@@ -32,13 +32,13 @@ export function createCuboidTooltip({
 }: CreateCuboidTooltipParams): CuboidTooltip {
     const details = createAnnotationDetails({ annotation, annotationSourceName });
     const [x, y, z] = details.location;
-    const [w, h, d] = details.dimensions;
+    const [l, w, h] = details.dimensions;
     const [rx, ry, rz] = details.rotation;
 
     return {
         annotationClassName,
         location: `X: ${x}  Y: ${y}  Z: ${z}`,
-        dimensions: `${w} × ${h} × ${d} m`,
+        dimensions: `${l} × ${w} × ${h} m`,
         rotation: `rx: ${rx}°  ry: ${ry}°  rz: ${rz}°`,
         annotationSourceName: details.annotationSourceName,
         trackNumber: details.trackNumber

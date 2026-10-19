@@ -4,6 +4,7 @@
         AnnotationSource,
         CuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import {
         groupAnnotationsBySource,
         resolveAnnotationClassName,
@@ -23,13 +24,19 @@
         annotationSources: readonly AnnotationSource[];
         /** ID of the currently expanded annotation row; bindable. */
         selectedCuboidId: string | null;
+        /** When true, numeric fields in the selected annotation become editable. */
+        editable?: boolean;
+        /** Called when the user commits a geometry change in the detail panel. */
+        onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
     }
 
     let {
         cuboids,
         annotationClasses,
         annotationSources,
-        selectedCuboidId = $bindable(null)
+        selectedCuboidId = $bindable(null),
+        editable = false,
+        onCuboidTransform
     }: Props = $props();
 
     const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
@@ -54,6 +61,8 @@
                 sources: annotationSources
             })}
             onToggle={toggle}
+            {editable}
+            {onCuboidTransform}
         />
     {/each}
 {/snippet}

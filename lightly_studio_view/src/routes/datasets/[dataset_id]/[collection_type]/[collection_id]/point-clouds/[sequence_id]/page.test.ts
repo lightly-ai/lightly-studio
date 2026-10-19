@@ -46,6 +46,7 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
 
 vi.mock('$lib/hooks', () => ({
     useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
+    useGlobalStorage: () => ({ isEditingMode: writable(false) }),
     useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
     // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
     useMcapSequenceSummary: () => ({

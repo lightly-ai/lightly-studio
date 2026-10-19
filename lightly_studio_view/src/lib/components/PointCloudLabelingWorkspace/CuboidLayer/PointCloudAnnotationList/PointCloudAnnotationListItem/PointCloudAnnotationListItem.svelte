@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import PointCloudAnnotationDetails from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails';
     import { Typography } from '$lib/components/Typography';
     import { ChevronDown } from '@lucide/svelte';
@@ -16,11 +17,36 @@
         isSelected: boolean;
         /** Human-readable annotation source name, when available. */
         annotationSourceName?: string;
+        /** When true, numeric fields in the detail panel become editable. */
+        editable?: boolean;
         /** Toggles the row's expanded state. */
         onToggle: (cuboidId: string) => void;
+        /** Called when the user commits a geometry change in the detail panel. */
+        onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
     }
 
-    let { cuboid, color, className, isSelected, annotationSourceName, onToggle }: Props = $props();
+    let {
+        cuboid,
+        color,
+        className,
+        isSelected,
+        annotationSourceName,
+        editable = false,
+        onToggle,
+        onCuboidTransform
+    }: Props = $props();
+
+    function handleAnnotationChange(
+        updated: Pick<CuboidAnnotation, 'center' | 'size' | 'rotation'>
+    ) {
+        onCuboidTransform?.({
+            annotationId: cuboid.id,
+            frameId: cuboid.frameId,
+            center: updated.center,
+            size: updated.size,
+            rotation: updated.rotation
+        });
+    }
 </script>
 
 <div
@@ -51,7 +77,12 @@
     </button>
     {#if isSelected}
         <div class="px-4 pb-4 pt-1">
-            <PointCloudAnnotationDetails {annotationSourceName} annotation={cuboid} />
+            <PointCloudAnnotationDetails
+                {annotationSourceName}
+                annotation={cuboid}
+                {editable}
+                onAnnotationChange={handleAnnotationChange}
+            />
         </div>
     {/if}
 </div>

@@ -419,6 +419,8 @@
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}
+                        editable={$isEditingMode}
+                        onCuboidTransform={handleCuboidTransform}
                     />
                 </Pane>
             </PaneGroup>
