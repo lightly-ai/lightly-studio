@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -44,6 +45,11 @@ def delete_annotations_by_ids(
     if not existing_annotation_ids:
         return 0
 
+    caption_sample_ids = _get_caption_sample_ids(
+        session=session, parent_sample_ids=existing_annotation_ids
+    )
+    sample_ids = existing_annotation_ids + caption_sample_ids
+
     # DuckDB rejects the delete of a parent row in the transaction that deleted its child
     # rows, so each foreign key level is committed separately. PostgreSQL does not need this,
     # see delete_dataset.py.
@@ -66,17 +72,15 @@ def delete_annotations_by_ids(
     )
     _delete_by_sample_ids(
         session=session,
-        tables=(SampleTagLinkTable, SampleEmbeddingTable),
-        sample_ids=existing_annotation_ids,
+        tables=(SampleTagLinkTable, SampleEmbeddingTable, TemporalSpanTable, CaptionTable),
+        sample_ids=sample_ids,
     )
     session.commit()
     _delete_by_sample_ids(
         session=session, tables=(AnnotationBaseTable,), sample_ids=existing_annotation_ids
     )
     session.commit()
-    _delete_by_sample_ids(
-        session=session, tables=(SampleTable,), sample_ids=existing_annotation_ids
-    )
+    _delete_by_sample_ids(session=session, tables=(SampleTable,), sample_ids=sample_ids)
     session.commit()
     return len(existing_annotation_ids)
 
@@ -92,6 +96,17 @@ def _get_parent_sample_ids(session: Session, annotation_ids: Sequence[UUID]) -> 
         ).all()
         parent_sample_id_by_annotation_id.update(dict(rows))
     return parent_sample_id_by_annotation_id
+
+
+def _get_caption_sample_ids(session: Session, parent_sample_ids: Sequence[UUID]) -> list[UUID]:
+    caption_sample_ids: list[UUID] = []
+    for batch in batching.batched(items=parent_sample_ids):
+        caption_sample_ids.extend(
+            session.exec(
+                select(CaptionTable.sample_id).where(col(CaptionTable.parent_sample_id).in_(batch))
+            ).all()
+        )
+    return caption_sample_ids
 
 
 def _delete_by_sample_ids(
