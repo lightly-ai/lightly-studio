@@ -558,6 +558,10 @@
                         <PlotAxisLines proxy={overlayProxy} />
                     {/if}
 
+                    {#if $plotLayout === 'text' && $appliedTextAxes}
+                        <PlotAxesLabels axes={$appliedTextAxes} />
+                    {/if}
+
                     {#if hoverPreview}
                         <div
                             class="pointer-events-none absolute z-10 -translate-x-1/2"
@@ -596,9 +600,6 @@
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
-        {/if}
-        {#if $plotLayout === 'text' && $appliedTextAxes && !embeddingsData.isLoading && !errorText}
-            <PlotAxesLabels axes={$appliedTextAxes} />
         {/if}
     </div>
     {#if isReady}

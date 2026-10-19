@@ -745,6 +745,11 @@ describe('PlotPanel.svelte', () => {
 
     it('disables both reset actions while applying edited axes', async () => {
         const user = userEvent.setup();
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
         mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await commitTextAxes(user);
@@ -771,6 +776,15 @@ describe('PlotPanel.svelte', () => {
         await waitFor(() =>
             expect(screen.queryByRole('button', { name: 'Applying…' })).not.toBeInTheDocument()
         );
+    });
+
+    it('hides the axis descriptions while the plot is not rendered', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await commitTextAxes(user);
+        expect(await screen.findByRole('button', { name: 'Edit axes' })).toBeInTheDocument();
+        expect(screen.queryByText('young')).not.toBeInTheDocument();
     });
 
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
