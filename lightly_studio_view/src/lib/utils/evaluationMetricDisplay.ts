@@ -1,15 +1,9 @@
-const countMetrics: Record<string, { label: string } | undefined> = {
-    tp: {
-        label: 'Correct predictions (TP)'
-    },
-    fp: {
-        label: 'Extra predictions (FP)'
-    },
-    fn: {
-        label: 'Missed objects (FN)'
-    }
+const countMetricLabels: Record<string, string | undefined> = {
+    tp: 'Correct predictions (TP)',
+    fp: 'Extra predictions (FP)',
+    fn: 'Missed objects (FN)'
 };
 
-export function getEvaluationMetricDisplay(metricName: string) {
-    return Object.hasOwn(countMetrics, metricName) ? countMetrics[metricName] : undefined;
+export function getEvaluationMetricLabel(metricName: string) {
+    return Object.hasOwn(countMetricLabels, metricName) ? countMetricLabels[metricName] : undefined;
 }

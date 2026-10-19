@@ -30,10 +30,7 @@
 </script>
 
 {#if showOrderValue || showMissingValue}
-    <div
-        class={badgeClass}
-        aria-label={showMissingValue && !showOrderValue ? 'No evaluation result' : undefined}
-    >
+    <div class={badgeClass} aria-label={!showOrderValue ? 'No evaluation result' : undefined}>
         {orderValueLabel}
     </div>
 {:else if similarityScore != null}

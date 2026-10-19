@@ -2,7 +2,7 @@
     import { useImageOrderBy } from '$lib/hooks/useImageOrderBy/useImageOrderBy';
     import { useGlobalStorage, usePostHog } from '$lib/hooks';
     import { type SelectItem } from '$lib/components/Select';
-    import { getEvaluationMetricDisplay } from '$lib/utils/evaluationMetricDisplay';
+    import { getEvaluationMetricLabel } from '$lib/utils/evaluationMetricDisplay';
     import OrderByControl from './OrderByControl.svelte';
 
     interface Props {
@@ -41,7 +41,7 @@
             label: field.source === 'evaluation_metric' ? field.evaluation_run_name : field.label,
             group:
                 field.source === 'evaluation_metric'
-                    ? (getEvaluationMetricDisplay(field.metric_name)?.label ?? field.metric_name)
+                    ? (getEvaluationMetricLabel(field.metric_name) ?? field.metric_name)
                     : undefined,
             testId:
                 field.source === 'evaluation_metric'
@@ -59,8 +59,9 @@
         const field = $allSortFields[Number(value)];
         if (field) handleFieldClick(field);
     };
-    const selectedField = $derived($allSortFields.find((field) => $isFieldSelected(field)));
-    const isEvaluationSort = $derived(selectedField?.source === 'evaluation_metric');
+    const isEvaluationSort = $derived(
+        selectValue !== '' && $allSortFields[Number(selectValue)]?.source === 'evaluation_metric'
+    );
 </script>
 
 <OrderByControl
