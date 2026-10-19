@@ -1,12 +1,37 @@
 from __future__ import annotations
 
 import importlib.util
+import threading
+from typing import Any
+from uuid import uuid4
 
+import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_GATEWAY,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+    HTTP_STATUS_SERVICE_UNAVAILABLE,
+    HTTP_STATUS_UNPROCESSABLE_ENTITY,
+)
+from lightly_studio.assisted_labeling import fal_sam3_provider
+from lightly_studio.assisted_labeling.fal_sam3_provider import FalSam3Provider
+from lightly_studio.assisted_labeling.provider import Prediction, ProviderError
+from tests.helpers_resolvers import create_collection, create_image
+from tests.services.assisted_labeling_service.helpers import StubProvider
+
+POSITIVE_POINT = {"x": 0.5, "y": 0.5, "positive": True}
+
+
+@pytest.fixture
+def stub_provider(mocker: MockerFixture) -> StubProvider:
+    provider = StubProvider()
+    mocker.patch.object(fal_sam3_provider, "get_provider", return_value=provider)
+    return provider
 
 
 def test_get_assisted_labeling_status(
@@ -45,3 +70,185 @@ def test_get_assisted_labeling_status__without_extra(
     assert response.json() == {
         "unavailable_reason": 'Install the fal extra: pip install "lightly-studio[fal]".'
     }
+
+
+def test_create_interactive_annotation_preview(
+    db_session: Session, media_test_client: TestClient, stub_provider: StubProvider
+) -> None:
+    mask = np.zeros((50, 100), dtype=np.bool_)
+    mask[20:31, 45:56] = True
+    stub_provider.predictions = [Prediction(mask=mask, score=0.9)]
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session, collection_id=collection.collection_id, width=100, height=50
+    )
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "points": [POSITIVE_POINT],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    prediction = response.json()["prediction"]
+    assert prediction["bbox"] == {"x": 45, "y": 20, "width": 11, "height": 11}
+    assert prediction["score"] == 0.9
+
+
+def test_create_interactive_annotation_preview__provider_thread(
+    db_session: Session,
+    media_test_client: TestClient,
+    mocker: MockerFixture,
+    stub_provider: StubProvider,
+) -> None:
+    thread_names: list[str] = []
+
+    def segment(*_args: Any, **_kwargs: Any) -> list[Prediction]:
+        thread_names.append(threading.current_thread().name)
+        return []
+
+    mocker.patch.object(stub_provider, "segment", side_effect=segment)
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "points": [POSITIVE_POINT],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"prediction": None}
+    assert len(thread_names) == 1
+    assert thread_names[0].startswith("assisted_labeling")
+
+
+def test_create_interactive_annotation_preview__points_and_boxes(
+    db_session: Session, media_test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "points": [POSITIVE_POINT],
+            "boxes": [{"x": 0.1, "y": 0.2, "width": 0.4, "height": 0.6}],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_create_interactive_annotation_preview__no_positive_point(
+    db_session: Session, media_test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "points": [{"x": 0.5, "y": 0.5, "positive": False}],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_create_interactive_annotation_preview__other_collection(
+    db_session: Session, media_test_client: TestClient, stub_provider: StubProvider
+) -> None:
+    collection = create_collection(session=db_session, collection_name="first")
+    other_collection = create_collection(session=db_session, collection_name="second")
+    image = create_image(session=db_session, collection_id=other_collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "points": [POSITIVE_POINT],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert stub_provider.prompts == []
+
+
+def test_create_interactive_annotation_preview__unknown_sample(
+    db_session: Session, media_test_client: TestClient, stub_provider: StubProvider
+) -> None:
+    collection = create_collection(session=db_session)
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(uuid4()),
+            "points": [POSITIVE_POINT],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert stub_provider.prompts == []
+
+
+def test_create_interactive_annotation_preview__provider_error(
+    db_session: Session, media_test_client: TestClient, stub_provider: StubProvider
+) -> None:
+    stub_provider.error = ProviderError("Request timed out.")
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "points": [POSITIVE_POINT],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
+    assert response.json() == {"error": "Request timed out."}
+
+
+def test_create_interactive_annotation_preview__unavailable(
+    db_session: Session,
+    media_test_client: TestClient,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("FAL_KEY", raising=False)
+    create_client = mocker.MagicMock()
+    mocker.patch.object(
+        fal_sam3_provider,
+        "get_provider",
+        return_value=FalSam3Provider(create_client=create_client),
+    )
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "points": [POSITIVE_POINT],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
+    assert response.json() == {"error": "Set the FAL_KEY environment variable."}
+    create_client.assert_not_called()

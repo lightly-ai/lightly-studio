@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from typing import Annotated
+from uuid import UUID
 
 import pydantic
 from pydantic import BaseModel
@@ -57,6 +58,26 @@ class AnnotationBox(BaseModel):
         return self
 
 
+class InteractiveAnnotationRequest(BaseModel):
+    """Request for a single-object preview from points or boxes."""
+
+    collection_id: UUID
+    sample_id: UUID
+    points: list[AnnotationPoint] | None = pydantic.Field(default=None, min_length=1)
+    boxes: list[AnnotationBox] | None = pydantic.Field(default=None, min_length=1)
+
+    @pydantic.model_validator(mode="after")
+    def validate_prompts(self) -> InteractiveAnnotationRequest:  # noqa: N804
+        """Requires exactly one prompt type and at least one positive point."""
+        if (self.points is None) == (self.boxes is None):
+            raise PydanticCustomError(
+                "invalid_prompts", "Provide either points or boxes, but not both."
+            )
+        if self.points is not None and not any(point.positive for point in self.points):
+            raise PydanticCustomError("invalid_prompts", "Place at least one positive point.")
+        return self
+
+
 class AnnotationPreviewBox(BaseModel):
     """A box in absolute integer XYWH pixel coordinates."""
 
@@ -79,3 +100,9 @@ class AnnotationPreview(BaseModel):
     bbox: AnnotationPreviewBox
     segmentation_mask: list[int]
     score: float | None
+
+
+class InteractiveAnnotationResponse(BaseModel):
+    """Single-object preview, or None if the provider finds no object."""
+
+    prediction: AnnotationPreview | None
