@@ -4016,7 +4016,7 @@ requires-dist = [
     { name = "einops", specifier = ">=0.6.0" },
     { name = "environs", specifier = "<12.0.0" },
     { name = "eval-type-backport", specifier = ">=0.2.2" },
-    { name = "fal-client", marker = "extra == 'fal'", specifier = ">=1.0.3" },
+    { name = "fal-client", marker = "extra == 'fal'", specifier = ">=1.0.0" },
     { name = "fastapi", specifier = ">=0.115.5" },
     { name = "fsspec", specifier = ">=2023.1.0" },
     { name = "gcsfs", marker = "extra == 'cloud-storage'", specifier = ">=2023.1.0" },
