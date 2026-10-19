@@ -155,8 +155,8 @@
         if (event.code !== 'Space' || event.repeat) return;
         const target = event.target;
         if (
-            target instanceof HTMLElement &&
-            (target.isContentEditable ||
+            target instanceof Element &&
+            ((target instanceof HTMLElement && target.isContentEditable) ||
                 target.closest(
                     'button, a, input, select, textarea, [role="button"], [role="option"], [role="menuitem"]'
                 ))

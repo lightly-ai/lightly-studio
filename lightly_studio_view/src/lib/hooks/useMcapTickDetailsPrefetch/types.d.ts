@@ -36,6 +36,8 @@ export interface PendingTick {
 export interface PrefetchSession {
     /** Session identifier used to discard obsolete buffering plans. */
     requestId: string;
+    /** Cache scope whose completed ticks can be reused by a later request. */
+    scopeKey: string;
     /** Completed tick indexes in the current session. */
     completed: Set<number>;
     /** Tick indexes waiting for a concurrency slot. */
