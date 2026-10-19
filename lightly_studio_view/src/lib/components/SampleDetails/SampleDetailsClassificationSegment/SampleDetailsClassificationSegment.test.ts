@@ -218,7 +218,7 @@ describe('SampleDetailsClassificationSegment', () => {
         if (existing) mocks.collections.push({ collection_id: 'human', name: 'Human' });
         mocks.createAnnotation.mockRejectedValueOnce(new Error('offline'));
         const onClick = vi.fn();
-        render(SampleDetailsSidePanelAnnotation, {
+        const { container } = render(SampleDetailsSidePanelAnnotation, {
             annotation: createClassification('c1', groundTruthSource.collection_id, 'cat'),
             isSelected: false,
             onClick,
@@ -226,6 +226,11 @@ describe('SampleDetailsClassificationSegment', () => {
             onToggleShowAnnotation: vi.fn(),
             onDeleteAnnotation: vi.fn()
         });
+        expect(container.querySelector('button button')).toBeNull();
+        screen.getByRole('button', { name: 'Select cat annotation' }).focus();
+        await userEvent.keyboard('{Enter} ');
+        expect(onClick).toHaveBeenCalledTimes(2);
+        onClick.mockClear();
         await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
         expect(onClick).not.toHaveBeenCalled();
         const input = screen.getByRole('combobox', { name: 'Annotation source' });
