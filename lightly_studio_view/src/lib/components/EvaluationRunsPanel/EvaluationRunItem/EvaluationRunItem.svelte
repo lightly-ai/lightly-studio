@@ -3,6 +3,8 @@
     import { Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
     import { ChevronDown, TriangleAlert } from '@lucide/svelte';
+    import EvaluationRunSummary from './EvaluationRunSummary/EvaluationRunSummary.svelte';
+    import EvaluationRunConfiguration from './EvaluationRunConfiguration/EvaluationRunConfiguration.svelte';
     import { slide } from 'svelte/transition';
     import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
     import EvaluationRunStaleSection from './EvaluationRunStaleSection/EvaluationRunStaleSection.svelte';
@@ -21,14 +23,6 @@
     }
 
     const { datasetId, run, expanded, onToggle }: Props = $props();
-
-    const formatConfigValue = (value: unknown): string => {
-        if (value === null || value === undefined) return '—';
-        if (typeof value === 'object') return JSON.stringify(value);
-        return String(value);
-    };
-
-    const configEntries = $derived(Object.entries(run.evaluation_run_configuration ?? {}));
 </script>
 
 <li class="rounded-md border border-border bg-background">
@@ -64,6 +58,10 @@
             >
                 {formatDate(run.created_at)}
             </Typography>
+            <EvaluationRunSummary
+                groundTruth={run.gt_annotation_source}
+                predictions={run.pred_annotation_source}
+            />
         </div>
         <ChevronDown
             class="size-4 shrink-0 transition-transform duration-{duration}"
@@ -81,65 +79,7 @@
                 <EvaluationRunStaleSection {datasetId} runId={run.id} />
             {/if}
 
-            <!-- Configuration -->
-            <section>
-                <Typography variant="subtitle2" component="h3" className="mb-2">
-                    Configuration
-                </Typography>
-                {#if configEntries.length === 0}
-                    <Typography variant="body2" className="text-muted-foreground">
-                        No configuration recorded.
-                    </Typography>
-                {:else}
-                    <dl
-                        class="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1"
-                        data-testid="evaluation-run-config"
-                    >
-                        {#each configEntries as [key, value] (key)}
-                            <Typography
-                                variant="body2"
-                                component="dt"
-                                className="text-muted-foreground"
-                            >
-                                {key}
-                            </Typography>
-                            <Typography variant="body2" component="dd" className="break-words">
-                                {formatConfigValue(value)}
-                            </Typography>
-                        {/each}
-                    </dl>
-                {/if}
-            </section>
-
-            <section data-testid="evaluation-run-annotation-sources">
-                <Typography variant="subtitle2" component="h3" className="mb-2">
-                    Annotation sources
-                </Typography>
-                <div class="flex flex-wrap gap-2">
-                    <div class="flex flex-col gap-0.5">
-                        <Typography variant="caption" className="text-muted-foreground">
-                            Ground truth
-                        </Typography>
-                        <span
-                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
-                            data-testid="evaluation-run-gt-annotation-source"
-                        >
-                            {run.gt_annotation_source}
-                        </span>
-                    </div>
-                    <div class="flex flex-col gap-0.5">
-                        <Typography variant="caption" className="text-muted-foreground">
-                            Predictions
-                        </Typography>
-                        <span
-                            class="rounded-md border border-border bg-muted px-2 py-0.5 text-sm"
-                            data-testid="evaluation-run-prediction-annotation-source"
-                        >
-                            {run.pred_annotation_source}
-                        </span>
-                    </div>
-                </div>
-            </section>
+            <EvaluationRunConfiguration configuration={run.evaluation_run_configuration} />
 
             <EvaluationRunConfusionMatrixSection
                 datasetId={datasetId ?? ''}
