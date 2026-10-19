@@ -36,6 +36,7 @@ def recompute_evaluation_run(
     session: Session,
     *,
     run: EvaluationRunTable,
+    replacement: EvaluationRunTable | None = None,
 ) -> EvaluationResult:
     """Re-run an evaluation in-place, replacing its metrics.
 
@@ -48,10 +49,53 @@ def recompute_evaluation_run(
     Args:
         session: Database session.
         run: The evaluation run to recompute.
+        replacement: Optional validated settings, with the same ID and creation date.
 
     Returns:
         Summary of the recomputed run, including its ID and input counts.
     """
+    # DuckDB requires committed child-row deletion before indexed run fields can
+    # change. Preserve copies so an exception can restore the previous results.
+    cleanup_commit = replacement is not None and session.get_bind().dialect.name == "duckdb"
+    old_rows = (
+        [
+            type(row).model_validate(row.model_dump())
+            for resolver in (
+                evaluation_annotation_metric_resolver,
+                evaluation_sample_metric_resolver,
+            )
+            for row in resolver.get_all_by_evaluation_run_id(
+                session=session, evaluation_run_id=run.id
+            )
+        ]
+        if cleanup_commit
+        else []
+    )
+    if cleanup_commit:
+        evaluation_annotation_metric_resolver.delete_by_evaluation_run_id(
+            session=session, evaluation_run_id=run.id
+        )
+        evaluation_sample_metric_resolver.delete_by_evaluation_run_id(
+            session=session, evaluation_run_id=run.id
+        )
+        session.commit()
+    try:
+        # Batch writers may commit. This session only flushes their changes into
+        # the outer transaction, allowing rollback after a later batch fails.
+        with Session(bind=session.connection(), join_transaction_mode="rollback_only") as work:
+            target = work.merge(replacement if replacement is not None else run)
+            result = _recompute_evaluation_run(session=work, run=target)
+        session.commit()
+    except Exception:
+        session.rollback()
+        if cleanup_commit:
+            session.add_all(old_rows)
+            session.commit()
+        raise
+    return result
+
+
+def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> EvaluationResult:
     observed_stale_since = run.stale_since
     data = _fetch_annotations_for_run(session=session, run=run)
     evaluation_annotation_metric_resolver.delete_by_evaluation_run_id(
