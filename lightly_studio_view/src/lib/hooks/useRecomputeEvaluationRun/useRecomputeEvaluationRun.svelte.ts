@@ -3,6 +3,7 @@ import {
     getEvaluationSampleMetricsInfoQueryKey,
     recomputeEvaluationRunMutation
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { recomputeEvaluationRun, updateRun } from '$lib/api/lightly_studio_local';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite';
 import { toast } from 'svelte-sonner';
@@ -12,19 +13,32 @@ interface UseRecomputeEvaluationRunParams {
     datasetId: string;
     /** The evaluation run to recompute. */
     runId: string;
+    config?: Record<string, unknown>;
+    onSuccess?: () => void;
 }
 
 export const useRecomputeEvaluationRun = (getParams: () => UseRecomputeEvaluationRunParams) => {
-    const mutation = createMutation(() => recomputeEvaluationRunMutation());
+    const mutation = createMutation(() => ({
+        ...recomputeEvaluationRunMutation(),
+        mutationFn: async (variables) => {
+            const { config } = getParams();
+            const { data } =
+                config === undefined
+                    ? await recomputeEvaluationRun({ ...variables, throwOnError: true })
+                    : await updateRun({ ...variables, body: { config }, throwOnError: true });
+            return data;
+        }
+    }));
     const client = useQueryClient();
 
     const recompute = () => {
-        const { datasetId, runId } = getParams();
+        const { datasetId, runId, onSuccess } = getParams();
         mutation.mutate(
             { path: { dataset_id: datasetId, run_id: runId } },
             {
                 onSuccess: () => {
                     toast.success('Evaluation recomputed');
+                    onSuccess?.();
                     const path = { dataset_id: datasetId };
                     client.invalidateQueries({
                         queryKey: getEvaluationRunsQueryKey({ path })

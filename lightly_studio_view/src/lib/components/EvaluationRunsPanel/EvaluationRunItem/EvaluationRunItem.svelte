@@ -8,7 +8,9 @@
     import { slide } from 'svelte/transition';
     import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
     import EvaluationRunStaleSection from './EvaluationRunStaleSection/EvaluationRunStaleSection.svelte';
+    import EditEvaluationDialog from '../EditEvaluationDialog/EditEvaluationDialog.svelte';
 
+    let editing = $state(false);
     const duration = 300; // in ms
 
     interface Props {
@@ -76,10 +78,13 @@
             transition:slide={{ duration }}
         >
             {#if run.stale_since !== null && datasetId}
-                <EvaluationRunStaleSection {datasetId} runId={run.id} />
+                <EvaluationRunStaleSection />
             {/if}
 
-            <EvaluationRunConfiguration configuration={run.evaluation_run_configuration} />
+            <EvaluationRunConfiguration
+                configuration={run.evaluation_run_configuration}
+                onEdit={datasetId ? () => (editing = true) : undefined}
+            />
 
             <EvaluationRunConfusionMatrixSection
                 datasetId={datasetId ?? ''}
@@ -88,3 +93,7 @@
         </div>
     {/if}
 </li>
+
+{#if editing && datasetId}
+    <EditEvaluationDialog {datasetId} {run} onClose={() => (editing = false)} />
+{/if}
