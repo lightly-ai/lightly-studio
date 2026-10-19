@@ -6,6 +6,7 @@ describe('prefetchSession', () => {
         const session = createPrefetchSession('request-1');
 
         expect(session.requestId).toBe('request-1');
+        expect(session.scopeKey).toBe('');
         expect(session.completed).toEqual(new Set());
         expect(session.queued).toEqual([]);
         expect(session.pending).toEqual(new Map());

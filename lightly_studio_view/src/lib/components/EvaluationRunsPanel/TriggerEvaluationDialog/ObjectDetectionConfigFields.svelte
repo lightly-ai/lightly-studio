@@ -15,11 +15,14 @@
 
 <div class="grid gap-2">
     <div class="flex items-center justify-between">
-        <Label class="text-foreground">IoU threshold</Label>
+        <Label class="text-foreground">Minimum overlap (IoU)</Label>
         <span class="text-sm tabular-nums text-muted-foreground" data-testid="iou-threshold-value">
             {iouThreshold.toFixed(2)}
         </span>
     </div>
+    <p class="text-xs text-muted-foreground">
+        How much a prediction must overlap the ground truth to count as a match.
+    </p>
     <Slider
         type="single"
         class="w-full"
@@ -30,14 +33,23 @@
         onValueChange={(value: number) => (iouThreshold = value)}
         data-testid="iou-threshold-slider"
     />
+    <div class="flex justify-between text-xs text-muted-foreground">
+        <span>← Less overlap</span>
+        <span>More overlap →</span>
+    </div>
 </div>
 
 <div class="flex items-center justify-between">
-    <div class="flex flex-col gap-0.5">
-        <Label class="text-foreground">Class-wise matching</Label>
-        <span class="text-xs text-muted-foreground">
-            Match predictions and ground truth within the same class only.
-        </span>
+    <div class="flex flex-col gap-1">
+        <Label for="evaluation-classwise" class="text-foreground">Require the same class</Label>
+        <p id="evaluation-classwise-description" class="text-xs text-muted-foreground">
+            A predicted car must match a car.
+        </p>
     </div>
-    <Switch bind:checked={classwise} data-testid="classwise-switch" />
+    <Switch
+        id="evaluation-classwise"
+        aria-describedby="evaluation-classwise-description"
+        bind:checked={classwise}
+        data-testid="classwise-switch"
+    />
 </div>

@@ -17,6 +17,24 @@ description: Python API reference for LightlyStudio's DatasetQuery, used to filt
         members: [ImageSampleField]
         show_if_no_docstring: true
 
+## MetadataAccessor
+
+Access metadata by key, for example `ImageSampleField.metadata["camera"]` or
+`VideoSampleField.metadata["camera"]`. For nested values, use dots between dictionary keys
+and brackets for array indices: `metadata["odometry.speed"]` selects the `speed` value inside
+`odometry`, and `metadata["odometry.acc[1]"]` selects the second element of its `acc` array. See
+[Metadata queries](../workflows/search_and_filter.md#metadata-queries) for examples and comparison rules.
+
+::: lightly_studio.core.dataset_query.metadata_expression
+    options:
+        members: [MetadataAccessor]
+
+## MetadataField
+
+::: lightly_studio.core.dataset_query.metadata_expression
+    options:
+        members: [MetadataField]
+
 ## VideoSampleField
 
 ::: lightly_studio.core.dataset_query.video_sample_field

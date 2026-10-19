@@ -52,4 +52,4 @@ dataset.add_images_from_path(path=image_directory)
 ls.register_remote_embedder(dataset=dataset, url=server_url, api_key=remote_embedder_server.API_KEY)
 
 # The GUI serves on port 8001
-ls.start_gui()
+ls.start_gui(open_browser=False)

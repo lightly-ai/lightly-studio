@@ -2,10 +2,12 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
-    import { Select } from '$lib/components/Select';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
-    import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import { PlotAxesEditor } from './PlotAxesEditor';
+    import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
+    import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
+    import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -133,14 +135,14 @@
         annotationLabels
     });
 
-    const PLOT_LAYOUT_ITEMS = [
-        { value: 'pacmap', label: 'PaCMAP' },
-        { value: 'text', label: 'Text' }
-    ];
-    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, commitTextAxes } = usePlotLayout(
-        untrack(() => collectionId)
-    );
-    const isAwaitingAxes = $derived($plotLayout === 'text' && $plotAxes === null);
+    const {
+        plotLayout,
+        textAxesDraft,
+        appliedTextAxes,
+        isEmbeddingAxes,
+        plotAxes,
+        commitTextAxes
+    } = usePlotLayout(untrack(() => collectionId));
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
@@ -335,7 +337,7 @@
     });
 
     const reset = () => {
-        viewportState = null;
+        userViewportState = null;
     };
 
     const isReady = true;
@@ -381,7 +383,8 @@
     );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Escape') {
+        // An open popover handles Escape itself and prevents the default.
+        if (event.defaultPrevented || event.key !== 'Escape') {
             return;
         }
         if (!hasActiveSelection) {
@@ -411,15 +414,20 @@
         setRangeSelection(normalizedSelection);
     };
 
-    let viewportState: ViewportState | null = $state(null);
+    // The viewport after the user pans or zooms. Until then, the default follows the plot size,
+    // because the size is 0 when the panel mounts and the default scale depends on it.
+    let userViewportState: ViewportState | null = $state(null);
+    const viewportState = $derived(
+        userViewportState ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
+    );
     const onViewportState = (state: ViewportState) => {
-        viewportState = state;
+        userViewportState = state;
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        viewportState = null;
+        userViewportState = null;
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {
@@ -427,7 +435,10 @@
         resetForNewLayout();
     };
     const commitPlotAxes = async (textAxes: Parameters<typeof commitTextAxes>[0]) => {
-        if (await commitTextAxes(textAxes)) resetForNewLayout();
+        if ($plotLayout === 'text' && areTextAxesEqual(textAxes, $appliedTextAxes)) return true;
+        const success = await commitTextAxes(textAxes);
+        if (success) resetForNewLayout();
+        return success;
     };
 
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
@@ -481,16 +492,15 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
-    <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="flex items-center gap-3">
+    <div class="mb-5 mt-2 flex items-start justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-3">
             <div class="text-lg font-semibold">Embedding Plot</div>
-            <Select
-                items={PLOT_LAYOUT_ITEMS}
-                value={$plotLayout}
-                onValueChange={(value) => selectPlotLayout(value as PlotLayout)}
-                size="xs"
-                class="w-28"
-                testId="plot-layout-select"
+            <PlotAxesEditor
+                bind:draft={$textAxesDraft}
+                active={$plotLayout === 'text'}
+                isPending={$isEmbeddingAxes}
+                onCommit={commitPlotAxes}
+                onReset={() => selectPlotLayout('pacmap')}
             />
         </div>
         <Button
@@ -505,14 +515,8 @@
             ✕
         </Button>
     </div>
-    <!-- Relative: the text-axis inputs overlay every state below, so the user can fix the texts
-         while the plot loads or shows an error. -->
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if isAwaitingAxes}
-            <div class="flex flex-1 items-center justify-center p-8 text-muted-foreground">
-                <div class="text-lg">Type the four axis texts and press Enter.</div>
-            </div>
-        {:else if embeddingsData.isLoading}
+        {#if embeddingsData.isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
@@ -546,6 +550,12 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
+                         as close to X− as to X+. -->
+                    {#if $plotAxes && overlayProxy}
+                        <PlotAxisLines proxy={overlayProxy} />
+                    {/if}
 
                     {#if hoverPreview}
                         <div
@@ -585,13 +595,6 @@
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
-        {/if}
-        {#if $plotLayout === 'text'}
-            <PlotTextAxesInputs
-                bind:draft={$textAxesDraft}
-                onCommit={commitPlotAxes}
-                isPending={$isEmbeddingAxes}
-            />
         {/if}
     </div>
     {#if isReady}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import operator
 from collections.abc import Sequence
 from typing import Any, cast
 
@@ -19,6 +20,126 @@ from tests.helpers_resolvers import create_collection, create_image_with_metadat
 
 
 class TestMetadataField:
+    @pytest.mark.parametrize("threshold", [2, 2.0])
+    @pytest.mark.parametrize(
+        ("compare", "expected_indices"),
+        [
+            (operator.eq, [1, 2]),
+            (operator.ne, [0, 3]),
+            (operator.lt, [0]),
+            (operator.le, [0, 1, 2]),
+            (operator.gt, [3]),
+            (operator.ge, [1, 2, 3]),
+        ],
+    )
+    def test_comparisons__numbers(
+        self,
+        db_session: Session,
+        threshold: int | float,
+        compare: Any,
+        expected_indices: list[int],
+    ) -> None:
+        collection = create_collection(session=db_session)
+        # Numeric strings, booleans, null, containers, and missing paths never match.
+        metadata_values: list[dict[str, Any]] = [
+            {"value": -1.5},
+            {"value": 2},
+            {"value": 2.0},
+            {"value": 10},
+            {"value": "2"},
+            {"value": "invalid"},
+            {"value": True},
+            {"value": False},
+            {"value": None},
+            {"value": {}},
+            {"value": []},
+            {"other": 2},
+            {},
+        ]
+        images = [
+            create_image_with_metadata(
+                session=db_session,
+                collection_id=collection.collection_id,
+                file_path_abs=f"/image{index}.jpg",
+                metadata=metadata,
+            )
+            for index, metadata in enumerate(metadata_values)
+        ]
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=compare(ImageSampleField.metadata["value"], threshold),
+            expected_samples=[images[index] for index in expected_indices],
+        )
+
+    @pytest.mark.parametrize(
+        ("lower", "upper"),
+        [(16777216, 16777217), (1.0000000000000002, 1.0000000000000004)],
+    )
+    @pytest.mark.parametrize(
+        ("compare", "expected_indices"),
+        [
+            (operator.eq, [0]),
+            (operator.ne, [1]),
+            (operator.lt, []),
+            (operator.le, [0]),
+            (operator.gt, [1]),
+            (operator.ge, [0, 1]),
+        ],
+    )
+    def test_comparisons__numeric_precision(
+        self,
+        db_session: Session,
+        lower: int | float,
+        upper: int | float,
+        compare: Any,
+        expected_indices: list[int],
+    ) -> None:
+        collection = create_collection(session=db_session)
+        images = [
+            create_image_with_metadata(
+                session=db_session,
+                collection_id=collection.collection_id,
+                file_path_abs=f"/image{index}.jpg",
+                metadata={"value": value},
+            )
+            for index, value in enumerate([lower, upper])
+        ]
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=compare(ImageSampleField.metadata["value"], lower),
+            expected_samples=[images[index] for index in expected_indices],
+        )
+
+    @pytest.mark.parametrize("path", ["odometry.speed", "odometry.acc[1]", "odometry.acc[-1]"])
+    def test_comparisons__nested_numbers(self, db_session: Session, path: str) -> None:
+        collection = create_collection(session=db_session)
+        image = create_image_with_metadata(
+            session=db_session,
+            collection_id=collection.collection_id,
+            metadata={"odometry": {"speed": 2.5, "acc": [100, 2.5]}},
+        )
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=ImageSampleField.metadata[path] < 3,
+            expected_samples=[image],
+        )
+
+    @pytest.mark.parametrize("compare", [operator.lt, operator.le, operator.gt, operator.ge])
+    @pytest.mark.parametrize("value", [True, False, "2", None, [], {}])
+    def test_ordering__unsupported_value(self, compare: Any, value: Any) -> None:
+        with pytest.raises(TypeError, match="require a"):
+            compare(ImageSampleField.metadata["score"], value)
+
+    @pytest.mark.parametrize(
+        "compare", [operator.eq, operator.ne, operator.lt, operator.le, operator.gt, operator.ge]
+    )
+    def test_comparisons__nan(self, compare: Any) -> None:
+        with pytest.raises(ValueError, match="do not support NaN"):
+            compare(ImageSampleField.metadata["score"], float("nan"))
+
     def test_eq_ne__strings(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         images = [
@@ -177,17 +298,26 @@ class TestMetadataField:
         )
 
     def test_eq__unsupported_value(self) -> None:
-        with pytest.raises(TypeError, match="require a string or boolean"):
+        with pytest.raises(TypeError, match="require a string, boolean, or number"):
             _ = ImageSampleField.metadata["score"] == cast(Any, None)
-        with pytest.raises(TypeError, match="require a string or boolean"):
+        with pytest.raises(TypeError, match="require a string, boolean, or number"):
             _ = ImageSampleField.metadata["score"] == cast(Any, [])
-        with pytest.raises(TypeError, match="require a string or boolean"):
+        with pytest.raises(TypeError, match="require a string, boolean, or number"):
             _ = ImageSampleField.metadata["score"] == cast(Any, {})
-        with pytest.raises(TypeError, match="require a string or boolean"):
+        with pytest.raises(TypeError, match="require a string, boolean, or number"):
             _ = ImageSampleField.metadata["score"] == cast(Any, object())
 
 
 class TestMetadataComparisonExpression:
+    def test_get__postgres_guards_numeric_cast(self) -> None:
+        expression = ImageSampleField.metadata["odometry.acc[1]"] < 15
+        query = select(SampleTable).where(expression.get())
+        compiled = query.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+        sql = str(compiled).lower()
+        assert "then cast(" in sql
+        assert "as double precision) end <" in sql
+        assert {"odometry", "acc", 1, 15, "number"}.issubset(set(compiled.params.values()))
+
     def test_get__postgres_binds_nested_path(self) -> None:
         expression = ImageSampleField.metadata["odometry.camera"] == "front"
         query = select(SampleTable).where(expression.get())

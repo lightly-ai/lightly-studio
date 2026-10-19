@@ -32,4 +32,4 @@ for photo_path in Path(DATASET_DIR / "photo").glob("*.jpg"):
         }
     )
 
-ls.start_gui()
+ls.start_gui(open_browser=False)

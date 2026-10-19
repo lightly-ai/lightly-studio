@@ -22,4 +22,4 @@ dataset.add_samples_from_coco(
 )
 
 # We start the UI application on port 8001
-ls.start_gui()
+ls.start_gui(open_browser=False)

@@ -163,11 +163,18 @@ def quickstart_enterprise(api_url: str | None, token: str | None, api_key: str |
         "Full database URL, e.g. 'duckdb:///lightly_studio.db'. Mutually exclusive with --db-file."
     ),
 )
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    default=False,
+    help="Do not open a browser automatically once the GUI server is ready.",
+)
 def gui(
     host: str | None,
     port: int | None,
     db_file: str | None,
     db_url: str | None,
+    no_browser: bool,
 ) -> None:
     """Start the web interface."""
     if db_file is not None and db_url is not None:
@@ -177,7 +184,7 @@ def gui(
         event=tracking.APP_LAUNCHED,
         properties={"launch_source": LaunchSource.GUI.value},
     )
-    lightly_studio.start_gui(host=host, port=port)
+    lightly_studio.start_gui(host=host, port=port, open_browser=not no_browser)
 
 
 def _has_evaluation(dataset: lightly_studio.ImageDataset, name: str) -> bool:

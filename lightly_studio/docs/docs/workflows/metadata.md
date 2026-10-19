@@ -57,6 +57,29 @@ for sample in dataset:
 Supported value types are `string`, `integer`, `float`, `boolean`, `list`, and `dict`.
 Once a key is set with a given type, it is expected that values for other samples for that key use the same type.
 
+### Filter samples by metadata
+
+Use `ImageSampleField.metadata["<path>"]` in a dataset query to select images by metadata values:
+
+```python
+from lightly_studio.core.dataset_query import AND, ImageSampleField
+
+query = dataset.match(
+    AND(
+        ImageSampleField.metadata["location"] == "city",
+        ImageSampleField.metadata["temperature"] >= 25,
+    )
+)
+samples = query.to_list()
+```
+
+For video datasets, use `VideoSampleField.metadata` instead of `ImageSampleField.metadata`.
+
+Filters support string and boolean equality, numeric comparisons, and nested paths such as
+`extra.camera` or `keywords[0]`. Missing values and values of a different JSON type do not
+match, including with `!=`. See [Metadata queries](search_and_filter.md#metadata-queries) for
+the supported operators, path syntax, and comparison rules.
+
 ### Add metadata from external sources
 
 You can bulk add metadata from any external source by providing it as a dictionary or CSV file. Use
