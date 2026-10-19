@@ -110,7 +110,7 @@
         // Changing the mode creates a new session, which cancels the old queue. This is important
         // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
         getRequestId: () =>
-            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? `entire/${workspace.currentTick}` : `window/${bufferingSeekVersion}`}`,
+            `${datasetId}/${sequenceId}/playback/${workspace.referenceFrameId || 'sensor'}/${$bufferEntireSequence ? `entire/${workspace.currentTick}` : `window/${bufferingSeekVersion}`}`,
         getRanges: () => {
             const activeIndex = workspace.ticks.findIndex(
                 (tick) => tick.seq_number === workspace.currentTick

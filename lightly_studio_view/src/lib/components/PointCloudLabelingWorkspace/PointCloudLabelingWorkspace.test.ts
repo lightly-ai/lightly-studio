@@ -358,7 +358,7 @@ describe('PointCloudLabelingWorkspace', () => {
         await user.click(screen.getByRole('button', { name: 'Play frames' }));
 
         expect(schedulerParams.current?.getRequestId()).toBe(
-            'dataset-1/sequence-1/playback/entire/0'
+            'dataset-1/sequence-1/playback/sensor/entire/0'
         );
         expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 0, endIndex: 1 }]);
 
@@ -370,7 +370,7 @@ describe('PointCloudLabelingWorkspace', () => {
         await fireEvent.pointerUp(slider);
 
         expect(schedulerParams.current?.getRequestId()).toBe(
-            'dataset-1/sequence-1/playback/entire/1'
+            'dataset-1/sequence-1/playback/sensor/entire/1'
         );
         expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 1, endIndex: 1 }]);
     });
