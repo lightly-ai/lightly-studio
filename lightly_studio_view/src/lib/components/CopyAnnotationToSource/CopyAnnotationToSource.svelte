@@ -1,5 +1,7 @@
 <script lang="ts">
     import { Tooltip } from '$lib/components/ui/tooltip';
+    import { Button } from '$lib/components/ui/button';
+    import { Input } from '$lib/components/ui/input';
     import * as Popover from '$lib/components/ui/popover';
     import { useAnnotationCollections } from '$lib/hooks';
     import { CopyPlus } from '@lucide/svelte';
@@ -19,13 +21,16 @@
         onCopied
     }));
     let open = $state(false);
+    let name = $state('');
+    const trimmedName = $derived(name.trim());
+    const exists = $derived(sources.data?.some((source) => source.name === trimmedName));
 </script>
 
 <Popover.Root bind:open>
     <Tooltip content="Duplicate to another annotation source">
         <Popover.Trigger
             class="inline-flex size-7 items-center justify-center rounded-md hover:bg-accent disabled:opacity-50"
-            disabled={$pending || !sources.isSuccess || !destinations.length}
+            disabled={$pending || !sources.isSuccess}
             aria-label="Duplicate to another annotation source"
             ><CopyPlus class="size-4" /></Popover.Trigger
         >
@@ -41,5 +46,27 @@
                 }}>{destination.name}</button
             >
         {/each}
+        <form
+            class="space-y-2 border-t p-2"
+            onsubmit={async (event) => {
+                event.preventDefault();
+                if (!trimmedName || exists || $pending) return;
+                if (await copy(trimmedName)) {
+                    name = '';
+                    open = false;
+                }
+            }}
+        >
+            <Input
+                aria-label="New annotation source"
+                placeholder="New annotation source"
+                bind:value={name}
+                disabled={$pending}
+                aria-invalid={exists}
+            />
+            <Button type="submit" size="sm" disabled={!trimmedName || exists || $pending}>
+                Create and duplicate
+            </Button>
+        </form>
     </Popover.Content>
 </Popover.Root>
