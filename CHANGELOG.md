@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Disabled buttons now show a tooltip explaining why they cannot be clicked.
 - Create a new annotation source while duplicating an annotation in the details view.
 - Copy annotations to another annotation source from the details view.
 - Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.

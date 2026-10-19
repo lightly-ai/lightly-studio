@@ -1,6 +1,6 @@
 <script lang="ts">
     import { ChevronDown } from '@lucide/svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import * as Popover from '$lib/components/ui/popover';
 
     interface Props {
@@ -21,14 +21,15 @@
     <Popover.Trigger>
         {#snippet child({ props })}
             <Button
-                {...props}
                 variant="outline"
-                size="sm"
-                class="h-10 w-full justify-between px-3 text-sm font-normal"
-                disabled={fields.length === 0}
+                iconAfter={ChevronDown}
+                iconAfterClass="opacity-50"
+                disabledReason={fields.length === 0
+                    ? 'No categorical metadata fields available to add.'
+                    : ''}
+                buttonProps={{ ...props, size: 'sm', class: 'h-10 w-full justify-between px-3 text-sm font-normal' }}
             >
                 Add categorical metadata field
-                <ChevronDown class="size-4 opacity-50" />
             </Button>
         {/snippet}
     </Popover.Trigger>
@@ -36,9 +37,7 @@
         {#each fields as field (field)}
             <Button
                 variant="ghost"
-                size="sm"
-                class="w-full justify-start text-xs"
-                onclick={() => addField(field)}
+                buttonProps={{ size: 'sm', class: 'w-full justify-start text-xs', onclick: () => addField(field) }}
             >
                 {field}
             </Button>
