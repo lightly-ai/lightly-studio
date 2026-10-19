@@ -67,13 +67,13 @@ describe('ImageOrderBy', () => {
         expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent('Sort by');
     });
 
-    it('shows a tooltip on hover over the sort trigger', async () => {
+    it('keeps the sort trigger free of a hover tooltip', async () => {
         const user = userEvent.setup();
         render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.hover(screen.getByTestId('sort-by-trigger'));
 
-        expect(screen.getByRole('tooltip')).toHaveTextContent('Sort items by attribute');
+        expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
     });
 
     it('shows the selected field label in the trigger', () => {
@@ -348,7 +348,7 @@ describe('ImageOrderBy', () => {
         ['tp', 'Correct predictions (TP)'],
         ['fp', 'Extra predictions (FP)'],
         ['fn', 'Missed objects (FN)']
-    ])('names %s counts and their evaluation in the menu', async (metricName, label) => {
+    ])('groups %s choices under their metric name', async (metricName, label) => {
         const user = userEvent.setup();
         mocks.metricsProxy.data = [
             {
@@ -358,41 +358,43 @@ describe('ImageOrderBy', () => {
         ];
         render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
         await user.click(screen.getByTestId('sort-by-trigger'));
-        expect(screen.getByTestId(`sort-field-model-${metricName}`)).toHaveTextContent(
-            `${label} · model`
+        expect(screen.getByRole('group', { name: label })).toContainElement(
+            screen.getByTestId(`sort-field-model-${metricName}`)
         );
+        expect(screen.getByTestId(`sort-field-model-${metricName}`)).toHaveTextContent('model');
     });
 
     it.each([
         [SortDirection.DESC, 'Highest'],
         [SortDirection.ASC, 'Lowest']
-    ])('explains evaluation counts in %s order', async (direction, directionLabel) => {
-        const user = userEvent.setup();
-        mocks.metricsProxy.data = [
-            { run_name: 'model', metrics: [{ metric_name: 'fp', min_value: 0, max_value: 12 }] }
-        ];
-        mocks.imageSortByValue = [
-            {
-                source: 'evaluation_metric',
-                evaluation_run_name: 'model',
-                metric_name: 'fp',
-                direction
-            }
-        ];
-        render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
-        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent(
-            'Extra predictions (FP) · model'
-        );
-        expect(screen.getByTestId('sort-direction-button')).toHaveAccessibleName(
-            `${directionLabel} first`
-        );
-        await user.hover(screen.getByTestId('sort-by-trigger'));
-        expect(screen.getByRole('tooltip')).toHaveTextContent(
-            `Extra predictions (FP) · model. False positives: predictions with no matching reference annotation. ${directionLabel} values first.`
-        );
-    });
+    ])(
+        'keeps direction clear without a dropdown tooltip in %s order',
+        async (direction, directionLabel) => {
+            const user = userEvent.setup();
+            mocks.metricsProxy.data = [
+                { run_name: 'model', metrics: [{ metric_name: 'fp', min_value: 0, max_value: 12 }] }
+            ];
+            mocks.imageSortByValue = [
+                {
+                    source: 'evaluation_metric',
+                    evaluation_run_name: 'model',
+                    metric_name: 'fp',
+                    direction
+                }
+            ];
+            render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
+            expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent(
+                'Extra predictions (FP) · model'
+            );
+            expect(screen.getByTestId('sort-direction-button')).toHaveAccessibleName(
+                `${directionLabel} first`
+            );
+            await user.hover(screen.getByTestId('sort-by-trigger'));
+            expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
+        }
+    );
 
-    it('lists evaluation metric fields in the dropdown as [run_name].[metric_name]', async () => {
+    it('lists evaluation names under their custom metric groups', async () => {
         const user = userEvent.setup();
         mocks.metricsProxy.data = [
             {
@@ -407,8 +409,13 @@ describe('ImageOrderBy', () => {
 
         await user.click(screen.getByTestId('sort-by-trigger'));
 
-        expect(screen.getByTestId('sort-field-run1-precision')).toHaveTextContent('run1.precision');
-        expect(screen.getByTestId('sort-field-run1-recall')).toHaveTextContent('run1.recall');
+        expect(screen.getByRole('group', { name: 'precision' })).toContainElement(
+            screen.getByTestId('sort-field-run1-precision')
+        );
+        expect(screen.getByTestId('sort-field-run1-precision')).toHaveTextContent('run1');
+        expect(screen.getByRole('group', { name: 'recall' })).toContainElement(
+            screen.getByTestId('sort-field-run1-recall')
+        );
     });
 
     it('selects an evaluation metric field', async () => {
@@ -417,17 +424,27 @@ describe('ImageOrderBy', () => {
             {
                 run_name: 'run1',
                 metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
+            },
+            {
+                run_name: 'run2',
+                metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
             }
         ];
         render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
 
         await user.click(screen.getByTestId('sort-by-trigger'));
-        await user.click(screen.getByTestId('sort-field-run1-precision'));
+        expect(screen.getByRole('group', { name: 'precision' })).toContainElement(
+            screen.getByTestId('sort-field-run1-precision')
+        );
+        expect(screen.getByRole('group', { name: 'precision' })).toContainElement(
+            screen.getByTestId('sort-field-run2-precision')
+        );
+        await user.click(screen.getByTestId('sort-field-run2-precision'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
             {
                 source: 'evaluation_metric',
-                evaluation_run_name: 'run1',
+                evaluation_run_name: 'run2',
                 metric_name: 'precision',
                 direction: SortDirection.DESC
             }
