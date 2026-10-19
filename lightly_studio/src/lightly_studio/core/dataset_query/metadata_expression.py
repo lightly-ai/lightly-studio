@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import operator
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -81,7 +82,9 @@ class MetadataField:  # noqa: PLW1641
     def _expression(self, other: MetadataValue, comparison: MetadataComparison) -> MatchExpression:
         if not isinstance(other, (str, bool, int, float)):
             raise TypeError("Metadata comparisons require a string, boolean, or number.")
-        # bool subclasses int, so numeric ordering must explicitly reject booleans.
+        if isinstance(other, float) and math.isnan(other):
+            raise ValueError("Metadata comparisons do not support NaN.")
+        # Boolean values are instances of int, so numeric ordering must reject them explicitly.
         if comparison not in ("==", "!=") and (
             isinstance(other, bool) or not isinstance(other, (int, float))
         ):

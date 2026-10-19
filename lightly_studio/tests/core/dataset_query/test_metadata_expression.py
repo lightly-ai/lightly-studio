@@ -133,6 +133,13 @@ class TestMetadataField:
         with pytest.raises(TypeError, match="require a"):
             compare(ImageSampleField.metadata["score"], value)
 
+    @pytest.mark.parametrize(
+        "compare", [operator.eq, operator.ne, operator.lt, operator.le, operator.gt, operator.ge]
+    )
+    def test_comparisons__nan(self, compare: Any) -> None:
+        with pytest.raises(ValueError, match="do not support NaN"):
+            compare(ImageSampleField.metadata["score"], float("nan"))
+
     def test_eq_ne__strings(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
         images = [
