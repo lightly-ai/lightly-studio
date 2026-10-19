@@ -76,8 +76,8 @@ samples = query.to_list()
 For video datasets, use `VideoSampleField.metadata` instead of `ImageSampleField.metadata`.
 
 Filters support string and boolean equality, numeric comparisons, and nested paths such as
-"`extra.camera`" or "`keywords[0]`". Missing values and values of a different JSON type do not
-match, including with "`!=`". See [Metadata queries](search_and_filter.md#metadata-queries) for
+`extra.camera` or `keywords[0]`. Missing values and values of a different JSON type do not
+match, including with `!=`. See [Metadata queries](search_and_filter.md#metadata-queries) for
 the supported operators, path syntax, and comparison rules.
 
 ### Add metadata from external sources
