@@ -714,9 +714,11 @@ describe('PlotPanel.svelte', () => {
             await user.click(screen.getByRole('button', { name: 'Pan plot' }));
             rangeSelectionStore.set(SQUARE_POLYGON);
             selectedSampleIdsStore.set(['sample-1']);
+            expect(screen.getByText('young')).toBeInTheDocument();
             await user.click(screen.getByRole('button', { name: 'Edit axes' }));
             await user.clear(screen.getByLabelText('Left'));
             await user.type(screen.getByLabelText('Left'), 'night');
+            expect(screen.getByText('young')).toBeInTheDocument();
             if (source === 'toolbar') {
                 await user.click(screen.getByRole('button', { name: 'Cancel' }));
             }
@@ -726,6 +728,7 @@ describe('PlotPanel.svelte', () => {
             expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
             expect(screen.getByTestId('plot-viewport')).toHaveTextContent('null');
             expect(mockClearPlotSelectionCount).toHaveBeenCalled();
+            expect(screen.queryByText('young')).not.toBeInTheDocument();
             // Back on PaCMAP, the button reads "Define axes" again.
             await user.click(screen.getByRole('button', { name: 'Define axes' }));
             expect(screen.getByLabelText('Left')).toHaveValue('night');
@@ -733,6 +736,7 @@ describe('PlotPanel.svelte', () => {
             expect(screen.getByLabelText('Bottom')).toHaveValue('sad');
             expect(screen.getByLabelText('Top')).toHaveValue('happy');
             await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+            expect(screen.getByText('night')).toBeInTheDocument();
             expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
                 JSON.stringify({ x: 0, y: 0, scale: 5 })
             );
@@ -741,6 +745,11 @@ describe('PlotPanel.svelte', () => {
 
     it('disables both reset actions while applying edited axes', async () => {
         const user = userEvent.setup();
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
         mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await commitTextAxes(user);
@@ -762,10 +771,20 @@ describe('PlotPanel.svelte', () => {
         // Escape does not close the popover while the axes are applied.
         await user.keyboard('{Escape}');
         expect(screen.getByRole('button', { name: 'Applying…' })).toBeInTheDocument();
+        expect(screen.getByText('young')).toBeInTheDocument();
         finish(TEXT_LAYOUT_AXES);
         await waitFor(() =>
             expect(screen.queryByRole('button', { name: 'Applying…' })).not.toBeInTheDocument()
         );
+    });
+
+    it('hides the axis descriptions while the plot is not rendered', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await commitTextAxes(user);
+        expect(await screen.findByRole('button', { name: 'Edit axes' })).toBeInTheDocument();
+        expect(screen.queryByText('young')).not.toBeInTheDocument();
     });
 
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
