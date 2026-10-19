@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
 import { formatDate } from '$lib/utils';
 import EvaluationRunItem from './EvaluationRunItem.svelte';
+import EvaluationRunConfiguration from './EvaluationRunConfiguration/EvaluationRunConfiguration.svelte';
 
 vi.mock(
     './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte',
@@ -51,6 +52,12 @@ const defaultProps = {
 const baseRunItemTestId = `evaluation-run-item-${baseRun.name}`;
 
 describe('EvaluationRunItem', () => {
+    it('does not offer editing when configuration is missing', () => {
+        render(EvaluationRunConfiguration, { configuration: null, onEdit: vi.fn() });
+        expect(screen.getByText('No configuration recorded.')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument();
+    });
+
     it('renders the run name and creation date', () => {
         render(EvaluationRunItem, { props: { ...defaultProps } });
 
