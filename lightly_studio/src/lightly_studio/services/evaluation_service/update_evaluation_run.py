@@ -35,7 +35,11 @@ def update_evaluation_run(
         EvaluationTaskType.INSTANCE_SEGMENTATION: InstanceSegmentationEvaluationConfig,
         EvaluationTaskType.SEMANTIC_SEGMENTATION: SemanticSegmentationEvaluationConfig,
     }
-    config = config_types[run.task_type].model_validate(settings.config)
+    config_type = config_types[run.task_type]
+    unknown = settings.config.keys() - config_type.model_fields.keys()
+    if unknown:
+        raise ValueError(f"Unknown evaluation parameters: {', '.join(sorted(unknown))}.")
+    config = config_type.model_validate(settings.config)
     return evaluation_service.recompute_evaluation_run(
         session=session, run=run, config_json=config.model_dump()
     )
