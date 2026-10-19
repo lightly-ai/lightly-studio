@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from sqlmodel import Session
@@ -31,6 +32,8 @@ from lightly_studio.resolvers import (
     evaluation_sample_metric_resolver,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def recompute_evaluation_run(
     session: Session,
@@ -52,6 +55,23 @@ def recompute_evaluation_run(
     Returns:
         Summary of the recomputed run, including its ID and input counts.
     """
+    try:
+        # Batch writers may commit. This session only flushes their changes into
+        # the outer transaction, allowing rollback after a later batch fails.
+        with Session(bind=session.connection(), join_transaction_mode="rollback_only") as work:
+            target = work.merge(run)
+            result = _recompute_evaluation_run(session=work, run=target)
+        session.commit()
+    except Exception:
+        try:
+            session.rollback()
+        except Exception:
+            logger.exception("Rollback failed after evaluation rerun error")
+        raise
+    return result
+
+
+def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> EvaluationResult:
     observed_stale_since = run.stale_since
     data = _fetch_annotations_for_run(session=session, run=run)
     evaluation_annotation_metric_resolver.delete_by_evaluation_run_id(

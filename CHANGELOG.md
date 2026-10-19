@@ -40,6 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve existing evaluation results when recomputation fails.
 - Python SDK: `start_gui()` stops without a `KeyboardInterrupt` traceback when you press Ctrl+C.
 - The GUI footer no longer shows a dev commit hash for released versions.
 - The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.

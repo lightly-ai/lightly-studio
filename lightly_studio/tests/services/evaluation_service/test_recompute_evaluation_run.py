@@ -2,10 +2,18 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any
 
+import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.database.db_manager import DatabaseEngine
+from lightly_studio.evaluation import object_detection_metric
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
     InstanceSegmentationEvaluationConfig,
@@ -195,3 +203,159 @@ def test_recompute_evaluation_run__instance_segmentation(db_session: Session) ->
         "fp": 0.0,
         "fn": 0.0,
     }
+
+
+@pytest.mark.parametrize("rollback_fails", [False, True])
+@pytest.mark.parametrize("after_persist", [False, True])
+def test_recompute_evaluation_run__failure_restores_results(
+    db_session: Session,
+    mocker: MockerFixture,
+    rollback_fails: bool,
+    after_persist: bool,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+        name="original",
+    )
+    run = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=result.evaluation_run_id
+    )
+    assert run is not None
+    run.stale_since = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    db_session.add(run)
+    db_session.commit()
+    db_session.refresh(run)
+    before = run.model_dump()
+    resolvers = (evaluation_sample_metric_resolver, evaluation_annotation_metric_resolver)
+    old_metrics = [
+        [
+            row.model_dump()
+            for row in resolver.get_all_by_evaluation_run_id(
+                session=db_session, evaluation_run_id=run.id
+            )
+        ]
+        for resolver in resolvers
+    ]
+    persist = object_detection_metric.create_and_persist_object_detection_metrics_per_sample
+
+    def fail(*args: Any, **kwargs: Any) -> None:
+        if after_persist:
+            persist(*args, **kwargs)
+        raise ValueError("Evaluation failed")
+
+    mocker.patch.object(
+        object_detection_metric,
+        "create_and_persist_object_detection_metrics_per_sample",
+        side_effect=fail,
+    )
+    if rollback_fails:
+        rollback = db_session.rollback
+
+        def fail_rollback() -> None:
+            rollback()
+            raise RuntimeError("Rollback failed")
+
+        mocker.patch.object(db_session, "rollback", side_effect=fail_rollback)
+    with pytest.raises(ValueError, match="Evaluation failed"):
+        evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+    if rollback_fails:
+        assert "Rollback failed after evaluation rerun error" in caplog.text
+    db_session.refresh(run)
+    assert run.model_dump() == before
+    for resolver, expected in zip(resolvers, old_metrics):
+        assert [
+            row.model_dump()
+            for row in resolver.get_all_by_evaluation_run_id(
+                session=db_session, evaluation_run_id=run.id
+            )
+        ] == expected
+
+
+def test_recompute_evaluation_run__process_exit_preserves_results(tmp_path: Path) -> None:
+    engine_url = f"duckdb:///{tmp_path / 'evaluation.duckdb'}"
+    engine = DatabaseEngine(engine_url=engine_url, single_threaded=True)
+    resolvers = (evaluation_sample_metric_resolver, evaluation_annotation_metric_resolver)
+    with engine.session() as session:
+        root = helpers.create_dataset_with_annotations(session)
+        result = evaluation_service.run_evaluation(
+            session=session,
+            collection=root,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+            gt_annotation_source="gt",
+            pred_annotation_source="pred",
+            config=ObjectDetectionEvaluationConfig(),
+            name="original",
+        )
+        run = evaluation_run_resolver.get_by_id(
+            session=session, evaluation_id=result.evaluation_run_id
+        )
+        assert run is not None
+        before = run.model_dump()
+        old_metrics = [
+            [
+                row.model_dump()
+                for row in resolver.get_all_by_evaluation_run_id(
+                    session=session, evaluation_run_id=run.id
+                )
+            ]
+            for resolver in resolvers
+        ]
+    engine.close()
+    # Exit after batch writers commit, bypassing all Python cleanup and error recovery.
+    crashed = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            """
+import os
+import sys
+from uuid import UUID
+from lightly_studio.database.db_manager import DatabaseEngine
+from lightly_studio.evaluation import object_detection_metric
+from lightly_studio.resolvers import evaluation_run_resolver
+from lightly_studio.services import evaluation_service
+persist = object_detection_metric.create_and_persist_object_detection_metrics_per_sample
+
+def crash(**kwargs):
+    persist(**kwargs)
+    os._exit(23)
+
+object_detection_metric.create_and_persist_object_detection_metrics_per_sample = crash
+engine = DatabaseEngine(engine_url=sys.argv[1], single_threaded=True)
+with engine.session() as session:
+    run = evaluation_run_resolver.get_by_id(session=session, evaluation_id=UUID(sys.argv[2]))
+    evaluation_service.recompute_evaluation_run(session=session, run=run)
+""",
+            engine_url,
+            str(result.evaluation_run_id),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    assert crashed.returncode == 23, crashed.stderr
+    engine = DatabaseEngine(engine_url=engine_url, single_threaded=True)
+    try:
+        with engine.session() as session:
+            run = evaluation_run_resolver.get_by_id(
+                session=session, evaluation_id=result.evaluation_run_id
+            )
+            assert run is not None
+            assert run.model_dump() == before
+            for resolver, expected in zip(resolvers, old_metrics):
+                assert [
+                    row.model_dump()
+                    for row in resolver.get_all_by_evaluation_run_id(
+                        session=session, evaluation_run_id=run.id
+                    )
+                ] == expected
+    finally:
+        engine.close()
