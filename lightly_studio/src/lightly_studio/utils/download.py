@@ -17,6 +17,8 @@ logger = logging.getLogger(__name__)
 ZIP_URL = "https://github.com/lightly-ai/dataset_examples/archive/refs/heads/main.zip"
 # name of the folder inside the zip
 REPO_DIR_IN_ZIP = "dataset_examples-main"
+# Copy of the COCO example subset on Hugging Face, used by `quickstart_enterprise`
+EXAMPLE_DATASET_HF_URI = "hf://datasets/lightly-ai/coco_subset_128_images"
 
 
 def download_example_dataset(
