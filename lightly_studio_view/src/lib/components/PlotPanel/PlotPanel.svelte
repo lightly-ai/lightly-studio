@@ -3,8 +3,9 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
-    import PlotAxesEditor from './PlotAxesEditor/PlotAxesEditor.svelte';
+    import { PlotAxesEditor } from './PlotAxesEditor';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
+    import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
     import type { ToolMode } from './PlotToolPill/selectionTool';
@@ -434,8 +435,7 @@
         resetForNewLayout();
     };
     const commitPlotAxes = async (textAxes: Parameters<typeof commitTextAxes>[0]) => {
-        if ($plotLayout === 'text' && JSON.stringify(textAxes) === JSON.stringify($appliedTextAxes))
-            return true;
+        if ($plotLayout === 'text' && areTextAxesEqual(textAxes, $appliedTextAxes)) return true;
         const success = await commitTextAxes(textAxes);
         if (success) resetForNewLayout();
         return success;
