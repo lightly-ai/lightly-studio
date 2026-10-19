@@ -16,3 +16,13 @@ export const toTextAxes = (draft: TextAxesDraft) => {
         y: { negative: draft.yNegative.trim(), positive: draft.yPositive.trim() }
     };
 };
+
+type TextAxes = NonNullable<ReturnType<typeof toTextAxes>>;
+
+// True when `b` has the same four texts as `a`.
+export const areTextAxesEqual = (a: TextAxes, b: TextAxes | null): boolean =>
+    b !== null &&
+    a.x.negative === b.x.negative &&
+    a.x.positive === b.x.positive &&
+    a.y.negative === b.y.negative &&
+    a.y.positive === b.y.positive;

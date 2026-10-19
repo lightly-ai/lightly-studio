@@ -7,12 +7,15 @@ vi.mock('./prefetchMcapTick', () => ({ prefetchMcapTick: vi.fn() }));
 const prefetchMock = vi.mocked(prefetchMcapTick);
 const ticks = Array.from({ length: 6 }, (_, seq_number) => ({ seq_number, timestamp_ns: null }));
 
-function createExecutor(onStateChange = vi.fn()) {
+function createExecutor(
+    onStateChange = vi.fn(),
+    getDisplayFrameId: () => string | undefined = () => undefined
+) {
     return createMcapTickPrefetchExecutor({
         client: {} as QueryClient,
         getDatasetId: () => 'dataset-1',
         getSequenceId: () => 'sequence-1',
-        getDisplayFrameId: () => undefined,
+        getDisplayFrameId,
         getTicks: () => ticks,
         onStateChange
     });
@@ -86,5 +89,24 @@ describe('createMcapTickPrefetchExecutor', () => {
         });
 
         expect(onStateChange).toHaveBeenLastCalledWith(new Set([0, 1, 2, 3]), new Map());
+    });
+
+    it('does not reuse completed ticks after changing display frames', async () => {
+        prefetchMock.mockResolvedValue(undefined);
+        let displayFrameId: string | undefined = 'base_link';
+        const executor = createExecutor(vi.fn(), () => displayFrameId);
+
+        await executor.prefetchRanges({
+            requestId: 'base-link',
+            ranges: [{ startIndex: 0, endIndex: 0 }]
+        });
+
+        displayFrameId = 'map';
+        await executor.prefetchRanges({
+            requestId: 'map',
+            ranges: [{ startIndex: 0, endIndex: 0 }]
+        });
+
+        expect(prefetchMock).toHaveBeenCalledTimes(2);
     });
 });

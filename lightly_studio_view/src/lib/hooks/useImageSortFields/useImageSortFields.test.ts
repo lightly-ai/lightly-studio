@@ -3,7 +3,7 @@ import { flushSync } from 'svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MetadataInfoView } from '$lib/api/lightly_studio_local';
 import type { EvaluationRunMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
-import { useImageSortFields } from './useImageSortFields.svelte';
+import { formatEvaluationMetricLabel, useImageSortFields } from './useImageSortFields.svelte';
 
 const metadataInfo = writable<MetadataInfoView[]>([]);
 
@@ -27,6 +27,16 @@ describe('useImageSortFields', () => {
         metadataInfo.set([]);
         metricsInfoMock.data = null;
         metricsInfoMock.dataUpdatedAt = 0;
+    });
+
+    it.each([
+        ['tp', 'Correct predictions (TP) · model'],
+        ['fp', 'Extra predictions (FP) · model'],
+        ['fn', 'Missed objects (FN) · model'],
+        ['custom_metric', 'model.custom_metric'],
+        ['constructor', 'model.constructor']
+    ])('formats %s without changing custom metric names', (metricName, label) => {
+        expect(formatEvaluationMetricLabel('model', metricName)).toBe(label);
     });
 
     describe('allSortFields', () => {

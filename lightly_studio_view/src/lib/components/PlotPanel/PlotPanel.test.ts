@@ -175,18 +175,18 @@ const SQUARE_POLYGON = [
 ];
 const TEXT_LAYOUT_AXES = { x: [1, 0, 0], y: [0, 1, 0] };
 
-const selectTextLayout = async (user: ReturnType<typeof userEvent.setup>) => {
-    await user.click(screen.getByTestId('plot-layout-select'));
-    await user.click(await screen.findByRole('option', { name: 'Text' }));
+const openAxesEditor = async (user: ReturnType<typeof userEvent.setup>) => {
+    await user.click(screen.getByRole('button', { name: 'Define axes' }));
 };
 
-// Switches the plot to the Text layout and commits four axis texts.
+// Applies four axis texts in the axes editor.
 const commitTextAxes = async (user: ReturnType<typeof userEvent.setup>) => {
-    await selectTextLayout(user);
-    await user.type(screen.getByLabelText('X axis start'), 'young');
-    await user.type(screen.getByLabelText('X axis end'), 'old');
-    await user.type(screen.getByLabelText('Y axis start'), 'sad');
-    await user.type(screen.getByLabelText('Y axis end'), 'happy{Enter}');
+    await openAxesEditor(user);
+    await user.type(screen.getByLabelText('Left'), 'young');
+    await user.type(screen.getByLabelText('Right'), 'old');
+    await user.type(screen.getByLabelText('Bottom'), 'sad');
+    await user.type(screen.getByLabelText('Top'), 'happy');
+    await user.click(screen.getByRole('button', { name: 'Apply axes' }));
 };
 
 describe('PlotPanel.svelte', () => {
@@ -662,19 +662,129 @@ describe('PlotPanel.svelte', () => {
         expect(viewport()).toHaveTextContent(defaultViewport);
     });
 
-    it('clears the region and shows a hint when the Text layout is selected', async () => {
+    it('preserves the plot and selection while defining or canceling axes', async () => {
         const user = userEvent.setup();
         imageFilterStore = writable({
             sample_filter: { sample_ids: [], embedding_region: { polygon: SQUARE_POLYGON } }
         });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
-        await selectTextLayout(user);
+        await tick();
+        mockClearPlotSelectionCount.mockClear();
+        await openAxesEditor(user);
 
-        // The region was drawn on the PaCMAP layout, so it does not apply to the text axes.
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
-        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
-        expect(screen.getByText('Type the four axis texts and press Enter.')).toBeInTheDocument();
+        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
+        expect(mockClearPlotSelectionCount).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Apply axes' })).toBeInTheDocument();
+        await user.keyboard('{Escape}');
+        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
+        expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
+    });
+
+    it('retains the editor and descriptions after failure so the user can retry', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockRejectedValueOnce(new Error('Service unavailable'));
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await commitTextAxes(user);
+        expect(screen.getByRole('alert')).toHaveTextContent('Could not apply axes');
+        expect(screen.getByLabelText('Left')).toHaveValue('young');
+        expect(screen.queryByRole('button', { name: 'Reset axes' })).not.toBeInTheDocument();
+        mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+        // Applying the same texts again does not embed them again.
+        await user.click(screen.getByRole('button', { name: 'Edit axes' }));
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(mockEmbedTextAxes).toHaveBeenCalledTimes(2);
+    });
+
+    it.each(['toolbar', 'editor'])(
+        'restores the default layout from the %s and keeps descriptions',
+        async (source) => {
+            const user = userEvent.setup();
+            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+                () => new DOMRect(0, 0, 400, 400)
+            );
+            const point = new Float32Array([0]);
+            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+            mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            await commitTextAxes(user);
+            await user.click(screen.getByRole('button', { name: 'Pan plot' }));
+            rangeSelectionStore.set(SQUARE_POLYGON);
+            selectedSampleIdsStore.set(['sample-1']);
+            expect(screen.getByText('young')).toBeInTheDocument();
+            await user.click(screen.getByRole('button', { name: 'Edit axes' }));
+            await user.clear(screen.getByLabelText('Left'));
+            await user.type(screen.getByLabelText('Left'), 'night');
+            expect(screen.getByText('young')).toBeInTheDocument();
+            if (source === 'toolbar') {
+                await user.click(screen.getByRole('button', { name: 'Cancel' }));
+            }
+            expect(mockEmbedTextAxes).toHaveBeenCalledTimes(1);
+            const resetButtons = screen.getAllByRole('button', { name: 'Reset axes' });
+            await user.click(resetButtons[resetButtons.length - 1]);
+            expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
+            expect(screen.getByTestId('plot-viewport')).toHaveTextContent('null');
+            expect(mockClearPlotSelectionCount).toHaveBeenCalled();
+            expect(screen.queryByText('young')).not.toBeInTheDocument();
+            // Back on PaCMAP, the button reads "Define axes" again.
+            await user.click(screen.getByRole('button', { name: 'Define axes' }));
+            expect(screen.getByLabelText('Left')).toHaveValue('night');
+            expect(screen.getByLabelText('Right')).toHaveValue('old');
+            expect(screen.getByLabelText('Bottom')).toHaveValue('sad');
+            expect(screen.getByLabelText('Top')).toHaveValue('happy');
+            await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+            expect(screen.getByText('night')).toBeInTheDocument();
+            expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
+                JSON.stringify({ x: 0, y: 0, scale: 5 })
+            );
+        }
+    );
+
+    it('disables both reset actions while applying edited axes', async () => {
+        const user = userEvent.setup();
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+        mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await commitTextAxes(user);
+        await user.click(screen.getByRole('button', { name: 'Edit axes' }));
+        await user.type(screen.getByLabelText('Left'), ' person');
+        let finish!: (axes: typeof TEXT_LAYOUT_AXES) => void;
+        mockEmbedTextAxes.mockReturnValueOnce(
+            new Promise((resolve) => {
+                finish = resolve;
+            })
+        );
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        const resetButtons = screen.getAllByRole('button', { name: 'Reset axes' });
+        expect(resetButtons).toHaveLength(2);
+        for (const button of resetButtons) {
+            expect(button).toBeDisabled();
+            await user.click(button);
+        }
+        // Escape does not close the popover while the axes are applied.
+        await user.keyboard('{Escape}');
+        expect(screen.getByRole('button', { name: 'Applying…' })).toBeInTheDocument();
+        expect(screen.getByText('young')).toBeInTheDocument();
+        finish(TEXT_LAYOUT_AXES);
+        await waitFor(() =>
+            expect(screen.queryByRole('button', { name: 'Applying…' })).not.toBeInTheDocument()
+        );
+    });
+
+    it('hides the axis descriptions while the plot is not rendered', async () => {
+        const user = userEvent.setup();
+        mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await commitTextAxes(user);
+        expect(await screen.findByRole('button', { name: 'Edit axes' })).toBeInTheDocument();
+        expect(screen.queryByText('young')).not.toBeInTheDocument();
     });
 
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
