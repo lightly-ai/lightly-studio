@@ -18,19 +18,26 @@ describe('buildMcapSequenceFilter', () => {
 });
 
 describe('useMcapSequenceFilters', () => {
-    it('ignores tags until a collection is set', () => {
-        const { mcapSequenceFilter, updateTagIds } = useMcapSequenceFilters();
+    it('ignores tags and regions until a collection is set', () => {
+        const { mcapSequenceFilter, updateEmbeddingRegion, updateTagIds } =
+            useMcapSequenceFilters();
 
         updateTagIds(['tag-1']);
+        updateEmbeddingRegion({ polygon: [{ x: 0, y: 0 }] });
         expect(get(mcapSequenceFilter)).toBeNull();
     });
 
-    it('resets the tags when the collection changes', () => {
-        const { mcapSequenceFilter, setCollectionId, updateTagIds } = useMcapSequenceFilters();
+    it('clears the region and resets the tags when the collection changes', () => {
+        const { mcapSequenceFilter, setCollectionId, updateEmbeddingRegion, updateTagIds } =
+            useMcapSequenceFilters();
 
         setCollectionId('collection-1');
         updateTagIds(['tag-1']);
+        updateEmbeddingRegion({ polygon: [] });
         expect(get(mcapSequenceFilter)?.sample_filter?.tag_ids).toEqual(['tag-1']);
+        expect(get(mcapSequenceFilter)?.sample_filter?.embedding_region).toEqual({ polygon: [] });
+        updateEmbeddingRegion(null);
+        expect(get(mcapSequenceFilter)?.sample_filter).toEqual({ tag_ids: ['tag-1'] });
 
         setCollectionId('collection-2');
         expect(get(mcapSequenceFilter)).toEqual({ filter_type: 'mcap_sequence' });

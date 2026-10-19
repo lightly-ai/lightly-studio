@@ -1,8 +1,13 @@
 import { derived, get, writable } from 'svelte/store';
-import type { McapSequenceFilter, SampleFilter } from '$lib/api/lightly_studio_local';
+import type {
+    EmbeddingRegion,
+    McapSequenceFilter,
+    SampleFilter
+} from '$lib/api/lightly_studio_local';
 
 export type McapSequenceFilterParams = {
     collection_id: string;
+    embedding_region?: EmbeddingRegion;
     tag_ids?: string[];
 };
 
@@ -16,6 +21,9 @@ export const buildMcapSequenceFilter = (
     }
 
     const sampleFilter: SampleFilter = {};
+    if (params.embedding_region) {
+        sampleFilter.embedding_region = params.embedding_region;
+    }
     if (params.tag_ids && params.tag_ids.length > 0) {
         sampleFilter.tag_ids = params.tag_ids;
     }
@@ -33,7 +41,7 @@ const mcapSequenceFilter = derived(filterParams, ($filterParams) =>
 
 /**
  * Filter state of the MCAP sequence grid. The filter panel writes the selected tags here and
- * the grid reads the filter.
+ * the embedding plot the selected region. The grid and the plot read the filter.
  */
 export const useMcapSequenceFilters = () => {
     // Resets the filter when the grid shows another collection.
@@ -52,10 +60,19 @@ export const useMcapSequenceFilters = () => {
         filterParams.set({ ...params, tag_ids: tagIds.length > 0 ? tagIds : undefined });
     };
 
+    const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
+        const params = get(filterParams);
+        if (!params) {
+            return;
+        }
+        filterParams.set({ ...params, embedding_region: embeddingRegion ?? undefined });
+    };
+
     return {
         filterParams,
         mcapSequenceFilter,
         setCollectionId,
+        updateEmbeddingRegion,
         updateTagIds
     };
 };
