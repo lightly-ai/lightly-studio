@@ -767,6 +767,8 @@ describe('PlotPanel.svelte', () => {
             expect(button).toBeDisabled();
             await user.click(button);
         }
+        // Escape does not close the popover while the axes are applied.
+        await user.keyboard('{Escape}');
         expect(screen.getByRole('button', { name: 'Applying…' })).toBeInTheDocument();
         finish(TEXT_LAYOUT_AXES);
         await waitFor(() =>
