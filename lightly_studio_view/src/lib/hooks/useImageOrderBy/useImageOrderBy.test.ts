@@ -294,28 +294,31 @@ describe('useImageOrderBy', () => {
             ]);
         });
 
-        it('selects an evaluation metric field', () => {
-            const { handleFieldClick } = useImageOrderBy({
-                collectionId: () => 'col1',
-                datasetId: () => 'ds1'
-            });
+        it.each(['tp', 'fp', 'fn', 'precision'])(
+            'selects %s with the highest value first',
+            (metricName) => {
+                const { handleFieldClick } = useImageOrderBy({
+                    collectionId: () => 'col1',
+                    datasetId: () => 'ds1'
+                });
 
-            handleFieldClick({
-                source: 'evaluation_metric',
-                evaluation_run_name: 'run1',
-                metric_name: 'precision',
-                label: 'run1.precision'
-            });
-
-            expect(updateSortBy).toHaveBeenCalledWith([
-                {
+                handleFieldClick({
                     source: 'evaluation_metric',
                     evaluation_run_name: 'run1',
-                    metric_name: 'precision',
-                    direction: SortDirection.ASC
-                }
-            ]);
-        });
+                    metric_name: metricName,
+                    label: `run1.${metricName}`
+                });
+
+                expect(updateSortBy).toHaveBeenCalledWith([
+                    {
+                        source: 'evaluation_metric',
+                        evaluation_run_name: 'run1',
+                        metric_name: metricName,
+                        direction: SortDirection.DESC
+                    }
+                ]);
+            }
+        );
     });
 
     describe('toggleDirection', () => {

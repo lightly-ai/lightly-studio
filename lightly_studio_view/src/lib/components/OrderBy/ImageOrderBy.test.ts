@@ -344,6 +344,54 @@ describe('ImageOrderBy', () => {
         ]);
     });
 
+    it.each([
+        ['tp', 'Correct predictions (TP)'],
+        ['fp', 'Extra predictions (FP)'],
+        ['fn', 'Missed objects (FN)']
+    ])('names %s counts and their evaluation in the menu', async (metricName, label) => {
+        const user = userEvent.setup();
+        mocks.metricsProxy.data = [
+            {
+                run_name: 'model',
+                metrics: [{ metric_name: metricName, min_value: 0, max_value: 12 }]
+            }
+        ];
+        render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
+        await user.click(screen.getByTestId('sort-by-trigger'));
+        expect(screen.getByTestId(`sort-field-model-${metricName}`)).toHaveTextContent(
+            `${label} · model`
+        );
+    });
+
+    it.each([
+        [SortDirection.DESC, 'Highest'],
+        [SortDirection.ASC, 'Lowest']
+    ])('explains evaluation counts in %s order', async (direction, directionLabel) => {
+        const user = userEvent.setup();
+        mocks.metricsProxy.data = [
+            { run_name: 'model', metrics: [{ metric_name: 'fp', min_value: 0, max_value: 12 }] }
+        ];
+        mocks.imageSortByValue = [
+            {
+                source: 'evaluation_metric',
+                evaluation_run_name: 'model',
+                metric_name: 'fp',
+                direction
+            }
+        ];
+        render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
+        expect(screen.getByTestId('sort-by-trigger')).toHaveTextContent(
+            'Extra predictions (FP) · model'
+        );
+        expect(screen.getByTestId('sort-direction-button')).toHaveAccessibleName(
+            `${directionLabel} first`
+        );
+        await user.hover(screen.getByTestId('sort-by-trigger'));
+        expect(screen.getByRole('tooltip')).toHaveTextContent(
+            `Extra predictions (FP) · model. False positives: predictions with no matching reference annotation. ${directionLabel} values first.`
+        );
+    });
+
     it('lists evaluation metric fields in the dropdown as [run_name].[metric_name]', async () => {
         const user = userEvent.setup();
         mocks.metricsProxy.data = [
@@ -381,7 +429,7 @@ describe('ImageOrderBy', () => {
                 source: 'evaluation_metric',
                 evaluation_run_name: 'run1',
                 metric_name: 'precision',
-                direction: SortDirection.ASC
+                direction: SortDirection.DESC
             }
         ]);
     });
