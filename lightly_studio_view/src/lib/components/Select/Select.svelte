@@ -13,6 +13,7 @@
     export interface SelectItem {
         value: string;
         label: string;
+        group?: string;
         /** Optional Lucide icon rendered before the label, in both the trigger and dropdown. */
         icon?: Component<IconProps>;
         /** Disable this item in the dropdown. */
@@ -109,6 +110,13 @@
         lg: 'size-5'
     };
 
+    const itemGroups = $derived(
+        [...new Set(items?.map((item) => item.group))].map((label) => ({
+            label,
+            items: items?.filter((item) => item.group === label) ?? []
+        }))
+    );
+
     const findItem = (v: string | undefined) =>
         v === undefined ? undefined : items?.find((i) => i.value === v);
 
@@ -157,26 +165,33 @@
         {#if children}
             {@render children()}
         {:else if items}
-            {#each items as item (item.value)}
-                <SelectPrimitive.Item
-                    value={item.value}
-                    label={item.label}
-                    disabled={item.disabled}
-                    data-testid={item.testId}
-                    class={cn(
-                        'gap-2 pr-3',
-                        itemSizeClass[size],
-                        hideSelectionMarker && 'pl-2',
-                        itemsAsLinks && 'cursor-pointer',
-                        item.class
-                    )}
-                >
-                    {#if item.icon}
-                        {@const ItemIcon = item.icon}
-                        <ItemIcon class={cn(iconSizeClass[size], 'shrink-0')} />
+            {#each itemGroups as group (group.label)}
+                <SelectPrimitive.Group>
+                    {#if group.label}
+                        <SelectPrimitive.GroupHeading>{group.label}</SelectPrimitive.GroupHeading>
                     {/if}
-                    {item.label}
-                </SelectPrimitive.Item>
+                    {#each group.items as item (item.value)}
+                        <SelectPrimitive.Item
+                            value={item.value}
+                            label={item.label}
+                            disabled={item.disabled}
+                            data-testid={item.testId}
+                            class={cn(
+                                'gap-2 pr-3',
+                                itemSizeClass[size],
+                                hideSelectionMarker && 'pl-2',
+                                itemsAsLinks && 'cursor-pointer',
+                                item.class
+                            )}
+                        >
+                            {#if item.icon}
+                                {@const ItemIcon = item.icon}
+                                <ItemIcon class={cn(iconSizeClass[size], 'shrink-0')} />
+                            {/if}
+                            {item.label}
+                        </SelectPrimitive.Item>
+                    {/each}
+                </SelectPrimitive.Group>
             {/each}
         {/if}
     </SelectPrimitive.Content>

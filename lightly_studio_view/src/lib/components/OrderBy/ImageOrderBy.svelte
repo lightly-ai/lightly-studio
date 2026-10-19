@@ -38,7 +38,11 @@
     const sortItems = $derived<SelectItem[]>(
         $allSortFields.map((field, i) => ({
             value: String(i),
-            label: field.label,
+            label: field.source === 'evaluation_metric' ? field.evaluation_run_name : field.label,
+            group:
+                field.source === 'evaluation_metric'
+                    ? (getEvaluationMetricDisplay(field.metric_name)?.label ?? field.metric_name)
+                    : undefined,
             testId:
                 field.source === 'evaluation_metric'
                     ? `sort-field-${field.evaluation_run_name}-${field.metric_name}`
@@ -57,16 +61,6 @@
     };
     const selectedField = $derived($allSortFields.find((field) => $isFieldSelected(field)));
     const isEvaluationSort = $derived(selectedField?.source === 'evaluation_metric');
-    const metricDescription = $derived(
-        selectedField?.source === 'evaluation_metric'
-            ? getEvaluationMetricDisplay(selectedField.metric_name)?.description
-            : undefined
-    );
-    const sortDescription = $derived(
-        isEvaluationSort
-            ? `${$selectedLabel}. ${metricDescription ?? ''} ${$selectedDirection === 'desc' ? 'Highest' : 'Lowest'} values first. Image badges show the value for each image.`
-            : undefined
-    );
 </script>
 
 <OrderByControl
@@ -74,7 +68,6 @@
     selectedValue={selectValue}
     triggerLabel={$selectedLabel ?? undefined}
     direction={$selectedDirection}
-    {sortDescription}
     {isEvaluationSort}
     disabled={isSimilaritySearchActive}
     allowDeselect

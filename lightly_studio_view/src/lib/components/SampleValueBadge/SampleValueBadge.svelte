@@ -5,16 +5,22 @@
     interface Props {
         /** Primary sort value for the active grid sort, when set. Takes precedence over `similarityScore`. */
         orderValue?: number | null;
+        showMissingValue?: boolean;
         /** Similarity to a text/embedding query, when search is active. Shown with a color dot when there is no `orderValue`. */
         similarityScore?: number | null;
         /** Whether a caption/text overlay occupies the bottom edge; lifts the badge (`bottom-8` vs `bottom-1`) so they don't overlap. */
         hasBottomOverlay?: boolean;
     }
 
-    let { orderValue = null, similarityScore = null, hasBottomOverlay = false }: Props = $props();
+    let {
+        orderValue = null,
+        similarityScore = null,
+        hasBottomOverlay = false,
+        showMissingValue = false
+    }: Props = $props();
 
     const showOrderValue = $derived(orderValue != null);
-    const orderValueLabel = $derived(orderValue != null ? formatOrderValue(orderValue) : '');
+    const orderValueLabel = $derived(orderValue != null ? formatOrderValue(orderValue) : '—');
     const badgeClass = $derived(
         cn(
             'absolute right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm',
@@ -23,8 +29,11 @@
     );
 </script>
 
-{#if showOrderValue}
-    <div class={badgeClass}>
+{#if showOrderValue || showMissingValue}
+    <div
+        class={badgeClass}
+        aria-label={showMissingValue && !showOrderValue ? 'No evaluation result' : undefined}
+    >
         {orderValueLabel}
     </div>
 {:else if similarityScore != null}

@@ -14,7 +14,6 @@
         direction: SortDirection;
         disabled?: boolean;
         allowDeselect?: boolean;
-        sortDescription?: string;
         isEvaluationSort?: boolean;
         onValueChange: (value: string) => void;
         onOpen: () => void;
@@ -28,7 +27,6 @@
         direction,
         disabled = false,
         allowDeselect = false,
-        sortDescription = 'Sort items by attribute',
         isEvaluationSort = false,
         onValueChange,
         onOpen,
@@ -47,24 +45,22 @@
 </script>
 
 <div class="flex items-center gap-1">
-    <Tooltip content={sortDescription} position="top" triggerClass="inline-flex">
-        <Select
-            {items}
-            value={selectedValue}
-            {triggerLabel}
-            {allowDeselect}
-            {onValueChange}
-            onOpenChange={(open) => {
-                if (open) onOpen();
-            }}
-            {disabled}
-            placeholder="Sort by"
-            size="xs"
-            variant="ghost"
-            class={isEvaluationSort ? 'w-48 min-w-20' : 'w-[100px] min-w-20'}
-            testId="sort-by-trigger"
-        />
-    </Tooltip>
+    <Select
+        {items}
+        value={selectedValue}
+        {triggerLabel}
+        {allowDeselect}
+        {onValueChange}
+        onOpenChange={(open) => {
+            if (open) onOpen();
+        }}
+        {disabled}
+        placeholder="Sort by"
+        size="xs"
+        variant="ghost"
+        class={isEvaluationSort ? 'w-48 min-w-20' : 'w-[100px] min-w-20'}
+        testId="sort-by-trigger"
+    />
 
     <Tooltip content={directionTooltip} position="top">
         <Button
