@@ -248,6 +248,20 @@ def test_from_decoded_message__undecodable_payload() -> None:
         compressed_video.from_decoded_message(message)
 
 
+def test_to_image() -> None:
+    message = SimpleNamespace(data=_h264_keyframe(width=16, height=8), format="h264")
+    image = compressed_video.to_image(decoded_message=message)
+    assert image.mode == "RGB"
+    assert image.size == (16, 8)
+
+
+def test_to_image__scales_to_width() -> None:
+    message = SimpleNamespace(data=_h264_keyframe(width=32, height=16), format="h264")
+    image = compressed_video.to_image(decoded_message=message, width=8)
+    assert image.mode == "RGB"
+    assert image.size == (8, 4)
+
+
 def test_codec_name__h264_variants() -> None:
     for fmt in ("h264", "H264", "avc"):
         assert compressed_video._codec_name(fmt) == "h264"
