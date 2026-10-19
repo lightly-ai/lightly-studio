@@ -4,6 +4,7 @@
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotAxesEditor from './PlotAxesEditor/PlotAxesEditor.svelte';
+    import PlotAxesLabels from './PlotAxesLabels/PlotAxesLabels.svelte';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
@@ -595,6 +596,9 @@
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
+        {/if}
+        {#if $plotLayout === 'text' && $appliedTextAxes && !embeddingsData.isLoading && !errorText}
+            <PlotAxesLabels axes={$appliedTextAxes} />
         {/if}
     </div>
     {#if isReady}

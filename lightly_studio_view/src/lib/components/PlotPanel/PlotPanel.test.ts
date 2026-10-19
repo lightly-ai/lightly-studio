@@ -714,9 +714,11 @@ describe('PlotPanel.svelte', () => {
             await user.click(screen.getByRole('button', { name: 'Pan plot' }));
             rangeSelectionStore.set(SQUARE_POLYGON);
             selectedSampleIdsStore.set(['sample-1']);
+            expect(screen.getByText('young')).toBeInTheDocument();
             await user.click(screen.getByRole('button', { name: 'Edit axes' }));
             await user.clear(screen.getByLabelText('Left'));
             await user.type(screen.getByLabelText('Left'), 'night');
+            expect(screen.getByText('young')).toBeInTheDocument();
             if (source === 'toolbar') {
                 await user.click(screen.getByRole('button', { name: 'Cancel' }));
             }
@@ -726,6 +728,7 @@ describe('PlotPanel.svelte', () => {
             expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
             expect(screen.getByTestId('plot-viewport')).toHaveTextContent('null');
             expect(mockClearPlotSelectionCount).toHaveBeenCalled();
+            expect(screen.queryByText('young')).not.toBeInTheDocument();
             // Back on PaCMAP, the button reads "Define axes" again.
             await user.click(screen.getByRole('button', { name: 'Define axes' }));
             expect(screen.getByLabelText('Left')).toHaveValue('night');
@@ -733,6 +736,7 @@ describe('PlotPanel.svelte', () => {
             expect(screen.getByLabelText('Bottom')).toHaveValue('sad');
             expect(screen.getByLabelText('Top')).toHaveValue('happy');
             await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+            expect(screen.getByText('night')).toBeInTheDocument();
             expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
                 JSON.stringify({ x: 0, y: 0, scale: 5 })
             );
@@ -762,6 +766,7 @@ describe('PlotPanel.svelte', () => {
         // Escape does not close the popover while the axes are applied.
         await user.keyboard('{Escape}');
         expect(screen.getByRole('button', { name: 'Applying…' })).toBeInTheDocument();
+        expect(screen.getByText('young')).toBeInTheDocument();
         finish(TEXT_LAYOUT_AXES);
         await waitFor(() =>
             expect(screen.queryByRole('button', { name: 'Applying…' })).not.toBeInTheDocument()
