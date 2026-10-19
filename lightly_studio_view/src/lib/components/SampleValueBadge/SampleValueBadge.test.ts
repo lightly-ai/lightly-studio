@@ -3,6 +3,14 @@ import { describe, expect, it } from 'vitest';
 import SampleValueBadge from './SampleValueBadge.svelte';
 
 describe('SampleValueBadge', () => {
+    it('distinguishes missing evaluation results from measured zero', async () => {
+        const { rerender } = render(SampleValueBadge, { props: { showMissingValue: true } });
+        expect(screen.getByLabelText('No evaluation result')).toHaveTextContent('—');
+        await rerender({ orderValue: 0, showMissingValue: true });
+        expect(screen.getByText('0')).toBeInTheDocument();
+        expect(screen.queryByLabelText('No evaluation result')).not.toBeInTheDocument();
+    });
+
     it('shows the formatted order value when present', () => {
         render(SampleValueBadge, { props: { orderValue: 0.75 } });
         expect(screen.getByText('0.75')).toBeInTheDocument();

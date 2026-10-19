@@ -80,6 +80,9 @@
         false
     );
     let activeTool = $state<WorkspaceTool>('select');
+    let seekWasPlaying = false;
+    let bufferingSeekVersion = $state(0);
+    let selectedBufferingTick = $state<number | undefined>(undefined);
 
     let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
     const lidarSelection = useChannelSelection({
@@ -108,11 +111,10 @@
         // Changing the mode creates a new session, which cancels the old queue. This is important
         // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
         getRequestId: () =>
-            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? `entire/${workspace.currentTick}` : 'window'}`,
+            `${datasetId}/${sequenceId}/playback/${workspace.referenceFrameId || 'sensor'}/${$bufferEntireSequence ? `entire/${selectedBufferingTick ?? workspace.currentTick}` : `window/${bufferingSeekVersion}`}`,
         getRanges: () => {
-            const activeIndex = workspace.ticks.findIndex(
-                (tick) => tick.seq_number === workspace.currentTick
-            );
+            const activeTick = selectedBufferingTick ?? workspace.currentTick;
+            const activeIndex = workspace.ticks.findIndex((tick) => tick.seq_number === activeTick);
 
             if ($bufferEntireSequence) {
                 return [{ startIndex: activeIndex, endIndex: workspace.ticks.length - 1 }];
@@ -137,6 +139,34 @@
             getOnTickChange: () => onTickChange,
             getIsTickBuffered: isTickBuffered
         });
+    const handleSeekStart = () => {
+        seekWasPlaying = workspace.isPlaying;
+        if (seekWasPlaying) workspace.togglePlayback();
+    };
+    const handleSeekEnd = () => {
+        if (seekWasPlaying && !workspace.isPlaying) workspace.togglePlayback();
+        seekWasPlaying = false;
+    };
+    const handleSelectTick = (seqNumber: number) => {
+        selectedBufferingTick = seqNumber;
+        bufferingSeekVersion += 1;
+        goToFrame(seqNumber);
+    };
+    const handleWindowKeydown = (event: KeyboardEvent) => {
+        if (event.code !== 'Space' || event.repeat) return;
+        const target = event.target;
+        if (
+            target instanceof Element &&
+            ((target instanceof HTMLElement && target.isContentEditable) ||
+                target.closest(
+                    'button, a, input, select, textarea, [role="button"], [role="option"], [role="menuitem"]'
+                ))
+        ) {
+            return;
+        }
+        event.preventDefault();
+        togglePlayback();
+    };
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -281,6 +311,8 @@
     }
 </script>
 
+<svelte:window onkeydown={handleWindowKeydown} />
+
 <div
     bind:this={containerEl}
     class="flex h-full min-h-0 w-full min-w-0 flex-col"
@@ -385,7 +417,9 @@
                             onNextFrame={goToNextFrame}
                             onPlayToggle={togglePlayback}
                             onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                            onSelectTick={goToFrame}
+                            onSelectTick={handleSelectTick}
+                            onSeekStart={handleSeekStart}
+                            onSeekEnd={handleSeekEnd}
                             {onPreviousSequence}
                             {onNextSequence}
                         />
