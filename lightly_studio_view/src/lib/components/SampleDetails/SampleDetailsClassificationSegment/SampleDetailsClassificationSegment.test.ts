@@ -211,8 +211,12 @@ describe('SampleDetailsClassificationSegment', () => {
 
     const deleteButton = () => screen.getByRole('button', { name: 'Delete classification' });
 
-    it('opens sidebar copying without selecting the annotation when editing', async () => {
+    it.each([false, true])('copies with an existing source: %s', async (existing) => {
         mocks.isEditingMode.set(true);
+        mocks.annotationLabels = [catLabel];
+        mocks.collections = [groundTruthSource];
+        if (existing) mocks.collections.push({ collection_id: 'human', name: 'Human' });
+        mocks.createAnnotation.mockRejectedValueOnce(new Error('offline'));
         const onClick = vi.fn();
         render(SampleDetailsSidePanelAnnotation, {
             annotation: createClassification('c1', groundTruthSource.collection_id, 'cat'),
@@ -223,8 +227,31 @@ describe('SampleDetailsClassificationSegment', () => {
             onDeleteAnnotation: vi.fn()
         });
         await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
-        expect(screen.getByRole('combobox', { name: 'Annotation source' })).toBeInTheDocument();
         expect(onClick).not.toHaveBeenCalled();
+        const input = screen.getByRole('combobox', { name: 'Annotation source' });
+        await userEvent.type(input, ' {Enter}');
+        await userEvent.type(input, `${groundTruthSource.name}{Enter}`);
+        expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
+        expect(mocks.createAnnotation).not.toHaveBeenCalled();
+        await userEvent.clear(input);
+        await userEvent.type(input, existing ? 'Human' : ' Human ');
+        await userEvent.click(
+            screen.getByRole('option', { name: existing ? 'Human' : 'Create: Human' })
+        );
+        expect(input).toHaveValue(existing ? 'Human' : ' Human ');
+        expect(toast.error).toHaveBeenCalled();
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() =>
+            expect(
+                screen.queryByRole('combobox', { name: 'Annotation source' })
+            ).not.toBeInTheDocument()
+        );
+        expect(mocks.createAnnotation).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                annotation_collection_name: 'Human',
+                annotation_label_id: 'label-cat'
+            })
+        );
     });
 
     it('renders a flat list without source groups for a single source', () => {
