@@ -5,7 +5,9 @@
     import { Select } from '$lib/components/Select';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
+    import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -335,7 +337,7 @@
     });
 
     const reset = () => {
-        viewportState = null;
+        userViewportState = null;
     };
 
     const isReady = true;
@@ -411,15 +413,20 @@
         setRangeSelection(normalizedSelection);
     };
 
-    let viewportState: ViewportState | null = $state(null);
+    // The viewport after the user pans or zooms. Until then, the default follows the plot size,
+    // because the size is 0 when the panel mounts and the default scale depends on it.
+    let userViewportState: ViewportState | null = $state(null);
+    const viewportState = $derived(
+        userViewportState ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
+    );
     const onViewportState = (state: ViewportState) => {
-        viewportState = state;
+        userViewportState = state;
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        viewportState = null;
+        userViewportState = null;
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {
@@ -546,6 +553,12 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
+                         as close to X− as to X+. -->
+                    {#if $plotAxes && overlayProxy}
+                        <PlotAxisLines proxy={overlayProxy} />
+                    {/if}
 
                     {#if hoverPreview}
                         <div

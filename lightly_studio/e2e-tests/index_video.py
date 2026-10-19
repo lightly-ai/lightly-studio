@@ -20,4 +20,4 @@ dataset.add_videos_from_youtube_vis(
 )
 
 # Start the GUI
-ls.start_gui()
+ls.start_gui(open_browser=False)
