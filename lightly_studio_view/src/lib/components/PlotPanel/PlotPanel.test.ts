@@ -175,13 +175,13 @@ const SQUARE_POLYGON = [
 ];
 const TEXT_LAYOUT_AXES = { x: [1, 0, 0], y: [0, 1, 0] };
 
-const selectTextLayout = async (user: ReturnType<typeof userEvent.setup>) => {
+const openAxesEditor = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('button', { name: 'Define axes' }));
 };
 
-// Switches the plot to the Text layout and commits four axis texts.
+// Applies four axis texts in the axes editor.
 const commitTextAxes = async (user: ReturnType<typeof userEvent.setup>) => {
-    await selectTextLayout(user);
+    await openAxesEditor(user);
     await user.type(screen.getByLabelText('Left'), 'young');
     await user.type(screen.getByLabelText('Right'), 'old');
     await user.type(screen.getByLabelText('Bottom'), 'sad');
@@ -671,7 +671,7 @@ describe('PlotPanel.svelte', () => {
 
         await tick();
         mockClearPlotSelectionCount.mockClear();
-        await selectTextLayout(user);
+        await openAxesEditor(user);
 
         expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
         expect(mockClearPlotSelectionCount).not.toHaveBeenCalled();
@@ -691,8 +691,12 @@ describe('PlotPanel.svelte', () => {
         expect(screen.queryByRole('button', { name: 'Reset axes' })).not.toBeInTheDocument();
         mockEmbedTextAxes.mockResolvedValueOnce(TEXT_LAYOUT_AXES);
         await user.click(screen.getByRole('button', { name: 'Apply axes' }));
-        expect(screen.getByRole('button', { name: 'Edit axes' })).toBeInTheDocument();
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+        // Applying the same texts again does not embed them again.
+        await user.click(screen.getByRole('button', { name: 'Edit axes' }));
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(mockEmbedTextAxes).toHaveBeenCalledTimes(2);
     });
 
     it.each(['toolbar', 'editor'])(
@@ -718,9 +722,7 @@ describe('PlotPanel.svelte', () => {
             }
             expect(mockEmbedTextAxes).toHaveBeenCalledTimes(1);
             const resetButtons = screen.getAllByRole('button', { name: 'Reset axes' });
-            const resetButton = resetButtons[resetButtons.length - 1];
-            resetButton.focus();
-            await user.keyboard('{Enter}');
+            await user.click(resetButtons[resetButtons.length - 1]);
             expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
             expect(screen.getByTestId('plot-viewport')).toHaveTextContent('null');
             expect(mockClearPlotSelectionCount).toHaveBeenCalled();
@@ -730,7 +732,7 @@ describe('PlotPanel.svelte', () => {
                 null,
                 null
             );
-            await selectTextLayout(user);
+            await openAxesEditor(user);
             expect(screen.getByLabelText('Left')).toHaveValue('night');
             expect(screen.getByLabelText('Right')).toHaveValue('old');
             expect(screen.getByLabelText('Bottom')).toHaveValue('sad');

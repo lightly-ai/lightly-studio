@@ -142,7 +142,6 @@
         plotAxes,
         commitTextAxes
     } = usePlotLayout(untrack(() => collectionId));
-    let axesEditorOpen = $state(false);
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
@@ -383,7 +382,8 @@
     );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
-        if (axesEditorOpen || event.defaultPrevented || event.key !== 'Escape') {
+        // An open popover handles Escape itself and prevents the default.
+        if (event.defaultPrevented || event.key !== 'Escape') {
             return;
         }
         if (!hasActiveSelection) {
@@ -496,7 +496,6 @@
         <div class="flex flex-wrap items-center gap-3">
             <div class="text-lg font-semibold">Embedding Plot</div>
             <PlotAxesEditor
-                bind:open={axesEditorOpen}
                 bind:draft={$textAxesDraft}
                 active={$plotLayout === 'text'}
                 isPending={$isEmbeddingAxes}

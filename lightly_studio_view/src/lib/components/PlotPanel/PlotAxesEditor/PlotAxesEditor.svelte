@@ -5,31 +5,29 @@
     import PlotTextAxesInputs from '../PlotTextAxesInputs/PlotTextAxesInputs.svelte';
     import { createEmptyTextAxesDraft, toTextAxes } from '../PlotTextAxesInputs/textAxesDraft';
 
+    type TextAxes = NonNullable<ReturnType<typeof toTextAxes>>;
+
     interface Props {
-        open: boolean;
         draft: ReturnType<typeof createEmptyTextAxesDraft>;
+        // True while the text layout is shown.
         active: boolean;
         isPending: boolean;
-        onCommit: (axes: NonNullable<ReturnType<typeof toTextAxes>>) => Promise<boolean>;
+        // Resolves to false when the texts fail to embed. The popover then stays open.
+        onCommit: (axes: TextAxes) => Promise<boolean>;
         onReset: () => void;
     }
 
-    let {
-        open = $bindable(),
-        draft = $bindable(),
-        active,
-        isPending,
-        onCommit,
-        onReset
-    }: Props = $props();
+    let { draft = $bindable(), active, isPending, onCommit, onReset }: Props = $props();
+    let open = $state(false);
     let error = $state(false);
+    const title = $derived(active ? 'Edit axes' : 'Define axes');
 
     const changeOpen = (next: boolean) => {
         if (isPending) return;
         error = false;
         open = next;
     };
-    const apply = async (axes: NonNullable<ReturnType<typeof toTextAxes>>) => {
+    const apply = async (axes: TextAxes) => {
         error = false;
         if (await onCommit(axes)) open = false;
         else error = true;
@@ -52,11 +50,11 @@
     <Popover.Root {open} onOpenChange={changeOpen}>
         <Popover.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}>
             <ArrowLeftRight class="mr-2 h-4 w-4" />
-            {active ? 'Edit axes' : 'Define axes'}
+            {title}
         </Popover.Trigger>
         <Popover.Content align="start" class="w-[min(380px,calc(100vw-2rem))] space-y-4">
             <div class="space-y-1">
-                <h3 class="text-sm font-semibold">{active ? 'Edit axes' : 'Define axes'}</h3>
+                <h3 class="text-sm font-semibold">{title}</h3>
                 <p class="text-sm text-muted-foreground">
                     Choose descriptions for each end of the axes. Samples will be positioned
                     according to how closely they match.
