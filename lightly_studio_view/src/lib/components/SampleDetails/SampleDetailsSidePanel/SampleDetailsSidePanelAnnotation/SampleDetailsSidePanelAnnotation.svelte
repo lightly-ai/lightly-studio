@@ -1,4 +1,5 @@
 <script lang="ts">
+    import CopyAnnotationToSource from '$lib/components/CopyAnnotationToSource/CopyAnnotationToSource.svelte';
     import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -111,7 +112,7 @@
 
 <div
     class={cn(
-        'gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
+        'flex items-center gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
         canHighlight ? 'border border-primary' : ''
     )}
@@ -290,4 +291,7 @@
             </div>
         </div>
     </button>
+    {#if $isEditingMode}
+        <CopyAnnotationToSource {collectionId} {annotation} onCopied={onUpdate} />
+    {/if}
 </div>
