@@ -71,7 +71,7 @@ right of the GUI to open the embedding plot. It shows your samples as points in 
 - **Text axes.** You describe each end of the two axes in natural language. The position of a
   sample shows how well it matches each description. See [Text axes](#text-axes).
 
-![Embedding plot](https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_v1.0.4.png){ width="100%" }
+![Embedding plot](https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_v1.1.3.png){ width="100%" }
 
 In both layouts you can:
 
@@ -93,7 +93,12 @@ sorts your samples by those concepts. For example, put
 `night` and `day` on the horizontal axis and `indoors` and `outdoors` on the vertical
 axis. Night photos then move to the left, and outdoor photos move to the top.
 
-<!-- TODO: Add a screenshot of the text axes layout with the axis lines and edge labels. -->
+<figure markdown>
+  <video autoplay loop muted playsinline controls style="width: 100%; border-radius: 6px;">
+    <source src="https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_text_axes_video_v1.1.3.mp4" type="video/mp4">
+  </video>
+  <figcaption>Defining text axes, then selecting the samples in each quadrant.</figcaption>
+</figure>
 
 To set the axes:
 
