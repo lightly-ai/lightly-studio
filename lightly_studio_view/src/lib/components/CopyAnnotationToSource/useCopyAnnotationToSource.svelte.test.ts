@@ -44,21 +44,20 @@ it.each(['classification', 'object_detection', 'segmentation_mask'] as const)(
                     : undefined
         });
         mocks.create.mockResolvedValue({ ...original, sample_id: 'copy' });
-        const action = useCopyAnnotationToSource(() => ({ ...params(), annotation: original }));
+        const current = { ...params(), annotation: original };
+        const action = useCopyAnnotationToSource(() => current);
         expect(await action.copy('human')).toBe(true);
-        expect(mocks.create).toHaveBeenLastCalledWith(
-            expect.objectContaining({
-                parent_sample_id: 'image',
-                annotation_type,
-                annotation_label_id: 'class',
-                annotation_collection_name: 'human',
-                ...original.object_detection_details,
-                ...original.segmentation_details
-            })
-        );
-        expect(mocks.create.mock.lastCall![0]).not.toHaveProperty('confidence');
+        expect(mocks.create).toHaveBeenLastCalledWith({
+            parent_sample_id: 'image',
+            annotation_type,
+            annotation_label_id: 'class',
+            annotation_collection_name: 'human',
+            ...original.object_detection_details,
+            ...original.segmentation_details
+        });
+        current.collectionId = 'another-collection';
         await mocks.undo.mock.lastCall![0].execute();
-        expect(mocks.remove).toHaveBeenLastCalledWith('copy', annotation_type);
+        expect(mocks.remove).toHaveBeenLastCalledWith('copy', annotation_type, 'images');
     }
 );
 

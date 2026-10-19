@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsClassificationSegment from './SampleDetailsClassificationSegment.svelte';
+import SampleDetailsSidePanelAnnotation from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
 
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
@@ -22,7 +23,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$app/state', () => ({
-    page: { params: { dataset_id: 'dataset-1' } }
+    page: { params: { dataset_id: 'dataset-1' }, data: { globalStorage: mocks } }
+}));
+
+vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
+    useAnnotation: () => ({ annotation: {}, refetch: vi.fn() })
 }));
 
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
@@ -205,6 +210,19 @@ describe('SampleDetailsClassificationSegment', () => {
     };
 
     const deleteButton = () => screen.getByRole('button', { name: 'Delete classification' });
+
+    it('shows the sidebar copy control when editing', () => {
+        mocks.isEditingMode.set(true);
+        render(SampleDetailsSidePanelAnnotation, {
+            annotation: createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            isSelected: false,
+            onClick: vi.fn(),
+            onUpdate: vi.fn(),
+            onToggleShowAnnotation: vi.fn(),
+            onDeleteAnnotation: vi.fn()
+        });
+        expect(screen.getByLabelText('Duplicate to another annotation source')).toBeInTheDocument();
+    });
 
     it('renders a flat list without source groups for a single source', () => {
         mocks.collections = [groundTruthSource];
