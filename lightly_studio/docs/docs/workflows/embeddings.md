@@ -43,7 +43,7 @@ frame. Frame embeddings are on by default; pass `embed_frames=False` to
 
 LightlyStudio embeds each object (an object-detection box or segmentation mask) as
 its own crop. This unlocks the embedding plot and similarity search on individual
-objects, the same way they work for whole images. Browse objects in the `Annotations`
+objects, the same way they work for whole images. Browse objects in the **Annotations**
 view of the GUI.
 
 Object embeddings are on by default; the `add_annotations_from_*` methods accept
@@ -63,8 +63,8 @@ LightlyStudio ships with two embedding models:
 
 ## The Embedding Plot (GUI)
 
-Click the `Embed` button in the top right of the GUI to open the embedding plot. It
-shows your samples as points in 2D. The plot has two layouts:
+Click **Embed** <span class="ls-inline-icon ls-inline-icon--embed"></span> in the top
+right of the GUI to open the embedding plot. It shows your samples as points in 2D. The plot has two layouts:
 
 - **Default layout.** PaCMAP projects embedding space to 2D. Similar samples are near
   each other. The axes have no meaning; only the distance between points does.
@@ -76,10 +76,13 @@ shows your samples as points in 2D. The plot has two layouts:
 In both layouts you can:
 
 - **Color the points** by tag, annotation class, or metadata (text and true/false
-  fields) using the `Color by` popover.
+  fields) using the **Color by** popover.
 - **Hover a point** to preview its thumbnail.
-- **Lasso a region** to scope the grid to the samples in that part of the plot, and
-  show or hide the points that your current filters exclude.
+- **Select a region** with **Rectangle**
+  <span class="ls-inline-icon ls-inline-icon--rectangle"></span> or **Lasso**
+  <span class="ls-inline-icon ls-inline-icon--lasso"></span> to scope the grid to the
+  samples in that part of the plot, and show or hide the points that your current filters
+  exclude.
 - **Double-click a legend entry** to isolate that category, so only its points
   stay visible. Single-click to toggle a category visibility.
 
@@ -94,20 +97,20 @@ axis. Night photos then move to the left, and outdoor photos move to the top.
 
 To set the axes:
 
-1. In the embedding plot, click `Define axes`.
-2. Under `Horizontal`, type a description in `Left` and in `Right`.
-3. Under `Vertical`, type a description in `Bottom` and in `Top`.
-4. Click `Apply axes`, or press Enter.
+1. In the embedding plot, click **Define axes**.
+2. Under **Horizontal**, type a description in **Left** and in **Right**.
+3. Under **Vertical**, type a description in **Bottom** and in **Top**.
+4. Click **Apply axes**, or press **Enter**.
 
 You must type all four descriptions. The plot then shows each description at its edge
 of the plot. If a description is too long to show, hover it to see the full text.
 
 Two lines through the center of the plot show where each axis is zero. A sample on the
-vertical line is as similar to `Left` as to `Right`. The farther right a sample is, the
-more it matches `Right` compared to `Left`. The vertical axis works the same way.
+vertical line is as similar to **Left** as to **Right**. The farther right a sample is, the
+more it matches **Right** compared to **Left**. The vertical axis works the same way.
 
-To change the descriptions, click `Edit axes`. To go back to the default layout, click
-`Reset axes`. LightlyStudio keeps your descriptions, so you can apply them again later.
+To change the descriptions, click **Edit axes**. To go back to the default layout, click
+**Reset axes**. LightlyStudio keeps your descriptions, so you can apply them again later.
 
 !!! note "A new layout clears the selection"
     When you apply new axes or reset them, the plot resets the zoom and clears your
