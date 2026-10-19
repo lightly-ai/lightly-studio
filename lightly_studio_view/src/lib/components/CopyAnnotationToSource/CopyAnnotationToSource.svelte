@@ -1,6 +1,5 @@
 <script lang="ts">
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import * as Popover from '$lib/components/ui/popover';
     import { useAnnotationCollections } from '$lib/hooks';
@@ -37,6 +36,12 @@
         >
     </Tooltip>
     <Popover.Content class="w-64 p-1" align="end">
+        <div class="space-y-1 p-2">
+            <p class="text-sm font-medium">Duplicate annotation</p>
+            <p class="text-xs text-muted-foreground">
+                Choose an annotation source or enter a new name.
+            </p>
+        </div>
         {#each destinations as destination (destination.collection_id)}
             <button
                 type="button"
@@ -65,9 +70,13 @@
                 disabled={$pending}
                 aria-invalid={exists}
             />
-            <Button type="submit" size="sm" disabled={!trimmedName || exists || $pending}>
-                Create and duplicate
-            </Button>
+            <p class="text-xs text-muted-foreground" aria-live="polite">
+                {exists
+                    ? 'This annotation source already exists.'
+                    : $pending
+                      ? 'Duplicating…'
+                      : 'Press Enter to create the source and duplicate.'}
+            </p>
         </form>
     </Popover.Content>
 </Popover.Root>
