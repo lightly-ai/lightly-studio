@@ -25,7 +25,6 @@
     const exists = $derived(sources.data?.some((source) => source.name === trimmedName));
 
     async function duplicate(sourceName: string) {
-        if ($pending || !sourceName) return;
         if (await copy(sourceName)) {
             name = '';
             open = false;
