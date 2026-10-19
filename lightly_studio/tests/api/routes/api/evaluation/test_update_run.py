@@ -18,6 +18,8 @@ from tests.api.routes.api.evaluation import helpers
         ({}, 200),
         ({"config": {"iou_threshold": -0.1}}, 400),
         ({"config": {"iou_threshold": 1.1}}, 400),
+        ({"config": {"iou_treshold": 0.75}}, 400),
+        ({"config": {"iou_threshold": 0.75, "class_wise": False}}, 400),
         ({"config": None}, 422),
         ({"name": "updated"}, 422),
         ({"task_type": "classification"}, 422),
