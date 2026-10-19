@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
 import { formatDate } from '$lib/utils';
 import EvaluationRunItem from './EvaluationRunItem.svelte';
@@ -13,18 +13,26 @@ vi.mock(
     }
 );
 
+const state = vi.hoisted(() => ({ pending: false, params: vi.fn(), recompute: vi.fn() }));
+beforeEach(() => {
+    vi.clearAllMocks();
+    state.pending = false;
+});
 vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
-    useRecomputeEvaluationRun: () => ({
-        mutation: { isPending: false },
-        recompute: vi.fn()
-    })
+    useRecomputeEvaluationRun: (getParams: () => unknown) => {
+        state.params.mockImplementation(getParams);
+        return {
+            mutation: { isPending: state.pending },
+            recompute: state.recompute
+        };
+    }
 }));
 
 const baseRun: EvaluationRunView = {
     id: 'run-1',
     name: 'Detection eval — v1',
     evaluation_run_configuration: {
-        iou_threshold: 0.5,
+        iou_threshold: 0.75,
         split: 'val',
         classwise: true
     },
@@ -64,18 +72,25 @@ describe('EvaluationRunItem', () => {
         expect(summary).not.toHaveTextContent('Class matching');
     });
 
-    it('renders configuration entries when expanded', () => {
+    it('renders configuration entries and opens editing for a current run', async () => {
         render(EvaluationRunItem, { props: { ...defaultProps, expanded: true } });
 
         const details = screen.getByTestId('evaluation-run-details');
         expect(details).toBeInTheDocument();
         expect(details).toHaveTextContent('Minimum overlap (IoU)');
-        expect(details).toHaveTextContent('0.50');
+        expect(details).toHaveTextContent('0.75');
         expect(details).toHaveTextContent('split');
         expect(details).toHaveTextContent('val');
         expect(details).toHaveTextContent('Class matching');
         expect(details).toHaveTextContent('Same class only');
         expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'true');
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        expect(screen.getByRole('dialog')).toHaveTextContent(baseRun.name);
+        await fireEvent.click(screen.getByRole('switch'));
+        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(state.recompute).not.toHaveBeenCalled();
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        expect(screen.getByRole('switch')).toBeChecked();
     });
 
     it('shows a placeholder when configuration is empty', () => {
@@ -151,7 +166,7 @@ describe('EvaluationRunItem', () => {
         expect(screen.getByTestId('evaluation-run-stale-icon')).toBeInTheDocument();
     });
 
-    it('shows the stale explanation and recompute button when stale and expanded', () => {
+    it('shows stale guidance and offers editing when stale and expanded', () => {
         const run: EvaluationRunView = {
             ...baseRun,
             stale_since: new Date('2026-02-01T00:00:00Z')
@@ -160,9 +175,9 @@ describe('EvaluationRunItem', () => {
 
         const staleSection = screen.getByTestId('evaluation-run-stale-section');
         expect(staleSection).toHaveTextContent(
-            'Annotations in the evaluated annotation sources were modified after this evaluation was run. Recomputing will update results using the current input and annotations, which may differ from the original run. Recompute'
+            'Annotations changed. Edit and rerun to update these results.'
         );
-        expect(screen.getByTestId('evaluation-run-recompute-button')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Edit and rerun' })).toBeInTheDocument();
     });
 
     it('does not show the recompute button when datasetId is not provided', () => {
@@ -175,5 +190,42 @@ describe('EvaluationRunItem', () => {
         });
 
         expect(screen.queryByTestId('evaluation-run-stale-section')).not.toBeInTheDocument();
+    });
+    it('loads saved values, submits changes to the same run, and closes only after success', async () => {
+        render(EvaluationRunItem, { ...defaultProps, expanded: true });
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        await fireEvent.click(screen.getByRole('switch'));
+        await fireEvent.click(screen.getByRole('button', { name: 'Save and rerun' }));
+        expect(state.recompute).toHaveBeenCalledOnce();
+        expect(state.params()).toMatchObject({
+            datasetId: 'dataset-1',
+            runId: baseRun.id,
+            config: { iou_threshold: 0.75, classwise: false, split: 'val' }
+        });
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        state.params().onSuccess();
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
+    it('allows rerunning evaluations without adjustable parameters', async () => {
+        render(EvaluationRunItem, {
+            ...defaultProps,
+            expanded: true,
+            run: { ...baseRun, evaluation_run_configuration: {} }
+        });
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Save and rerun' }));
+        expect(state.params().config).toEqual({});
+    });
+
+    it('blocks cancellation and repeated submissions while rerunning', async () => {
+        state.pending = true;
+        render(EvaluationRunItem, { ...defaultProps, expanded: true });
+        await fireEvent.click(screen.getByRole('button', { name: 'Edit and rerun' }));
+        expect(screen.getByRole('button', { name: 'Evaluating…' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+        await fireEvent.keyDown(document, { key: 'Escape' });
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 });
