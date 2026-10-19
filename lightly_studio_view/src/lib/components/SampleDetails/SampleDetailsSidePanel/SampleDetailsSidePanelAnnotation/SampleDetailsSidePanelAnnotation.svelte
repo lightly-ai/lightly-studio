@@ -1,5 +1,5 @@
 <script lang="ts">
-    import CopyAnnotationToSource from '$lib/components/CopyAnnotationToSource/CopyAnnotationToSource.svelte';
+    import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';

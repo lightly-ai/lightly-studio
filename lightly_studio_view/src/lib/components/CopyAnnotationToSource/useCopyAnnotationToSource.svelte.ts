@@ -20,19 +20,17 @@ export const useCopyAnnotationToSource = (getParams: () => Params) => {
     const pending = writable(false);
     const copy = async (sourceName: string) => {
         if (get(pending)) return false;
-        const { annotation, onCopied } = getParams();
-        const annotationLabelId = labels.data?.find(
-            (label) =>
-                label.annotation_label_name === annotation.annotation_label.annotation_label_name
-        )?.annotation_label_id;
-        if (!annotationLabelId) {
+        const { annotation, onCopied, collectionId } = getParams();
+        const labelName = annotation.annotation_label.annotation_label_name;
+        const label = labels.data?.find((label) => label.annotation_label_name === labelName);
+        if (!label?.annotation_label_id) {
             toast.error('Annotation classes are still loading. Please try again.');
             return false;
         }
         pending.set(true);
         try {
             const created = await createAnnotation({
-                annotation_label_id: annotationLabelId,
+                annotation_label_id: label.annotation_label_id,
                 annotation_type: annotation.annotation_type,
                 annotation_collection_name: sourceName,
                 parent_sample_id: annotation.parent_sample_id,
@@ -42,7 +40,7 @@ export const useCopyAnnotationToSource = (getParams: () => Params) => {
             addAnnotationCreateToUndoStack({
                 annotation: created,
                 addReversibleAction,
-                deleteAnnotation,
+                deleteAnnotation: (id, type) => deleteAnnotation(id, type, collectionId),
                 refetch: onCopied
             });
             onCopied();

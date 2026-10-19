@@ -1,16 +1,11 @@
 <script lang="ts">
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Popover from '$lib/components/ui/popover';
     import { useAnnotationCollections } from '$lib/hooks';
     import { CopyPlus } from '@lucide/svelte';
     import { useCopyAnnotationToSource } from './useCopyAnnotationToSource.svelte';
 
-    interface Props {
-        collectionId: string;
-        annotation: AnnotationView;
-        onCopied: () => void;
-    }
+    type Props = ReturnType<Parameters<typeof useCopyAnnotationToSource>[0]>;
     const { collectionId, annotation, onCopied }: Props = $props();
     const sources = useAnnotationCollections(() => ({ collectionId }));
     const destinations = $derived(

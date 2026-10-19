@@ -1,5 +1,5 @@
 <script lang="ts">
-    import CopyAnnotationToSource from '$lib/components/CopyAnnotationToSource/CopyAnnotationToSource.svelte';
+    import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Button, SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
