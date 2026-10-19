@@ -108,6 +108,28 @@ def test_start_gui__with_explicit_host_port(
     mock_server.assert_called_once_with(host="0.0.0.0", port=9999)
 
 
+def test_start_gui__returns_on_keyboard_interrupt(
+    mocker: MockerFixture,
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    """Test that start_gui returns normally when uvicorn raises SIGINT after shutdown."""
+    image_path = tmp_path / "sample.jpg"
+    Image.new("RGB", (10, 10)).save(image_path)
+
+    dataset = ImageDataset.create("test_dataset")
+    dataset.add_images_from_path(path=tmp_path)
+
+    mock_server = mocker.patch.object(start_gui_module, "Server")
+    mock_uvicorn_server = mock_server.return_value.create_uvicorn_server.return_value
+    mock_uvicorn_server.run.side_effect = KeyboardInterrupt
+
+    server = start_gui(open_browser=False)
+
+    mock_uvicorn_server.run.assert_called_once_with()
+    assert server is mock_server.return_value
+
+
 def test_start_gui__opens_browser_by_default(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
