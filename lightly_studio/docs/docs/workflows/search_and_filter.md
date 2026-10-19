@@ -250,11 +250,11 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     You can combine metadata expressions with `AND`, `OR`, and `NOT` as shown in
     [Boolean operators](#boolean-operators).
 
-    !!! note "Choosing between `!=` and `NOT(...)`"
+    !!! note "Comparing special metadata values"
 
-        Every metadata comparison, including `!=`, excludes samples where the selected value
-        is missing, JSON `null`, an array, an object, or a different type from the comparison value.
-        `NOT(...)` selects all samples that the expression inside it excludes.
+        The operation result is always `False` if the metadata value is missing, `None`,
+        an array, an object, or an incompatible type with the compared value. This also
+        holds for the `!=` operator.
 
         For example, these two filters answer different questions:
 
