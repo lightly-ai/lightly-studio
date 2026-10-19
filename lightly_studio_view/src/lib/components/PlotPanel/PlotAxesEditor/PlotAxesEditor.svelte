@@ -49,7 +49,10 @@
 <div class="flex flex-wrap items-center gap-2">
     <!-- A function binding, so changeOpen can keep the popover open while the axes apply. -->
     <Popover.Root bind:open={() => open, changeOpen}>
-        <Popover.Trigger class={buttonVariants({ variant: 'outline', size: 'sm' })}>
+        <Popover.Trigger
+            class={buttonVariants({ variant: 'outline', size: 'sm' })}
+            disabled={isPending}
+        >
             <ArrowLeftRight class="mr-2 h-4 w-4" />
             {title}
         </Popover.Trigger>

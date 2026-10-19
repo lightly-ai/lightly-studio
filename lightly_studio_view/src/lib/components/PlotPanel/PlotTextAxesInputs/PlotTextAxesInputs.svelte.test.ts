@@ -29,4 +29,46 @@ describe('PlotTextAxesInputs', () => {
             y: { negative: 'sad', positive: 'happy' }
         });
     });
+
+    it('shows an alert on Apply axes until all four texts are filled', async () => {
+        const user = userEvent.setup();
+        const onCommit = vi.fn();
+        const onCancel = vi.fn();
+        const draft = $state({
+            xNegative: 'young',
+            xPositive: 'old',
+            yNegative: 'sad',
+            yPositive: ''
+        });
+        render(PlotTextAxesInputs, { draft, onCommit, onCancel });
+
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(onCommit).not.toHaveBeenCalled();
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Enter a description for each end of both axes.'
+        );
+
+        // The alert hides as soon as the last text is filled.
+        await user.type(screen.getByLabelText('Top'), 'happy');
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(onCommit).toHaveBeenCalledExactlyOnceWith({
+            x: { negative: 'young', positive: 'old' },
+            y: { negative: 'sad', positive: 'happy' }
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(onCancel).toHaveBeenCalledOnce();
+    });
+
+    it('disables the form while the texts are embedded', () => {
+        const draft = $state({ xNegative: 'a', xPositive: 'b', yNegative: 'c', yPositive: 'd' });
+        render(PlotTextAxesInputs, { draft, onCommit: vi.fn(), isPending: true });
+
+        for (const label of ['Left', 'Right', 'Bottom', 'Top']) {
+            expect(screen.getByLabelText(label)).toBeDisabled();
+        }
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Applying…' })).toBeDisabled();
+    });
 });
