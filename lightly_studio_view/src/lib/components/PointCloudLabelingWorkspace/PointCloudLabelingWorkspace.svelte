@@ -82,6 +82,7 @@
     let activeTool = $state<WorkspaceTool>('select');
     let seekWasPlaying = false;
     let bufferingSeekVersion = $state(0);
+    let selectedBufferingTick = $state<number | undefined>(undefined);
 
     let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
     const lidarSelection = useChannelSelection({
@@ -110,11 +111,10 @@
         // Changing the mode creates a new session, which cancels the old queue. This is important
         // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
         getRequestId: () =>
-            `${datasetId}/${sequenceId}/playback/${workspace.referenceFrameId || 'sensor'}/${$bufferEntireSequence ? `entire/${workspace.currentTick}` : `window/${bufferingSeekVersion}`}`,
+            `${datasetId}/${sequenceId}/playback/${workspace.referenceFrameId || 'sensor'}/${$bufferEntireSequence ? `entire/${selectedBufferingTick ?? workspace.currentTick}` : `window/${bufferingSeekVersion}`}`,
         getRanges: () => {
-            const activeIndex = workspace.ticks.findIndex(
-                (tick) => tick.seq_number === workspace.currentTick
-            );
+            const activeTick = selectedBufferingTick ?? workspace.currentTick;
+            const activeIndex = workspace.ticks.findIndex((tick) => tick.seq_number === activeTick);
 
             if ($bufferEntireSequence) {
                 return [{ startIndex: activeIndex, endIndex: workspace.ticks.length - 1 }];
@@ -148,6 +148,7 @@
         seekWasPlaying = false;
     };
     const handleSelectTick = (seqNumber: number) => {
+        selectedBufferingTick = seqNumber;
         bufferingSeekVersion += 1;
         goToFrame(seqNumber);
     };

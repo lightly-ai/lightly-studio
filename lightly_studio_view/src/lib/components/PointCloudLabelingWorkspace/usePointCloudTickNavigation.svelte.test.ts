@@ -154,15 +154,22 @@ describe('usePointCloudTickNavigation', () => {
 
     it('restarts playback timing from a newly selected frame', async () => {
         vi.useFakeTimers();
-        const workspace = createWorkspace();
+        const workspace = {
+            ...createWorkspace(),
+            ticks: [{ seq_number: 0 }, { seq_number: 1 }, { seq_number: 2 }]
+        } as PointCloudWorkspaceContext;
+        let goToFrame: (seqNumber: number) => void = () => undefined;
         const view = render(Harness, {
             workspace,
             tickNumber: 1,
-            onReady: () => undefined
+            onReady: (navigation) => {
+                goToFrame = navigation.goToFrame;
+            }
         });
         flushSync();
 
         await vi.advanceTimersByTimeAsync(60);
+        goToFrame(1);
         await view.rerender({ workspace: { ...workspace, currentTick: 1 } });
         flushSync();
         await vi.advanceTimersByTimeAsync(40);
