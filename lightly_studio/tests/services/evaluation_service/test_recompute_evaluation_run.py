@@ -7,6 +7,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from pytest_mock import MockerFixture
@@ -30,8 +31,11 @@ from lightly_studio.services import evaluation_service
 from tests.api.routes.api.evaluation import helpers
 
 
+@pytest.mark.parametrize("outdated_caller", [False, True])
 def test_recompute_evaluation_run__clears_staleness_and_preserves_run(
     db_session: Session,
+    mocker: MockerFixture,
+    outdated_caller: bool,
 ) -> None:
     root = helpers.create_dataset_with_annotations(db_session)
 
@@ -56,7 +60,15 @@ def test_recompute_evaluation_run__clears_staleness_and_preserves_run(
     db_session.commit()
     db_session.refresh(run)
 
-    recomputed = evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+    caller_run = type(run).model_validate(run.model_dump())
+    if outdated_caller:
+        run.stale_since = datetime(2026, 1, 2, tzinfo=timezone.utc)
+        db_session.commit()
+        db_session.refresh(run)
+    current_stale_since = run.stale_since
+    clear_stale = mocker.spy(evaluation_run_resolver, "clear_stale_since")
+    recomputed = evaluation_service.recompute_evaluation_run(session=db_session, run=caller_run)
+    assert clear_stale.call_args.kwargs["expected_stale_since"] == current_stale_since
 
     assert recomputed.evaluation_run_id == run_id
     assert recomputed.sample_count == result.sample_count
@@ -68,6 +80,17 @@ def test_recompute_evaluation_run__clears_staleness_and_preserves_run(
     assert run_after.stale_since is None
     assert run_after.created_at == original_created_at
     assert run_after.id == run_id
+
+
+def test_recompute_evaluation_run__missing_run(db_session: Session) -> None:
+    run = helpers.make_evaluation_run(
+        run_id=uuid4(),
+        name="missing",
+        config_json={},
+        created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    with pytest.raises(ValueError, match="Evaluation run no longer exists"):
+        evaluation_service.recompute_evaluation_run(session=db_session, run=run)
 
 
 def test_recompute_evaluation_run__produces_fresh_metrics(db_session: Session) -> None:
@@ -264,7 +287,11 @@ def test_recompute_evaluation_run__failure_restores_results(
 
         mocker.patch.object(db_session, "rollback", side_effect=fail_rollback)
     with pytest.raises(ValueError, match="Evaluation failed"):
-        evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+        evaluation_service.recompute_evaluation_run(
+            session=db_session,
+            run=run,
+            config_json={"iou_threshold": 0.75, "classwise": False},
+        )
     if rollback_fails:
         assert "Rollback failed after evaluation rerun error" in caplog.text
     db_session.refresh(run)
@@ -331,7 +358,9 @@ object_detection_metric.create_and_persist_object_detection_metrics_per_sample =
 engine = DatabaseEngine(engine_url=sys.argv[1], single_threaded=True)
 with engine.session() as session:
     run = evaluation_run_resolver.get_by_id(session=session, evaluation_id=UUID(sys.argv[2]))
-    evaluation_service.recompute_evaluation_run(session=session, run=run)
+    evaluation_service.recompute_evaluation_run(
+        session=session, run=run, config_json={"iou_threshold": 0.75, "classwise": False}
+    )
 """,
             engine_url,
             str(result.evaluation_run_id),
