@@ -22,7 +22,7 @@
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
-    import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation/useDeleteCuboidAnnotation.svelte';
+    import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { Vector3, WorkspaceTool } from './domain';
