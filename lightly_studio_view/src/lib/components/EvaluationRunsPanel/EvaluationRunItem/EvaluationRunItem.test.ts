@@ -57,6 +57,11 @@ describe('EvaluationRunItem', () => {
         render(EvaluationRunItem, { props: { ...defaultProps } });
 
         expect(screen.queryByTestId('evaluation-run-details')).not.toBeInTheDocument();
+        const summary = screen.getByTestId(baseRunItemTestId);
+        expect(summary).toHaveTextContent('Predictions predictions_v2');
+        expect(summary).toHaveTextContent('Ground truth ground_truth_v1');
+        expect(summary).not.toHaveTextContent('Minimum overlap');
+        expect(summary).not.toHaveTextContent('Class matching');
     });
 
     it('renders configuration entries when expanded', () => {
@@ -64,12 +69,12 @@ describe('EvaluationRunItem', () => {
 
         const details = screen.getByTestId('evaluation-run-details');
         expect(details).toBeInTheDocument();
-        expect(details).toHaveTextContent('iou_threshold');
-        expect(details).toHaveTextContent('0.5');
+        expect(details).toHaveTextContent('Minimum overlap (IoU)');
+        expect(details).toHaveTextContent('0.50');
         expect(details).toHaveTextContent('split');
         expect(details).toHaveTextContent('val');
-        expect(details).toHaveTextContent('classwise');
-        expect(details).toHaveTextContent('true');
+        expect(details).toHaveTextContent('Class matching');
+        expect(details).toHaveTextContent('Same class only');
         expect(screen.getByTestId(baseRunItemTestId)).toHaveAttribute('aria-expanded', 'true');
     });
 
@@ -91,6 +96,29 @@ describe('EvaluationRunItem', () => {
         render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
 
         expect(screen.getByTestId('evaluation-run-config')).toHaveTextContent('["cat","dog"]');
+    });
+
+    it('shows unknown sources when their names are unavailable', () => {
+        const run = { ...baseRun, gt_annotation_source: null, pred_annotation_source: null };
+        render(EvaluationRunItem, { props: { ...defaultProps, run } });
+
+        expect(screen.getByTestId('evaluation-run-gt-annotation-source')).toHaveTextContent(
+            'Unknown'
+        );
+        expect(screen.getByTestId('evaluation-run-prediction-annotation-source')).toHaveTextContent(
+            'Unknown'
+        );
+    });
+
+    it('formats class-agnostic matching and missing configuration values', () => {
+        const run = {
+            ...baseRun,
+            evaluation_run_configuration: { classwise: false, split: null }
+        };
+        render(EvaluationRunItem, { props: { ...defaultProps, run, expanded: true } });
+
+        expect(screen.getByTestId('evaluation-run-config')).toHaveTextContent('Any class');
+        expect(screen.getByTestId('evaluation-run-config')).toHaveTextContent('—');
     });
 
     it('calls onToggle when the row is clicked', async () => {
