@@ -27,6 +27,14 @@ class ReadMcapSequencesRequest(BaseModel):
     )
 
 
+class ReadMcapSequenceSampleIdsRequest(BaseModel):
+    """Request body for reading matching MCAP sequence sample ids."""
+
+    filter: McapSequenceFilter | None = Field(
+        None, description="Filter parameters for MCAP sequences"
+    )
+
+
 @mcap_sequence_router.post(
     "/collections/{collection_id}/mcap-sequences/list",
     response_model=McapSequenceViewsWithCount,
@@ -53,4 +61,23 @@ def list_mcap_sequences(
         collection_id=collection_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter if body is not None else None,
+    )
+
+
+@mcap_sequence_router.post(
+    "/collections/{collection_id}/mcap-sequences/sample_ids",
+    response_model=list[UUID],
+)
+def get_mcap_sequence_sample_ids(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="Collection Id")],
+    body: ReadMcapSequenceSampleIdsRequest,
+) -> list[UUID]:
+    """Retrieve all sample ids of MCAP sequences matching the given filters."""
+    return list(
+        mcap_group_sequence_resolver.get_sample_ids(
+            session=session,
+            collection_id=collection_id,
+            filters=body.filter,
+        )
     )

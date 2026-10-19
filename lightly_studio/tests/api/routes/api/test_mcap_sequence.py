@@ -132,6 +132,27 @@ def test_list_mcap_sequences__filter(test_client: TestClient, db_session: Sessio
     assert [sequence["sample_id"] for sequence in result["data"]] == [str(seq_ids[1])]
 
 
+def test_get_mcap_sequence_sample_ids(test_client: TestClient, db_session: Session) -> None:
+    """Returns the sample IDs of the MCAP sequences that match the filter."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(
+        session=db_session, collection_id=seq_col.collection_id, dataset_id=seq_col.dataset_id
+    )
+
+    response = test_client.post(
+        f"/api/collections/{seq_col.collection_id}/mcap-sequences/sample_ids",
+        json={
+            "filter": {
+                "filter_type": "mcap_sequence",
+                "sample_filter": {"sample_ids": [str(seq_ids[0])]},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [str(seq_ids[0])]
+
+
 def _create_sequences(session: Session, collection_id: UUID, dataset_id: UUID) -> list[UUID]:
     """Create two MCAP sequences of one recording."""
     recording_id = recording_resolver.create(
