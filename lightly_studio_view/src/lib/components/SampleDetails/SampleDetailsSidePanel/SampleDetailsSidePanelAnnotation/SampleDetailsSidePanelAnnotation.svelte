@@ -112,7 +112,7 @@
 
 <div
     class={cn(
-        'relative flex items-center gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
+        'relative flex items-center gap-2 rounded-sm px-4 py-2 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
         canHighlight ? 'border border-primary' : ''
     )}
@@ -165,7 +165,7 @@
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
                                         placeholder="Select or create a class"
-                                        className="w-full min-w-0"
+                                        className="h-8 w-full min-w-0 px-3"
                                         contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {
                                             addAnnotationLabelChangeToUndoStack({
@@ -197,25 +197,23 @@
                                     </SelectList>
                                 </div>
                             {:else}
-                                <div
-                                    class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
-                                >
+                                <div class="flex h-8 w-full min-w-0 items-center overflow-hidden">
                                     <span class="truncate">{annotationLabelName}</span>
-                                    {#if annotation.confidence != null}
-                                        {@const formattedConfidence = formatConfidence(
-                                            annotation.confidence
-                                        )}
-                                        <span class="text-xs text-muted-foreground"
-                                            >Confidence: {formattedConfidence}</span
-                                        >
-                                    {/if}
                                 </div>
+                            {/if}
+                            {#if annotation.confidence != null}
+                                {@const formattedConfidence = formatConfidence(
+                                    annotation.confidence
+                                )}
+                                <span class="text-xs text-muted-foreground"
+                                    >Confidence: {formattedConfidence}</span
+                                >
                             {/if}
                         </div>
                     </div>
                 </div>
                 <div
-                    class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-1"
+                    class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-3"
                 >
                     <div class="pointer-events-auto flex shrink-0 items-center gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
