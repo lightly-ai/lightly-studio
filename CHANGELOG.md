@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The text axes layout of the embedding plot shows the lines x = 0 and y = 0. They split the plot into four parts, one for each pair of axis texts.
 - Added a "Clear all filters" button to the filter sidebar.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
+- Python SDK: Filter samples by metadata with equality and ordering comparisons, including nested fields and array indices, e.g. `ImageSampleField.metadata["odometry.speed"] < 15`.
 
 ### Changed
 
