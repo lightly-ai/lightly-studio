@@ -18,7 +18,6 @@ def delete(session: Session, run: EvaluationRunTable) -> None:
         session=session, evaluation_run_id=run.id
     )
     # DuckDB cannot delete a referenced run until its metric deletions are committed.
-    if session.get_bind().dialect.name == "duckdb":
-        session.commit()
+    session.commit()
     session.delete(run)
     session.commit()
