@@ -61,7 +61,6 @@
         class={cn(
             'relative',
             isPending && 'overflow-hidden',
-            isDisabledByReason && 'disabled:opacity-100',
             className
         )}
         disabled={isPending || Boolean(disabled) || isDisabledByReason}
