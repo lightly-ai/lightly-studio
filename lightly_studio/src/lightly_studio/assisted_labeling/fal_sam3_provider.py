@@ -52,6 +52,10 @@ _CONTENT_TYPES = {
     ".jpeg": "image/jpeg",
     ".png": "image/png",
     ".webp": "image/webp",
+    ".gif": "image/gif",
+    ".bmp": "image/bmp",
+    ".tif": "image/tiff",
+    ".tiff": "image/tiff",
 }
 _DEFAULT_CONTENT_TYPE = "image/jpeg"
 
@@ -150,8 +154,8 @@ def build_request_body(image_url: str, prompt: SegmentationPrompt) -> dict[str, 
                 "x": point.x,
                 "y": point.y,
                 "label": 1 if point.positive else 0,
-                # Without a shared object id, SAM 3 treats each point as a separate object.
-                "object_id": 0,
+                # All points must share one object id, so SAM 3 refines one mask with them
+                "object_id": 1,
             }
             for point in prompt.points
         ]
@@ -187,7 +191,9 @@ def parse_response(output: dict[str, Any], width: int, height: int) -> list[Pred
         rles = rle
     else:
         raise ProviderError(f"fal.ai returned an invalid RLE: {rle!r}")
-    scores = output.get("scores") or []
+    scores = output.get("scores")
+    if scores is None:
+        scores = []
     if not isinstance(scores, list):
         raise ProviderError(f"fal.ai returned invalid scores: {scores!r}")
     predictions = []

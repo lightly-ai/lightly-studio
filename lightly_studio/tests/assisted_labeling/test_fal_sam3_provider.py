@@ -294,7 +294,9 @@ class TestFalSam3Provider:
 class TestBuildRequestBody:
     def test_points(self) -> None:
         prompt = helpers.make_prompt(
-            points=[PointPrompt(x=3, y=4, positive=True), PointPrompt(x=5, y=6, positive=False)]
+            points=[PointPrompt(x=3, y=4, positive=True), PointPrompt(x=5, y=6, positive=False)],
+            text=None,
+            max_masks=1,
         )
 
         body = fal_sam3_provider.build_request_body(image_url="url", prompt=prompt)
@@ -303,8 +305,8 @@ class TestBuildRequestBody:
             "image_url": "url",
             "prompt": "",
             "point_prompts": [
-                {"x": 3, "y": 4, "label": 1, "object_id": 0},
-                {"x": 5, "y": 6, "label": 0, "object_id": 0},
+                {"x": 3, "y": 4, "label": 1, "object_id": 1},
+                {"x": 5, "y": 6, "label": 0, "object_id": 1},
             ],
             "max_masks": 1,
             "return_multiple_masks": False,
@@ -314,7 +316,9 @@ class TestBuildRequestBody:
         }
 
     def test_boxes(self) -> None:
-        prompt = helpers.make_prompt(boxes=[BoxPrompt(x_min=1, y_min=2, x_max=3, y_max=4)])
+        prompt = helpers.make_prompt(
+            boxes=[BoxPrompt(x_min=1, y_min=2, x_max=3, y_max=4)], text=None, max_masks=1
+        )
 
         body = fal_sam3_provider.build_request_body(image_url="url", prompt=prompt)
 
@@ -346,8 +350,9 @@ class TestParseResponse:
         assert predictions[1].mask[1, 3]
         assert predictions[1].score == 0.7
 
-    def test_without_scores(self) -> None:
-        predictions = fal_sam3_provider.parse_response(output={"rle": "0 1"}, width=4, height=2)
+    @pytest.mark.parametrize("output", [{"rle": "0 1"}, {"rle": "0 1", "scores": None}])
+    def test_without_scores(self, output: dict[str, object]) -> None:
+        predictions = fal_sam3_provider.parse_response(output=output, width=4, height=2)
 
         assert len(predictions) == 1
         assert predictions[0].score is None
@@ -358,7 +363,7 @@ class TestParseResponse:
                 output={"rle": "0 1", "scores": ["high"]}, width=4, height=2
             )
 
-    @pytest.mark.parametrize("scores", [0.5, {"a": 1}, "9"])
+    @pytest.mark.parametrize("scores", [0.5, {"a": 1}, "9", 0, False, "", {}])
     def test_invalid_scores_type(self, scores: object) -> None:
         with pytest.raises(ProviderError, match="invalid scores"):
             fal_sam3_provider.parse_response(
@@ -434,7 +439,11 @@ def test_decode_rle__invalid(rle: str) -> None:
         ("a.JPEG", "image/jpeg"),
         ("a.png", "image/png"),
         ("a.webp", "image/webp"),
-        ("a.bmp", "image/jpeg"),
+        ("a.gif", "image/gif"),
+        ("a.bmp", "image/bmp"),
+        ("a.TIF", "image/tiff"),
+        ("a.tiff", "image/tiff"),
+        ("a.heic", "image/jpeg"),
         ("a", "image/jpeg"),
     ],
 )
