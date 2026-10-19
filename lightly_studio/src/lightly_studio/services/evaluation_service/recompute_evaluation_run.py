@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from uuid import UUID
 
 from sqlmodel import Session
@@ -22,9 +23,7 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
     SemanticSegmentationEvaluationConfig,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable, EvaluationTaskType
-from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
@@ -33,12 +32,13 @@ from lightly_studio.resolvers import (
     evaluation_sample_metric_resolver,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def recompute_evaluation_run(
     session: Session,
     *,
     run: EvaluationRunTable,
-    replacement: EvaluationRunTable | None = None,
 ) -> EvaluationResult:
     """Re-run an evaluation in-place, replacing its metrics.
 
@@ -51,46 +51,24 @@ def recompute_evaluation_run(
     Args:
         session: Database session.
         run: The evaluation run to recompute.
-        replacement: Optional validated settings, with the same ID and creation date.
 
     Returns:
         Summary of the recomputed run, including its ID and input counts.
     """
-    old_metrics = _remove_metrics_for_settings_update(
-        session=session, run=run, replacement=replacement
-    )
     try:
         # Batch writers may commit. This session only flushes their changes into
         # the outer transaction, allowing rollback after a later batch fails.
         with Session(bind=session.connection(), join_transaction_mode="rollback_only") as work:
-            target = work.merge(replacement if replacement is not None else run)
+            target = work.merge(run)
             result = _recompute_evaluation_run(session=work, run=target)
         session.commit()
     except Exception:
-        session.rollback()
-        if old_metrics:
-            session.add_all(old_metrics)
-            session.commit()
+        try:
+            session.rollback()
+        except Exception:
+            logger.exception("Rollback failed after evaluation rerun error")
         raise
     return result
-
-
-def _remove_metrics_for_settings_update(
-    session: Session, run: EvaluationRunTable, replacement: EvaluationRunTable | None
-) -> list[EvaluationAnnotationMetricTable | EvaluationSampleMetricTable]:
-    """Back up and remove metrics when DuckDB requires it to update run settings."""
-    if replacement is None or session.get_bind().dialect.name != "duckdb":
-        return []
-
-    # DuckDB rejects indexed run-field updates while metrics reference the run,
-    # even after uncommitted deletes. Keep copies to restore if the rerun fails.
-    old_metrics: list[EvaluationAnnotationMetricTable | EvaluationSampleMetricTable] = []
-    for resolver in (evaluation_annotation_metric_resolver, evaluation_sample_metric_resolver):
-        rows = resolver.get_all_by_evaluation_run_id(session=session, evaluation_run_id=run.id)
-        old_metrics.extend(type(row).model_validate(row.model_dump()) for row in rows)
-        resolver.delete_by_evaluation_run_id(session=session, evaluation_run_id=run.id)
-    session.commit()
-    return old_metrics
 
 
 def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> EvaluationResult:
