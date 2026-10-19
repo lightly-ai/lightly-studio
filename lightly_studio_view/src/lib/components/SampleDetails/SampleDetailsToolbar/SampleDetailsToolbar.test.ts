@@ -9,7 +9,7 @@ const { initializeSlic } = vi.hoisted(() => ({ initializeSlic: vi.fn(async () =>
 vi.mock('@lightly-ai/slic', () => ({ getSlicEngine: initializeSlic }));
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
+    status: 'cursor' as ToolbarStatus,
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
     },
@@ -41,6 +41,15 @@ vi.mock('$lib/hooks/useSettings', () => ({
     useSettings: () => ({
         settingsStore
     })
+}));
+
+const assistedLabelingTools = {
+    smartSelectDisabledReason: null as string | null,
+    instancesDisabledReason: null as string | null
+};
+
+vi.mock('$lib/hooks/useAssistedLabelingProvider', () => ({
+    useAssistedLabelingProvider: () => ({ tools: assistedLabelingTools })
 }));
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
@@ -91,6 +100,8 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.isErasing = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
+        assistedLabelingTools.smartSelectDisabledReason = null;
+        assistedLabelingTools.instancesDisabledReason = null;
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {

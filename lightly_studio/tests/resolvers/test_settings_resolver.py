@@ -29,6 +29,7 @@ def test_get_settings_creates_default_settings(
     assert settings.key_toolbar_slic == "a"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
+    assert settings.assisted_labeling_provider == "fal_sam3"
 
 
 def test_set_settings_updates_grid_view_rendering(
@@ -60,6 +61,7 @@ def test_set_settings_updates_grid_view_rendering(
         key_toolbar_slic="f",
         key_toolbar_brush="r",
         key_toolbar_eraser="x",
+        assisted_labeling_provider="fake",
     )
 
     updated_settings = settings_resolver.set_settings(session=db_session, settings=input_settings)
@@ -83,6 +85,7 @@ def test_set_settings_updates_grid_view_rendering(
     assert updated_settings.key_toolbar_slic == "f"
     assert updated_settings.key_toolbar_brush == "r"
     assert updated_settings.key_toolbar_eraser == "x"
+    assert updated_settings.assisted_labeling_provider == "fake"
 
     settings = settings_resolver.get_settings(session=db_session)
     assert settings.grid_view_sample_rendering == GridViewSampleRenderingType.CONTAIN
@@ -97,3 +100,4 @@ def test_set_settings_updates_grid_view_rendering(
     assert settings.key_toolbar_slic == "f"
     assert settings.key_toolbar_brush == "r"
     assert settings.key_toolbar_eraser == "x"
+    assert settings.assisted_labeling_provider == "fake"

@@ -7,6 +7,7 @@
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import { useAutoLabelDialog } from '$lib/hooks/useAutoLabelDialog';
 
     let {
         isImages = false,
@@ -33,6 +34,7 @@
     const { isExportDialogOpen } = useExportDialog();
     const { isOperatorsDialogOpen } = useOperatorsDialog();
     const { isSettingsDialogOpen } = useSettingsDialog();
+    const { isAutoLabelDialogOpen } = useAutoLabelDialog();
 
     $effect(() => {
         if (!hasSelection || $datasetSplitCollectionId !== collection.collection_id) {
@@ -49,6 +51,12 @@
         if ($isOperatorsDialogOpen) hasOperatorsMenuLoaded = true;
     });
 </script>
+
+{#if isImages && isImageCollection && $isAutoLabelDialogOpen}
+    {#await import('$lib/components/AutoLabelDialog/AutoLabelDialog.svelte') then { default: AutoLabelDialog }}
+        <AutoLabelDialog />
+    {/await}
+{/if}
 
 <!-- These menus own subsequent dialog state, so keep them mounted after their first open. -->
 {#if hasClassifier && hasClassifierFlowLoaded}
