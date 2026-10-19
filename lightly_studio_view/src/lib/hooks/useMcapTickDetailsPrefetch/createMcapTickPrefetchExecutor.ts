@@ -33,10 +33,16 @@ export function createMcapTickPrefetchExecutor({
     });
 
     const prefetchRanges = ({ requestId, ranges }: PrefetchRangesRequest): Promise<void> => {
+        const scopeKey = JSON.stringify([
+            getDatasetId(),
+            getSequenceId(),
+            getDisplayFrameId() ?? null
+        ]);
         if (!session || session.requestId !== requestId) {
-            const completed = new Set(session?.completed ?? []);
+            const completed =
+                session?.scopeKey === scopeKey ? new Set(session.completed) : new Set<number>();
             discardPrefetchSession(session);
-            session = createPrefetchSession(requestId);
+            session = createPrefetchSession(requestId, scopeKey);
             session.completed = completed;
             notify(session);
         }

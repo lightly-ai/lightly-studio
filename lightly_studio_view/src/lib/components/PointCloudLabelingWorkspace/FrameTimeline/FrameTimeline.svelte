@@ -36,6 +36,10 @@
         onPlayToggle: () => void;
         onPlaybackIntervalChange: (intervalMs: number) => void;
         onSelectTick: (seqNumber: number) => void;
+        /** Called when the user starts dragging the slider. */
+        onSeekStart?: () => void;
+        /** Called when the user releases the slider. */
+        onSeekEnd?: () => void;
         /** Open the previous sequence; the control is disabled when absent. */
         onPreviousSequence?: () => void;
         /** Open the next sequence; the control is disabled when absent. */
@@ -55,6 +59,8 @@
         onPlayToggle,
         onPlaybackIntervalChange,
         onSelectTick,
+        onSeekStart,
+        onSeekEnd,
         onPreviousSequence,
         onNextSequence
     }: Props = $props();
@@ -89,6 +95,13 @@
         {onNextSequence}
     />
     <div class="relative flex-none">
-        <TimelineTracks {ticks} {currentTick} {bufferedRanges} {onSelectTick} />
+        <TimelineTracks
+            {ticks}
+            {currentTick}
+            {bufferedRanges}
+            {onSelectTick}
+            {onSeekStart}
+            {onSeekEnd}
+        />
     </div>
 </div>
