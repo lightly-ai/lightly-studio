@@ -37,7 +37,7 @@ MAX_CACHED_IMAGE_URLS = 256
 REQUEST_TIMEOUT_S = 60.0
 TIMEOUT_MESSAGE = f"fal.ai did not answer within {REQUEST_TIMEOUT_S:g} s."
 
-# TODO(Jonas, 10/2026): The offset is not verified against a live response.
+# TODO(iunir, 10/2026): The offset is not verified against a live response.
 RLE_START_OFFSET = 0
 """Value to subtract from each RLE start to get a 0-based pixel index."""
 
@@ -76,7 +76,6 @@ class FalSam3Provider:
         self._client_lock = threading.Lock()
         self._image_urls: OrderedDict[UUID, str] = OrderedDict()
         self._image_urls_lock = threading.Lock()
-        self._upload_locks: dict[UUID, threading.Lock] = {}
 
     def unavailable_reason(self) -> str | None:
         """Returns None if the fal extra is installed and the API key is set, else a reason."""
@@ -116,30 +115,15 @@ class FalSam3Provider:
             return self._client
 
     def _get_image_url(self, client: SyncClient, image: ProviderImage) -> str:
+        # The lock also covers the upload, so each image is uploaded once.
         with self._image_urls_lock:
-            upload_lock = self._upload_locks.setdefault(image.sample_id, threading.Lock())
-        # The per-sample lock prevents parallel uploads of the same image.
-        try:
-            with upload_lock:
-                cached_url = self._get_cached_url(sample_id=image.sample_id)
-                if cached_url is not None:
-                    return cached_url
+            url = self._image_urls.get(image.sample_id)
+            if url is None:
                 url = _upload(client=client, image=image)
-                with self._image_urls_lock:
-                    self._image_urls[image.sample_id] = url
-                    if len(self._image_urls) > MAX_CACHED_IMAGE_URLS:
-                        self._image_urls.popitem(last=False)
-                return url
-        finally:
-            with self._image_urls_lock:
-                if self._upload_locks.get(image.sample_id) is upload_lock:
-                    del self._upload_locks[image.sample_id]
-
-    def _get_cached_url(self, sample_id: UUID) -> str | None:
-        with self._image_urls_lock:
-            url = self._image_urls.get(sample_id)
-            if url is not None:
-                self._image_urls.move_to_end(sample_id)
+                self._image_urls[image.sample_id] = url
+                if len(self._image_urls) > MAX_CACHED_IMAGE_URLS:
+                    self._image_urls.popitem(last=False)
+            self._image_urls.move_to_end(image.sample_id)
             return url
 
 
@@ -204,6 +188,8 @@ def parse_response(output: dict[str, Any], width: int, height: int) -> list[Pred
     else:
         raise ProviderError(f"fal.ai returned an invalid RLE: {rle!r}")
     scores = output.get("scores") or []
+    if not isinstance(scores, list):
+        raise ProviderError(f"fal.ai returned invalid scores: {scores!r}")
     predictions = []
     for index, rle_string in enumerate(rles):
         if not rle_string:

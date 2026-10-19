@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib.util
 import json
-import threading
 from typing import Any, cast
 from uuid import UUID
 
@@ -191,17 +190,18 @@ class TestFalSam3Provider:
                 image=helpers.make_image(width=4, height=2), prompt=helpers.make_prompt(text="car")
             )
 
-    def test_segment__upload_error_releases_lock(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_segment__upload_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FAL_KEY", "secret")
         client = FakeFalClient(upload_error=httpx.ConnectError("refused"))
         provider = _make_provider(client=client)
+        image = helpers.make_image(width=4, height=2)
 
         with pytest.raises(ProviderError, match=r"fal\.ai request failed: refused"):
-            provider.segment(
-                image=helpers.make_image(width=4, height=2), prompt=helpers.make_prompt(text="car")
-            )
+            provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
+        with pytest.raises(ProviderError, match=r"fal\.ai request failed: refused"):
+            provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
 
-        assert provider._upload_locks == {}
+        assert len(client.uploads) == 2
         assert client.runs == []
 
     def test_segment__upload_error_from_image_data(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -217,8 +217,6 @@ class TestFalSam3Provider:
 
         with pytest.raises(ProviderError, match="unreadable"):
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
-
-        assert provider._upload_locks == {}
 
     @pytest.mark.parametrize(
         "error",
@@ -293,27 +291,6 @@ class TestFalSam3Provider:
             )
 
 
-def test_get_image_url__keeps_lock_of_other_call() -> None:
-    client = FakeFalClient()
-    provider = _make_provider(client=client)
-    image = helpers.make_image(width=4, height=2)
-    other_lock = threading.Lock()
-
-    def read_bytes() -> bytes:
-        # Another call replaces the lock while this upload runs.
-        provider._upload_locks[image.sample_id] = other_lock
-        raise ProviderError("unreadable")
-
-    failing = ProviderImage(
-        sample_id=image.sample_id, width=4, height=2, file_name="a.jpg", read_bytes=read_bytes
-    )
-
-    with pytest.raises(ProviderError):
-        provider._get_image_url(client=cast(SyncClient, client), image=failing)
-
-    assert provider._upload_locks == {image.sample_id: other_lock}
-
-
 class TestBuildRequestBody:
     def test_points(self) -> None:
         prompt = helpers.make_prompt(
@@ -379,6 +356,13 @@ class TestParseResponse:
         with pytest.raises(ProviderError, match="invalid score"):
             fal_sam3_provider.parse_response(
                 output={"rle": "0 1", "scores": ["high"]}, width=4, height=2
+            )
+
+    @pytest.mark.parametrize("scores", [0.5, {"a": 1}, "9"])
+    def test_invalid_scores_type(self, scores: object) -> None:
+        with pytest.raises(ProviderError, match="invalid scores"):
+            fal_sam3_provider.parse_response(
+                output={"rle": "0 1", "scores": scores}, width=4, height=2
             )
 
     @pytest.mark.parametrize("output", [{"rle": ""}, {"rle": []}])
