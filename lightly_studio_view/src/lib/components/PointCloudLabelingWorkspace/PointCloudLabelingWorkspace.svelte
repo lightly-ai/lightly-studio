@@ -156,7 +156,10 @@
         const target = event.target;
         if (
             target instanceof HTMLElement &&
-            (target.isContentEditable || ['INPUT', 'SELECT', 'TEXTAREA'].includes(target.tagName))
+            (target.isContentEditable ||
+                target.closest(
+                    'button, a, input, select, textarea, [role="button"], [role="option"], [role="menuitem"]'
+                ))
         ) {
             return;
         }

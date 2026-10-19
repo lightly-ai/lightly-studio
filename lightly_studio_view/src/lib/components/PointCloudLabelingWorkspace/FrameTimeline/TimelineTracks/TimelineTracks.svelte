@@ -27,6 +27,44 @@
     let { ticks, currentTick, bufferedRanges, onSelectTick, onSeekStart, onSeekEnd }: Props =
         $props();
 
+    const SEEK_KEYS = new Set([
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'PageUp',
+        'PageDown',
+        'Home',
+        'End'
+    ]);
+    let seekActive = false;
+    let lastCommittedIndex: number | null = null;
+
+    const beginSeek = () => {
+        if (seekActive) return;
+        seekActive = true;
+        lastCommittedIndex = null;
+        onSeekStart?.();
+    };
+
+    const commitSelectedTick = (input: HTMLInputElement) => {
+        const index = Number(input.value);
+        if (index === lastCommittedIndex) return;
+
+        const tick = ticks[index];
+        if (tick) {
+            lastCommittedIndex = index;
+            onSelectTick(tick.seq_number);
+        }
+    };
+
+    const endSeek = () => {
+        if (!seekActive) return;
+        seekActive = false;
+        lastCommittedIndex = null;
+        onSeekEnd?.();
+    };
+
     const NANOS_PER_SECOND = 1_000_000_000;
 
     /** Anchor the ruler at the first tick that carries a timestamp so labels stay relative. */
@@ -78,21 +116,23 @@
                 ticks.findIndex((tick) => tick.seq_number === currentTick)
             )}
             disabled={ticks.length === 0}
-            onpointerdown={() => {
-                onSeekStart?.();
+            onpointerdown={beginSeek}
+            onpointerup={(event) => {
+                commitSelectedTick(event.currentTarget);
+                endSeek();
             }}
-            onpointerup={() => {
-                // Range inputs dispatch `change` after `pointerup`; defer the fallback so a
-                // changed position is applied before playback resumes.
-                setTimeout(() => onSeekEnd?.(), 0);
+            onpointercancel={endSeek}
+            onkeydown={(event) => {
+                if (SEEK_KEYS.has(event.key)) beginSeek();
             }}
-            onchange={(event) => {
-                const tick = ticks[Number(event.currentTarget.value)];
-                if (tick) {
-                    onSelectTick(tick.seq_number);
-                    onSeekEnd?.();
+            onkeyup={(event) => {
+                if (SEEK_KEYS.has(event.key)) {
+                    commitSelectedTick(event.currentTarget);
+                    endSeek();
                 }
             }}
+            onblur={endSeek}
+            onchange={(event) => commitSelectedTick(event.currentTarget)}
         />
     </div>
 </div>
