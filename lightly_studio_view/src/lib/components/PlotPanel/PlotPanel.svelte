@@ -4,7 +4,7 @@
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import { PlotAxesEditor } from './PlotAxesEditor';
-    import PlotAxesLabels from './PlotAxesLabels/PlotAxesLabels.svelte';
+    import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
     import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
