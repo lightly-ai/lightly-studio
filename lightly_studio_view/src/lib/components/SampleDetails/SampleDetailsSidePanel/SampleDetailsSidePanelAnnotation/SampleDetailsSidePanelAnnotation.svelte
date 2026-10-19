@@ -112,16 +112,20 @@
 
 <div
     class={cn(
-        'flex items-center gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
+        'relative flex items-center gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
         canHighlight ? 'border border-primary' : ''
     )}
 >
     <button
         type="button"
-        class="flex w-full min-w-0 items-stretch justify-between text-left"
+        class="absolute inset-0 rounded-sm"
+        aria-label={`Select ${annotationLabelName} annotation`}
         data-annotation-id={annotation.sample_id}
         onclick={onClick}
+    ></button>
+    <div
+        class="pointer-events-none relative flex w-full min-w-0 items-stretch justify-between text-left"
     >
         <div class="w-full">
             <div class="flex min-w-0">
@@ -142,7 +146,7 @@
                         <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
-                                    class="min-w-0"
+                                    class="pointer-events-auto min-w-0"
                                     role="button"
                                     tabindex="0"
                                     onkeydown={(e) => {
@@ -152,9 +156,8 @@
                                         }
                                     }}
                                     onclick={(e) => {
-                                        if (!onClickSelectList) return;
                                         e.stopPropagation();
-                                        onClickSelectList();
+                                        (onClickSelectList ?? onClick)();
                                     }}
                                 >
                                     <SelectList
@@ -214,7 +217,7 @@
                 <div
                     class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-1"
                 >
-                    <div class="flex shrink-0 items-center gap-3">
+                    <div class="pointer-events-auto flex shrink-0 items-center gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Tooltip
@@ -295,5 +298,5 @@
                 </span>
             </div>
         </div>
-    </button>
+    </div>
 </div>
