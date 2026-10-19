@@ -21,11 +21,15 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
     twodim_embedding_resolver,
     video_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 embeddings2d_router = APIRouter()
@@ -34,7 +38,7 @@ embeddings2d_router = APIRouter()
 class GetEmbeddings2DRequest(BaseModel):
     """Request body for retrieving 2D embeddings."""
 
-    filters: ImageFilter | VideoFilter | AnnotationsFilter = Field(
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | McapSequenceFilter = Field(
         description="Filter parameters identifying matching samples"
     )
     color_by: ColorBy | None = None
@@ -149,7 +153,7 @@ def get_2d_embeddings(
 def _get_matching_sample_ids(
     session: SessionDep,
     collection_id: UUID,
-    filters: ImageFilter | VideoFilter | AnnotationsFilter,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | McapSequenceFilter,
 ) -> set[UUID]:
     """Get the set of sample IDs that match the given filters.
 
@@ -175,6 +179,12 @@ def _get_matching_sample_ids(
             collection_id=collection_id,
             filters=filters,
         )
+    if isinstance(filters, McapSequenceFilter):
+        return mcap_group_sequence_resolver.get_sample_ids(
+            session=session,
+            collection_id=collection_id,
+            filters=filters,
+        )
     # Default to image_resolver for ImageFilter
     return image_resolver.get_sample_ids(
         session=session,
@@ -185,13 +195,15 @@ def _get_matching_sample_ids(
 
 def _validate_filter_type(
     collection: CollectionTable,
-    filters: ImageFilter | VideoFilter | AnnotationsFilter,
+    filters: ImageFilter | VideoFilter | AnnotationsFilter | McapSequenceFilter,
 ) -> None:
     if collection.sample_type == SampleType.IMAGE and isinstance(filters, ImageFilter):
         return
     if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
         return
     if collection.sample_type == SampleType.ANNOTATION and isinstance(filters, AnnotationsFilter):
+        return
+    if collection.sample_type == SampleType.SEQUENCE and isinstance(filters, McapSequenceFilter):
         return
     raise HTTPException(
         status_code=HTTP_STATUS_BAD_REQUEST,
