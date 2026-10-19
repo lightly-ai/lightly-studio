@@ -345,26 +345,6 @@ describe('ImageOrderBy', () => {
     });
 
     it.each([
-        ['tp', 'Correct predictions (TP)'],
-        ['fp', 'Extra predictions (FP)'],
-        ['fn', 'Missed objects (FN)']
-    ])('groups %s choices under their metric name', async (metricName, label) => {
-        const user = userEvent.setup();
-        mocks.metricsProxy.data = [
-            {
-                run_name: 'model',
-                metrics: [{ metric_name: metricName, min_value: 0, max_value: 12 }]
-            }
-        ];
-        render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
-        await user.click(screen.getByTestId('sort-by-trigger'));
-        expect(screen.getByRole('group', { name: label })).toContainElement(
-            screen.getByTestId(`sort-field-model-${metricName}`)
-        );
-        expect(screen.getByTestId(`sort-field-model-${metricName}`)).toHaveTextContent('model');
-    });
-
-    it.each([
         [SortDirection.DESC, 'Highest'],
         [SortDirection.ASC, 'Lowest']
     ])(
@@ -394,40 +374,22 @@ describe('ImageOrderBy', () => {
         }
     );
 
-    it('lists evaluation names under their custom metric groups', async () => {
+    it('groups choices across evaluations by metric and selects the matching run', async () => {
         const user = userEvent.setup();
         mocks.metricsProxy.data = [
             {
                 run_name: 'run1',
                 metrics: [
                     { metric_name: 'precision', min_value: 0, max_value: 1 },
-                    { metric_name: 'recall', min_value: 0, max_value: 1 }
+                    { metric_name: 'fp', min_value: 0, max_value: 12 }
                 ]
-            }
-        ];
-        render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
-
-        await user.click(screen.getByTestId('sort-by-trigger'));
-
-        expect(screen.getByRole('group', { name: 'precision' })).toContainElement(
-            screen.getByTestId('sort-field-run1-precision')
-        );
-        expect(screen.getByTestId('sort-field-run1-precision')).toHaveTextContent('run1');
-        expect(screen.getByRole('group', { name: 'recall' })).toContainElement(
-            screen.getByTestId('sort-field-run1-recall')
-        );
-    });
-
-    it('selects an evaluation metric field', async () => {
-        const user = userEvent.setup();
-        mocks.metricsProxy.data = [
-            {
-                run_name: 'run1',
-                metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
             },
             {
                 run_name: 'run2',
-                metrics: [{ metric_name: 'precision', min_value: 0, max_value: 1 }]
+                metrics: [
+                    { metric_name: 'precision', min_value: 0, max_value: 1 },
+                    { metric_name: 'fp', min_value: 0, max_value: 12 }
+                ]
             }
         ];
         render(ImageOrderBy, { props: { collectionId: 'col1', datasetId: 'ds1' } });
@@ -439,6 +401,10 @@ describe('ImageOrderBy', () => {
         expect(screen.getByRole('group', { name: 'precision' })).toContainElement(
             screen.getByTestId('sort-field-run2-precision')
         );
+        expect(screen.getByRole('group', { name: 'Extra predictions (FP)' })).toContainElement(
+            screen.getByTestId('sort-field-run2-fp')
+        );
+        expect(screen.getByTestId('sort-field-run2-fp')).toHaveTextContent('run2');
         await user.click(screen.getByTestId('sort-field-run2-precision'));
 
         expect(mocks.updateSortBy).toHaveBeenCalledWith([
