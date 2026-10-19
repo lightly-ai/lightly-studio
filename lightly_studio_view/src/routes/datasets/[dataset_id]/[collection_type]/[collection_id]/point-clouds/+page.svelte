@@ -6,6 +6,8 @@
     import { useGlobalStorage, useMcapSequencesInfinite } from '$lib/hooks';
     import { routeHelpers } from '$lib/routes';
 
+    // The page layout provides data, but this route loads its own sequence data.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data: _data }: { data: PageData } = $props();
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
