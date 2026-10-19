@@ -17,6 +17,22 @@ description: Python API reference for LightlyStudio's DatasetQuery, used to filt
         members: [ImageSampleField]
         show_if_no_docstring: true
 
+## MetadataAccessor
+
+Access metadata through `ImageSampleField.metadata["<path>"]` or
+`VideoSampleField.metadata["<path>"]`. See
+[Metadata queries](../workflows/search_and_filter.md#metadata-queries) for examples and comparison rules.
+
+::: lightly_studio.core.dataset_query.metadata_expression
+    options:
+        members: [MetadataAccessor]
+
+## MetadataField
+
+::: lightly_studio.core.dataset_query.metadata_expression
+    options:
+        members: [MetadataField]
+
 ## VideoSampleField
 
 ::: lightly_studio.core.dataset_query.video_sample_field
