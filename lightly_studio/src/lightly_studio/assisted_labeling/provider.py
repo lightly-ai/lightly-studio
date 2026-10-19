@@ -41,7 +41,13 @@ class ProviderImage:
 
 @dataclass(frozen=True)
 class PointPrompt:
-    """A point prompt in integer pixel coordinates."""
+    """A point prompt in integer pixel coordinates.
+
+    Attributes:
+        x: Column of the pixel, from 0 to image width - 1.
+        y: Row of the pixel, from 0 to image height - 1.
+        positive: True if the pixel is on the object, False if it is on the background.
+    """
 
     x: int
     y: int
@@ -50,7 +56,16 @@ class PointPrompt:
 
 @dataclass(frozen=True)
 class BoxPrompt:
-    """A box prompt in integer pixel coordinates."""
+    """A box prompt in integer pixel coordinates.
+
+    The minimum coordinates are inclusive and the maximum coordinates are exclusive.
+
+    Attributes:
+        x_min: Left edge, from 0 to image width - 1.
+        y_min: Top edge, from 0 to image height - 1.
+        x_max: Right edge, from x_min + 1 to image width.
+        y_max: Bottom edge, from y_min + 1 to image height.
+    """
 
     x_min: int
     y_min: int
