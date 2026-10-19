@@ -11,7 +11,10 @@ interface UseDeleteCuboidAnnotationReturn {
     handleDeleteCuboid: (cuboidId: string) => Promise<boolean>;
 }
 
-export function useDeleteCuboidAnnotation({ getCollectionId, getAnnotations }: Params): UseDeleteCuboidAnnotationReturn {
+export function useDeleteCuboidAnnotation({
+    getCollectionId,
+    getAnnotations
+}: Params): UseDeleteCuboidAnnotationReturn {
     const { deleteAnnotation } = useDeleteAnnotation({
         getCollectionId: () => getCollectionId() ?? ''
     });
