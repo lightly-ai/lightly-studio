@@ -37,7 +37,7 @@ vi.mock('$lib/hooks/useAuth/useAuth', () => ({
 // The classification segment imports useAnnotationCollections through the `$lib/hooks`
 // barrel; mocking the underlying module replaces the barrel re-export too.
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
-    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
+    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections, isSuccess: true }))
 }));
 
 // Drives the grid-filter seeded collapse: sources missing from the selection start collapsed.
@@ -211,17 +211,52 @@ describe('SampleDetailsClassificationSegment', () => {
 
     const deleteButton = () => screen.getByRole('button', { name: 'Delete classification' });
 
-    it('shows the sidebar copy control when editing', () => {
+    it.each([false, true])('copies with an existing source: %s', async (existing) => {
         mocks.isEditingMode.set(true);
-        render(SampleDetailsSidePanelAnnotation, {
+        mocks.annotationLabels = [catLabel];
+        mocks.collections = [groundTruthSource];
+        if (existing) mocks.collections.push({ collection_id: 'human', name: 'Human' });
+        mocks.createAnnotation.mockRejectedValueOnce(new Error('offline'));
+        const onClick = vi.fn();
+        const { container } = render(SampleDetailsSidePanelAnnotation, {
             annotation: createClassification('c1', groundTruthSource.collection_id, 'cat'),
             isSelected: false,
-            onClick: vi.fn(),
+            onClick,
             onUpdate: vi.fn(),
             onToggleShowAnnotation: vi.fn(),
             onDeleteAnnotation: vi.fn()
         });
-        expect(screen.getByLabelText('Duplicate to another annotation source')).toBeInTheDocument();
+        expect(container.querySelector('button button')).toBeNull();
+        screen.getByRole('button', { name: 'Select cat annotation' }).focus();
+        await userEvent.keyboard('{Enter} ');
+        expect(onClick).toHaveBeenCalledTimes(2);
+        onClick.mockClear();
+        await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
+        expect(onClick).not.toHaveBeenCalled();
+        const input = screen.getByRole('combobox', { name: 'Annotation source' });
+        await userEvent.type(input, ' {Enter}');
+        await userEvent.type(input, `${groundTruthSource.name}{Enter}`);
+        expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
+        expect(mocks.createAnnotation).not.toHaveBeenCalled();
+        await userEvent.clear(input);
+        await userEvent.type(input, existing ? 'Human' : ' Human ');
+        await userEvent.click(
+            screen.getByRole('option', { name: existing ? 'Human' : 'Create: Human' })
+        );
+        expect(input).toHaveValue(existing ? 'Human' : ' Human ');
+        expect(toast.error).toHaveBeenCalled();
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() =>
+            expect(
+                screen.queryByRole('combobox', { name: 'Annotation source' })
+            ).not.toBeInTheDocument()
+        );
+        expect(mocks.createAnnotation).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                annotation_collection_name: 'Human',
+                annotation_label_id: 'label-cat'
+            })
+        );
     });
 
     it('renders a flat list without source groups for a single source', () => {
