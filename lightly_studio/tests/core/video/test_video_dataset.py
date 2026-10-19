@@ -5,7 +5,9 @@ from pathlib import Path
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 
+from lightly_studio.analytics import tracking
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -86,6 +88,25 @@ class TestDataset:
             embedding_model_id=model_id,
         )
         assert len(embeddings) == 2
+
+    def test_dataset_add_videos_from_path__tracks_ingest(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        mock_track = mocker.patch.object(tracking, "track")
+        create_video_file(
+            output_path=tmp_path / "test_video.mp4", width=64, height=48, num_frames=2, fps=2
+        )
+
+        dataset = VideoDataset.create(name="test_dataset")
+        dataset.add_videos_from_path(path=tmp_path, embed=False, embed_frames=False)
+
+        mock_track.assert_called_once_with(
+            event="samples_ingested",
+            properties={"source": "local", "sample_type": "video", "format": "folder"},
+        )
 
     @pytest.mark.parametrize(
         ("embed", "embed_frames", "expected_video_embeddings", "expected_frame_embeddings"),

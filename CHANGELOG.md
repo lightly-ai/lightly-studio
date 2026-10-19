@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added an image interpolation setting to show sharp pixel edges when zooming in.
 - Added a "Clear all filters" button to the filter sidebar.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
+- Python SDK: Report anonymous usage data on how data is loaded: the dataset format and whether it comes from the example dataset, a local folder or remote storage.
 
 ### Changed
 
