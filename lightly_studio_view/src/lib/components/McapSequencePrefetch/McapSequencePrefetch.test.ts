@@ -29,14 +29,30 @@ vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svel
 }));
 
 describe('McapSequencePrefetch', () => {
+    let runIdleCallback: (() => void) | undefined;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        runIdleCallback = undefined;
+        Object.defineProperty(window, 'requestIdleCallback', {
+            configurable: true,
+            value: (callback: () => void) => {
+                runIdleCallback = callback;
+                return 1;
+            }
+        });
     });
 
-    it('starts prefetching the first 50 ticks for the sequence', () => {
+    it('starts prefetching the first 50 ticks for the sequence when idle', async () => {
         render(McapSequencePrefetch, {
             props: { datasetId: 'dataset-1', sequenceId: 'sequence-1' }
         });
+        expect(useScheduler).toHaveBeenCalledOnce();
+        const initialParams = useScheduler.mock.calls[0][0];
+        expect(initialParams.getEnabled()).toBe(false);
+
+        runIdleCallback?.();
+        await vi.waitFor(() => expect(initialParams.getEnabled()).toBe(true));
 
         expect(useScheduler).toHaveBeenCalledWith(
             expect.objectContaining({
