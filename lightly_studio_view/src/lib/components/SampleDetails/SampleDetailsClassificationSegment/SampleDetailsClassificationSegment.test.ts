@@ -361,17 +361,50 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.getByText('zebra')).toBeInTheDocument();
     });
 
-    it('shows confidence value when present', () => {
-        mocks.collections = [groundTruthSource];
-        const annotations = [
-            createClassification('c1', groundTruthSource.collection_id, 'bird', 0.95)
-        ];
+    it.each([0, 0.95])(
+        'keeps classification confidence %s when switching modes',
+        async (confidence) => {
+            mocks.collections = [groundTruthSource];
+            mocks.annotationLabels = [catLabel];
+            const annotations = [
+                createClassification('c1', groundTruthSource.collection_id, 'cat', confidence)
+            ];
+            render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
 
-        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+            mocks.isEditingMode.set(true);
+            expect(await screen.findByRole('combobox')).toHaveTextContent('cat');
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+        }
+    );
 
-        expect(screen.getByText('bird')).toBeInTheDocument();
-        expect(screen.getByText('Confidence: 0.95')).toBeInTheDocument();
-    });
+    it.each([0, 0.95])(
+        'keeps spatial annotation confidence %s when switching modes',
+        async (confidence) => {
+            mocks.annotationLabels = [catLabel];
+            render(SampleDetailsSidePanelAnnotation, {
+                annotation: {
+                    ...createClassification(
+                        'a1',
+                        groundTruthSource.collection_id,
+                        'cat',
+                        confidence
+                    ),
+                    annotation_type: 'object_detection'
+                },
+                isSelected: false,
+                onClick: vi.fn(),
+                onUpdate: vi.fn(),
+                onToggleShowAnnotation: vi.fn(),
+                onDeleteAnnotation: vi.fn()
+            });
+
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+            mocks.isEditingMode.set(true);
+            expect(await screen.findByRole('combobox')).toHaveTextContent('cat');
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+        }
+    );
 
     it('does not show confidence line when confidence is null', () => {
         mocks.collections = [groundTruthSource];
