@@ -47,7 +47,7 @@
             <Button
                 variant="destructive"
                 isPending={mutation.isPending}
-                buttonProps={{ disabled: mutation.isPending, onclick: remove }}
+                buttonProps={{ onclick: remove }}
             >
                 {mutation.isPending ? 'Deleting…' : 'Delete'}
             </Button>

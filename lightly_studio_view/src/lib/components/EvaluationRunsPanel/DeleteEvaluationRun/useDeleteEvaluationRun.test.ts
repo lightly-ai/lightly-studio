@@ -8,11 +8,8 @@ import { useDeleteEvaluationRun } from './useDeleteEvaluationRun.svelte';
 vi.mock('@tanstack/svelte-query', async (original) => ({
     ...(await original<typeof import('@tanstack/svelte-query')>()),
     useQueryClient: () => ({ invalidateQueries }),
-    createMutation: () => ({
-        mutate: (_vars: unknown, callbacks: { onSuccess: () => void; onError: () => void }) => {
-            succeed = callbacks.onSuccess;
-            fail = callbacks.onError;
-        }
+    createMutation: (options: () => { onSuccess: () => void; onError: () => void }) => ({
+        mutate: () => ({ onSuccess: succeed, onError: fail } = options())
     })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));

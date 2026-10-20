@@ -20,47 +20,45 @@ export const useDeleteEvaluationRun = (getParams: () => Params) => {
     const client = useQueryClient();
     const filters = useImageFilters();
     const { clearRun } = useAnnotationSortBy();
-    const mutation = createMutation(() => ({ ...deleteRunMutation() }));
+    const mutation = createMutation(() => ({
+        ...deleteRunMutation(),
+        onSuccess: () => {
+            const { datasetId, run, onSuccess } = getParams();
+            const sort = get(filters.imageSortBy);
+            const remaining = sort?.filter(
+                (expr) =>
+                    expr.source !== 'evaluation_metric' || expr.evaluation_run_name !== run.name
+            );
+            if (remaining?.length !== sort?.length) {
+                filters.updateSortBy(remaining?.length ? remaining : null);
+            }
+            if (
+                get(filters.imageFilter)?.sample_filter?.confusion_cell?.evaluation_run_id ===
+                run.id
+            ) {
+                filters.updateConfusionCell(null);
+            }
+            clearRun(run.id);
+            const path = { dataset_id: datasetId };
+            // Annotation metrics are cached by source rather than dataset.
+            for (const queryKey of [
+                getEvaluationRunsQueryKey({ path }),
+                getEvaluationSampleMetricsInfoQueryKey({ path }),
+                [{ _id: 'getEvaluationAnnotationMetricsInfo' }],
+                ['readImagesInfinite'],
+                [ANNOTATIONS_INFINITE_QUERY_KEY_ROOT]
+            ]) {
+                client.invalidateQueries({ queryKey });
+            }
+            toast.success('Evaluation deleted');
+            onSuccess();
+        },
+        onError: () => toast.error('Failed to delete evaluation. Try again.')
+    }));
     const remove = () => {
         if (mutation.isPending) return;
-        const { datasetId, run, onSuccess } = getParams();
-        mutation.mutate(
-            { path: { dataset_id: datasetId, run_id: run.id } },
-            {
-                onSuccess: () => {
-                    const sort = get(filters.imageSortBy);
-                    const remaining = sort?.filter(
-                        (expr) =>
-                            expr.source !== 'evaluation_metric' ||
-                            expr.evaluation_run_name !== run.name
-                    );
-                    if (remaining?.length !== sort?.length) {
-                        filters.updateSortBy(remaining?.length ? remaining : null);
-                    }
-                    if (
-                        get(filters.imageFilter)?.sample_filter?.confusion_cell
-                            ?.evaluation_run_id === run.id
-                    ) {
-                        filters.updateConfusionCell(null);
-                    }
-                    clearRun(run.id);
-                    const path = { dataset_id: datasetId };
-                    // Annotation metrics are cached by source rather than dataset.
-                    for (const queryKey of [
-                        getEvaluationRunsQueryKey({ path }),
-                        getEvaluationSampleMetricsInfoQueryKey({ path }),
-                        [{ _id: 'getEvaluationAnnotationMetricsInfo' }],
-                        ['readImagesInfinite'],
-                        [ANNOTATIONS_INFINITE_QUERY_KEY_ROOT]
-                    ]) {
-                        client.invalidateQueries({ queryKey });
-                    }
-                    toast.success('Evaluation deleted');
-                    onSuccess();
-                },
-                onError: () => toast.error('Failed to delete evaluation. Try again.')
-            }
-        );
+        const { datasetId, run } = getParams();
+        mutation.mutate({ path: { dataset_id: datasetId, run_id: run.id } });
     };
     return { mutation, remove };
 };
