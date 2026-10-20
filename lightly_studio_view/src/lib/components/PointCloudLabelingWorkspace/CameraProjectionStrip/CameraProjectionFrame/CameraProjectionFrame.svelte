@@ -9,6 +9,7 @@
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
     import type { ProjectionSettings } from '../projectionSettings';
+    import type { AnnotationClassColor } from '../projectionOverlay';
 
     /**
      * A single camera tile in the projection strip, with a placeholder icon when the
@@ -32,6 +33,7 @@
         label: string;
         batch?: PointBatch;
         annotations?: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
         projection?: CameraProjectionView;
         projectionSettings?: ProjectionSettings;
         onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
@@ -48,6 +50,7 @@
         label,
         batch,
         annotations = [],
+        annotationClasses = [],
         projection,
         onPlaybackToggle,
         projectionSettings,
@@ -117,6 +120,7 @@
                 <ProjectionOverlay
                     {batch}
                     {annotations}
+                    {annotationClasses}
                     {projection}
                     settings={projectionSettings}
                 />
@@ -128,6 +132,7 @@
             imageUrl={fullFrameUrl ?? frameUrl}
             {batch}
             {annotations}
+            {annotationClasses}
             {projection}
             {projectionSettings}
             {onProjectionSettingsChange}

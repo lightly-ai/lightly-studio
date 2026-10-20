@@ -4,6 +4,7 @@
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+    import type { AnnotationClassColor } from './projectionOverlay';
     import ProjectionControls from './ProjectionControls.svelte';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
 
@@ -27,6 +28,7 @@
         selectedChannelIds: number[];
         batch?: PointBatch;
         annotations?: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
         canProject?: boolean;
         onPlaybackToggle?: () => void;
     }
@@ -40,6 +42,7 @@
         selectedChannelIds,
         batch,
         annotations = [],
+        annotationClasses = [],
         canProject = true,
         onPlaybackToggle
     }: Props = $props();
@@ -86,6 +89,7 @@
                 label={summaryChannel.group_component_name}
                 {batch}
                 {annotations}
+                {annotationClasses}
                 projection={canProject ? (channel?.projection ?? undefined) : undefined}
                 {onPlaybackToggle}
                 projectionSettings={$projectionSettings}

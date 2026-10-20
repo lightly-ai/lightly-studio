@@ -412,6 +412,7 @@
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
                                 batch={currentSnapshot?.frame.batch}
                                 annotations={snapshotAnnotations}
+                                {annotationClasses}
                                 canProject={!workspace.isShowingSensorFrames}
                                 onPlaybackToggle={togglePlayback}
                             />

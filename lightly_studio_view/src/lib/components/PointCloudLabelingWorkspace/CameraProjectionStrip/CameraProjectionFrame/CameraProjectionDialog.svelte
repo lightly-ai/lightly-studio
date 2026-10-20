@@ -8,6 +8,7 @@
     import ProjectionControls from '../ProjectionControls.svelte';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
     import type { ProjectionSettings } from '../projectionSettings';
+    import type { AnnotationClassColor } from '../projectionOverlay';
 
     interface Props {
         open?: boolean;
@@ -15,6 +16,7 @@
         imageUrl: string | null;
         batch?: PointBatch;
         annotations: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
         projection?: CameraProjectionView;
         projectionSettings?: ProjectionSettings;
         onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
@@ -27,6 +29,7 @@
         imageUrl,
         batch,
         annotations,
+        annotationClasses = [],
         projection,
         projectionSettings,
         onProjectionSettingsChange,
@@ -74,7 +77,13 @@
                 alt={`${label} enlarged`}
                 class="block max-h-[80vh] max-w-full rounded-md object-contain"
             />
-            <ProjectionOverlay {batch} {annotations} {projection} settings={projectionSettings} />
+            <ProjectionOverlay
+                {batch}
+                {annotations}
+                {annotationClasses}
+                {projection}
+                settings={projectionSettings}
+            />
         </div>
     </Dialog.Content>
 </Dialog.Root>

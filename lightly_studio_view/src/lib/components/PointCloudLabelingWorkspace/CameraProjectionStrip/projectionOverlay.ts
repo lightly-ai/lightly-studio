@@ -29,6 +29,20 @@ export interface ProjectedSegment {
     end: ProjectedPoint;
 }
 
+export interface AnnotationClassColor {
+    id: string;
+    color: string;
+}
+
+const CUBOID_FACES = [
+    [0, 1, 3, 2],
+    [4, 6, 7, 5],
+    [0, 4, 5, 1],
+    [2, 3, 7, 6],
+    [0, 2, 6, 4],
+    [1, 5, 7, 3]
+] as const;
+
 type CameraPoint = readonly [x: number, y: number, z: number];
 type ColorMetric = 'depth' | 'height' | 'intensity' | 'distance' | 'density';
 
@@ -54,7 +68,8 @@ export function drawProjectionOverlay(
     projection: CameraProjectionView,
     batch: PointBatch | undefined,
     annotations: readonly AnnotationView[],
-    settings: ProjectionSettings = DEFAULT_PROJECTION_SETTINGS
+    settings: ProjectionSettings = DEFAULT_PROJECTION_SETTINGS,
+    annotationClasses: readonly AnnotationClassColor[] = []
 ): void {
     context.clearRect(0, 0, projection.width, projection.height);
     if (batch && settings.showPoints) {
@@ -76,14 +91,34 @@ export function drawProjectionOverlay(
     }
     if (settings.showAnnotations) {
         context.globalAlpha = 1;
-        context.strokeStyle = '#ff5c5c';
-        context.lineWidth = 2;
-        context.beginPath();
-        for (const segment of projectAnnotations(annotations, projection)) {
-            context.moveTo(segment.start.x, segment.start.y);
-            context.lineTo(segment.end.x, segment.end.y);
+        for (const annotation of annotations) {
+            const cuboid = annotation.cuboid_3d_details;
+            if (!cuboid) continue;
+            const color =
+                annotationClasses.find(
+                    ({ id }) => id === annotation.annotation_label.annotation_label_name
+                )?.color ?? '#ff5c5c';
+
+            context.fillStyle = color;
+            context.globalAlpha = 0.2;
+            for (const face of projectCuboidFaces(cuboid, projection)) {
+                context.beginPath();
+                context.moveTo(face[0].x, face[0].y);
+                for (const point of face.slice(1)) context.lineTo(point.x, point.y);
+                context.closePath();
+                context.fill();
+            }
+
+            context.globalAlpha = 1;
+            context.strokeStyle = color;
+            context.lineWidth = 2;
+            context.beginPath();
+            for (const segment of projectCuboid(cuboid, projection)) {
+                context.moveTo(segment.start.x, segment.start.y);
+                context.lineTo(segment.end.x, segment.end.y);
+            }
+            context.stroke();
         }
-        context.stroke();
     }
 }
 
@@ -263,6 +298,58 @@ export function projectCuboid(
         const clipped2d = clipToImage(start, end, projection);
         return clipped2d ? [clipped2d] : [];
     });
+}
+
+function projectCuboidFaces(
+    cuboid: Cuboid3dAnnotationView,
+    projection: CameraProjectionView
+): ProjectedPoint[][] {
+    const corners = cuboidCorners(cuboid).map((corner) => toCameraPoint(corner, projection));
+    return CUBOID_FACES.flatMap((face) => {
+        const projected = face.map((index) => {
+            const cameraPoint = corners[index];
+            return cameraPoint[2] > NEAR_PLANE ? projectCameraPoint(cameraPoint, projection) : null;
+        });
+        if (projected.some((point) => point === null)) return [];
+        const clipped = clipPolygonToImage(
+            projected as ProjectedPoint[],
+            projection.width,
+            projection.height
+        );
+        return clipped.length >= 3 ? [clipped] : [];
+    });
+}
+
+function clipPolygonToImage(
+    polygon: ProjectedPoint[],
+    width: number,
+    height: number
+): ProjectedPoint[] {
+    let clipped = polygon;
+    for (const [axis, limit, keepGreater] of [
+        ['x', 0, true],
+        ['x', width, false],
+        ['y', 0, true],
+        ['y', height, false]
+    ] as const) {
+        const input = clipped;
+        clipped = [];
+        for (let index = 0; index < input.length; index += 1) {
+            const start = input[index];
+            const end = input[(index + 1) % input.length];
+            const startInside = keepGreater ? start[axis] >= limit : start[axis] <= limit;
+            const endInside = keepGreater ? end[axis] >= limit : end[axis] <= limit;
+            if (startInside !== endInside) {
+                const ratio = (limit - start[axis]) / (end[axis] - start[axis]);
+                clipped.push({
+                    x: start.x + ratio * (end.x - start.x),
+                    y: start.y + ratio * (end.y - start.y)
+                });
+            }
+            if (endInside) clipped.push(end);
+        }
+    }
+    return clipped;
 }
 
 function clipToNearPlane(start: CameraPoint, end: CameraPoint): [CameraPoint, CameraPoint] | null {

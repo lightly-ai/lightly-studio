@@ -4,12 +4,13 @@
         CameraProjectionView
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
-    import { drawProjectionOverlay } from './projectionOverlay';
+    import { drawProjectionOverlay, type AnnotationClassColor } from './projectionOverlay';
     import { DEFAULT_PROJECTION_SETTINGS, type ProjectionSettings } from './projectionSettings';
 
     interface Props {
         batch?: PointBatch;
         annotations: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
         projection?: CameraProjectionView;
         settings?: ProjectionSettings;
     }
@@ -17,6 +18,7 @@
     let {
         batch,
         annotations,
+        annotationClasses = [],
         projection,
         settings = DEFAULT_PROJECTION_SETTINGS
     }: Props = $props();
@@ -28,7 +30,7 @@
         canvas.height = projection.height;
         const context = canvas.getContext('2d');
         if (!context) return;
-        drawProjectionOverlay(context, projection, batch, annotations, settings);
+        drawProjectionOverlay(context, projection, batch, annotations, settings, annotationClasses);
     });
 </script>
 
