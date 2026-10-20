@@ -9,8 +9,9 @@ import os
 import threading
 from collections import OrderedDict
 from collections.abc import Iterator
+from concurrent.futures import Future
 from pathlib import PurePosixPath
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import httpx
@@ -68,17 +69,12 @@ class FalSam3Provider:
     needs a restart.
     """
 
-    def __init__(self, create_client: Callable[[str], SyncClient] | None = None) -> None:
-        """Creates the provider.
-
-        Args:
-            create_client: Creates the fal.ai client from the API key. Creates a
-                `fal_client.SyncClient` if None.
-        """
-        self._create_client = create_client if create_client is not None else _create_client
+    def __init__(self) -> None:
+        """Creates the provider."""
         self._client: SyncClient | None = None
         self._client_lock = threading.Lock()
         self._image_urls: OrderedDict[UUID, str] = OrderedDict()
+        self._pending_uploads: dict[UUID, Future[str]] = {}
         self._image_urls_lock = threading.Lock()
 
     def unavailable_reason(self) -> str | None:
@@ -95,40 +91,70 @@ class FalSam3Provider:
         image_url = self._get_image_url(client=client, image=image)
         # fal-client retries connection errors and status 408, 409 and 429. With
         # `start_timeout`, it does not retry timeouts of `run`, but it retries upload timeouts.
+        import fal_client  # noqa: PLC0415
+
         with _fal_errors_as_provider_errors():
-            output = client.run(
-                application=ENDPOINT,
-                arguments=build_request_body(image_url=image_url, prompt=prompt),
-                timeout=REQUEST_TIMEOUT_S,
-                start_timeout=REQUEST_TIMEOUT_S,
-            )
+            try:
+                output = client.run(
+                    application=ENDPOINT,
+                    arguments=build_request_body(image_url=image_url, prompt=prompt),
+                    timeout=REQUEST_TIMEOUT_S,
+                    start_timeout=REQUEST_TIMEOUT_S,
+                )
+            except fal_client.FalClientHTTPError:
+                # fal.ai can delete the uploaded file, so the next call uploads again
+                self._forget_image_url(sample_id=image.sample_id)
+                raise
         if not isinstance(output, dict):
             raise ProviderError(f"fal.ai returned unexpected JSON: {output!r}")
         return parse_response(output=output, width=image.width, height=image.height)
 
     def _get_client(self) -> SyncClient:
-        reason = self.unavailable_reason()
-        if reason is not None:
-            raise ProviderUnavailableError(reason)
         with self._client_lock:
             if self._client is None:
+                reason = self.unavailable_reason()
+                if reason is not None:
+                    raise ProviderUnavailableError(reason)
                 try:
-                    self._client = self._create_client(os.environ[FAL_KEY_ENV_VAR])
+                    self._client = _create_client(fal_key=os.environ[FAL_KEY_ENV_VAR])
                 except ImportError as error:
                     raise ProviderUnavailableError(MISSING_EXTRA_REASON) from error
             return self._client
 
     def _get_image_url(self, client: SyncClient, image: ProviderImage) -> str:
-        # The lock also covers the upload, so each image is uploaded once.
+        # Concurrent calls for one sample wait for its single upload. The lock is not held
+        # during the upload, so other samples do not wait.
+        sample_id = image.sample_id
         with self._image_urls_lock:
-            url = self._image_urls.get(image.sample_id)
-            if url is None:
-                url = _upload(client=client, image=image)
-                self._image_urls[image.sample_id] = url
-                if len(self._image_urls) > MAX_CACHED_IMAGE_URLS:
-                    self._image_urls.popitem(last=False)
-            self._image_urls.move_to_end(image.sample_id)
-            return url
+            url = self._image_urls.get(sample_id)
+            if url is not None:
+                self._image_urls.move_to_end(sample_id)
+                return url
+            pending = self._pending_uploads.get(sample_id)
+            is_uploader = pending is None
+            if pending is None:
+                pending = Future()
+                self._pending_uploads[sample_id] = pending
+        if not is_uploader:
+            return pending.result()
+        try:
+            url = _upload(client=client, image=image)
+        except BaseException as error:
+            with self._image_urls_lock:
+                del self._pending_uploads[sample_id]
+            pending.set_exception(error)
+            raise
+        with self._image_urls_lock:
+            del self._pending_uploads[sample_id]
+            self._image_urls[sample_id] = url
+            if len(self._image_urls) > MAX_CACHED_IMAGE_URLS:
+                self._image_urls.popitem(last=False)
+        pending.set_result(url)
+        return url
+
+    def _forget_image_url(self, sample_id: UUID) -> None:
+        with self._image_urls_lock:
+            self._image_urls.pop(sample_id, None)
 
 
 def build_request_body(image_url: str, prompt: SegmentationPrompt) -> dict[str, Any]:
@@ -164,6 +190,10 @@ def build_request_body(image_url: str, prompt: SegmentationPrompt) -> dict[str, 
             {"x_min": box.x_min, "y_min": box.y_min, "x_max": box.x_max, "y_max": box.y_max}
             for box in prompt.boxes
         ]
+        if prompt.max_masks == 1:
+            # Boxes and points of a single mask describe one object
+            for box_prompt in body["box_prompts"]:
+                box_prompt["object_id"] = 1
     return body
 
 
