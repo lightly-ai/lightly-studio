@@ -22,8 +22,7 @@ export function restoreTransformSnapshot(
 export const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'rotate' | 'scale'>> =
     {
         translate: 'translate',
-        rotate: 'rotate',
-        resize: 'scale'
+        rotate: 'rotate'
     };
 
 type CuboidTransformPayload = Parameters<
