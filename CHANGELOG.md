@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- API: Delete an evaluation and its results while keeping annotations unchanged.
 - Edit saved evaluation parameters and rerun from the evaluation panel.
 - API: Change evaluation parameters and rerun an existing evaluation.
 - Create a new annotation source while duplicating an annotation in the details view.
