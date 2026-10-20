@@ -1,4 +1,4 @@
-import { expect, gotoFirstPage, test } from '../utils';
+import { expect, test } from '../utils';
 import type { Page } from '@playwright/test';
 
 async function reachImageStep(page: Page) {
@@ -14,7 +14,7 @@ async function reachImageStep(page: Page) {
         await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
     // Edit annotations step — skip if visible
-    if (await page.getByText('Edit annotations', { exact: true }).isVisible()) {
+    if (await page.locator('#driver-popover-title').getByText('Edit annotations', { exact: true }).isVisible()) {
         await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
     // Embedding step — skip if visible
@@ -24,13 +24,17 @@ async function reachImageStep(page: Page) {
     await expect(page.getByText('Open an image', { exact: true })).toBeVisible();
 }
 
-test('image tour follows a double-click into sample details', async ({ page, samplesPage }) => {
+test('image tour follows a double-click into sample details', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('navigation-menu-images').click();
+    await expect(page.getByTestId('sample-grid-item').first()).toBeVisible();
+
     await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();
     await reachImageStep(page);
 
-    await samplesPage.getSampleByIndex(0).click();
+    await page.locator('[data-index="0"]').click();
     await expect(page.getByText('Open an image', { exact: true })).toBeVisible();
-    await samplesPage.getSampleByIndex(0).dblclick();
+    await page.locator('[data-index="0"]').dblclick();
 
     await expect(page.getByText('Inspect and annotate', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Done' }).click();
@@ -40,7 +44,7 @@ test('image tour follows a double-click into sample details', async ({ page, sam
 test('tour can open a sample with its accessible action and replay from detail', async ({
     page
 }) => {
-    await gotoFirstPage(page);
+    await page.goto('/');
     await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();
     await reachImageStep(page);
     await page.getByRole('button', { name: 'Open sample' }).click();
@@ -53,7 +57,7 @@ test('tour can open a sample with its accessible action and replay from detail',
 });
 
 test('dismissed invitation stays dismissed after reload', async ({ page }) => {
-    await gotoFirstPage(page);
+    await page.goto('/');
     await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();
     await page.getByRole('button', { name: 'Dismiss' }).click();
     await page.reload();
