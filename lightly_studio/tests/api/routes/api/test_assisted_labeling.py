@@ -10,9 +10,10 @@ from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 
 
 def test_get_assisted_labeling_status(
-    test_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    test_client: TestClient, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setenv("FAL_KEY", "secret")
+    mocker.patch.object(importlib.util, "find_spec", return_value=mocker.sentinel.spec)
 
     response = test_client.get("/api/annotate/status")
 
@@ -21,9 +22,10 @@ def test_get_assisted_labeling_status(
 
 
 def test_get_assisted_labeling_status__without_key(
-    test_client: TestClient, monkeypatch: pytest.MonkeyPatch
+    test_client: TestClient, mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.delenv("FAL_KEY", raising=False)
+    mocker.patch.object(importlib.util, "find_spec", return_value=mocker.sentinel.spec)
 
     response = test_client.get("/api/annotate/status")
 
