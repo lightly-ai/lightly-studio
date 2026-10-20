@@ -155,6 +155,11 @@
     const handleWindowKeydown = (event: KeyboardEvent) => {
         if (event.code !== 'Space' || event.repeat) return;
         const target = event.target;
+        if (target instanceof Element && target.closest('[role="dialog"]')) {
+            event.preventDefault();
+            togglePlayback();
+            return;
+        }
         if (
             target instanceof Element &&
             ((target instanceof HTMLElement && target.isContentEditable) ||
@@ -399,6 +404,10 @@
                                 seqNumber={workspace.currentTick}
                                 displayFrameId={workspace.referenceFrameId}
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
+                                batch={sceneSnapshot?.frame.batch}
+                                annotations={sceneSnapshot?.annotations ?? []}
+                                canProject={!workspace.isShowingSensorFrames}
+                                onPlaybackToggle={togglePlayback}
                             />
                         </Pane>
                     </PaneGroup>
