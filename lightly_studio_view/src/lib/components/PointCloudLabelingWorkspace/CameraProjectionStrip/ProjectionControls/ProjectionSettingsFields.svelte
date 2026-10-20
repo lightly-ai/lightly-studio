@@ -60,7 +60,7 @@
 </div>
 <div class="space-y-2">
     <div class="flex justify-between text-xs">
-        <Label for="projection-point-opacity">Point opacity</Label>
+        <Label for="projection-point-opacity">Point visibility</Label>
         <span class="tabular-nums text-muted-foreground"
             >{Math.round(settings.pointOpacity * 100)}%</span
         >
@@ -73,7 +73,7 @@
         max={1}
         step={0.05}
         onValueChange={(value: number) => update({ pointOpacity: value })}
-        aria-label="Projection point opacity"
+        aria-label="Projection point visibility"
     />
 </div>
 <div class="flex items-center justify-between gap-3 text-sm">
