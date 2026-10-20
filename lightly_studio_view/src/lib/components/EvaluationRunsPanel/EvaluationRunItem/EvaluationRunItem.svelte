@@ -2,7 +2,7 @@
     import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
     import { Typography } from '$lib/components';
     import { formatDate } from '$lib/utils';
-    import { ChevronDown, TriangleAlert } from '@lucide/svelte';
+    import { TriangleAlert } from '@lucide/svelte';
     import EvaluationRunSummary from './EvaluationRunSummary/EvaluationRunSummary.svelte';
     import EvaluationRunConfiguration from './EvaluationRunConfiguration/EvaluationRunConfiguration.svelte';
     import { slide } from 'svelte/transition';
@@ -38,7 +38,7 @@
             aria-expanded={expanded}
         >
             <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 pr-16">
+                <div class="flex items-center gap-1.5 pr-8">
                     <Typography
                         variant={expanded ? 'subtitle1' : 'subtitle2'}
                         className="truncate"
@@ -67,10 +67,6 @@
                     predictions={run.pred_annotation_source}
                 />
             </div>
-            <ChevronDown
-                class="absolute right-12 top-3 size-4 text-muted-foreground transition-transform duration-{duration}"
-                style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
-            />
         </button>
         {#if datasetId}
             <div class="absolute right-1 top-1 text-muted-foreground">
