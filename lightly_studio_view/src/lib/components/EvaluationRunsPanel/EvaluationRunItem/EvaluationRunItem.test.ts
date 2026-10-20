@@ -14,10 +14,18 @@ vi.mock(
     }
 );
 
+const deletion = vi.hoisted(() => ({ pending: false, params: vi.fn(), remove: vi.fn() }));
+vi.mock('../DeleteEvaluationRun/useDeleteEvaluationRun.svelte', () => ({
+    useDeleteEvaluationRun: (params: () => unknown) => {
+        deletion.params.mockImplementation(params);
+        return { mutation: { isPending: deletion.pending }, remove: deletion.remove };
+    }
+}));
 const state = vi.hoisted(() => ({ pending: false, params: vi.fn(), recompute: vi.fn() }));
 beforeEach(() => {
     vi.clearAllMocks();
     state.pending = false;
+    deletion.pending = false;
 });
 vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
     useRecomputeEvaluationRun: (getParams: () => unknown) => {
@@ -227,4 +235,39 @@ describe('EvaluationRunItem', () => {
         await fireEvent.keyDown(document, { key: 'Escape' });
         expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
+});
+
+it.each([false, true])(
+    'confirms deletion without toggling the row (expanded: %s)',
+    async (expanded) => {
+        const onToggle = vi.fn();
+        render(EvaluationRunItem, { ...defaultProps, expanded, onToggle });
+        await fireEvent.click(
+            screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
+        );
+        expect(screen.getByRole('dialog')).toHaveTextContent(baseRun.name);
+        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(deletion.remove).not.toHaveBeenCalled();
+        await fireEvent.click(
+            screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
+        );
+        await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+        expect(deletion.remove).toHaveBeenCalledOnce();
+        expect(onToggle).not.toHaveBeenCalled();
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        deletion.params().onSuccess();
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    }
+);
+
+it('blocks dismissal and repeated deletion while pending', async () => {
+    deletion.pending = true;
+    render(EvaluationRunItem, defaultProps);
+    await fireEvent.click(
+        screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
+    );
+    expect(screen.getByRole('button', { name: 'Deleting…' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+    await fireEvent.keyDown(document, { key: 'Escape' });
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
 });
