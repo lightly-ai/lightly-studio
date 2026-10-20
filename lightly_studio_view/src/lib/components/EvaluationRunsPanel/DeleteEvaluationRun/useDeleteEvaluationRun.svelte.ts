@@ -32,10 +32,8 @@ export const useDeleteEvaluationRun = (getParams: () => Params) => {
             if (remaining?.length !== sort?.length) {
                 filters.updateSortBy(remaining?.length ? remaining : null);
             }
-            if (
-                get(filters.imageFilter)?.sample_filter?.confusion_cell?.evaluation_run_id ===
-                run.id
-            ) {
+            const cell = get(filters.imageFilter)?.sample_filter?.confusion_cell;
+            if (cell?.evaluation_run_id === run.id) {
                 filters.updateConfusionCell(null);
             }
             clearRun(run.id);

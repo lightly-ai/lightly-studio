@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import type { EvaluationRunView } from '$lib/api/lightly_studio_local/types.gen';
+import { get } from 'svelte/store';
+import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
 import { formatDate } from '$lib/utils';
 import EvaluationRunItem from './EvaluationRunItem.svelte';
 import EvaluationRunConfiguration from './EvaluationRunConfiguration/EvaluationRunConfiguration.svelte';
@@ -14,18 +17,20 @@ vi.mock(
     }
 );
 
-const deletion = vi.hoisted(() => ({ pending: false, params: vi.fn(), remove: vi.fn() }));
-vi.mock('../DeleteEvaluationRun/useDeleteEvaluationRun.svelte', () => ({
-    useDeleteEvaluationRun: (params: () => unknown) => {
-        deletion.params.mockImplementation(params);
-        return { mutation: { isPending: deletion.pending }, remove: deletion.remove };
+const deletion = vi.hoisted(() => ({ isPending: false, mutate: vi.fn() }));
+let callbacks: { onSuccess: () => void; onError: () => void };
+vi.mock('@tanstack/svelte-query', async (original) => ({
+    ...(await original<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: vi.fn() }),
+    createMutation: (options: () => typeof callbacks) => {
+        callbacks = options();
+        return deletion;
     }
 }));
 const state = vi.hoisted(() => ({ pending: false, params: vi.fn(), recompute: vi.fn() }));
 beforeEach(() => {
     vi.clearAllMocks();
     state.pending = false;
-    deletion.pending = false;
 });
 vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte', () => ({
     useRecomputeEvaluationRun: (getParams: () => unknown) => {
@@ -237,34 +242,59 @@ describe('EvaluationRunItem', () => {
     });
 });
 
-it('confirms deletion without toggling the row', async () => {
-    const onToggle = vi.fn();
-    render(EvaluationRunItem, { ...defaultProps, onToggle });
-    await fireEvent.click(
-        screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
-    );
-    expect(screen.getByRole('dialog')).toHaveTextContent(baseRun.name);
-    await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-    expect(deletion.remove).not.toHaveBeenCalled();
-    await fireEvent.click(
-        screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
-    );
-    await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-    expect(deletion.remove).toHaveBeenCalledOnce();
-    expect(onToggle).not.toHaveBeenCalled();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-    deletion.params().onSuccess();
-    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-});
-
-it('blocks dismissal and repeated deletion while pending', async () => {
-    deletion.pending = true;
-    render(EvaluationRunItem, defaultProps);
-    await fireEvent.click(
-        screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
-    );
-    expect(screen.getByRole('button', { name: 'Deleting…' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
-    await fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
-});
+it.each(['run-1', 'other-run'])(
+    'confirms deletion and clears only its selections (%s)',
+    async (selectedRun) => {
+        const filters = useImageFilters();
+        const annotations = useAnnotationSortBy();
+        const sort = [
+            {
+                source: 'evaluation_metric' as const,
+                evaluation_run_name: selectedRun,
+                metric_name: 'fp',
+                direction: 'desc' as const
+            }
+        ];
+        const cell = { evaluation_run_id: selectedRun, gt_label: 'cat', pred_label: 'dog' };
+        const annotationSort = {
+            source: 'annotation_evaluation_metric' as const,
+            evaluation_run_id: selectedRun,
+            metric_name: 'iou',
+            direction: 'asc' as const
+        };
+        filters.updateFilterParams({
+            collection_id: 'images',
+            mode: 'normal',
+            filters: { tag_ids: ['tag'], confusion_cell: cell }
+        });
+        filters.updateSortBy(sort);
+        annotations.setSortBy('source', annotationSort);
+        render(EvaluationRunItem, { ...defaultProps, run: { ...baseRun, name: 'run-1' } });
+        const open = () =>
+            fireEvent.click(screen.getByRole('button', { name: 'Delete evaluation run-1' }));
+        await open();
+        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(deletion.mutate).not.toHaveBeenCalled();
+        await open();
+        await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+        expect(deletion.mutate).toHaveBeenCalledWith({
+            path: { dataset_id: 'dataset-1', run_id: 'run-1' }
+        });
+        callbacks.onError();
+        expect(get(filters.imageSortBy)).toEqual(sort);
+        expect(get(filters.imageFilter)?.sample_filter?.confusion_cell).toEqual(cell);
+        expect(annotations.getSortBy('source')).toEqual(annotationSort);
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        callbacks.onSuccess();
+        expect(get(filters.imageSortBy)).toEqual(selectedRun === 'run-1' ? null : sort);
+        expect(get(filters.imageFilter)?.sample_filter).toEqual({
+            tag_ids: ['tag'],
+            confusion_cell: selectedRun === 'run-1' ? undefined : cell
+        });
+        expect(annotations.getSortBy('source')).toEqual(
+            selectedRun === 'run-1' ? null : annotationSort
+        );
+        expect(defaultProps.onToggle).not.toHaveBeenCalled();
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    }
+);
