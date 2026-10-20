@@ -110,16 +110,17 @@ To set the axes:
 You must type all four descriptions. The plot then shows each description at its edge
 of the plot. If a description is too long to show, hover it to see the full text.
 
-Two lines through the center of the plot show where each axis is zero. A sample on the
-vertical line is as similar to **Left** as to **Right**. The farther right a sample is, the
-more it matches **Right** compared to **Left**. The vertical axis works the same way.
+Two dashed lines show where each axis is zero. A sample on the vertical line is as
+similar to **Left** as to **Right**. The farther right a sample is, the more it matches
+**Right** compared to **Left**. The vertical axis works the same way.
 
 To change the descriptions, click **Edit axes**. To go back to the default layout, click
-**Reset axes**. LightlyStudio keeps your descriptions, so you can apply them again later.
+**Reset axes**. LightlyStudio keeps your descriptions until you reload the page, so you
+can apply them again.
 
 !!! note "A new layout clears the selection"
     When you apply new axes or reset them, the plot resets the zoom and clears your
-    lasso selection. A selected region belongs to the layout you drew it on.
+    selection. A selected region belongs to the layout you drew it on.
 
 !!! tip "Write good descriptions"
     - Describe content that you can see in the image, such as `a photo at night`.
