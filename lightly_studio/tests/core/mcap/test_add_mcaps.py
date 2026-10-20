@@ -7,6 +7,7 @@ from uuid import UUID
 import pytest
 from pytest_mock import MockerFixture
 
+from lightly_studio.analytics import tracking
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.mcap import add_mcaps, mcap_dataset
 from lightly_studio.core.mcap.component import McapComponentSpec
@@ -701,6 +702,28 @@ class TestMcapDatasetAddMcapsFromPath:
             "first.mcap",
             "second.mcap",
         ]
+
+    def test_add_mcaps_from_path__tracks_ingest(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        mock_track = mocker.patch.object(tracking, "track")
+        helpers.write_mcap(tmp_path / "recording.mcap")
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+
+        dataset.add_mcaps_from_path(
+            path=tmp_path,
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        )
+
+        mock_track.assert_called_once_with(
+            event="samples_ingested",
+            properties={"source": "local", "sample_type": "mcap", "format": "mcap"},
+        )
 
     def test_add_mcaps_from_path__skips_annotation_mcaps(
         self,
