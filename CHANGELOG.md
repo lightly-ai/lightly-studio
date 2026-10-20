@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Disabled buttons now show a tooltip explaining why they cannot be clicked.
+- Delete an evaluation from the evaluation panel. Grid filters and sorting that use the deleted evaluation are removed.
+- API: Delete an evaluation and its results while keeping annotations unchanged.
+- Edit saved evaluation parameters and rerun from the evaluation panel.
+- API: Change evaluation parameters and rerun an existing evaluation.
 - Create a new annotation source while duplicating an annotation in the details view.
 - Copy annotations to another annotation source from the details view.
 - Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.
@@ -18,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a "Clear all filters" button to the filter sidebar.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
 - Python SDK: Filter samples by metadata with equality and ordering comparisons, including nested fields and array indices, e.g. `ImageSampleField.metadata["odometry.speed"] < 15`.
+- Python SDK: Report anonymous usage data on how data is loaded: the dataset format and whether it comes from the example dataset, a local folder or remote storage.
 
 ### Changed
 
@@ -41,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve existing evaluation results when recomputation fails.
 - Python SDK: `start_gui()` stops without a `KeyboardInterrupt` traceback when you press Ctrl+C.
 - The GUI footer no longer shows a dev commit hash for released versions.
 - The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.

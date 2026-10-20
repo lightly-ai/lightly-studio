@@ -27,9 +27,9 @@
     <div class="space-y-1">
         <Typography component="dt" variant="body2">Dimensions (m):</Typography>
         <dd class="mt-1 grid grid-cols-3 gap-x-4">
-            <Typography variant="body2">W {details.dimensions[0]}</Typography>
-            <Typography variant="body2">H {details.dimensions[1]}</Typography>
-            <Typography variant="body2">D {details.dimensions[2]}</Typography>
+            <Typography variant="body2">L {details.dimensions[0]}</Typography>
+            <Typography variant="body2">W {details.dimensions[1]}</Typography>
+            <Typography variant="body2">H {details.dimensions[2]}</Typography>
         </dd>
     </div>
 
