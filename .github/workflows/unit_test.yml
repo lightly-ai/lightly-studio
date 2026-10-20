@@ -114,6 +114,14 @@ jobs:
         working-directory: lightly_studio
         run: make install-optional-deps
 
+      # TODO(Michal, 10/2026): CI benchmark only, do not merge.
+      - name: Bench venv and uv cache size
+        working-directory: lightly_studio
+        run: |
+          du -sh ../.venv
+          du -sh "$(uv cache dir)"
+          du -sm ../.venv/lib/python*/site-packages/* | sort -n | tail -30
+
       - name: Run checks for LightlyStudio
         working-directory: lightly_studio
         run: make static-checks
@@ -153,6 +161,14 @@ jobs:
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         run: make install-optional-deps
+
+      # TODO(Michal, 10/2026): CI benchmark only, do not merge.
+      - name: Bench venv and uv cache size
+        working-directory: lightly_studio
+        run: |
+          du -sh ../.venv
+          du -sh "$(uv cache dir)"
+          du -sm ../.venv/lib/python*/site-packages/* | sort -n | tail -30
 
       - name: Export schema and generate version file from backend
         working-directory: lightly_studio
@@ -221,6 +237,14 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make install-optional-deps
 
+      # TODO(Michal, 10/2026): CI benchmark only, do not merge.
+      - name: Bench venv and uv cache size
+        working-directory: lightly_studio
+        run: |
+          du -sh ../.venv
+          du -sh "$(uv cache dir)"
+          du -sm ../.venv/lib/python*/site-packages/* | sort -n | tail -30
+
       - name: Check Alembic migrations
         if: matrix.database == 'Postgres'
         working-directory: lightly_studio
@@ -272,6 +296,14 @@ jobs:
         working-directory: lightly_studio
         run: make install-optional-deps
 
+      # TODO(Michal, 10/2026): CI benchmark only, do not merge.
+      - name: Bench venv and uv cache size
+        working-directory: lightly_studio
+        run: |
+          du -sh ../.venv
+          du -sh "$(uv cache dir)"
+          du -sm ../.venv/lib/python*/site-packages/* | sort -n | tail -30
+
       # The view test suite imports the generated API client, which is built
       # from the backend's exported schema.
       - name: Export schema and generate version file from backend
@@ -317,6 +349,14 @@ jobs:
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
         run: make install-optional-deps
+
+      # TODO(Michal, 10/2026): CI benchmark only, do not merge.
+      - name: Bench venv and uv cache size
+        working-directory: lightly_studio
+        run: |
+          du -sh ../.venv
+          du -sh "$(uv cache dir)"
+          du -sm ../.venv/lib/python*/site-packages/* | sort -n | tail -30
 
       # `make docs` checks broken links.
       - name: Build docs
