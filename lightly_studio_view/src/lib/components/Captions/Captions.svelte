@@ -45,7 +45,7 @@
 
     // Tags and metadata filters are kept per parent collection, so they match the images tab.
     const { tagsSelected } = $derived(useTags({ collection_id: parentCollectionId }));
-    const { metadataValues, categoricalMetadataValues } = $derived.by(() =>
+    const { metadataValues, categoricalMetadataValues } = $derived(
         useMetadataFilters(parentCollectionId)
     );
 
