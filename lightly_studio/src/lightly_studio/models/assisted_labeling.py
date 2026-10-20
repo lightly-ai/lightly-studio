@@ -22,6 +22,7 @@ class AssistedLabelingStatusView(BaseModel):
 
 NormalizedCoordinate = Annotated[float, pydantic.Field(ge=0, le=1, allow_inf_nan=False)]
 _NORMALIZED_UPPER_BOUND = 1.000001
+MAX_INTERACTIVE_POINTS = 100
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
 # context of a `ValueError` is not JSON serializable in the 422 response.
@@ -63,8 +64,11 @@ class InteractiveAnnotationRequest(BaseModel):
 
     collection_id: UUID
     sample_id: UUID
-    points: list[AnnotationPoint] | None = pydantic.Field(default=None, min_length=1)
-    boxes: list[AnnotationBox] | None = pydantic.Field(default=None, min_length=1)
+    points: list[AnnotationPoint] | None = pydantic.Field(
+        default=None, min_length=1, max_length=MAX_INTERACTIVE_POINTS
+    )
+    # One box, because the preview is a single object
+    boxes: list[AnnotationBox] | None = pydantic.Field(default=None, min_length=1, max_length=1)
 
     @pydantic.model_validator(mode="after")
     def validate_prompts(self) -> InteractiveAnnotationRequest:  # noqa: N804

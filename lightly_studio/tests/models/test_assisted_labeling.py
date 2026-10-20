@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 import pytest
 from pydantic import ValidationError
@@ -35,8 +35,8 @@ class TestAnnotationBox:
 class TestInteractiveAnnotationRequest:
     def test_validate_prompts__points(self) -> None:
         request = InteractiveAnnotationRequest(
-            collection_id=uuid4(),
-            sample_id=uuid4(),
+            collection_id=uuid.uuid4(),
+            sample_id=uuid.uuid4(),
             points=[AnnotationPoint(x=0.5, y=0.5, positive=True)],
         )
 
@@ -45,20 +45,35 @@ class TestInteractiveAnnotationRequest:
     def test_validate_prompts__points_and_boxes(self) -> None:
         with pytest.raises(ValidationError, match="Provide either points or boxes"):
             InteractiveAnnotationRequest(
-                collection_id=uuid4(),
-                sample_id=uuid4(),
+                collection_id=uuid.uuid4(),
+                sample_id=uuid.uuid4(),
                 points=[AnnotationPoint(x=0.5, y=0.5, positive=True)],
                 boxes=[AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)],
             )
 
     def test_validate_prompts__no_prompts(self) -> None:
         with pytest.raises(ValidationError, match="Provide either points or boxes"):
-            InteractiveAnnotationRequest(collection_id=uuid4(), sample_id=uuid4())
+            InteractiveAnnotationRequest(collection_id=uuid.uuid4(), sample_id=uuid.uuid4())
 
     def test_validate_prompts__no_positive_point(self) -> None:
         with pytest.raises(ValidationError, match=r"Place at least one positive point\."):
             InteractiveAnnotationRequest(
-                collection_id=uuid4(),
-                sample_id=uuid4(),
+                collection_id=uuid.uuid4(),
+                sample_id=uuid.uuid4(),
                 points=[AnnotationPoint(x=0.5, y=0.5, positive=False)],
+            )
+
+    def test_validate_prompts__too_many_points(self) -> None:
+        with pytest.raises(ValidationError, match="at most 100 items"):
+            InteractiveAnnotationRequest(
+                collection_id=uuid.uuid4(),
+                sample_id=uuid.uuid4(),
+                points=[AnnotationPoint(x=0.5, y=0.5, positive=True)] * 101,
+            )
+
+    def test_validate_prompts__two_boxes(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        with pytest.raises(ValidationError, match="at most 1 item"):
+            InteractiveAnnotationRequest(
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), boxes=[box, box]
             )

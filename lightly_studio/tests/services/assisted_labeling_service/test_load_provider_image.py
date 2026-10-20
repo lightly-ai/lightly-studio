@@ -1,7 +1,7 @@
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
-from uuid import uuid4
 
 import pytest
 from sqlmodel import Session
@@ -45,8 +45,18 @@ def test_load_provider_image__missing_file(db_session: Session, tmp_path: Path) 
         session=db_session, collection_id=collection.collection_id, sample_id=image.sample_id
     )
 
-    with pytest.raises(NotFoundError, match="could not be read"):
+    with pytest.raises(NotFoundError, match="does not exist"):
         provider_image.read_bytes()
+
+
+def test_load_provider_image__unknown_size(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id, width=0)
+
+    with pytest.raises(ValueError, match="has no known size"):
+        assisted_labeling_service.load_provider_image(
+            session=db_session, collection_id=collection.collection_id, sample_id=image.sample_id
+        )
 
 
 def test_load_provider_image__unknown_sample(db_session: Session) -> None:
@@ -54,7 +64,7 @@ def test_load_provider_image__unknown_sample(db_session: Session) -> None:
 
     with pytest.raises(NotFoundError, match="not found in collection"):
         assisted_labeling_service.load_provider_image(
-            session=db_session, collection_id=collection.collection_id, sample_id=uuid4()
+            session=db_session, collection_id=collection.collection_id, sample_id=uuid.uuid4()
         )
 
 
