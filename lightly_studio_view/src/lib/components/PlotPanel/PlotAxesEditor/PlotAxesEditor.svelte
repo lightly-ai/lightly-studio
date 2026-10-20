@@ -39,13 +39,6 @@
     };
 </script>
 
-{#snippet resetButton()}
-    <Button variant="outline" size="sm" disabled={isPending} onclick={reset}>
-        <RotateCcw class="mr-2 h-4 w-4" />
-        Reset axes
-    </Button>
-{/snippet}
-
 <div class="flex flex-wrap items-center gap-2">
     <!-- A function binding, so changeOpen can keep the popover open while the axes apply. -->
     <Popover.Root bind:open={() => open, changeOpen}>
@@ -75,17 +68,18 @@
                     Could not apply axes. Check your descriptions and try again.
                 </p>
             {/if}
-            {#if active}
-                <div class="space-y-2 border-t pt-4">
-                    {@render resetButton()}
-                    <p class="text-sm text-muted-foreground">
-                        Return to the default plot. Your descriptions will be kept.
-                    </p>
-                </div>
-            {/if}
         </Popover.Content>
     </Popover.Root>
     {#if active}
-        {@render resetButton()}
+        <Button
+            variant="outline"
+            size="sm"
+            disabled={isPending}
+            onclick={reset}
+            title="Return to the default plot. Your descriptions will be kept."
+        >
+            <RotateCcw class="mr-2 h-4 w-4" />
+            Reset axes
+        </Button>
     {/if}
 </div>
