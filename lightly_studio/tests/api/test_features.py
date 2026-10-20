@@ -7,7 +7,10 @@ def test_get_active_features(mocker: MockerFixture) -> None:
     mocker.patch.object(features, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
     mocker.patch.object(features, "LIGHTLY_STUDIO_POINT_CLOUD_ENABLED", False)
 
-    assert features._get_active_features() == [features.ANALYTICS_FEATURE, features.ONBOARDING_FEATURE]
+    assert features._get_active_features() == [
+        features.ANALYTICS_FEATURE,
+        features.ONBOARDING_FEATURE,
+    ]
 
 
 def test_get_active_features__with_analytics_disabled(mocker: MockerFixture) -> None:
@@ -22,7 +25,10 @@ def test_get_active_features__with_point_cloud_rendering_enabled(mocker: MockerF
     mocker.patch.object(features, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
     mocker.patch.object(features, "LIGHTLY_STUDIO_POINT_CLOUD_ENABLED", True)
 
-    assert features._get_active_features() == [features.ONBOARDING_FEATURE, features.POINT_CLOUD_RENDERING_FEATURE]
+    assert features._get_active_features() == [
+        features.ONBOARDING_FEATURE,
+        features.POINT_CLOUD_RENDERING_FEATURE,
+    ]
 
 
 def test_get_active_features__with_point_cloud_rendering_disabled_by_default(
@@ -33,5 +39,3 @@ def test_get_active_features__with_point_cloud_rendering_disabled_by_default(
     mocker.patch.object(features, "LIGHTLY_STUDIO_POINT_CLOUD_ENABLED", False)
 
     assert features.POINT_CLOUD_RENDERING_FEATURE not in features._get_active_features()
-
-
