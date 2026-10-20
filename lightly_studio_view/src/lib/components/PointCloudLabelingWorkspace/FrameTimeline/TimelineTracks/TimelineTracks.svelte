@@ -18,9 +18,52 @@
         bufferedRanges: readonly BufferRange[];
         /** Select a tick from the overlaid ruler slider. */
         onSelectTick: (seqNumber: number) => void;
+        /** Called when the user starts dragging the slider. */
+        onSeekStart?: () => void;
+        /** Called when the user releases the slider. */
+        onSeekEnd?: () => void;
     }
 
-    let { ticks, currentTick, bufferedRanges, onSelectTick }: Props = $props();
+    let { ticks, currentTick, bufferedRanges, onSelectTick, onSeekStart, onSeekEnd }: Props =
+        $props();
+
+    const SEEK_KEYS = new Set([
+        'ArrowLeft',
+        'ArrowRight',
+        'ArrowUp',
+        'ArrowDown',
+        'PageUp',
+        'PageDown',
+        'Home',
+        'End'
+    ]);
+    let seekActive = false;
+    let lastCommittedIndex: number | null = null;
+
+    const beginSeek = () => {
+        if (seekActive) return;
+        seekActive = true;
+        lastCommittedIndex = null;
+        onSeekStart?.();
+    };
+
+    const commitSelectedTick = (input: HTMLInputElement) => {
+        const index = Number(input.value);
+        if (index === lastCommittedIndex) return;
+
+        const tick = ticks[index];
+        if (tick) {
+            lastCommittedIndex = index;
+            onSelectTick(tick.seq_number);
+        }
+    };
+
+    const endSeek = () => {
+        if (!seekActive) return;
+        seekActive = false;
+        lastCommittedIndex = null;
+        onSeekEnd?.();
+    };
 
     const NANOS_PER_SECOND = 1_000_000_000;
 
@@ -47,7 +90,7 @@
     };
 </script>
 
-<div class="flex flex-none flex-col gap-1 overflow-hidden px-2 py-1">
+<div class="flex flex-none select-none flex-col gap-1 overflow-hidden px-2 py-1">
     <div class="relative flex h-4 shrink-0 items-end gap-px">
         {#each visibleMarks as mark (mark.tick.seq_number)}
             <span
@@ -73,10 +116,23 @@
                 ticks.findIndex((tick) => tick.seq_number === currentTick)
             )}
             disabled={ticks.length === 0}
-            oninput={(event) => {
-                const tick = ticks[Number(event.currentTarget.value)];
-                if (tick) onSelectTick(tick.seq_number);
+            onpointerdown={beginSeek}
+            onpointerup={(event) => {
+                commitSelectedTick(event.currentTarget);
+                endSeek();
             }}
+            onpointercancel={endSeek}
+            onkeydown={(event) => {
+                if (SEEK_KEYS.has(event.key)) beginSeek();
+            }}
+            onkeyup={(event) => {
+                if (SEEK_KEYS.has(event.key)) {
+                    commitSelectedTick(event.currentTarget);
+                    endSeek();
+                }
+            }}
+            onblur={endSeek}
+            onchange={(event) => commitSelectedTick(event.currentTarget)}
         />
     </div>
 </div>

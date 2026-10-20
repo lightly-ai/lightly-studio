@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsClassificationSegment from './SampleDetailsClassificationSegment.svelte';
+import SampleDetailsSidePanelAnnotation from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
 
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
@@ -22,7 +23,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$app/state', () => ({
-    page: { params: { dataset_id: 'dataset-1' } }
+    page: { params: { dataset_id: 'dataset-1' }, data: { globalStorage: mocks } }
+}));
+
+vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
+    useAnnotation: () => ({ annotation: {}, refetch: vi.fn() })
 }));
 
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
@@ -32,7 +37,7 @@ vi.mock('$lib/hooks/useAuth/useAuth', () => ({
 // The classification segment imports useAnnotationCollections through the `$lib/hooks`
 // barrel; mocking the underlying module replaces the barrel re-export too.
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
-    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
+    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections, isSuccess: true }))
 }));
 
 // Drives the grid-filter seeded collapse: sources missing from the selection start collapsed.
@@ -206,6 +211,54 @@ describe('SampleDetailsClassificationSegment', () => {
 
     const deleteButton = () => screen.getByRole('button', { name: 'Delete classification' });
 
+    it.each([false, true])('copies with an existing source: %s', async (existing) => {
+        mocks.isEditingMode.set(true);
+        mocks.annotationLabels = [catLabel];
+        mocks.collections = [groundTruthSource];
+        if (existing) mocks.collections.push({ collection_id: 'human', name: 'Human' });
+        mocks.createAnnotation.mockRejectedValueOnce(new Error('offline'));
+        const onClick = vi.fn();
+        const { container } = render(SampleDetailsSidePanelAnnotation, {
+            annotation: createClassification('c1', groundTruthSource.collection_id, 'cat'),
+            isSelected: false,
+            onClick,
+            onUpdate: vi.fn(),
+            onToggleShowAnnotation: vi.fn(),
+            onDeleteAnnotation: vi.fn()
+        });
+        expect(container.querySelector('button button')).toBeNull();
+        screen.getByRole('button', { name: 'Select cat annotation' }).focus();
+        await userEvent.keyboard('{Enter} ');
+        expect(onClick).toHaveBeenCalledTimes(2);
+        onClick.mockClear();
+        await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
+        expect(onClick).not.toHaveBeenCalled();
+        const input = screen.getByRole('combobox', { name: 'Annotation source' });
+        await userEvent.type(input, ' {Enter}');
+        await userEvent.type(input, `${groundTruthSource.name}{Enter}`);
+        expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
+        expect(mocks.createAnnotation).not.toHaveBeenCalled();
+        await userEvent.clear(input);
+        await userEvent.type(input, existing ? 'Human' : ' Human ');
+        await userEvent.click(
+            screen.getByRole('option', { name: existing ? 'Human' : 'Create: Human' })
+        );
+        expect(input).toHaveValue(existing ? 'Human' : ' Human ');
+        expect(toast.error).toHaveBeenCalled();
+        await userEvent.keyboard('{Enter}');
+        await waitFor(() =>
+            expect(
+                screen.queryByRole('combobox', { name: 'Annotation source' })
+            ).not.toBeInTheDocument()
+        );
+        expect(mocks.createAnnotation).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                annotation_collection_name: 'Human',
+                annotation_label_id: 'label-cat'
+            })
+        );
+    });
+
     it('renders a flat list without source groups for a single source', () => {
         mocks.collections = [groundTruthSource];
         const annotations = [
@@ -308,17 +361,50 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.getByText('zebra')).toBeInTheDocument();
     });
 
-    it('shows confidence value when present', () => {
-        mocks.collections = [groundTruthSource];
-        const annotations = [
-            createClassification('c1', groundTruthSource.collection_id, 'bird', 0.95)
-        ];
+    it.each([0, 0.95])(
+        'keeps classification confidence %s when switching modes',
+        async (confidence) => {
+            mocks.collections = [groundTruthSource];
+            mocks.annotationLabels = [catLabel];
+            const annotations = [
+                createClassification('c1', groundTruthSource.collection_id, 'cat', confidence)
+            ];
+            render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
 
-        render(SampleDetailsClassificationSegment, { props: { ...defaultProps, annotations } });
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+            mocks.isEditingMode.set(true);
+            expect(await screen.findByRole('combobox')).toHaveTextContent('cat');
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+        }
+    );
 
-        expect(screen.getByText('bird')).toBeInTheDocument();
-        expect(screen.getByText('Confidence: 0.95')).toBeInTheDocument();
-    });
+    it.each([0, 0.95])(
+        'keeps spatial annotation confidence %s when switching modes',
+        async (confidence) => {
+            mocks.annotationLabels = [catLabel];
+            render(SampleDetailsSidePanelAnnotation, {
+                annotation: {
+                    ...createClassification(
+                        'a1',
+                        groundTruthSource.collection_id,
+                        'cat',
+                        confidence
+                    ),
+                    annotation_type: 'object_detection'
+                },
+                isSelected: false,
+                onClick: vi.fn(),
+                onUpdate: vi.fn(),
+                onToggleShowAnnotation: vi.fn(),
+                onDeleteAnnotation: vi.fn()
+            });
+
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+            mocks.isEditingMode.set(true);
+            expect(await screen.findByRole('combobox')).toHaveTextContent('cat');
+            expect(screen.getByText(`Confidence: ${confidence}`)).toBeInTheDocument();
+        }
+    );
 
     it('does not show confidence line when confidence is null', () => {
         mocks.collections = [groundTruthSource];

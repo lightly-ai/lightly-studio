@@ -68,14 +68,14 @@ describe('EvaluationRunsPanel', () => {
     it('renders an error message when error is set', () => {
         renderPanel({ error: 'boom' });
 
-        expect(screen.getByText(/Error loading evaluation runs: boom/)).toBeInTheDocument();
+        expect(screen.getByText(/Error loading evaluations: boom/)).toBeInTheDocument();
     });
 
     it('renders the empty state when there are no runs', () => {
         renderPanel({ evaluationRuns: [] });
 
         expect(screen.getByTestId('evaluation-runs-empty')).toBeInTheDocument();
-        expect(screen.getByText('No evaluation runs yet')).toBeInTheDocument();
+        expect(screen.getByText('No evaluations yet')).toBeInTheDocument();
         expect(screen.queryByTestId('evaluation-runs-list')).not.toBeInTheDocument();
     });
 
@@ -161,7 +161,7 @@ describe('EvaluationRunsPanel', () => {
     it('shows the add button and opens the trigger dialog when ids are provided', async () => {
         renderPanel({ datasetId: 'dataset-1', collectionId: 'collection-1' });
 
-        const addButton = screen.getByTestId('evaluation-runs-add-button');
+        const addButton = screen.getByRole('button', { name: 'New evaluation' });
         expect(addButton).toBeInTheDocument();
 
         await fireEvent.click(addButton);
