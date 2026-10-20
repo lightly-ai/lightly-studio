@@ -114,11 +114,11 @@
             <Dialog.Content class="max-w-[90vw] gap-2 p-3 sm:max-w-[90vw]">
                 <Dialog.Title class="text-sm font-medium">{label}</Dialog.Title>
                 <Dialog.Description class="sr-only">Enlarged camera frame</Dialog.Description>
-                <div class="relative">
+                <div class="relative mx-auto w-fit max-w-full">
                     <img
                         src={fullFrameUrl ?? frameUrl}
                         alt={`${label} enlarged`}
-                        class="max-h-[80vh] w-full rounded-md object-contain"
+                        class="block max-h-[80vh] max-w-full rounded-md object-contain"
                     />
                     <ProjectionOverlay {batch} {annotations} {projection} />
                 </div>
