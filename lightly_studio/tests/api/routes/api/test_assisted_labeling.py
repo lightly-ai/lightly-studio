@@ -231,12 +231,8 @@ def test_create_interactive_annotation_preview__unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("FAL_KEY", raising=False)
-    create_client = mocker.MagicMock()
-    mocker.patch.object(
-        fal_sam3_provider,
-        "get_provider",
-        return_value=FalSam3Provider(create_client=create_client),
-    )
+    create_client = mocker.patch.object(fal_sam3_provider, "_create_client")
+    mocker.patch.object(fal_sam3_provider, "get_provider", return_value=FalSam3Provider())
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
 
