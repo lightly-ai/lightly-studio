@@ -19,6 +19,7 @@ from av import CodecContext, VideoFrame
 from av.codec.context import ThreadType
 from av.video.codeccontext import VideoCodecContext
 from av.video.reformatter import Interpolation
+from PIL import Image
 
 from lightly_studio.core.mcap import _video_formats, message_fields
 from lightly_studio.core.mcap.errors import McapAccessError
@@ -215,13 +216,39 @@ def from_decoded_message(
         McapAccessError: If the message fields are missing, the video format is not
             supported (not H.264 or H.265), or PyAV cannot decode the payload.
     """
-    decoder = VideoDecoder(keyframe_log_time_ns=0)
-    decoder.decode(decoded_message=decoded_message, log_time_ns=0)
-    frame = decoder.frame(log_time_ns=0)
-    if frame is None:
-        decoder.flush()
-        frame = decoder.require_frame(log_time_ns=0)
+    frame = _decode_single_message(decoded_message=decoded_message)
     return to_jpeg(frame=frame, width=width, height=height, quality=quality)
+
+
+def to_image(
+    decoded_message: Any,
+    width: int | None = None,
+    height: int | None = None,
+) -> Image.Image:
+    """Decodes the frame of a single compressed video message to an RGB image.
+
+    The same rules as for `from_decoded_message` apply: pass a keyframe message, because
+    a delta frame cannot be decoded without the frames before it.
+
+    Args:
+        decoded_message: A decoded compressed video message with `data` (bytes,
+            Annex B) and `format` (str, e.g. ``"h265"``) fields.
+        width: If set, resize the output to this width in pixels. Aspect ratio is
+            preserved when only one of `width` / `height` is given.
+        height: If set, resize the output to this height in pixels. Aspect ratio is
+            preserved when only one of `width` / `height` is given.
+
+    Returns:
+        The decoded frame in RGB mode. At its original size when `width` and `height`
+        are both omitted.
+
+    Raises:
+        McapAccessError: If the message fields are missing, the video format is not
+            supported (not H.264 or H.265), or PyAV cannot decode the payload.
+    """
+    frame = _decode_single_message(decoded_message=decoded_message)
+    picture = _scaled_rgb_frame(frame=frame, width=width, height=height)
+    return Image.fromarray(picture.to_ndarray(format="rgb24"))
 
 
 def to_jpeg(
@@ -257,6 +284,22 @@ def to_jpeg(
     packets = codec.encode(picture)
     packets.extend(codec.encode(None))
     return b"".join(bytes(packet) for packet in packets)
+
+
+def _decode_single_message(decoded_message: Any) -> VideoFrame:
+    """Decodes the frame of a single compressed video message.
+
+    Raises:
+        McapAccessError: If the message fields are missing, the video format is not
+            supported (not H.264 or H.265), or PyAV cannot decode the payload.
+    """
+    decoder = VideoDecoder(keyframe_log_time_ns=0)
+    decoder.decode(decoded_message=decoded_message, log_time_ns=0)
+    frame = decoder.frame(log_time_ns=0)
+    if frame is None:
+        decoder.flush()
+        frame = decoder.require_frame(log_time_ns=0)
+    return frame
 
 
 def _open_decoder(codec_name: str) -> CodecContext:
@@ -320,6 +363,21 @@ def _codec_name(video_format: str) -> str:
     raise McapAccessError(
         f"Unsupported compressed video format: '{video_format}'. "
         f"Only H.264 and H.265 are supported."
+    )
+
+
+def _scaled_rgb_frame(frame: VideoFrame, width: int | None, height: int | None) -> VideoFrame:
+    """Scales a frame to the output size in RGB, or returns it unchanged when unscaled."""
+    out_width, out_height = _output_size(frame=frame, width=width, height=height)
+    if out_width == frame.width and out_height == frame.height:
+        return frame
+    interpolation = (
+        Interpolation.AREA
+        if out_width <= frame.width and out_height <= frame.height
+        else Interpolation.BILINEAR
+    )
+    return frame.reformat(
+        width=out_width, height=out_height, format="rgb24", interpolation=interpolation
     )
 
 
