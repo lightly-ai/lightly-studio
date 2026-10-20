@@ -10,6 +10,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -23,6 +24,7 @@ from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
+    create_caption,
     create_collection,
     create_embedding_model,
     create_groups,
@@ -153,6 +155,32 @@ def test_delete_annotations_by_ids__deletes_tag_links_and_embeddings(
 
     assert _get_tag_link_sample_ids(session=db_session) == [to_keep_id]
     assert _get_embedding_sample_ids(session=db_session) == [to_keep_id]
+    assert db_session.get(SampleTable, to_delete_id) is None
+
+
+def test_delete_annotations_by_ids__deletes_captions(db_session: Session) -> None:
+    image = _create_image_in_new_collection(session=db_session)
+    to_delete, to_keep = _create_object_detections(session=db_session, image=image, count=2)
+    to_delete_id, to_keep_id = to_delete.sample_id, to_keep.sample_id
+    annotation_collection_id = to_delete.sample.collection_id
+    deleted_caption_id = create_caption(
+        session=db_session, collection_id=annotation_collection_id, parent_sample_id=to_delete_id
+    ).sample_id
+    kept_caption_id = create_caption(
+        session=db_session, collection_id=annotation_collection_id, parent_sample_id=to_keep_id
+    ).sample_id
+    image_caption_id = create_caption(
+        session=db_session,
+        collection_id=image.sample.collection_id,
+        parent_sample_id=image.sample_id,
+    ).sample_id
+
+    annotation_resolver.delete_annotations_by_ids(session=db_session, annotation_ids=[to_delete_id])
+
+    assert db_session.get(CaptionTable, deleted_caption_id) is None
+    assert db_session.get(SampleTable, deleted_caption_id) is None
+    assert db_session.get(CaptionTable, kept_caption_id) is not None
+    assert db_session.get(CaptionTable, image_caption_id) is not None
     assert db_session.get(SampleTable, to_delete_id) is None
 
 
