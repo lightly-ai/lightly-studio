@@ -196,6 +196,7 @@ class TestFalSam3Provider:
         client.release_upload.set()
         provider.segment(image=cached_image, prompt=prompt)
         client.release_upload.clear()
+        client.upload_started.clear()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             new_future = executor.submit(provider.segment, image=new_image, prompt=prompt)
