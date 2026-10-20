@@ -223,7 +223,7 @@ class TestFalSam3Provider:
         image = helpers.make_image(width=4, height=2)
 
         for _ in range(2):
-            with pytest.raises(ProviderError, match="File not found"):
+            with pytest.raises(ProviderError, match=r"^fal\.ai request failed with status 422\.$"):
                 provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
 
         assert len(client.uploads) == 2
@@ -291,9 +291,9 @@ class TestFalSam3Provider:
         provider = _make_provider(mocker=mocker, client=client)
         image = helpers.make_image(width=4, height=2)
 
-        with pytest.raises(ProviderError, match=r"fal\.ai request failed: refused"):
+        with pytest.raises(ProviderError, match=r"^fal\.ai request failed\.$"):
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
-        with pytest.raises(ProviderError, match=r"fal\.ai request failed: refused"):
+        with pytest.raises(ProviderError, match=r"^fal\.ai request failed\.$"):
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
 
         assert len(client.uploads) == 2
@@ -331,7 +331,10 @@ class TestFalSam3Provider:
             )
 
     def test_segment__http_error(
-        self, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        mocker: MockerFixture,
+        caplog: pytest.LogCaptureFixture,
     ) -> None:
         monkeypatch.setenv("FAL_KEY", "secret")
         error = FalClientHTTPError(
@@ -342,10 +345,12 @@ class TestFalSam3Provider:
         )
         provider = _make_provider(mocker=mocker, client=FakeFalClient(run_error=error))
 
-        with pytest.raises(ProviderError, match=r"fal\.ai request failed: Invalid image"):
+        with pytest.raises(ProviderError, match=r"^fal\.ai request failed with status 422\.$"):
             provider.segment(
                 image=helpers.make_image(width=4, height=2), prompt=helpers.make_prompt(text="car")
             )
+
+        assert "Invalid image" in caplog.text
 
     def test_segment__start_timeout_expiry(
         self, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture

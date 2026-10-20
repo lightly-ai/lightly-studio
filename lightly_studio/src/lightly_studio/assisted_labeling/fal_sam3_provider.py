@@ -101,7 +101,7 @@ class FalSam3Provider:
                 self._forget_image_url(sample_id=image.sample_id)
                 raise
         if not isinstance(output, dict):
-            raise ProviderError(f"fal.ai returned unexpected JSON: {output!r}")
+            raise _provider_error(message="fal.ai returned unexpected JSON.", details=output)
         return parse_response(output=output, width=image.width, height=image.height)
 
     def _get_client(self) -> SyncClient:
@@ -197,19 +197,19 @@ def parse_response(output: dict[str, Any], width: int, height: int) -> list[Pred
         ProviderError: If the output has no valid `rle` or an invalid score.
     """
     if "rle" not in output:
-        raise ProviderError(f"fal.ai returned no RLE: {output!r}")
+        raise _provider_error(message="fal.ai returned no RLE.", details=output)
     rle = output["rle"]
     if isinstance(rle, str):
         rles = [rle]
     elif isinstance(rle, list) and all(isinstance(item, str) for item in rle):
         rles = rle
     else:
-        raise ProviderError(f"fal.ai returned an invalid RLE: {rle!r}")
+        raise _provider_error(message="fal.ai returned an invalid RLE.", details=rle)
     scores = output.get("scores")
     if scores is None:
         scores = []
     if not isinstance(scores, list):
-        raise ProviderError(f"fal.ai returned invalid scores: {scores!r}")
+        raise _provider_error(message="fal.ai returned invalid scores.", details=scores)
     predictions = []
     for index, rle_string in enumerate(rles):
         if not rle_string:
@@ -218,7 +218,9 @@ def parse_response(output: dict[str, Any], width: int, height: int) -> list[Pred
         try:
             parsed_score = float(score) if score is not None else None
         except (TypeError, ValueError) as error:
-            raise ProviderError(f"fal.ai returned an invalid score: {score!r}") from error
+            raise _provider_error(
+                message="fal.ai returned an invalid score.", details=score
+            ) from error
         predictions.append(
             Prediction(
                 mask=decode_rle(rle=rle_string, width=width, height=height),
@@ -248,7 +250,9 @@ def decode_rle(rle: str, width: int, height: int) -> NDArray[np.bool_]:
     try:
         values = [int(value) for value in rle.split()]
     except ValueError as error:
-        raise ProviderError(f"fal.ai returned an invalid RLE string: {rle[:100]!r}") from error
+        raise _provider_error(
+            message="fal.ai returned an invalid RLE string.", details=rle[:100]
+        ) from error
     if len(values) % 2 != 0:
         raise ProviderError("fal.ai returned an RLE string with an odd number of values.")
     if any(value < 0 for value in values):
@@ -301,13 +305,16 @@ def _fal_errors_as_provider_errors() -> Iterator[None]:
     except (httpx.TimeoutException, fal_client.FalClientTimeoutError) as error:
         raise ProviderError(TIMEOUT_MESSAGE) from error
     except fal_client.FalClientHTTPError as error:
-        is_timeout = _is_start_timeout_expiry(error=error)
-        message = TIMEOUT_MESSAGE if is_timeout else f"fal.ai request failed: {error}"
-        raise ProviderError(message) from error
+        if _is_start_timeout_expiry(error=error):
+            raise ProviderError(TIMEOUT_MESSAGE) from error
+        message = f"fal.ai request failed with status {error.status_code}."
+        raise _provider_error(message=message, details=error) from error
     except (httpx.HTTPError, fal_client.FalClientError) as error:
-        raise ProviderError(f"fal.ai request failed: {error}") from error
+        raise _provider_error(message="fal.ai request failed.", details=error) from error
     except (KeyError, ValueError) as error:
-        raise ProviderError(f"fal.ai returned an invalid response: {error!r}") from error
+        raise _provider_error(
+            message="fal.ai returned an invalid response.", details=error
+        ) from error
 
 
 def _is_start_timeout_expiry(error: FalClientHTTPError) -> bool:
@@ -316,6 +323,12 @@ def _is_start_timeout_expiry(error: FalClientHTTPError) -> bool:
         error.status_code == _HTTP_STATUS_GATEWAY_TIMEOUT
         and _REQUEST_TIMEOUT_TYPE_HEADER in error.response.headers
     )
+
+
+def _provider_error(message: str, details: object) -> ProviderError:
+    # API callers see the message, so the fal.ai details go only to the log
+    logger.warning("%s Details: %r", message, details)
+    return ProviderError(message)
 
 
 def _read_fal_key() -> str | None:
