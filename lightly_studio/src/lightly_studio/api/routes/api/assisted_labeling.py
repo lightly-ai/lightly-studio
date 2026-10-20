@@ -30,7 +30,7 @@ def get_assisted_labeling_status() -> AssistedLabelingStatusView:
     )
 
 
-@annotate_router.post("/interactive")
+@assisted_labeling_router.post("/interactive")
 async def create_interactive_annotation_preview(
     request: InteractiveAnnotationRequest,
 ) -> InteractiveAnnotationResponse:
