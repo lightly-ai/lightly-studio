@@ -810,6 +810,8 @@ def _copy_evaluation_class_metrics(session: Session) -> None:
     src = _table(EvaluationClassMetricTable).alias("src")
     map_run = _map(_MAP_EVALUATION_RUN)
     map_label = _map(_MAP_ANNOTATION_LABEL)
+    # TODO(Szabolcs, 10/2026): Delete the rows of deleted labels instead of skipping them here.
+    # See https://github.com/lightly-ai/lightly-studio/issues/2892.
     from_clause = src.join(map_run, map_run.c.old_id == src.c["evaluation_run_id"]).join(
         map_label, map_label.c.old_id == src.c["annotation_label_id"]
     )
