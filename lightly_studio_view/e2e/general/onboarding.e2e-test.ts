@@ -14,7 +14,12 @@ async function reachImageStep(page: Page) {
         await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
     // Edit annotations step — skip if visible
-    if (await page.locator('#driver-popover-title').getByText('Edit annotations', { exact: true }).isVisible()) {
+    if (
+        await page
+            .locator('#driver-popover-title')
+            .getByText('Edit annotations', { exact: true })
+            .isVisible()
+    ) {
         await page.getByRole('button', { name: 'Next', exact: true }).click();
     }
     // Embedding step — skip if visible
