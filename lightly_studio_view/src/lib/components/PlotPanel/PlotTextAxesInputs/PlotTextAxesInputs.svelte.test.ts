@@ -11,16 +11,16 @@ describe('PlotTextAxesInputs', () => {
         const draft = $state(createEmptyTextAxesDraft());
         render(PlotTextAxesInputs, { draft, onCommit });
 
-        await user.type(screen.getByLabelText('X axis start'), 'young');
-        await user.type(screen.getByLabelText('X axis end'), 'old');
-        await user.type(screen.getByLabelText('Y axis start'), 'sad{Enter}');
+        await user.type(screen.getByLabelText('Left'), 'young');
+        await user.type(screen.getByLabelText('Right'), 'old');
+        await user.type(screen.getByLabelText('Bottom'), 'sad{Enter}');
 
         // A missing text marks its input and blocks the commit.
         expect(onCommit).not.toHaveBeenCalled();
-        expect(screen.getByLabelText('Y axis end')).toHaveAttribute('aria-invalid', 'true');
-        expect(screen.getByLabelText('Y axis start')).toHaveAttribute('aria-invalid', 'false');
+        expect(screen.getByLabelText('Top')).toHaveAttribute('aria-invalid', 'true');
+        expect(screen.getByLabelText('Bottom')).toHaveAttribute('aria-invalid', 'false');
 
-        await user.type(screen.getByLabelText('Y axis end'), ' happy {Enter}');
+        await user.type(screen.getByLabelText('Top'), ' happy {Enter}');
 
         // The parent owns the draft, so it keeps the texts when the plot unmounts.
         expect(draft.yPositive).toBe(' happy ');
@@ -28,5 +28,47 @@ describe('PlotTextAxesInputs', () => {
             x: { negative: 'young', positive: 'old' },
             y: { negative: 'sad', positive: 'happy' }
         });
+    });
+
+    it('shows an alert on Apply axes until all four texts are filled', async () => {
+        const user = userEvent.setup();
+        const onCommit = vi.fn();
+        const onCancel = vi.fn();
+        const draft = $state({
+            xNegative: 'young',
+            xPositive: 'old',
+            yNegative: 'sad',
+            yPositive: ''
+        });
+        render(PlotTextAxesInputs, { draft, onCommit, onCancel });
+
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(onCommit).not.toHaveBeenCalled();
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Enter a description for each end of both axes.'
+        );
+
+        // The alert hides as soon as the last text is filled.
+        await user.type(screen.getByLabelText('Top'), 'happy');
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(onCommit).toHaveBeenCalledExactlyOnceWith({
+            x: { negative: 'young', positive: 'old' },
+            y: { negative: 'sad', positive: 'happy' }
+        });
+
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(onCancel).toHaveBeenCalledOnce();
+    });
+
+    it('disables the form while the texts are embedded', () => {
+        const draft = $state({ xNegative: 'a', xPositive: 'b', yNegative: 'c', yPositive: 'd' });
+        render(PlotTextAxesInputs, { draft, onCommit: vi.fn(), isPending: true });
+
+        for (const label of ['Left', 'Right', 'Bottom', 'Top']) {
+            expect(screen.getByLabelText(label)).toBeDisabled();
+        }
+        expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Applying…' })).toBeDisabled();
     });
 });

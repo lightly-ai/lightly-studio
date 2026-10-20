@@ -75,27 +75,14 @@
                 />
             {/if}
             <Typography variant="h5" component="h2" className="text-foreground">
-                Evaluation Runs
+                Evaluations
             </Typography>
         </div>
         <div class="flex items-center gap-1">
-            {#if canTrigger}
-                <Button
-                    variant="ghost"
-                    icon={Plus}
-                    ariaLabel="Start a new evaluation run"
-                    buttonProps={{
-                        size: 'icon',
-                        onclick: () => (dialogOpen = true),
-                        class: 'h-8 w-8',
-                        'data-testid': 'evaluation-runs-add-button'
-                    }}
-                />
-            {/if}
             <Button
                 variant="ghost"
                 icon={X}
-                ariaLabel="Close evaluation runs panel"
+                ariaLabel="Close evaluations panel"
                 buttonProps={{
                     size: 'icon',
                     onclick: onClose,
@@ -106,6 +93,19 @@
         </div>
     </div>
 
+    {#if canTrigger}
+        <div class="mb-4">
+            <Button
+                variant="default"
+                icon={Plus}
+                buttonProps={{
+                    size: 'sm',
+                    onclick: () => (dialogOpen = true),
+                    'data-testid': 'evaluation-runs-add-button'
+                }}>New evaluation</Button
+            >
+        </div>
+    {/if}
     <div class="flex min-h-0 flex-1 flex-col overflow-y-auto dark:[color-scheme:dark]">
         {#if isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
@@ -114,7 +114,7 @@
         {:else if error}
             <div class="flex flex-1 items-center justify-center p-8">
                 <Typography variant="body2" className="text-red-500">
-                    Error loading evaluation runs:
+                    Error loading evaluations:
                     {error}
                 </Typography>
             </div>
@@ -124,9 +124,9 @@
                 data-testid="evaluation-runs-empty"
             >
                 <div class="text-center">
-                    <Typography variant="body1">No evaluation runs yet</Typography>
+                    <Typography variant="body1">No evaluations yet</Typography>
                     <Typography variant="body2" className="mt-1 text-muted-foreground">
-                        Runs will appear here once you compute them for this dataset.
+                        Find mistakes by comparing predictions with your reference annotations.
                     </Typography>
                 </div>
             </div>

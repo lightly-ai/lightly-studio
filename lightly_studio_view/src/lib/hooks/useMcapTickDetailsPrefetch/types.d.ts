@@ -36,6 +36,8 @@ export interface PendingTick {
 export interface PrefetchSession {
     /** Session identifier used to discard obsolete buffering plans. */
     requestId: string;
+    /** Cache scope whose completed ticks can be reused by a later request. */
+    scopeKey: string;
     /** Completed tick indexes in the current session. */
     completed: Set<number>;
     /** Tick indexes waiting for a concurrency slot. */
@@ -56,6 +58,8 @@ export interface McapTickPrefetchExecutorParams extends McapTickDetailsPrefetchP
 }
 
 export interface McapTickPrefetchSchedulerParams extends McapTickDetailsPrefetchParams {
+    /** Reactive flag controlling whether background buffering may start. */
+    getEnabled?: () => boolean;
     /** Reactive identifier of the current buffering plan. */
     getRequestId: () => string;
     /** Reactive ranges to load in order. */
