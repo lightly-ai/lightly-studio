@@ -9,7 +9,7 @@ One integrated computer vision platform for labeling, curation, QA, and dataset 
     Working in a team and looking for collaboration features, role-based access permissions, and
     centrally managed cloud credentials?
 
-    [Try LightlyStudio Enterprise →](https://studio.auth.lightly.ai/sign-up){ .md-button .md-button--primary }
+    [Learn More →](https://www.lightly.ai/lightly-studio){ .md-button .md-button--primary }
     [Book a Demo →](https://www.lightly.ai/demo){ .md-button }
     { .ls-cta }
 

@@ -9,6 +9,7 @@ from lightly_studio.core.dataset_query.field import (
     DatetimeField,
     NumericalField,
 )
+from lightly_studio.core.dataset_query.metadata_expression import MetadataAccessor
 from lightly_studio.core.dataset_query.tags_expression import TagsAccessor
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoTable
@@ -45,3 +46,4 @@ class VideoSampleField:
     created_at = DatetimeField(col(SampleTable.created_at))
 
     tags = TagsAccessor()
+    metadata = MetadataAccessor()

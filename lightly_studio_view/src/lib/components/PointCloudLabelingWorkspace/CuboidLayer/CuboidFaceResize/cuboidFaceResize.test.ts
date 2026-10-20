@@ -67,6 +67,8 @@ describe('computeResizedCuboid', () => {
         });
         expect(result.size).toEqual([6, 2, 6]);
         expect(result.center).toBeCloseToTuple([1, 0, 0]);
+        expect(result.center[0] + result.size[0] / 2).toBeCloseTo(4);
+        expect(result.center[0] - result.size[0] / 2).toBeCloseTo(-2);
     });
 
     it('shrinks the +Y face: size shrinks along y, center shifts down', () => {

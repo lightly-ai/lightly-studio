@@ -10,6 +10,7 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from lightly_studio.api.routes.api.evaluation.create_run import create_run_router
+from lightly_studio.api.routes.api.evaluation.delete_run import delete_run_router
 from lightly_studio.api.routes.api.evaluation.get_confusion_matrix import (
     get_confusion_matrix_router,
 )
@@ -18,12 +19,15 @@ from lightly_studio.api.routes.api.evaluation.get_sample_metrics_info import (
     get_sample_metrics_info_router,
 )
 from lightly_studio.api.routes.api.evaluation.recompute_run import recompute_run_router
+from lightly_studio.api.routes.api.evaluation.update_run import update_run_router
 
 evaluation_router = APIRouter(prefix="/datasets/{dataset_id}", tags=["evaluation"])
 evaluation_router.include_router(create_run_router)
+evaluation_router.include_router(delete_run_router)
 evaluation_router.include_router(get_runs_router)
 evaluation_router.include_router(get_sample_metrics_info_router)
 evaluation_router.include_router(get_confusion_matrix_router)
 evaluation_router.include_router(recompute_run_router)
+evaluation_router.include_router(update_run_router)
 
 __all__ = ["evaluation_router"]

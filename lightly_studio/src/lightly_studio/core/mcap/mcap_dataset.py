@@ -9,6 +9,8 @@ from uuid import UUID
 
 from typing_extensions import Self
 
+from lightly_studio.analytics import ingest_tracking
+from lightly_studio.analytics.ingest_tracking import IngestFormat
 from lightly_studio.core import dataset
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME
 from lightly_studio.core.mcap import (
@@ -253,6 +255,7 @@ class McapDataset:
                 greater than 0, or if a reference frame id is empty or repeated.
             AllInputFilesFailedError: If every recording under the path failed.
         """
+        source = ingest_tracking.get_source(path=path)
         fsspec_lister.validate_limit(limit)
         # Configure clients before discovery creates and caches a filesystem.
         remote_storage.configure_connections(paths=[str(path)])
@@ -274,6 +277,9 @@ class McapDataset:
             components=components,
             max_pairing_diff_ns=max_pairing_diff_ns,
             reference_frame_ids=reference_frame_ids,
+        )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.MCAP, ingest_format=IngestFormat.MCAP
         )
 
     def add_labels_from_folder(

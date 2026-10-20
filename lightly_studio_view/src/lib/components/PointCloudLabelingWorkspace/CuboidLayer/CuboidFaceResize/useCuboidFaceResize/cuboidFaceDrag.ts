@@ -25,19 +25,60 @@ interface FaceDrag {
     pointerId: number;
 }
 
+/**
+ * Choose a drag plane that preserves the resize axis. The plane normal is the
+ * component of {@link cameraDirection} perpendicular to {@link faceNormal}, so
+ * the plane contains the face-normal direction and pointer movement maps to a
+ * nonzero resize delta. When the camera looks along the face normal (within
+ * ~6°), the perpendicular component vanishes; we fall back to a plane whose
+ * normal is a stable tangent (cross product with world-up, or world-right when
+ * the face normal is vertical) so the drag plane still contains the resize axis.
+ */
+export function computeDragPlane({
+    cameraDirection,
+    faceNormal,
+    startPoint
+}: {
+    cameraDirection: Vector3;
+    faceNormal: Vector3;
+    startPoint: Vector3;
+}): Plane {
+    const NEAR_ZERO = 0.01;
+    const perpendicular = cameraDirection
+        .clone()
+        .addScaledVector(faceNormal, -cameraDirection.dot(faceNormal));
+    let planeNormal: Vector3;
+    if (perpendicular.lengthSq() > NEAR_ZERO) {
+        planeNormal = perpendicular.normalize();
+    } else {
+        const up = new Vector3(0, 1, 0);
+        const tangent = new Vector3().crossVectors(faceNormal, up);
+        if (tangent.lengthSq() < NEAR_ZERO) {
+            tangent.crossVectors(faceNormal, new Vector3(1, 0, 0));
+        }
+        planeNormal = tangent.normalize();
+    }
+    return new Plane().setFromNormalAndCoplanarPoint(planeNormal, startPoint);
+}
+
 export function createFaceDrag({ event, face, annotation, camera }: FaceDragParams): FaceDrag {
     const startPoint = new Vector3(event.point.x, event.point.y, event.point.z);
     const cameraDirection = camera.getWorldDirection(new Vector3());
+    const faceNormalWorld = computeFaceNormalWorld({
+        axis: face.axis,
+        sign: face.sign,
+        rotation: annotation.rotation
+    });
     return {
         face,
-        faceNormalWorld: computeFaceNormalWorld({
-            axis: face.axis,
-            sign: face.sign,
-            rotation: annotation.rotation
-        }),
+        faceNormalWorld,
         originalCenter: annotation.center,
         originalSize: annotation.size,
-        dragPlane: new Plane().setFromNormalAndCoplanarPoint(cameraDirection, startPoint),
+        dragPlane: computeDragPlane({
+            cameraDirection,
+            faceNormal: new Vector3(...faceNormalWorld),
+            startPoint
+        }),
         startPoint,
         pointerId: event.nativeEvent.pointerId
     };

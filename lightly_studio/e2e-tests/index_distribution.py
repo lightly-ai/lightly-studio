@@ -409,7 +409,7 @@ def main() -> None:
         f"Created dataset '{DATASET_NAME}' with {len(samples)} images and "
         f"{', '.join(seeded) if seeded else 'no extra content'}."
     )
-    ls.start_gui()
+    ls.start_gui(open_browser=False)
 
 
 if __name__ == "__main__":
