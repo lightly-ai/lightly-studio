@@ -1,11 +1,6 @@
 import { expect, gotoFirstPage, test } from '../utils';
 import type { Page } from '@playwright/test';
 
-test.skip(
-    process.env.LIGHTLY_STUDIO_ONBOARDING_ENABLED !== 'true',
-    'Run with LIGHTLY_STUDIO_ONBOARDING_ENABLED=true on the e2e server and Playwright process'
-);
-
 async function reachImageStep(page: Page) {
     await page.getByRole('button', { name: 'Start', exact: true }).click();
     await expect(page.getByText('Browse your collection', { exact: true })).toBeVisible();

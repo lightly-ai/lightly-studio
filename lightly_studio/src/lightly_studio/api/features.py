@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_ANALYTICS_ENABLED,
-    LIGHTLY_STUDIO_ONBOARDING_ENABLED,
     LIGHTLY_STUDIO_POINT_CLOUD_ENABLED,
 )
 
@@ -22,8 +21,7 @@ def _get_active_features() -> list[str]:
     features = []
     if LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         features.append(ANALYTICS_FEATURE)
-    if LIGHTLY_STUDIO_ONBOARDING_ENABLED:
-        features.append(ONBOARDING_FEATURE)
+    features.append(ONBOARDING_FEATURE)
     if LIGHTLY_STUDIO_POINT_CLOUD_ENABLED:
         features.append(POINT_CLOUD_RENDERING_FEATURE)
     return features
