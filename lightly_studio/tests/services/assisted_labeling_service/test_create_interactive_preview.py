@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 import numpy as np
 
@@ -122,5 +122,5 @@ def _request(
     boxes: list[AnnotationBox] | None = None,
 ) -> InteractiveAnnotationRequest:
     return InteractiveAnnotationRequest(
-        collection_id=uuid4(), sample_id=image.sample_id, points=points, boxes=boxes
+        collection_id=uuid.uuid4(), sample_id=image.sample_id, points=points, boxes=boxes
     )

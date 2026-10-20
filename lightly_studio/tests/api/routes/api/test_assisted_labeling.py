@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import importlib.util
 import threading
+import uuid
 from typing import Any
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import numpy as np
 import pytest
@@ -157,7 +158,7 @@ def test_create_interactive_annotation_preview__unknown_sample(
     collection = create_collection(session=db_session)
 
     response = _post_interactive(
-        client=media_test_client, collection_id=collection.collection_id, sample_id=uuid4()
+        client=media_test_client, collection_id=collection.collection_id, sample_id=uuid.uuid4()
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
