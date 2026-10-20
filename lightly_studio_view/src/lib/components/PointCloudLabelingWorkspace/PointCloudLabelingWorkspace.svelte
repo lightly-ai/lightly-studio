@@ -155,6 +155,11 @@
     const handleWindowKeydown = (event: KeyboardEvent) => {
         if (event.code !== 'Space' || event.repeat) return;
         const target = event.target;
+        const isTextEntry =
+            target instanceof Element &&
+            ((target instanceof HTMLElement && target.isContentEditable) ||
+                target.closest('input, select, textarea'));
+        if (isTextEntry) return;
         if (target instanceof Element && target.closest('[role="dialog"]')) {
             event.preventDefault();
             togglePlayback();
@@ -241,9 +246,10 @@
     // show placeholder data from the previous tick), we keep the previous point cloud visible for
     // a smooth transition but immediately clear the annotations so they don't bleed into frames
     // where they do not belong.
-    const snapshotAnnotations = $derived(
-        sceneSnapshot?.tick === workspace.currentTick ? sceneSnapshot.annotations : []
+    const currentSnapshot = $derived(
+        sceneSnapshot?.tick === workspace.currentTick ? sceneSnapshot : undefined
     );
+    const snapshotAnnotations = $derived(currentSnapshot?.annotations ?? []);
 
     const cuboids = $derived(tickAnnotationsToCuboids(snapshotAnnotations));
 
@@ -404,8 +410,8 @@
                                 seqNumber={workspace.currentTick}
                                 displayFrameId={workspace.referenceFrameId}
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
-                                batch={sceneSnapshot?.frame.batch}
-                                annotations={sceneSnapshot?.annotations ?? []}
+                                batch={currentSnapshot?.frame.batch}
+                                annotations={snapshotAnnotations}
                                 canProject={!workspace.isShowingSensorFrames}
                                 onPlaybackToggle={togglePlayback}
                             />
