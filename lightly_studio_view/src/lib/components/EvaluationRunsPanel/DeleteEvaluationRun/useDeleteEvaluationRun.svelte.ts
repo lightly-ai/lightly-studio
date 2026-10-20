@@ -37,25 +37,24 @@ export const useDeleteEvaluationRun = (getParams: () => Params) => {
                     if (remaining?.length !== sort?.length) {
                         filters.updateSortBy(remaining?.length ? remaining : null);
                     }
-                    const params = get(filters.filterParams);
                     if (
-                        params.mode === 'normal' &&
-                        params.filters?.confusion_cell?.evaluation_run_id === run.id
+                        get(filters.imageFilter)?.sample_filter?.confusion_cell
+                            ?.evaluation_run_id === run.id
                     ) {
                         filters.updateConfusionCell(null);
                     }
                     clearRun(run.id);
                     const path = { dataset_id: datasetId };
-                    client.invalidateQueries({ queryKey: getEvaluationRunsQueryKey({ path }) });
-                    client.invalidateQueries({
-                        queryKey: getEvaluationSampleMetricsInfoQueryKey({ path })
-                    });
                     // Annotation metrics are cached by source rather than dataset.
-                    client.invalidateQueries({
-                        queryKey: [{ _id: 'getEvaluationAnnotationMetricsInfo' }]
-                    });
-                    client.invalidateQueries({ queryKey: ['readImagesInfinite'] });
-                    client.invalidateQueries({ queryKey: [ANNOTATIONS_INFINITE_QUERY_KEY_ROOT] });
+                    for (const queryKey of [
+                        getEvaluationRunsQueryKey({ path }),
+                        getEvaluationSampleMetricsInfoQueryKey({ path }),
+                        [{ _id: 'getEvaluationAnnotationMetricsInfo' }],
+                        ['readImagesInfinite'],
+                        [ANNOTATIONS_INFINITE_QUERY_KEY_ROOT]
+                    ]) {
+                        client.invalidateQueries({ queryKey });
+                    }
                     toast.success('Evaluation deleted');
                     onSuccess();
                 },

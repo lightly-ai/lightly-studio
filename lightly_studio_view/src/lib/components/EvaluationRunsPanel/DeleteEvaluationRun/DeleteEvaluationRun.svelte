@@ -15,9 +15,6 @@
         run,
         onSuccess: () => (open = false)
     }));
-    const close = () => {
-        if (!mutation.isPending) open = false;
-    };
 </script>
 
 <Button
@@ -42,7 +39,9 @@
             </Dialog.Description>
         </Dialog.Header>
         <Dialog.Footer>
-            <Button variant="outline" buttonProps={{ disabled: mutation.isPending, onclick: close }}
+            <Button
+                variant="outline"
+                buttonProps={{ disabled: mutation.isPending, onclick: () => (open = false) }}
                 >Cancel</Button
             >
             <Button

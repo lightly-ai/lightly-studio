@@ -28,52 +28,50 @@
     const { datasetId, run, expanded, onToggle }: Props = $props();
 </script>
 
-<li class="rounded-md border border-border bg-background">
-    <div class="relative">
-        <button
-            type="button"
-            class="block w-full px-3 py-2 text-left hover:bg-muted/50"
-            onclick={onToggle}
-            data-testid={`evaluation-run-item-${run.name}`}
-            aria-expanded={expanded}
-        >
-            <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5 pr-8">
-                    <Typography
-                        variant={expanded ? 'subtitle1' : 'subtitle2'}
-                        className="truncate"
-                        props={{ 'data-testid': 'evaluation-run-name' }}
-                    >
-                        {run.name}
-                    </Typography>
-                    {#if run.stale_since !== null}
-                        <TriangleAlert
-                            class="{expanded
-                                ? 'size-4'
-                                : 'size-3.5'} shrink-0 text-amber-500 dark:text-amber-400"
-                            data-testid="evaluation-run-stale-icon"
-                        />
-                    {/if}
-                </div>
+<li class="relative rounded-md border border-border bg-background">
+    <button
+        type="button"
+        class="block w-full px-3 py-2 text-left hover:bg-muted/50"
+        onclick={onToggle}
+        data-testid={`evaluation-run-item-${run.name}`}
+        aria-expanded={expanded}
+    >
+        <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5 pr-8">
                 <Typography
-                    variant="caption"
-                    className="text-muted-foreground"
-                    props={{ 'data-testid': 'evaluation-run-date' }}
+                    variant={expanded ? 'subtitle1' : 'subtitle2'}
+                    className="truncate"
+                    props={{ 'data-testid': 'evaluation-run-name' }}
                 >
-                    {formatDate(run.created_at)}
+                    {run.name}
                 </Typography>
-                <EvaluationRunSummary
-                    groundTruth={run.gt_annotation_source}
-                    predictions={run.pred_annotation_source}
-                />
+                {#if run.stale_since !== null}
+                    <TriangleAlert
+                        class="{expanded
+                            ? 'size-4'
+                            : 'size-3.5'} shrink-0 text-amber-500 dark:text-amber-400"
+                        data-testid="evaluation-run-stale-icon"
+                    />
+                {/if}
             </div>
-        </button>
-        {#if datasetId}
-            <div class="absolute right-1 top-1 text-muted-foreground">
-                <DeleteEvaluationRun {datasetId} run={{ id: run.id, name: run.name }} />
-            </div>
-        {/if}
-    </div>
+            <Typography
+                variant="caption"
+                className="text-muted-foreground"
+                props={{ 'data-testid': 'evaluation-run-date' }}
+            >
+                {formatDate(run.created_at)}
+            </Typography>
+            <EvaluationRunSummary
+                groundTruth={run.gt_annotation_source}
+                predictions={run.pred_annotation_source}
+            />
+        </div>
+    </button>
+    {#if datasetId}
+        <div class="absolute right-1 top-1 text-muted-foreground">
+            <DeleteEvaluationRun {datasetId} run={{ id: run.id, name: run.name }} />
+        </div>
+    {/if}
 
     {#if expanded}
         <div
