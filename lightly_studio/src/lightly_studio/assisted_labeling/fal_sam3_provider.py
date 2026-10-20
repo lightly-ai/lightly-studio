@@ -69,8 +69,7 @@ class FalSam3Provider:
         """Creates the provider."""
         self._client: SyncClient | None = None
         self._client_lock = threading.Lock()
-        self._image_urls: OrderedDict[UUID, str] = OrderedDict()
-        self._pending_uploads: dict[UUID, Future[str]] = {}
+        self._image_urls: OrderedDict[UUID, Future[str]] = OrderedDict()
         self._image_urls_lock = threading.Lock()
 
     def unavailable_reason(self) -> str | None:
@@ -118,35 +117,24 @@ class FalSam3Provider:
             return self._client
 
     def _get_image_url(self, client: SyncClient, image: ProviderImage) -> str:
-        # Concurrent calls for one sample wait for its single upload. The lock is not held
-        # during the upload, so other samples do not wait.
+        # The first call uploads and later calls wait for its future, so other samples do not wait
         sample_id = image.sample_id
         with self._image_urls_lock:
-            url = self._image_urls.get(sample_id)
-            if url is not None:
-                self._image_urls.move_to_end(sample_id)
-                return url
-            pending = self._pending_uploads.get(sample_id)
-            is_uploader = pending is None
-            if pending is None:
-                pending = Future()
-                self._pending_uploads[sample_id] = pending
-        if not is_uploader:
-            return pending.result()
-        try:
-            url = _upload(client=client, image=image)
-        except BaseException as error:
-            with self._image_urls_lock:
-                del self._pending_uploads[sample_id]
-            pending.set_exception(error)
-            raise
-        with self._image_urls_lock:
-            del self._pending_uploads[sample_id]
-            self._image_urls[sample_id] = url
-            if len(self._image_urls) > MAX_CACHED_IMAGE_URLS:
-                self._image_urls.popitem(last=False)
-        pending.set_result(url)
-        return url
+            future = self._image_urls.get(sample_id)
+            is_uploader = future is None
+            if future is None:
+                future = Future()
+                self._image_urls[sample_id] = future
+                if len(self._image_urls) > MAX_CACHED_IMAGE_URLS:
+                    self._image_urls.popitem(last=False)
+            self._image_urls.move_to_end(sample_id)
+        if is_uploader:
+            try:
+                future.set_result(_upload(client=client, image=image))
+            except BaseException as error:
+                self._forget_image_url(sample_id=sample_id)
+                future.set_exception(error)
+        return future.result()
 
     def _forget_image_url(self, sample_id: UUID) -> None:
         with self._image_urls_lock:
