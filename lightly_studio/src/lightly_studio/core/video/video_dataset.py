@@ -13,6 +13,8 @@ from labelformat.formats import (
 )
 from sqlmodel import Session
 
+from lightly_studio.analytics import ingest_tracking
+from lightly_studio.analytics.ingest_tracking import IngestFormat
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video import add_annotations, add_videos
@@ -145,6 +147,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         """
         if target_fps is not None and target_fps <= 0:
             raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
+        source = ingest_tracking.get_source(path=path)
         fsspec_lister.validate_limit(limit)
 
         video_paths = _collect_video_file_paths(
@@ -169,6 +172,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.VIDEO, ingest_format=IngestFormat.FOLDER
+        )
 
     def add_videos_from_youtube_vis(  # noqa: PLR0913
         self,
@@ -200,6 +206,7 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         Raises:
             ValueError: If limit is not None and not greater than 0.
         """
+        source = ingest_tracking.get_source(path=videos_path)
         fsspec_lister.validate_limit(limit)
         annotations_json = Path(annotations_json).absolute()
 
@@ -236,6 +243,9 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
             )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.VIDEO, ingest_format=IngestFormat.YOUTUBE_VIS
+        )
 
     def add_annotations_from_activitynet(
         self,

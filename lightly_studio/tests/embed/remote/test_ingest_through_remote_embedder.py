@@ -146,6 +146,31 @@ def test_embed_annotation_collection__after_restart(
     assert embedding_count == 6
 
 
+def test_embed_annotation_collection__new_collection_after_restart(
+    dataset: ImageDataset, server_url: str, mocker: MockerFixture
+) -> None:
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    # No built-in model loads in this test
+    mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
+    annotation_collection_id = _add_box_to_each_image(dataset=dataset)
+
+    embed_samples.embed_annotation_collection(
+        session=dataset.session, annotation_collection_id=annotation_collection_id
+    )
+
+    # The new crop collection takes the model row of the images, which stores the server
+    crop_model = _default_model(dataset=dataset, collection_id=annotation_collection_id)
+    image_model = _default_model(dataset=dataset, collection_id=dataset.collection_id)
+    assert crop_model.embedding_model_id == image_model.embedding_model_id
+    assert crop_model.remote_embedder_url == server_url
+    embedding_count = sample_embedding_resolver.get_embedding_count(
+        session=dataset.session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=crop_model.embedding_model_id,
+    )
+    assert embedding_count == 3
+
+
 def test_add_videos_from_path__embeds_the_frames_on_the_server(
     server_url: str, tmp_path: Path
 ) -> None:

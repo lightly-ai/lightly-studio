@@ -2,6 +2,7 @@
     import { ChevronLeft, ChevronRight, Pause, Play, SkipBack, SkipForward } from '@lucide/svelte';
     import { Button } from '$lib/components';
     import { Select } from '$lib/components/Select';
+    import { Checkbox } from '$lib/components/ui/checkbox';
 
     /** Playback interval at 1x speed, i.e. 10 Hz. */
     const BASE_INTERVAL_MS = 100;
@@ -18,6 +19,10 @@
     interface Props {
         /** One-based `Frame n / total`, or an em-dash placeholder when the sequence is empty. */
         frameLabel: string;
+        /** Whether the complete sequence should be prefetched. */
+        bufferEntireSequence: boolean;
+        /** Called when the complete-sequence buffering option changes. */
+        onBufferEntireSequenceChange: (enabled: boolean) => void;
         /** Whether playback is currently running; toggles the play/pause icon. */
         isPlaying: boolean;
         playbackIntervalMs: number;
@@ -42,6 +47,8 @@
 
     let {
         frameLabel,
+        bufferEntireSequence,
+        onBufferEntireSequenceChange,
         isPlaying,
         playbackIntervalMs,
         hasTicks,
@@ -56,7 +63,7 @@
     }: Props = $props();
 </script>
 
-<div class="flex shrink-0 items-center gap-1 border-b px-2 py-1">
+<div class="flex shrink-0 select-none items-center gap-1 border-b px-2 py-1">
     <Button
         variant="ghost"
         icon={SkipBack}
@@ -123,4 +130,12 @@
         }}
     />
     <span class="ml-2 text-xs text-muted-foreground">{frameLabel}</span>
+    <label class="ml-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Checkbox
+            aria-label="Buffer entire sequence"
+            checked={bufferEntireSequence}
+            onCheckedChange={(checked) => onBufferEntireSequenceChange(checked === true)}
+        />
+        <span>Buffer entire sequence</span>
+    </label>
 </div>

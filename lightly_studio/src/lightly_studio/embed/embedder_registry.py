@@ -55,7 +55,7 @@ _INITIAL_BOOTSTRAP_SPACES = {
     Capability.IMAGE_PATH: _MOBILECLIP_SPACE_KEY,
     Capability.IMAGE_CROP_PATH: _MOBILECLIP_SPACE_KEY,
     Capability.VIDEO_PATH: _PERCEPTION_ENCODER_SPACE_KEY,
-    Capability.IMAGE_PIL: _MOBILECLIP_SPACE_KEY,
+    Capability.IMAGE_PIL: _PERCEPTION_ENCODER_SPACE_KEY,
     Capability.IMAGE_BYTES: _MOBILECLIP_SPACE_KEY,
 }
 
@@ -101,6 +101,7 @@ class EmbedderRegistry:
             tuple[UUID, str], tuple[EmbedderConfig, float, NoEmbedderReason]
         ] = {}
         self._bootstrap_spaces = dict(_INITIAL_BOOTSTRAP_SPACES)
+        self._registered_bootstraps: set[Capability] = set()
         self._build_locks: dict[tuple[UUID | None, str], threading.Lock] = {}
         self._lock = threading.Lock()
 
@@ -183,6 +184,24 @@ class EmbedderRegistry:
         if isinstance(embedder, embedder_type):
             return embedder
         return NoEmbedderReason.LACKS_CAPABILITY
+
+    def has_registered_bootstrap(self, embedder_type: type[Embedder]) -> bool:
+        """Report whether a registration set the bootstrap space of a capability.
+
+        A built-in bootstrap space is not a registration.
+
+        Args:
+            embedder_type: The embedder interface of the capability, such as
+                ``ImageCropPathEmbedder``.
+
+        Raises:
+            ValueError: If ``embedder_type`` is not the interface of a capability.
+        """
+        capability = _TYPE_TO_CAPABILITY.get(embedder_type)
+        if capability is None:
+            raise ValueError(f"{embedder_type.__name__!r} is not an embedder capability type.")
+        with self._lock:
+            return capability in self._registered_bootstraps
 
     def preload_builtin_embedders(self) -> None:
         """Load and cache the built-in bootstrap embedders.
@@ -326,12 +345,22 @@ class EmbedderRegistry:
         capabilities: set[Capability],
         bootstrap_for: Set[Capability] | None,
     ) -> None:
-        """Set the space as the bootstrap default for requested capabilities it supports."""
+        """Set the space as the bootstrap default for requested capabilities it supports.
+
+        A capability whose bootstrap space now has an embedder without it is no longer a
+        registered bootstrap.
+        """
         defaults = (
             capabilities if bootstrap_for is None else capabilities.intersection(bootstrap_for)
         )
         for capability in defaults:
             self._bootstrap_spaces[capability] = space_key
+        self._registered_bootstraps.update(defaults)
+        self._registered_bootstraps -= {
+            capability
+            for capability in self._registered_bootstraps - capabilities
+            if self._bootstrap_spaces.get(capability) == space_key
+        }
 
 
 _registry = EmbedderRegistry()

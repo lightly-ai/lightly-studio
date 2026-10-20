@@ -184,7 +184,7 @@ def test_get_tick_details__camera_projection_uses_camera_timestamp(
         "transform_to_target_frame",
         return_value=np.eye(4),
     )
-    mocker.patch.object(recording_service.reader_cache, "get_cached_reader")
+    mocker.patch.object(recording_service.reader_cache, "borrow_reader")
     mocker.patch.object(
         recording_service.load_static_transforms,
         "load_static_transforms",

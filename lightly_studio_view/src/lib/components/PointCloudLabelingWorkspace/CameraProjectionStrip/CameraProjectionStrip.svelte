@@ -1,14 +1,14 @@
 <script lang="ts">
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
-    import { useTickDetails } from '$lib/hooks';
+    import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 
     /**
-     * Horizontal strip of camera tiles for the active point-cloud tick. Each
-     * camera channel renders its frame for the current tick, resolved from the
-     * tick's per-component MCAP locators keyed by `group_component_name`.
+     * Horizontal strip of camera tiles for the active point-cloud tick. The tile images
+     * come from the tick data, keyed by channel ID. The full-resolution frame is located
+     * by the tick's MCAP locators, keyed by `group_component_name`.
      */
     interface Props {
         /** Dataset the sequence belongs to. */
@@ -47,6 +47,12 @@
         getDisplayFrameId: () => displayFrameId || undefined
     });
     const recordingId = $derived(tickDetails.data?.recording_id);
+    const { query: cameraFrames } = useTickCameraFrames(() => ({
+        datasetId,
+        sequenceId,
+        seqNumber,
+        displayFrameId: displayFrameId || undefined
+    }));
 </script>
 
 <div
@@ -63,6 +69,7 @@
                 channelId={summaryChannel.channel_id}
                 keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
                 logTimeNs={channel?.log_time_ns}
+                blob={cameraFrames.data?.[summaryChannel.channel_id]}
                 label={summaryChannel.group_component_name}
                 {batch}
                 {annotations}

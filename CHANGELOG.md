@@ -9,15 +9,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- API: Delete an evaluation and its results while keeping annotations unchanged.
+- Edit saved evaluation parameters and rerun from the evaluation panel.
+- API: Change evaluation parameters and rerun an existing evaluation.
+- Create a new annotation source while duplicating an annotation in the details view.
+- Copy annotations to another annotation source from the details view.
+- Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.
 - Added an image interpolation setting to show sharp pixel edges when zooming in.
+- The text axes layout of the embedding plot shows the lines x = 0 and y = 0. They split the plot into four parts, one for each pair of axis texts.
+- Added a "Clear all filters" button to the filter sidebar.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
+- Python SDK: Filter samples by metadata with equality and ordering comparisons, including nested fields and array indices, e.g. `ImageSampleField.metadata["odometry.speed"] < 15`.
+- Python SDK: Report anonymous usage data on how data is loaded: the dataset format and whether it comes from the example dataset, a local folder or remote storage.
 
 ### Changed
 
+- Group image-grid evaluation sorts by metric, show highest counts first, and mark missing results.
+- Clarify evaluation settings and annotation sources in the evaluation panel.
+- Keep annotation cards aligned and confidence visible when switching between viewing and editing.
+- Python SDK: `start_gui()` now opens the browser by default (`open_browser=True`). Pass `open_browser=False` to suppress. The `lightly-studio gui` CLI command accepts `--no-browser` to opt out.
 - Make embedding plot points excluded by filters or without a category easier to see on dark backgrounds.
 - Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
 - BREAKING: A tag now holds only samples of its own collection. For example, an image tag holds only images. Tags no longer have a `kind` field. The API returns 400 when a request adds a sample of another collection, or a sample that does not exist, to a tag. The PostgreSQL migration is automatic. It moves each sample that has a tag of another collection to a tag with the same name in the collection of the sample. DuckDB users must re-index their data before they can create tags.
 - Speed up adding many samples to a tag.
+- Python SDK: Crops and frames get embedded with a remote embedder automatically when a compatible remote embedder was used previously.
+- The text axes layout of the embedding plot scales each text embedding to norm 1, so x = 0 is exactly where a sample is as similar to X− as to X+. The same is true for y. Before, with an embedding model such as MobileCLIP, the text with the larger norm got a larger part of the plot.
+- The text axes layout of the embedding plot starts on a fixed range of -0.2 to 0.2 on both axes and no longer fits the view to the data. Axes along which the images vary strongly now look wide, and axes from texts that do not match the images look small.
+- The embedding plot has a "Define axes" button instead of the PaCMAP/Text select, with a popover for the four axis texts. The plot edges show the applied texts, and "Reset axes" goes back to the PaCMAP layout.
+- Python SDK: New video datasets embed their video frames with Perception Encoder (`PE-Core-T16-384`), the model of the videos, instead of MobileCLIP. Existing datasets keep the model of their frames.
 
 ### Deprecated
 
@@ -25,8 +44,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Preserve existing evaluation results when recomputation fails.
+- Python SDK: `start_gui()` stops without a `KeyboardInterrupt` traceback when you press Ctrl+C.
 - The GUI footer no longer shows a dev commit hash for released versions.
 - The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.
+- Python SDK: Speed up `dataset.evaluate()` and evaluation recompute on large datasets. The metrics are now written in larger batches, so the annotations are no longer loaded again for each sample.
 
 ### Security
 

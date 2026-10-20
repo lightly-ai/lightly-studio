@@ -294,7 +294,7 @@ describe('useImageOrderBy', () => {
             ]);
         });
 
-        it('selects an evaluation metric field', () => {
+        it('selects an evaluation metric field with the highest value first', () => {
             const { handleFieldClick } = useImageOrderBy({
                 collectionId: () => 'col1',
                 datasetId: () => 'ds1'
@@ -312,7 +312,7 @@ describe('useImageOrderBy', () => {
                     source: 'evaluation_metric',
                     evaluation_run_name: 'run1',
                     metric_name: 'precision',
-                    direction: SortDirection.ASC
+                    direction: SortDirection.DESC
                 }
             ]);
         });

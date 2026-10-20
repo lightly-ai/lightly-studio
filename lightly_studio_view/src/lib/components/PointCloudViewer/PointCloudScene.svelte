@@ -7,6 +7,7 @@
     import { createSceneNavigationController } from './sceneNavigationController';
     import type { ColorMode } from './pointCloudUtils';
     import type { PointBatch } from './types';
+    import type { WorkspaceTool } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
     interface Props {
         /** Current point cloud batch with positions, intensities, and count. */
@@ -19,9 +20,18 @@
         intensityRange?: [number, number];
         /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
+        /** Tool that determines whether orbit rotation is enabled. */
+        activeTool?: WorkspaceTool;
     }
 
-    let { batch, colorMode = 'none', pointSize = 2, intensityRange, fitKey = '' }: Props = $props();
+    let {
+        batch,
+        colorMode = 'none',
+        pointSize = 2,
+        intensityRange,
+        fitKey = '',
+        activeTool = 'select'
+    }: Props = $props();
 
     const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
     const { invalidate, renderer } = useThrelte();
@@ -60,6 +70,7 @@
     <OrbitControls
         bind:ref={controlsRef}
         enableDamping
+        enableRotate={activeTool !== 'create-cuboid'}
         screenSpacePanning={false}
         mouseButtons={{
             LEFT: THREE.MOUSE.ROTATE,

@@ -21,6 +21,7 @@ from lightly_studio.core.mcap.errors import (
     McapAccessError,
     TopicNotFoundError,
 )
+from lightly_studio.core.mcap.reader import range_cache, summary_cache
 from lightly_studio.core.mcap.type_definitions import TopicInfo
 
 logger = logging.getLogger(__name__)
@@ -78,6 +79,24 @@ class ChannelDecoder:
             )
             return None
 
+    def required_payload(self, schema: Schema | None, channel: Channel, message: Message) -> Any:
+        """Decodes a message payload, and raises if it cannot be decoded.
+
+        Raises:
+            DecoderNotFoundError: If no factory can decode the channel.
+            Exception: The decoder failed on the payload.
+        """
+        decoder = self._decoder_by_channel_id.get(channel.id)
+        if decoder is None:
+            decoder = self._find_decoder(schema=schema, channel=channel)
+            if decoder is None:
+                raise DecoderNotFoundError(
+                    f"No decoder factory for message encoding '{channel.message_encoding}' "
+                    f"of topic '{channel.topic}'."
+                )
+            self._decoder_by_channel_id[channel.id] = decoder
+        return decoder(message.data)
+
     def _decoder_for(
         self, schema: Schema | None, channel: Channel
     ) -> Callable[[bytes], Any] | None:
@@ -89,11 +108,7 @@ class ChannelDecoder:
         if channel.id in self._decoder_by_channel_id:
             return self._decoder_by_channel_id[channel.id]
 
-        decoder: Callable[[bytes], Any] | None = None
-        for factory in self._factories:
-            decoder = factory.decoder_for(message_encoding=channel.message_encoding, schema=schema)
-            if decoder is not None:
-                break
+        decoder = self._find_decoder(schema=schema, channel=channel)
         if decoder is None:
             logger.warning(
                 "Cannot decode the messages of topic '%s' in '%s'. Its messages are skipped.",
@@ -102,6 +117,16 @@ class ChannelDecoder:
             )
         self._decoder_by_channel_id[channel.id] = decoder
         return decoder
+
+    def _find_decoder(
+        self, schema: Schema | None, channel: Channel
+    ) -> Callable[[bytes], Any] | None:
+        """Returns the decoder of the first factory that can decode a channel."""
+        for factory in self._factories:
+            decoder = factory.decoder_for(message_encoding=channel.message_encoding, schema=schema)
+            if decoder is not None:
+                return decoder
+        return None
 
 
 class TopicIndex:
@@ -225,7 +250,8 @@ def open_reader(
 
     Returns:
         The binary stream, the seeking reader, and the payload decoder. The caller
-        closes the stream.
+        closes the stream. A remote file shares its parsed summary and identical
+        byte reads with the other readers of the URI.
 
     Raises:
         mcap.exceptions.McapError: If the file is not an MCAP file.
@@ -242,10 +268,12 @@ def open_reader(
                 "seekable files can be read, so a remote file needs a filesystem "
                 "that supports range requests."
             )
+        stream = range_cache.share_remote_reads(stream=stream, uri=path)
         # Kept, so that a single message can be decoded without a second pass.
         factories = decoding.decoder_factories()
         decoder = ChannelDecoder(path=path, factories=factories)
         reader = mcap_reader.make_reader(stream, decoder_factories=factories)
+        summary_cache.install_cached_summary(reader=reader, uri=path)
     except Exception:
         stream.close()
         raise

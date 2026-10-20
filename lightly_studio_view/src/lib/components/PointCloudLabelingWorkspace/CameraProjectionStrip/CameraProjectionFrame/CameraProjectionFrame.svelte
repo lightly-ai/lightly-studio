@@ -10,10 +10,9 @@
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
 
     /**
-     * A single camera tile in the projection strip. Renders the channel's frame
-     * for the active tick, falling back to a placeholder camera icon when the
-     * image fails to load. Clicking the frame enlarges it in a dialog over the
-     * workspace; the enlarged frame follows the active tick.
+     * A single camera tile in the projection strip, with a placeholder icon when the
+     * image is missing or fails to load. Clicking the tile enlarges the frame at full
+     * resolution in a dialog that follows the active tick.
      */
     interface Props {
         /** Dataset the recording belongs to. */
@@ -26,6 +25,8 @@
         keyframeTimestampNs?: string;
         /** Frame to show, in nanoseconds, as a string to preserve full precision. */
         logTimeNs?: string;
+        /** Tile-size JPEG of the frame, from the tick data. */
+        blob?: Blob;
         /** Studio slot name shown as the caption, e.g. `front`. */
         label: string;
         batch?: PointBatch;
@@ -39,13 +40,14 @@
         channelId,
         keyframeTimestampNs,
         logTimeNs,
+        blob,
         label,
         batch,
         annotations = [],
         projection
     }: Props = $props();
 
-    const frameUrl = $derived(
+    const fullFrameUrl = $derived(
         recordingId && keyframeTimestampNs && logTimeNs
             ? getCameraFrameUrl({
                   datasetId,
@@ -56,6 +58,17 @@
               })
             : null
     );
+
+    let frameUrl = $state<string | null>(null);
+    $effect(() => {
+        if (!blob) {
+            frameUrl = null;
+            return;
+        }
+        const url = URL.createObjectURL(blob);
+        frameUrl = url;
+        return () => URL.revokeObjectURL(url);
+    });
 
     let failedFrameUrl = $state<string | null>(null);
     let isEnlarged = $state(false);
@@ -103,7 +116,7 @@
                 <Dialog.Description class="sr-only">Enlarged camera frame</Dialog.Description>
                 <div class="relative">
                     <img
-                        src={frameUrl}
+                        src={fullFrameUrl ?? frameUrl}
                         alt={`${label} enlarged`}
                         class="max-h-[80vh] w-full rounded-md object-contain"
                     />

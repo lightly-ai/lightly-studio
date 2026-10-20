@@ -1,15 +1,24 @@
 <script lang="ts">
+    import type { PageData } from './$types';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
     import { useGlobalStorage, useMcapSequencesInfinite } from '$lib/hooks';
     import { routeHelpers } from '$lib/routes';
 
+    // The page layout provides data, but this route loads its own sequence data.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data: _data }: { data: PageData } = $props();
     const datasetId = $derived(page.params.dataset_id!);
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
 
-    const { data, query, loadMore, totalCount } = useMcapSequencesInfinite(() => collectionId);
+    const {
+        data: sequenceData,
+        query,
+        loadMore,
+        totalCount
+    } = useMcapSequencesInfinite(() => collectionId);
     const { setfilteredSampleCount } = useGlobalStorage();
 
     $effect(() => {
@@ -17,7 +26,7 @@
     });
 
     const sequences = $derived(
-        $data.map((sequence) => ({
+        $sequenceData.map((sequence) => ({
             sampleId: sequence.sample_id,
             fileName: sequence.file_name,
             sampleCount: sequence.sample_count,

@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 APP_LAUNCHED = "app_launched"
 ENTERPRISE_CONNECTION_ATTEMPTED = "enterprise_connection_attempted"
 ENTERPRISE_CONNECTION_ESTABLISHED = "enterprise_connection_established"
+SAMPLES_INGESTED = "samples_ingested"
 
 
 class NoOpTracker(Tracker):

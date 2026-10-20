@@ -28,9 +28,12 @@ export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () =
         invalidateEvaluationRunsQueries();
     };
 
-    const deleteAnnotation = (annotationId: string, annotationType: string) =>
+    const deleteAnnotation = (
+        annotationId: string,
+        annotationType: string,
+        collectionId = getCollectionId()
+    ) =>
         new Promise<void>((resolve, reject) => {
-            const collectionId = getCollectionId();
             mutation.mutate(
                 {
                     path: {

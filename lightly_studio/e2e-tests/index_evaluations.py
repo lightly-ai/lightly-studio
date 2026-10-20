@@ -60,4 +60,4 @@ dataset.evaluate().object_detection(
     config=evaluation_config,
 )
 
-ls.start_gui()
+ls.start_gui(open_browser=False)

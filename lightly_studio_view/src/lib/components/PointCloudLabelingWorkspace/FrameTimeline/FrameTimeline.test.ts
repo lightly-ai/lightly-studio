@@ -11,6 +11,9 @@ const defaultProps = {
     currentTick: 0,
     isPlaying: false,
     playbackIntervalMs: 100,
+    bufferEntireSequence: false,
+    onBufferEntireSequenceChange: vi.fn(),
+    bufferedRanges: [],
     onPreviousFrame: vi.fn(),
     onNextFrame: vi.fn(),
     onPlayToggle: vi.fn(),
@@ -19,6 +22,20 @@ const defaultProps = {
 };
 
 describe('FrameTimeline', () => {
+    it('colors tick marks that are included in buffered ranges', () => {
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                bufferedRanges: [{ startIndex: 1, endIndex: 2 }]
+            }
+        });
+
+        const marks = screen.getAllByTestId('timeline-tick-mark');
+        expect(marks[0]).toHaveClass('bg-border');
+        expect(marks[1]).toHaveClass('bg-primary');
+        expect(marks[2]).toHaveClass('bg-primary');
+    });
+
     it.each([
         { currentTick: 0, label: 'Frame 1 / 3' },
         { currentTick: 1, label: 'Frame 2 / 3' }
@@ -37,6 +54,17 @@ describe('FrameTimeline', () => {
         expect(screen.getByText('Frame — / —')).toBeInTheDocument();
     });
 
+    it('toggles complete-sequence buffering from the transport', async () => {
+        const onBufferEntireSequenceChange = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onBufferEntireSequenceChange }
+        });
+
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }));
+
+        expect(onBufferEntireSequenceChange).toHaveBeenCalledWith(true);
+    });
+
     it('selects ticks with the timeline slider and exposes the playback interval control', async () => {
         const onSelectTick = vi.fn();
         render(FrameTimeline, {
@@ -51,12 +79,66 @@ describe('FrameTimeline', () => {
             }
         });
 
-        await fireEvent.input(screen.getByRole('slider', { name: 'Frame position' }), {
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.input(slider, { target: { value: '1' } });
+        expect(onSelectTick).not.toHaveBeenCalled();
+
+        await fireEvent.change(slider, {
             target: { value: '2' }
         });
+        await fireEvent.pointerUp(slider);
         expect(screen.getByLabelText('Playback speed')).toHaveTextContent('1×');
         expect(screen.getByRole('slider', { name: 'Frame position' })).toHaveAttribute('max', '2');
         expect(onSelectTick).toHaveBeenCalledWith(8);
+    });
+
+    it('reports the start and end of slider seeking', async () => {
+        const onSeekStart = vi.fn();
+        const onSeekEnd = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onSeekStart, onSeekEnd }
+        });
+
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.pointerUp(slider);
+
+        expect(onSeekStart).toHaveBeenCalledOnce();
+        expect(onSeekEnd).toHaveBeenCalledOnce();
+    });
+
+    it('reports keyboard seeking and commits the selected tick', async () => {
+        const onSeekStart = vi.fn();
+        const onSeekEnd = vi.fn();
+        const onSelectTick = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onSeekStart, onSeekEnd, onSelectTick }
+        });
+
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.keyDown(slider, { key: 'ArrowRight' });
+        await fireEvent.change(slider, { target: { value: '1' } });
+        await fireEvent.keyUp(slider, { key: 'ArrowRight' });
+
+        expect(onSeekStart).toHaveBeenCalledOnce();
+        expect(onSeekEnd).toHaveBeenCalledOnce();
+        expect(onSelectTick).toHaveBeenCalledWith(1);
+    });
+
+    it('commits the final slider position after dragging', async () => {
+        const onSelectTick = vi.fn();
+        render(FrameTimeline, {
+            props: { ...defaultProps, onSelectTick }
+        });
+
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        await fireEvent.pointerDown(slider);
+        await fireEvent.input(slider, { target: { value: '1' } });
+        expect(onSelectTick).not.toHaveBeenCalled();
+
+        await fireEvent.change(slider, { target: { value: '2' } });
+        expect(onSelectTick).toHaveBeenCalledWith(2);
     });
 
     it('labels ruler ticks with their timestamp relative to the first tick', () => {
