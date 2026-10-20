@@ -35,6 +35,7 @@
     const visibleItems = $derived(items.filter((item) => item.visible !== false));
 
     function onKeyDown(e: KeyboardEvent) {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
         if (isTextInputTarget(e.target)) return;
         if (shouldHandleShortcut && !shouldHandleShortcut(e)) return;
 
@@ -78,6 +79,7 @@
                     disabled={isDisabled}
                     onclick={isDisabled ? undefined : () => onToolChange(item.id, 'click')}
                     aria-label={item.label}
+                    aria-pressed={isActive}
                     class="flex items-center justify-center rounded-md p-2 transition-colors focus:outline-none
                         {isActive ? 'bg-black/40' : 'hover:bg-black/20'}
                         {isDisabled ? 'pointer-events-none opacity-50' : ''}"

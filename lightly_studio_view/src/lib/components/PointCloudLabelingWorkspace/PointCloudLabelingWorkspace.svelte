@@ -85,6 +85,7 @@
         false
     );
     let activeTool = $state<WorkspaceTool>('select');
+    const effectiveTool = $derived<WorkspaceTool>($isEditingMode ? activeTool : 'select');
     let seekWasPlaying = false;
     let bufferingSeekVersion = $state(0);
     let selectedBufferingTick = $state<number | undefined>(undefined);
@@ -375,7 +376,7 @@
                                     {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
                                     hoveredAnnotationId={hoveredCuboidId}
-                                    {activeTool}
+                                    activeTool={effectiveTool}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
                                     onCreateCuboid={handleCreateCuboid}

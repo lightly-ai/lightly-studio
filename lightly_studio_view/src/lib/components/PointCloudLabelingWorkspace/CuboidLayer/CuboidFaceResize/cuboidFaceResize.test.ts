@@ -51,20 +51,16 @@ describe('computeFaceNormalWorld', () => {
 });
 
 describe('computeResizedCuboid', () => {
-    const center = [0, 0, 0] as const;
-    const size = [4, 2, 6] as const;
-    const xNormal = [1, 0, 0] as const;
-    const yNormal = [0, 1, 0] as const;
-    const zNormal = [0, 0, 1] as const;
+    const defaultParams = {
+        originalCenter: [0, 0, 0] as const,
+        originalSize: [4, 2, 6] as const,
+        axis: 0 as 0 | 1 | 2,
+        faceNormalWorld: [1, 0, 0] as const,
+        delta: 0
+    };
 
     it('expands the +X face: size grows along x, center shifts right', () => {
-        const result = computeResizedCuboid({
-            originalCenter: center,
-            originalSize: size,
-            axis: 0,
-            faceNormalWorld: xNormal,
-            delta: 2
-        });
+        const result = computeResizedCuboid({ ...defaultParams, delta: 2 });
         expect(result.size).toEqual([6, 2, 6]);
         expect(result.center).toBeCloseToTuple([1, 0, 0]);
         expect(result.center[0] + result.size[0] / 2).toBeCloseTo(4);
@@ -73,10 +69,9 @@ describe('computeResizedCuboid', () => {
 
     it('shrinks the +Y face: size shrinks along y, center shifts down', () => {
         const result = computeResizedCuboid({
-            originalCenter: center,
-            originalSize: size,
+            ...defaultParams,
             axis: 1,
-            faceNormalWorld: yNormal,
+            faceNormalWorld: [0, 1, 0] as const,
             delta: -1
         });
         expect(result.size).toEqual([4, 1, 6]);
@@ -85,10 +80,9 @@ describe('computeResizedCuboid', () => {
 
     it('expands the +Z face: center shifts up', () => {
         const result = computeResizedCuboid({
-            originalCenter: center,
-            originalSize: size,
+            ...defaultParams,
             axis: 2,
-            faceNormalWorld: zNormal,
+            faceNormalWorld: [0, 0, 1] as const,
             delta: 4
         });
         expect(result.size).toEqual([4, 2, 10]);
@@ -99,13 +93,7 @@ describe('computeResizedCuboid', () => {
         // +X face at x = center.x + size.x/2 = 2.
         // After expanding by 2, +X face should move to 2+2=4.
         // -X face should stay at center.x - size.x/2 = -2.
-        const result = computeResizedCuboid({
-            originalCenter: center,
-            originalSize: size,
-            axis: 0,
-            faceNormalWorld: xNormal,
-            delta: 2
-        });
+        const result = computeResizedCuboid({ ...defaultParams, delta: 2 });
         const newPlusFace = result.center[0] + result.size[0] / 2;
         const newMinusFace = result.center[0] - result.size[0] / 2;
         expect(newPlusFace).toBeCloseTo(4);
@@ -113,39 +101,28 @@ describe('computeResizedCuboid', () => {
     });
 
     it('clamps size to MIN_CUBOID_SIZE and stops center from over-shifting', () => {
-        const result = computeResizedCuboid({
-            originalCenter: center,
-            originalSize: size,
-            axis: 0,
-            faceNormalWorld: xNormal,
-            delta: -100
-        });
+        const result = computeResizedCuboid({ ...defaultParams, delta: -100 });
         expect(result.size[0]).toBe(MIN_CUBOID_SIZE);
         // center shifts only by half the actual (clamped) delta
-        const actualDelta = MIN_CUBOID_SIZE - size[0];
+        const actualDelta = MIN_CUBOID_SIZE - defaultParams.originalSize[0];
         expect(result.center[0]).toBeCloseTo(actualDelta / 2);
     });
 
     it('returns original values when delta is zero', () => {
         const result = computeResizedCuboid({
-            originalCenter: center,
-            originalSize: size,
+            ...defaultParams,
             axis: 1,
-            faceNormalWorld: yNormal,
-            delta: 0
+            faceNormalWorld: [0, 1, 0] as const
         });
         expect(result.center).toEqual([0, 0, 0]);
         expect(result.size).toEqual([4, 2, 6]);
     });
 
     it('works for the -X face (negative normal direction)', () => {
-        const minusXNormal = [-1, 0, 0] as const;
         // Dragging -X face outward (positive delta along -X normal means moving in -X direction).
         const result = computeResizedCuboid({
-            originalCenter: center,
-            originalSize: size,
-            axis: 0,
-            faceNormalWorld: minusXNormal,
+            ...defaultParams,
+            faceNormalWorld: [-1, 0, 0] as const,
             delta: 2
         });
         expect(result.size[0]).toBeCloseTo(6);

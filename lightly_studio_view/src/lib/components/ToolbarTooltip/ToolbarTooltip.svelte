@@ -32,7 +32,7 @@
 
 <div
     class="relative"
-    role="region"
+    role="presentation"
     bind:this={triggerElement}
     onpointerenter={tooltip.show}
     onpointerleave={tooltip.hide}

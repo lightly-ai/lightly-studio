@@ -210,10 +210,10 @@ describe('Toolbar', () => {
         expect(queryByRole('tooltip')).not.toBeInTheDocument();
     });
 
-    it('applies active styling to the active tool button', () => {
+    it('marks the active tool button as pressed', () => {
         const { getByLabelText } = render(Toolbar, { props: defaultProps });
 
-        expect(getByLabelText('Select').className).toContain('bg-black/40');
-        expect(getByLabelText('Drag').className).toContain('hover:bg-black/20');
+        expect(getByLabelText('Select')).toHaveAttribute('aria-pressed', 'true');
+        expect(getByLabelText('Drag')).toHaveAttribute('aria-pressed', 'false');
     });
 });
