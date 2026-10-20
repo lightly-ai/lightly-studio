@@ -52,3 +52,19 @@ def test_to_box_prompt__edge() -> None:
     prompt = convert_prompts.to_box_prompt(box=box, width=100, height=50)
 
     assert prompt == BoxPrompt(x_min=99, y_min=49, x_max=100, y_max=50)
+
+
+def test_to_box_prompts() -> None:
+    boxes = [
+        AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5),
+        AnnotationBox(x=0.5, y=0.5, width=0.5, height=0.5),
+    ]
+
+    assert convert_prompts.to_box_prompts(boxes=boxes, width=10, height=4) == [
+        BoxPrompt(x_min=0, y_min=0, x_max=5, y_max=2),
+        BoxPrompt(x_min=5, y_min=2, x_max=10, y_max=4),
+    ]
+
+
+def test_to_box_prompts__none() -> None:
+    assert convert_prompts.to_box_prompts(boxes=None, width=10, height=4) == []

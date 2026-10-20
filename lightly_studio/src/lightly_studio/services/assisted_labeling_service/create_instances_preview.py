@@ -17,6 +17,9 @@ from lightly_studio.services.assisted_labeling_service import (
     to_annotation_preview,
 )
 
+# One mask selects the single-object mode of the provider, which merges all boxes into one object
+_MIN_MULTI_INSTANCE_MASKS = 2
+
 
 def create_instances_preview(
     provider: AssistedLabelingProvider,
@@ -33,15 +36,15 @@ def create_instances_preview(
     """
     prompt = SegmentationPrompt(
         points=[],
-        boxes=[
-            convert_prompts.to_box_prompt(box=box, width=image.width, height=image.height)
-            for box in request.boxes or []
-        ],
-        text=(request.prompt or "").strip() or None,
-        max_masks=request.max_instances,
+        boxes=convert_prompts.to_box_prompts(
+            boxes=request.boxes, width=image.width, height=image.height
+        ),
+        text=request.prompt,
+        max_masks=max(request.max_instances, _MIN_MULTI_INSTANCE_MASKS),
     )
     predictions = run_provider.segment(provider=provider, image=image, prompt=prompt)
     previews = to_annotation_preview.to_sorted_annotation_previews(
         predictions=predictions, width=image.width, height=image.height
     )
+    # `max_masks` can be larger than `max_instances`
     return InstancesAnnotationResponse(predictions=previews[: request.max_instances])

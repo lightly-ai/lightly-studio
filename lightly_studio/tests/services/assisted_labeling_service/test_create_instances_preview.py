@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 import numpy as np
 
@@ -27,7 +27,7 @@ def test_create_instances_preview__text() -> None:
     response = assisted_labeling_service.create_instances_preview(
         provider=provider,
         image=image,
-        request=_request(image=image, prompt=" dog ", max_instances=2),
+        request=_request(image=image, prompt="dog", max_instances=2),
     )
 
     (prompt,) = provider.prompts
@@ -82,6 +82,33 @@ def test_create_instances_preview__max_instances() -> None:
     assert [prediction.score for prediction in response.predictions] == [0.9, 0.8]
 
 
+def test_create_instances_preview__single_instance() -> None:
+    provider = StubProvider(
+        predictions=[
+            _prediction(x=0, score=0.8),
+            _prediction(x=1, score=0.9),
+        ]
+    )
+    image = helpers.make_image(width=4, height=2)
+
+    response = assisted_labeling_service.create_instances_preview(
+        provider=provider,
+        image=image,
+        request=_request(
+            image=image,
+            boxes=[
+                AnnotationBox(x=0.0, y=0.0, width=0.25, height=0.5),
+                AnnotationBox(x=0.25, y=0.0, width=0.25, height=0.5),
+            ],
+            max_instances=1,
+        ),
+    )
+
+    (prompt,) = provider.prompts
+    assert prompt.max_masks == 2
+    assert [prediction.score for prediction in response.predictions] == [0.9]
+
+
 def _prediction(x: int, score: float) -> Prediction:
     # A single pixel at (x, 0) of a 4x2 image.
     mask = np.zeros((2, 4), dtype=np.bool_)
@@ -96,7 +123,7 @@ def _request(
     max_instances: int = 16,
 ) -> InstancesAnnotationRequest:
     return InstancesAnnotationRequest(
-        collection_id=uuid4(),
+        collection_id=uuid.uuid4(),
         sample_id=image.sample_id,
         prompt=prompt,
         boxes=boxes,

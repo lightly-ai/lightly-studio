@@ -34,10 +34,9 @@ def create_interactive_preview(
             convert_prompts.to_point_prompt(point=point, width=image.width, height=image.height)
             for point in request.points or []
         ],
-        boxes=[
-            convert_prompts.to_box_prompt(box=box, width=image.width, height=image.height)
-            for box in request.boxes or []
-        ],
+        boxes=convert_prompts.to_box_prompts(
+            boxes=request.boxes, width=image.width, height=image.height
+        ),
         text=None,
         max_masks=1,
     )

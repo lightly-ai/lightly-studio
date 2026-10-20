@@ -81,8 +81,45 @@ class TestInteractiveAnnotationRequest:
 
 
 class TestInstancesAnnotationRequest:
-    def test_validate_prompts__blank_text_without_boxes(self) -> None:
+    def test_validate_prompts__text_and_boxes(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        request = InstancesAnnotationRequest(
+            collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt=" dog ", boxes=[box]
+        )
+
+        assert request.prompt == "dog"
+        assert request.boxes == [box]
+
+    def test_validate_prompts__no_prompts(self) -> None:
         with pytest.raises(ValidationError, match=r"Provide a text prompt, boxes, or both\."):
+            InstancesAnnotationRequest(collection_id=uuid.uuid4(), sample_id=uuid.uuid4())
+
+    def test_validate_prompts__blank_text_with_boxes(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        with pytest.raises(ValidationError, match="at least 1 character"):
             InstancesAnnotationRequest(
-                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt="   "
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt="   ", boxes=[box]
+            )
+
+    def test_validate_prompts__too_long_text(self) -> None:
+        with pytest.raises(ValidationError, match="at most 200 characters"):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt="a" * 201
+            )
+
+    def test_validate_prompts__too_many_boxes(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        with pytest.raises(ValidationError, match="at most 100 items"):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), boxes=[box] * 101
+            )
+
+    @pytest.mark.parametrize("max_instances", [0, 33])
+    def test_validate_prompts__max_instances_out_of_range(self, max_instances: int) -> None:
+        with pytest.raises(ValidationError, match="max_instances"):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(),
+                sample_id=uuid.uuid4(),
+                prompt="dog",
+                max_instances=max_instances,
             )
