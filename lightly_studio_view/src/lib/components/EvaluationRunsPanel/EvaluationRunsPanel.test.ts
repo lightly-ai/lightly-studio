@@ -24,6 +24,10 @@ vi.mock('$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte',
     })
 }));
 
+vi.mock('./DeleteEvaluationRun/useDeleteEvaluationRun.svelte', () => ({
+    useDeleteEvaluationRun: () => ({ mutation: { isPending: false }, remove: vi.fn() })
+}));
+
 const noop = () => {};
 
 const makeRun = (
