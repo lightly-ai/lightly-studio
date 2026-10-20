@@ -2,6 +2,7 @@
     import { ArrowLeftRight, RotateCcw } from '@lucide/svelte';
     import * as Popover from '$lib/components/ui/popover';
     import { Button, buttonVariants } from '$lib/components/ui/button';
+    import { Tooltip } from '$lib/components/ui/tooltip';
     import PlotTextAxesInputs from '../PlotTextAxesInputs/PlotTextAxesInputs.svelte';
     import { createEmptyTextAxesDraft, toTextAxes } from '../PlotTextAxesInputs/textAxesDraft';
 
@@ -71,15 +72,16 @@
         </Popover.Content>
     </Popover.Root>
     {#if active}
-        <Button
-            variant="outline"
-            size="sm"
-            disabled={isPending}
-            onclick={reset}
-            title="Return to the default plot. Your descriptions will be kept."
+        <Tooltip
+            content="Return to the default plot. Your descriptions will be kept."
+            position="bottom"
+            class="w-max"
+            ariaLabel="Reset axes help"
         >
-            <RotateCcw class="mr-2 h-4 w-4" />
-            Reset axes
-        </Button>
+            <Button variant="outline" size="sm" disabled={isPending} onclick={reset}>
+                <RotateCcw class="mr-2 h-4 w-4" />
+                Reset axes
+            </Button>
+        </Tooltip>
     {/if}
 </div>

@@ -55,6 +55,13 @@ describe('PlotAxesEditor', () => {
         await user.click(screen.getByRole('button', { name: 'Edit axes' }));
         expect(screen.getAllByRole('button', { name: 'Reset axes' })).toHaveLength(1);
 
+        // Keyboard focus shows the hint, not only mouse hover.
+        await user.keyboard('{Escape}');
+        screen.getByRole('button', { name: 'Reset axes' }).focus();
+        expect(await screen.findByRole('tooltip')).toHaveTextContent(
+            'Your descriptions will be kept.'
+        );
+
         await user.click(screen.getByRole('button', { name: 'Reset axes' }));
         expect(props.onReset).toHaveBeenCalledOnce();
         expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
