@@ -38,10 +38,6 @@ MAX_CACHED_IMAGE_URLS = 256
 REQUEST_TIMEOUT_S = 60.0
 TIMEOUT_MESSAGE = f"fal.ai did not answer within {REQUEST_TIMEOUT_S:g} s."
 
-# TODO(iunir, 10/2026): The offset is not verified against a live response.
-RLE_START_OFFSET = 0
-"""Value to subtract from each RLE start to get a 0-based pixel index."""
-
 ENDPOINT = "fal-ai/sam-3/image-rle"
 
 # fal.ai answers 504 with this header when `start_timeout` expires.
@@ -244,19 +240,16 @@ def parse_response(output: dict[str, Any], width: int, height: int) -> list[Pred
     return predictions
 
 
-def decode_rle(
-    rle: str, width: int, height: int, start_offset: int = RLE_START_OFFSET
-) -> NDArray[np.bool_]:
+def decode_rle(rle: str, width: int, height: int) -> NDArray[np.bool_]:
     """Decodes a fal.ai RLE string to a full-image mask.
 
-    The RLE string has space-separated `start length` pairs. The starts index the
-    row-major flattened image.
+    The RLE string has space-separated `start length` pairs. The starts are 1-based
+    indices into the row-major flattened image.
 
     Args:
         rle: The RLE string.
         width: Image width W in pixels.
         height: Image height H in pixels.
-        start_offset: Value to subtract from each start to get a 0-based index.
 
     Returns:
         Mask of shape (H, W) and dtype `np.bool_`.
@@ -276,7 +269,7 @@ def decode_rle(
     flat = np.zeros(size, dtype=np.bool_)
     clipped = False
     for start, length in zip(values[0::2], values[1::2]):
-        begin = start - start_offset
+        begin = start - 1
         end = begin + length
         if begin < 0 or end > size:
             clipped = True

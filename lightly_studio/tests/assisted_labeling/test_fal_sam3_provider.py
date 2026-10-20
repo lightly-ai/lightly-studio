@@ -141,7 +141,7 @@ class TestFalSam3Provider:
 
     def test_segment(self, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture) -> None:
         monkeypatch.setenv("FAL_KEY", "secret")
-        client = FakeFalClient(output={"rle": "1 2", "scores": [0.75], "metadata": []})
+        client = FakeFalClient(output={"rle": "2 2", "scores": [0.75], "metadata": []})
         provider = _make_provider(mocker=mocker, client=client)
         image = helpers.make_image(width=4, height=2, file_name="a.png", data=b"png-bytes")
         prompt = helpers.make_prompt(points=[PointPrompt(x=1, y=0, positive=True)])
@@ -469,7 +469,7 @@ class TestBuildRequestBody:
 
 class TestParseResponse:
     def test_list(self) -> None:
-        output = {"rle": ["0 1", "", "7 1"], "scores": [0.5, 0.6, 0.7]}
+        output = {"rle": ["1 1", "", "8 1"], "scores": [0.5, 0.6, 0.7]}
 
         predictions = fal_sam3_provider.parse_response(output=output, width=4, height=2)
 
@@ -479,7 +479,7 @@ class TestParseResponse:
         assert predictions[1].mask[1, 3]
         assert predictions[1].score == 0.7
 
-    @pytest.mark.parametrize("output", [{"rle": "0 1"}, {"rle": "0 1", "scores": None}])
+    @pytest.mark.parametrize("output", [{"rle": "1 1"}, {"rle": "1 1", "scores": None}])
     def test_without_scores(self, output: dict[str, object]) -> None:
         predictions = fal_sam3_provider.parse_response(output=output, width=4, height=2)
 
@@ -489,14 +489,14 @@ class TestParseResponse:
     def test_invalid_score(self) -> None:
         with pytest.raises(ProviderError, match="invalid score"):
             fal_sam3_provider.parse_response(
-                output={"rle": "0 1", "scores": ["high"]}, width=4, height=2
+                output={"rle": "1 1", "scores": ["high"]}, width=4, height=2
             )
 
     @pytest.mark.parametrize("scores", [0.5, {"a": 1}, "9", 0, False, "", {}])
     def test_invalid_scores_type(self, scores: object) -> None:
         with pytest.raises(ProviderError, match="invalid scores"):
             fal_sam3_provider.parse_response(
-                output={"rle": "0 1", "scores": scores}, width=4, height=2
+                output={"rle": "1 1", "scores": scores}, width=4, height=2
             )
 
     @pytest.mark.parametrize("output", [{"rle": ""}, {"rle": []}])
@@ -515,31 +515,19 @@ class TestParseResponse:
 
 
 def test_decode_rle() -> None:
-    mask = fal_sam3_provider.decode_rle(rle="1 2 5 3", width=4, height=2)
+    mask = fal_sam3_provider.decode_rle(rle="2 2 6 3", width=4, height=2)
 
     expected = np.array([[False, True, True, False], [False, True, True, True]])
     np.testing.assert_array_equal(mask, expected)
     assert mask.dtype == np.bool_
 
 
-def test_decode_rle__start_offset() -> None:
-    mask = fal_sam3_provider.decode_rle(rle="1 2", width=4, height=2, start_offset=1)
+def test_decode_rle__fal_response() -> None:
+    # First run of a fal.ai mask for a 160x96 image with a rectangle at x 20-69, y 10-39.
+    mask = fal_sam3_provider.decode_rle(rle="1621 50", width=160, height=96)
 
-    np.testing.assert_array_equal(mask, np.array([[True, True, False, False], [False] * 4]))
-
-
-def test_decode_rle__golden() -> None:
-    # 4x3 mask, row-major "start length" runs: row 0 pixels 1-2, row 1 pixel 3, row 2 pixel 0.
-    mask = fal_sam3_provider.decode_rle(rle="1 2 7 1 8 1", width=4, height=3)
-
-    expected = np.array(
-        [
-            [False, True, True, False],
-            [False, False, False, True],
-            [True, False, False, False],
-        ]
-    )
-    np.testing.assert_array_equal(mask, expected)
+    assert mask[10, 20:70].all()
+    assert mask.sum() == 50
 
 
 def test_decode_rle__empty() -> None:
@@ -550,7 +538,7 @@ def test_decode_rle__empty() -> None:
 
 
 def test_decode_rle__clips_run() -> None:
-    mask = fal_sam3_provider.decode_rle(rle="6 5", width=4, height=2)
+    mask = fal_sam3_provider.decode_rle(rle="7 5", width=4, height=2)
 
     np.testing.assert_array_equal(mask, np.array([[False] * 4, [False, False, True, True]]))
 
