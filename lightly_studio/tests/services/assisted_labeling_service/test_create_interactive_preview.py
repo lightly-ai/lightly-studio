@@ -38,7 +38,7 @@ def test_create_interactive_preview__points() -> None:
     assert response.prediction.score == 0.9
 
 
-def test_create_interactive_preview__prompt() -> None:
+def test_create_interactive_preview__point_prompt() -> None:
     provider = StubProvider()
     image = helpers.make_image(width=100, height=50)
 

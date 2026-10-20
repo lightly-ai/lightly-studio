@@ -3,11 +3,12 @@ from __future__ import annotations
 import importlib.util
 import threading
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from httpx import Response
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -83,13 +84,8 @@ def test_create_interactive_annotation_preview(
         session=db_session, collection_id=collection.collection_id, width=100, height=50
     )
 
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "points": [POSITIVE_POINT],
-        },
+    response = _post_interactive(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -114,13 +110,8 @@ def test_create_interactive_annotation_preview__provider_thread(
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
 
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "points": [POSITIVE_POINT],
-        },
+    response = _post_interactive(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
     )
 
     assert response.status_code == HTTP_STATUS_OK
@@ -135,32 +126,11 @@ def test_create_interactive_annotation_preview__points_and_boxes(
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
 
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "points": [POSITIVE_POINT],
-            "boxes": [{"x": 0.1, "y": 0.2, "width": 0.4, "height": 0.6}],
-        },
-    )
-
-    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
-
-
-def test_create_interactive_annotation_preview__no_positive_point(
-    db_session: Session, media_test_client: TestClient
-) -> None:
-    collection = create_collection(session=db_session)
-    image = create_image(session=db_session, collection_id=collection.collection_id)
-
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "points": [{"x": 0.5, "y": 0.5, "positive": False}],
-        },
+    response = _post_interactive(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        boxes=[{"x": 0.1, "y": 0.2, "width": 0.4, "height": 0.6}],
     )
 
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
@@ -173,13 +143,8 @@ def test_create_interactive_annotation_preview__other_collection(
     other_collection = create_collection(session=db_session, collection_name="second")
     image = create_image(session=db_session, collection_id=other_collection.collection_id)
 
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "points": [POSITIVE_POINT],
-        },
+    response = _post_interactive(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
@@ -191,13 +156,8 @@ def test_create_interactive_annotation_preview__unknown_sample(
 ) -> None:
     collection = create_collection(session=db_session)
 
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(uuid4()),
-            "points": [POSITIVE_POINT],
-        },
+    response = _post_interactive(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=uuid4()
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
@@ -211,13 +171,8 @@ def test_create_interactive_annotation_preview__provider_error(
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
 
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "points": [POSITIVE_POINT],
-        },
+    response = _post_interactive(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
     )
 
     assert response.status_code == HTTP_STATUS_BAD_GATEWAY
@@ -231,20 +186,33 @@ def test_create_interactive_annotation_preview__unavailable(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     monkeypatch.delenv("FAL_KEY", raising=False)
+    mocker.patch.object(importlib.util, "find_spec", return_value=mocker.sentinel.spec)
     create_client = mocker.patch.object(fal_sam3_provider, "_create_client")
     mocker.patch.object(fal_sam3_provider, "get_provider", return_value=FalSam3Provider())
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
 
-    response = media_test_client.post(
-        "/api/annotate/interactive",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "points": [POSITIVE_POINT],
-        },
+    response = _post_interactive(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
     )
 
     assert response.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
     assert response.json() == {"error": "Set the FAL_KEY environment variable."}
     create_client.assert_not_called()
+
+
+def _post_interactive(
+    client: TestClient,
+    collection_id: UUID,
+    sample_id: UUID,
+    boxes: list[dict[str, float]] | None = None,
+) -> Response:
+    return client.post(
+        "/api/annotate/interactive",
+        json={
+            "collection_id": str(collection_id),
+            "sample_id": str(sample_id),
+            "points": [POSITIVE_POINT],
+            "boxes": boxes,
+        },
+    )

@@ -9,15 +9,12 @@ from lightly_studio.assisted_labeling.provider import (
     PointPrompt,
     Prediction,
     ProviderError,
-    SegmentationPrompt,
 )
 from lightly_studio.services.assisted_labeling_service import run_provider
 from tests.assisted_labeling import helpers
 from tests.services.assisted_labeling_service.helpers import StubProvider
 
-PROMPT = SegmentationPrompt(
-    points=[PointPrompt(x=50, y=25, positive=True)], boxes=[], text=None, max_masks=1
-)
+PROMPT = helpers.make_prompt(points=[PointPrompt(x=50, y=25, positive=True)])
 
 
 def test_segment(caplog: pytest.LogCaptureFixture) -> None:
