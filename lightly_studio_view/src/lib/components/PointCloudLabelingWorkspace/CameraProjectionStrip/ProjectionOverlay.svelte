@@ -5,10 +5,7 @@
     } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
     import { drawProjectionOverlay } from './projectionOverlay';
-    import {
-        DEFAULT_PROJECTION_SETTINGS,
-        type ProjectionSettings
-    } from './projectionSettings';
+    import { DEFAULT_PROJECTION_SETTINGS, type ProjectionSettings } from './projectionSettings';
 
     interface Props {
         batch?: PointBatch;

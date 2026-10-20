@@ -69,12 +69,7 @@ export function drawProjectionOverlay(
         });
         for (const point of points) {
             context.fillStyle = 'rgba(0, 0, 0, 0.8)';
-            context.fillRect(
-                point.x - halfSize - 1,
-                point.y - halfSize - 1,
-                size + 2,
-                size + 2
-            );
+            context.fillRect(point.x - halfSize - 1, point.y - halfSize - 1, size + 2, size + 2);
             context.fillStyle = getPointColor(normalizePoint(point, metrics, ranges));
             context.fillRect(point.x - halfSize, point.y - halfSize, size, size);
         }
@@ -113,7 +108,8 @@ function normalizePoint(
 ): number {
     return (
         metrics.reduce(
-            (sum, metric, index) => sum + normalize(getMetricValue(point, metric), ...ranges[index]),
+            (sum, metric, index) =>
+                sum + normalize(getMetricValue(point, metric), ...ranges[index]),
             0
         ) / metrics.length
     );

@@ -1,8 +1,5 @@
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
-import {
-    DEFAULT_PROJECTION_SETTINGS,
-    type ProjectionSettings
-} from '../projectionSettings';
+import { DEFAULT_PROJECTION_SETTINGS, type ProjectionSettings } from '../projectionSettings';
 
 const PROJECTION_COLOR_MODES = new Set<ProjectionSettings['colorMode']>([
     'height',

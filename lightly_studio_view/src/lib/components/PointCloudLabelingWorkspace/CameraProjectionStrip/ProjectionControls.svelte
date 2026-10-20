@@ -51,10 +51,6 @@
             <h3 class="text-sm font-medium">Camera projection settings</h3>
             <p class="text-xs text-muted-foreground">Adjust the camera overlay visibility.</p>
         </div>
-        <ProjectionSettingsFields
-            {settings}
-            onChange={onChange}
-            onKeydown={preventSpaceActivation}
-        />
+        <ProjectionSettingsFields {settings} {onChange} onKeydown={preventSpaceActivation} />
     </Popover.Content>
 </Popover.Root>
