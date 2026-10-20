@@ -20,7 +20,7 @@ class AssistedLabelingStatusView(BaseModel):
 
 
 NormalizedCoordinate = Annotated[float, pydantic.Field(ge=0, le=1, allow_inf_nan=False)]
-NORMALIZED_BOUND_TOLERANCE = 1.000001
+_NORMALIZED_UPPER_BOUND = 1.000001
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
 # context of a `ValueError` is not JSON serializable in the 422 response.
@@ -48,10 +48,12 @@ class AnnotationBox(BaseModel):
         if (
             self.width <= 0
             or self.height <= 0
-            or self.x + self.width > NORMALIZED_BOUND_TOLERANCE
-            or self.y + self.height > NORMALIZED_BOUND_TOLERANCE
+            or self.x + self.width > _NORMALIZED_UPPER_BOUND
+            or self.y + self.height > _NORMALIZED_UPPER_BOUND
         ):
-            raise PydanticCustomError("invalid_box", "The normalized box is invalid.")
+            raise PydanticCustomError(
+                "invalid_box", "The normalized box is empty or outside the image."
+            )
         return self
 
 

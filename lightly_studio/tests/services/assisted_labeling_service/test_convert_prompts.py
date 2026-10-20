@@ -38,12 +38,12 @@ def test_to_box_prompt__clamps_to_image() -> None:
 
 
 def test_to_box_prompt__at_least_one_pixel() -> None:
-    box = AnnotationBox(x=0.501, y=0.501, width=0.001, height=0.001)
+    # 0.5 + 1e-17 == 0.5 in float, so the box has no pixel before the minimum size.
+    box = AnnotationBox(x=0.5, y=0.5, width=1e-17, height=1e-17)
 
     prompt = convert_prompts.to_box_prompt(box=box, width=100, height=50)
 
-    assert prompt.x_max - prompt.x_min >= 1
-    assert prompt.y_max - prompt.y_min >= 1
+    assert prompt == BoxPrompt(x_min=50, y_min=25, x_max=51, y_max=26)
 
 
 def test_to_box_prompt__edge() -> None:
