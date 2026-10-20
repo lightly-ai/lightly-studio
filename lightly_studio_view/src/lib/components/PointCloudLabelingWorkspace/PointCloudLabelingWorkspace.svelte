@@ -399,6 +399,9 @@
                                 seqNumber={workspace.currentTick}
                                 displayFrameId={workspace.referenceFrameId}
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
+                                batch={sceneSnapshot?.frame.batch}
+                                annotations={sceneSnapshot?.annotations ?? []}
+                                canProject={!workspace.isShowingSensorFrames}
                             />
                         </Pane>
                     </PaneGroup>

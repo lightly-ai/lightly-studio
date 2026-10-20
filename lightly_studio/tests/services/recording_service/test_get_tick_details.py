@@ -5,16 +5,20 @@ from __future__ import annotations
 import uuid
 from pathlib import Path
 
+import numpy as np
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.models.static_transform import StaticTransformCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     group_resolver,
+    sensor_calibration_resolver,
     static_transform_resolver,
     tag_resolver,
 )
@@ -135,6 +139,75 @@ def test_get_tick_details__annotations(db_session: Session) -> None:
     assert annotation.annotation_label.annotation_label_name == "truck"
     assert annotation.cuboid_3d_details is not None
     assert annotation.cuboid_3d_details.px == pytest.approx(1.0)
+
+
+def test_get_tick_details__camera_projection_uses_camera_timestamp(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    fixture = helpers.create_mcap_sequence(session=db_session)
+    camera = create_mcap(
+        session=db_session,
+        collection_id=fixture.slots["front"].collection_id,
+        channel_id=3,
+        log_time_ns=2_000,
+        keyframe_log_time_ns=1_500,
+    )
+    group_id = group_resolver.create_many(
+        session=db_session,
+        collection_id=fixture.group_collection.collection_id,
+        groups=[{camera.sample_id}],
+    )[0]
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=group_id,
+            sequence_sample_id=fixture.sample_id,
+            seq_number=0,
+            timestamp_ns=1_000,
+        )
+    )
+    sensor_calibration_resolver.create_many(
+        session=db_session,
+        rows=[
+            SensorCalibrationCreate(
+                recording_id=fixture.recording_id,
+                collection_id=fixture.slots["front"].collection_id,
+                width=640,
+                height=480,
+                k=[600.0, 0.0, 320.0, 0.0, 600.0, 240.0, 0.0, 0.0, 1.0],
+            )
+        ],
+    )
+    db_session.commit()
+
+    transform = mocker.patch.object(
+        recording_service.transform_to_target_frame,
+        "transform_to_target_frame",
+        return_value=np.eye(4),
+    )
+    mocker.patch.object(recording_service.reader_cache, "borrow_reader")
+    mocker.patch.object(
+        recording_service.load_static_transforms,
+        "load_static_transforms",
+        return_value=[],
+    )
+
+    result = recording_service.get_tick_details(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        seq_number=0,
+        target_frame_id="odom",
+    )
+
+    assert result is not None
+    assert result.camera_channels["front"].projection is not None
+    transform.assert_called_once_with(
+        reader=mocker.ANY,
+        source_frame_id="odom",
+        target_frame_id="main",
+        timestamp_ns=2_000,
+        static_transforms=[],
+    )
 
 
 def test_get_tick_details__tags(db_session: Session) -> None:
