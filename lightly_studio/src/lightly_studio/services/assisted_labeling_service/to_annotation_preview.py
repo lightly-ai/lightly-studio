@@ -18,6 +18,11 @@ def to_sorted_annotation_previews(
 
     Predictions without a score come last.
 
+    Args:
+        predictions: Provider predictions with full-image masks.
+        width: Image width in pixels.
+        height: Image height in pixels.
+
     Raises:
         ProviderError: If a mask shape is not (height, width).
     """

@@ -9,7 +9,13 @@ from lightly_studio.models.assisted_labeling import AnnotationBox, AnnotationPoi
 
 
 def to_point_prompt(point: AnnotationPoint, width: int, height: int) -> PointPrompt:
-    """Returns the pixel that contains the normalized point."""
+    """Returns the pixel that contains the normalized point.
+
+    Args:
+        point: Point in normalized image coordinates.
+        width: Image width in pixels.
+        height: Image height in pixels.
+    """
     return PointPrompt(
         x=_clamp(value=math.floor(point.x * width), upper=width - 1),
         y=_clamp(value=math.floor(point.y * height), upper=height - 1),
@@ -18,7 +24,13 @@ def to_point_prompt(point: AnnotationPoint, width: int, height: int) -> PointPro
 
 
 def to_box_prompt(box: AnnotationBox, width: int, height: int) -> BoxPrompt:
-    """Returns the smallest pixel box that contains the normalized box."""
+    """Returns the smallest pixel box that contains the normalized box.
+
+    Args:
+        box: Box in normalized image coordinates.
+        width: Image width in pixels.
+        height: Image height in pixels.
+    """
     x_min = _clamp(value=math.floor(box.x * width), upper=width - 1)
     y_min = _clamp(value=math.floor(box.y * height), upper=height - 1)
     x_max = _clamp(value=math.ceil((box.x + box.width) * width), upper=width)
