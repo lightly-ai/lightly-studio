@@ -269,6 +269,7 @@ def decode_rle(rle: str, width: int, height: int) -> NDArray[np.bool_]:
     flat = np.zeros(size, dtype=np.bool_)
     clipped = False
     for start, length in zip(values[0::2], values[1::2]):
+        # fal.ai starts are 1-based, checked against a live response (10/2026)
         begin = start - 1
         end = begin + length
         if begin < 0 or end > size:
