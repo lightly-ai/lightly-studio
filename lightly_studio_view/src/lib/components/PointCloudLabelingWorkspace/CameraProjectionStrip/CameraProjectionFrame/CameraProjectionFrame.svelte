@@ -144,7 +144,8 @@
                 }}
             >
                 <div class="flex min-w-0 items-center justify-between gap-3 pr-10">
-                    <Dialog.Title class="min-w-0 truncate text-sm font-medium">{label}</Dialog.Title
+                    <Dialog.Title class="min-w-0 truncate text-sm font-medium"
+                        >Camera: {label}</Dialog.Title
                     >
                     {#if projectionSettings && onProjectionSettingsChange}
                         <ProjectionControls
