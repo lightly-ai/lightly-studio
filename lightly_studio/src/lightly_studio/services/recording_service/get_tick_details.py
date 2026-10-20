@@ -11,6 +11,8 @@ from sqlmodel import Session
 
 from lightly_studio.core.mcap import transforms
 from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
+from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.mcap_sequence_ticks import (
@@ -75,7 +77,7 @@ def get_tick_details(
     link = tick.link
 
     camera_timestamps = {
-        name: mcap.log_time_ns
+        name: mcap.capture_timestamp_ns
         for name, (mcap, data_type) in tick.channels.items()
         if data_type is McapDataType.VIDEO_FRAME
     }
@@ -167,20 +169,13 @@ def _camera_projections(
             projection_timestamp_ns = camera_timestamps.get(component.group_component_name)
             if projection_timestamp_ns is None:
                 continue
-            try:
-                matrix = (
-                    np.eye(4, dtype=np.float64)
-                    if component.frame_id == target_frame_id
-                    else transform_to_target_frame.transform_to_target_frame(
-                        reader=reader,
-                        source_frame_id=target_frame_id,
-                        target_frame_id=component.frame_id,
-                        timestamp_ns=projection_timestamp_ns,
-                        static_transforms=static_transforms,
-                    )
-                )
-            except (McapAccessError, TransformNotFoundError):
-                continue
+            matrix = _get_camera_projection_matrix(
+                reader=reader,
+                source_frame_id=target_frame_id,
+                target_frame_id=component.frame_id,
+                timestamp_ns=projection_timestamp_ns,
+                static_transforms=static_transforms,
+            )
             if matrix is None:
                 continue
             projections[component.group_component_name] = CameraProjectionView(
@@ -190,6 +185,28 @@ def _camera_projections(
                 scene_to_camera=[float(value) for value in matrix.reshape(-1)],
             )
     return projections
+
+
+def _get_camera_projection_matrix(
+    reader: McapFileReader,
+    source_frame_id: str,
+    target_frame_id: str,
+    timestamp_ns: int,
+    static_transforms: Sequence[StaticTransform],
+) -> NDArray[np.float64] | None:
+    """Resolve the scene-to-camera transform, skipping unavailable transforms."""
+    if source_frame_id == target_frame_id:
+        return np.eye(4, dtype=np.float64)
+    try:
+        return transform_to_target_frame.transform_to_target_frame(
+            reader=reader,
+            source_frame_id=source_frame_id,
+            target_frame_id=target_frame_id,
+            timestamp_ns=timestamp_ns,
+            static_transforms=static_transforms,
+        )
+    except (McapAccessError, TransformNotFoundError):
+        return None
 
 
 def _cuboids_in_frame(

@@ -368,7 +368,7 @@ start-example-mcap-remote-s3: build
 .PHONY: start-example-mcap-directory
 start-example-mcap-directory: build
 	@echo "Starting MCAP sequence example (from directory: $(MCAP_DIRECTORY))..."
-	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(MCAP_DIRECTORY) \
+	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH="$(MCAP_DIRECTORY)" \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Runs the MCAP sequence-indexing example from S3 for a folder of recordings: syncs all

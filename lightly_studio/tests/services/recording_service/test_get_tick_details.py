@@ -28,6 +28,8 @@ from tests.helpers_resolvers import create_annotation_label, create_mcap, create
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 from tests.resolvers.mcap_group_sequence_resolver.helpers import McapSequenceFixture
 
+CAMERA_FRAME_ID = "main"
+
 
 def test_get_tick_details(db_session: Session) -> None:
     fixture = helpers.create_mcap_sequence(session=db_session)
@@ -144,12 +146,13 @@ def test_get_tick_details__annotations(db_session: Session) -> None:
 def test_get_tick_details__camera_projection_uses_camera_timestamp(
     db_session: Session, mocker: MockerFixture
 ) -> None:
-    fixture = helpers.create_mcap_sequence(session=db_session)
+    fixture = helpers.create_mcap_sequence(session=db_session, camera_frame_id=CAMERA_FRAME_ID)
     camera = create_mcap(
         session=db_session,
         collection_id=fixture.slots["front"].collection_id,
         channel_id=3,
         log_time_ns=2_000,
+        capture_timestamp_ns=3_000,
         keyframe_log_time_ns=1_500,
     )
     group_id = group_resolver.create_many(
@@ -204,8 +207,8 @@ def test_get_tick_details__camera_projection_uses_camera_timestamp(
     transform.assert_called_once_with(
         reader=mocker.ANY,
         source_frame_id="odom",
-        target_frame_id="main",
-        timestamp_ns=2_000,
+        target_frame_id=CAMERA_FRAME_ID,
+        timestamp_ns=3_000,
         static_transforms=[],
     )
 
