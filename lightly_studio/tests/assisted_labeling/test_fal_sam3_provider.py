@@ -120,6 +120,7 @@ class TestFalSam3Provider:
     def test_unavailable_reason(
         self, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
     ) -> None:
+        mocker.patch.object(importlib.util, "find_spec", return_value=mocker.sentinel.spec)
         provider = _make_provider(mocker=mocker, client=FakeFalClient())
 
         monkeypatch.delenv("FAL_KEY", raising=False)
