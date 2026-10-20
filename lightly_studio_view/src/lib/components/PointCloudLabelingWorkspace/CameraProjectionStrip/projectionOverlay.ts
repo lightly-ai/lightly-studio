@@ -10,6 +10,13 @@ export interface ProjectedPoint {
     y: number;
 }
 
+export interface ProjectedPointData extends ProjectedPoint {
+    depth: number;
+    height: number;
+    intensity: number;
+    rgb?: readonly [number, number, number];
+}
+
 export interface ProjectedSegment {
     start: ProjectedPoint;
     end: ProjectedPoint;
@@ -90,6 +97,44 @@ export function projectPointCloud(
             point.y <= projection.height
         ) {
             points.push(point);
+        }
+    }
+    return points;
+}
+
+/** Projects points and retains values used by camera-overlay color modes. */
+export function projectPointCloudData(
+    batch: PointBatch,
+    projection: CameraProjectionView,
+    maxPoints = 5000
+): ProjectedPointData[] {
+    const step = Math.max(1, Math.ceil(batch.count / maxPoints));
+    const points: ProjectedPointData[] = [];
+    for (let index = 0; index < batch.count; index += step) {
+        const offset = index * 3;
+        const position: [number, number, number] = [
+            batch.positions[offset],
+            batch.positions[offset + 1],
+            batch.positions[offset + 2]
+        ];
+        const cameraPoint = toCameraPoint(position, projection);
+        const point = projectCameraPoint(cameraPoint, projection);
+        if (
+            point &&
+            point.x >= 0 &&
+            point.x <= projection.width &&
+            point.y >= 0 &&
+            point.y <= projection.height
+        ) {
+            points.push({
+                ...point,
+                depth: cameraPoint[2],
+                height: position[2],
+                intensity: batch.intensities[index],
+                rgb: batch.colors
+                    ? [batch.colors[offset], batch.colors[offset + 1], batch.colors[offset + 2]]
+                    : undefined
+            });
         }
     }
     return points;

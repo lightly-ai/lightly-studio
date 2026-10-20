@@ -4,6 +4,8 @@
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+    import ProjectionControls from './ProjectionControls.svelte';
+    import { DEFAULT_PROJECTION_SETTINGS, type ProjectionSettings } from './projectionSettings';
 
     /**
      * Horizontal strip of camera tiles for the active point-cloud tick. The tile images
@@ -26,6 +28,7 @@
         batch?: PointBatch;
         annotations?: readonly AnnotationView[];
         canProject?: boolean;
+        onPlaybackToggle?: () => void;
     }
 
     let {
@@ -37,8 +40,10 @@
         selectedChannelIds,
         batch,
         annotations = [],
-        canProject = true
+        canProject = true,
+        onPlaybackToggle
     }: Props = $props();
+    let projectionSettings = $state<ProjectionSettings>({ ...DEFAULT_PROJECTION_SETTINGS });
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
@@ -59,6 +64,13 @@
     class="flex h-full min-h-0 flex-col border-t bg-background p-2"
     data-testid="workspace-projection-strip"
 >
+    <div class="flex shrink-0 items-center justify-between px-1 pb-2 text-xs">
+        <span class="text-muted-foreground">Camera projections</span>
+        <ProjectionControls
+            settings={projectionSettings}
+            onChange={(settings) => (projectionSettings = settings)}
+        />
+    </div>
     <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto">
         {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
             {@const channel =
@@ -74,6 +86,9 @@
                 {batch}
                 {annotations}
                 projection={canProject ? (channel?.projection ?? undefined) : undefined}
+                {onPlaybackToggle}
+                {projectionSettings}
+                onProjectionSettingsChange={(settings) => (projectionSettings = settings)}
             />
         {/each}
     </div>

@@ -3,6 +3,7 @@ import { fireEvent } from '@testing-library/dom';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '$lib/api/lightly_studio_local/client.gen';
 import CameraProjectionFrame from './CameraProjectionFrame.svelte';
+import { DEFAULT_PROJECTION_SETTINGS } from '../projectionSettings';
 
 // Pin the client's base URL so the enlarged frame src is deterministic regardless of the
 // value baked into the generated client at build time (see getCameraFrameUrl.test.ts).
@@ -86,7 +87,7 @@ describe('CameraProjectionFrame', () => {
         expect(canvas).toBeInTheDocument();
         expect(canvas).toHaveProperty('width', 640);
         expect(canvas).toHaveProperty('height', 480);
-        expect(context.fillRect).toHaveBeenCalledWith(-1, -1, 2, 2);
+        expect(context.fillRect).toHaveBeenCalledWith(-2, -2, 4, 4);
     });
 
     it('falls back to the placeholder when the frame image fails to load', async () => {
@@ -105,16 +106,50 @@ describe('CameraProjectionFrame', () => {
         unmount();
     });
 
-    it('enlarges the frame at full resolution in a dialog', async () => {
-        render(CameraProjectionFrame, { props: defaultProps });
+    it('updates the enlarged frame while the dialog stays open', async () => {
+        const { rerender } = render(CameraProjectionFrame, { props: defaultProps });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
 
         expect(screen.getByRole('dialog')).toBeInTheDocument();
-        expect(screen.getByRole('img', { name: 'front enlarged' })).toHaveAttribute(
+        const enlargedImage = screen.getByRole('img', { name: 'front enlarged' });
+        expect(enlargedImage).toHaveAttribute(
             'src',
             `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1500&log_time_ns=2000`
         );
+
+        await rerender({ ...defaultProps, logTimeNs: '3000' });
+
+        expect(screen.getByRole('img', { name: 'front enlarged' })).toHaveAttribute(
+            'src',
+            `${TEST_BASE_URL}/datasets/dataset-1/recordings/recording-1/camera-frame?channel_id=3&keyframe_timestamp_ns=1500&log_time_ns=3000`
+        );
+        expect(screen.getByRole('img', { name: 'front enlarged' })).toBe(enlargedImage);
         expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    });
+
+    it('uses Space for playback without closing the dialog', async () => {
+        const onPlaybackToggle = vi.fn();
+        render(CameraProjectionFrame, { props: { ...defaultProps, onPlaybackToggle } });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
+        await fireEvent.keyDown(screen.getByRole('dialog'), { code: 'Space', key: ' ' });
+
+        expect(onPlaybackToggle).toHaveBeenCalledOnce();
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
+
+    it('shows projection settings in the expanded dialog', async () => {
+        render(CameraProjectionFrame, {
+            props: {
+                ...defaultProps,
+                projectionSettings: DEFAULT_PROJECTION_SETTINGS,
+                onProjectionSettingsChange: vi.fn()
+            }
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
+
+        expect(screen.getByRole('button', { name: 'Projection settings' })).toBeInTheDocument();
     });
 });
