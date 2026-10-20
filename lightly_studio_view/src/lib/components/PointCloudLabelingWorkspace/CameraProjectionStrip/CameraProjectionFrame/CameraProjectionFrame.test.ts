@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import { fireEvent } from '@testing-library/dom';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { client } from '$lib/api/lightly_studio_local/client.gen';
 import CameraProjectionFrame from './CameraProjectionFrame.svelte';
 
@@ -19,13 +19,34 @@ const defaultProps = {
 
 describe('CameraProjectionFrame', () => {
     const originalBaseUrl = client.getConfig().baseUrl;
+    const context = {
+        beginPath: vi.fn(),
+        clearRect: vi.fn(),
+        fillRect: vi.fn(),
+        lineTo: vi.fn(),
+        moveTo: vi.fn(),
+        stroke: vi.fn(),
+        fillStyle: '',
+        lineWidth: 0,
+        strokeStyle: ''
+    };
 
     beforeAll(() => {
         client.setConfig({ baseUrl: TEST_BASE_URL });
     });
 
+    beforeEach(() => {
+        vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+            context as unknown as CanvasRenderingContext2D
+        );
+    });
+
     afterAll(() => {
         client.setConfig({ baseUrl: originalBaseUrl });
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('renders the frame image with the caption and a URL built from the props', () => {
@@ -47,11 +68,20 @@ describe('CameraProjectionFrame', () => {
                     height: 480,
                     camera_matrix: [1, 0, 0, 0, 1, 0, 0, 0, 1],
                     scene_to_camera: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]
+                },
+                batch: {
+                    positions: new Float32Array([0, 0, 1]),
+                    intensities: new Float32Array([0]),
+                    count: 1
                 }
             }
         });
 
-        expect(document.querySelector('canvas')).toBeInTheDocument();
+        const canvas = document.querySelector('canvas');
+        expect(canvas).toBeInTheDocument();
+        expect(canvas).toHaveProperty('width', 640);
+        expect(canvas).toHaveProperty('height', 480);
+        expect(context.fillRect).toHaveBeenCalledWith(-1, -1, 2, 2);
     });
 
     it('falls back to the placeholder when the frame image fails to load', async () => {
