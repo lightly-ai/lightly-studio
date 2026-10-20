@@ -45,7 +45,7 @@ async def create_interactive_annotation_preview(
     )
 
 
-@annotate_router.post("/instances")
+@assisted_labeling_router.post("/instances")
 async def create_instances_annotation_preview(
     request: InstancesAnnotationRequest,
 ) -> InstancesAnnotationResponse:
