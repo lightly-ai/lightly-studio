@@ -1,11 +1,34 @@
 <script lang="ts">
+    import type { Component, Snippet } from 'svelte';
+    import type { IconProps } from '@lucide/svelte';
     import { Button as UiButton } from '$lib/components/ui/button';
+    import type { ButtonProps, ButtonVariant } from '$lib/components/ui/button';
     import { cn } from '$lib/utils/shadcn';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import ButtonProgress from './ButtonProgress.svelte';
-    import type { Props } from './Button.types';
 
-    type CollapseAt = NonNullable<Props['collapseAt']>;
+    type CollapseAt = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'never';
+
+    type ButtonPropsWithDeprecations = Omit<ButtonProps, 'disabled'> & {
+        /** @deprecated Prefer `disabledReason` or `isPending`. */
+        disabled?: boolean | null;
+    };
+
+    interface BaseProps {
+        icon?: Component<IconProps>;
+        iconAfter?: Component<IconProps>;
+        iconAfterClass?: string;
+        variant?: ButtonVariant;
+        buttonProps?: ButtonPropsWithDeprecations;
+        collapseAt?: CollapseAt;
+        isPending?: boolean;
+        disabledReason?: string;
+        onclick?: ButtonProps['onclick'];
+    }
+
+    type Props =
+        | (BaseProps & { children: Snippet; ariaLabel?: string })
+        | (BaseProps & { children?: undefined; ariaLabel: string });
 
     let {
         icon: Icon,
