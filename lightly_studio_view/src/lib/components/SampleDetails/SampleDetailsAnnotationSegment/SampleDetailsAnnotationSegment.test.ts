@@ -460,6 +460,38 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('pred-new')).toBeDefined();
         });
 
+        it('keeps an annotation drawn into a hidden source visible', async () => {
+            const user = userEvent.setup();
+            // The mocked label context is read at mount, so the new annotation's ID is set now.
+            mocks.lastCreatedAnnotationId = 'pred-new';
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: firstAnnotations }
+            });
+
+            await user.click(screen.getAllByTestId('source-group-eye')[1]);
+            await rerender({ ...defaultProps, annotations: [], sampleId: 'sample-2' });
+            await rerender({
+                ...defaultProps,
+                annotations: [createAnnotation('pred-new', predictionsSource.collection_id, 'cat')],
+                sampleId: 'sample-2'
+            });
+
+            expect(getRow('pred-new')).not.toHaveAttribute('data-hidden', 'true');
+        });
+
+        it('keeps the visibility set with the annotation eyes on the next sample', async () => {
+            const user = userEvent.setup();
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: firstAnnotations }
+            });
+
+            await user.click(within(getRow('pred-1')).getByTestId('mock-annotation-row-toggle'));
+            await rerender({ ...defaultProps, annotations: nextAnnotations, sampleId: 'sample-2' });
+
+            expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('gt-2')).not.toHaveAttribute('data-hidden', 'true');
+        });
+
         it('keeps the default state of untouched sources', async () => {
             const user = userEvent.setup();
             const { rerender } = render(SampleDetailsAnnotationSegment, {

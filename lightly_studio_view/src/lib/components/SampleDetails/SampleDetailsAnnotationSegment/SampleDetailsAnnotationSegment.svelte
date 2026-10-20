@@ -19,7 +19,6 @@
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
     import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
     import {
-        applySourceVisibility,
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
         groupAnnotationsBySource,
@@ -93,7 +92,10 @@
     const gridHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
     // The seed also applies the source visibility the user set on earlier samples.
     const seededHiddenIds = $derived(
-        applySourceVisibility(annotationsSort, gridHiddenIds, $sourceGroupStates)
+        computeSeededHiddenIds(annotationsSort, (sourceId) => {
+            const hidden = $sourceGroupStates[sourceId]?.hidden;
+            return hidden === undefined ? $isSourceVisible(sourceId) : !hidden;
+        })
     );
 
     // Keep source markers and row layout stable when annotations are hidden, matching
@@ -125,7 +127,10 @@
         }
 
         seededSampleId = sampleId;
-        annotationsIdsToHide = new Set(seededHiddenIds);
+        const nextHiddenIds = new Set(seededHiddenIds);
+        // Keep the annotation the user just drew visible, also when its source is hidden.
+        nextHiddenIds.delete(annotationLabelContext.lastCreatedAnnotationId ?? '');
+        annotationsIdsToHide = nextHiddenIds;
     });
 
     const toggleAnnotationSelection = (annotationId: string) => {
@@ -184,10 +189,18 @@
                 ? [...annotationsIdsToHide].filter((id) => id !== annotationId)
                 : [...annotationsIdsToHide, annotationId]
         );
+        const group = sourceGroups.find((sourceGroup) =>
+            sourceGroup.annotations.some((annotation) => annotation.sample_id === annotationId)
+        );
+        if (group) rememberSourceVisibility(group.id, group.annotations);
     };
 
     const onToggleSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
         annotationsIdsToHide = toggleSourceVisibility(sourceAnnotations, annotationsIdsToHide);
+        rememberSourceVisibility(sourceId, sourceAnnotations);
+    };
+
+    const rememberSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
         setSourceGroupState(sourceId, {
             hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
         });

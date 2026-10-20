@@ -118,24 +118,3 @@ export const computeSeededHiddenIds = (
             .filter((annotation) => !isSourceVisible(annotation.annotation_collection_id))
             .map((annotation) => annotation.sample_id)
     );
-
-/**
- * Applies the visibility the user set per source on earlier samples to the seeded hidden set.
- * Sources without a stored choice keep their seeded visibility. The given set is not mutated.
- */
-export const applySourceVisibility = (
-    annotations: AnnotationView[],
-    seededHiddenIds: Set<string>,
-    hiddenBySourceId: Record<string, { hidden?: boolean }>
-): Set<string> => {
-    const next = new Set(seededHiddenIds);
-    for (const annotation of annotations) {
-        const hidden = hiddenBySourceId[annotation.annotation_collection_id]?.hidden;
-        if (hidden === true) {
-            next.add(annotation.sample_id);
-        } else if (hidden === false) {
-            next.delete(annotation.sample_id);
-        }
-    }
-    return next;
-};
