@@ -64,6 +64,7 @@
     noTriggerRole
     triggerTabIndex={isDisabledByReason ? 0 : undefined}
     triggerClass={tooltipTriggerClass}
+    ariaLabel={isDisabledByReason ? ariaLabel : undefined}
 >
     <UiButton
         {variant}
