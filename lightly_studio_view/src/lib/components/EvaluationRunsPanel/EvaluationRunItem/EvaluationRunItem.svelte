@@ -9,6 +9,7 @@
     import EvaluationRunConfusionMatrixSection from './EvaluationRunConfusionMatrixSection/EvaluationRunConfusionMatrixSection.svelte';
     import EvaluationRunStaleSection from './EvaluationRunStaleSection/EvaluationRunStaleSection.svelte';
     import EditEvaluationDialog from '../EditEvaluationDialog/EditEvaluationDialog.svelte';
+    import DeleteEvaluationRun from '../DeleteEvaluationRun/DeleteEvaluationRun.svelte';
 
     let editing = $state(false);
     const duration = 300; // in ms
@@ -28,48 +29,53 @@
 </script>
 
 <li class="rounded-md border border-border bg-background">
-    <button
-        type="button"
-        class="flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50"
-        onclick={onToggle}
-        data-testid={`evaluation-run-item-${run.name}`}
-        aria-expanded={expanded}
-    >
-        <div class="min-w-0 flex-1">
-            <div class="flex items-center gap-1.5">
+    <div class="flex items-center pr-2">
+        <button
+            type="button"
+            class="flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50"
+            onclick={onToggle}
+            data-testid={`evaluation-run-item-${run.name}`}
+            aria-expanded={expanded}
+        >
+            <div class="min-w-0 flex-1">
+                <div class="flex items-center gap-1.5">
+                    <Typography
+                        variant={expanded ? 'subtitle1' : 'subtitle2'}
+                        className="truncate"
+                        props={{ 'data-testid': 'evaluation-run-name' }}
+                    >
+                        {run.name}
+                    </Typography>
+                    {#if run.stale_since !== null}
+                        <TriangleAlert
+                            class="{expanded
+                                ? 'size-4'
+                                : 'size-3.5'} shrink-0 text-amber-500 dark:text-amber-400"
+                            data-testid="evaluation-run-stale-icon"
+                        />
+                    {/if}
+                </div>
                 <Typography
-                    variant={expanded ? 'subtitle1' : 'subtitle2'}
-                    className="truncate"
-                    props={{ 'data-testid': 'evaluation-run-name' }}
+                    variant="caption"
+                    className="text-muted-foreground"
+                    props={{ 'data-testid': 'evaluation-run-date' }}
                 >
-                    {run.name}
+                    {formatDate(run.created_at)}
                 </Typography>
-                {#if run.stale_since !== null}
-                    <TriangleAlert
-                        class="{expanded
-                            ? 'size-4'
-                            : 'size-3.5'} shrink-0 text-amber-500 dark:text-amber-400"
-                        data-testid="evaluation-run-stale-icon"
-                    />
-                {/if}
+                <EvaluationRunSummary
+                    groundTruth={run.gt_annotation_source}
+                    predictions={run.pred_annotation_source}
+                />
             </div>
-            <Typography
-                variant="caption"
-                className="text-muted-foreground"
-                props={{ 'data-testid': 'evaluation-run-date' }}
-            >
-                {formatDate(run.created_at)}
-            </Typography>
-            <EvaluationRunSummary
-                groundTruth={run.gt_annotation_source}
-                predictions={run.pred_annotation_source}
+            <ChevronDown
+                class="size-4 shrink-0 transition-transform duration-{duration}"
+                style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
             />
-        </div>
-        <ChevronDown
-            class="size-4 shrink-0 transition-transform duration-{duration}"
-            style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
-        />
-    </button>
+        </button>
+        {#if datasetId}
+            <DeleteEvaluationRun {datasetId} run={{ id: run.id, name: run.name }} />
+        {/if}
+    </div>
 
     {#if expanded}
         <div

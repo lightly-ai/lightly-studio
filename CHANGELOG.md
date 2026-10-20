@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Delete evaluations from the evaluation panel and clear their grid filters.
 - API: Delete an evaluation and its results while keeping annotations unchanged.
 - Edit saved evaluation parameters and rerun from the evaluation panel.
 - API: Change evaluation parameters and rerun an existing evaluation.
