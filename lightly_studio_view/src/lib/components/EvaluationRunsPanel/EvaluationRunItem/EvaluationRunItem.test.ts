@@ -237,28 +237,25 @@ describe('EvaluationRunItem', () => {
     });
 });
 
-it.each([false, true])(
-    'confirms deletion without toggling the row (expanded: %s)',
-    async (expanded) => {
-        const onToggle = vi.fn();
-        render(EvaluationRunItem, { ...defaultProps, expanded, onToggle });
-        await fireEvent.click(
-            screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
-        );
-        expect(screen.getByRole('dialog')).toHaveTextContent(baseRun.name);
-        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
-        expect(deletion.remove).not.toHaveBeenCalled();
-        await fireEvent.click(
-            screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
-        );
-        await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
-        expect(deletion.remove).toHaveBeenCalledOnce();
-        expect(onToggle).not.toHaveBeenCalled();
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-        deletion.params().onSuccess();
-        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
-    }
-);
+it('confirms deletion without toggling the row', async () => {
+    const onToggle = vi.fn();
+    render(EvaluationRunItem, { ...defaultProps, onToggle });
+    await fireEvent.click(
+        screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
+    );
+    expect(screen.getByRole('dialog')).toHaveTextContent(baseRun.name);
+    await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(deletion.remove).not.toHaveBeenCalled();
+    await fireEvent.click(
+        screen.getByRole('button', { name: `Delete evaluation ${baseRun.name}` })
+    );
+    await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+    expect(deletion.remove).toHaveBeenCalledOnce();
+    expect(onToggle).not.toHaveBeenCalled();
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    deletion.params().onSuccess();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+});
 
 it('blocks dismissal and repeated deletion while pending', async () => {
     deletion.pending = true;

@@ -1,5 +1,4 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { get } from 'svelte/store';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotationSortBy';
@@ -8,8 +7,13 @@ import { useDeleteEvaluationRun } from './useDeleteEvaluationRun.svelte';
 
 vi.mock('@tanstack/svelte-query', async (original) => ({
     ...(await original<typeof import('@tanstack/svelte-query')>()),
-    createMutation: vi.fn(),
-    useQueryClient: vi.fn()
+    useQueryClient: () => ({ invalidateQueries }),
+    createMutation: () => ({
+        mutate: (_vars: unknown, callbacks: { onSuccess: () => void; onError: () => void }) => {
+            succeed = callbacks.onSuccess;
+            fail = callbacks.onError;
+        }
+    })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 const invalidateQueries = vi.fn();
@@ -18,18 +22,14 @@ const filters = useImageFilters();
 const annotations = useAnnotationSortBy();
 let succeed: () => void;
 let fail: () => void;
+const ordinarySort = {
+    source: 'image' as const,
+    field_name: 'file_path_abs',
+    direction: 'asc' as const
+};
 
 beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(useQueryClient).mockReturnValue({ invalidateQueries } as unknown as ReturnType<
-        typeof useQueryClient
-    >);
-    vi.mocked(createMutation).mockReturnValue({
-        mutate: (_vars: unknown, callbacks: { onSuccess: () => void; onError: () => void }) => {
-            succeed = callbacks.onSuccess;
-            fail = callbacks.onError;
-        }
-    } as unknown as ReturnType<typeof createMutation>);
     filters.updateFilterParams({
         collection_id: 'images',
         mode: 'normal',
@@ -49,7 +49,8 @@ it.each(['run-1', 'other-run'])(
                 evaluation_run_name: name,
                 metric_name: 'fp',
                 direction: 'desc' as const
-            }
+            },
+            ordinarySort
         ];
         filters.updateSortBy(sort);
         const cell = { evaluation_run_id: selectedRun, gt_label: 'cat', pred_label: 'dog' };
@@ -75,7 +76,7 @@ it.each(['run-1', 'other-run'])(
         expect(invalidateQueries).not.toHaveBeenCalled();
         expect(toast.error).toHaveBeenCalled();
         succeed();
-        expect(get(filters.imageSortBy)).toEqual(selectedRun === 'run-1' ? null : sort);
+        expect(get(filters.imageSortBy)).toEqual(selectedRun === 'run-1' ? [ordinarySort] : sort);
         expect(get(filters.imageFilter)?.sample_filter).toEqual({
             tag_ids: ['tag'],
             sample_ids: ['sample'],
@@ -90,17 +91,3 @@ it.each(['run-1', 'other-run'])(
         expect(onSuccess).toHaveBeenCalledOnce();
     }
 );
-
-it('keeps ordinary sorting after deletion', () => {
-    const sort = [
-        { source: 'image' as const, field_name: 'file_path_abs', direction: 'asc' as const }
-    ];
-    filters.updateSortBy(sort);
-    useDeleteEvaluationRun(() => ({
-        datasetId: 'dataset',
-        run: { id: 'run-1', name: 'Evaluation' },
-        onSuccess
-    })).remove();
-    succeed();
-    expect(get(filters.imageSortBy)).toEqual(sort);
-});
