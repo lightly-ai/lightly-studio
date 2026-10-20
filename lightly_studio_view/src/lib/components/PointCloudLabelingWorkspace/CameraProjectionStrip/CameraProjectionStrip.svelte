@@ -5,8 +5,7 @@
     import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
     import ProjectionControls from './ProjectionControls.svelte';
-    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
-    import { DEFAULT_PROJECTION_SETTINGS, type ProjectionSettings } from './projectionSettings';
+    import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
 
     /**
      * Horizontal strip of camera tiles for the active point-cloud tick. The tile images
@@ -44,28 +43,7 @@
         canProject = true,
         onPlaybackToggle
     }: Props = $props();
-    const projectionSettings = useSessionStorage<ProjectionSettings>(
-        'lightlyStudio_cameraProjectionSettings',
-        DEFAULT_PROJECTION_SETTINGS
-    );
-    const projectionColorModes = new Set<ProjectionSettings['colorMode']>([
-        'height',
-        'intensity',
-        'distance',
-        'density',
-        'height-distance',
-        'height-density'
-    ]);
-
-    // Migrate settings saved by the previous camera-specific color mode list.
-    $effect(() => {
-        if (!projectionColorModes.has($projectionSettings.colorMode)) {
-            projectionSettings.update((settings) => ({
-                ...settings,
-                colorMode: DEFAULT_PROJECTION_SETTINGS.colorMode
-            }));
-        }
-    });
+    const projectionSettings = useProjectionSettings();
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
