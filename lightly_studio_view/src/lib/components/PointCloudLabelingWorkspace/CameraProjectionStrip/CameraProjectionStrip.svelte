@@ -2,6 +2,11 @@
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+    import ProjectionControls from './ProjectionControls.svelte';
+    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
+    import { DEFAULT_PROJECTION_SETTINGS, type ProjectionSettings } from './projectionSettings';
 
     /**
      * Horizontal strip of camera tiles for the active point-cloud tick. The tile images
@@ -21,6 +26,10 @@
         cameraChannels: ChannelSummaryView[];
         /** Camera channel IDs currently shown in the projection strip. */
         selectedChannelIds: number[];
+        batch?: PointBatch;
+        annotations?: readonly AnnotationView[];
+        canProject?: boolean;
+        onPlaybackToggle?: () => void;
     }
 
     let {
@@ -29,8 +38,34 @@
         seqNumber,
         displayFrameId,
         cameraChannels: summaryCameraChannels,
-        selectedChannelIds
+        selectedChannelIds,
+        batch,
+        annotations = [],
+        canProject = true,
+        onPlaybackToggle
     }: Props = $props();
+    const projectionSettings = useSessionStorage<ProjectionSettings>(
+        'lightlyStudio_cameraProjectionSettings',
+        DEFAULT_PROJECTION_SETTINGS
+    );
+    const projectionColorModes = new Set<ProjectionSettings['colorMode']>([
+        'height',
+        'intensity',
+        'distance',
+        'density',
+        'height-distance',
+        'height-density'
+    ]);
+
+    // Migrate settings saved by the previous camera-specific color mode list.
+    $effect(() => {
+        if (!projectionColorModes.has($projectionSettings.colorMode)) {
+            projectionSettings.update((settings) => ({
+                ...settings,
+                colorMode: DEFAULT_PROJECTION_SETTINGS.colorMode
+            }));
+        }
+    });
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
@@ -51,6 +86,14 @@
     class="flex h-full min-h-0 flex-col border-t bg-background p-2"
     data-testid="workspace-projection-strip"
 >
+    <div class="flex shrink-0 items-center justify-between px-1 pb-2 text-xs">
+        <span class="text-muted-foreground">Camera projections</span>
+        <ProjectionControls
+            settings={$projectionSettings}
+            onChange={(settings) => projectionSettings.set(settings)}
+            {onPlaybackToggle}
+        />
+    </div>
     <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto">
         {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
             {@const channel =
@@ -63,6 +106,12 @@
                 logTimeNs={channel?.log_time_ns}
                 blob={cameraFrames.data?.[summaryChannel.channel_id]}
                 label={summaryChannel.group_component_name}
+                {batch}
+                {annotations}
+                projection={canProject ? (channel?.projection ?? undefined) : undefined}
+                {onPlaybackToggle}
+                projectionSettings={$projectionSettings}
+                onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
             />
         {/each}
     </div>
