@@ -20,7 +20,9 @@
                 data-testid={source.testId}
             >
                 {#if source.name}<ColorMarker label={source.name} />{/if}
-                <span class="min-w-0 break-words">{source.name ?? 'Unknown'}</span>
+                <span class="min-w-0 truncate" title={source.name ?? 'Unknown'}>
+                    {source.name ?? 'Unknown'}
+                </span>
             </span>
         </span>
     {/each}

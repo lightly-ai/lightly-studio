@@ -29,16 +29,16 @@
 </script>
 
 <li class="rounded-md border border-border bg-background">
-    <div class="flex items-center pr-2">
+    <div class="relative">
         <button
             type="button"
-            class="flex min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted/50"
+            class="block w-full px-3 py-2 text-left hover:bg-muted/50"
             onclick={onToggle}
             data-testid={`evaluation-run-item-${run.name}`}
             aria-expanded={expanded}
         >
             <div class="min-w-0 flex-1">
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-center gap-1.5 pr-16">
                     <Typography
                         variant={expanded ? 'subtitle1' : 'subtitle2'}
                         className="truncate"
@@ -68,12 +68,14 @@
                 />
             </div>
             <ChevronDown
-                class="size-4 shrink-0 transition-transform duration-{duration}"
+                class="absolute right-12 top-3 size-4 text-muted-foreground transition-transform duration-{duration}"
                 style={`transform: ${expanded ? 'rotate(0deg)' : 'rotate(-90deg)'}`}
             />
         </button>
         {#if datasetId}
-            <DeleteEvaluationRun {datasetId} run={{ id: run.id, name: run.name }} />
+            <div class="absolute right-1 top-1 text-muted-foreground">
+                <DeleteEvaluationRun {datasetId} run={{ id: run.id, name: run.name }} />
+            </div>
         {/if}
     </div>
 
