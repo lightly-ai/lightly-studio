@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import functools
 import importlib.util
 import logging
 import os
@@ -139,6 +140,15 @@ class FalSam3Provider:
     def _forget_image_url(self, sample_id: UUID) -> None:
         with self._image_urls_lock:
             self._image_urls.pop(sample_id, None)
+
+
+@functools.cache
+def get_provider() -> FalSam3Provider:
+    """Returns the shared provider.
+
+    Built on first use and kept, so that the fal.ai client and the image URL cache persist.
+    """
+    return FalSam3Provider()
 
 
 def build_request_body(image_url: str, prompt: SegmentationPrompt) -> dict[str, Any]:
