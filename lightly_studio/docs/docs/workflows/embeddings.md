@@ -167,7 +167,7 @@ implementation of `embed_images` does inside.
 | Use-case | What `embed_images` does | Example |
 |---|---|---|
 | Compute embeddings on the fly | Runs your model on the given file paths | [`example_custom_embedding_model.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_custom_embedding_model.py) |
-| Use a hosted embedding API | Sends the images to the API, for example [OpenRouter](../tutorials/openrouter-embeddings.md) | [`example_openrouter_embedder.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_openrouter_embedder.py) |
+| Use an external embedding model | Sends the images to a hosted API, see the [tutorial](../tutorials/external-embedding-models.md) | [`example_openrouter_embedder.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_openrouter_embedder.py) |
 | Load precomputed embeddings | Looks up stored vectors by file path | [`example_load_existing_embeddings.py`](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio/src/lightly_studio/examples/example_load_existing_embeddings.py) |
 
 An embedder subclasses `Embedder` through one interface per input it can embed.

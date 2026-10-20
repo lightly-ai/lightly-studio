@@ -37,11 +37,11 @@ unlabeled data to a trained and evaluated model.
 
     Explore Imagenette in the embedding plot, use the lasso and legend to inspect groups of similar images, and annotate them group by group.
 
--   **[Use Gemini Embedding 2 from OpenRouter in LightlyStudio](openrouter-embeddings.md)**
+-   **[Use External Embedding Models in LightlyStudio](external-embedding-models.md)**
 
-    [![Use Gemini Embedding 2 from OpenRouter in LightlyStudio](https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_v1.0.4.png)](openrouter-embeddings.md)
+    [![Use External Embedding Models in LightlyStudio](https://storage.googleapis.com/lightly-public/studio/docs/embedding_plot_v1.0.4.png)](external-embedding-models.md)
 
-    Embed images and text with a hosted multimodal model from OpenRouter, with no local GPU, then use text search, image search and the embedding plot.
+    Replace the built-in embedding model with an external one, such as a hosted API. The example uses Gemini Embedding 2 through OpenRouter for the embedding plot, text search and image search.
 </div>
 
 ## Video

@@ -1,8 +1,10 @@
-"""Example of how to use an embedding model from OpenRouter.
+"""Example of how to use an external embedding model, with OpenRouter as the provider.
 
 OpenRouter serves many embedding models behind one HTTP API. This example uses Google
 Gemini Embedding 2, which embeds text and images into one shared space. Thus text
-search, image search and the embedding plot all work without a local GPU.
+search, image search and the embedding plot all work without a local GPU. To use a
+different provider, change the request and response format in ``_request_embeddings``
+and ``_to_image_input``.
 
 The embedder below subclasses one interface per input it can embed: images by path,
 uploaded images as bytes, annotation crops and text.
