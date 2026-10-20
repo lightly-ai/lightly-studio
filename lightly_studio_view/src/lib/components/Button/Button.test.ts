@@ -194,6 +194,18 @@ describe('Button', () => {
             expect(container.querySelector('button')).toBeDisabled();
         });
 
+        it('renders as a disabled button (not an anchor) when href and disabledReason are both set', () => {
+            const { container } = render(ButtonTestWrapper, {
+                props: {
+                    label: 'View',
+                    buttonProps: { href: '/some/path' },
+                    disabledReason: 'No access'
+                }
+            });
+
+            expect(container.querySelector('a')).toBeNull();
+            expect(container.querySelector('button')).toBeDisabled();
+        });
     });
 
     describe('isPending', () => {

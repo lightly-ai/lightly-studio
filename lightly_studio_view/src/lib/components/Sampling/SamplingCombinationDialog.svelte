@@ -50,7 +50,6 @@
         noSamples,
         notEnoughSamples,
         sampleCountLabel,
-        isFormValid,
         createButtonTooltip,
         isSubmitting,
         loadingMessage,

@@ -26,8 +26,17 @@
         const rest = { ...buttonProps };
         delete rest.class;
         delete rest.disabled;
+        delete rest.onclick;
+        // Anchors ignore the disabled attribute; strip href when disabled by reason
+        // so UiButton renders a <button> that properly blocks interaction.
+        if (disabledReason && rest.href) {
+            delete rest.href;
+        }
         return rest;
     });
+
+    // Top-level onclick takes precedence; buttonProps.onclick is the fallback.
+    const resolvedOnclick = $derived(onclick ?? buttonProps.onclick);
 
     const isDisabledByReason = $derived(Boolean(disabledReason));
     const tooltipTriggerClass = $derived.by(() => {
@@ -58,14 +67,10 @@
 >
     <UiButton
         {variant}
-        class={cn(
-            'relative',
-            isPending && 'overflow-hidden',
-            className
-        )}
+        class={cn('relative', isPending && 'overflow-hidden', className)}
         disabled={isPending || Boolean(disabled) || isDisabledByReason}
         aria-label={ariaLabel}
-        {onclick}
+        onclick={resolvedOnclick}
         {...restButtonProps}
     >
         {#if Icon}
@@ -88,4 +93,3 @@
         {/if}
     </UiButton>
 </Tooltip>
-

@@ -27,7 +27,11 @@
                 disabledReason={fields.length === 0
                     ? 'No categorical metadata fields available to add.'
                     : ''}
-                buttonProps={{ ...props, size: 'sm', class: 'h-10 w-full justify-between px-3 text-sm font-normal' }}
+                buttonProps={{
+                    ...props,
+                    size: 'sm',
+                    class: 'h-10 w-full justify-between px-3 text-sm font-normal'
+                }}
             >
                 Add categorical metadata field
             </Button>
@@ -37,7 +41,11 @@
         {#each fields as field (field)}
             <Button
                 variant="ghost"
-                buttonProps={{ size: 'sm', class: 'w-full justify-start text-xs', onclick: () => addField(field) }}
+                buttonProps={{
+                    size: 'sm',
+                    class: 'w-full justify-start text-xs',
+                    onclick: () => addField(field)
+                }}
             >
                 {field}
             </Button>
