@@ -125,20 +125,32 @@
         </button>
         <Dialog.Root bind:open={isEnlarged}>
             <Dialog.Content
-                class="max-w-[90vw] gap-2 p-3 sm:max-w-[90vw]"
+                class="max-w-[90vw] gap-2 p-3 outline-none sm:max-w-[90vw]"
+                onOpenAutoFocus={(event) => event.preventDefault()}
+                onCloseAutoFocus={(event) => event.preventDefault()}
                 onkeydown={(event) => {
                     if (event.code !== 'Space' || event.repeat) return;
                     event.preventDefault();
                     event.stopPropagation();
+                    const target = event.target as HTMLElement;
+                    if (
+                        target.closest(
+                            'button, input, select, textarea, [role="button"], [role="slider"], [role="switch"], [contenteditable="true"]'
+                        )
+                    ) {
+                        return;
+                    }
                     onPlaybackToggle?.();
                 }}
             >
-                <div class="flex items-center justify-between gap-3">
-                    <Dialog.Title class="text-sm font-medium">{label}</Dialog.Title>
+                <div class="flex min-w-0 items-center justify-between gap-3 pr-10">
+                    <Dialog.Title class="min-w-0 truncate text-sm font-medium">{label}</Dialog.Title
+                    >
                     {#if projectionSettings && onProjectionSettingsChange}
                         <ProjectionControls
                             settings={projectionSettings}
                             onChange={onProjectionSettingsChange}
+                            {onPlaybackToggle}
                         />
                     {/if}
                 </div>

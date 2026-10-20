@@ -42,9 +42,11 @@
             const halfSize = size / 2;
             context.globalAlpha = settings.pointOpacity;
             const points = projectPointCloudData(batch, projection);
-            const values = points.map((point) => getColorValue(point, settings.colorMode));
-            const min = Math.min(...values);
-            const max = Math.max(...values);
+            const metrics = getColorMetrics(settings.colorMode);
+            const ranges = metrics.map((metric) => {
+                const values = points.map((point) => getMetricValue(point, metric));
+                return [Math.min(...values), Math.max(...values)] as const;
+            });
             for (const [index, point] of points.entries()) {
                 context.fillStyle = 'rgba(0, 0, 0, 0.8)';
                 context.fillRect(
@@ -56,7 +58,7 @@
                 context.fillStyle = getPointColor(
                     point,
                     settings,
-                    normalize(values[index], min, max)
+                    normalizePoint(point, metrics, ranges)
                 );
                 context.fillRect(point.x - halfSize, point.y - halfSize, size, size);
             }
@@ -74,10 +76,34 @@
         }
     });
 
-    function getColorValue(point: ProjectedPointData, mode: ProjectionColorMode): number {
-        if (mode === 'height') return point.height;
-        if (mode === 'intensity') return point.intensity;
-        return point.depth;
+    type ColorMetric = 'depth' | 'height' | 'intensity' | 'distance' | 'density';
+
+    function getColorMetrics(mode: ProjectionColorMode): ColorMetric[] {
+        if (mode === 'height-distance') return ['height', 'distance'];
+        if (mode === 'height-density') return ['height', 'density'];
+        if (mode === 'height') return ['height'];
+        if (mode === 'intensity') return ['intensity'];
+        if (mode === 'distance') return ['distance'];
+        if (mode === 'density') return ['density'];
+        return ['depth'];
+    }
+
+    function getMetricValue(point: ProjectedPointData, metric: ColorMetric): number {
+        return point[metric];
+    }
+
+    function normalizePoint(
+        point: ProjectedPointData,
+        metrics: ColorMetric[],
+        ranges: readonly (readonly [number, number])[]
+    ): number {
+        return (
+            metrics.reduce(
+                (sum, metric, index) =>
+                    sum + normalize(getMetricValue(point, metric), ...ranges[index]),
+                0
+            ) / metrics.length
+        );
     }
 
     function normalize(value: number, min: number, max: number): number {
@@ -89,10 +115,6 @@
         settings: ProjectionSettings,
         normalizedValue: number
     ): string {
-        if (settings.colorMode === 'single') return settings.pointColor;
-        if (settings.colorMode === 'rgb' && point.rgb) {
-            return `rgb(${point.rgb.map((value) => Math.round(value * 255)).join(', ')})`;
-        }
         const hue = 230 - normalizedValue * 230;
         return `hsl(${hue} 90% 55%)`;
     }

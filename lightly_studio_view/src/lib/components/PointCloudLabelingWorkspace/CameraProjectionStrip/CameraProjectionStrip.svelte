@@ -5,6 +5,7 @@
     import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
     import type { PointBatch } from '$lib/components/PointCloudViewer/types';
     import ProjectionControls from './ProjectionControls.svelte';
+    import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { DEFAULT_PROJECTION_SETTINGS, type ProjectionSettings } from './projectionSettings';
 
     /**
@@ -43,7 +44,28 @@
         canProject = true,
         onPlaybackToggle
     }: Props = $props();
-    let projectionSettings = $state<ProjectionSettings>({ ...DEFAULT_PROJECTION_SETTINGS });
+    const projectionSettings = useSessionStorage<ProjectionSettings>(
+        'lightlyStudio_cameraProjectionSettings',
+        DEFAULT_PROJECTION_SETTINGS
+    );
+    const projectionColorModes = new Set<ProjectionSettings['colorMode']>([
+        'height',
+        'intensity',
+        'distance',
+        'density',
+        'height-distance',
+        'height-density'
+    ]);
+
+    // Migrate settings saved by the previous camera-specific color mode list.
+    $effect(() => {
+        if (!projectionColorModes.has($projectionSettings.colorMode)) {
+            projectionSettings.update((settings) => ({
+                ...settings,
+                colorMode: DEFAULT_PROJECTION_SETTINGS.colorMode
+            }));
+        }
+    });
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => datasetId,
@@ -67,8 +89,9 @@
     <div class="flex shrink-0 items-center justify-between px-1 pb-2 text-xs">
         <span class="text-muted-foreground">Camera projections</span>
         <ProjectionControls
-            settings={projectionSettings}
-            onChange={(settings) => (projectionSettings = settings)}
+            settings={$projectionSettings}
+            onChange={(settings) => projectionSettings.set(settings)}
+            {onPlaybackToggle}
         />
     </div>
     <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto">
@@ -87,8 +110,8 @@
                 {annotations}
                 projection={canProject ? (channel?.projection ?? undefined) : undefined}
                 {onPlaybackToggle}
-                {projectionSettings}
-                onProjectionSettingsChange={(settings) => (projectionSettings = settings)}
+                projectionSettings={$projectionSettings}
+                onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
             />
         {/each}
     </div>

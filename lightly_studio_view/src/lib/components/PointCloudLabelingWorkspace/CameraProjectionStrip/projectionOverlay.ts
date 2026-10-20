@@ -14,6 +14,8 @@ export interface ProjectedPointData extends ProjectedPoint {
     depth: number;
     height: number;
     intensity: number;
+    distance: number;
+    density: number;
     rgb?: readonly [number, number, number];
 }
 
@@ -109,6 +111,7 @@ export function projectPointCloudData(
     maxPoints = 5000
 ): ProjectedPointData[] {
     const step = Math.max(1, Math.ceil(batch.count / maxPoints));
+    const densityByCell = getDensityByCell(batch);
     const points: ProjectedPointData[] = [];
     for (let index = 0; index < batch.count; index += step) {
         const offset = index * 3;
@@ -131,6 +134,8 @@ export function projectPointCloudData(
                 depth: cameraPoint[2],
                 height: position[2],
                 intensity: batch.intensities[index],
+                distance: Math.hypot(...position),
+                density: Math.log1p(densityByCell.get(getCellKey(position)) ?? 1),
                 rgb: batch.colors
                     ? [batch.colors[offset], batch.colors[offset + 1], batch.colors[offset + 2]]
                     : undefined
@@ -138,6 +143,26 @@ export function projectPointCloudData(
         }
     }
     return points;
+}
+
+function getDensityByCell(batch: PointBatch): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (let index = 0; index < batch.count; index++) {
+        const offset = index * 3;
+        const position: [number, number, number] = [
+            batch.positions[offset],
+            batch.positions[offset + 1],
+            batch.positions[offset + 2]
+        ];
+        const key = getCellKey(position);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+}
+
+function getCellKey(position: readonly [number, number, number]): string {
+    const cellSize = 0.5;
+    return position.map((coordinate) => Math.floor(coordinate / cellSize)).join(',');
 }
 
 export function projectCuboid(

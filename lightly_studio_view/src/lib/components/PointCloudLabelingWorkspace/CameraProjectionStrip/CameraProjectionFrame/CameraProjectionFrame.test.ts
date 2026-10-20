@@ -139,6 +139,38 @@ describe('CameraProjectionFrame', () => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
     });
 
+    it('does not restore focus to the frame trigger when the dialog closes', async () => {
+        render(CameraProjectionFrame, { props: defaultProps });
+
+        const trigger = screen.getByRole('button', { name: 'Enlarge front' });
+        await fireEvent.click(trigger);
+        await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        expect(document.activeElement).not.toBe(trigger);
+    });
+
+    it('does not trigger playback from a dialog control', async () => {
+        const onPlaybackToggle = vi.fn();
+        render(CameraProjectionFrame, {
+            props: {
+                ...defaultProps,
+                onPlaybackToggle,
+                projectionSettings: DEFAULT_PROJECTION_SETTINGS,
+                onProjectionSettingsChange: vi.fn()
+            }
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Enlarge front' }));
+        const settingsButton = screen.getByRole('button', { name: 'Projection settings' });
+        await fireEvent.keyDown(settingsButton, { code: 'Space', key: ' ' });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(onPlaybackToggle).toHaveBeenCalledOnce();
+        expect(settingsButton).toHaveAttribute('aria-expanded', 'false');
+        expect(document.activeElement).not.toBe(settingsButton);
+    });
+
     it('shows projection settings in the expanded dialog', async () => {
         render(CameraProjectionFrame, {
             props: {

@@ -2,6 +2,7 @@
     import { Settings2 } from '@lucide/svelte';
     import { Button } from '$lib/components/ui/button';
     import { Label } from '$lib/components/ui/label';
+    import { Select } from '$lib/components/Select';
     import { Slider } from '$lib/components/ui/slider';
     import { Switch } from '$lib/components/ui/switch';
     import * as Popover from '$lib/components/ui/popover';
@@ -10,12 +11,31 @@
     interface Props {
         settings: ProjectionSettings;
         onChange: (settings: ProjectionSettings) => void;
+        onPlaybackToggle?: () => void;
     }
 
-    let { settings, onChange }: Props = $props();
+    let { settings, onChange, onPlaybackToggle }: Props = $props();
     let open = $state(false);
 
     const update = (changes: Partial<ProjectionSettings>) => onChange({ ...settings, ...changes });
+    const colorItems = [
+        { value: 'height', label: 'Height' },
+        { value: 'intensity', label: 'Intensity' },
+        { value: 'distance', label: 'Distance' },
+        { value: 'density', label: 'Density' },
+        { value: 'height-distance', label: 'Height + Distance' },
+        { value: 'height-density', label: 'Height + Density' }
+    ];
+    const preventSpaceActivation = (event: KeyboardEvent) => {
+        if (event.code !== 'Space' || event.repeat) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onPlaybackToggle?.();
+        (event.target as HTMLElement).blur();
+        setTimeout(() => {
+            (document.activeElement as HTMLElement | null)?.blur();
+        }, 0);
+    };
 </script>
 
 <Popover.Root bind:open>
@@ -25,15 +45,20 @@
                 {...props}
                 variant="outline"
                 size="xs"
+                class="px-3"
                 aria-label="Projection settings"
                 aria-expanded={open}
+                onkeydown={preventSpaceActivation}
             >
                 <Settings2 />
                 Settings
             </Button>
         {/snippet}
     </Popover.Trigger>
-    <Popover.Content class="w-72 space-y-4 p-4">
+    <Popover.Content
+        class="max-h-[calc(100vh-2rem)] w-72 space-y-4 overflow-y-auto p-4"
+        onkeydown={preventSpaceActivation}
+    >
         <div class="space-y-1">
             <h3 class="text-sm font-medium">Camera projection settings</h3>
             <p class="text-xs text-muted-foreground">Adjust the camera overlay visibility.</p>
@@ -90,40 +115,20 @@
                 aria-label="Projection point opacity"
             />
         </div>
-        <label class="flex items-center justify-between text-sm" for="projection-color-mode">
-            Color points by
-            <select
-                id="projection-color-mode"
-                class="h-8 rounded-md border bg-background px-2 text-xs"
+        <div class="flex items-center justify-between gap-3 text-sm">
+            <Label for="projection-color-mode">Color points by</Label>
+            <Select
+                items={colorItems}
                 value={settings.colorMode}
-                onchange={(event) =>
-                    update({
-                        colorMode: (event.currentTarget as HTMLSelectElement)
-                            .value as ProjectionSettings['colorMode']
-                    })}
-            >
-                <option value="depth">Depth</option>
-                <option value="height">Height</option>
-                <option value="intensity">Intensity</option>
-                <option value="rgb">RGB</option>
-                <option value="single">Single color</option>
-            </select>
-        </label>
-        {#if settings.colorMode === 'single'}
-            <label class="flex items-center justify-between text-sm" for="projection-point-color">
-                Point color
-                <select
-                    id="projection-point-color"
-                    class="h-8 rounded-md border bg-background px-2 text-xs"
-                    value={settings.pointColor}
-                    onchange={(event) =>
-                        update({ pointColor: (event.currentTarget as HTMLSelectElement).value })}
-                >
-                    <option value="#22d3ee">Cyan</option>
-                    <option value="#facc15">Yellow</option>
-                    <option value="#ffffff">White</option>
-                </select>
-            </label>
-        {/if}
+                size="xs"
+                class="min-w-0 flex-1"
+                selectProps={{
+                    id: 'projection-color-mode',
+                    onkeydown: preventSpaceActivation
+                }}
+                onValueChange={(value) =>
+                    update({ colorMode: value as ProjectionSettings['colorMode'] })}
+            />
+        </div>
     </Popover.Content>
 </Popover.Root>
