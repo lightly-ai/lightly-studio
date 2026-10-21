@@ -44,6 +44,7 @@ from lightly_studio.models.query_expr import (
     FieldRef,
     IntegerExpr,
     MatchExpr,
+    MetadataComparisonExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
@@ -238,8 +239,10 @@ def evaluation_metric_sort_to_order_by(
     return order_by
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
+def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PLR0912 C901
     """Translate a validated query-language expression to a dataset-query expression."""
+    if isinstance(expr, MetadataComparisonExpr):
+        raise QueryExprError("Metadata query expressions are not yet supported.")
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
             field=_lookup(mapping=_STRING_FIELDS, field=expr.field, type_="string"),
