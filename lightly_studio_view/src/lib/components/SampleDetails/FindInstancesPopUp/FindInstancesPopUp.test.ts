@@ -28,9 +28,11 @@ const defaultProps = {
 };
 
 describe('FindInstancesPopUp', () => {
-    it('finds instances on Enter only with a prompt', async () => {
+    it('finds instances on Enter only with a prompt, also when boxes are drawn', async () => {
         const onGenerate = vi.fn();
-        const { rerender } = render(FindInstancesPopUp, { props: { ...defaultProps, onGenerate } });
+        const { rerender } = render(FindInstancesPopUp, {
+            props: { ...defaultProps, onGenerate, boxCount: 2 }
+        });
         const input = screen.getByLabelText('Instance prompt');
 
         await fireEvent.keyDown(input, { key: 'Enter' });
