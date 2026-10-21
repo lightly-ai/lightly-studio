@@ -1,6 +1,8 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
-    import type { SaveAs } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+
+    type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];
 
     interface Props {
         collectionId: string;

@@ -1,14 +1,16 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import SampleAnnotationRect from '$lib/components/SampleDetails/SampleAnnotationRect/SampleAnnotationRect.svelte';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
-    import NormalizedBoxRect from '$lib/components/SampleDetails/AnnotationPreview/NormalizedBoxRect.svelte';
-    import type { SaveAs } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+    import NormalizedBoxRect from '$lib/components/SampleDetails/NormalizedBoxRect/NormalizedBoxRect.svelte';
     import SmartSelectPoints from './SmartSelectPoints.svelte';
     import { getClassNameAtPoint } from './SmartSelectOverlay.helpers';
     import { useDragBox } from '$lib/components/SampleDetails/useDragBox/useDragBox.svelte';
     import { useSmartSelect } from './useSmartSelect.svelte';
+
+    type SaveAs = ComponentProps<typeof AnnotationPreview>['saveAs'];
 
     interface Props {
         collectionId: string;
