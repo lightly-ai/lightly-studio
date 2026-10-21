@@ -164,9 +164,9 @@
                     <span
                         id={valueId}
                         class="min-w-0 flex-1 truncate text-left"
-                        title={selectedItem?.label || label}
+                        title={selectedItem?.label ?? label}
                     >
-                        {selectedItem?.label || label}
+                        {selectedItem?.label ?? label}
                     </span>
                     <ChevronsUpDownIcon class="shrink-0 opacity-50" />
                 </Button>

@@ -23,7 +23,7 @@
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const items = $derived(getSelectionItems(annotationLabels.data ?? []));
     const selectedItem = $derived.by((): ListItem | undefined => {
-        if (!value) return undefined;
+        if (value == null) return undefined;
         return items.find((item) => item.value === value) ?? { value, label: value };
     });
 </script>
