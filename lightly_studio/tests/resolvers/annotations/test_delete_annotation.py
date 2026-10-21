@@ -75,6 +75,7 @@ def test_delete_annotation__deletes_sample_tag_links(
 ) -> None:
     """Test deleting an annotation also removes tag links for its sample."""
     annotation = annotations_test_data.annotations[0]
+    annotation_id = annotation.sample_id
     annotation_collection_id = annotation.sample.collection_id
     tag = create_tag(
         session=db_session,
@@ -91,15 +92,15 @@ def test_delete_annotation__deletes_sample_tag_links(
     ).all()
     assert links_before
 
-    annotation_resolver.delete_annotation(db_session, annotation.sample_id)
+    annotation_resolver.delete_annotation(db_session, annotation_id)
 
     # Verify both annotation and sample-tag links were deleted.
-    assert annotation_resolver.get_by_id(db_session, annotation.sample_id) is None
+    assert annotation_resolver.get_by_id(db_session, annotation_id) is None
     links_after = db_session.exec(
-        select(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id) == annotation.sample_id)
+        select(SampleTagLinkTable).where(col(SampleTagLinkTable.sample_id) == annotation_id)
     ).all()
     assert not links_after
-    assert db_session.get(SampleTable, annotation.sample_id) is None
+    assert db_session.get(SampleTable, annotation_id) is None
 
 
 def test_delete_annotation__deletes_sample_embeddings(
@@ -112,6 +113,7 @@ def test_delete_annotation__deletes_sample_embeddings(
     so deleting the sample previously failed when the ORM tried to null it out.
     """
     annotation = annotations_test_data.annotations[0]
+    annotation_id = annotation.sample_id
     embedding_model = create_embedding_model(
         session=db_session,
         collection_id=annotation.sample.collection_id,
@@ -123,17 +125,15 @@ def test_delete_annotation__deletes_sample_embeddings(
         embedding=[0.1] * embedding_model.embedding_dimension,
     )
 
-    annotation_resolver.delete_annotation(db_session, annotation.sample_id)
+    annotation_resolver.delete_annotation(db_session, annotation_id)
 
     # Verify both annotation and its embedding were deleted.
-    assert annotation_resolver.get_by_id(db_session, annotation.sample_id) is None
+    assert annotation_resolver.get_by_id(db_session, annotation_id) is None
     embeddings_after = db_session.exec(
-        select(SampleEmbeddingTable).where(
-            col(SampleEmbeddingTable.sample_id) == annotation.sample_id
-        )
+        select(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id) == annotation_id)
     ).all()
     assert not embeddings_after
-    assert db_session.get(SampleTable, annotation.sample_id) is None
+    assert db_session.get(SampleTable, annotation_id) is None
 
 
 def test_delete_annotation__deletes_evaluation_annotation_metrics(

@@ -2,65 +2,34 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
-from sqlmodel import Session, col, delete
+from sqlmodel import Session, col, select
 
-from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
-)
+from lightly_studio.database import db_array
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.resolvers import annotation_resolver
-from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
-    delete_evaluation_metrics,
-)
-from lightly_studio.resolvers.annotations.annotations_filter import (
-    AnnotationsFilter,
-)
-from lightly_studio.utils import batching
 
 
 def delete_annotations(
     session: Session,
-    annotation_label_ids: list[UUID] | None,
+    annotation_label_ids: Sequence[UUID],
 ) -> None:
-    """Delete all annotations and their tag links using filters.
+    """Delete the annotations with the given labels, their samples and dependent rows.
 
     Args:
         session: Database session.
-        annotation_label_ids: List of annotation label IDs to filter by.
+        annotation_label_ids: IDs of the annotation labels to delete the annotations of.
+            If empty, no annotations are deleted.
     """
-    annotations = annotation_resolver.get_all(
-        session,
-        filters=AnnotationsFilter(
-            annotation_label_ids=annotation_label_ids,
-        ),
-    ).annotations
-
-    # Delete annotation details first
-    for annotation in annotations:
-        if annotation.object_detection_details:
-            session.delete(annotation.object_detection_details)
-        if annotation.segmentation_details:
-            session.delete(annotation.segmentation_details)
-        if annotation.cuboid_3d_details:
-            session.delete(annotation.cuboid_3d_details)
-        if annotation.temporal_span_details:
-            session.delete(annotation.temporal_span_details)
-    session.commit()
-
-    # Now delete the annotations themselves
-    annotation_ids = [annotation.sample_id for annotation in annotations]
-    parent_sample_ids = list({annotation.parent_sample_id for annotation in annotations})
-    if annotation_ids:
-        # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation
-        # once evaluation results can be recomputed or marked stale independently.
-        delete_evaluation_metrics(
-            session=session,
-            annotation_ids=annotation_ids,
-            parent_sample_ids=parent_sample_ids,
+    if not annotation_label_ids:
+        return
+    query = select(AnnotationBaseTable.sample_id).where(
+        db_array.in_array(
+            column=col(AnnotationBaseTable.annotation_label_id), values=annotation_label_ids
         )
-    for batch in batching.batched(items=annotation_ids):
-        session.exec(
-            delete(AnnotationBaseTable).where(col(AnnotationBaseTable.sample_id).in_(batch))
-        )
-    session.commit()
+    )
+    annotation_resolver.delete_annotations_by_ids(
+        session=session, annotation_ids=session.exec(query).all()
+    )

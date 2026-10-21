@@ -1,5 +1,7 @@
 """A surface-level smoke test for the QueryExpr model for documentation purposes."""
 
+from __future__ import annotations
+
 from datetime import datetime, timezone
 
 import pytest
@@ -9,10 +11,90 @@ from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
     DatetimeExpr,
+    MetadataComparisonExpr,
     NotExpr,
+    OrdinalComparisonOperator,
     QueryExpr,
     StringExpr,
 )
+
+
+class TestMetadataComparisonExpr:
+    @pytest.mark.parametrize("value", ["front", "1", True, False, 1, -2, 0.8, -5.5])
+    @pytest.mark.parametrize("operator", list(OrdinalComparisonOperator))
+    def test_model_validate(self, value: str | bool | int | float, operator: str) -> None:
+        payload = {
+            "match_expr": {
+                "type": "metadata_comparison_expr",
+                "path": "odometry.acc[1]",
+                "operator": operator,
+                "value": value,
+            }
+        }
+        if isinstance(value, (str, bool)) and operator not in ("==", "!="):
+            with pytest.raises(ValidationError, match="ordering comparisons require a number"):
+                QueryExpr.model_validate(payload)
+            return
+
+        query = QueryExpr.model_validate(payload)
+        assert isinstance(query.match_expr, MetadataComparisonExpr)
+        assert type(query.match_expr.value) is type(value)
+        assert query.model_dump(mode="json") == payload
+        assert QueryExpr.model_validate_json(query.model_dump_json()) == query
+
+    @pytest.mark.parametrize("value", [None, [], {}, float("nan"), float("inf"), -float("inf")])
+    def test_model_validate__invalid_value(self, value: object) -> None:
+        with pytest.raises(ValidationError):
+            MetadataComparisonExpr.model_validate(
+                {"path": "camera", "operator": "==", "value": value}
+            )
+
+    def test_model_validate__invalid_operator(self) -> None:
+        with pytest.raises(ValidationError):
+            MetadataComparisonExpr.model_validate(
+                {"path": "camera", "operator": "IN", "value": "front"}
+            )
+
+    @pytest.mark.parametrize(
+        "expression",
+        [
+            {
+                "type": "and",
+                "children": [
+                    {
+                        "type": "metadata_comparison_expr",
+                        "path": "camera",
+                        "operator": "==",
+                        "value": "front",
+                    }
+                ],
+            },
+            {
+                "type": "or",
+                "children": [
+                    {
+                        "type": "metadata_comparison_expr",
+                        "path": "reviewed",
+                        "operator": "!=",
+                        "value": False,
+                    }
+                ],
+            },
+            {
+                "type": "not",
+                "child": {
+                    "type": "metadata_comparison_expr",
+                    "path": "score",
+                    "operator": ">=",
+                    "value": 0.8,
+                },
+            },
+        ],
+    )
+    def test_model_validate__boolean_composition(self, expression: dict[str, object]) -> None:
+        query = QueryExpr.model_validate({"match_expr": expression})
+        assert query.model_dump(mode="json") == {"match_expr": expression}
+        assert QueryExpr.model_validate_json(query.model_dump_json()) == query
 
 
 class TestQueryExpr:

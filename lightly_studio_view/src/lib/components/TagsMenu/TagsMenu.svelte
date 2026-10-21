@@ -21,8 +21,15 @@
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
-    let { collection_id, gridType }: Parameters<typeof useTags>[0] & { gridType: GridType } =
-        $props();
+    let {
+        collection_id,
+        gridType,
+        allowAssign = true
+    }: Parameters<typeof useTags>[0] & {
+        gridType: GridType;
+        /** Set to false for views without a selection to assign tags to, so they only filter. */
+        allowAssign?: boolean;
+    } = $props();
 
     const isAnnotationGrid = $derived(gridType === 'annotations');
 
@@ -252,7 +259,7 @@
             {/each}
         </div>
 
-        {#if canManageTags}
+        {#if canManageTags && allowAssign}
             <TagAssignInput
                 options={$tags}
                 {hasSelection}

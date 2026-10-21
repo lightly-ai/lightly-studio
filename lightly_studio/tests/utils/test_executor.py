@@ -30,6 +30,16 @@ def test_get_media_executor_isolates_different_prefixes() -> None:
     assert image_executor is not video_executor
 
 
+def test_get_media_executor__max_workers(mocker: MockerFixture) -> None:
+    mocker.patch("lightly_studio.utils.executor.os.cpu_count", return_value=8)
+
+    default_executor = get_media_executor("image_thumbnail")
+    sized_executor = get_media_executor("assisted_labeling", max_workers=3)
+
+    assert default_executor._max_workers == 7
+    assert sized_executor._max_workers == 3
+
+
 def test_get_media_worker_count_uses_shared_worker_policy(mocker: MockerFixture) -> None:
     mocker.patch("lightly_studio.utils.executor.os.cpu_count", return_value=8)
 

@@ -12,7 +12,10 @@ from numpy.typing import NDArray
 
 
 class ProviderError(Exception):
-    """Raised when a provider cannot compute a segmentation."""
+    """Raised when a provider cannot compute a segmentation.
+
+    API callers see the message, so it must not hold provider output.
+    """
 
 
 class ProviderUnavailableError(Exception):
