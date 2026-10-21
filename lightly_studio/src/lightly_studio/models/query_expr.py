@@ -8,6 +8,7 @@ from typing import Annotated, Union
 
 import pydantic
 from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictInt, StrictStr
+from pydantic_core import PydanticCustomError
 from typing_extensions import Literal, Self, TypeAlias
 
 
@@ -109,7 +110,9 @@ class MetadataComparisonExpr(BaseModel):
         if self.operator not in (OrdinalComparisonOperator.EQ, OrdinalComparisonOperator.NEQ) and (
             isinstance(self.value, (str, bool))
         ):
-            raise ValueError("Metadata ordering comparisons require a number.")
+            raise PydanticCustomError(
+                "metadata_ordering", "Metadata ordering comparisons require a number."
+            )
         return self
 
 
