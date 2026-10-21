@@ -184,6 +184,29 @@ def test_delete_annotations_by_ids__deletes_captions(db_session: Session) -> Non
     assert db_session.get(SampleTable, to_delete_id) is None
 
 
+def test_delete_annotations_by_ids__delete_samples_false_keeps_sample(db_session: Session) -> None:
+    # The annotation label update deletes the annotation but reuses its sample.
+    image = _create_image_in_new_collection(session=db_session)
+    (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
+    tag = create_tag(
+        session=db_session, collection_id=annotation.sample.collection_id, tag_name="tag"
+    )
+    annotation.sample.tags.append(tag)
+    db_session.add(annotation.sample)
+    db_session.commit()
+    annotation_id = annotation.sample_id
+
+    deleted_count = annotation_resolver.delete_annotations_by_ids(
+        session=db_session, annotation_ids=[annotation_id], delete_samples=False
+    )
+
+    assert deleted_count == 1
+    assert db_session.get(AnnotationBaseTable, annotation_id) is None
+    assert db_session.get(ObjectDetectionAnnotationTable, annotation_id) is None
+    assert db_session.get(SampleTable, annotation_id) is not None
+    assert _get_tag_link_sample_ids(session=db_session) == [annotation_id]
+
+
 def test_delete_annotations_by_ids__multiple(db_session: Session) -> None:
     image = _create_image_in_new_collection(session=db_session)
     annotation_ids = [
