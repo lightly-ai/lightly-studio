@@ -110,20 +110,7 @@ describe('useBulkDeleteAnnotations', () => {
         );
     });
 
-    it('refetches and reports a stale selection on 404', async () => {
-        mocks.bulkDeleteAnnotations.mockResolvedValue({
-            error: { detail: 'Not found' },
-            response: { status: 404 }
-        });
-        const { deleteAnnotations } = useBulkDeleteAnnotations();
-
-        const result = await deleteAnnotations(defaultInput);
-
-        expect(result).toEqual({ ok: false, isStale: true });
-        expect(mocks.invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
-    });
-
-    it('reports other failures without refetching', async () => {
+    it('reports failures without refetching', async () => {
         mocks.bulkDeleteAnnotations.mockResolvedValue({
             error: { detail: 'Boom' },
             response: { status: 500 }
@@ -132,7 +119,7 @@ describe('useBulkDeleteAnnotations', () => {
 
         const result = await deleteAnnotations(defaultInput);
 
-        expect(result).toEqual({ ok: false, isStale: false });
+        expect(result).toEqual({ ok: false });
         expect(mocks.invalidateQueries).not.toHaveBeenCalled();
     });
 

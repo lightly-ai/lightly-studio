@@ -31,13 +31,7 @@ interface BulkDeleteAnnotationsInput {
     selectAllSnapshot: SelectAllSnapshot | null;
 }
 
-/**
- * `isStale` is set when some selected annotations no longer exist. Nothing was deleted and the
- * grids were refetched.
- */
-type BulkDeleteAnnotationsResult =
-    | { ok: true; deletedCount: number }
-    | { ok: false; isStale: boolean };
+type BulkDeleteAnnotationsResult = { ok: true; deletedCount: number } | { ok: false };
 
 export interface UseBulkDeleteAnnotations {
     deleteAnnotations: (input: BulkDeleteAnnotationsInput) => Promise<BulkDeleteAnnotationsResult>;
@@ -88,18 +82,14 @@ export const useBulkDeleteAnnotations = (): UseBulkDeleteAnnotations => {
     ): Promise<BulkDeleteAnnotationsResult> => {
         isPending.set(true);
         try {
-            const { data, response } = await requestBulkDelete(input);
-            const isStale = response?.status === 404;
-            if (data) {
-                invalidateQueries(input);
-                return { ok: true, deletedCount: data.deleted_count };
+            const { data } = await requestBulkDelete(input);
+            if (!data) {
+                return { ok: false };
             }
-            if (isStale) {
-                invalidateQueries(input);
-            }
-            return { ok: false, isStale };
+            invalidateQueries(input);
+            return { ok: true, deletedCount: data.deleted_count };
         } catch {
-            return { ok: false, isStale: false };
+            return { ok: false };
         } finally {
             isPending.set(false);
         }
