@@ -32,6 +32,9 @@ vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
         updateAnnotation: vi.fn()
     })
 }));
+vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
+    useAssistedLabelingStatus: () => ({ disabledReason: null })
+}));
 // jsdom lacks the SVG matrix operations used to keep labels the same size while zooming.
 vi.mock('$lib/components/ZoomableContainer/unscale', () => ({ unscale: vi.fn() }));
 
