@@ -161,6 +161,7 @@ def _camera_projections(
         session=session, recording_id=recording_id
     )
     projections: dict[str, CameraProjectionView] = {}
+    dynamic_transforms_by_timestamp: dict[int, Sequence[StaticTransform] | None] = {}
     with reader_cache.borrow_reader(uri=recording.uri) as reader:
         for component in components:
             calibration = calibrations.get(component.collection_id)
@@ -169,12 +170,21 @@ def _camera_projections(
             projection_timestamp_ns = camera_timestamps.get(component.group_component_name)
             if projection_timestamp_ns is None:
                 continue
+            if projection_timestamp_ns not in dynamic_transforms_by_timestamp:
+                dynamic_transforms_by_timestamp[
+                    projection_timestamp_ns
+                ] = load_dynamic_transforms.load_dynamic_transforms_near(
+                    session=session,
+                    recording_id=recording_id,
+                    timestamp_ns=projection_timestamp_ns,
+                )
             matrix = _get_camera_projection_matrix(
                 reader=reader,
                 source_frame_id=target_frame_id,
                 target_frame_id=component.frame_id,
                 timestamp_ns=projection_timestamp_ns,
                 static_transforms=static_transforms,
+                dynamic_transforms=dynamic_transforms_by_timestamp[projection_timestamp_ns],
             )
             if matrix is None:
                 continue
@@ -187,12 +197,13 @@ def _camera_projections(
     return projections
 
 
-def _get_camera_projection_matrix(
+def _get_camera_projection_matrix(  # noqa: PLR0913
     reader: McapFileReader,
     source_frame_id: str,
     target_frame_id: str,
     timestamp_ns: int,
     static_transforms: Sequence[StaticTransform],
+    dynamic_transforms: Sequence[StaticTransform] | None,
 ) -> NDArray[np.float64] | None:
     """Resolve the scene-to-camera transform, skipping unavailable transforms."""
     if source_frame_id == target_frame_id:
@@ -204,6 +215,7 @@ def _get_camera_projection_matrix(
             target_frame_id=target_frame_id,
             timestamp_ns=timestamp_ns,
             static_transforms=static_transforms,
+            dynamic_transforms=dynamic_transforms,
         )
     except (McapAccessError, TransformNotFoundError):
         return None

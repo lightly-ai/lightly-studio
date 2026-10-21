@@ -210,6 +210,7 @@ def test_get_tick_details__camera_projection_uses_camera_timestamp(
         target_frame_id=CAMERA_FRAME_ID,
         timestamp_ns=3_000,
         static_transforms=[],
+        dynamic_transforms=None,
     )
 
 
