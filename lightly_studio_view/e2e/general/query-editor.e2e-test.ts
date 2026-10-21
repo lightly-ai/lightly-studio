@@ -20,6 +20,18 @@ async function typeAndApply(page: Page, query: string): Promise<void> {
 }
 
 test.describe('query editor', () => {
+    test('apply a metadata query and verify the matching sample', async ({ samplesPage, page }) => {
+        await page.getByTestId('side-panel-tabs-query').click();
+        await typeAndApply(
+            page,
+            'metadata["camera"] = "front" AND metadata["reviewed"] = true AND metadata["odometry.acc[1]"] < -0.2'
+        );
+
+        await expect(samplesPage.getSamples()).toHaveCount(1);
+        await expect(samplesPage.getSampleByName(cocoDataset.firstSampleName)).toBeVisible();
+        await expect(page.getByTestId('query-filter-chip')).toBeVisible();
+    });
+
     test('apply query and verify filtered grid', async ({ samplesPage, page }) => {
         await page.getByTestId('side-panel-tabs-query').click();
         await expect(page.getByRole('heading', { name: 'Query Filter' })).toBeVisible();

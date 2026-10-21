@@ -21,5 +21,11 @@ dataset.add_samples_from_coco(
     annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
 )
 
+# Seed a known sample for metadata query editor coverage.
+for sample in dataset:
+    if sample.file_name == "000000001732.jpg":
+        sample.metadata.update(camera="front", reviewed=True, odometry={"acc": [0.0, -0.3]})
+        break
+
 # We start the UI application on port 8001
 ls.start_gui(open_browser=False)

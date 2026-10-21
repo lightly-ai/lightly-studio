@@ -27,6 +27,14 @@ interface FieldReference extends Expression {
   member: string;
 }
 
+interface MetadataReference extends Expression {
+  path: string;
+}
+
+interface BooleanLiteral extends Expression {
+  value: boolean;
+}
+
 interface TagInExpression extends Expression {
   tag_name: Expression;
 }
@@ -56,6 +64,7 @@ SampleUnary<isImage> returns Expression:
   '(' Sample<isImage> ')'
     | {NotExpression} NOT expression=SampleUnary<isImage>
     | SampleComparison<isImage>
+    | MetadataComparison
     | TagInExpression
     | AnnotationQuery;
 
@@ -65,6 +74,24 @@ SampleComparison<isImage> returns ComparisonExpression:
    | SampleEqualityFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=NumericLiteral
    | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral
    | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
+
+MetadataComparison returns ComparisonExpression:
+  MetadataReference {ComparisonExpression.left=current}
+    (operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=SignedNumericLiteral
+    | operator=('=' | '!=') right=StringLiteral
+    | operator=('=' | '!=') right=BooleanLiteral);
+
+MetadataReference returns MetadataReference:
+  {MetadataReference} 'metadata' '[' path=STRING ']';
+
+SignedNumericLiteral returns Expression:
+  {NumberLiteral} value=SignedNumber;
+
+SignedNumber returns number:
+  ('-' | '+')? (FLOAT | INT);
+
+BooleanLiteral returns Expression:
+  {BooleanLiteral} value=BOOLEAN;
 
 SampleIntFieldReference<isImage> returns FieldReference:
   (<isImage> {FieldReference} member=ImageIntFieldName)
@@ -236,6 +263,7 @@ FloatLiteral returns Expression:
 StringLiteral returns Expression:
   {StringLiteral} value=STRING;
 
+terminal BOOLEAN returns boolean: /\b(true|false)\b/;
 terminal FLOAT returns number: /[0-9]+\.[0-9]*/;
 terminal INT returns number: /[0-9]+/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
