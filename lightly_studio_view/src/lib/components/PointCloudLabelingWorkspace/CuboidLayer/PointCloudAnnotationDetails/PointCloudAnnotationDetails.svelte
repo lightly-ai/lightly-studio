@@ -4,7 +4,7 @@
     import AnnotationGeometryGroup from './AnnotationGeometryGroup';
     import { Typography } from '$lib/components/Typography';
 
-    type AnnotationInput = Parameters<typeof createAnnotationDetails>[0]['annotation'];
+    type AnnotationInput = Parameters<typeof createAnnotationDetails>[0]['annotation'] & { id: string };
 
     interface Props {
         /** Cuboid whose metadata is displayed. */

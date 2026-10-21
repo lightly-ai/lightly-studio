@@ -2,7 +2,7 @@ import { rotationToEulerDegrees } from './pointCloudAnnotationDetails';
 import { updateAnnotationGeometry } from './updateAnnotationGeometry';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
-type AnnotationInput = Pick<CuboidAnnotation, 'center' | 'size' | 'rotation' | 'trackNumber'>;
+type AnnotationInput = Pick<CuboidAnnotation, 'id' | 'center' | 'size' | 'rotation' | 'trackNumber'>;
 type FieldName = Parameters<typeof updateAnnotationGeometry>[1];
 
 function isValidFieldValue(field: FieldName, value: number): boolean {
@@ -31,16 +31,17 @@ export function useAnnotationDetailsEditing(
     // Accumulates uncommitted field edits so that a second commit does not
     // rebuild geometry from the stale prop while a previous save is in-flight.
     let pendingAnnotation: AnnotationInput | null = null;
-    // Used to detect when the annotation prop itself has changed (i.e. a
-    // refetch returned new data), at which point pendingAnnotation is cleared.
-    let lastAnnotationRef: AnnotationInput | null = null;
+    // Tracks the identity of the annotation currently shown so that
+    // pendingAnnotation is cleared only when a different cuboid is selected,
+    // not when the same cuboid is refetched with a new object reference.
+    let lastAnnotationId: string | null = null;
     let valueOnFocus = '';
 
     $effect(() => {
         const annotation = getAnnotation();
 
-        if (annotation !== lastAnnotationRef) {
-            lastAnnotationRef = annotation;
+        if (annotation.id !== lastAnnotationId) {
+            lastAnnotationId = annotation.id;
             pendingAnnotation = null;
         }
 
