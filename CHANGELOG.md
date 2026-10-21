@@ -27,7 +27,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Improved filter consistency between the images and captions views.
-- Fixed clearing filters in the captions view and kept tag filters when switching between images and captions.
 - Group image-grid evaluation sorts by metric, show highest counts first, and mark missing results.
 - Clarify evaluation settings and annotation sources in the evaluation panel.
 - Keep annotation cards aligned and confidence visible when switching between viewing and editing.
