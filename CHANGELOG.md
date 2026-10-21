@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Keep source colors stable when hiding annotations in the details view, and show confidence while editing.
 - Preserve existing evaluation results when recomputation fails.
 - Python SDK: `start_gui()` stops without a `KeyboardInterrupt` traceback when you press Ctrl+C.
 - The GUI footer no longer shows a dev commit hash for released versions.

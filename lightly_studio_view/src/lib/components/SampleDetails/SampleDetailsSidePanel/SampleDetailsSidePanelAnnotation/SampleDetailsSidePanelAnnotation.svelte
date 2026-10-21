@@ -201,14 +201,6 @@
                                     <span class="truncate">{annotationLabelName}</span>
                                 </div>
                             {/if}
-                            {#if annotation.confidence != null}
-                                {@const formattedConfidence = formatConfidence(
-                                    annotation.confidence
-                                )}
-                                <span class="text-xs text-muted-foreground"
-                                    >Confidence: {formattedConfidence}</span
-                                >
-                            {/if}
                         </div>
                     </div>
                 </div>
@@ -275,6 +267,11 @@
                     </div>
                 </div>
             </div>
+            {#if annotation.confidence != null}
+                <div class="pt-1 text-xs text-muted-foreground">
+                    Confidence: {formatConfidence(annotation.confidence)}
+                </div>
+            {/if}
             {#if annotation.object_track_number != null}
                 <div class="pt-1">
                     <span class="text-xs text-muted-foreground">

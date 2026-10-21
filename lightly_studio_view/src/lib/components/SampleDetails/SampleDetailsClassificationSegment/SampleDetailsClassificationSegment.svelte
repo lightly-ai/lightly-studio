@@ -6,7 +6,12 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
-    import { cn, formatConfidence, resolveEffectiveColorBySource } from '$lib/utils';
+    import {
+        cn,
+        countVisibleSources,
+        formatConfidence,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -77,7 +82,7 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { isSourceVisible, multipleSourcesVisible } = useAnnotationCollectionsFilter();
+    const { isSourceVisible } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
@@ -90,11 +95,10 @@
         computeSeededHiddenIds(classificationAnnotations, $isSourceVisible)
     );
 
-    // Color source group headers by source only when multiple sources are visible and class
-    // coloring is not enforced, mirroring the annotation segment and canvas behavior.
+    // Local visibility changes must not alter source colors or card layout.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: $multipleSourcesVisible,
+            multipleSourcesVisible: countVisibleSources(classificationAnnotations) >= 2,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
