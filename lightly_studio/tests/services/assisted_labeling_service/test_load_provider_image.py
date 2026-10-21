@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 from sqlmodel import Session
 
-from lightly_studio.errors import NotFoundError
+from lightly_studio.errors import NotFoundError, UnknownImageSizeError
 from lightly_studio.services import assisted_labeling_service
 from tests.helpers_resolvers import create_collection, create_image
 
@@ -45,7 +45,20 @@ def test_load_provider_image__missing_file(db_session: Session, tmp_path: Path) 
         session=db_session, collection_id=collection.collection_id, sample_id=image.sample_id
     )
 
-    with pytest.raises(NotFoundError, match="does not exist"):
+    with pytest.raises(NotFoundError, match="could not be read"):
+        provider_image.read_bytes()
+
+
+def test_load_provider_image__unreadable_file(db_session: Session, tmp_path: Path) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs=str(tmp_path)
+    )
+    provider_image = assisted_labeling_service.load_provider_image(
+        session=db_session, collection_id=collection.collection_id, sample_id=image.sample_id
+    )
+
+    with pytest.raises(NotFoundError, match="could not be read"):
         provider_image.read_bytes()
 
 
@@ -53,7 +66,7 @@ def test_load_provider_image__unknown_size(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id, width=0)
 
-    with pytest.raises(ValueError, match="has no known size"):
+    with pytest.raises(UnknownImageSizeError, match="has no known size"):
         assisted_labeling_service.load_provider_image(
             session=db_session, collection_id=collection.collection_id, sample_id=image.sample_id
         )

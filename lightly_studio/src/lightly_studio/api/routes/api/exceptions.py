@@ -22,7 +22,7 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import NotFoundError, QueryExprError
+from lightly_studio.errors import NotFoundError, QueryExprError, UnknownImageSizeError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -136,6 +136,16 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
         return JSONResponse(
             status_code=HTTP_STATUS_NOT_FOUND,
             content={"error": str(_exc) or "Resource not found."},
+        )
+
+    @app.exception_handler(UnknownImageSizeError)
+    async def _unknown_image_size_error_handler(
+        _request: Request, _exc: UnknownImageSizeError
+    ) -> JSONResponse:
+        """Handle a stored image without a known size."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY)
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY, content={"error": str(_exc)}
         )
 
     @app.exception_handler(QueryExprError)

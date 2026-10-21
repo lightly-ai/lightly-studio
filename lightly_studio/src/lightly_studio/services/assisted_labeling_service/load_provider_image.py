@@ -9,7 +9,7 @@ import fsspec
 from sqlmodel import Session
 
 from lightly_studio.assisted_labeling.provider import ProviderImage
-from lightly_studio.errors import NotFoundError
+from lightly_studio.errors import NotFoundError, UnknownImageSizeError
 from lightly_studio.resolvers import image_resolver
 
 
@@ -20,13 +20,13 @@ def load_provider_image(session: Session, collection_id: UUID, sample_id: UUID) 
 
     Raises:
         NotFoundError: If the collection has no image with the sample ID.
-        ValueError: If the image has no known size.
+        UnknownImageSizeError: If the image has no known size.
     """
     image = image_resolver.get_by_id(session=session, sample_id=sample_id)
     if image is None or image.sample.collection_id != collection_id:
         raise NotFoundError(f"Image {sample_id} not found in collection {collection_id}.")
     if image.width <= 0 or image.height <= 0:
-        raise ValueError(f"Image {sample_id} has no known size.")
+        raise UnknownImageSizeError(f"Image {sample_id} has no known size.")
     return ProviderImage(
         sample_id=image.sample_id,
         width=image.width,
@@ -40,10 +40,10 @@ def _read_file(file_path: str) -> bytes:
     """Reads a local or cloud file.
 
     Raises:
-        NotFoundError: If the file does not exist.
+        NotFoundError: If the file cannot be read.
     """
     filesystem, path = fsspec.core.url_to_fs(url=file_path)
     try:
         return bytes(filesystem.cat_file(path=path))
-    except FileNotFoundError as exc:
-        raise NotFoundError(f"The image file '{file_path}' does not exist.") from exc
+    except OSError as exc:
+        raise NotFoundError(f"The image file '{file_path}' could not be read.") from exc

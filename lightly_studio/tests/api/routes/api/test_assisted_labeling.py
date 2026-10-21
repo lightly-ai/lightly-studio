@@ -165,6 +165,21 @@ def test_create_interactive_annotation_preview__unknown_sample(
     assert stub_provider.prompts == []
 
 
+def test_create_interactive_annotation_preview__unknown_image_size(
+    db_session: Session, media_test_client: TestClient, stub_provider: StubProvider
+) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id, width=0)
+
+    response = _post_interactive(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+    assert response.json() == {"error": f"Image {image.sample_id} has no known size."}
+    assert stub_provider.prompts == []
+
+
 def test_create_interactive_annotation_preview__provider_error(
     db_session: Session, media_test_client: TestClient, stub_provider: StubProvider
 ) -> None:
