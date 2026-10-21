@@ -42,36 +42,42 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
     };
 });
 
-vi.mock('$lib/hooks', () => ({
-    useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
-    // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
-    useMcapSequenceSummary: () => ({
-        summary: { data: summaryData, isLoading: false, isError: false },
-        refetch: vi.fn()
-    }),
-    useMcapSequenceTicks: () => ({
-        ticks: {
-            data: {
-                ticks: [
-                    { seq_number: 0, timestamp_ns: 1000 },
-                    { seq_number: 1, timestamp_ns: 2000 }
-                ]
-            }
-        },
-        refetch: vi.fn()
-    }),
-    useTickDetails: () => ({ tickDetails: { data: undefined } }),
-    useCloudPointFrame: () => ({
-        query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
-    }),
-    useTickCameraFrames: () => ({ query: { data: undefined } }),
-    useAnnotationCollections: () => ({ data: [] }),
-    useMcapTickPrefetchScheduler: () => ({
-        bufferedRanges: [],
-        errors: new Map(),
-        cancel: vi.fn()
-    })
-}));
+vi.mock('$lib/hooks', async () => {
+    const { readonly, writable } = await import('svelte/store');
+    const featureFlags = writable<string[]>([]);
+    return {
+        useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
+        useGlobalStorage: () => ({ isEditingMode: writable(false) }),
+        useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
+        // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
+        useMcapSequenceSummary: () => ({
+            summary: { data: summaryData, isLoading: false, isError: false },
+            refetch: vi.fn()
+        }),
+        useMcapSequenceTicks: () => ({
+            ticks: {
+                data: {
+                    ticks: [
+                        { seq_number: 0, timestamp_ns: 1000 },
+                        { seq_number: 1, timestamp_ns: 2000 }
+                    ]
+                }
+            },
+            refetch: vi.fn()
+        }),
+        useTickDetails: () => ({ tickDetails: { data: undefined } }),
+        useCloudPointFrame: () => ({
+            query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
+        }),
+        useTickCameraFrames: () => ({ query: { data: undefined } }),
+        useAnnotationCollections: () => ({ data: [] }),
+        useMcapTickPrefetchScheduler: () => ({
+            bufferedRanges: [],
+            errors: new Map(),
+            cancel: vi.fn()
+        })
+    };
+});
 
 const mockPageData = {
     datasetId: 'dataset-1',

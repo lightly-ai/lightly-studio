@@ -1,16 +1,13 @@
 <script lang="ts">
     import { AnnotationType } from '$lib/api/lightly_studio_local';
-    import { SampleDetailsToolbarTooltip } from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import { onDestroy, onMount } from 'svelte';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
-    import BoundingBoxToolbarButton from '../BoundingBoxToolbarButton/BoundingBoxToolbarButton.svelte';
-    import BrushToolbarButton from '../BrushToolbarButton/BrushToolbarButton.svelte';
-    import CursorToolbarButton from '../CursorToolbarButton/CursorToolbarButton.svelte';
-    import DragToolbarButton from '../DragToolbarButton/DragToolbarButton.svelte';
+    import { onMount } from 'svelte';
+    import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
-    import SlicToolbarButton from '../SlicToolbarButton/SlicToolbarButton.svelte';
+    import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
+    import { MousePointer, Hand, Brush, Bot } from '@lucide/svelte';
+    import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
 
     import { getSlicEngine } from '@lightly-ai/slic';
 
@@ -38,67 +35,8 @@
     } = $props();
 
     const { settingsStore } = useSettings();
+
     let isSpacePressed = false;
-
-    const onKeyDown = (e: KeyboardEvent) => {
-        // Typing in a field or in an overlay must not trigger the shortcuts behind it.
-        if (isTextInputTarget(e.target) || isOverlayTarget(e.target)) {
-            return;
-        }
-
-        if (e.code === 'Space') {
-            isSpacePressed = true;
-            return;
-        }
-
-        if (isSpacePressed) {
-            return;
-        }
-
-        const key = e.key.toLowerCase();
-        if (key === $settingsStore.key_toolbar_selection) {
-            e.preventDefault();
-            onClickCursor();
-        } else if (key === $settingsStore.key_toolbar_bounding_box) {
-            e.preventDefault();
-            activateBoundingBox();
-        } else if (key === $settingsStore.key_toolbar_segmentation_mask) {
-            if (!showSegmentationTool) return;
-            e.preventDefault();
-            activateBrush();
-        } else if (key === ($settingsStore.key_toolbar_slic ?? 'a').toLowerCase()) {
-            if (!showSegmentationTool || !slicAvailable) return;
-            e.preventDefault();
-            if (e.repeat || annotationLabelContext.isDrawing || isPending) return;
-            onClickSlic();
-            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
-        } else if (key === $settingsStore.key_toolbar_drag) {
-            e.preventDefault();
-            onClickDrag();
-        }
-    };
-
-    const onKeyUp = (e: KeyboardEvent) => {
-        if (e.code === 'Space') {
-            isSpacePressed = false;
-        }
-    };
-
-    const onWindowBlur = () => {
-        isSpacePressed = false;
-    };
-
-    onMount(() => {
-        window.addEventListener('keydown', onKeyDown);
-        window.addEventListener('keyup', onKeyUp);
-        window.addEventListener('blur', onWindowBlur);
-    });
-
-    onDestroy(() => {
-        window.removeEventListener('keydown', onKeyDown);
-        window.removeEventListener('keyup', onKeyUp);
-        window.removeEventListener('blur', onWindowBlur);
-    });
 
     const {
         context: annotationLabelContext,
@@ -114,6 +52,77 @@
         setBrushMode,
         setStatus
     } = useSampleDetailsToolbarContext();
+
+    const items = $derived<ToolbarItem[]>([
+        {
+            id: 'cursor',
+            label: 'Selection',
+            icon: MousePointer,
+            shortcut: $settingsStore.key_toolbar_selection,
+            action: 'select'
+        },
+        {
+            id: 'drag',
+            label: 'Drag',
+            icon: Hand,
+            shortcut: $settingsStore.key_toolbar_drag,
+            action: 'pan',
+            hint: 'Hold Space to pan temporarily'
+        },
+        {
+            id: 'bounding-box',
+            label: 'Bounding Box Tool',
+            icon: VectorSquareIcon,
+            shortcut: $settingsStore.key_toolbar_bounding_box,
+            action: 'draw',
+            visible: !annotationLabelContext.isOnAnnotationDetailsView
+        },
+        {
+            id: 'slic',
+            label: 'AI-Assisted labeling',
+            icon: Bot,
+            shortcut: $settingsStore.key_toolbar_slic ?? 'a',
+            action: 'activate',
+            visible: showSegmentationTool && slicAvailable
+        },
+        {
+            id: 'brush',
+            label: 'Segmentation Mask Brush',
+            icon: Brush,
+            shortcut: $settingsStore.key_toolbar_segmentation_mask,
+            action: 'paint',
+            visible: showSegmentationTool
+        }
+    ]);
+
+    function shouldHandleShortcut(e: KeyboardEvent): boolean {
+        if (isOverlayTarget(e.target)) return false;
+
+        if (e.code === 'Space') {
+            isSpacePressed = true;
+            return false;
+        }
+
+        if (isSpacePressed) return false;
+
+        return true;
+    }
+
+    // Reset space tracking on keyup and window blur.
+    onMount(() => {
+        const onKeyUp = (e: KeyboardEvent) => {
+            if (e.code === 'Space') isSpacePressed = false;
+        };
+        const onWindowBlur = () => {
+            isSpacePressed = false;
+        };
+        window.addEventListener('keyup', onKeyUp);
+        window.addEventListener('blur', onWindowBlur);
+        return () => {
+            window.removeEventListener('keyup', onKeyUp);
+            window.removeEventListener('blur', onWindowBlur);
+        };
+    });
 
     $effect(() => {
         // Reset annotation label and type when switching to cursor tool
@@ -157,16 +166,6 @@
         setLastCreatedAnnotationId(null);
     };
 
-    const onClickBoundingBox = () => activateBoundingBox();
-
-    const onClickCursor = () => {
-        setStatus('cursor');
-    };
-
-    const onClickDrag = () => {
-        setStatus('drag');
-    };
-
     const activateBrush = () => {
         if (!showSegmentationTool) return;
 
@@ -176,9 +175,7 @@
         setLastCreatedAnnotationId(null);
     };
 
-    const onClickBrush = () => activateBrush();
-
-    const onClickSlic = () => {
+    const activateSlic = () => {
         if (!showSegmentationTool || !slicAvailable) return;
 
         const shouldKeepSelectedAnnotation =
@@ -192,71 +189,35 @@
         }
         setLastCreatedAnnotationId(null);
     };
+
+    function onToolChange(tool: string, trigger: ToolbarTrigger) {
+        switch (tool) {
+            case 'cursor':
+                setStatus('cursor');
+                break;
+            case 'drag':
+                setStatus('drag');
+                break;
+            case 'bounding-box':
+                activateBoundingBox();
+                break;
+            case 'brush':
+                activateBrush();
+                break;
+            case 'slic':
+                if (annotationLabelContext.isDrawing || isPending) return;
+                activateSlic();
+                if (trigger === 'shortcut' && !annotationLabelContext.isOnAnnotationDetailsView) {
+                    setAnnotationId(null);
+                }
+                break;
+        }
+    }
 </script>
 
-<div class="pointer-events-none absolute left-1 top-1 z-20">
-    <div
-        class="
-      pointer-events-auto
-      flex
-      select-none
-      flex-col
-      items-stretch
-      gap-1
-      rounded-lg
-      bg-muted
-      p-1
-      shadow-md
-    "
-    >
-        <SampleDetailsToolbarTooltip
-            label="Select"
-            shortcut={$settingsStore.key_toolbar_selection.toUpperCase()}
-            action="select"
-        >
-            <CursorToolbarButton onclick={onClickCursor} />
-        </SampleDetailsToolbarTooltip>
-        <SampleDetailsToolbarTooltip
-            label="Drag"
-            shortcut={$settingsStore.key_toolbar_drag.toUpperCase()}
-            action="pan"
-            hint="Hold Space to pan temporarily"
-        >
-            <DragToolbarButton onclick={onClickDrag} />
-        </SampleDetailsToolbarTooltip>
-        {#if !annotationLabelContext.isOnAnnotationDetailsView}
-            <SampleDetailsToolbarTooltip
-                label="Bounding Box"
-                shortcut={$settingsStore.key_toolbar_bounding_box.toUpperCase()}
-                action="draw"
-            >
-                <BoundingBoxToolbarButton onclick={onClickBoundingBox} />
-            </SampleDetailsToolbarTooltip>
-        {/if}
-        {#if showSegmentationTool && slicAvailable}
-            <SampleDetailsToolbarTooltip
-                label="AI-Assisted labeling"
-                shortcut={($settingsStore.key_toolbar_slic ?? 'a').toUpperCase()}
-                action="activate"
-            >
-                <SlicToolbarButton
-                    onclick={onClickSlic}
-                    isActive={sampleDetailsToolbarContext.status === 'slic'}
-                />
-            </SampleDetailsToolbarTooltip>
-        {/if}
-        {#if showSegmentationTool}
-            <SampleDetailsToolbarTooltip
-                label="Segmentation Mask Brush"
-                shortcut={$settingsStore.key_toolbar_segmentation_mask.toUpperCase()}
-                action="paint"
-            >
-                <BrushToolbarButton
-                    onclick={onClickBrush}
-                    isActive={sampleDetailsToolbarContext.status === 'brush' &&
-                        annotationLabelContext.annotationType === AnnotationType.SEGMENTATION_MASK}
-                />
-            </SampleDetailsToolbarTooltip>
-        {/if}
-    </div>
-</div>
+<Toolbar
+    {items}
+    activeTool={sampleDetailsToolbarContext.status}
+    {onToolChange}
+    {shouldHandleShortcut}
+/>
