@@ -1,8 +1,13 @@
 import { listMcapSequencesInfiniteOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createInfiniteQuery, useQueryClient } from '@tanstack/svelte-query';
 import { type Writable, writable } from 'svelte/store';
-import type { McapSequenceView } from '$lib/api/lightly_studio_local/types.gen';
+import type { McapSequenceFilter, McapSequenceView } from '$lib/api/lightly_studio_local/types.gen';
 import { GRID_PAGE_SIZE } from '$lib/constants';
+
+interface UseMcapSequencesInfiniteParams {
+    collection_id: string;
+    filter?: McapSequenceFilter | null;
+}
 
 interface UseMcapSequencesInfiniteReturn {
     data: Writable<McapSequenceView[]>;
@@ -12,24 +17,24 @@ interface UseMcapSequencesInfiniteReturn {
     totalCount: Writable<number>;
 }
 
+const buildOptions = ({ collection_id, filter }: UseMcapSequencesInfiniteParams) =>
+    listMcapSequencesInfiniteOptions({
+        path: { collection_id },
+        query: { limit: GRID_PAGE_SIZE },
+        body: { filter: filter ?? undefined }
+    });
+
 export const useMcapSequencesInfinite = (
-    getCollectionId: () => string
+    getParams: () => UseMcapSequencesInfiniteParams
 ): UseMcapSequencesInfiniteReturn => {
     const query = createInfiniteQuery(() => ({
-        ...listMcapSequencesInfiniteOptions({
-            path: { collection_id: getCollectionId() },
-            query: { limit: GRID_PAGE_SIZE }
-        }),
+        ...buildOptions(getParams()),
         getNextPageParam: (lastPage) => lastPage.nextCursor || undefined
     }));
 
     const client = useQueryClient();
     const refresh = () => {
-        const options = listMcapSequencesInfiniteOptions({
-            path: { collection_id: getCollectionId() },
-            query: { limit: GRID_PAGE_SIZE }
-        });
-        client.invalidateQueries({ queryKey: options.queryKey });
+        client.invalidateQueries({ queryKey: buildOptions(getParams()).queryKey });
     };
 
     const data = writable<McapSequenceView[]>([]);
@@ -40,6 +45,10 @@ export const useMcapSequencesInfinite = (
             const sequences = query.data.pages.flatMap((page) => page.data);
             data.set(sequences);
             totalCount.set(query.data.pages[0].total_count);
+        } else if (query.isPending) {
+            // A new query key without cached data must not show the previous filter's results.
+            data.set([]);
+            totalCount.set(0);
         }
     });
 

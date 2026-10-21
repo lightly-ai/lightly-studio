@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Disabled buttons now show a tooltip explaining why they cannot be clicked.
+- Added a filter panel to the captions tab, with tag and metadata filters. The footer now counts the number of active captions.
 - Delete an evaluation from the evaluation panel. Grid filters and sorting that use the deleted evaluation are removed.
 - API: Delete an evaluation and its results while keeping annotations unchanged.
 - Edit saved evaluation parameters and rerun from the evaluation panel.
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Improved filter consistency between the images and captions views.
 - Group image-grid evaluation sorts by metric, show highest counts first, and mark missing results.
 - Clarify evaluation settings and annotation sources in the evaluation panel.
 - Keep annotation cards aligned and confidence visible when switching between viewing and editing.
@@ -46,6 +48,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Keep source colors stable when hiding annotations in the details view, and show confidence while editing.
 - Preserve existing evaluation results when recomputation fails.
 - Python SDK: `start_gui()` stops without a `KeyboardInterrupt` traceback when you press Ctrl+C.
 - The GUI footer no longer shows a dev commit hash for released versions.

@@ -5,6 +5,10 @@ export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
 export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
+export {
+    buildMcapSequenceFilter,
+    useMcapSequenceFilters
+} from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useFiltersClearedSignal } from '$lib/hooks/useFiltersClearedSignal/useFiltersClearedSignal';

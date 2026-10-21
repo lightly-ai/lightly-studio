@@ -23,10 +23,23 @@ vi.mock('$app/state', () => ({
     }
 }));
 
+const { toggleSampleSelection } = vi.hoisted(() => ({ toggleSampleSelection: vi.fn() }));
+
+vi.mock('$lib/hooks/useTags/useTags', () => ({
+    useTags: () => ({ tagsSelected: writable(new Set<string>()) })
+}));
+
 vi.mock('$lib/hooks', () => ({
     useGlobalStorage: () => ({
         setfilteredSampleCount: vi.fn(),
-        sampleSize: writable({ width: 6, height: 200 })
+        sampleSize: writable({ width: 6, height: 200 }),
+        getSelectedSampleIds: () => writable(new Set<string>()),
+        toggleSampleSelection
+    }),
+    useMcapSequenceFilters: () => ({
+        mcapSequenceFilter: writable({ filter_type: 'mcap_sequence' }),
+        setCollectionId: vi.fn(),
+        updateTagIds: vi.fn()
     }),
     useMcapSequencesInfinite: () => ({
         data: writable(
@@ -91,12 +104,24 @@ describe('point-clouds/+page.svelte', () => {
         vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(1000);
     });
 
-    afterEach(() => vi.restoreAllMocks());
+    afterEach(() => {
+        vi.restoreAllMocks();
+        vi.clearAllMocks();
+    });
+
+    it('selects a sequence on click', async () => {
+        render(Page, { props: { data: pageData } });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'View MCAP sequence 1' }));
+
+        expect(toggleSampleSelection).toHaveBeenCalledWith('sequence-1', 'collection-1');
+        expect(goto).not.toHaveBeenCalled();
+    });
 
     it('navigates with the route dataset id (a collection id the layout can resolve)', async () => {
         render(Page, { props: { data: pageData } });
 
-        await fireEvent.click(screen.getByRole('button', { name: 'View MCAP sequence 1' }));
+        await fireEvent.dblClick(screen.getByRole('button', { name: 'View MCAP sequence 1' }));
 
         expect(goto).toHaveBeenCalledOnce();
         const destination = vi.mocked(goto).mock.calls[0][0] as string;

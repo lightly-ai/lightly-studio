@@ -8,7 +8,7 @@
 
     let { collectionId, onReady }: Props = $props();
 
-    const result = useMcapSequencesInfinite(() => collectionId);
+    const result = useMcapSequencesInfinite(() => ({ collection_id: collectionId }));
 
     $effect(() => {
         onReady(result);

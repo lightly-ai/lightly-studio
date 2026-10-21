@@ -16,24 +16,32 @@
 
     interface Props {
         sequences: McapSequence[];
+        selectedSampleIds?: Set<string>;
         isLoading: boolean;
         isEmpty: boolean;
         isError: boolean;
         hasNextPage: boolean;
         isFetchingNextPage: boolean;
+        scrollResetKey?: string;
         onLoadMore: () => void;
-        onSequenceClick: (sampleId: string) => void;
+        /** Click toggles the selection of a sequence. */
+        onSequenceSelect?: (sampleId: string, index: number, shiftKey: boolean) => void;
+        /** Double click opens a sequence. */
+        onSequenceOpen: (sampleId: string) => void;
     }
 
     let {
         sequences,
+        selectedSampleIds = new Set(),
         isLoading,
         isEmpty,
         isError,
         hasNextPage,
         isFetchingNextPage,
+        scrollResetKey,
         onLoadMore,
-        onSequenceClick
+        onSequenceSelect,
+        onSequenceOpen
     }: Props = $props();
 
     const { showSampleFilenamesStore } = useSettings();
@@ -67,6 +75,7 @@
             <Grid
                 itemCount={sequences.length}
                 {columnCount}
+                {scrollResetKey}
                 viewportProps={{ 'data-testid': 'mcap-sequences-grid-viewport' }}
                 gridProps={{
                     'data-testid': 'mcap-sequences-grid',
@@ -80,8 +89,17 @@
                             {height}
                             {style}
                             dataTestId={`mcap-sequence-grid-item-button-${sequences[index].sampleId}`}
-                            tag={false}
-                            onSelect={() => onSequenceClick(sequences[index].sampleId)}
+                            tag={onSequenceSelect !== undefined}
+                            isSelected={selectedSampleIds.has(sequences[index].sampleId)}
+                            onSelect={(event) =>
+                                onSequenceSelect
+                                    ? onSequenceSelect(
+                                          sequences[index].sampleId,
+                                          index,
+                                          event.shiftKey
+                                      )
+                                    : onSequenceOpen(sequences[index].sampleId)}
+                            ondblclick={() => onSequenceOpen(sequences[index].sampleId)}
                             ariaLabel={`View MCAP sequence ${index + 1}`}
                         >
                             <McapSequenceGridItem

@@ -431,12 +431,12 @@ describe('+layout.svelte collection-grid workspace', () => {
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
-    it('does not render the filter panel on point-clouds route', async () => {
+    it('renders the filter panel on point-clouds route', async () => {
         setPageRoute(APP_ROUTES.pointClouds);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('filter-panel-body')).not.toBeInTheDocument();
+        expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
     it('renders child route content on images route', async () => {
