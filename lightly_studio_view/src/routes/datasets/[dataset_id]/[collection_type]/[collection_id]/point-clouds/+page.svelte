@@ -4,7 +4,8 @@
     import { page } from '$app/state';
     import { get } from 'svelte/store';
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
-    import { useGlobalStorage, useMcapSequencesInfinite } from '$lib/hooks';
+    import { useGlobalStorage, useMcapSequenceFilters, useMcapSequencesInfinite } from '$lib/hooks';
+    import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
@@ -15,14 +16,25 @@
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
 
+    const { getSelectedSampleIds, toggleSampleSelection, setfilteredSampleCount } =
+        useGlobalStorage();
+    const { mcapSequenceFilter, setCollectionId, updateTagIds } = useMcapSequenceFilters();
+    const { tagsSelected } = $derived.by(() => useTags({ collection_id: collectionId }));
+
+    $effect(() => {
+        setCollectionId(collectionId);
+        updateTagIds(Array.from($tagsSelected));
+    });
+
     const {
         data: sequenceData,
         query,
         loadMore,
         totalCount
-    } = useMcapSequencesInfinite(() => collectionId);
-    const { getSelectedSampleIds, toggleSampleSelection, setfilteredSampleCount } =
-        useGlobalStorage();
+    } = useMcapSequencesInfinite(() => ({
+        collection_id: collectionId,
+        filter: $mcapSequenceFilter
+    }));
 
     $effect(() => {
         setfilteredSampleCount($totalCount);
@@ -80,6 +92,7 @@
     {isError}
     {hasNextPage}
     {isFetchingNextPage}
+    scrollResetKey={JSON.stringify($mcapSequenceFilter)}
     onLoadMore={loadMore}
     onSequenceSelect={handleSequenceSelect}
     onSequenceOpen={handleSequenceOpen}
