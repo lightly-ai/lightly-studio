@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import asyncio
 import functools
-from concurrent.futures import ThreadPoolExecutor
 
 from fastapi import APIRouter
 
@@ -16,6 +15,7 @@ from lightly_studio.models.assisted_labeling import (
     InteractiveAnnotationResponse,
 )
 from lightly_studio.services import assisted_labeling_service
+from lightly_studio.utils import executor
 
 assisted_labeling_router = APIRouter(prefix="/annotate", tags=["annotate"])
 
@@ -36,14 +36,10 @@ async def create_interactive_annotation_preview(
 ) -> InteractiveAnnotationResponse:
     """Returns a single-object preview from points or boxes. Saves nothing."""
     return await asyncio.get_running_loop().run_in_executor(
-        _get_provider_executor(), functools.partial(_create_interactive_preview, request=request)
-    )
-
-
-@functools.cache
-def _get_provider_executor() -> ThreadPoolExecutor:
-    return ThreadPoolExecutor(
-        max_workers=PROVIDER_MAX_WORKERS, thread_name_prefix="assisted_labeling"
+        executor.get_media_executor(
+            thread_name_prefix="assisted_labeling", max_workers=PROVIDER_MAX_WORKERS
+        ),
+        functools.partial(_create_interactive_preview, request=request),
     )
 
 
