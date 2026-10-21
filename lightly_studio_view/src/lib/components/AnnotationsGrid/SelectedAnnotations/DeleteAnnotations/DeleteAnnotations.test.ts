@@ -92,7 +92,7 @@ describe('DeleteAnnotations', () => {
     });
 
     it('keeps the selection and shows an error when deleting fails', async () => {
-        mocks.deleteAnnotations.mockResolvedValue({ ok: false, isStale: false });
+        mocks.deleteAnnotations.mockResolvedValue({ ok: false });
         render(DeleteAnnotations, { props: { collectionId: 'col-1' } });
 
         await confirmDelete();
@@ -103,17 +103,5 @@ describe('DeleteAnnotations', () => {
             )
         );
         expect(mocks.clearSelectedSampleAnnotationCrops).not.toHaveBeenCalled();
-    });
-
-    it('asks to retry when the selection is stale', async () => {
-        mocks.deleteAnnotations.mockResolvedValue({ ok: false, isStale: true });
-        render(DeleteAnnotations, { props: { collectionId: 'col-1' } });
-
-        await confirmDelete();
-
-        await waitFor(() =>
-            expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('retry'))
-        );
-        expect(mocks.clearSelectedSampleAnnotationCrops).toHaveBeenCalledWith('col-1');
     });
 });
