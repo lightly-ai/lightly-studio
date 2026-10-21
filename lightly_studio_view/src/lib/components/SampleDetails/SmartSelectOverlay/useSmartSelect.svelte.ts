@@ -11,7 +11,8 @@ import {
 } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 import { canInferFromPoints, type SmartSelectPoint } from './SmartSelectOverlay.helpers';
 
-type SmartSelectPrompt = { points: SmartSelectPoint[] } | { boxes: NormalizedBox[] };
+// One box, because the endpoint previews a single object
+type SmartSelectPrompt = { points: SmartSelectPoint[] } | { boxes: [NormalizedBox] };
 
 interface UseSmartSelectParams {
     collectionId: string;
