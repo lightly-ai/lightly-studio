@@ -63,7 +63,7 @@
     }: Props = $props();
 </script>
 
-<div class="flex shrink-0 items-center gap-1 border-b px-2 py-1">
+<div class="flex shrink-0 select-none items-center gap-1 border-b px-2 py-1">
     <Button
         variant="ghost"
         icon={SkipBack}

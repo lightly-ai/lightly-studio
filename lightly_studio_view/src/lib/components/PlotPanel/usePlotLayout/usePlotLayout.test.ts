@@ -40,6 +40,27 @@ describe('usePlotLayout', () => {
         expect(get(usePlotLayout('collection-b').plotLayout)).toBe('pacmap');
     });
 
+    it('preserves the layout until embedding succeeds and blocks duplicate submissions', async () => {
+        let finish!: (axes: typeof AXES) => void;
+        mocks.embedTextAxes.mockReturnValue(
+            new Promise((resolve) => {
+                finish = resolve;
+            })
+        );
+        const layout = usePlotLayout('collection-a');
+        const pending = layout.commitTextAxes(TEXT_AXES);
+        expect(get(layout.plotLayout)).toBe('pacmap');
+        expect(get(layout.plotAxes)).toBeNull();
+        expect(get(layout.isEmbeddingAxes)).toBe(true);
+        expect(await layout.commitTextAxes(TEXT_AXES)).toBe(false);
+        expect(mocks.embedTextAxes).toHaveBeenCalledTimes(1);
+        finish(AXES);
+        expect(await pending).toBe(true);
+        expect(get(layout.plotLayout)).toBe('text');
+        expect(get(layout.appliedTextAxes)).toEqual(TEXT_AXES);
+        expect(get(layout.isEmbeddingAxes)).toBe(false);
+    });
+
     it('keeps the committed axes and shows the error when the texts fail to embed', async () => {
         mocks.embedTextAxes.mockResolvedValueOnce(AXES);
         const layout = usePlotLayout('collection-a');
@@ -51,5 +72,7 @@ describe('usePlotLayout', () => {
 
         expect(toast.error).toHaveBeenCalledWith('Cannot embed text.');
         expect(get(layout.plotAxes)).toEqual(AXES);
+        expect(get(layout.appliedTextAxes)).toEqual(TEXT_AXES);
+        expect(get(layout.isEmbeddingAxes)).toBe(false);
     });
 });

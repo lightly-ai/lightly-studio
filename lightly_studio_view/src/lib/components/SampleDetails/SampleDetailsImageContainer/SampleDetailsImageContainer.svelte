@@ -74,6 +74,8 @@
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
+    // Source identity stays stable when annotations are temporarily hidden.
+    const showSourceLabels = $derived(countVisibleSources(sample.annotations) >= 2);
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
@@ -86,12 +88,10 @@
             });
     });
 
-    // Color boxes by source only while annotations from multiple sources are visible and
-    // class coloring is not enforced, mirroring the side panel.
+    // Use all sources in this sample so visibility changes do not recolor annotations.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible:
-                countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2,
+            multipleSourcesVisible: showSourceLabels,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
@@ -286,6 +286,7 @@
                         {sample}
                         {scale}
                         {colorBySource}
+                        {showSourceLabels}
                         highlight={annotationLabelContext.isDrawing
                             ? 'disabled'
                             : determineHighlightForAnnotation(annotation.sample_id)}

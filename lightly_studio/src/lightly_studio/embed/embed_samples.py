@@ -8,8 +8,10 @@ the capability-typed ``EmbedderRegistry``.
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
 from uuid import UUID
 
+import numpy as np
 from lightly_studio_serve.embedder import (
     ImageBytesEmbedder,
     ImageCropPathEmbedder,
@@ -18,6 +20,7 @@ from lightly_studio_serve.embedder import (
     TextEmbedder,
     VideoPathEmbedder,
 )
+from numpy.typing import NDArray
 from PIL.Image import Image
 from sqlmodel import Session
 from tqdm import tqdm
@@ -38,6 +41,9 @@ _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 # Embed and commit images in chunks, so that an embedder failure keeps the earlier chunks
 _IMAGE_EMBED_BATCH_SIZE = 1024
+
+# Commit MCAP image-frame embeddings in chunks, so that a failure keeps the earlier chunks
+_MCAP_IMAGE_FRAMES_EMBED_BATCH_SIZE = 64
 
 
 class ImageNotEmbeddedError(ValueError):
@@ -176,9 +182,10 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
     """Embed the crops of an annotation collection and store the result.
 
     When the collection has a default embedding model, its space selects the embedder.
-    Otherwise the registry's default crop embedder is used and registered as the
-    collection's default. Does nothing (and logs a warning) if no crop embedder is
-    available.
+    Otherwise the space of the parent collection is used, unless a registration set
+    the crop bootstrap or the parent has no default. Then the registry's default crop
+    embedder is used. The space is registered as the collection's default. Does nothing (and
+    logs a warning) if no crop embedder is available. See ``resolve_default_embedder``.
 
     Args:
         session: Database session for resolver operations.
@@ -271,9 +278,10 @@ def embed_frame_samples(
     """Embed the frames of a single video and store the result.
 
     When the collection has a default embedding model, its space selects the embedder.
-    Otherwise the registry's default PIL embedder is used and registered as the
-    collection's default. Does nothing (and logs a warning) if no PIL embedder is
-    available.
+    Otherwise the space of the parent video collection is used, unless a registration set
+    the PIL bootstrap or the parent has no default. Then the registry's default PIL
+    embedder is used. The space is registered as the collection's default. Does nothing (and
+    logs a warning) if no PIL embedder is available. See ``resolve_default_embedder``.
 
     Args:
         session: Database session for resolver operations.
@@ -314,6 +322,66 @@ def embed_frame_samples(
     )
 
 
+def embed_mcap_image_frames(
+    session: Session,
+    collection_id: UUID,
+    sample_ids: list[UUID],
+    load_frames: Callable[[UUID], list[Image]],
+) -> None:
+    """Embed samples from MCAP image frames and store the result.
+
+    The frames of each sample are embedded with the PIL image embedder. The embedding of
+    the sample is the mean of its frame embeddings, scaled to unit length. A sample
+    without frames, or whose frames the embedder all drops, gets no embedding.
+
+    When the collection has a default embedding model, its space selects the embedder.
+    Otherwise the registry's default PIL embedder is used and registered as the
+    collection's default. Does nothing (and logs a warning) if no PIL embedder is
+    available.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The collection whose default embedding model is used.
+        sample_ids: The sample IDs to embed.
+        load_frames: Returns the frames of one sample. It is called once per sample,
+            after the embedder is resolved, so that no frame is loaded in vain.
+    """
+    if not sample_ids:
+        logger.warning("No samples to embed. Skipping embedding generation.")
+        return
+
+    default_embedder_and_model_id = default_embedder.resolve_default_embedder(
+        session=session,
+        collection_id=collection_id,
+        embedder_type=ImagePILEmbedder,
+    )
+    if default_embedder_and_model_id is None:
+        return
+    embedder, model_id = default_embedder_and_model_id
+
+    with tqdm(total=len(sample_ids), desc="Embedding samples", unit=" samples") as progress:
+        for sample_id_chunk in batching.batched(
+            items=sample_ids, batch_size=_MCAP_IMAGE_FRAMES_EMBED_BATCH_SIZE
+        ):
+            kept_sample_ids: list[UUID] = []
+            embeddings: list[NDArray[np.float32]] = []
+            for sample_id in sample_id_chunk:
+                embedding = _pool_frame_embeddings(embedder=embedder, frames=load_frames(sample_id))
+                if embedding is not None:
+                    kept_sample_ids.append(sample_id)
+                    embeddings.append(embedding)
+                progress.update(1)
+            if not kept_sample_ids:
+                continue
+            embedding_storage.store_embeddings(
+                session=session,
+                model_id=model_id,
+                sample_ids=kept_sample_ids,
+                embeddings=np.stack(embeddings),
+                show_progress=False,
+            )
+
+
 def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
     """Report whether an embedder is available for a collection's video frames.
 
@@ -336,6 +404,33 @@ def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
         )
         is not None
     )
+
+
+def _pool_frame_embeddings(
+    embedder: ImagePILEmbedder, frames: list[Image]
+) -> NDArray[np.float32] | None:
+    """Embed the frames of one sample and pool them to a single embedding.
+
+    D is the embedding dimension.
+
+    Args:
+        embedder: The PIL image embedder resolved for the collection.
+        frames: The frames of the sample.
+
+    Returns:
+        The mean of the frame embeddings scaled to unit length, of shape (D,). None if
+        there are no frames or the embedder drops all of them.
+    """
+    if not frames:
+        return None
+    result = embedder.embed_images_pil(images=frames)
+    if not result.kept_indices:
+        return None
+    mean_embedding: NDArray[np.float32] = result.embeddings.mean(axis=0).astype(np.float32)
+    norm = float(np.linalg.norm(mean_embedding))
+    if norm > 0.0:
+        mean_embedding = mean_embedding / norm
+    return mean_embedding
 
 
 def _embed_image_chunk(

@@ -2,7 +2,7 @@
     import { untrack, type Component } from 'svelte';
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
-    import { SampleDetailsToolbarTooltip } from '$lib/components/SampleDetails/SampleDetailsToolbarTooltip';
+    import { ToolbarTooltip } from '$lib/components/ToolbarTooltip';
     import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
     import {
         SELECTION_TOOLS,
@@ -61,7 +61,7 @@
     data-testid="plot-tool-pill"
 >
     {#each SELECTION_TOOLS as tool (tool.mode)}
-        <SampleDetailsToolbarTooltip
+        <ToolbarTooltip
             label={tool.label}
             shortcut={tool.shortcut && formatShortcutKeys(tool.shortcut.keys, isMac)}
             action={tool.shortcut?.action}
@@ -82,6 +82,6 @@
                     )
                 }}
             />
-        </SampleDetailsToolbarTooltip>
+        </ToolbarTooltip>
     {/each}
 </div>

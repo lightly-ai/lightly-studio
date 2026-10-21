@@ -2,14 +2,16 @@
     import type { PageData } from './$types';
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
+    import { get } from 'svelte/store';
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
-    import McapSequencePrefetch from '$lib/components/McapSequencePrefetch/McapSequencePrefetch.svelte';
     import { useGlobalStorage, useMcapSequencesInfinite } from '$lib/hooks';
     import { routeHelpers } from '$lib/routes';
+    import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
-    const { data }: { data: PageData } = $props();
+    // The page layout provides data, but this route loads its own sequence data.
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data: _data }: { data: PageData } = $props();
     const datasetId = $derived(page.params.dataset_id!);
-    const prefetchDatasetId = $derived(data.collection.dataset_id);
     const collectionId = $derived(page.params.collection_id!);
     const collectionType = $derived(page.params.collection_type!);
 
@@ -19,7 +21,8 @@
         loadMore,
         totalCount
     } = useMcapSequencesInfinite(() => collectionId);
-    const { setfilteredSampleCount } = useGlobalStorage();
+    const { getSelectedSampleIds, toggleSampleSelection, setfilteredSampleCount } =
+        useGlobalStorage();
 
     $effect(() => {
         setfilteredSampleCount($totalCount);
@@ -33,16 +36,31 @@
             sequenceFrame: sequence.sequence_frame ?? null
         }))
     );
+    const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
+    let selectionAnchorSampleId = $state<string | null>(null);
     const isLoading = $derived(query.isPending && sequences.length === 0);
     const isEmpty = $derived(query.isSuccess && sequences.length === 0);
     const isError = $derived(query.isError);
     const hasNextPage = $derived(query.hasNextPage ?? false);
     const isFetchingNextPage = $derived(query.isFetchingNextPage);
 
+    const handleSequenceSelect = (sampleId: string, index: number, shiftKey: boolean) => {
+        selectionAnchorSampleId = selectRangeByAnchor({
+            sampleIdsInOrder: sequences.map((sequence) => sequence.sampleId),
+            selectedSampleIds: get(getSelectedSampleIds(collectionId)),
+            clickedSampleId: sampleId,
+            clickedIndex: index,
+            shiftKey,
+            anchorSampleId: selectionAnchorSampleId,
+            onSelectSample: (selectedSampleId) =>
+                toggleSampleSelection(selectedSampleId, collectionId)
+        });
+    };
+
     // An MCAP component's sample is its sequence, so the sample id doubles as the sequence id.
     // The dataset slot carries a collection id (what the collection layout resolves the hierarchy
     // by); the labeling page derives the real dataset id from the loaded collection.
-    const handleSequenceClick = (sampleId: string) => {
+    const handleSequenceOpen = (sampleId: string) => {
         void goto(
             routeHelpers.toPointCloudLabeling({
                 datasetId,
@@ -56,15 +74,13 @@
 
 <McapSequencesGrid
     {sequences}
+    selectedSampleIds={$selectedSampleIds}
     {isLoading}
     {isEmpty}
     {isError}
     {hasNextPage}
     {isFetchingNextPage}
     onLoadMore={loadMore}
-    onSequenceClick={handleSequenceClick}
+    onSequenceSelect={handleSequenceSelect}
+    onSequenceOpen={handleSequenceOpen}
 />
-
-{#each sequences.slice(0, 10) as sequence (sequence.sampleId)}
-    <McapSequencePrefetch datasetId={prefetchDatasetId} sequenceId={sequence.sampleId} />
-{/each}

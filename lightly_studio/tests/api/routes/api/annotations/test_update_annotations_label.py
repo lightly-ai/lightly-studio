@@ -31,5 +31,5 @@ def test_update_annotations_labels(
 
     assert response.status_code == HTTP_STATUS_OK
     result = response.json()
-    assert result[0]["sample_id"] == str(annotation.sample_id)
+    assert result[0]["sample_id"] == str(annotation_id)
     assert result[0]["annotation_label_id"] == str(label.annotation_label_id)

@@ -9,6 +9,8 @@ from uuid import UUID
 
 from typing_extensions import Self
 
+from lightly_studio.analytics import ingest_tracking
+from lightly_studio.analytics.ingest_tracking import IngestFormat
 from lightly_studio.core import dataset
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME
 from lightly_studio.core.mcap import (
@@ -24,6 +26,7 @@ from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import fsspec_lister, remote_storage
+from lightly_studio.embed import embed_mcap_sequences
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import mcap_group_sequence_resolver, recording_resolver
@@ -210,6 +213,7 @@ class McapDataset:
         max_pairing_diff_ns: int = add_mcaps.DEFAULT_MAX_PAIRING_DIFF_NS,
         limit: int | None = None,
         reference_frame_ids: Sequence[str] | None = None,
+        embed: bool = True,
     ) -> None:
         """Index every `.mcap` recording under a path into the dataset.
 
@@ -246,6 +250,9 @@ class McapDataset:
                 order. The first is the default. Each id is the frame string from the
                 bag, for example `map` or `CABIN`. When omitted, no frames are
                 stored and the viewer keeps each point cloud in its sensor frame.
+            embed: If True, generate embeddings for the newly indexed sequences. The
+                embedding of a sequence is computed from evenly spaced keyframes of the
+                first camera component.
 
         Raises:
             ValueError: If `components` names other components than the dataset has, if
@@ -253,6 +260,7 @@ class McapDataset:
                 greater than 0, or if a reference frame id is empty or repeated.
             AllInputFilesFailedError: If every recording under the path failed.
         """
+        source = ingest_tracking.get_source(path=path)
         fsspec_lister.validate_limit(limit)
         # Configure clients before discovery creates and caches a filesystem.
         remote_storage.configure_connections(paths=[str(path)])
@@ -267,7 +275,7 @@ class McapDataset:
         )
         logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
 
-        add_mcaps.index_recordings(
+        sequence_sample_ids = add_mcaps.index_recordings(
             dataset=self,
             mcap_paths=mcap_paths,
             sync_component=sync_component,
@@ -275,6 +283,15 @@ class McapDataset:
             max_pairing_diff_ns=max_pairing_diff_ns,
             reference_frame_ids=reference_frame_ids,
         )
+        ingest_tracking.track_samples_ingested(
+            source=source, sample_type=SampleType.MCAP, ingest_format=IngestFormat.MCAP
+        )
+        if embed:
+            embed_mcap_sequences.embed_mcap_sequences(
+                session=self._session,
+                collection_id=self.collection_id,
+                sequence_sample_ids=sequence_sample_ids,
+            )
 
     def add_labels_from_folder(
         self,

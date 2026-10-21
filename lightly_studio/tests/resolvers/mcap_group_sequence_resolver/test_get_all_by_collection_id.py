@@ -9,7 +9,6 @@ from sqlmodel import Session, insert
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.mcap import McapCreate
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
@@ -24,14 +23,16 @@ from lightly_studio.resolvers import (
     group_resolver,
     mcap_group_component_definition_resolver,
     mcap_group_sequence_resolver,
-    mcap_resolver,
     recording_resolver,
     sample_resolver,
     sequence_resolver,
 )
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.mcap_group_sequence_resolver import helpers
-from tests.resolvers.mcap_group_sequence_resolver.helpers import McapSequenceFixture
 
 
 def test_get_all_by_collection_id__empty_collection(db_session: Session) -> None:
@@ -204,7 +205,7 @@ def test_get_all_by_collection_id__pagination(db_session: Session) -> None:
 
 def test_get_all_by_collection_id__returns_sequence_frame(db_session: Session) -> None:
     fixture = helpers.create_mcap_sequence(session=db_session, uri="/bags/drive_001.mcap")
-    _add_mcap_ticks_to_sequence(
+    helpers.add_mcap_ticks_to_sequence(
         session=db_session,
         fixture=fixture,
         ticks=[(100, 100), (200, 200)],
@@ -229,7 +230,7 @@ def test_get_all_by_collection_id__no_sequence_frame_without_camera_frames(
     db_session: Session,
 ) -> None:
     fixture = helpers.create_mcap_sequence(session=db_session, uri="/bags/lidar_001.mcap")
-    _add_mcap_ticks_to_sequence(
+    helpers.add_mcap_ticks_to_sequence(
         session=db_session,
         fixture=fixture,
         ticks=[(100, 50)],
@@ -286,14 +287,14 @@ def test_get_all_by_collection_id__sequence_frame_uses_lowest_index_slot_when_ch
     )
     # The front slot's channel ID is from an earlier bag. This recording uses channel 8.
     # Rear has an earlier keyframe, but front has the lower group component index.
-    rear_sample_id = _create_mcap_sample(
+    rear_sample_id = helpers.create_mcap_sample(
         session=db_session,
         collection_id=slots["rear"].collection_id,
         channel_id=5,
         log_time_ns=100,
         keyframe_log_time_ns=100,
     )
-    front_sample_id = _create_mcap_sample(
+    front_sample_id = helpers.create_mcap_sample(
         session=db_session,
         collection_id=slots["front"].collection_id,
         channel_id=8,
@@ -364,14 +365,14 @@ def test_get_all_by_collection_id__no_sequence_frame_when_resolved_channel_has_n
         recording_id=recording_id,
     )
     # front (resolved camera) has no self-decodable keyframe; rear does.
-    front_sample_id = _create_mcap_sample(
+    front_sample_id = helpers.create_mcap_sample(
         session=db_session,
         collection_id=slots["front"].collection_id,
         channel_id=3,
         log_time_ns=100,
         keyframe_log_time_ns=50,  # Not a keyframe — keyframe_log_time_ns != log_time_ns.
     )
-    rear_sample_id = _create_mcap_sample(
+    rear_sample_id = helpers.create_mcap_sample(
         session=db_session,
         collection_id=slots["rear"].collection_id,
         channel_id=5,
@@ -398,80 +399,38 @@ def test_get_all_by_collection_id__no_sequence_frame_when_resolved_channel_has_n
     assert result.samples[0].sequence_frame is None
 
 
-def _add_mcap_ticks_to_sequence(
-    session: Session,
-    fixture: McapSequenceFixture,
-    ticks: list[tuple[int, int | None]],
-) -> None:
-    group_ids = [
-        _create_mcap_tick(
-            session=session,
-            fixture=fixture,
-            camera_log_time_ns=camera_log_time_ns,
-            camera_keyframe_log_time_ns=camera_keyframe_log_time_ns,
+def test_get_all_by_collection_id__filters(db_session: Session) -> None:
+    """A sample filter restricts the sequences and the total count."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(session=db_session, collection_id=seq_col.collection_id, count=3)
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=seq_col.collection_id,
+        pagination=None,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(sample_ids=[seq_ids[2]])),
+    )
+
+    assert result.total_count == 1
+    assert [sample.sample_id for sample in result.samples] == [seq_ids[2]]
+
+
+def _create_sequences(session: Session, collection_id: UUID, count: int) -> list[UUID]:
+    """Create MCAP sequences of one recording, in creation order."""
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    assert collection is not None
+    recording_id = recording_resolver.create(
+        session=session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    return [
+        mcap_group_sequence_resolver.create(
+            session=session, collection_id=collection_id, recording_id=recording_id
         )
-        for camera_log_time_ns, camera_keyframe_log_time_ns in ticks
+        for _ in range(count)
     ]
-    sequence_resolver.add_samples(
-        session=session,
-        sequence_sample_id=fixture.sample_id,
-        links=[
-            SampleSequenceLinkCreate(
-                sample_id=group_id,
-                seq_number=sequence_number,
-                timestamp_ns=ticks[sequence_number][0],
-            )
-            for sequence_number, group_id in enumerate(group_ids)
-        ],
-    )
-
-
-def _create_mcap_tick(
-    session: Session,
-    fixture: McapSequenceFixture,
-    camera_log_time_ns: int,
-    camera_keyframe_log_time_ns: int | None,
-) -> UUID:
-    camera_sample_id = _create_mcap_sample(
-        session=session,
-        collection_id=fixture.slots["front"].collection_id,
-        channel_id=3,
-        log_time_ns=camera_log_time_ns,
-        keyframe_log_time_ns=camera_keyframe_log_time_ns,
-    )
-    point_cloud_sample_id = _create_mcap_sample(
-        session=session,
-        collection_id=fixture.slots["pcl_front"].collection_id,
-        channel_id=7,
-        log_time_ns=camera_log_time_ns + 1,
-        keyframe_log_time_ns=None,
-    )
-    return group_resolver.create_many(
-        session=session,
-        collection_id=fixture.group_collection.collection_id,
-        groups=[{camera_sample_id, point_cloud_sample_id}],
-    )[0]
-
-
-def _create_mcap_sample(
-    session: Session,
-    collection_id: UUID,
-    channel_id: int,
-    log_time_ns: int,
-    keyframe_log_time_ns: int | None,
-) -> UUID:
-    return mcap_resolver.create_many(
-        session=session,
-        collection_id=collection_id,
-        samples=[
-            McapCreate(
-                channel_id=channel_id,
-                log_time_ns=log_time_ns,
-                capture_timestamp_ns=log_time_ns,
-                keyframe_log_time_ns=keyframe_log_time_ns,
-            )
-        ],
-    )[0]
 
 
 def _link_frames_to_sequence(

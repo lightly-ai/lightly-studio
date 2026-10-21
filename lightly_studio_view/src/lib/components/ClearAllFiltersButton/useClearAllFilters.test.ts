@@ -63,6 +63,31 @@ describe('useClearAllFilters', () => {
         expect(get(storage.getSelectedSampleIds(collectionId)).has('sample-1')).toBe(true);
     });
 
+    it('clears caption tags and metadata while preserving hidden image filters', () => {
+        const tags = useTags({ collection_id: collectionId, autoLoad: false });
+        tags.setTagSelected('tag-1', true);
+        storage.setSelectedAnnotationFilterIds('label-1');
+        sources.setSelectedCollectionIds(['source-1']);
+        storage.updateMetadataValues({ score: { min: 0.5, max: 1 } });
+        storage.updateCategoricalMetadataValues({ weather: ['sunny'] });
+
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters({
+            ...imagesGrid,
+            isImages: false,
+            isCaptions: true
+        });
+        expect(get(hasActiveFilters)).toBe(true);
+
+        clearAllFilters();
+
+        expect(get(hasActiveFilters)).toBe(false);
+        expect(get(tags.tagsSelected).size).toBe(0);
+        expect(get(storage.metadataValues)).toEqual({ score: { min: 0, max: 1 } });
+        expect(get(storage.categoricalMetadataValues)).toEqual({});
+        expect(get(storage.selectedAnnotationFilterIds).has('label-1')).toBe(true);
+        expect(get(sources.selectedCollectionIds)).toEqual(['source-1']);
+    });
+
     it('detects and clears video bounds on the videos grid', () => {
         videoBounds.updateVideoBoundsValues({ ...fullVideoBounds, fps: { min: 30, max: 60 } });
 

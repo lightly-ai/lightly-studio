@@ -156,7 +156,7 @@ class CreateSegmentationMask(CreateAnnotationBase):
         Returns:
             The CreateSegmentationMask instance for the provided details.
         """
-        (segmentation_mask, bbox) = _segmentation_mask_and_bounding_box(binary_mask=binary_mask)
+        (segmentation_mask, bbox) = segmentation_mask_and_bounding_box(binary_mask=binary_mask)
         x, y, width, height = bbox
 
         return CreateSegmentationMask(
@@ -201,7 +201,7 @@ class CreateSegmentationMask(CreateAnnotationBase):
         )
 
 
-def _segmentation_mask_and_bounding_box(
+def segmentation_mask_and_bounding_box(
     binary_mask: NDArray[np.int_],
 ) -> tuple[list[int], list[int]]:
     """Extract run-length encoding and bounding box from a binary mask.

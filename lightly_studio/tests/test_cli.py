@@ -48,7 +48,7 @@ def test_gui(mocker: MockerFixture, mock_track: MagicMock) -> None:
     result = runner.invoke(cli=cli.main, args=["gui"])
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
-    mock_start_gui.assert_called_once_with(host=None, port=None)
+    mock_start_gui.assert_called_once_with(host=None, port=None, open_browser=True)
     mock_track.assert_called_once_with(
         event=tracking.APP_LAUNCHED,
         properties={"launch_source": tracking.LaunchSource.GUI.value},
@@ -62,7 +62,7 @@ def test_gui__with_host_port(mocker: MockerFixture) -> None:
     result = runner.invoke(cli=cli.main, args=["gui", "--host", "0.0.0.0", "--port", "9999"])
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file=None, db_url=None, must_exist=True)
-    mock_start_gui.assert_called_once_with(host="0.0.0.0", port=9999)
+    mock_start_gui.assert_called_once_with(host="0.0.0.0", port=9999, open_browser=True)
 
 
 def test_gui__with_db_file(mocker: MockerFixture) -> None:
@@ -72,7 +72,7 @@ def test_gui__with_db_file(mocker: MockerFixture) -> None:
     result = runner.invoke(cli=cli.main, args=["gui", "--db-file", "my_duck.db"])
     assert result.exit_code == 0
     mock_connect.assert_called_once_with(db_file="my_duck.db", db_url=None, must_exist=True)
-    mock_start_gui.assert_called_once_with(host=None, port=None)
+    mock_start_gui.assert_called_once_with(host=None, port=None, open_browser=True)
 
 
 def test_gui__with_db_url(mocker: MockerFixture) -> None:
@@ -84,7 +84,7 @@ def test_gui__with_db_url(mocker: MockerFixture) -> None:
     mock_connect.assert_called_once_with(
         db_file=None, db_url="postgresql://localhost/mydb", must_exist=True
     )
-    mock_start_gui.assert_called_once_with(host=None, port=None)
+    mock_start_gui.assert_called_once_with(host=None, port=None, open_browser=True)
 
 
 def test_gui__with_db_file_and_db_url(mocker: MockerFixture) -> None:

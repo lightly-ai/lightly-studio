@@ -11,6 +11,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset
+from lightly_studio.analytics import tracking
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -98,6 +99,44 @@ class TestDataset:
         assert bbox.x == 150.0
         assert bbox.y == 150.0
         assert annotation.annotation_label_name == "dog"
+
+    def test_add_samples_from_coco__tracks_ingest(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        mock_track = mocker.patch.object(tracking, "track")
+        example_path = tmp_path / "dataset_examples"
+        example_path.mkdir()
+        annotations_path = example_path / "annotations.json"
+        annotations_path.write_text(json.dumps(get_coco_annotation_dict_valid()))
+        images_path = _create_valid_samples(example_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(annotations_json=annotations_path, images_path=images_path)
+
+        mock_track.assert_called_once_with(
+            event="samples_ingested",
+            properties={"source": "example", "sample_type": "image", "format": "coco"},
+        )
+
+    def test_add_samples_from_coco__failed_ingest_not_tracked(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        mock_track = mocker.patch.object(tracking, "track")
+        images_path = _create_valid_samples(tmp_path)
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(FileNotFoundError):
+            dataset.add_samples_from_coco(
+                annotations_json=tmp_path / "missing.json", images_path=images_path
+            )
+
+        mock_track.assert_not_called()
 
     def test_add_samples_from_coco__valid_bbox(
         self,

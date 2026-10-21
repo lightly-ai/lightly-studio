@@ -9,12 +9,9 @@ from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.database import db_array
-from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import SampleGroupLinkTable
-from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.mcap_group_component_definition import (
-    McapDataType,
     McapGroupComponentDefinitionTable,
 )
 from lightly_studio.models.mcap_group_sequence import (
@@ -26,12 +23,18 @@ from lightly_studio.models.mcap_group_sequence import (
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable
+from lightly_studio.resolvers import mcap_group_sequence_resolver
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
+from lightly_studio.type_definitions import QueryType
 
 
 def get_all_by_collection_id(
     session: Session,
     collection_id: UUID,
     pagination: Paginated | None,
+    filters: McapSequenceFilter | None = None,
 ) -> McapSequenceViewsWithCount:
     """Retrieve MCAP sequences for a collection ordered by creation time.
 
@@ -42,23 +45,20 @@ def get_all_by_collection_id(
         session: Database session for executing queries.
         collection_id: The ID of the collection to scope results to.
         pagination: Optional pagination parameters (offset and limit).
+        filters: Optional filters for the sequences.
 
     Returns:
         McapSequenceViewsWithCount containing the page of sequences, the total
         count before pagination, and a cursor for the next page.
     """
-    samples_query = (
-        select(McapGroupSequenceTable)
-        .join(SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id))
-        .where(col(SampleTable.collection_id) == collection_id)
-        .order_by(col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc())
-    )
+    samples_query = _scope_query(
+        query=select(McapGroupSequenceTable), collection_id=collection_id, filters=filters
+    ).order_by(col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc())
 
-    total_count_query = (
-        select(func.count())
-        .select_from(McapGroupSequenceTable)
-        .join(SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id))
-        .where(col(SampleTable.collection_id) == collection_id)
+    total_count_query = _scope_query(
+        query=select(func.count()).select_from(McapGroupSequenceTable),
+        collection_id=collection_id,
+        filters=filters,
     )
 
     if pagination is not None:
@@ -107,6 +107,18 @@ def get_all_by_collection_id(
         total_count=total_count,
         next_cursor=_compute_next_cursor(pagination=pagination, total_count=total_count),
     )
+
+
+def _scope_query(
+    query: QueryType, collection_id: UUID, filters: McapSequenceFilter | None
+) -> QueryType:
+    """Scope a query on McapGroupSequenceTable to a collection and filters."""
+    query = query.join(
+        SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id)
+    ).where(col(SampleTable.collection_id) == collection_id)
+    if filters is not None:
+        query = filters.apply(query)
+    return query
 
 
 def _get_sequence_sample_counts(
@@ -161,7 +173,7 @@ def _get_sequence_frames(
     Returns:
         Dictionary mapping sequence sample_id to its first-keyframe locator.
     """
-    video_frame_collection_id = _get_first_video_frame_collection_id(
+    video_frame_collection_id = mcap_group_sequence_resolver.get_first_video_frame_collection_id(
         session=session,
         sequence_collection_id=collection_id,
     )
@@ -210,50 +222,6 @@ def _get_file_names_by_recording_id(
         recording_id: uri.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1]
         for recording_id, uri in session.exec(query).all()
     }
-
-
-def _get_first_video_frame_collection_id(
-    session: Session,
-    sequence_collection_id: UUID,
-) -> UUID | None:
-    """Get the collection_id of the lowest-indexed VIDEO_FRAME slot in the collection.
-
-    Resolves the camera slot once per collection by finding the VIDEO_FRAME component
-    with the smallest ``group_component_index`` in the GROUP child of the SEQUENCE
-    collection. Returns ``None`` when no VIDEO_FRAME slot exists.
-
-    Args:
-        session: Database session for executing queries.
-        sequence_collection_id: The SEQUENCE collection to resolve the camera for.
-
-    Returns:
-        The ``collection_id`` of the lowest-indexed VIDEO_FRAME slot, or ``None``.
-    """
-    group_collection_id = session.exec(
-        select(CollectionTable.collection_id)
-        .where(col(CollectionTable.parent_collection_id) == sequence_collection_id)
-        .where(col(CollectionTable.sample_type) == SampleType.GROUP)
-        .limit(1)
-    ).first()
-    if group_collection_id is None:
-        return None
-    return session.exec(
-        select(McapGroupComponentDefinitionTable.collection_id)
-        .join(
-            GroupComponentDefinitionTable,
-            col(GroupComponentDefinitionTable.collection_id)
-            == col(McapGroupComponentDefinitionTable.collection_id),
-        )
-        .join(
-            CollectionTable,
-            col(CollectionTable.collection_id)
-            == col(McapGroupComponentDefinitionTable.collection_id),
-        )
-        .where(col(CollectionTable.parent_collection_id) == group_collection_id)
-        .where(col(McapGroupComponentDefinitionTable.mcap_data_type) == McapDataType.VIDEO_FRAME)
-        .order_by(col(GroupComponentDefinitionTable.group_component_index).asc())
-        .limit(1)
-    ).first()
 
 
 def _get_first_keyframe_per_sequence(

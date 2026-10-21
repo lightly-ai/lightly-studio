@@ -16,6 +16,7 @@ interface UseAnnotationSortByReturn {
      */
     sortByFor: Readable<(collectionId: string) => AnnotationEvaluationMetricSortExpr | null>;
     getSortBy: (collectionId: string) => AnnotationEvaluationMetricSortExpr | null;
+    clearRun: (runId: string) => void;
     setSortBy: (collectionId: string, expr: AnnotationEvaluationMetricSortExpr | null) => void;
 }
 
@@ -37,5 +38,9 @@ export function useAnnotationSortBy(): UseAnnotationSortByReturn {
         selection.set(expr ? { collectionId, expr } : null);
     };
 
-    return { sortByFor, getSortBy, setSortBy };
+    const clearRun = (runId: string) => {
+        selection.update((current) => (current?.expr.evaluation_run_id === runId ? null : current));
+    };
+
+    return { sortByFor, getSortBy, setSortBy, clearRun };
 }
