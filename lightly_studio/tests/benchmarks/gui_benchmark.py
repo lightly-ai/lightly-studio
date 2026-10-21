@@ -176,7 +176,11 @@ def main() -> None:
         )
 
         try:
-            start_gui_module.start_gui(host=preview_server.host, port=preview_server.port)
+            start_gui_module.start_gui(
+                host=preview_server.host,
+                port=preview_server.port,
+                open_browser=False,
+            )
         finally:
             db_manager.close()
 

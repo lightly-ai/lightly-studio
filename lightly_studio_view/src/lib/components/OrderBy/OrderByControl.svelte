@@ -14,6 +14,7 @@
         direction: SortDirection;
         disabled?: boolean;
         allowDeselect?: boolean;
+        isEvaluationSort?: boolean;
         onValueChange: (value: string) => void;
         onOpen: () => void;
         onToggleDirection: () => void;
@@ -26,35 +27,40 @@
         direction,
         disabled = false,
         allowDeselect = false,
+        isEvaluationSort = false,
         onValueChange,
         onOpen,
         onToggleDirection
     }: Props = $props();
 
     const directionTooltip = $derived(
-        direction === SortDirection.DESC ? 'Sort descending' : 'Sort ascending'
+        isEvaluationSort
+            ? direction === SortDirection.DESC
+                ? 'Highest first'
+                : 'Lowest first'
+            : direction === SortDirection.DESC
+              ? 'Sort descending'
+              : 'Sort ascending'
     );
 </script>
 
 <div class="flex items-center gap-1">
-    <Tooltip content="Sort items by attribute" position="top" triggerClass="inline-flex">
-        <Select
-            {items}
-            value={selectedValue}
-            {triggerLabel}
-            {allowDeselect}
-            {onValueChange}
-            onOpenChange={(open) => {
-                if (open) onOpen();
-            }}
-            {disabled}
-            placeholder="Sort by"
-            size="xs"
-            variant="ghost"
-            class="w-[100px] min-w-20"
-            testId="sort-by-trigger"
-        />
-    </Tooltip>
+    <Select
+        {items}
+        value={selectedValue}
+        {triggerLabel}
+        {allowDeselect}
+        {onValueChange}
+        onOpenChange={(open) => {
+            if (open) onOpen();
+        }}
+        {disabled}
+        placeholder="Sort by"
+        size="xs"
+        variant="ghost"
+        class={isEvaluationSort ? 'w-48 min-w-20' : 'w-[100px] min-w-20'}
+        testId="sort-by-trigger"
+    />
 
     <Tooltip content={directionTooltip} position="top">
         <Button

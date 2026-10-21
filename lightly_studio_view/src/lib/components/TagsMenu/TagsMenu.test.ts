@@ -176,6 +176,18 @@ describe('TagsMenu', () => {
         expect(mocks.loadTags).toHaveBeenCalled();
     });
 
+    it('hides the assign input when allowAssign is false', () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'captions',
+                allowAssign: false
+            }
+        });
+
+        expect(screen.queryByPlaceholderText('Assign tag to selection')).not.toBeInTheDocument();
+    });
+
     it('tags by filter when the selection is an unmodified select-all', async () => {
         mocks.selectedSampleIdsByCollection = {
             'collection-1': new Set(['sample-1', 'sample-2'])

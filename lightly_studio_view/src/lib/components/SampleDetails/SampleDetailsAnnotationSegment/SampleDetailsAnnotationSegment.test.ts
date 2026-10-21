@@ -367,7 +367,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         });
     });
 
-    describe('coloring by visible sources', () => {
+    describe('stable source coloring', () => {
         const annotations = [
             createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
             createAnnotation('pred-1', predictionsSource.collection_id, 'cat')
@@ -384,7 +384,7 @@ describe('SampleDetailsAnnotationSegment', () => {
             ];
         });
 
-        it('colors by source only while annotations from multiple sources are visible', async () => {
+        it('preserves source colors when hiding a source or an individual annotation', async () => {
             const user = userEvent.setup();
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
@@ -395,13 +395,19 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
 
-            // Hiding one source leaves a single visible source: label colors again.
+            // Hiding a source keeps its identity and the remaining source colors stable.
             await user.click(screen.getAllByTestId('source-group-eye')[1]);
 
             headers = screen.getAllByTestId('annotation-source-group-header');
-            expect(getSourceColorMarker(headers[0])).not.toBeInTheDocument();
-            expect(getSourceColorMarker(headers[1])).not.toBeInTheDocument();
-            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
+            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
+            expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
+            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
+            expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'true');
+
+            await user.click(within(getRow('gt-1')).getByRole('button'));
+            expect(getRow('gt-1')).toHaveAttribute('data-hidden', 'true');
+            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
+            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
         });
 
         it('uses class colors when enforce coloring by class is enabled, even with multiple visible sources', () => {

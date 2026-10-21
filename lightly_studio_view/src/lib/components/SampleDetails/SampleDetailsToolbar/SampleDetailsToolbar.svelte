@@ -7,7 +7,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
     import { MousePointer, Hand, Brush, Bot } from '@lucide/svelte';
-    import VectorSquareIcon from '$lib/components/VectorSquareIcon/VectorSquareIcon.svelte';
+    import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
 
     import { getSlicEngine } from '@lightly-ai/slic';
 

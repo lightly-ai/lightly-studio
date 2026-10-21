@@ -30,11 +30,16 @@ export function useToolbarTooltip({ getTrigger, getPosition, tooltipId }: UseToo
     $effect(() => {
         if (!visible) return;
         const control = getTrigger()?.querySelector<HTMLElement>('button, [tabindex]');
-        control?.setAttribute('aria-describedby', tooltipId);
+        const previous = control?.getAttribute('aria-describedby') ?? null;
+        control?.setAttribute(
+            'aria-describedby',
+            previous ? `${previous} ${tooltipId}` : tooltipId
+        );
         window.addEventListener('resize', updateRect);
         window.addEventListener('scroll', updateRect, true);
         return () => {
-            control?.removeAttribute('aria-describedby');
+            if (previous === null) control?.removeAttribute('aria-describedby');
+            else control?.setAttribute('aria-describedby', previous);
             window.removeEventListener('resize', updateRect);
             window.removeEventListener('scroll', updateRect, true);
         };

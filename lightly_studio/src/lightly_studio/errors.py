@@ -11,3 +11,7 @@ class TagNotFoundError(Exception):
 
 class QueryExprError(Exception):
     """Exception raised when a query expression cannot be translated."""
+
+
+class UnknownImageSizeError(Exception):
+    """Exception raised when a stored image has no known width or height."""

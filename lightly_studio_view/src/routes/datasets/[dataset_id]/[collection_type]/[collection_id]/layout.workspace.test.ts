@@ -47,11 +47,13 @@ vi.mock('paneforge', async () => {
 });
 vi.mock('$lib/components', async () => {
     const { default: Stub } = await import('./LayoutStub.test.svelte');
+    // The footer text is asserted in the tests, so it renders for real.
+    const { default: Footer } = await import('$lib/components/Footer/Footer.svelte');
     return {
         Button: Stub,
         CombinedMetadataDimensionsFilters: Stub,
         DatasetGridHeader: Stub,
-        Footer: Stub,
+        Footer,
         LabelsMenu: Stub,
         MetadataFilterChips: Stub,
         Onboarding: Stub,
@@ -234,6 +236,7 @@ import * as useHasEmbeddingsModule from '$lib/hooks/useHasEmbeddings/useHasEmbed
 
 let mockActivePanel: ReturnType<typeof writable<PanelType>>;
 let mockFilterPanelCollapsed: ReturnType<typeof writable<boolean>>;
+let mockFilteredCaptionCount: ReturnType<typeof writable<number>>;
 
 function setPageRoute(routeId: string | null): void {
     vi.spyOn(appState, 'page', 'get').mockReturnValue({
@@ -251,6 +254,7 @@ beforeEach(() => {
 
     mockActivePanel = writable<PanelType>('none');
     mockFilterPanelCollapsed = writable(false);
+    mockFilteredCaptionCount = writable(0);
 
     vi.mocked(useGlobalStorageModule.useGlobalStorage).mockReturnValue({
         activePanel: mockActivePanel,
@@ -258,6 +262,7 @@ beforeEach(() => {
         filterPanelCollapsed: mockFilterPanelCollapsed,
         toggleFilterPanelCollapsed: vi.fn(),
         filteredSampleCount: writable(0),
+        filteredCaptionCount: mockFilteredCaptionCount,
         filteredAnnotationCount: writable(0),
         textEmbedding: writable(undefined),
         collections: writable({}),
@@ -368,6 +373,24 @@ const defaultProps = {
 // Collection-grid workspace rendering
 
 describe('+layout.svelte collection-grid workspace', () => {
+    it('shows the caption count in the footer on the captions route', async () => {
+        // The captions collection has one sample per caption, so its sample count is the caption total.
+        setPageRoute(APP_ROUTES.captions);
+        mockFilteredCaptionCount.set(3);
+        const captionsProps = {
+            data: {
+                ...defaultProps.data,
+                collection: { ...defaultProps.data.collection, total_sample_count: 3 }
+            }
+        };
+
+        render(LayoutWorkspaceTestWrapper, { props: captionsProps });
+        expect(await screen.findByText('Showing 3 captions')).toBeInTheDocument();
+
+        mockFilteredCaptionCount.set(1);
+        expect(await screen.findByText('Showing 1 of 3 captions')).toBeInTheDocument();
+    });
+
     it('renders filter panel on images route', async () => {
         setPageRoute(APP_ROUTES.images);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
