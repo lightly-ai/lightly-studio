@@ -1,12 +1,11 @@
 <script lang="ts">
     import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
     import SampleAnnotationSegmentationRLE from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';
-    import type { SaveAs } from './annotationPreview.helpers';
 
     interface Props {
         preview: Pick<AnnotationPreview, 'bbox' | 'segmentation_mask'>;
         image: { width: number };
-        saveAs: SaveAs;
+        saveAs: 'mask' | 'box';
     }
 
     let { preview, image, saveAs }: Props = $props();

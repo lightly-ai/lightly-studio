@@ -3,18 +3,13 @@ import {
     readAnnotationLabelsOptions,
     readAnnotationLabelsQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import {
-    previewToCreateInput,
-    type SaveAs
-} from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
-import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+import { useCreateAnnotation, useCreateLabel } from '$lib/hooks';
 import { useQueryClient } from '@tanstack/svelte-query';
-import { page } from '$app/state';
+import { previewToCreateInput } from './useSaveAnnotationPreviews.helpers';
 
 interface SaveAnnotationPreviewsParams {
     sampleId: string;
-    saveAs: SaveAs;
+    saveAs: Parameters<typeof previewToCreateInput>[0]['saveAs'];
     annotationSource: string | null | undefined;
     previews: { preview: AnnotationPreview; className: string }[];
     onPreviewSaved: (preview: AnnotationPreview) => void;
@@ -23,9 +18,11 @@ interface SaveAnnotationPreviewsParams {
 // Saves accepted previews and reports each saved one, so a retry after a failure only has to
 // submit the previews that are left.
 export const useSaveAnnotationPreviews = ({
-    getCollectionId
+    getCollectionId,
+    getDatasetId
 }: {
     getCollectionId: () => string;
+    getDatasetId: () => string;
 }) => {
     const { createAnnotation, refetch } = useCreateAnnotation({ getCollectionId });
     const { createLabel } = useCreateLabel({ getCollectionId });
@@ -49,7 +46,7 @@ export const useSaveAnnotationPreviews = ({
         const newClassNames = [...new Set(classNames)].filter((name) => !labelIds.has(name));
         for (const className of newClassNames) {
             const label = await createLabel({
-                dataset_id: page.params.dataset_id!,
+                dataset_id: getDatasetId(),
                 annotation_label_name: className
             });
             labelIds.set(className, label.annotation_label_id!);

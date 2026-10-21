@@ -17,14 +17,11 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
         invalidateQueries: mocks.invalidateQueries
     })
 }));
-vi.mock('$app/state', () => ({ page: { params: { dataset_id: 'dataset-1' } } }));
-vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
+vi.mock('$lib/hooks', () => ({
     useCreateAnnotation: () => ({
         createAnnotation: mocks.createAnnotation,
         refetch: mocks.refetch
-    })
-}));
-vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
+    }),
     useCreateLabel: () => ({ createLabel: mocks.createLabel })
 }));
 
@@ -37,7 +34,10 @@ const first = makePreview(1);
 const second = makePreview(2);
 
 const save = (onPreviewSaved: (preview: unknown) => void) =>
-    useSaveAnnotationPreviews({ getCollectionId: () => 'collection-1' }).saveAnnotationPreviews({
+    useSaveAnnotationPreviews({
+        getCollectionId: () => 'collection-1',
+        getDatasetId: () => 'dataset-1'
+    }).saveAnnotationPreviews({
         sampleId: 'sample-1',
         saveAs: 'mask',
         annotationSource: 'source',
@@ -61,7 +61,9 @@ describe('useSaveAnnotationPreviews', () => {
 
         await save(onPreviewSaved);
 
-        expect(mocks.createLabel).toHaveBeenCalledTimes(1);
+        expect(mocks.createLabel.mock.calls).toEqual([
+            [{ dataset_id: 'dataset-1', annotation_label_name: 'cat' }]
+        ]);
         expect(mocks.createAnnotation).toHaveBeenCalledTimes(2);
         expect(mocks.invalidateQueries).toHaveBeenCalledTimes(1);
         expect(mocks.invalidateQueries).toHaveBeenCalledWith({
@@ -99,7 +101,10 @@ describe('useSaveAnnotationPreviews', () => {
     });
 
     it('reuses a class created by a failed call on retry', async () => {
-        const hook = useSaveAnnotationPreviews({ getCollectionId: () => 'collection-1' });
+        const hook = useSaveAnnotationPreviews({
+            getCollectionId: () => 'collection-1',
+            getDatasetId: () => 'dataset-1'
+        });
         const params = {
             sampleId: 'sample-1',
             saveAs: 'mask' as const,
