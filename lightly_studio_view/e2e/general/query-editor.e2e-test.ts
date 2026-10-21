@@ -1,4 +1,5 @@
 import type { Page, Response } from '@playwright/test';
+import type { ReadImagesData, ReadImagesResponse } from '$lib/api/lightly_studio_local';
 import { test, expect } from '../utils';
 import { cocoDataset } from './fixtures';
 
@@ -20,13 +21,67 @@ async function typeAndApply(page: Page, query: string): Promise<void> {
 }
 
 test.describe('query editor', () => {
-    test('apply a metadata query and verify the matching sample', async ({ samplesPage, page }) => {
+    test('send metadata comparisons and display the filtered response', async ({
+        samplesPage,
+        page
+    }) => {
+        // Mock only this query's response so the shared dataset needs no test-specific metadata.
+        await page.route('**/images/list', async (route) => {
+            const body: ReadImagesData['body'] = route.request().postDataJSON();
+            if (!body.filters?.sample_filter?.query_expr) {
+                await route.continue();
+                return;
+            }
+
+            const response = await route.fetch({ postData: { ...body, filters: null } });
+            const images: ReadImagesResponse = await response.json();
+            const data = images.data.filter(
+                (sample) => sample.file_name === cocoDataset.firstSampleName
+            );
+            await route.fulfill({
+                response,
+                json: { data, total_count: data.length, nextCursor: null }
+            });
+        });
+        const queryRequest = page.waitForRequest((request) => {
+            if (!request.url().endsWith('/images/list') || request.method() !== 'POST') {
+                return false;
+            }
+            const body: ReadImagesData['body'] = request.postDataJSON();
+            return !!body.filters?.sample_filter?.query_expr;
+        });
         await page.getByTestId('side-panel-tabs-query').click();
         await typeAndApply(
             page,
             'metadata["camera"] = "front" AND metadata["reviewed"] = true AND metadata["odometry.acc[1]"] < -0.2'
         );
 
+        const body: ReadImagesData['body'] = (await queryRequest).postDataJSON();
+        expect(body.filters?.sample_filter?.query_expr).toEqual({
+            match_expr: {
+                type: 'and',
+                children: [
+                    {
+                        type: 'metadata_comparison_expr',
+                        path: 'camera',
+                        operator: '==',
+                        value: 'front'
+                    },
+                    {
+                        type: 'metadata_comparison_expr',
+                        path: 'reviewed',
+                        operator: '==',
+                        value: true
+                    },
+                    {
+                        type: 'metadata_comparison_expr',
+                        path: 'odometry.acc[1]',
+                        operator: '<',
+                        value: -0.2
+                    }
+                ]
+            }
+        });
         await expect(samplesPage.getSamples()).toHaveCount(1);
         await expect(samplesPage.getSampleByName(cocoDataset.firstSampleName)).toBeVisible();
         await expect(page.getByTestId('query-filter-chip')).toBeVisible();
