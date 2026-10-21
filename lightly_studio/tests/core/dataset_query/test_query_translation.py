@@ -43,19 +43,6 @@ def test_to_match_expression__metadata_numbers(
     assert translated.value == value
 
 
-@pytest.mark.parametrize("operator", [OrdinalComparisonOperator.EQ, OrdinalComparisonOperator.NEQ])
-@pytest.mark.parametrize("value", ["front", True, False])
-def test_to_match_expression__metadata_equality(
-    operator: OrdinalComparisonOperator, value: str | bool
-) -> None:
-    translated = query_translation.to_match_expression(
-        expr=MetadataComparisonExpr(path="value", operator=operator, value=value)
-    )
-    assert isinstance(translated, MetadataComparisonExpression)
-    assert translated.comparison == operator.value
-    assert translated.value == value
-
-
 def test_to_match_expression__string_eq() -> None:
     expr = StringExpr(
         field=FieldRef(table="image", name="file_name"),

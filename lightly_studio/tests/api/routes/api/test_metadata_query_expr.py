@@ -88,17 +88,9 @@ def test_metadata_query__list_and_count(  # noqa: PLR0913
     response = test_client.post(endpoint, json=body, params={"offset": 0, "limit": 1})
     assert response.status_code == 200
     assert response.json()["total_count"] == len(expected_indices)
-    response = test_client.post(
-        endpoint,
-        json={
-            **body,
-            **(
-                {"pagination": {"offset": 0, "limit": 100}}
-                if sample_type == SampleType.IMAGE
-                else {}
-            ),
-        },
-    )
+    if sample_type == SampleType.IMAGE:
+        body["pagination"] = {"offset": 0, "limit": 100}
+    response = test_client.post(endpoint, json=body)
     assert response.status_code == 200
     assert {sample["sample_id"] for sample in response.json()["data"]} == {
         str(sample_ids[index]) for index in expected_indices
