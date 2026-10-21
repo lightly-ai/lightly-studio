@@ -2,6 +2,7 @@
     import type { Snippet } from 'svelte';
     import { Box, SquareDashed } from '@lucide/svelte';
     import { cn } from '$lib/utils';
+    import { Button } from '$lib/components/ui/button';
     import AnnotationClassSelect from '$lib/components/SampleDetails/AnnotationClassSelect/AnnotationClassSelect.svelte';
 
     type SaveAs = (typeof saveAsOptions)[number]['value'];
@@ -85,17 +86,8 @@
         </div>
 
         <div class="flex gap-1.5">
-            <button
-                type="button"
-                class="h-8 flex-1 rounded-md bg-primary text-sm text-primary-foreground transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
-                disabled={!canSave}
-                onclick={onSave}>Save</button
-            >
-            <button
-                type="button"
-                class="h-8 flex-1 rounded-md border border-border text-sm text-muted-foreground transition hover:bg-muted-foreground/10"
-                onclick={onClear}>Clear</button
-            >
+            <Button class="h-8 flex-1" disabled={!canSave} onclick={onSave}>Save</Button>
+            <Button variant="outline" class="h-8 flex-1" onclick={onClear}>Clear</Button>
         </div>
     </div>
 </div>

@@ -8,7 +8,7 @@ export const getAssistedLabelingDisabledReason = ({
     status: AssistedLabelingStatusView | undefined;
     isError: boolean;
 }): string | null => {
+    if (status) return status.unavailable_reason;
     if (isError) return 'Could not load the assisted labeling status.';
-    if (!status) return 'Loading the assisted labeling status…';
-    return status.unavailable_reason;
+    return 'Loading the assisted labeling status…';
 };

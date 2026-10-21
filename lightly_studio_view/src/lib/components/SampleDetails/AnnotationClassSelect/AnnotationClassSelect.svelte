@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
+    import { useAnnotationLabels } from '$lib/hooks';
+    import { SelectList } from '$lib/components/SelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import type { ListItem } from '$lib/components/SelectList/types';
     import { cn } from '$lib/utils';
@@ -33,7 +33,7 @@
     {selectedItem}
     name="annotation-class"
     {label}
-    placeholder="Select or create an annotation class"
+    placeholder="Select an annotation class"
     className={cn('w-full', className)}
     contentClassName="w-full"
     isLoading={annotationLabels.isLoading}

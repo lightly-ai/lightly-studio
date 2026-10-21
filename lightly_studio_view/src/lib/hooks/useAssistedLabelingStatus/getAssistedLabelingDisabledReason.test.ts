@@ -20,6 +20,15 @@ describe('getAssistedLabelingDisabledReason', () => {
         ).toBe('Set the FAL_KEY environment variable.');
     });
 
+    it('keeps the loaded status after a failed refetch', () => {
+        expect(
+            getAssistedLabelingDisabledReason({
+                status: { unavailable_reason: null },
+                isError: true
+            })
+        ).toBeNull();
+    });
+
     it('disables the tools while loading or after a failed request', () => {
         expect(getAssistedLabelingDisabledReason({ status: undefined, isError: false })).toBe(
             'Loading the assisted labeling status…'
