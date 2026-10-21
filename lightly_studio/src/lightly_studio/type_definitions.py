@@ -39,6 +39,7 @@ QueryType = TypeVar(
     Select[tuple[GroupTable, float]],
     Select[tuple[VideoTable, VideoFrameTable, float]],
     SelectOfScalar[McapGroupSequenceTable],
+    Select[tuple[McapGroupSequenceTable, float]],
 )
 
 PathLike = Union[str, Path]

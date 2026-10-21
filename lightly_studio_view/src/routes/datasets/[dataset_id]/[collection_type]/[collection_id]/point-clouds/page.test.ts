@@ -33,6 +33,7 @@ vi.mock('$lib/hooks', () => ({
     useGlobalStorage: () => ({
         setfilteredSampleCount: vi.fn(),
         sampleSize: writable({ width: 6, height: 200 }),
+        textEmbedding: writable(null),
         getSelectedSampleIds: () => writable(new Set<string>()),
         toggleSampleSelection
     }),
