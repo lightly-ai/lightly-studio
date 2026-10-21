@@ -28,7 +28,6 @@
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
     import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { Vector3, WorkspaceTool } from './domain';
 
     /**
