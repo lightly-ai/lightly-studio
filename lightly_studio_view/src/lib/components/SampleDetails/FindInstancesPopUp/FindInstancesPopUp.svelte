@@ -1,11 +1,13 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import { Loader2, Sparkles, SquareDashedMousePointer } from '@lucide/svelte';
     import { Input } from '$lib/components/ui/input';
     import { cn } from '$lib/utils';
     import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
-    import type { SaveAs } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
     import { canGenerateInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
     import MaxInstancesInput from './MaxInstancesInput/MaxInstancesInput.svelte';
+
+    type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];
 
     interface Props {
         collectionId: string;
