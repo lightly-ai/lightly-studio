@@ -43,7 +43,6 @@ export function useUpdateCuboidAnnotation({
     // Serializes saves per cuboid so that rapid successive drags cannot persist out of order.
     const saves = new Map<string, Promise<unknown>>();
 
-
     async function refreshAnnotations(): Promise<void> {
         try {
             await onUpdated();

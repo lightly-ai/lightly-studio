@@ -28,9 +28,22 @@ export function useAnnotationDetailsEditing(
         rz: ''
     });
     let lastEmittedRotation: AnnotationInput['rotation'] | null = null;
+    // Accumulates uncommitted field edits so that a second commit does not
+    // rebuild geometry from the stale prop while a previous save is in-flight.
+    let pendingAnnotation: AnnotationInput | null = null;
+    // Used to detect when the annotation prop itself has changed (i.e. a
+    // refetch returned new data), at which point pendingAnnotation is cleared.
+    let lastAnnotationRef: AnnotationInput | null = null;
+    let valueOnFocus = '';
 
     $effect(() => {
         const annotation = getAnnotation();
+
+        if (annotation !== lastAnnotationRef) {
+            lastAnnotationRef = annotation;
+            pendingAnnotation = null;
+        }
+
         for (const [index, field] of ['x', 'y', 'z'].entries()) {
             const name = field as FieldName;
             if (focusedField !== name) inputValues[name] = String(annotation.center[index]);
@@ -60,16 +73,24 @@ export function useAnnotationDetailsEditing(
 
     function handleFocus(field: FieldName): void {
         focusedField = field;
+        valueOnFocus = inputValues[field];
     }
 
     function handleCommit(field: FieldName): void {
         const raw = inputValues[field];
         const value = Number.parseFloat(raw);
-        if (raw !== '' && !Number.isNaN(value) && isValidFieldValue(field, value)) {
-            const updated = updateAnnotationGeometry(getAnnotation(), field, value, inputValues);
+        if (
+            raw !== valueOnFocus &&
+            raw !== '' &&
+            Number.isFinite(value) &&
+            isValidFieldValue(field, value)
+        ) {
+            const base = pendingAnnotation ?? getAnnotation();
+            const updated = updateAnnotationGeometry(base, field, value, inputValues);
             if (field === 'rx' || field === 'ry' || field === 'rz') {
                 lastEmittedRotation = updated.rotation;
             }
+            pendingAnnotation = updated;
             onAnnotationChange(updated);
         }
         focusedField = null;

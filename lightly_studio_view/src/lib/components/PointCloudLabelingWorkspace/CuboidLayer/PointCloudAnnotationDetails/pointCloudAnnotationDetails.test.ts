@@ -145,4 +145,85 @@ describe('PointCloudAnnotationDetails - editable mode', () => {
 
         expect(onAnnotationChange).not.toHaveBeenCalled();
     });
+
+    it('does not fire onAnnotationChange when field value is unchanged after focus', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('does not fire onAnnotationChange for Infinity value', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '1e309' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('fires onAnnotationChange with updated size on dimension blur', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'dimension l' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '8' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({ size: [8, 1.8, 1.5] })
+        );
+    });
+
+    it('fires onAnnotationChange with updated rotation on rotation blur', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'rotation rz' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '90' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({
+                rotation: expect.arrayContaining([expect.any(Number)])
+            })
+        );
+    });
+
+    it('preserves first field change when a second field is committed before save completes', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const xInput = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(xInput);
+        fireEvent.input(xInput, { target: { value: '5' } });
+        fireEvent.blur(xInput);
+
+        const yInput = screen.getByRole('spinbutton', { name: 'location y' });
+        fireEvent.focus(yInput);
+        fireEvent.input(yInput, { target: { value: '3' } });
+        fireEvent.blur(yInput);
+
+        const lastCall = onAnnotationChange.mock.calls.at(-1)?.[0];
+        expect(lastCall).toMatchObject({ center: [5, 3, 1.234] });
+    });
 });
