@@ -12,6 +12,7 @@ import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
 import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
 import { useEmbeddingFilterForAnnotations } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+import { useEmbeddingFilterForMcapSequences } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForMcapSequences';
 import { getPlotSelectionCount } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
 
 type Range = { min: number; max: number };
@@ -154,7 +155,8 @@ function useEmbeddingPlotFilter(collectionId: string): FilterGroup {
     const embeddingFilters = [
         useEmbeddingFilterForImages(collectionIdStore, setRangeSelectionForCollection),
         useEmbeddingFilterForVideos(collectionIdStore, setRangeSelectionForCollection),
-        useEmbeddingFilterForAnnotations(collectionIdStore, setRangeSelectionForCollection)
+        useEmbeddingFilterForAnnotations(collectionIdStore, setRangeSelectionForCollection),
+        useEmbeddingFilterForMcapSequences(collectionIdStore, setRangeSelectionForCollection)
     ];
     return {
         isActive: derived(getPlotSelectionCount(collectionIdStore), ($count) => $count > 0),
