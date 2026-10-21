@@ -35,6 +35,7 @@
     const visibleItems = $derived(items.filter((item) => item.visible !== false));
 
     function onKeyDown(e: KeyboardEvent) {
+        if (e.repeat) return;
         if (e.ctrlKey || e.metaKey || e.altKey) return;
         if (isTextInputTarget(e.target)) return;
         if (shouldHandleShortcut && !shouldHandleShortcut(e)) return;
