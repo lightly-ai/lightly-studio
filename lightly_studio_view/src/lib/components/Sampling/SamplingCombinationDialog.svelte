@@ -7,7 +7,6 @@
     import StrategyCard from '$lib/components/Sampling/StrategyCard/StrategyCard.svelte';
     import FieldTooltip from '$lib/components/FieldTooltip/FieldTooltip.svelte';
     import { Button } from '$lib/components';
-    import { Tooltip } from '$lib/components/ui/tooltip';
     import * as Dialog from '$lib/components/ui/dialog';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
@@ -51,7 +50,6 @@
         noSamples,
         notEnoughSamples,
         sampleCountLabel,
-        isFormValid,
         createButtonTooltip,
         isSubmitting,
         loadingMessage,
@@ -285,26 +283,18 @@
                     >
                         Cancel
                     </Button>
-                    <Tooltip
-                        content={$createButtonTooltip}
-                        position="top"
-                        triggerClass="inline-block"
+                    <Button
+                        variant="default"
+                        isPending={$isSubmitting}
+                        disabledReason={$createButtonTooltip}
+                        buttonProps={{
+                            type: 'submit',
+                            disabled: $notEnoughSamples || $noSamples,
+                            'data-testid': 'sampling-dialog-submit'
+                        }}
                     >
-                        <Button
-                            variant="default"
-                            buttonProps={{
-                                type: 'submit',
-                                disabled:
-                                    !$isFormValid ||
-                                    $isSubmitting ||
-                                    $notEnoughSamples ||
-                                    $noSamples,
-                                'data-testid': 'sampling-dialog-submit'
-                            }}
-                        >
-                            {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
-                        </Button>
-                    </Tooltip>
+                        {$isSubmitting ? $loadingMessage || 'Creating...' : 'Create Selection'}
+                    </Button>
                 </Dialog.Footer>
             </form>
         </Dialog.Content>

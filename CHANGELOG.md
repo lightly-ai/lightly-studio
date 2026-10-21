@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Disabled buttons now show a tooltip explaining why they cannot be clicked.
 - Added a filter panel to the captions tab, with tag and metadata filters. The footer now counts the number of active captions.
 - Delete an evaluation from the evaluation panel. Grid filters and sorting that use the deleted evaluation are removed.
 - API: Delete an evaluation and its results while keeping annotations unchanged.
