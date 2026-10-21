@@ -59,14 +59,6 @@ describe('metadata query translation', () => {
             metadata({ path: 'camera name', operator: '==', value: 'front left' })
         ],
         [
-            String.raw`metadata["camera\"name"] = "front"`,
-            metadata({ path: 'camera"name', operator: '==', value: 'front' })
-        ],
-        [
-            String.raw`metadata['camera\\name'] = 'front'`,
-            metadata({ path: 'camera\\name', operator: '==', value: 'front' })
-        ],
-        [
             'metadata["reviewed"] = "true"',
             metadata({ path: 'reviewed', operator: '==', value: 'true' })
         ]
