@@ -55,6 +55,51 @@ Run all commands from `lightly_studio/` in the worktree. Use the venv of the wor
 
 If a script fails with a connection error, Postgres is not running. Do step 1 again.
 
+## Hosted GUI
+
+The demo also runs on the self-hosted stack, with login and the workspace page. The stack
+is the compose project `wayve-hosted`, in this worktree of `lightly-studio-self-hosted`:
+
+```text
+/Users/gabrielfruet/dev/lightly/lightly-studio-self-hosted/.claude/worktrees/wayve-hosted
+```
+
+The stack has its own Postgres, restored from `wayve.clean.dump`. The GUI on port 8021 and
+the hosted GUI use different databases. A script tags only the database in `WAYVE_DB_URL`.
+
+The released studio images (1.1.3 and older) do not know the schema of the demo database.
+Thus the stack uses the image `lightly/lightly-studio-self-hosted:wayve-demo`, built for
+arm64 from commit `0dd7af578` of this branch. The file `docker-compose.wayve.yml` selects
+this image.
+
+1. Start the stack from the self-hosted worktree:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.wayve.yml up -d
+   ```
+
+2. Open `http://localhost:8200/workspace/login`. Sign in as `admin@example.com`. The
+   password is `ADMIN_PASSWORD` in the `.env` file of the self-hosted worktree.
+3. Before you run a script, set the database URL in the terminal of the scripts:
+
+   ```bash
+   export WAYVE_DB_URL="postgresql://lightly:$(grep '^POSTGRES_PASSWORD=' /Users/gabrielfruet/dev/lightly/lightly-studio-self-hosted/.claude/worktrees/wayve-hosted/.env | cut -d= -f2-)@localhost:5435/lightly_studio"
+   ```
+
+4. To stop the stack:
+
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.wayve.yml stop
+   ```
+
+To reset the hosted database, run these commands from the self-hosted worktree:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.wayve.yml stop studio
+docker exec -i wayve-hosted-db-1 pg_restore --clean --no-owner -U lightly -d lightly_studio < ~/demo_data/wayve/wayve.clean.dump
+docker compose -f docker-compose.yml -f docker-compose.wayve.yml start studio
+```
+
 ## Scripts
 
 Run each script in a second terminal while the GUI is up. Then refresh the browser.
