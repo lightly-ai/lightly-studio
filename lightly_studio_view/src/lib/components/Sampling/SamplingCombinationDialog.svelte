@@ -22,6 +22,9 @@
         page.data.collection?.sample_type === 'video' ||
             page.data.collection?.sample_type === 'video_frame'
     );
+    const isSequenceCollection = $derived(page.data.collection?.sample_type === 'sequence');
+    // Subpart diversity needs annotation crop embeddings, which are only generated for images.
+    const lacksCropEmbeddings = $derived(isVideoCollection || isSequenceCollection);
 
     const { trackEvent } = usePostHog();
     const { isSamplingDialogOpen, openSamplingDialog, closeSamplingDialog } = useSamplingDialog();
@@ -57,6 +60,7 @@
     } = useSamplingCombinationDialog({
         getCollectionId: () => collectionId,
         getIsVideoCollection: () => isVideoCollection,
+        getIsSequenceCollection: () => isSequenceCollection,
         instances,
         onSubmitSuccess: resetStrategies
     });
@@ -157,8 +161,8 @@
                                 metadataBalancingDisabledReason={!strategyOptions.hasCategoricalMetadataFields
                                     ? 'No categorical metadata fields found. Index string or boolean metadata on your samples to enable this strategy.'
                                     : undefined}
-                                subpartDiversityDisabledReason={isVideoCollection
-                                    ? 'Not available for video collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
+                                subpartDiversityDisabledReason={lacksCropEmbeddings
+                                    ? 'Not available for video and sequence collections. Subpart diversity requires annotation crop embeddings, which are only generated for images.'
                                     : !strategyOptions.hasCroppableAnnotationSources
                                       ? 'No object detection or segmentation annotation sources found. Add object detection or segmentation annotations to enable this strategy.'
                                       : hasSubpartDiversity
