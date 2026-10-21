@@ -45,6 +45,10 @@ export const useMcapSequencesInfinite = (
             const sequences = query.data.pages.flatMap((page) => page.data);
             data.set(sequences);
             totalCount.set(query.data.pages[0].total_count);
+        } else if (query.isPending) {
+            // A new query key without cached data must not show the previous filter's results.
+            data.set([]);
+            totalCount.set(0);
         }
     });
 
