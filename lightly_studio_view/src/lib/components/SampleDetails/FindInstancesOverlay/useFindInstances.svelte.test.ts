@@ -82,7 +82,7 @@ describe('useFindInstances', () => {
             body: {
                 collection_id: 'collection-1',
                 sample_id: 'sample-1',
-                prompt: 'cars',
+                text_prompt: 'cars',
                 boxes: [box],
                 max_instances: 8
             }
@@ -91,8 +91,9 @@ describe('useFindInstances', () => {
         expect(instances.isGenerating).toBe(false);
     });
 
-    it('does not request instances without a prompt or a box', async () => {
+    it('does not request instances with boxes but without a prompt', async () => {
         const { instances } = setup('  ');
+        instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
 
         await instances.generate();
 

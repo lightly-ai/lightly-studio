@@ -69,7 +69,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const generate = async () => {
         const { collectionId, sampleId, prompt, maxInstances } = getParams();
-        if (isSaving || !canGenerateInstances({ prompt, boxCount: boxes.length })) return;
+        if (isSaving || !canGenerateInstances({ prompt })) return;
         const requestSequence = ++sequence;
         isGenerating = true;
         try {

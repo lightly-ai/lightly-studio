@@ -2,13 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { buildInstancesRequestBody, canGenerateInstances } from './FindInstancesOverlay.helpers';
 
 describe('FindInstancesOverlay.helpers', () => {
-    it('needs a non-blank prompt or a box to generate', () => {
-        expect(canGenerateInstances({ prompt: '  ', boxCount: 0 })).toBe(false);
-        expect(canGenerateInstances({ prompt: 'car', boxCount: 0 })).toBe(true);
-        expect(canGenerateInstances({ prompt: '', boxCount: 1 })).toBe(true);
+    it('needs a non-blank prompt to generate', () => {
+        expect(canGenerateInstances({ prompt: '  ' })).toBe(false);
+        expect(canGenerateInstances({ prompt: 'car' })).toBe(true);
     });
 
-    it('builds the request with a trimmed prompt and omits empty prompt types', () => {
+    it('builds the request with a trimmed prompt and omits empty boxes', () => {
         expect(
             buildInstancesRequestBody({
                 collectionId: 'c',
@@ -20,7 +19,7 @@ describe('FindInstancesOverlay.helpers', () => {
         ).toEqual({
             collection_id: 'c',
             sample_id: 's',
-            prompt: 'cars',
+            text_prompt: 'cars',
             boxes: null,
             max_instances: 8
         });
@@ -30,10 +29,10 @@ describe('FindInstancesOverlay.helpers', () => {
             buildInstancesRequestBody({
                 collectionId: 'c',
                 sampleId: 's',
-                prompt: ' ',
+                prompt: 'cars',
                 boxes: [box],
                 maxInstances: 16
             })
-        ).toMatchObject({ prompt: null, boxes: [box] });
+        ).toMatchObject({ text_prompt: 'cars', boxes: [box] });
     });
 });

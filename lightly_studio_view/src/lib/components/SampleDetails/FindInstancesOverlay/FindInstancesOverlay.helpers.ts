@@ -1,13 +1,9 @@
 import type { InstancesAnnotationRequest } from '$lib/api/lightly_studio_local';
 import type { NormalizedBox } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 
-export const canGenerateInstances = ({
-    prompt,
-    boxCount
-}: {
-    prompt: string;
-    boxCount: number;
-}): boolean => prompt.trim().length > 0 || boxCount > 0;
+// Boxes alone find only the boxed objects, so the endpoint needs a text prompt.
+export const canGenerateInstances = ({ prompt }: { prompt: string }): boolean =>
+    prompt.trim().length > 0;
 
 export const buildInstancesRequestBody = ({
     collectionId,
@@ -24,7 +20,7 @@ export const buildInstancesRequestBody = ({
 }): InstancesAnnotationRequest => ({
     collection_id: collectionId,
     sample_id: sampleId,
-    prompt: prompt.trim() || null,
+    text_prompt: prompt.trim(),
     boxes: boxes.length > 0 ? boxes : null,
     max_instances: maxInstances
 });
