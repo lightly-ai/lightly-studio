@@ -1,14 +1,8 @@
 import { derived, get, writable } from 'svelte/store';
-import type {
-    EmbeddingRegion,
-    McapSequenceFilter,
-    SampleFilter
-} from '$lib/api/lightly_studio_local';
+import type { McapSequenceFilter, SampleFilter } from '$lib/api/lightly_studio_local';
 
 export type McapSequenceFilterParams = {
     collection_id: string;
-    sample_ids?: string[];
-    embedding_region?: EmbeddingRegion;
     tag_ids?: string[];
 };
 
@@ -22,12 +16,6 @@ export const buildMcapSequenceFilter = (
     }
 
     const sampleFilter: SampleFilter = {};
-    if (params.sample_ids && params.sample_ids.length > 0) {
-        sampleFilter.sample_ids = params.sample_ids;
-    }
-    if (params.embedding_region) {
-        sampleFilter.embedding_region = params.embedding_region;
-    }
     if (params.tag_ids && params.tag_ids.length > 0) {
         sampleFilter.tag_ids = params.tag_ids;
     }
@@ -44,8 +32,8 @@ const mcapSequenceFilter = derived(filterParams, ($filterParams) =>
 );
 
 /**
- * Filter state of the MCAP sequence grid. The filter panel writes the selected tags and the
- * embedding plot writes the selected region here. The grid, sampling and plot read the filter.
+ * Filter state of the MCAP sequence grid. The filter panel writes the selected tags here and
+ * the grid reads the filter.
  */
 export const useMcapSequenceFilters = () => {
     // Resets the filter when the grid shows another collection.
@@ -54,25 +42,6 @@ export const useMcapSequenceFilters = () => {
             return;
         }
         filterParams.set({ collection_id: collectionId });
-    };
-
-    const updateSampleIds = (sampleIds: string[]) => {
-        const params = get(filterParams);
-        if (!params) {
-            return;
-        }
-        filterParams.set({
-            ...params,
-            sample_ids: sampleIds.length > 0 ? sampleIds : undefined
-        });
-    };
-
-    const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
-        const params = get(filterParams);
-        if (!params) {
-            return;
-        }
-        filterParams.set({ ...params, embedding_region: embeddingRegion ?? undefined });
     };
 
     const updateTagIds = (tagIds: string[]) => {
@@ -87,8 +56,6 @@ export const useMcapSequenceFilters = () => {
         filterParams,
         mcapSequenceFilter,
         setCollectionId,
-        updateSampleIds,
-        updateEmbeddingRegion,
         updateTagIds
     };
 };

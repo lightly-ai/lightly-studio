@@ -7,30 +7,30 @@ describe('buildMcapSequenceFilter', () => {
         expect(buildMcapSequenceFilter(null)).toBeNull();
     });
 
-    it('puts the plot selection into the sample filter', () => {
-        const region = { polygon: [{ x: 0, y: 0 }] };
-
+    it('puts the selected tags into the sample filter', () => {
         expect(
-            buildMcapSequenceFilter({
-                collection_id: 'collection-1',
-                sample_ids: ['sequence-1'],
-                embedding_region: region
-            })
+            buildMcapSequenceFilter({ collection_id: 'collection-1', tag_ids: ['tag-1'] })
         ).toEqual({
             filter_type: 'mcap_sequence',
-            sample_filter: { sample_ids: ['sequence-1'], embedding_region: region }
+            sample_filter: { tag_ids: ['tag-1'] }
         });
     });
 });
 
 describe('useMcapSequenceFilters', () => {
-    it('resets the region when the collection changes', () => {
-        const { mcapSequenceFilter, setCollectionId, updateEmbeddingRegion } =
-            useMcapSequenceFilters();
+    it('ignores tags until a collection is set', () => {
+        const { mcapSequenceFilter, updateTagIds } = useMcapSequenceFilters();
+
+        updateTagIds(['tag-1']);
+        expect(get(mcapSequenceFilter)).toBeNull();
+    });
+
+    it('resets the tags when the collection changes', () => {
+        const { mcapSequenceFilter, setCollectionId, updateTagIds } = useMcapSequenceFilters();
 
         setCollectionId('collection-1');
-        updateEmbeddingRegion({ polygon: [{ x: 0, y: 0 }] });
-        expect(get(mcapSequenceFilter)?.sample_filter?.embedding_region).toBeDefined();
+        updateTagIds(['tag-1']);
+        expect(get(mcapSequenceFilter)?.sample_filter?.tag_ids).toEqual(['tag-1']);
 
         setCollectionId('collection-2');
         expect(get(mcapSequenceFilter)).toEqual({ filter_type: 'mcap_sequence' });
