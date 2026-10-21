@@ -614,7 +614,8 @@
                                 </span>
                                 <span class="flex items-center gap-1">
                                     <ClearAllFiltersButton
-                                        {collectionId}
+                                        collectionId={metadataCollectionId}
+                                        {isCaptions}
                                         {isImages}
                                         {isVideos}
                                         {isVideoFrames}
