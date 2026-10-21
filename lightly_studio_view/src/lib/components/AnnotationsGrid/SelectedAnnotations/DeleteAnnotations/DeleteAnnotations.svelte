@@ -38,11 +38,6 @@
             clearSelectedSampleAnnotationCrops(collectionId);
             const noun = result.deletedCount === 1 ? 'annotation' : 'annotations';
             toast.success(`Deleted ${result.deletedCount} ${noun}`);
-        } else if (result.isStale) {
-            clearSelectedSampleAnnotationCrops(collectionId);
-            toast.error(
-                'Some selected annotations no longer exist. Nothing was deleted. Select the annotations again and retry.'
-            );
         } else {
             toast.error('Failed to delete annotations. Please try again.');
         }
