@@ -2,8 +2,9 @@
     import type { Snippet } from 'svelte';
     import { Box, SquareDashed } from '@lucide/svelte';
     import { cn } from '$lib/utils';
-    import type { SaveAs } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
     import AnnotationClassSelect from '$lib/components/SampleDetails/AnnotationClassSelect/AnnotationClassSelect.svelte';
+
+    type SaveAs = (typeof saveAsOptions)[number]['value'];
 
     interface Props {
         title: string;
