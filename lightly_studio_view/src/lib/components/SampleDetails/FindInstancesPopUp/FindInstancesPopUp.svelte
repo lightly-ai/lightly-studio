@@ -49,7 +49,7 @@
         onClear
     }: Props = $props();
 
-    const canGenerate = $derived(canGenerateInstances({ prompt, boxCount }) && !isGenerating);
+    const canGenerate = $derived(canGenerateInstances({ prompt }) && !isGenerating);
 
     const iconButtonClass =
         'flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border transition disabled:pointer-events-none disabled:opacity-50';
@@ -66,7 +66,7 @@
     {onSave}
     {onClear}
 >
-    <p class="text-xs text-muted-foreground">Type a prompt, draw boxes, or both.</p>
+    <p class="text-xs text-muted-foreground">Type a prompt. Draw boxes to show more examples.</p>
     <div class="flex items-center gap-1.5">
         <Input
             class="h-8"
