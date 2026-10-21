@@ -1,11 +1,13 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import SampleAnnotationRect from '$lib/components/SampleDetails/SampleAnnotationRect/SampleAnnotationRect.svelte';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
-    import NormalizedBoxRect from '$lib/components/SampleDetails/AnnotationPreview/NormalizedBoxRect.svelte';
-    import type { SaveAs } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+    import NormalizedBoxRect from '$lib/components/SampleDetails/NormalizedBoxRect/NormalizedBoxRect.svelte';
     import { useDragBox } from '$lib/components/SampleDetails/useDragBox/useDragBox.svelte';
     import InstanceDeleteButton from './InstanceDeleteButton.svelte';
     import { useFindInstances } from './useFindInstances.svelte';
+
+    type SaveAs = ComponentProps<typeof AnnotationPreview>['saveAs'];
 
     interface Props {
         collectionId: string;
