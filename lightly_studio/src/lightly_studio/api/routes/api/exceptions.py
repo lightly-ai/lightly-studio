@@ -16,11 +16,13 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_SERVICE_UNAVAILABLE,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
+from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import NotFoundError, QueryExprError
+from lightly_studio.errors import NotFoundError, QueryExprError, UnknownImageSizeError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -136,6 +138,16 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             content={"error": str(_exc) or "Resource not found."},
         )
 
+    @app.exception_handler(UnknownImageSizeError)
+    async def _unknown_image_size_error_handler(
+        _request: Request, _exc: UnknownImageSizeError
+    ) -> JSONResponse:
+        """Handle a stored image without a known size."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY)
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY, content={"error": str(_exc)}
+        )
+
     @app.exception_handler(QueryExprError)
     async def _query_expr_error_handler(_request: Request, _exc: QueryExprError) -> JSONResponse:
         """Handle query expression errors."""
@@ -170,6 +182,22 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
         return JSONResponse(
             status_code=HTTP_STATUS_BAD_GATEWAY,
             content={"error": "The embedding server did not give embeddings."},
+        )
+
+    @app.exception_handler(ProviderError)
+    async def _provider_error_handler(_request: Request, _exc: ProviderError) -> JSONResponse:
+        """Handle an assisted labeling provider that failed to compute a segmentation."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_BAD_GATEWAY)
+        return JSONResponse(status_code=HTTP_STATUS_BAD_GATEWAY, content={"error": str(_exc)})
+
+    @app.exception_handler(ProviderUnavailableError)
+    async def _provider_unavailable_error_handler(
+        _request: Request, _exc: ProviderUnavailableError
+    ) -> JSONResponse:
+        """Handle an assisted labeling provider that is not usable."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_SERVICE_UNAVAILABLE)
+        return JSONResponse(
+            status_code=HTTP_STATUS_SERVICE_UNAVAILABLE, content={"error": str(_exc)}
         )
 
     @app.exception_handler(Exception)
