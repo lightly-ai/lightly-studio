@@ -4,75 +4,36 @@ Demo data for the Wayve call on 22 October 2026. The data is 50 dashcam clips fr
 [Nexar Collision Prediction dataset](https://huggingface.co/datasets/nexar-ai/nexar_collision_prediction).
 The Nexar Open Data License permits free use with attribution and prohibits resale.
 
-## What the demo shows
+## The story
 
-A hand-built near-miss filter misses most near-misses in the dark. The GUI shows where the
-filter is wrong. Search and example-based scoring find the clips that the filter missed.
+A simple near-miss filter says: "a vehicle is close when its box fills 13% of the frame."
+In the 2 seconds before each near-miss, this filter catches 7 of 52 frames. At night it
+catches 1 of 24. LightlyStudio shows the gap, and example-based search finds the frames
+that the filter misses.
 
-The GUI stays up for the full demo. Each script connects to the same Postgres database,
-changes tags, and stops. A browser refresh shows the change.
+## The data
 
-The database has two datasets:
+The demo uses the dataset `nexar-frames`: one image for each second of each clip, 1,774
+images. Each image has YOLO boxes and this metadata:
 
-- `nexar-clips`: 50 videos, with one embedding for each clip. The video frames have no
-  embeddings.
-- `nexar-frames`: one image for each second of each clip, 1,774 images. Each image has an
-  embedding, YOLO boxes in the annotation source `yolo11n`, and frame metadata.
+| Key | Content |
+|---|---|
+| `near_miss` | Nexar label. `true` if the clip ends in a collision or a near-collision. |
+| `seconds_to_event` | Seconds until the event. Near-miss clips only. Negative after the event. |
+| `light_conditions` | `Normal`, `Dark`, `Twilight` or `Bright` |
+| `max_vehicle_area` | The largest vehicle box divided by the frame area. A large value means a close vehicle. |
+| `clip`, `weather`, `scene`, `timestamp_s` | The clip, the conditions, and the second in the clip |
+| `n_persons`, `n_vehicles`, `max_person_conf` | YOLO11n counts |
 
-| Metadata key | Datasets | Content |
-|---|---|---|
-| `clip`, `light_conditions`, `weather`, `scene` | Both | Nexar labels |
-| `near_miss` | Both | Nexar label. The ground truth for the filter. |
-| `timestamp_s` | Frames | The second of the frame in its clip |
-| `n_persons`, `n_vehicles`, `max_person_conf` | Frames | YOLO11n detections |
-| `max_vehicle_area` | Frames | The largest vehicle box divided by the frame area |
-| `seconds_to_event` | Frames | Near-miss clips only. Negative after the event. |
+`near_miss` is a label for the full clip. Thus all frames of a near-miss clip have `true`,
+also frames long before the event. Use `seconds_to_event` to get the frames near the event.
 
-## Start and stop
+The dataset `nexar-clips` has the same 50 clips as videos.
 
-Run all commands from `lightly_studio/` in the worktree. Use the venv of the worktree with
-`env -u VIRTUAL_ENV`. The shell exports a `VIRTUAL_ENV` for a different checkout.
+## Before the call
 
-1. Start Postgres:
-
-   ```bash
-   docker start wayve-postgres
-   ```
-
-2. Start the GUI, and keep it open in its own terminal:
-
-   ```bash
-   env -u VIRTUAL_ENV ../.venv/bin/lightly-studio gui --db-url postgresql://lightly:lightly@localhost:5434/wayve --port 8021
-   ```
-
-3. Open `http://localhost:8021`. The GUI opens on `nexar-clips`.
-4. To stop the GUI, push Ctrl+C.
-5. To stop Postgres:
-
-   ```bash
-   docker stop wayve-postgres
-   ```
-
-If a script fails with a connection error, Postgres is not running. Do step 1 again.
-
-## Hosted GUI
-
-The demo also runs on the self-hosted stack, with login and the workspace page. The stack
-is the compose project `wayve-hosted`, in this worktree of `lightly-studio-self-hosted`:
-
-```text
-/Users/gabrielfruet/dev/lightly/lightly-studio-self-hosted/.claude/worktrees/wayve-hosted
-```
-
-The stack has its own Postgres, restored from `wayve.clean.dump`. The GUI on port 8021 and
-the hosted GUI use different databases. A script tags only the database in `WAYVE_DB_URL`.
-
-The released studio images (1.1.3 and older) do not know the schema of the demo database.
-Thus the stack uses the image `lightly/lightly-studio-self-hosted:wayve-demo`, built for
-arm64 from commit `0dd7af578` of this branch. The file `docker-compose.wayve.yml` selects
-this image.
-
-1. Start the stack from the self-hosted worktree:
+1. Start the hosted stack. Run this command from the self-hosted worktree
+   `/Users/gabrielfruet/dev/lightly/lightly-studio-self-hosted/.claude/worktrees/wayve-hosted`:
 
    ```bash
    docker compose -f docker-compose.yml -f docker-compose.wayve.yml up -d
@@ -80,19 +41,72 @@ this image.
 
 2. Open `http://localhost:8200/workspace/login`. Sign in as `admin@example.com`. The
    password is `ADMIN_PASSWORD` in the `.env` file of the self-hosted worktree.
-3. Before you run a script, set the database URL in the terminal of the scripts:
+3. Open `nexar-frames` once, and wait until the images show. The first load takes about
+   10 seconds.
+4. Open a terminal for the scripts. Go to `lightly_studio/` in this worktree, and set the
+   database URL of the hosted stack:
 
    ```bash
+   cd /Users/gabrielfruet/dev/lightly/lightly-studio/.claude/worktrees/wayve-demo/lightly_studio
    export WAYVE_DB_URL="postgresql://lightly:$(grep '^POSTGRES_PASSWORD=' /Users/gabrielfruet/dev/lightly/lightly-studio-self-hosted/.claude/worktrees/wayve-hosted/.env | cut -d= -f2-)@localhost:5435/lightly_studio"
    ```
 
-4. To stop the stack:
+## During the call
+
+### 1. Run the filter
+
+```bash
+env -u VIRTUAL_ENV ../.venv/bin/python src/lightly_studio/examples/wayve_demo/frames_query.py
+```
+
+The script tags 70 frames with `close_vehicle`. Refresh the browser. The tag shows in the
+sidebar.
+
+### 2. Show that the filter is wrong
+
+Do these steps on `nexar-frames`, in the left sidebar. Read each count in the
+**Showing N of 1,774 images** line at the bottom left.
+
+1. Under **Metadata**, click **Add categorical metadata field**, then `near_miss`. Open
+   **All values**, and tick `true`. The count is 828.
+2. Scroll down to the **Seconds To Event** slider. Drag the right handle to about 2, then the
+   left handle to about 0. The two handles are then almost on top of each other. The count
+   is 52: the 2 seconds before each near-miss.
+3. Tick the tag `close_vehicle`. The count is 7. The filter misses 45 of 52.
+4. Add `light_conditions`, and tick `Dark`. The count is 1. Untick `close_vehicle`. The
+   count is 24: dark frames with a vehicle close ahead.
+
+Say: "In the 2 seconds before each near-miss, your filter catches 7 of 52 frames. At night
+it catches 1 of 24."
+
+### 3. Change the filter
+
+The query is at the top of `frames_query.py`. For example, remove the `#` in front of the
+`light_conditions` line. Then run the script again, and refresh the browser. Each run
+removes the old `close_vehicle` tag first.
+
+### 4. Find the missed frames from examples
+
+1. Keep the filters of step 2: near-miss, dark, 0 to 2 seconds.
+2. Select 3 to 5 frames that show a close vehicle.
+3. Type `examples` in **Assign tag to selection**, and push Enter.
+4. Run the script:
 
    ```bash
-   docker compose -f docker-compose.yml -f docker-compose.wayve.yml stop
+   env -u VIRTUAL_ENV ../.venv/bin/python src/lightly_studio/examples/wayve_demo/from_examples.py
    ```
 
-To reset the hosted database, run these commands from the self-hosted worktree:
+5. Refresh the browser, clear the metadata filters, and tick `from_examples`. The 50 frames
+   that look most like the examples show. Most of them are dark frames from near-miss clips.
+
+If you tag a wrong frame, open the frame and click the **×** on the tag in the right panel.
+If the `examples` tag does not exist, the script stops and tells you to create it.
+
+## Reset
+
+To remove a full tag, click **⋯** next to the tag in the sidebar, then **Delete**.
+
+To restore the full database, run these commands from the self-hosted worktree:
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.wayve.yml stop studio
@@ -100,64 +114,44 @@ docker exec -i wayve-hosted-db-1 pg_restore --clean --no-owner -U lightly -d lig
 docker compose -f docker-compose.yml -f docker-compose.wayve.yml start studio
 ```
 
-## Scripts
+## Backup GUI on port 8021
 
-Run each script in a second terminal while the GUI is up. Then refresh the browser.
+If the hosted stack fails, use the local GUI. It has its own copy of the data in the
+container `wayve-postgres`.
 
-| Command | Result |
-|---|---|
-| `env -u VIRTUAL_ENV ../.venv/bin/python src/lightly_studio/examples/wayve_demo/filter_v1.py` | Tags clips in `nexar-clips` with `filter_v1`, and prints the missed clips and the false positives. |
-| `env -u VIRTUAL_ENV ../.venv/bin/python src/lightly_studio/examples/wayve_demo/frames_query.py` | Tags dark frames with a close vehicle in `nexar-frames` with `dark_close_vehicle`. |
-| `env -u VIRTUAL_ENV ../.venv/bin/python src/lightly_studio/examples/wayve_demo/from_examples.py` | Tags the 50 frames most similar to the frames tagged `examples` with `from_examples`. |
-| `env -u VIRTUAL_ENV ../.venv/bin/python src/lightly_studio/examples/wayve_demo/clear_tag.py clips filter_v1` | Removes one tag from all samples. Use `clips` or `frames`. |
-
-Each script removes its tag first. Thus a second run gives the same result.
-
-To show a "what if" change, edit `looks_like_near_miss` in `filter_v1.py`, or the query at
-the top of `main()` in `frames_query.py`. Then run the script again.
-
-Before you run `from_examples.py`, select 3 to 5 frames in `nexar-frames` and tag them
-`examples`. Use dark frames from the missed clips. Without this tag, the script stops and
-tells you to create it. To use a different tag or count, add
-`--examples-tag <tag> --top <n>`.
-
-## Reset
-
-To remove one tag, run `clear_tag.py`.
-
-To restore the full database to the state after the build:
-
-1. Stop the GUI.
-2. Restore the snapshot:
+1. Start Postgres:
 
    ```bash
-   docker exec -i wayve-postgres pg_restore --clean -U lightly -d wayve < ~/demo_data/wayve/wayve.clean.dump
+   docker start wayve-postgres
    ```
 
-3. Start the GUI again.
+2. Start the GUI from `lightly_studio/` in this worktree:
 
-## Results of filter v1
+   ```bash
+   env -u VIRTUAL_ENV ../.venv/bin/lightly-studio gui --db-url postgresql://lightly:lightly@localhost:5434/wayve --port 8021
+   ```
 
-The rule: a clip is a near-miss if a vehicle box fills 13% of the frame or more.
+3. In the terminal of the scripts, remove the hosted URL. The scripts then use the backup:
 
-- The filter tags 20 clips. 13 clips are real near-misses, and 7 are false positives.
-- The filter misses 13 of the 26 near-misses. 8 of these 13 clips are in the dark.
-- All 7 false positives are clips in normal light.
+   ```bash
+   unset WAYVE_DB_URL
+   ```
 
-Missed dark clips: `00093` (snow), `00108`, `00283`, `00317`, `00463`, `00763` (rain),
-`00929`, `00936`.
+To restore the backup database, stop the GUI, then run:
 
-## Where each feature works
+```bash
+docker exec -i wayve-postgres pg_restore --clean -U lightly -d wayve < ~/demo_data/wayve/wayve.clean.dump
+```
 
-| Feature | `nexar-clips` videos | Frames inside `nexar-clips` | `nexar-frames` |
-|---|---|---|---|
-| Text and image search | Yes | No | Yes |
-| Embedding plot | Yes | No | Yes |
-| Few-shot classifier | No | No | Yes |
-| GUI query editor | No | No | Yes |
-| Metadata filters, tags | Yes | Yes | Yes |
+## About the hosted stack
 
-Use `nexar-frames` for all steps on frames.
+The hosted stack is the compose project `wayve-hosted` in the self-hosted worktree, branch
+`gabriel-wayve-hosted`. It has its own Postgres on port 5435, restored from
+`~/demo_data/wayve/wayve.clean.dump`.
+
+The released studio images (1.1.3 and older) do not know the schema of the demo database.
+Thus the stack uses the image `lightly/lightly-studio-self-hosted:wayve-demo`, built for
+arm64 from commit `0dd7af578` of this branch. The file `docker-compose.wayve.yml` selects it.
 
 ## Build from zero
 
@@ -190,5 +184,3 @@ The build takes about 5 minutes on an Apple M5. It deletes all data in the datab
    ```bash
    docker exec wayve-postgres pg_dump -U lightly -d wayve -Fc > ~/demo_data/wayve/wayve.clean.dump
    ```
-
-To use a different database, set `WAYVE_DB_URL`. The scripts read it in `config.py`.

@@ -1,6 +1,6 @@
 """Build the Wayve demo datasets from the 50 Nexar clips picked by `pick_clips.py`.
 
-The Postgres database in `config.DB_URL` holds two datasets:
+The Postgres database in `WAYVE_DB_URL` holds two datasets:
 
 - `nexar-frames`: one JPEG image per clip second, with YOLO boxes, frame metadata and
   embeddings. The few-shot classifier and the GUI query editor work on image datasets only.
@@ -18,6 +18,7 @@ Run from `lightly_studio/` with the venv from the README:
 from __future__ import annotations
 
 import csv
+import os
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,7 +31,14 @@ from ultralytics.models import YOLO
 import lightly_studio as ls
 from lightly_studio.core.annotation.annotation_create import CreateObjectDetection
 from lightly_studio.core.sample import Sample
-from lightly_studio.examples.wayve_demo import config
+from lightly_studio.database import db_manager
+
+DB_URL = os.environ.get("WAYVE_DB_URL", "postgresql://lightly:lightly@localhost:5434/wayve")
+DATA_DIR = Path.home() / "demo_data/wayve"
+NEXAR_DIR = DATA_DIR / "nexar"
+VIDEOS_DIR = NEXAR_DIR / "videos"
+FRAMES_DIR = NEXAR_DIR / "frames"
+YOLO_WEIGHTS = DATA_DIR / "yolo11n.pt"
 
 ANNOTATION_SOURCE = "yolo11n"
 MIN_CONFIDENCE = 0.35
@@ -54,24 +62,22 @@ class Box:
 
 def main() -> None:
     """Extract and detect the frames, then index the frames and the clips."""
-    clips = {
-        row["file_name"]: row for row in csv.DictReader((config.NEXAR_DIR / "selection.csv").open())
-    }
-    config.connect(cleanup_existing=True)
+    clips = {row["file_name"]: row for row in csv.DictReader((NEXAR_DIR / "selection.csv").open())}
+    db_manager.connect(db_url=DB_URL, cleanup_existing=True)
 
-    model = YOLO(str(config.YOLO_WEIGHTS))
-    config.FRAMES_DIR.mkdir(parents=True, exist_ok=True)
+    model = YOLO(str(YOLO_WEIGHTS))
+    FRAMES_DIR.mkdir(parents=True, exist_ok=True)
     boxes_by_image: dict[str, list[Box]] = {}
     for file_name in sorted(clips):
-        images = _extract_seconds(video_path=config.VIDEOS_DIR / file_name)
+        images = _extract_seconds(video_path=VIDEOS_DIR / file_name)
         print(f"Detecting objects in {file_name} ({len(images)} frames)")
         for second, image in enumerate(images):
             image_name = f"{Path(file_name).stem}_{second:02d}.jpg"
-            cv2.imwrite(str(config.FRAMES_DIR / image_name), image)
+            cv2.imwrite(str(FRAMES_DIR / image_name), image)
             boxes_by_image[image_name] = _detect(model=model, image=image)
 
-    frames = ls.ImageDataset.create(name=config.FRAMES_DATASET)
-    frames.add_images_from_path(path=config.FRAMES_DIR, embed=True)
+    frames = ls.ImageDataset.create(name="nexar-frames")
+    frames.add_images_from_path(path=FRAMES_DIR, embed=True)
     for frame in frames:
         clip_stem, second_str = Path(frame.file_name).stem.rsplit("_", maxsplit=1)
         clip = clips[f"{clip_stem}.mp4"]
@@ -83,10 +89,8 @@ def main() -> None:
             timestamp_s=float(second_str),
         )
 
-    videos = ls.VideoDataset.create(name=config.CLIPS_DATASET)
-    videos.add_videos_from_path(
-        path=config.VIDEOS_DIR, embed=True, embed_frames=False, target_fps=1
-    )
+    videos = ls.VideoDataset.create(name="nexar-clips")
+    videos.add_videos_from_path(path=VIDEOS_DIR, embed=True, embed_frames=False, target_fps=1)
     for video in videos:
         _set_clip_metadata(sample=video, clip=clips[video.file_name])
     print(f"Done: {len(boxes_by_image)} frames, {len(clips)} clips")
