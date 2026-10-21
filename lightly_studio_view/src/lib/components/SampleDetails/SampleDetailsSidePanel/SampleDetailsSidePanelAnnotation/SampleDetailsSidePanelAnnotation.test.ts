@@ -22,6 +22,16 @@ vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
     useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
 }));
+// The copy control mounts in editing mode; keep its data hooks isolated from the API.
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: () => ({ data: [], isSuccess: true })
+}));
+vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
+    useCreateAnnotation: () => ({ createAnnotation: vi.fn() })
+}));
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() })
+}));
 const annotation: AnnotationView = {
     sample_id: 'annotation',
     parent_sample_id: 'image',

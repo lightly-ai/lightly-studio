@@ -201,14 +201,6 @@
                                     <span class="truncate">{annotationLabelName}</span>
                                 </div>
                             {/if}
-                            {#if annotation.confidence != null}
-                                {@const formattedConfidence = formatConfidence(
-                                    annotation.confidence
-                                )}
-                                <span class="text-xs text-muted-foreground"
-                                    >Confidence: {formattedConfidence}</span
-                                >
-                            {/if}
                         </div>
                     </div>
                 </div>
