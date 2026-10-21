@@ -4,6 +4,7 @@
     import { Color, DoubleSide } from 'three';
     import { FACE_DEFINITIONS, getCuboidFaceLayout } from './cuboidFaceResize';
     import { useCuboidFaceResize } from './useCuboidFaceResize';
+    import { CuboidResizeHandle } from './CuboidResizeHandle';
 
     interface Props extends Pick<
         Parameters<typeof useCuboidFaceResize>[0],
@@ -57,4 +58,20 @@
             />
         </T.Mesh>
     {/if}
+
+    <!-- Persistent gizmo handle: arrow shaft + box cap, always visible in resize mode -->
+    <CuboidResizeHandle
+        {position}
+        euler={face.euler}
+        axisIndex={face.axis}
+        isActive={$hoveredFace === face}
+        onpointerenter={() => {
+            onFaceHoverEnter(face);
+        }}
+        onpointerleave={onFaceHoverLeave}
+        onpointerdown={(event) => {
+            event.stopPropagation();
+            onFacePointerDown({ event, face });
+        }}
+    />
 {/each}
