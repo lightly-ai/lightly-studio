@@ -3,7 +3,7 @@
     import { Box, SquareDashed } from '@lucide/svelte';
     import { cn } from '$lib/utils';
     import { Button } from '$lib/components/ui/button';
-    import AnnotationClassSelect from '$lib/components/SampleDetails/AnnotationClassSelect/AnnotationClassSelect.svelte';
+    import { AnnotationClassSelect } from '$lib/components/SampleDetails/AnnotationClassSelect';
 
     type SaveAs = (typeof saveAsOptions)[number]['value'];
 
