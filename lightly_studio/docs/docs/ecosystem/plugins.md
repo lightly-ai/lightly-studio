@@ -124,7 +124,7 @@ masks directly inside LightlyStudio.
 
 ## Build Your Own Plugin
 
-The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator, the GUI lists it automatically. While you develop an operator, register it manually in your script (see below). To share it, package it so LightlyStudio discovers it on install (see [Package Your Plugin](#package-your-plugin)). For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
+An operator plugin lets you run backend code from a dialog in the LightlyStudio GUI. You write a subclass of `BaseOperator` and put the action in its `execute` method. After you register an operator, the GUI lists it automatically. While you develop an operator, register it manually in your script (see below). To share it, package it with a `lightly_studio.plugins` entry point so LightlyStudio discovers it on install. See [Contributing Plugins](https://github.com/lightly-ai/lightly-studio-plugins#contributing-plugins). For operators that use the built-in parameter types, the GUI generates and renders the dialog automatically.
 
 ### Operator Plugin
 
@@ -355,19 +355,3 @@ operator_registry.register(LightlyTrainAutoLabelingODOperator())
 
 ls.start_gui()
 ```
-
-### Package Your Plugin
-
-To make LightlyStudio discover your operator on install, declare an entry point in the
-`lightly_studio.plugins` group of your package's `pyproject.toml`. The entry point
-references a `BaseOperator` subclass. LightlyStudio creates the operator with no
-arguments, so all fields need default values.
-
-```toml title="pyproject.toml"
-[project.entry-points."lightly_studio.plugins"]
-greeting = "my_plugin.greeting_operator:GreetingOperator"
-```
-
-After `pip install .`, remove the `operator_registry.register` call from your script.
-For complete examples, see the
-[lightly-studio-plugins](https://github.com/lightly-ai/lightly-studio-plugins) repository.
