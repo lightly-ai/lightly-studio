@@ -25,6 +25,7 @@ interface FilterGroup {
 
 interface UseClearAllFiltersParams {
     collectionId: string;
+    isCaptions?: boolean;
     isImages: boolean;
     isVideos: boolean;
     isVideoFrames: boolean;
@@ -60,7 +61,10 @@ export function useClearAllFilters(params: UseClearAllFiltersParams): UseClearAl
 
 // Only the filters that the sidebar of the current grid shows.
 function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
-    const { collectionId, isImages, isVideos, isVideoFrames } = params;
+    const { collectionId, isCaptions, isImages, isVideos, isVideoFrames } = params;
+    if (isCaptions) {
+        return [useTagAndLabelFilters(collectionId, false), useMetadataFilterGroup()];
+    }
     const groups = [useTagAndLabelFilters(collectionId), useEmbeddingPlotFilter(collectionId)];
     if (isImages || isVideos || isVideoFrames) groups.push(useMetadataFilterGroup());
     if (isImages) {
@@ -84,7 +88,7 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
     return groups;
 }
 
-function useTagAndLabelFilters(collectionId: string): FilterGroup {
+function useTagAndLabelFilters(collectionId: string, includeLabels = true): FilterGroup {
     const storage = useGlobalStorage();
     const { tagsSelected, clearTagsSelected } = useTags({
         collection_id: collectionId,
@@ -93,11 +97,11 @@ function useTagAndLabelFilters(collectionId: string): FilterGroup {
     return {
         isActive: derived(
             [tagsSelected, storage.selectedAnnotationFilterIds],
-            ([$tags, $labels]) => $tags.size > 0 || $labels.size > 0
+            ([$tags, $labels]) => $tags.size > 0 || (includeLabels && $labels.size > 0)
         ),
         clear: () => {
             clearTagsSelected();
-            storage.clearSelectedAnnotationFilterIds();
+            if (includeLabels) storage.clearSelectedAnnotationFilterIds();
         }
     };
 }
