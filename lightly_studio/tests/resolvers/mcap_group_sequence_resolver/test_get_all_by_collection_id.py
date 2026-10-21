@@ -27,6 +27,10 @@ from lightly_studio.resolvers import (
     sample_resolver,
     sequence_resolver,
 )
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 
@@ -393,6 +397,40 @@ def test_get_all_by_collection_id__no_sequence_frame_when_resolved_channel_has_n
     )
 
     assert result.samples[0].sequence_frame is None
+
+
+def test_get_all_by_collection_id__filters(db_session: Session) -> None:
+    """A sample filter restricts the sequences and the total count."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(session=db_session, collection_id=seq_col.collection_id, count=3)
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=seq_col.collection_id,
+        pagination=None,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(sample_ids=[seq_ids[2]])),
+    )
+
+    assert result.total_count == 1
+    assert [sample.sample_id for sample in result.samples] == [seq_ids[2]]
+
+
+def _create_sequences(session: Session, collection_id: UUID, count: int) -> list[UUID]:
+    """Create MCAP sequences of one recording, in creation order."""
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    assert collection is not None
+    recording_id = recording_resolver.create(
+        session=session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    return [
+        mcap_group_sequence_resolver.create(
+            session=session, collection_id=collection_id, recording_id=recording_id
+        )
+        for _ in range(count)
+    ]
 
 
 def _link_frames_to_sequence(
