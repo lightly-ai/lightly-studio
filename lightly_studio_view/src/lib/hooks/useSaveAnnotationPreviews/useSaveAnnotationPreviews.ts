@@ -1,10 +1,6 @@
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
-import {
-    readAnnotationLabelsOptions,
-    readAnnotationLabelsQueryKey
-} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useCreateAnnotation, useCreateLabel } from '$lib/hooks';
-import { useQueryClient } from '@tanstack/svelte-query';
+import { useCreateAnnotation } from '$lib/hooks';
+import { useLabelIds } from './useLabelIds';
 import { previewToCreateInput } from './useSaveAnnotationPreviews.helpers';
 
 interface SaveAnnotationPreviewsParams {
@@ -25,41 +21,7 @@ export const useSaveAnnotationPreviews = ({
     getDatasetId: () => string;
 }) => {
     const { createAnnotation, refetch } = useCreateAnnotation({ getCollectionId });
-    const { createLabel } = useCreateLabel({ getCollectionId });
-    const client = useQueryClient();
-
-    // Fetches the classes from the server, so classes created by an earlier call are included.
-    const fetchLabelIds = async () => {
-        const labels = await client.fetchQuery(
-            readAnnotationLabelsOptions({ path: { collection_id: getCollectionId() } })
-        );
-        return new Map(
-            labels.map((label): [string, string] => [
-                label.annotation_label_name,
-                label.annotation_label_id!
-            ])
-        );
-    };
-
-    const getLabelIds = async (classNames: string[]) => {
-        const labelIds = await fetchLabelIds();
-        const newClassNames = [...new Set(classNames)].filter((name) => !labelIds.has(name));
-        for (const className of newClassNames) {
-            const label = await createLabel({
-                dataset_id: getDatasetId(),
-                annotation_label_name: className
-            });
-            labelIds.set(className, label.annotation_label_id!);
-        }
-        if (newClassNames.length > 0) {
-            client.invalidateQueries({
-                queryKey: readAnnotationLabelsQueryKey({
-                    path: { collection_id: getCollectionId() }
-                })
-            });
-        }
-        return labelIds;
-    };
+    const { getLabelIds } = useLabelIds({ getCollectionId, getDatasetId });
 
     const saveAnnotationPreviews = async (params: SaveAnnotationPreviewsParams) => {
         const labelIds = await getLabelIds(params.previews.map(({ className }) => className));

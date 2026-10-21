@@ -73,6 +73,32 @@ describe('useSaveAnnotationPreviews', () => {
         expect(onPreviewSaved.mock.calls).toEqual([[first], [second]]);
     });
 
+    it('refreshes the labels when a class creation fails after another one', async () => {
+        const previews = [
+            { preview: first, className: 'cat' },
+            { preview: second, className: 'dog' }
+        ];
+        mocks.createLabel
+            .mockResolvedValueOnce({ annotation_label_id: 'label-cat' })
+            .mockRejectedValueOnce(new Error('create failed'));
+
+        await expect(
+            useSaveAnnotationPreviews({
+                getCollectionId: () => 'collection-1',
+                getDatasetId: () => 'dataset-1'
+            }).saveAnnotationPreviews({
+                sampleId: 'sample-1',
+                saveAs: 'mask',
+                annotationSource: 'source',
+                previews,
+                onPreviewSaved: vi.fn()
+            })
+        ).rejects.toThrow('create failed');
+
+        expect(mocks.invalidateQueries).toHaveBeenCalledTimes(1);
+        expect(mocks.createAnnotation).not.toHaveBeenCalled();
+    });
+
     it('uses an existing class without creating it', async () => {
         mocks.fetchQuery.mockResolvedValue([
             { annotation_label_name: 'cat', annotation_label_id: 'label-cat' }
