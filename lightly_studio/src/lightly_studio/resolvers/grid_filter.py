@@ -28,3 +28,9 @@ CollectionFilter = Annotated[
     Union[ImageFilter, VideoFilter],
     Field(discriminator="filter_type"),
 ]
+
+# A filter for the samples of a root collection that sampling supports.
+SamplingFilter = Annotated[
+    Union[ImageFilter, VideoFilter, McapSequenceFilter],
+    Field(discriminator="filter_type"),
+]
