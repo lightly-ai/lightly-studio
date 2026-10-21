@@ -74,6 +74,7 @@ export { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEval
 export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotationOrderBy.svelte';
 export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
+export { useBulkDeleteAnnotations } from '$lib/hooks/useBulkDeleteAnnotations/useBulkDeleteAnnotations';
 export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
