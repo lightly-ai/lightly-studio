@@ -237,7 +237,7 @@ def test_create_instances_annotation_preview(
         json={
             "collection_id": str(collection.collection_id),
             "sample_id": str(image.sample_id),
-            "prompt": "dog",
+            "text_prompt": "dog",
             "max_instances": 2,
         },
     )
@@ -264,12 +264,49 @@ def test_create_instances_annotation_preview__too_many_instances(
         json={
             "collection_id": str(collection.collection_id),
             "sample_id": str(image.sample_id),
-            "prompt": "dog",
+            "text_prompt": "dog",
             "max_instances": 33,
         },
     )
 
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_create_instances_annotation_preview__provider_error(
+    db_session: Session, media_test_client: TestClient, stub_provider: StubProvider
+) -> None:
+    stub_provider.error = ProviderError("Request timed out.")
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = _post_instances(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
+    assert response.json() == {"error": "Request timed out."}
+
+
+def test_create_instances_annotation_preview__unavailable(
+    db_session: Session,
+    media_test_client: TestClient,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("FAL_KEY", raising=False)
+    mocker.patch.object(importlib.util, "find_spec", return_value=mocker.sentinel.spec)
+    create_client = mocker.patch.object(fal_sam3_provider, "_create_client")
+    mocker.patch.object(fal_sam3_provider, "get_provider", return_value=FalSam3Provider())
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = _post_instances(
+        client=media_test_client, collection_id=collection.collection_id, sample_id=image.sample_id
+    )
+
+    assert response.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
+    assert response.json() == {"error": "Set the FAL_KEY environment variable."}
+    create_client.assert_not_called()
 
 
 def _post_interactive(
@@ -285,5 +322,16 @@ def _post_interactive(
             "sample_id": str(sample_id),
             "points": [POSITIVE_POINT],
             "boxes": boxes,
+        },
+    )
+
+
+def _post_instances(client: TestClient, collection_id: UUID, sample_id: UUID) -> Response:
+    return client.post(
+        "/api/annotate/instances",
+        json={
+            "collection_id": str(collection_id),
+            "sample_id": str(sample_id),
+            "text_prompt": "dog",
         },
     )

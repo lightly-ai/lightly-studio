@@ -84,10 +84,10 @@ class TestInstancesAnnotationRequest:
     def test_validate_prompts__text_and_boxes(self) -> None:
         box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
         request = InstancesAnnotationRequest(
-            collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt=" dog ", boxes=[box]
+            collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), text_prompt=" dog ", boxes=[box]
         )
 
-        assert request.prompt == "dog"
+        assert request.text_prompt == "dog"
         assert request.boxes == [box]
 
     def test_validate_prompts__no_prompts(self) -> None:
@@ -98,13 +98,13 @@ class TestInstancesAnnotationRequest:
         box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
         with pytest.raises(ValidationError, match="at least 1 character"):
             InstancesAnnotationRequest(
-                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt="   ", boxes=[box]
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), text_prompt="   ", boxes=[box]
             )
 
     def test_validate_prompts__too_long_text(self) -> None:
         with pytest.raises(ValidationError, match="at most 200 characters"):
             InstancesAnnotationRequest(
-                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), prompt="a" * 201
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), text_prompt="a" * 201
             )
 
     def test_validate_prompts__too_many_boxes(self) -> None:
@@ -120,6 +120,6 @@ class TestInstancesAnnotationRequest:
             InstancesAnnotationRequest(
                 collection_id=uuid.uuid4(),
                 sample_id=uuid.uuid4(),
-                prompt="dog",
+                text_prompt="dog",
                 max_instances=max_instances,
             )

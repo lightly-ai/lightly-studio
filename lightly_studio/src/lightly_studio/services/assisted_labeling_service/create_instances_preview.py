@@ -39,7 +39,7 @@ def create_instances_preview(
         boxes=convert_prompts.to_box_prompts(
             boxes=request.boxes, width=image.width, height=image.height
         ),
-        text=request.prompt,
+        text=request.text_prompt,
         max_masks=max(request.max_instances, _MIN_MULTI_INSTANCE_MASKS),
     )
     predictions = run_provider.segment(provider=provider, image=image, prompt=prompt)

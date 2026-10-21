@@ -26,7 +26,7 @@ MAX_INTERACTIVE_POINTS = 100
 DEFAULT_MAX_INSTANCES = 16
 MAX_INSTANCES_LIMIT = 32
 MAX_INSTANCES_BOXES = 100
-MAX_INSTANCES_PROMPT_LENGTH = 200
+MAX_INSTANCES_TEXT_PROMPT_LENGTH = 200
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
 # context of a `ValueError` is not JSON serializable in the 422 response.
@@ -121,11 +121,11 @@ class InstancesAnnotationRequest(BaseModel):
 
     collection_id: UUID
     sample_id: UUID
-    prompt: (
+    text_prompt: (
         Annotated[
             str,
             StringConstraints(
-                strip_whitespace=True, min_length=1, max_length=MAX_INSTANCES_PROMPT_LENGTH
+                strip_whitespace=True, min_length=1, max_length=MAX_INSTANCES_TEXT_PROMPT_LENGTH
             ),
         ]
         | None
@@ -138,7 +138,7 @@ class InstancesAnnotationRequest(BaseModel):
     @pydantic.model_validator(mode="after")
     def validate_prompts(self) -> InstancesAnnotationRequest:  # noqa: N804
         """Requires a text prompt, boxes, or both."""
-        if self.prompt is None and self.boxes is None:
+        if self.text_prompt is None and self.boxes is None:
             raise PydanticCustomError("invalid_prompts", "Provide a text prompt, boxes, or both.")
         return self
 

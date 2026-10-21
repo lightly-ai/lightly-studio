@@ -24,6 +24,13 @@ def to_point_prompt(point: AnnotationPoint, width: int, height: int) -> PointPro
     )
 
 
+def to_point_prompts(
+    points: Sequence[AnnotationPoint] | None, width: int, height: int
+) -> list[PointPrompt]:
+    """Returns the pixels of the normalized points, or no points for None."""
+    return [to_point_prompt(point=point, width=width, height=height) for point in points or []]
+
+
 def to_box_prompt(box: AnnotationBox, width: int, height: int) -> BoxPrompt:
     """Returns the smallest pixel box that contains the normalized box.
 

@@ -27,7 +27,7 @@ def test_create_instances_preview__text() -> None:
     response = assisted_labeling_service.create_instances_preview(
         provider=provider,
         image=image,
-        request=_request(image=image, prompt="dog", max_instances=2),
+        request=_request(image=image, text_prompt="dog", max_instances=2),
     )
 
     (prompt,) = provider.prompts
@@ -76,7 +76,7 @@ def test_create_instances_preview__max_instances() -> None:
     response = assisted_labeling_service.create_instances_preview(
         provider=provider,
         image=image,
-        request=_request(image=image, prompt="dog", max_instances=2),
+        request=_request(image=image, text_prompt="dog", max_instances=2),
     )
 
     assert [prediction.score for prediction in response.predictions] == [0.9, 0.8]
@@ -118,14 +118,14 @@ def _prediction(x: int, score: float) -> Prediction:
 
 def _request(
     image: ProviderImage,
-    prompt: str | None = None,
+    text_prompt: str | None = None,
     boxes: list[AnnotationBox] | None = None,
     max_instances: int = 16,
 ) -> InstancesAnnotationRequest:
     return InstancesAnnotationRequest(
         collection_id=uuid.uuid4(),
         sample_id=image.sample_id,
-        prompt=prompt,
+        text_prompt=text_prompt,
         boxes=boxes,
         max_instances=max_instances,
     )
