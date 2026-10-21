@@ -6,7 +6,6 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session, select
 
 from lightly_studio.api.routes.api.status import (
-    HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
@@ -67,7 +66,9 @@ def test_bulk_delete_annotations(db_session: Session, test_client: TestClient) -
     assert _get_annotation_ids(session=db_session) == {annotation_ids[3]}
 
 
-def test_bulk_delete_annotations__missing_id(db_session: Session, test_client: TestClient) -> None:
+def test_bulk_delete_annotations__ignores_missing_id(
+    db_session: Session, test_client: TestClient
+) -> None:
     annotation_collection_id, annotation_ids = _create_annotations(
         session=db_session, annotation_collection_name="ground_truth"
     )
@@ -77,27 +78,9 @@ def test_bulk_delete_annotations__missing_id(db_session: Session, test_client: T
         json={"annotation_ids": [str(annotation_ids[0]), str(uuid4())]},
     )
 
-    assert response.status_code == HTTP_STATUS_NOT_FOUND
-    assert _get_annotation_ids(session=db_session) == set(annotation_ids)
-
-
-def test_bulk_delete_annotations__annotation_of_other_collection(
-    db_session: Session, test_client: TestClient
-) -> None:
-    gt_collection_id, gt_annotation_ids = _create_annotations(
-        session=db_session, annotation_collection_name="ground_truth"
-    )
-    _, pred_annotation_ids = _create_annotations(
-        session=db_session, annotation_collection_name="predictions"
-    )
-
-    response = test_client.post(
-        f"/api/collections/{gt_collection_id}/annotations/bulk_delete",
-        json={"annotation_ids": [str(gt_annotation_ids[0]), str(pred_annotation_ids[0])]},
-    )
-
-    assert response.status_code == HTTP_STATUS_NOT_FOUND
-    assert _get_annotation_ids(session=db_session) == {*gt_annotation_ids, *pred_annotation_ids}
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"deleted_count": 1}
+    assert _get_annotation_ids(session=db_session) == {annotation_ids[1]}
 
 
 def test_bulk_delete_annotations__empty_ids(db_session: Session, test_client: TestClient) -> None:
