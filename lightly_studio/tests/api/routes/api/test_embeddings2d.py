@@ -15,14 +15,20 @@ from sqlmodel import Session
 
 from lightly_studio.embed.mobileclip_embedder import EMBEDDING_DIMENSION
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
     image_resolver,
+    mcap_group_sequence_resolver,
+    recording_resolver,
     sample_resolver,
     tag_resolver,
     video_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
@@ -243,6 +249,63 @@ def test_get_embeddings2d__with_video_filter(
 
     # Verify the resolver was called with the correct filters
     assert spy_video_resolver.call_args.kwargs["filters"] == video_filter
+
+
+def test_get_embeddings2d__with_mcap_sequence_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    collection_id = collection.collection_id
+    embedding_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="model_a",
+        embedding_dimension=EMBEDDING_DIMENSION,
+        set_as_default=True,
+    )
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sequence_ids = []
+    for value in (0, 1):
+        sequence_id = mcap_group_sequence_resolver.create(
+            session=db_session, collection_id=collection_id, recording_id=recording_id
+        )
+        create_sample_embedding(
+            session=db_session,
+            sample_id=sequence_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=[value] * EMBEDDING_DIMENSION,
+        )
+        sequence_ids.append(sequence_id)
+    tag = tag_resolver.create(
+        session=db_session,
+        tag=TagCreate(collection_id=collection_id, name="tagged"),
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[sequence_ids[0]]
+    )
+    sequence_filter = McapSequenceFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id]))
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": sequence_filter.model_dump(mode="json")},
+    )
+
+    assert response.status_code == 200
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_ids_payload = table.column("sample_id").to_pylist()
+    fulfils_filter = table.column("fulfils_filter").to_numpy(zero_copy_only=False)
+    # Both sequences are in the plot, and only the tagged sequence passes the filter.
+    assert set(sample_ids_payload) == {str(sequence_id) for sequence_id in sequence_ids}
+    filtered_ids = {
+        sample_id for sample_id, passes in zip(sample_ids_payload, fulfils_filter) if passes
+    }
+    assert filtered_ids == {str(sequence_ids[0])}
 
 
 def test_get_embeddings2d__rejects_mismatched_filter_type(

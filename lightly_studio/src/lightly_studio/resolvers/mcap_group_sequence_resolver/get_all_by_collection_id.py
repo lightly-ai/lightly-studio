@@ -57,6 +57,9 @@ def get_all_by_collection_id(
         McapSequenceViewsWithCount containing the page of sequences, the total
         count before pagination, and a cursor for the next page.
     """
+    mcap_group_sequence_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, sequence_filter=filters
+    )
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
         collection_id=collection_id,
