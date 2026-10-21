@@ -62,10 +62,6 @@ export class SampleDetailsPage {
         await this.page.getByTestId('header-editing-mode-button').click();
     }
 
-    async hasAnnotationWithLabel(label: string) {
-        return this.page.getByLabel(label).isVisible();
-    }
-
     getAnnotationBoxByLabel(label: string) {
         // Match `data-annotation-label` (always rendered), not the `data-label` text overlay that
         // only appears when the "show annotation text labels" setting is on.
