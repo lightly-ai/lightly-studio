@@ -152,6 +152,10 @@
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
     const isFrameDetails = $derived(isFrameDetailsRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
+    // Captions list the parent collection's samples, so their tags and metadata filters use that collection.
+    const metadataCollectionId = $derived(
+        isCaptions ? (collection.parent_collection_id ?? collectionId) : collectionId
+    );
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
@@ -327,7 +331,7 @@
         metadataInfo,
         categoricalMetadataValues,
         updateCategoricalMetadataValues
-    } = $derived.by(() => useMetadataFilters(collectionId));
+    } = $derived.by(() => useMetadataFilters(metadataCollectionId));
     const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
@@ -496,7 +500,7 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups || isPointClouds
     );
-    const hasFilterPanel = $derived(isCollectionGrid && !isPointClouds);
+    const hasFilterPanel = $derived((isCollectionGrid || isCaptions) && !isPointClouds);
 
     const panelIsVisible = $derived(
         isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
@@ -642,7 +646,11 @@
                             {/if}
 
                             <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
+                                <TagsMenu
+                                    collection_id={metadataCollectionId}
+                                    {gridType}
+                                    allowAssign={!isCaptions}
+                                />
                             </div>
 
                             <EmbeddingSelectionFilterItem
@@ -657,25 +665,31 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            <LabelsMenu
-                                {annotationFilterRows}
-                                onToggleAnnotationFilter={(label) =>
-                                    toggleAnnotationFilterSelection(label, collectionId)}
-                                showVisibilityToggle={showAnnotationVisibilityToggle}
-                            />
+                            {#if !isCaptions}
+                                <LabelsMenu
+                                    {annotationFilterRows}
+                                    onToggleAnnotationFilter={(label) =>
+                                        toggleAnnotationFilterSelection(label, collectionId)}
+                                    showVisibilityToggle={showAnnotationVisibilityToggle}
+                                />
+                            {/if}
 
-                            {#if isImages || isVideos || isVideoFrames}
+                            {#if isImages || isVideos || isVideoFrames || isCaptions}
                                 {#key collectionId}
                                     <MetadataFilterChips
-                                        {collectionId}
-                                        isImageCollection={isImages}
+                                        collectionId={metadataCollectionId}
+                                        isImageCollection={isImages || isCaptions}
                                         categoricalKeys={categoricalMetadataKeys}
                                     />
                                     <CombinedMetadataDimensionsFilters
+                                        collectionId={metadataCollectionId}
+                                        showDimensions={!isCaptions}
                                         {isVideos}
                                         {isVideoFrames}
-                                        isImageCollection={isImages}
-                                        categoricalFilter={imageAnnotationCountsFilter}
+                                        isImageCollection={isImages || isCaptions}
+                                        categoricalFilter={isCaptions
+                                            ? undefined
+                                            : imageAnnotationCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}

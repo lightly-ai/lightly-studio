@@ -46,19 +46,23 @@ describe('PlotAxesEditor', () => {
         expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
     });
 
-    it('resets the active axes from the popover and closes it', async () => {
+    it('resets the active axes from the toolbar only', async () => {
         const user = userEvent.setup();
         const props = { ...defaultProps(), active: true };
         render(PlotAxesEditor, props);
 
-        // The toolbar shows a reset button next to the trigger.
-        expect(screen.getAllByRole('button', { name: 'Reset axes' })).toHaveLength(1);
+        // The popover does not add a second reset button.
         await user.click(screen.getByRole('button', { name: 'Edit axes' }));
-        const resetButtons = screen.getAllByRole('button', { name: 'Reset axes' });
-        expect(resetButtons).toHaveLength(2);
+        expect(screen.getAllByRole('button', { name: 'Reset axes' })).toHaveLength(1);
 
-        // The popover renders in a portal at the end of the body, so its reset button is last.
-        await user.click(resetButtons[1]);
+        // Keyboard focus shows the hint, not only mouse hover.
+        await user.keyboard('{Escape}');
+        screen.getByRole('button', { name: 'Reset axes' }).focus();
+        expect(await screen.findByRole('tooltip')).toHaveTextContent(
+            'Your descriptions will be kept.'
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Reset axes' }));
         expect(props.onReset).toHaveBeenCalledOnce();
         expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
     });
@@ -72,9 +76,7 @@ describe('PlotAxesEditor', () => {
         await view.rerender({ ...props, isPending: true });
 
         expect(screen.getByRole('button', { name: 'Edit axes' })).toBeDisabled();
-        for (const button of screen.getAllByRole('button', { name: 'Reset axes' })) {
-            expect(button).toBeDisabled();
-        }
+        expect(screen.getByRole('button', { name: 'Reset axes' })).toBeDisabled();
         await user.keyboard('{Escape}');
         expect(screen.getByRole('button', { name: 'Applying…' })).toBeInTheDocument();
     });

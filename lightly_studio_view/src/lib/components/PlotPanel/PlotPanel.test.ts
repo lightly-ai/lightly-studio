@@ -699,51 +699,45 @@ describe('PlotPanel.svelte', () => {
         expect(mockEmbedTextAxes).toHaveBeenCalledTimes(2);
     });
 
-    it.each(['toolbar', 'editor'])(
-        'restores the default layout from the %s and keeps descriptions',
-        async (source) => {
-            const user = userEvent.setup();
-            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-                () => new DOMRect(0, 0, 400, 400)
-            );
-            const point = new Float32Array([0]);
-            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
-            mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
-            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-            await commitTextAxes(user);
-            await user.click(screen.getByRole('button', { name: 'Pan plot' }));
-            rangeSelectionStore.set(SQUARE_POLYGON);
-            selectedSampleIdsStore.set(['sample-1']);
-            expect(screen.getByText('young')).toBeInTheDocument();
-            await user.click(screen.getByRole('button', { name: 'Edit axes' }));
-            await user.clear(screen.getByLabelText('Left'));
-            await user.type(screen.getByLabelText('Left'), 'night');
-            expect(screen.getByText('young')).toBeInTheDocument();
-            if (source === 'toolbar') {
-                await user.click(screen.getByRole('button', { name: 'Cancel' }));
-            }
-            expect(mockEmbedTextAxes).toHaveBeenCalledTimes(1);
-            const resetButtons = screen.getAllByRole('button', { name: 'Reset axes' });
-            await user.click(resetButtons[resetButtons.length - 1]);
-            expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
-            expect(screen.getByTestId('plot-viewport')).toHaveTextContent('null');
-            expect(mockClearPlotSelectionCount).toHaveBeenCalled();
-            expect(screen.queryByText('young')).not.toBeInTheDocument();
-            // Back on PaCMAP, the button reads "Define axes" again.
-            await user.click(screen.getByRole('button', { name: 'Define axes' }));
-            expect(screen.getByLabelText('Left')).toHaveValue('night');
-            expect(screen.getByLabelText('Right')).toHaveValue('old');
-            expect(screen.getByLabelText('Bottom')).toHaveValue('sad');
-            expect(screen.getByLabelText('Top')).toHaveValue('happy');
-            await user.click(screen.getByRole('button', { name: 'Apply axes' }));
-            expect(screen.getByText('night')).toBeInTheDocument();
-            expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
-                JSON.stringify({ x: 0, y: 0, scale: 5 })
-            );
-        }
-    );
+    it('restores the default layout and keeps descriptions', async () => {
+        const user = userEvent.setup();
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+        mockEmbedTextAxes.mockResolvedValue(TEXT_LAYOUT_AXES);
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await commitTextAxes(user);
+        await user.click(screen.getByRole('button', { name: 'Pan plot' }));
+        rangeSelectionStore.set(SQUARE_POLYGON);
+        selectedSampleIdsStore.set(['sample-1']);
+        expect(screen.getByText('young')).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Edit axes' }));
+        await user.clear(screen.getByLabelText('Left'));
+        await user.type(screen.getByLabelText('Left'), 'night');
+        expect(screen.getByText('young')).toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(mockEmbedTextAxes).toHaveBeenCalledTimes(1);
+        await user.click(screen.getByRole('button', { name: 'Reset axes' }));
+        expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
+        expect(screen.getByTestId('plot-viewport')).toHaveTextContent('null');
+        expect(mockClearPlotSelectionCount).toHaveBeenCalled();
+        expect(screen.queryByText('young')).not.toBeInTheDocument();
+        // Back on PaCMAP, the button reads "Define axes" again.
+        await user.click(screen.getByRole('button', { name: 'Define axes' }));
+        expect(screen.getByLabelText('Left')).toHaveValue('night');
+        expect(screen.getByLabelText('Right')).toHaveValue('old');
+        expect(screen.getByLabelText('Bottom')).toHaveValue('sad');
+        expect(screen.getByLabelText('Top')).toHaveValue('happy');
+        await user.click(screen.getByRole('button', { name: 'Apply axes' }));
+        expect(screen.getByText('night')).toBeInTheDocument();
+        expect(screen.getByTestId('plot-viewport')).toHaveTextContent(
+            JSON.stringify({ x: 0, y: 0, scale: 5 })
+        );
+    });
 
-    it('disables both reset actions while applying edited axes', async () => {
+    it('disables reset while applying edited axes', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
             () => new DOMRect(0, 0, 400, 400)
@@ -762,12 +756,9 @@ describe('PlotPanel.svelte', () => {
             })
         );
         await user.click(screen.getByRole('button', { name: 'Apply axes' }));
-        const resetButtons = screen.getAllByRole('button', { name: 'Reset axes' });
-        expect(resetButtons).toHaveLength(2);
-        for (const button of resetButtons) {
-            expect(button).toBeDisabled();
-            await user.click(button);
-        }
+        const resetButton = screen.getByRole('button', { name: 'Reset axes' });
+        expect(resetButton).toBeDisabled();
+        await user.click(resetButton);
         // Escape does not close the popover while the axes are applied.
         await user.keyboard('{Escape}');
         expect(screen.getByRole('button', { name: 'Applying…' })).toBeInTheDocument();

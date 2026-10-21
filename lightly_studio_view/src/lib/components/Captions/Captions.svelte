@@ -3,8 +3,21 @@
     import { readCollectionOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
     import { createQuery } from '@tanstack/svelte-query';
 
-    import { useSamplesInfinite, useGlobalStorage } from '$lib/hooks';
-    import { LazyTrigger, Spinner, GridHeader, Separator, CaptionsItem } from '$lib/components';
+    import {
+        useSamplesInfinite,
+        useGlobalStorage,
+        useTags,
+        createMetadataFilters,
+        useMetadataFilters
+    } from '$lib/hooks';
+    import {
+        LazyTrigger,
+        Spinner,
+        GridHeader,
+        Separator,
+        CaptionsItem,
+        ShowFiltersButton
+    } from '$lib/components';
 
     const {
         collectionId
@@ -30,14 +43,27 @@
         return collection.parent_collection_id;
     });
 
+    // Tags and metadata filters are kept per parent collection, so they match the images tab.
+    const { tagsSelected } = $derived(useTags({ collection_id: parentCollectionId }));
+    const { metadataValues, categoricalMetadataValues } = $derived(
+        useMetadataFilters(parentCollectionId)
+    );
+
     const { data, query, loadMore, refresh } = useSamplesInfinite(() => ({
         path: { collection_id: parentCollectionId },
-        body: { filters: { has_captions: true } }
+        body: {
+            filters: {
+                has_captions: true,
+                tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+                metadata_filters: createMetadataFilters($metadataValues, $categoricalMetadataValues)
+            }
+        }
     }));
 
     let viewport: HTMLElement | null = $state(null);
 
-    const { sampleSize, setfilteredSampleCount, setfilteredCaptionCount } = useGlobalStorage();
+    const { sampleSize, setfilteredSampleCount, setfilteredCaptionCount, filterPanelCollapsed } =
+        useGlobalStorage();
 
     $effect(() => {
         if (query.isSuccess && query.data?.pages.length > 0) {
@@ -46,15 +72,10 @@
         }
     });
     let viewportHeight = $state(0);
-    let size = $state(0);
-    let captionSize = $state(0);
-    let clientWidth = $state(0);
 
     // Add a resize observer effect to update viewport dimensions
     $effect(() => {
         if (!viewport) return;
-        size = clientWidth / $sampleSize.width;
-        captionSize = size - GridGap;
         // Set initial height
         viewportHeight = viewport.clientHeight;
 
@@ -74,6 +95,12 @@
     let items = $derived($data);
     const GridGap = 8;
     const innerCardMargin = 32;
+    // The zoom control sets 1 to 16 columns. Thumbnails use fixed pixel sizes (96px at 16 columns,
+    // +16px per step down to 1 column), so they do not change when the filter panel resizes the grid.
+    const thumbnailSide = $derived(96 + (16 - $sampleSize.width) * 16);
+    // Rows never go below 120px, so the caption text stays readable on small thumbnails.
+    const minRowHeight = 120;
+    const rowHeight = $derived(Math.max(minRowHeight, thumbnailSide + innerCardMargin));
     let activeDraftSampleId = $state<string | null>(null);
 
     const height = $derived(viewportHeight + GridGap);
@@ -90,10 +117,18 @@
 </script>
 
 <div class="flex flex-1 flex-col space-y-4">
-    <GridHeader />
+    <!-- Same flex row as the images header, so the zoom slider lines up across both tabs. -->
+    <div class="flex min-w-0 items-center gap-x-4">
+        {#if $filterPanelCollapsed}
+            <ShowFiltersButton />
+        {/if}
+        <div class="min-w-0 flex-1">
+            <GridHeader />
+        </div>
+    </div>
     <Separator class="mb-4 bg-border-hard" />
 
-    <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport} bind:clientWidth>
+    <div class="h-full w-full flex-1 overflow-hidden" bind:this={viewport}>
         {#if query.isPending && items.length === 0}
             <div class="flex h-full w-full items-center justify-center gap-2">
                 <Spinner />
@@ -103,10 +138,9 @@
             <List
                 itemCount={items.length}
                 {height}
-                itemSize={captionSize + GridGap}
+                itemSize={rowHeight + GridGap}
                 class="dark:[color-scheme:dark]"
-                style="--sample-width: {captionSize -
-                    innerCardMargin}px; --sample-height: {captionSize - innerCardMargin}px;"
+                style="--sample-width: {thumbnailSide}px; --sample-height: {thumbnailSide}px;"
             >
                 {#snippet item({ index, style })}
                     {#if items[index]}
@@ -117,7 +151,7 @@
                                 data-testid="caption-grid-item"
                             >
                                 <CaptionsItem
-                                    maxHeight={`${captionSize}px`}
+                                    maxHeight={`${rowHeight}px`}
                                     item={items[index]}
                                     onUpdate={refresh}
                                     isCreatingCaption={activeDraftSampleId ===
