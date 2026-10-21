@@ -59,8 +59,6 @@ def delete_annotations_by_ids(
     # DuckDB rejects the delete of a parent row in the transaction that deleted its child
     # rows, so each foreign key level is committed separately. PostgreSQL does not need this,
     # see delete_dataset.py.
-    _expunge(session=session, table=AnnotationBaseTable, sample_ids=existing_annotation_ids)
-    _expunge(session=session, table=SampleTable, sample_ids=sample_ids)
     # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation once
     # evaluation results can be recomputed or marked stale independently from annotation updates.
     _delete_evaluation_metrics(
@@ -124,23 +122,6 @@ def _delete_by_sample_ids(
         sample_id_column = col(table.sample_id)  # type: ignore[attr-defined]
         for batch in batching.batched(items=sample_ids):
             session.exec(delete(table).where(sample_id_column.in_(batch)))
-
-
-def _expunge(session: Session, table: type[SQLModel], sample_ids: Sequence[UUID]) -> None:
-    """Detach the loaded objects of rows that will be deleted from the session.
-
-    A commit expires all loaded objects. After the bulk delete, a read of an expired
-    object reloads its row, which no longer exists, and raises an error. Detached objects
-    keep their loaded values, so callers can still read the attributes of objects that
-    they loaded before the delete. Call this before the first commit. It does not delete
-    rows in the database.
-    """
-    sample_id_set = set(sample_ids)
-    for key in list(session.identity_map.keys()):
-        cls, primary_key = key[0], key[1]
-        instance = session.identity_map.get(key)
-        if cls is table and primary_key[0] in sample_id_set and instance is not None:
-            session.expunge(instance)
 
 
 def _delete_evaluation_metrics(
