@@ -6,8 +6,9 @@ from datetime import datetime
 from enum import Enum
 from typing import Annotated, Union
 
-from pydantic import BaseModel, Field, StrictFloat, StrictInt, StrictStr
-from typing_extensions import Literal, TypeAlias
+import pydantic
+from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictInt, StrictStr
+from typing_extensions import Literal, Self, TypeAlias
 
 
 class EqualityComparisonOperator(str, Enum):
@@ -88,6 +89,30 @@ class TagsContainsExpr(BaseModel):
     tag_name: StrictStr
 
 
+class MetadataComparisonExpr(BaseModel):
+    """Compare a sample's metadata at a dot-separated path with optional array indices.
+
+    Attributes:
+        path: Metadata path, such as ``odometry.acc[1]``.
+        operator: Equality, inequality, or numeric ordering operator.
+        value: Strict JSON scalar. Ordering requires a number, excluding booleans.
+    """
+
+    type: Literal["metadata_comparison_expr"] = "metadata_comparison_expr"
+    path: str
+    operator: OrdinalComparisonOperator
+    value: StrictStr | StrictBool | StrictInt | Annotated[StrictFloat, Field(allow_inf_nan=False)]
+
+    @pydantic.model_validator(mode="after")
+    def validate_comparison(self) -> Self:  # noqa: N804
+        """Reject ordering comparisons with strings or booleans."""
+        if self.operator not in (OrdinalComparisonOperator.EQ, OrdinalComparisonOperator.NEQ) and (
+            isinstance(self.value, (str, bool))
+        ):
+            raise ValueError("Metadata ordering comparisons require a number.")
+        return self
+
+
 class ClassificationMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching classification annotation."""
 
@@ -138,6 +163,7 @@ MatchExpr: TypeAlias = Annotated[
         OrdinalFloatExpr,
         EqualityFloatExpr,
         TagsContainsExpr,
+        MetadataComparisonExpr,
         ClassificationMatchExpr,
         ObjectDetectionMatchExpr,
         SegmentationMaskMatchExpr,

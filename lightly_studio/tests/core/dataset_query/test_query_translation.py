@@ -17,6 +17,7 @@ from lightly_studio.models.query_expr import (
     EqualityFloatExpr,
     FieldRef,
     IntegerExpr,
+    MetadataComparisonExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
@@ -26,6 +27,14 @@ from lightly_studio.models.query_expr import (
     StringExpr,
     TagsContainsExpr,
 )
+
+
+def test_to_match_expression__metadata_not_yet_supported() -> None:
+    expr = MetadataComparisonExpr(
+        path="camera", operator=OrdinalComparisonOperator.EQ, value="front"
+    )
+    with pytest.raises(QueryExprError, match="Metadata query expressions are not yet supported"):
+        query_translation.to_match_expression(expr=expr)
 
 
 def test_to_match_expression__string_eq() -> None:
