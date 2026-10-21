@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/svelte-query', () => ({
     createMutation: () => ({ mutateAsync: mocks.mutateAsync })
 }));
-vi.mock('$lib/hooks/useSaveAnnotationPreviews', () => ({
+vi.mock('$lib/hooks', () => ({
     useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.toastError } }));

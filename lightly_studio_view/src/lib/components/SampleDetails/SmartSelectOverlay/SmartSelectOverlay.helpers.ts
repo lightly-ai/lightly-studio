@@ -1,7 +1,7 @@
 import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
-import type { NormalizedPoint } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import type { normalizedPointFromEvent } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 
-export type SmartSelectPoint = NormalizedPoint & { positive: boolean };
+export type SmartSelectPoint = ReturnType<typeof normalizedPointFromEvent> & { positive: boolean };
 
 // The provider rejects point prompts without a positive point.
 export const canInferFromPoints = (points: SmartSelectPoint[]): boolean =>

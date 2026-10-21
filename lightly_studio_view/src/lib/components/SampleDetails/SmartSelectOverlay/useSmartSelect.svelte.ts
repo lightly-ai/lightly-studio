@@ -2,15 +2,19 @@ import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInteractiveAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews';
+import { useSaveAnnotationPreviews } from '$lib/hooks';
 import {
     getAnnotationPreviewErrorMessage,
-    resolveAnnotationClassName,
-    type NormalizedBox,
-    type SaveAs
+    pickClassName
 } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
+import { page } from '$app/state';
 import { canInferFromPoints, type SmartSelectPoint } from './SmartSelectOverlay.helpers';
 
+type NormalizedBox = ReturnType<typeof boxFromPoints>;
+type SaveAs = Parameters<
+    ReturnType<typeof useSaveAnnotationPreviews>['saveAnnotationPreviews']
+>[0]['saveAs'];
 // One box, because the endpoint previews a single object
 type SmartSelectPrompt = { points: SmartSelectPoint[] } | { boxes: [NormalizedBox] };
 
@@ -34,7 +38,8 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
 
     const mutation = createMutation(() => createInteractiveAnnotationPreviewMutation());
     const { saveAnnotationPreviews } = useSaveAnnotationPreviews({
-        getCollectionId: () => getParams().collectionId
+        getCollectionId: () => getParams().collectionId,
+        getDatasetId: () => page.params.dataset_id!
     });
 
     const infer = async (prompt: SmartSelectPrompt) => {
@@ -78,7 +83,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         if (!preview || isSaving) return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
-        const className = resolveAnnotationClassName([annotationClass, hintedClass]);
+        const className = pickClassName([annotationClass, hintedClass]);
         try {
             await saveAnnotationPreviews({
                 sampleId,

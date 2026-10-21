@@ -1,10 +1,4 @@
-import {
-    boxFromPoints,
-    isDragBox,
-    normalizedPointFromEvent,
-    type NormalizedBox,
-    type NormalizedPoint
-} from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import { boxFromPoints, isDragBox, normalizedPointFromEvent } from './useDragBox.helpers';
 
 type RectPointerEvent = PointerEvent & { currentTarget: SVGRectElement };
 
@@ -12,8 +6,8 @@ type RectPointerEvent = PointerEvent & { currentTarget: SVGRectElement };
 export const useDragBox = (
     getParams: () => { interactionRect: SVGRectElement | null | undefined }
 ) => {
-    let start = $state<NormalizedPoint | null>(null);
-    let box = $state<NormalizedBox | null>(null);
+    let start = $state<ReturnType<typeof normalizedPointFromEvent> | null>(null);
+    let box = $state<ReturnType<typeof boxFromPoints> | null>(null);
 
     const pointFromEvent = (event: PointerEvent) => {
         const rect = getParams().interactionRect;
