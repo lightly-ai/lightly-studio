@@ -263,7 +263,7 @@ FloatLiteral returns Expression:
 StringLiteral returns Expression:
   {StringLiteral} value=STRING;
 
-terminal BOOLEAN returns boolean: /\b(true|false)\b/;
+terminal BOOLEAN returns boolean: /\b(true|false)\b/i;
 terminal FLOAT returns number: /[0-9]+\.[0-9]*/;
 terminal INT returns number: /[0-9]+/;
 terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;

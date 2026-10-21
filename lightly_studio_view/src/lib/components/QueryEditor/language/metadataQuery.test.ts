@@ -1,29 +1,75 @@
 import { describe, expect, it } from 'vitest';
+import type { MetadataComparisonExpr } from '$lib/api/lightly_studio_local';
 import { createLightlyQueryServices } from './lightly-query-module';
 import { parseLightlyQuery } from './query-expr-translation';
 
 const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
 
-function metadata(path: string, operator: string, value: string | number | boolean) {
+interface MetadataComparisonParams {
+    path: string;
+    operator: MetadataComparisonExpr['operator'];
+    value: MetadataComparisonExpr['value'];
+}
+
+interface MetadataComparisonResult extends MetadataComparisonParams {
+    type: 'metadata_comparison_expr';
+}
+
+function metadata({ path, operator, value }: MetadataComparisonParams): MetadataComparisonResult {
     return { type: 'metadata_comparison_expr', path, operator, value };
 }
 
 describe('metadata query translation', () => {
     it.each([
-        ['metadata["camera"] = "front"', metadata('camera', '==', 'front')],
-        ["metadata['camera'] != 'rear'", metadata('camera', '!=', 'rear')],
-        ['metadata["reviewed"] = true', metadata('reviewed', '==', true)],
-        ['metadata["reviewed"] != false', metadata('reviewed', '!=', false)],
-        ['metadata["count"] = 3', metadata('count', '==', 3)],
-        ['metadata["count"] != -2', metadata('count', '!=', -2)],
-        ['metadata["score"] >= 0.8', metadata('score', '>=', 0.8)],
-        ['metadata["score"] > +0.8', metadata('score', '>', 0.8)],
-        ['metadata["odometry.acc[1]"] < -0.2', metadata('odometry.acc[1]', '<', -0.2)],
-        ['metadata["score"] <= -0.0', metadata('score', '<=', -0)],
-        ['metadata["camera name"] = "front left"', metadata('camera name', '==', 'front left')],
-        [String.raw`metadata["camera\"name"] = "front"`, metadata('camera"name', '==', 'front')],
-        [String.raw`metadata['camera\\name'] = 'front'`, metadata('camera\\name', '==', 'front')],
-        ['metadata["reviewed"] = "true"', metadata('reviewed', '==', 'true')]
+        [
+            'metadata["camera"] = "front"',
+            metadata({ path: 'camera', operator: '==', value: 'front' })
+        ],
+        [
+            "metadata['camera'] != 'rear'",
+            metadata({ path: 'camera', operator: '!=', value: 'rear' })
+        ],
+        [
+            'metadata["reviewed"] = true',
+            metadata({ path: 'reviewed', operator: '==', value: true })
+        ],
+        [
+            'metadata["reviewed"] = TRUE',
+            metadata({ path: 'reviewed', operator: '==', value: true })
+        ],
+        [
+            'metadata["reviewed"] != False',
+            metadata({ path: 'reviewed', operator: '!=', value: false })
+        ],
+        [
+            'metadata["reviewed"] != false',
+            metadata({ path: 'reviewed', operator: '!=', value: false })
+        ],
+        ['metadata["count"] = 3', metadata({ path: 'count', operator: '==', value: 3 })],
+        ['metadata["count"] != -2', metadata({ path: 'count', operator: '!=', value: -2 })],
+        ['metadata["score"] >= 0.8', metadata({ path: 'score', operator: '>=', value: 0.8 })],
+        ['metadata["score"] > +0.8', metadata({ path: 'score', operator: '>', value: 0.8 })],
+        [
+            'metadata["odometry.acc[1]"] < -0.2',
+            metadata({ path: 'odometry.acc[1]', operator: '<', value: -0.2 })
+        ],
+        ['metadata["score"] <= -0.0', metadata({ path: 'score', operator: '<=', value: -0 })],
+        [
+            'metadata["camera name"] = "front left"',
+            metadata({ path: 'camera name', operator: '==', value: 'front left' })
+        ],
+        [
+            String.raw`metadata["camera\"name"] = "front"`,
+            metadata({ path: 'camera"name', operator: '==', value: 'front' })
+        ],
+        [
+            String.raw`metadata['camera\\name'] = 'front'`,
+            metadata({ path: 'camera\\name', operator: '==', value: 'front' })
+        ],
+        [
+            'metadata["reviewed"] = "true"',
+            metadata({ path: 'reviewed', operator: '==', value: 'true' })
+        ]
     ])('translates %s to the exact API payload', (source, expected) => {
         expect(parseLightlyQuery(parser, source)).toEqual({
             status: 'ok',
@@ -43,7 +89,10 @@ describe('metadata query translation', () => {
                 match_expr: {
                     type: 'or',
                     children: [
-                        { type: 'not', child: metadata('camera', '==', 'front') },
+                        {
+                            type: 'not',
+                            child: metadata({ path: 'camera', operator: '==', value: 'front' })
+                        },
                         {
                             type: 'and',
                             children: [
@@ -53,7 +102,7 @@ describe('metadata query translation', () => {
                                     operator: '>=',
                                     value: 640
                                 },
-                                metadata('score', '>=', 0.8)
+                                metadata({ path: 'score', operator: '>=', value: 0.8 })
                             ]
                         }
                     ]
@@ -76,7 +125,10 @@ describe('metadata query translation', () => {
                     children: [
                         {
                             type: 'or',
-                            children: [metadata('reviewed', '==', true), metadata('score', '<', -1)]
+                            children: [
+                                metadata({ path: 'reviewed', operator: '==', value: true }),
+                                metadata({ path: 'score', operator: '<', value: -1 })
+                            ]
                         },
                         {
                             type: 'tags_contains_expr',

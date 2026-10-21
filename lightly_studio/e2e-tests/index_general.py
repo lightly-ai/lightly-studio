@@ -21,11 +21,17 @@ dataset.add_samples_from_coco(
     annotation_type=ls.AnnotationType.SEGMENTATION_MASK,
 )
 
-# Seed a known sample for metadata query editor coverage.
+# Each contrasting sample fails one predicate of the metadata query.
+query_metadata = {
+    "000000001732.jpg": {"camera": "front", "reviewed": True, "odometry": {"acc": [0.0, -0.3]}},
+    "000000003124.jpg": {"camera": "rear", "reviewed": True, "odometry": {"acc": [0.0, -0.3]}},
+    "000000013473.jpg": {"camera": "front", "reviewed": False, "odometry": {"acc": [0.0, -0.3]}},
+    "000000014276.jpg": {"camera": "front", "reviewed": True, "odometry": {"acc": [0.0, -0.1]}},
+}
 for sample in dataset:
-    if sample.file_name == "000000001732.jpg":
-        sample.metadata.update(camera="front", reviewed=True, odometry={"acc": [0.0, -0.3]})
-        break
+    metadata = query_metadata.get(sample.file_name)
+    if metadata is not None:
+        sample.metadata.update(other=metadata)
 
 # We start the UI application on port 8001
 ls.start_gui(open_browser=False)
