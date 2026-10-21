@@ -25,7 +25,7 @@ def delete_annotation(
     Raises:
         ValueError: If the annotation does not exist.
     """
-    annotation = annotation_resolver.get_by_id(session, annotation_id=annotation_id)
+    annotation = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
     if not annotation:
         raise ValueError(f"Annotation {annotation_id} not found")
 

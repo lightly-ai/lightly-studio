@@ -14,22 +14,22 @@ from lightly_studio.resolvers import annotation_resolver
 
 def delete_annotations(
     session: Session,
-    annotation_label_ids: Sequence[UUID] | None,
+    annotation_label_ids: Sequence[UUID],
 ) -> None:
     """Delete the annotations with the given labels, their samples and dependent rows.
 
     Args:
         session: Database session.
         annotation_label_ids: IDs of the annotation labels to delete the annotations of.
-            If None or empty, all annotations are deleted.
+            If empty, no annotations are deleted.
     """
-    query = select(AnnotationBaseTable.sample_id)
-    if annotation_label_ids:
-        query = query.where(
-            db_array.in_array(
-                column=col(AnnotationBaseTable.annotation_label_id), values=annotation_label_ids
-            )
+    if not annotation_label_ids:
+        return
+    query = select(AnnotationBaseTable.sample_id).where(
+        db_array.in_array(
+            column=col(AnnotationBaseTable.annotation_label_id), values=annotation_label_ids
         )
+    )
     annotation_resolver.delete_annotations_by_ids(
         session=session, annotation_ids=session.exec(query).all()
     )

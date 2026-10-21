@@ -37,7 +37,7 @@ def delete_annotations_by_ids(
         annotation_ids: IDs of the annotations to delete.
         delete_samples: Whether to also delete the annotation samples, their tags,
             embeddings and captions. Set to False to keep the samples for reuse,
-            e.g. when an annotation is recreated.
+            e.g. when an annotation is updated.
 
     Returns:
         The number of deleted annotations.
@@ -58,8 +58,7 @@ def delete_annotations_by_ids(
 
     # DuckDB rejects the delete of a parent row in the transaction that deleted its child
     # rows, so each foreign key level is committed separately. PostgreSQL does not need this,
-    # see delete_dataset.py. The commits expire loaded objects, so the bulk deletes after a
-    # commit cannot remove them from the session. Remove them before the first commit.
+    # see delete_dataset.py.
     _expunge(session=session, table=AnnotationBaseTable, sample_ids=existing_annotation_ids)
     _expunge(session=session, table=SampleTable, sample_ids=sample_ids)
     # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation once
@@ -128,6 +127,14 @@ def _delete_by_sample_ids(
 
 
 def _expunge(session: Session, table: type[SQLModel], sample_ids: Sequence[UUID]) -> None:
+    """Detach the loaded objects of rows that will be deleted from the session.
+
+    A commit expires all loaded objects. After the bulk delete, a read of an expired
+    object reloads its row, which no longer exists, and raises an error. Detached objects
+    keep their loaded values, so callers can still read the attributes of objects that
+    they loaded before the delete. Call this before the first commit. It does not delete
+    rows in the database.
+    """
     sample_id_set = set(sample_ids)
     for key in list(session.identity_map.keys()):
         cls, primary_key = key[0], key[1]

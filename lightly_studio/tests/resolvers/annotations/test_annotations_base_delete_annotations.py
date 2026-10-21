@@ -45,9 +45,10 @@ def test_delete_annotations(
 
 
 @pytest.mark.usefixtures("annotations_test_data")
-def test_delete_annotations__no_label_ids_deletes_all(db_session: Session) -> None:
-    assert annotation_resolver.get_all(session=db_session).total_count > 0
+def test_delete_annotations__no_label_ids_deletes_nothing(db_session: Session) -> None:
+    total_count = annotation_resolver.get_all(session=db_session).total_count
+    assert total_count > 0
 
-    annotation_resolver.delete_annotations(session=db_session, annotation_label_ids=None)
+    annotation_resolver.delete_annotations(session=db_session, annotation_label_ids=[])
 
-    assert annotation_resolver.get_all(session=db_session).total_count == 0
+    assert annotation_resolver.get_all(session=db_session).total_count == total_count
