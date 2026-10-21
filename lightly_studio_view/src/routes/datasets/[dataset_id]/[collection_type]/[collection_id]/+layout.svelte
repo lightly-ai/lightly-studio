@@ -659,6 +659,7 @@
                                 {isVideos}
                                 {isImages}
                                 {isAnnotations}
+                                isSequences={isPointClouds}
                             />
                             {#if isImages}
                                 <ConfusionCellFilterItem />
@@ -666,7 +667,7 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            <!-- Captions and MCAP sequences support only the tag filter. -->
+                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
                             {#if !isCaptions && !isPointClouds}
                                 <LabelsMenu
                                     {annotationFilterRows}

@@ -44,7 +44,8 @@
         NO_CATEGORY_LABEL
     } from './plotCategories';
     import { page } from '$app/state';
-    import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
+    import { useMcapSequenceFilters } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
@@ -70,16 +71,20 @@
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
-    // Everything that isn't videos or annotations is the images grid.
-    const isImages = $derived(!isVideos && !isAnnotations);
+    // The MCAP sequences grid lives on the point clouds route.
+    const isSequences = $derived(isPointCloudsRoute(page.route?.id ?? null));
+    // Everything that isn't videos, annotations or sequences is the images grid.
+    const isImages = $derived(!isVideos && !isAnnotations && !isSequences);
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
+    const sequenceFilters = useMcapSequenceFilters();
     const { annotationPlotRegion, saveRegion: saveAnnotationRegion } = useAnnotationPlotSelection();
 
-    const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
+    const imageFilter = $derived(isVideos || isSequences ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
+    const sequenceFilter = $derived(isSequences ? sequenceFilters.mcapSequenceFilter : null);
     const activeSampleIds = $derived(
         isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
     );
@@ -95,6 +100,15 @@
         // empty annotations filter so all points count as included).
         if (isAnnotations) {
             return $selectedAnnotationsFilter ?? { filter_type: 'annotations' as const };
+        }
+        if (isSequences) {
+            // The plot highlights its own selection rather than filtering by it, so only
+            // the tags of the grid filter are sent.
+            const tagIds = $sequenceFilter?.sample_filter?.tag_ids;
+            return {
+                filter_type: 'mcap_sequence' as const,
+                ...(tagIds ? { sample_filter: { tag_ids: tagIds } } : {})
+            };
         }
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
@@ -194,15 +208,19 @@
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
     // highlight from the stored polygon to keep reflecting the actually selected points. Videos
     // and images keep the region on their filter stores; annotations use the shared plot store.
+    const committedSampleRegion = $derived(
+        isSequences
+            ? ($sequenceFilter?.sample_filter?.embedding_region ?? null)
+            : isVideos
+              ? ($videoFilter?.sample_filter?.embedding_region ?? null)
+              : isImages
+                ? ($imageFilter?.sample_filter?.embedding_region ?? null)
+                : null
+    );
     const committedHighlightRegion = $derived(
-        isImages || isVideos
-            ? ((isVideos
-                  ? $videoFilter?.sample_filter?.embedding_region
-                  : $imageFilter?.sample_filter?.embedding_region
-              )?.polygon ?? null)
-            : isAnnotations
-              ? ($annotationPlotRegion?.polygon ?? null)
-              : null
+        isAnnotations
+            ? ($annotationPlotRegion?.polygon ?? null)
+            : (committedSampleRegion?.polygon ?? null)
     );
 
     // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
@@ -244,6 +262,8 @@
             imageFilters.updateEmbeddingRegion(region);
         } else if (isVideos) {
             videoFilters.updateEmbeddingRegion(region);
+        } else if (isSequences) {
+            sequenceFilters.updateEmbeddingRegion(region);
         } else {
             saveAnnotationRegion(region);
         }
@@ -371,13 +391,7 @@
     // Videos and images track their committed selection on their filter stores; annotations use
     // the shared plot region store.
     const regionSelected = $derived(
-        isImages || isVideos
-            ? ((isVideos
-                  ? $videoFilter?.sample_filter?.embedding_region
-                  : $imageFilter?.sample_filter?.embedding_region) ?? null) !== null
-            : isAnnotations
-              ? $annotationPlotRegion !== null
-              : false
+        isAnnotations ? $annotationPlotRegion !== null : committedSampleRegion !== null
     );
     const hasActiveSelection = $derived(
         $rangeSelection !== null || activeSampleIds.length > 0 || regionSelected
@@ -476,7 +490,13 @@
     );
     const resolveThumbnail = $derived.by(() =>
         createThumbnailResolver({
-            route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
+            route: isAnnotations
+                ? 'annotations'
+                : isVideos
+                  ? 'videos'
+                  : isSequences
+                    ? 'mcap_sequences'
+                    : 'images',
             collectionId
         })
     );

@@ -1,8 +1,8 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import { BoxIcon } from '@lucide/svelte';
-    import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
+    import { getMcapSequenceFrameURL } from '$lib/utils';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
 
     interface Props {
@@ -25,12 +25,7 @@
     }: Props = $props();
 
     const frameUrl = $derived(
-        sequenceFrame
-            ? `${PUBLIC_LIGHTLY_STUDIO_API_URL}datasets/${sequenceFrame.dataset_id}/recordings/${sequenceFrame.recording_id}/camera-frame` +
-                  `?channel_id=${sequenceFrame.channel_id}` +
-                  `&keyframe_timestamp_ns=${sequenceFrame.keyframe_log_time_ns}` +
-                  `&w=${Math.round(width)}&h=${Math.round(height)}`
-            : null
+        sequenceFrame ? getMcapSequenceFrameURL(sequenceFrame, width, height) : null
     );
 
     // Debounce the URL so that rapid width/height changes during a panel resize or
