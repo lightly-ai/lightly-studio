@@ -1,21 +1,23 @@
-"""Build the Wayve demo database from the 50 Nexar clips picked by `pick_clips.py`.
+"""Build the Wayve demo datasets from the 50 Nexar clips picked by `pick_clips.py`.
 
-The database holds two datasets:
+The Postgres database in `config.DB_URL` holds two datasets:
 
-- `nexar-clips`: a video dataset with one embedding per clip and one per frame (1 fps).
-  Clips carry the Nexar labels as metadata. Frames carry YOLO boxes and counts.
-- `nexar-frames`: the same frames as JPEG images, for the few-shot classifier and the
-  GUI query editor, which work on image datasets only.
+- `nexar-frames`: one JPEG image per clip second, with YOLO boxes, frame metadata and
+  embeddings. The few-shot classifier and the GUI query editor work on image datasets only.
+- `nexar-clips`: the videos, with one embedding per clip and the Nexar labels as metadata.
+  Video frames have no embeddings.
 
-Run from `lightly_studio/`:
+The script creates `nexar-clips` last, because the GUI root opens the newest dataset.
+It deletes all data in the database first.
 
-    uv run python src/lightly_studio/examples/wayve_demo/build_dataset.py
+Run from `lightly_studio/` with the venv from the README:
+
+    python src/lightly_studio/examples/wayve_demo/build_dataset.py
 """
 
 from __future__ import annotations
 
 import csv
-from collections import defaultdict
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -28,15 +30,7 @@ from ultralytics.models import YOLO
 import lightly_studio as ls
 from lightly_studio.core.annotation.annotation_create import CreateObjectDetection
 from lightly_studio.core.sample import Sample
-from lightly_studio.core.video.video_frame_sample import VideoFrameSample
-from lightly_studio.database import db_manager
-
-DATA_DIR = Path.home() / "demo_data/wayve"
-NEXAR_DIR = DATA_DIR / "nexar"
-VIDEOS_DIR = NEXAR_DIR / "videos"
-FRAMES_DIR = NEXAR_DIR / "frames"
-DB_FILE = DATA_DIR / "wayve.db"
-YOLO_WEIGHTS = DATA_DIR / "yolo11n.pt"
+from lightly_studio.examples.wayve_demo import config
 
 ANNOTATION_SOURCE = "yolo11n"
 MIN_CONFIDENCE = 0.35
@@ -59,54 +53,43 @@ class Box:
 
 
 def main() -> None:
-    """Index the videos, run YOLO on every kept frame and index the frames as images."""
-    clips = {row["file_name"]: row for row in csv.DictReader((NEXAR_DIR / "selection.csv").open())}
-    db_manager.connect(db_file=str(DB_FILE), cleanup_existing=True)
+    """Extract and detect the frames, then index the frames and the clips."""
+    clips = {
+        row["file_name"]: row for row in csv.DictReader((config.NEXAR_DIR / "selection.csv").open())
+    }
+    config.connect(cleanup_existing=True)
 
-    videos = ls.VideoDataset.create(name="nexar-clips")
-    videos.add_videos_from_path(path=VIDEOS_DIR, embed=True, embed_frames=True, target_fps=1)
+    model = YOLO(str(config.YOLO_WEIGHTS))
+    config.FRAMES_DIR.mkdir(parents=True, exist_ok=True)
+    boxes_by_image: dict[str, list[Box]] = {}
+    for file_name in sorted(clips):
+        images = _extract_seconds(video_path=config.VIDEOS_DIR / file_name)
+        print(f"Detecting objects in {file_name} ({len(images)} frames)")
+        for second, image in enumerate(images):
+            image_name = f"{Path(file_name).stem}_{second:02d}.jpg"
+            cv2.imwrite(str(config.FRAMES_DIR / image_name), image)
+            boxes_by_image[image_name] = _detect(model=model, image=image)
+
+    frames = ls.ImageDataset.create(name=config.FRAMES_DATASET)
+    frames.add_images_from_path(path=config.FRAMES_DIR, embed=True)
+    for frame in frames:
+        clip_stem, second_str = Path(frame.file_name).stem.rsplit("_", maxsplit=1)
+        clip = clips[f"{clip_stem}.mp4"]
+        _set_clip_metadata(sample=frame, clip=clip)
+        _set_frame_labels(
+            sample=frame,
+            boxes=boxes_by_image[frame.file_name],
+            clip=clip,
+            timestamp_s=float(second_str),
+        )
+
+    videos = ls.VideoDataset.create(name=config.CLIPS_DATASET)
+    videos.add_videos_from_path(
+        path=config.VIDEOS_DIR, embed=True, embed_frames=False, target_fps=1
+    )
     for video in videos:
         _set_clip_metadata(sample=video, clip=clips[video.file_name])
-
-    frames_by_video: dict[str, list[VideoFrameSample]] = defaultdict(list)
-    for frame in videos.frames():
-        frames_by_video[frame.parent_video.file_name].append(frame)
-
-    model = YOLO(str(YOLO_WEIGHTS))
-    FRAMES_DIR.mkdir(parents=True, exist_ok=True)
-    boxes_by_image: dict[str, list[Box]] = {}
-    times_by_image: dict[str, float] = {}
-    for file_name, frames in frames_by_video.items():
-        print(f"Detecting objects in {file_name} ({len(frames)} frames)")
-        images = _extract_frames(
-            video_path=VIDEOS_DIR / file_name,
-            frame_numbers={f.frame_number for f in frames},
-        )
-        for frame in frames:
-            image_name = f"{Path(file_name).stem}_{frame.frame_number:05d}.jpg"
-            cv2.imwrite(str(FRAMES_DIR / image_name), images[frame.frame_number])
-            boxes = _detect(model=model, image=images[frame.frame_number])
-            boxes_by_image[image_name] = boxes
-            times_by_image[image_name] = frame.frame_timestamp_s
-            _set_frame_labels(
-                sample=frame,
-                boxes=boxes,
-                clip=clips[file_name],
-                timestamp_s=frame.frame_timestamp_s,
-            )
-
-    images_dataset = ls.ImageDataset.create(name="nexar-frames")
-    images_dataset.add_images_from_path(path=FRAMES_DIR)
-    for image in images_dataset:
-        clip_name = image.file_name.rsplit("_", maxsplit=1)[0] + ".mp4"
-        _set_clip_metadata(sample=image, clip=clips[clip_name])
-        _set_frame_labels(
-            sample=image,
-            boxes=boxes_by_image[image.file_name],
-            clip=clips[clip_name],
-            timestamp_s=times_by_image[image.file_name],
-        )
-    print(f"Done: {DB_FILE}")
+    print(f"Done: {len(boxes_by_image)} frames, {len(clips)} clips")
 
 
 def _set_clip_metadata(sample: Sample, clip: dict[str, str]) -> None:
@@ -156,22 +139,25 @@ def _set_frame_labels(
         )
 
 
-def _extract_frames(video_path: Path, frame_numbers: set[int]) -> dict[int, NDArray[np.uint8]]:
-    """Decode the video once and keep the frames with the given numbers."""
+def _extract_seconds(video_path: Path) -> list[NDArray[np.uint8]]:
+    """Decode the video once and keep the frame at each whole second, from second 0.
+
+    The frame for second `s` has index `round(s * fps)`.
+    """
     capture = cv2.VideoCapture(str(video_path))
-    images: dict[int, NDArray[np.uint8]] = {}
+    fps = capture.get(cv2.CAP_PROP_FPS)
+    images: list[NDArray[np.uint8]] = []
     index = 0
-    while len(images) < len(frame_numbers):
+    while True:
         ok, image = capture.read()
         if not ok:
             break
-        if index in frame_numbers:
-            images[index] = image
+        if index == round(len(images) * fps):
+            images.append(image)
         index += 1
     capture.release()
-    missing = frame_numbers - images.keys()
-    if missing:
-        raise RuntimeError(f"{video_path.name}: could not decode frames {sorted(missing)}")
+    if not images:
+        raise RuntimeError(f"{video_path.name}: could not decode any frame")
     return images
 
 
