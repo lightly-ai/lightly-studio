@@ -36,8 +36,15 @@ export interface PerformanceLimits {
 }
 
 export async function gotoFirstPage(page: Page): Promise<void> {
+    await dismissOnboarding(page);
     await page.goto('/');
-    await expect(page.getByTestId('sample-grid-item').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByTestId('sample-grid-item').first()).toBeVisible();
+}
+
+async function dismissOnboarding(page: Page): Promise<void> {
+    await page.addInitScript(() => {
+        localStorage.setItem('lightly-studio:onboarding-invitation:v1', 'shown');
+    });
 }
 
 type Pages = {
@@ -55,6 +62,7 @@ type Pages = {
 export const test = base.extend<Pages>({
     annotationsPage: async ({ page }, use) => {
         // Set up the fixture.
+        await dismissOnboarding(page);
         const annotationsPage = new AnnotationsPage(page);
         await annotationsPage.goto();
 
@@ -70,6 +78,7 @@ export const test = base.extend<Pages>({
 
     samplesPage: async ({ page }, use) => {
         // Set up the fixture.
+        await dismissOnboarding(page);
         const samplesPage = new SamplesPage(page);
         await samplesPage.goto();
 
@@ -84,6 +93,7 @@ export const test = base.extend<Pages>({
     },
     captionsPage: async ({ page }, use) => {
         // Set up the fixture.
+        await dismissOnboarding(page);
         const captionsPage = new CaptionsPage(page);
         await captionsPage.goto();
 
@@ -92,6 +102,7 @@ export const test = base.extend<Pages>({
     },
     captionsVideoFramePage: async ({ page }, use) => {
         // Set up the fixture.
+        await dismissOnboarding(page);
         const captionsPage = new CaptionsPage(page);
         // For a video dataset, captions are on the third menu level (index 2).
         await captionsPage.goto(2);
@@ -102,6 +113,7 @@ export const test = base.extend<Pages>({
 
     videosPage: async ({ page }, use) => {
         // Set up the fixture.
+        await dismissOnboarding(page);
         const videosPage = new VideosPage(page);
         await videosPage.goto();
 
@@ -111,6 +123,7 @@ export const test = base.extend<Pages>({
 
     videoFramesPage: async ({ page }, use) => {
         // Set up the fixture.
+        await dismissOnboarding(page);
         const videoFramesPage = new VideoFramesPage(page);
         await videoFramesPage.goto();
 

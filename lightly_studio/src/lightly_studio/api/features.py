@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_ANALYTICS_ENABLED,
-    LIGHTLY_STUDIO_ONBOARDING_ENABLED,
 )
 
 # The GUI reads this back to decide whether to start PostHog, so that
@@ -18,8 +17,7 @@ def _get_active_features() -> list[str]:
     features = []
     if LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         features.append(ANALYTICS_FEATURE)
-    if LIGHTLY_STUDIO_ONBOARDING_ENABLED:
-        features.append(ONBOARDING_FEATURE)
+    features.append(ONBOARDING_FEATURE)
     return features
 
 
