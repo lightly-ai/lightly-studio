@@ -34,7 +34,11 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
         invalidateEvaluationRunsQueries();
     };
 
-    const createAnnotation = (inputs: AnnotationCreateInput) =>
+    // Pass `skipRefetch` to create many annotations and call `refetch` once at the end.
+    const createAnnotation = (
+        inputs: AnnotationCreateInput,
+        { skipRefetch = false }: { skipRefetch?: boolean } = {}
+    ) =>
         new Promise<CreateAnnotationResponse>((resolve, reject) => {
             const collectionId = getCollectionId();
             mutation.mutate(
@@ -46,7 +50,7 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
                 },
                 {
                     onSuccess: (data) => {
-                        refetch(collectionId);
+                        if (!skipRefetch) refetch(collectionId);
                         trackEvent('annotation_created', {
                             collection_id: collectionId,
                             annotation_type: data.annotation_type,
@@ -63,6 +67,7 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
         });
 
     return {
-        createAnnotation
+        createAnnotation,
+        refetch: () => refetch(getCollectionId())
     };
 };
