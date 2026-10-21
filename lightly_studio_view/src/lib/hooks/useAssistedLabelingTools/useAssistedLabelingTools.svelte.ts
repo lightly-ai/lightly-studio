@@ -4,13 +4,12 @@ import {
     useSampleDetailsToolbarContext
 } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-import type { SaveAs } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 
 const noop = () => undefined;
 
 // A class, so child components can update the fields without mutating a $state prop.
 class AssistedLabelingToolState {
-    saveAs = $state<SaveAs>('mask');
+    saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
     smartSelect = $state<{ canSave: boolean; save: () => void; clear: () => void }>({
         canSave: false,
