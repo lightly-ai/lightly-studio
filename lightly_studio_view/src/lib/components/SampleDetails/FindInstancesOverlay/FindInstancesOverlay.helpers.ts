@@ -1,5 +1,5 @@
 import type { InstancesAnnotationRequest } from '$lib/api/lightly_studio_local';
-import type { NormalizedBox } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 
 // Boxes alone find only the boxed objects, so the endpoint needs a text prompt.
 export const canGenerateInstances = ({ prompt }: { prompt: string }): boolean =>
@@ -15,7 +15,7 @@ export const buildInstancesRequestBody = ({
     collectionId: string;
     sampleId: string;
     prompt: string;
-    boxes: NormalizedBox[];
+    boxes: ReturnType<typeof boxFromPoints>[];
     maxInstances: number;
 }): InstancesAnnotationRequest => ({
     collection_id: collectionId,

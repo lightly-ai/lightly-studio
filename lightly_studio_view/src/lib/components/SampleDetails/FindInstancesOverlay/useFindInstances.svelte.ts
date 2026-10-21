@@ -3,14 +3,19 @@ import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInstancesAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews';
+import { useSaveAnnotationPreviews } from '$lib/hooks';
 import {
     getAnnotationPreviewErrorMessage,
-    resolveAnnotationClassName,
-    type NormalizedBox,
-    type SaveAs
+    pickClassName
 } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
+import { page } from '$app/state';
 import { buildInstancesRequestBody, canGenerateInstances } from './FindInstancesOverlay.helpers';
+
+type NormalizedBox = ReturnType<typeof boxFromPoints>;
+type SaveAs = Parameters<
+    ReturnType<typeof useSaveAnnotationPreviews>['saveAnnotationPreviews']
+>[0]['saveAs'];
 
 interface UseFindInstancesParams {
     collectionId: string;
@@ -37,7 +42,8 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const mutation = createMutation(() => createInstancesAnnotationPreviewMutation());
     const { saveAnnotationPreviews } = useSaveAnnotationPreviews({
-        getCollectionId: () => getParams().collectionId
+        getCollectionId: () => getParams().collectionId,
+        getDatasetId: () => page.params.dataset_id!
     });
 
     // Keeps the predictions while a save runs, so a failed save keeps the unsaved ones.
@@ -113,7 +119,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         if (!canSave()) return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
-        const className = resolveAnnotationClassName([annotationClass, resultsPrompt]);
+        const className = pickClassName([annotationClass, resultsPrompt]);
         try {
             await saveAnnotationPreviews({
                 sampleId,
