@@ -11,6 +11,17 @@ LightlyStudio plugins can add workflows such as image segmentation with SAM3, au
 
 Plugins are shown in the UI based on their scope. The scope tells LightlyStudio which modality and context a plugin supports, for example dataset-level, image, or video frame context. The current view then determines which items the plugin runs on: in grid view, it uses the items matching the active filters; in detail view, it runs on the currently open item.
 
+## How Plugins Are Registered
+
+LightlyStudio registers a plugin in one of two ways:
+
+| Mode | Use it for | What you do |
+|---|---|---|
+| Automatic discovery | Plugins installed as a Python package, such as the [LightlyStudio plugins](#lightlystudio-plugins) | Install the package. LightlyStudio registers it when the GUI starts. |
+| Manual registration | Your own operator that is not packaged, for example a class in a local script | Call `operator_registry.register(...)` before `ls.start_gui()`. |
+
+Do not register an installed plugin by hand. It then shows up twice in the GUI.
+
 ## LightlyStudio Plugins
 
 Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://github.com/lightly-ai/lightly-studio-plugins) repository. Each plugin lives in its own subdirectory under `plugins/` and can be installed directly from the repository.
@@ -83,7 +94,9 @@ Replace `<plugin_name>` with the folder name of the plugin you want to install:
 pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
 ```
 
-Once installed, the plugin is auto-registered and will appear in the GUI automatically.
+Once installed, the plugin is registered automatically the next time you start the GUI.
+You do not need to call `operator_registry.register`. If the GUI is already running,
+restart it.
 
 To remove a plugin, uninstall its package with `pip uninstall`,
 using the package name defined in the plugin's `pyproject.toml` (typically matching the
@@ -111,7 +124,7 @@ masks directly inside LightlyStudio.
 
 ## Build Your Own Plugin
 
-The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator through the Python API, the GUI lists it automatically. For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
+The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator, the GUI lists it automatically. While you develop an operator, register it manually in your script (see below). To share it, package it so LightlyStudio discovers it on install (see [Package Your Plugin](#package-your-plugin)). For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
 
 ### Operator Plugin
 
@@ -167,7 +180,7 @@ class GreetingOperator(BaseOperator):
         return OperatorResult(success=True, message=f"Hello {your_name}!")
 ```
 
-To make an operator known to the application, you have to register it. For this you need to extend our main execution .py file:
+To make an operator known to the application, you register it manually (see [How Plugins Are Registered](#how-plugins-are-registered)). For this you need to extend our main execution .py file:
 
 ```python title="example_operator.py"
 import lightly_studio as ls
@@ -342,3 +355,19 @@ operator_registry.register(LightlyTrainAutoLabelingODOperator())
 
 ls.start_gui()
 ```
+
+### Package Your Plugin
+
+To make LightlyStudio discover your operator on install, declare an entry point in the
+`lightly_studio.plugins` group of your package's `pyproject.toml`. The entry point
+references a `BaseOperator` subclass. LightlyStudio creates the operator with no
+arguments, so all fields need default values.
+
+```toml title="pyproject.toml"
+[project.entry-points."lightly_studio.plugins"]
+greeting = "my_plugin.greeting_operator:GreetingOperator"
+```
+
+After `pip install .`, remove the `operator_registry.register` call from your script.
+For complete examples, see the
+[lightly-studio-plugins](https://github.com/lightly-ai/lightly-studio-plugins) repository.
