@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from lightly_studio.models.assisted_labeling import (
     AnnotationBox,
     AnnotationPoint,
+    InstancesAnnotationRequest,
     InteractiveAnnotationRequest,
 )
 
@@ -76,4 +77,55 @@ class TestInteractiveAnnotationRequest:
         with pytest.raises(ValidationError, match="at most 1 item"):
             InteractiveAnnotationRequest(
                 collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), boxes=[box, box]
+            )
+
+
+class TestInstancesAnnotationRequest:
+    def test_init__text_and_boxes(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        request = InstancesAnnotationRequest(
+            collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), text_prompt=" dog ", boxes=[box]
+        )
+
+        assert request.text_prompt == "dog"
+        assert request.boxes == [box]
+
+    def test_init__no_text_prompt(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        with pytest.raises(ValidationError, match="text_prompt"):
+            InstancesAnnotationRequest.model_validate(
+                {"collection_id": uuid.uuid4(), "sample_id": uuid.uuid4(), "boxes": [box]}
+            )
+
+    def test_init__blank_text_with_boxes(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        with pytest.raises(ValidationError, match="at least 1 character"):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), text_prompt="   ", boxes=[box]
+            )
+
+    def test_init__too_long_text(self) -> None:
+        with pytest.raises(ValidationError, match="at most 200 characters"):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(), sample_id=uuid.uuid4(), text_prompt="a" * 201
+            )
+
+    def test_init__too_many_boxes(self) -> None:
+        box = AnnotationBox(x=0.0, y=0.0, width=0.5, height=0.5)
+        with pytest.raises(ValidationError, match="at most 100 items"):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(),
+                sample_id=uuid.uuid4(),
+                text_prompt="dog",
+                boxes=[box] * 101,
+            )
+
+    @pytest.mark.parametrize("max_instances", [0, 33])
+    def test_init__max_instances_out_of_range(self, max_instances: int) -> None:
+        with pytest.raises(ValidationError, match="max_instances"):
+            InstancesAnnotationRequest(
+                collection_id=uuid.uuid4(),
+                sample_id=uuid.uuid4(),
+                text_prompt="dog",
+                max_instances=max_instances,
             )
