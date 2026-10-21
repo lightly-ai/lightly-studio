@@ -51,6 +51,7 @@ def test_create_instances_preview__boxes() -> None:
         image=image,
         request=_request(
             image=image,
+            text_prompt="dog",
             boxes=[AnnotationBox(x=0.1, y=0.2, width=0.4, height=0.6)],
             max_instances=10,
         ),
@@ -58,7 +59,7 @@ def test_create_instances_preview__boxes() -> None:
 
     (prompt,) = provider.prompts
     assert prompt.boxes == [BoxPrompt(x_min=10, y_min=10, x_max=50, y_max=40)]
-    assert prompt.text is None
+    assert prompt.text == "dog"
     assert prompt.points == []
     assert prompt.max_masks == 10
 
@@ -96,6 +97,7 @@ def test_create_instances_preview__single_instance() -> None:
         image=image,
         request=_request(
             image=image,
+            text_prompt="dog",
             boxes=[
                 AnnotationBox(x=0.0, y=0.0, width=0.25, height=0.5),
                 AnnotationBox(x=0.25, y=0.0, width=0.25, height=0.5),
@@ -118,7 +120,7 @@ def _prediction(x: int, score: float) -> Prediction:
 
 def _request(
     image: ProviderImage,
-    text_prompt: str | None = None,
+    text_prompt: str,
     boxes: list[AnnotationBox] | None = None,
     max_instances: int = 16,
 ) -> InstancesAnnotationRequest:

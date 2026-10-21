@@ -49,7 +49,7 @@ async def create_interactive_annotation_preview(
 async def create_instances_annotation_preview(
     request: InstancesAnnotationRequest,
 ) -> InstancesAnnotationResponse:
-    """Returns previews of all instances that match a text prompt or boxes. Saves nothing."""
+    """Returns previews of all instances that match a text prompt. Saves nothing."""
     return await asyncio.get_running_loop().run_in_executor(
         _get_provider_executor(), functools.partial(_create_instances_preview, request=request)
     )

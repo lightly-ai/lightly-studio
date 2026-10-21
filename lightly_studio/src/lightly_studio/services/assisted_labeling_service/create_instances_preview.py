@@ -1,4 +1,4 @@
-"""Previews of all instances that match a text prompt or boxes."""
+"""Previews of all instances that match a text prompt."""
 
 from __future__ import annotations
 

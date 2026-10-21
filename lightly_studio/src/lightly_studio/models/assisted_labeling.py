@@ -117,30 +117,26 @@ class InteractiveAnnotationResponse(BaseModel):
 
 
 class InstancesAnnotationRequest(BaseModel):
-    """Request for previews of all instances that match a text prompt or boxes."""
+    """Request for previews of all instances that match a text prompt.
+
+    Attributes:
+        text_prompt: What to find, for example a class name.
+        boxes: Optional examples of instances that the text prompt can miss.
+        max_instances: Maximum number of previews.
+    """
 
     collection_id: UUID
     sample_id: UUID
-    text_prompt: (
-        Annotated[
-            str,
-            StringConstraints(
-                strip_whitespace=True, min_length=1, max_length=MAX_INSTANCES_TEXT_PROMPT_LENGTH
-            ),
-        ]
-        | None
-    ) = None
+    text_prompt: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True, min_length=1, max_length=MAX_INSTANCES_TEXT_PROMPT_LENGTH
+        ),
+    ]
     boxes: list[AnnotationBox] | None = pydantic.Field(
         default=None, min_length=1, max_length=MAX_INSTANCES_BOXES
     )
     max_instances: int = pydantic.Field(default=DEFAULT_MAX_INSTANCES, ge=1, le=MAX_INSTANCES_LIMIT)
-
-    @pydantic.model_validator(mode="after")
-    def validate_prompts(self) -> InstancesAnnotationRequest:  # noqa: N804
-        """Requires a text prompt, boxes, or both."""
-        if self.text_prompt is None and self.boxes is None:
-            raise PydanticCustomError("invalid_prompts", "Provide a text prompt, boxes, or both.")
-        return self
 
 
 class InstancesAnnotationResponse(BaseModel):
