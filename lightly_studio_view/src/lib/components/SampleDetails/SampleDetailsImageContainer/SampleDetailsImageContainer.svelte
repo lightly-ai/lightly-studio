@@ -228,7 +228,6 @@
     width={sample.width}
     height={sample.height}
     panEnabled={isPanEnabled({
-        isEditingMode: $isEditingMode,
         isDrawing: annotationLabelContext.isDrawing,
         isErasing: annotationLabelContext.isErasing,
         status: sampleDetailsToolbarContext.status

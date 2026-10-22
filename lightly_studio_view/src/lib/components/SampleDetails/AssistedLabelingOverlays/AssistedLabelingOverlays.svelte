@@ -6,7 +6,7 @@
 
     interface Props {
         collectionId: string;
-        sample: { sampleId: string; width: number; height: number; annotations: AnnotationView[] };
+        sample: { sampleId: string; width: number; height: number };
         visibleAnnotations: AnnotationView[];
         scale: number;
         interactionRect?: SVGRectElement | null;
@@ -34,7 +34,6 @@
         <SmartSelectOverlay
             bind:interactionRect
             {collectionId}
-            sampleId={sample.sampleId}
             {sample}
             annotations={visibleAnnotations}
             {scale}

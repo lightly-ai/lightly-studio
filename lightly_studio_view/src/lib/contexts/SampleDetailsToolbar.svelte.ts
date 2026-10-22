@@ -15,6 +15,8 @@ export type ToolbarStatus =
 
 export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
+    // The status a Space pan interrupted, restored when the pan ends.
+    panFrom?: ToolbarStatus;
     brush: {
         mode: BrushMode;
         size: number;

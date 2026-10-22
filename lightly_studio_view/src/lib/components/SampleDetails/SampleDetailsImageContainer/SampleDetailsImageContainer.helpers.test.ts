@@ -2,10 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
 
 const params = {
-    isEditingMode: true,
     isDrawing: false,
     isErasing: false,
-    status: 'cursor'
+    status: 'cursor' as const
 };
 
 describe('isPanEnabled', () => {
@@ -18,10 +17,7 @@ describe('isPanEnabled', () => {
         expect(isPanEnabled({ ...params, isErasing: true })).toBe(false);
     });
 
-    it('disables panning for smart select in edit mode only', () => {
+    it('disables panning for assisted labeling tools', () => {
         expect(isPanEnabled({ ...params, status: 'smart-select' })).toBe(false);
-        expect(isPanEnabled({ ...params, status: 'smart-select', isEditingMode: false })).toBe(
-            true
-        );
     });
 });

@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SmartSelectPopUp from '$lib/components/SampleDetails/SmartSelectPopUp/SmartSelectPopUp.svelte';
     import type { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
 
@@ -10,12 +9,10 @@
 
     let { collectionId, assistedLabeling }: Props = $props();
 
-    // The tool status outlives edit mode, so the pop-ups check it.
-    const { isEditingMode } = useGlobalStorage();
     const toolState = $derived(assistedLabeling.state);
 </script>
 
-{#if $isEditingMode && assistedLabeling.activeTool === 'smart-select' && !assistedLabeling.isPanning}
+{#if assistedLabeling.activeTool === 'smart-select' && !assistedLabeling.isPanning}
     <SmartSelectPopUp
         {collectionId}
         saveAs={toolState.saveAs}
