@@ -56,3 +56,14 @@ LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS: int = env.int("LIGHTLY_STUDIO_REQUEST_TI
 LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR: bool = env.bool(
     "LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR", False
 )
+
+# The plugin catalog that the GUI shows to browse and install plugins.
+LIGHTLY_STUDIO_PLUGIN_CATALOG_URL: str = env.str(
+    "LIGHTLY_STUDIO_PLUGIN_CATALOG_URL",
+    "https://raw.githubusercontent.com/lightly-ai/lightly-studio-plugins/main/plugins.toml",
+)
+# Lets the GUI install plugins into the Python environment of the server. Unset, only requests
+# from the same machine (a loopback client address) can install plugins.
+LIGHTLY_STUDIO_ALLOW_PLUGIN_INSTALL: Optional[bool] = env.bool(
+    "LIGHTLY_STUDIO_ALLOW_PLUGIN_INSTALL", default=None
+)
