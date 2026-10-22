@@ -2,18 +2,14 @@ import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSmartSelect } from './useSmartSelect.svelte';
 
-const mocks = vi.hoisted(() => {
-    const mutateAsync = vi.fn();
-    return {
-        mutateAsync,
-        mutation: { mutateAsync, isPending: false },
-        saveAnnotationPreviews: vi.fn(),
-        toastError: vi.fn()
-    };
-});
+const mocks = vi.hoisted(() => ({
+    mutateAsync: vi.fn(),
+    saveAnnotationPreviews: vi.fn(),
+    toastError: vi.fn()
+}));
 
 vi.mock('@tanstack/svelte-query', () => ({
-    createMutation: () => mocks.mutation
+    createMutation: () => ({ mutateAsync: mocks.mutateAsync })
 }));
 vi.mock('$lib/hooks', () => ({
     useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
@@ -59,7 +55,6 @@ const point = { x: 0.5, y: 0.5, positive: true };
 describe('useSmartSelect', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.mutation.isPending = false;
     });
 
     afterEach(() => cleanup());
@@ -135,17 +130,33 @@ describe('useSmartSelect', () => {
         );
     });
 
-    it('does not save while a newer preview is pending', async () => {
-        mocks.mutateAsync.mockResolvedValue({ prediction });
+    it('drops the preview once a point is added, even if its request fails', async () => {
+        mocks.mutateAsync
+            .mockResolvedValueOnce({ prediction })
+            .mockRejectedValueOnce(new Error('provider failed'));
         const smartSelect = setup();
         smartSelect.addPoint(point, null);
         await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
 
-        mocks.mutation.isPending = true;
+        smartSelect.addPoint({ ...point, x: 0.6 }, null);
+        await vi.waitFor(() => expect(mocks.toastError).toHaveBeenCalled());
         await smartSelect.save();
 
+        expect(smartSelect.preview).toBeNull();
         expect(smartSelect.canSave).toBe(false);
         expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+    });
+
+    it('drops a box preview once a negative point is added', async () => {
+        mocks.mutateAsync.mockResolvedValue({ prediction });
+        const smartSelect = setup();
+        smartSelect.selectBox({ x: 0, y: 0, width: 0.5, height: 0.5 });
+        await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
+
+        smartSelect.addPoint({ ...point, positive: false }, null);
+
+        expect(smartSelect.preview).toBeNull();
+        expect(mocks.mutateAsync).toHaveBeenCalledTimes(1);
     });
 
     it('keeps the newest preview when an older response arrives late', async () => {
@@ -196,6 +207,23 @@ describe('useSmartSelect', () => {
         expect(mocks.toastError).toHaveBeenCalledWith(
             'Could not save the annotation: create failed'
         );
+    });
+
+    it('keeps the preview when cleared during a failed save', async () => {
+        const saving = deferred();
+        mocks.mutateAsync.mockResolvedValue({ prediction });
+        mocks.saveAnnotationPreviews.mockReturnValue(saving.promise);
+        const smartSelect = setup();
+        smartSelect.addPoint(point, null);
+        await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
+
+        const save = smartSelect.save();
+        smartSelect.clear();
+        saving.reject(new Error('create failed'));
+        await save;
+
+        expect(smartSelect.preview).toEqual(prediction);
+        expect(smartSelect.canSave).toBe(true);
     });
 
     it('drops a pending response once torn down', async () => {

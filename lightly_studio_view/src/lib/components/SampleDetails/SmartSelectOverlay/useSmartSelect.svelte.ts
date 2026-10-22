@@ -56,7 +56,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         }
     };
 
-    const clear = () => {
+    const reset = () => {
         sequence += 1;
         points = [];
         preview = null;
@@ -64,23 +64,29 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
     };
 
     // Drops a request from a previous sample, e.g. after the overlay was keyed by a new one.
-    $effect(() => clear);
+    $effect(() => reset);
+
+    // Keeps the preview while a save runs, so a failed save can be retried.
+    const clear = () => {
+        if (!isSaving) reset();
+    };
 
     const addPoint = (point: SmartSelectPoint, className: string | null) => {
         if (isSaving) return;
         points = [...points, point];
+        // The preview no longer matches the points, so it cannot be saved.
+        preview = null;
         hintedClass = className ?? hintedClass;
         if (canInferFromPoints(points)) void infer({ points });
     };
 
     const selectBox = (box: NormalizedBox) => {
         if (isSaving) return;
-        clear();
+        reset();
         void infer({ boxes: [box] });
     };
 
-    // A pending request means the preview does not match the prompts yet.
-    const canSave = () => preview !== null && !isSaving && !mutation.isPending;
+    const canSave = () => preview !== null && !isSaving;
 
     const save = async () => {
         if (!preview || !canSave()) return;
@@ -93,7 +99,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
                 saveAs,
                 annotationSource,
                 previews: [{ preview, className }],
-                onPreviewSaved: clear
+                onPreviewSaved: reset
             });
             onSaved();
         } catch (error) {
