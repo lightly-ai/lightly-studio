@@ -3,7 +3,6 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 from fastapi.testclient import TestClient
-from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
 from lightly_studio.api.routes.api.status import (
@@ -12,7 +11,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
-from lightly_studio.resolvers import embedding_region_resolver, evaluation_run_resolver
+from lightly_studio.resolvers import evaluation_run_resolver
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
@@ -185,33 +184,57 @@ def test_bulk_delete_annotations_by_filter(db_session: Session, test_client: Tes
     assert _get_annotation_ids(session=db_session) == {dog_annotation_id}
 
 
-def test_bulk_delete_annotations_by_filter__embedding_region(
-    db_session: Session, test_client: TestClient, mocker: MockerFixture
+def test_bulk_delete_annotations_by_filter__keeps_other_annotation_collection(
+    db_session: Session, test_client: TestClient
 ) -> None:
-    annotation_collection_id, annotation_ids = _create_annotations(
-        session=db_session, annotation_collection_name="ground_truth"
-    )
-    mocker.patch.object(
-        embedding_region_resolver,
-        "get_sample_ids_in_region",
-        return_value=[annotation_ids[1]],
-    )
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation_details = [
+        AnnotationDetails(sample_id=image.sample_id, annotation_label_id=label.annotation_label_id)
+    ]
+    gt_annotation = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=annotation_details,
+        collection_name="ground_truth",
+    )[0]
+    pred_annotation = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=annotation_details,
+        collection_name="predictions",
+    )[0]
 
     response = test_client.post(
-        f"/api/collections/{annotation_collection_id}/annotations/bulk_delete_by_filter",
+        f"/api/collections/{gt_annotation.annotation_collection_id}/annotations/bulk_delete_by_filter",
         json={
             "filter": {
                 "filter_type": "annotations",
-                "embedding_region": {
-                    "polygon": [{"x": 0, "y": 0}, {"x": 1, "y": 0}, {"x": 1, "y": 1}]
-                },
+                "annotation_label_ids": [str(label.annotation_label_id)],
             }
         },
     )
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {"deleted_count": 1}
-    assert _get_annotation_ids(session=db_session) == {annotation_ids[0]}
+    assert _get_annotation_ids(session=db_session) == {pred_annotation.sample_id}
+
+
+def test_bulk_delete_annotations_by_filter__rejects_non_annotation_filter(
+    db_session: Session, test_client: TestClient
+) -> None:
+    annotation_collection_id, annotation_ids = _create_annotations(
+        session=db_session, annotation_collection_name="ground_truth"
+    )
+
+    response = test_client.post(
+        f"/api/collections/{annotation_collection_id}/annotations/bulk_delete_by_filter",
+        json={"filter": {"filter_type": "image"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+    assert _get_annotation_ids(session=db_session) == set(annotation_ids)
 
 
 def _create_annotations(

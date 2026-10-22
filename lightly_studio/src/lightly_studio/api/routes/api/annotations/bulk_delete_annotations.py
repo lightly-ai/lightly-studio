@@ -20,7 +20,7 @@ from lightly_studio.resolvers import (
     grid_filter_sample_ids,
     sample_resolver,
 )
-from lightly_studio.resolvers.grid_filter import GridFilter
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 
 bulk_delete_annotations_router = APIRouter()
 
@@ -34,7 +34,7 @@ class BulkDeleteAnnotationsInput(BaseModel):
 class BulkDeleteAnnotationsByFilterInput(BaseModel):
     """API input for filtered bulk annotation deletion."""
 
-    filter: GridFilter
+    filter: AnnotationsFilter
 
 
 class BulkDeleteAnnotationsResult(BaseModel):
