@@ -1,7 +1,8 @@
 <script lang="ts">
-    import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
+    import { Checkbox } from '$lib/components/ui/checkbox';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { X } from '@lucide/svelte';
 
     const { filterParams, updateConfusionCell } = useImageFilters();
 
@@ -11,16 +12,6 @@
         $filterParams?.mode === 'normal' ? ($filterParams.filters?.confusion_cell ?? null) : null
     );
 
-    // A null gt_label is the false-positive bucket (only a prediction, no ground
-    // truth); a null pred_label is the false-negative bucket (only a ground truth, no
-    // prediction). Otherwise it is a real class-by-class confusion.
-    const chipTitle = $derived.by(() => {
-        if (!confusionCell) return '';
-        if (confusionCell.gt_label == null) return `Predicted only: ${confusionCell.pred_label}`;
-        if (confusionCell.pred_label == null) return `Ground truth only: ${confusionCell.gt_label}`;
-        return `GT: ${confusionCell.gt_label} → Pred: ${confusionCell.pred_label}`;
-    });
-
     const clearFilter = () => {
         updateConfusionCell(null);
     };
@@ -28,17 +19,40 @@
 
 {#if confusionCell}
     <Segment title="Confusion Matrix">
-        <FilterChip
-            checked={true}
-            title={chipTitle}
-            checkboxLabel="Confusion cell filter"
-            testId="confusion-cell-filter-item-chip"
-            onCheckedChange={(nextChecked) => {
-                if (nextChecked !== true) {
-                    clearFilter();
-                }
-            }}
-            onClear={clearFilter}
-        />
+        <div
+            class="flex items-center gap-2 rounded-md border border-[#3c3c3c] bg-muted px-2 py-2"
+            data-testid="confusion-cell-filter-item-chip"
+        >
+            <Checkbox
+                checked={true}
+                aria-label="Confusion cell filter"
+                onCheckedChange={(nextChecked) => {
+                    if (nextChecked !== true) clearFilter();
+                }}
+            />
+            <dl
+                class="grid min-w-0 flex-1 grid-cols-[max-content_minmax(0,1fr)] items-baseline gap-x-2 gap-y-1 text-sm"
+            >
+                {#each [{ role: 'Ground truth', value: confusionCell.gt_label, missing: 'No ground truth' }, { role: 'Prediction', value: confusionCell.pred_label, missing: 'No prediction' }] as field (field.role)}
+                    <dt class="text-xs text-muted-foreground">{field.role}</dt>
+                    <dd class="[overflow-wrap:anywhere]">
+                        {#if field.value == null}
+                            <em class="text-muted-foreground">{field.missing}</em>
+                        {:else}
+                            <span class="font-medium">{field.value}</span>
+                        {/if}
+                    </dd>
+                {/each}
+            </dl>
+            <button
+                type="button"
+                class="shrink-0 text-muted-foreground hover:text-foreground"
+                onclick={clearFilter}
+                title="Clear confusion matrix filter"
+                aria-label="Clear confusion matrix filter"
+            >
+                <X class="size-4" />
+            </button>
+        </div>
     </Segment>
 {/if}
