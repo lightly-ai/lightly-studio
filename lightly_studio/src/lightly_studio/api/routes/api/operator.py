@@ -60,6 +60,17 @@ def get_operators() -> list[RegisteredOperatorMetadata]:
     return operator_registry.get_all_metadata()
 
 
+@operator_router.post("/reload")
+def reload_operators() -> list[RegisteredOperatorMetadata]:
+    """Register the plugins that were installed after the server started.
+
+    Returns:
+        All registered operators, including the new ones.
+    """
+    operator_registry.discover_new_plugins()
+    return operator_registry.get_all_metadata()
+
+
 @operator_router.get("/{operator_id}/parameters")
 def get_operator_parameters(operator_id: str) -> list[ParameterView]:
     """Get the parameters for a registered operator."""

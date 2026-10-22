@@ -43,6 +43,7 @@ from lightly_studio.api.routes.api import (
     mcap_sequence,
     metadata,
     operator,
+    plugin,
     sample,
     sampling,
     settings,
@@ -52,6 +53,7 @@ from lightly_studio.api.routes.api import (
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
+    register_plugin_exception_handlers,
 )
 from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import (
@@ -136,6 +138,7 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
 
 
 register_exception_handlers(app)
+register_plugin_exception_handlers(app=app)
 
 # api routes
 api_router = APIRouter(prefix="/api", tags=["api"])
@@ -160,6 +163,7 @@ api_router.include_router(evaluation.evaluation_router)
 api_router.include_router(metadata.metadata_router)
 api_router.include_router(sampling.sampling_router)
 api_router.include_router(operator.operator_router)
+api_router.include_router(plugin.plugin_router)
 api_router.include_router(frame.frame_router)
 api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)

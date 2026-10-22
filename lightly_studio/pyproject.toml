@@ -69,6 +69,8 @@ dependencies = [
     # schema encoding we read (CDR/ros2msg).
     "mcap>=1.2.0,<2.0",
     "mcap-ros2-support>=0.5.0,<0.6",
+    # Parses the plugin catalog. The standard library has tomllib from Python 3.11.
+    "tomli>=2.0.0; python_version < '3.11'",
 ]
 
 [tool.uv]

@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_FORBIDDEN,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_SERVICE_UNAVAILABLE,
@@ -23,6 +24,8 @@ from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUna
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
 from lightly_studio.errors import NotFoundError, QueryExprError, UnknownImageSizeError
+from lightly_studio.plugins.plugin_catalog import CatalogUnavailableError
+from lightly_studio.plugins.plugin_installer import PluginInstallNotAllowedError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -211,3 +214,24 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
             content={"error": "Internal server error."},
         )
+
+
+def register_plugin_exception_handlers(app: FastAPI) -> None:
+    """Register the exception handlers for the plugin catalog and plugin installs."""
+
+    @app.exception_handler(CatalogUnavailableError)
+    async def _catalog_unavailable_error_handler(
+        _request: Request, _exc: CatalogUnavailableError
+    ) -> JSONResponse:
+        """Handle a plugin catalog that cannot be fetched, for example without a network."""
+        logger.warning("Plugin catalog unavailable: %s", _exc)
+        return JSONResponse(
+            status_code=HTTP_STATUS_SERVICE_UNAVAILABLE, content={"error": str(_exc)}
+        )
+
+    @app.exception_handler(PluginInstallNotAllowedError)
+    async def _plugin_install_not_allowed_error_handler(
+        _request: Request, _exc: PluginInstallNotAllowedError
+    ) -> JSONResponse:
+        """Handle a plugin install request from a client that may not install plugins."""
+        return JSONResponse(status_code=HTTP_STATUS_FORBIDDEN, content={"error": str(_exc)})

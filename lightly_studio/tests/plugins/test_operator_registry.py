@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import importlib.metadata
+import site
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-import lightly_studio.plugins.operator_registry as _registry_mod
+from lightly_studio.plugins import operator_registry as _registry_module
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import ENTRY_POINT_GROUP, OperatorRegistry
@@ -96,21 +99,10 @@ def test_operator_registry__startup_all_continues_after_failure() -> None:
     assert healthy.status == OperatorStatus.READY
 
 
-def _patch_entry_points(mocker: MockerFixture, eps: list[Any]) -> None:
-    """Patch ``entry_points`` to return *eps*."""
-
-    def _side_effect(group: str | None = None) -> Any:
-        if group is not None:
-            return eps
-        return {ENTRY_POINT_GROUP: eps}
-
-    mocker.patch.object(_registry_mod, "entry_points", side_effect=_side_effect)
-
-
 def test_operator_registry__discover_plugins_no_entry_points(
     mocker: MockerFixture,
 ) -> None:
-    _patch_entry_points(mocker, [])
+    _patch_distributions(mocker=mocker, distributions=[])
     registry = OperatorRegistry()
     registry.discover_plugins()
 
@@ -120,28 +112,48 @@ def test_operator_registry__discover_plugins_no_entry_points(
 def test_operator_registry__discover_plugins_registers_valid_operator(
     mocker: MockerFixture,
 ) -> None:
-    ep = mocker.MagicMock()
-    ep.name = "test_plugin"
-    ep.value = "my_package:TestOp"
-    ep.load.return_value = TestOperator
-
-    _patch_entry_points(mocker, [ep])
+    ep = _entry_point(mocker=mocker, name="test_plugin", loads=TestOperator)
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
     registry = OperatorRegistry()
-    registry.discover_plugins()
+    new_ids = registry.discover_plugins()
 
     metadata = registry.get_all_metadata()
     assert len(metadata) == 1
     assert metadata[0].name == "test operator"
+    assert metadata[0].package_name == "my_package"
+    assert new_ids == [metadata[0].operator_id]
+
+
+def test_operator_registry__discover_plugins_ignores_other_groups(
+    mocker: MockerFixture,
+) -> None:
+    ep = _entry_point(mocker=mocker, name="cli", loads=TestOperator, group="console_scripts")
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+
+    assert registry.get_all_metadata() == []
+
+
+def test_operator_registry__discover_plugins_twice_no_duplicates(
+    mocker: MockerFixture,
+) -> None:
+    ep = _entry_point(mocker=mocker, name="test_plugin", loads=TestOperator)
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+    new_ids = registry.discover_plugins()
+
+    assert new_ids == []
+    assert len(registry.get_all_metadata()) == 1
+    ep.load.assert_called_once()
 
 
 def test_operator_registry__discover_plugins_and_manual_register(
     mocker: MockerFixture,
 ) -> None:
-    ep = mocker.MagicMock()
-    ep.value = "my_package:TestOp"
-    ep.load.return_value = TestOperator
-
-    _patch_entry_points(mocker, [ep])
+    ep = _entry_point(mocker=mocker, name="test_plugin", loads=TestOperator)
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
     registry = OperatorRegistry()
     registry.discover_plugins()
 
@@ -151,17 +163,14 @@ def test_operator_registry__discover_plugins_and_manual_register(
     assert len(metadata) == 2
     assert metadata[0].name == "test operator"
     assert metadata[1].name == "failing operator"
+    assert metadata[1].package_name is None
 
 
 def test_operator_registry__discover_plugins_skips_non_base_operator(
     mocker: MockerFixture,
 ) -> None:
-    ep = mocker.MagicMock()
-    ep.name = "bad_plugin"
-    ep.value = "my_package:NotAnOperator"
-    ep.load.return_value = lambda: "not an operator"
-
-    _patch_entry_points(mocker, [ep])
+    ep = _entry_point(mocker=mocker, name="bad_plugin", loads=lambda: "not an operator")
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
     registry = OperatorRegistry()
     registry.discover_plugins()
 
@@ -171,16 +180,95 @@ def test_operator_registry__discover_plugins_skips_non_base_operator(
 def test_operator_registry__discover_plugins_skips_failing_entry_point(
     mocker: MockerFixture,
 ) -> None:
-    ep = mocker.MagicMock()
-    ep.name = "broken_plugin"
-    ep.value = "my_package:Broken"
+    ep = _entry_point(mocker=mocker, name="broken_plugin", loads=None)
     ep.load.side_effect = ImportError("module not found")
-
-    _patch_entry_points(mocker, [ep])
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
     registry = OperatorRegistry()
     registry.discover_plugins()
 
     assert registry.get_all_metadata() == []
+
+
+def test_operator_registry__discover_new_plugins(
+    mocker: MockerFixture,
+) -> None:
+    first = _entry_point(mocker=mocker, name="first", loads=TestOperator)
+    second = _entry_point(mocker=mocker, name="second", loads=FailingStartupOperator)
+    distributions = [_distribution(mocker, "first_package", [first])]
+    _patch_distributions(mocker=mocker, distributions=distributions)
+    registry = OperatorRegistry()
+    registry.discover_plugins()
+    registry.startup_all()
+
+    # A second package is installed while the server runs.
+    distributions.append(_distribution(mocker, "second_package", [second]))
+    new_ids = registry.discover_new_plugins()
+
+    assert len(new_ids) == 1
+    new_operator = registry.get_by_id(operator_id=new_ids[0])
+    assert isinstance(new_operator, FailingStartupOperator)
+    assert new_operator.status == OperatorStatus.ERROR
+    assert len(registry.get_all_metadata()) == 2
+
+
+def test_operator_registry__discover_plugins_retries_failed_entry_point(
+    mocker: MockerFixture,
+) -> None:
+    ep = _entry_point(mocker=mocker, name="test_plugin", loads=None)
+    ep.load.side_effect = [ImportError("missing dependency"), TestOperator]
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
+    registry = OperatorRegistry()
+
+    assert registry.discover_plugins() == []
+    # The missing dependency was installed before the second scan.
+    assert len(registry.discover_plugins()) == 1
+
+
+def test_operator_registry__discover_plugins_activates_new_pth_files(
+    mocker: MockerFixture,
+) -> None:
+    _patch_distributions(mocker=mocker, distributions=[])
+    pth_files = [Path("/site/a.pth")]
+    mocker.patch.object(_registry_module, "_pth_files", side_effect=lambda: list(pth_files))
+    addpackage = mocker.patch.object(site, "addpackage")
+    registry = OperatorRegistry()
+
+    # An editable install adds a .pth file while the server runs.
+    pth_files.append(Path("/site/b.pth"))
+    registry.discover_plugins()
+    registry.discover_plugins()
+
+    addpackage.assert_called_once_with("/site", "b.pth", None)
+
+
+def _patch_distributions(mocker: MockerFixture, distributions: list[Any]) -> None:
+    """Patch ``importlib.metadata.distributions`` to return *distributions*.
+
+    The list is read on each call, so a test can append to it to simulate an install.
+    """
+    mocker.patch.object(
+        importlib.metadata,
+        "distributions",
+        side_effect=lambda: list(distributions),
+    )
+
+
+def _distribution(mocker: MockerFixture, name: str, eps: list[Any]) -> Any:
+    dist = mocker.MagicMock()
+    dist.metadata = {"Name": name}
+    dist.entry_points = eps
+    return dist
+
+
+def _entry_point(
+    mocker: MockerFixture, name: str, loads: Any, group: str = ENTRY_POINT_GROUP
+) -> Any:
+    ep = mocker.MagicMock()
+    ep.name = name
+    ep.value = f"my_package:{name}"
+    ep.group = group
+    ep.load.return_value = loads
+    return ep
 
 
 @dataclass

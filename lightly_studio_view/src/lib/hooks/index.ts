@@ -94,9 +94,12 @@ export {
     type Operator,
     type OperatorParameter,
     type OperatorParameterColumn,
-    type OperatorParameterType
+    type OperatorParameterType,
+    useOperatorsList
 } from '$lib/hooks/useOperators';
 export { useImageAnnotationCountsBySampleTags } from '$lib/hooks/useImageAnnotationCountsBySampleTags/useImageAnnotationCountsBySampleTags.svelte';
+export { usePluginCatalog } from '$lib/hooks/usePluginCatalog';
+export { isInstalling, usePluginInstall } from '$lib/hooks/usePluginInstall';
 export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/useRecomputeEvaluationRun.svelte';
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
 export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';

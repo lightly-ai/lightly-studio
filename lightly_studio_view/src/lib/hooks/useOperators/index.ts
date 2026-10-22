@@ -5,3 +5,4 @@ export {
     type OperatorParameterColumn,
     type OperatorParameterType
 } from './useOperators';
+export { useOperatorsList } from './useOperatorsList.svelte';
