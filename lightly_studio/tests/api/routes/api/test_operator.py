@@ -7,6 +7,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 import lightly_studio.api.routes.api.operator as operator_routes_module
@@ -68,6 +69,23 @@ def test_get_operators__multiple(
     payload = response.json()
     assert {payload[0]["name"], payload[1]["name"]} == {"Op A", "Op B"}
     assert len(payload) == 2
+
+
+def test_reload_operators(
+    test_client: TestClient,
+    isolated_operator_registry: OperatorRegistry,
+    mocker: MockerFixture,
+) -> None:
+    isolated_operator_registry.register(TestOperator(name="Op A"))
+    discover_new_plugins = mocker.patch.object(
+        isolated_operator_registry, "discover_new_plugins", return_value=[]
+    )
+
+    response = test_client.post("/api/operators/reload")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert [op["name"] for op in response.json()] == ["Op A"]
+    discover_new_plugins.assert_called_once_with()
 
 
 def test_get_operator_parameters__operator_not_found(
