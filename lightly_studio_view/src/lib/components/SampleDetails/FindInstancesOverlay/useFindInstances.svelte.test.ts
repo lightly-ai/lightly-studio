@@ -41,6 +41,7 @@ const setup = (initialPrompt = 'cars') => {
         prompt: initialPrompt,
         annotationClass: null
     });
+    const onSaved = vi.fn();
     let instances!: ReturnType<typeof useFindInstances>;
     cleanup = $effect.root(() => {
         instances = useFindInstances(() => ({
@@ -51,11 +52,11 @@ const setup = (initialPrompt = 'cars') => {
             saveAs: 'box',
             annotationClass: params.annotationClass,
             annotationSource: 'source',
-            onSaved: vi.fn()
+            onSaved
         }));
     });
     flushSync();
-    return { instances, params };
+    return { instances, params, onSaved };
 };
 
 const generateResults = async (instances: ReturnType<typeof useFindInstances>) => {
@@ -111,6 +112,29 @@ describe('useFindInstances', () => {
 
         expect(instances.predictions).toEqual([]);
         expect(instances.boxes).toEqual([box]);
+    });
+
+    it('keeps the results when only whitespace around the prompt changes', async () => {
+        const { instances, params } = setup();
+        await generateResults(instances);
+
+        params.prompt = 'cars ';
+        flushSync();
+
+        expect(instances.predictions).toHaveLength(2);
+    });
+
+    it('requests instances only once while a request is in flight', async () => {
+        const pending = deferred();
+        mocks.mutateAsync.mockReturnValueOnce(pending.promise);
+        const { instances } = setup();
+
+        const request = instances.generate();
+        await instances.generate();
+        pending.resolve({ predictions: [] });
+        await request;
+
+        expect(mocks.mutateAsync).toHaveBeenCalledTimes(1);
     });
 
     it('does not save while instances are being found', async () => {
@@ -230,7 +254,7 @@ describe('useFindInstances', () => {
         mocks.saveAnnotationPreviews.mockReturnValue(saving.promise);
 
         const save = instances.save();
-        instances.removePrediction(first);
+        instances.removePrediction(instances.predictions[0]);
 
         expect(instances.predictions).toEqual([first, second]);
         saving.resolve(undefined);
@@ -289,5 +313,19 @@ describe('useFindInstances', () => {
         await request;
 
         expect(mocks.toastError).not.toHaveBeenCalled();
+    });
+
+    it('skips the callbacks of a save that ends after teardown', async () => {
+        const saving = deferred();
+        const { instances, onSaved } = setup();
+        await generateResults(instances);
+        mocks.saveAnnotationPreviews.mockReturnValue(saving.promise);
+
+        const save = instances.save();
+        cleanup();
+        saving.resolve(undefined);
+        await save;
+
+        expect(onSaved).not.toHaveBeenCalled();
     });
 });

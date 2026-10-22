@@ -38,7 +38,8 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
     let isSaving = $state(false);
     // Drops responses that a newer prompt, box or clear made stale.
     let sequence = 0;
-    let previousPrompt = untrack(() => getParams().prompt);
+    let isDisposed = false;
+    let previousPrompt = untrack(() => getParams().prompt.trim());
 
     const mutation = createMutation(() => createInstancesAnnotationPreviewMutation());
     const { saveAnnotationPreviews } = useSaveAnnotationPreviews({
@@ -63,11 +64,14 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
     };
 
     // Drops a request from a previous sample, e.g. after the overlay was keyed by a new one.
-    $effect(() => clear);
+    $effect(() => () => {
+        isDisposed = true;
+        clear();
+    });
 
     // A new prompt starts a new search and keeps the drawn boxes.
     $effect(() => {
-        const { prompt } = getParams();
+        const prompt = getParams().prompt.trim();
         if (prompt === previousPrompt) return;
         previousPrompt = prompt;
         untrack(dropPredictions);
@@ -75,7 +79,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const generate = async () => {
         const { collectionId, sampleId, prompt, maxInstances } = getParams();
-        if (isSaving || !canGenerateInstances({ prompt })) return;
+        if (isSaving || isGenerating || !canGenerateInstances({ prompt })) return;
         const requestSequence = ++sequence;
         isGenerating = true;
         try {
@@ -84,7 +88,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
                     collectionId,
                     sampleId,
                     prompt,
-                    boxes,
+                    boxes: $state.snapshot(boxes),
                     maxInstances
                 })
             });
@@ -106,13 +110,12 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         boxes = [...boxes, box];
     };
 
-    const removePrediction = (preview: AnnotationPreview) => {
-        if (isSaving) return;
+    const removeSavedPrediction = (preview: AnnotationPreview) => {
         predictions = predictions.filter((prediction) => prediction !== preview);
     };
 
-    const removeSavedPrediction = (preview: AnnotationPreview) => {
-        predictions = predictions.filter((prediction) => prediction !== preview);
+    const removePrediction = (preview: AnnotationPreview) => {
+        if (!isSaving) removeSavedPrediction(preview);
     };
 
     const save = async () => {
@@ -131,8 +134,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
                 })),
                 onPreviewSaved: removeSavedPrediction
             });
-            onSaved();
+            if (!isDisposed) onSaved();
         } catch (error) {
+            if (isDisposed) return;
             toast.error(
                 `Could not save the annotations: ${getAnnotationPreviewErrorMessage(error)}`
             );
