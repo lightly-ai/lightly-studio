@@ -275,13 +275,14 @@
     y="0"
     width={sample.width}
     height={sample.height}
+    opacity="0.85"
     class:previewHidden={!isPreviewVisible}
 >
     <canvas
         bind:this={previewCanvas}
         width={sample.width}
         height={sample.height}
-        style="width: 100%; height: 100%; pointer-events: none; opacity: 0.85;"
+        style="width: 100%; height: 100%; pointer-events: none;"
     ></canvas>
 </foreignObject>
 <SampleAnnotationRect
