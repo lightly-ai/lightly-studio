@@ -10,6 +10,8 @@ from typing import Any, cast
 
 import fsspec
 
+from lightly_studio import ca_bundle
+
 # Keys accepted by apply_cloud_credentials. Only well-known cloud provider
 # environment variables are allowed to prevent arbitrary process-environment
 # injection through the enterprise credential endpoint.
@@ -20,6 +22,11 @@ _ALLOWED_KEY_PATTERN = re.compile(
     r"|FSSPEC_[A-Z0-9_]+"
     r")$"
 )
+
+# PEM text of custom CA certificates for S3. botocore needs a file path in AWS_CA_BUNDLE, so
+# this value is written to a file instead of being set as an environment variable.
+_AWS_CA_BUNDLE_PEM_KEY = "AWS_CA_BUNDLE_PEM"
+_AWS_CA_BUNDLE_KEY = "AWS_CA_BUNDLE"
 
 
 def apply_cloud_credentials(credentials: dict[str, str]) -> None:
@@ -33,17 +40,20 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
         credentials: Environment variables supplied by the enterprise service.
             Keys must match one of the allowed cloud provider patterns
             (``AWS_*``, ``GOOGLE_APPLICATION_CREDENTIALS``, ``FSSPEC_*``).
+            ``AWS_CA_BUNDLE_PEM`` holds custom CA certificates for S3. They are
+            written to a file that ``AWS_CA_BUNDLE`` points to.
 
     Raises:
-        ValueError: If a key is not in the allowlist, or if an FSSPEC_* value
-            cannot be parsed by fsspec.
+        ValueError: If a key is not in the allowlist, if an FSSPEC_* value
+            cannot be parsed by fsspec, or if the CA certificates are not valid.
         ImportError: If a required cloud filesystem dependency is not installed.
     """
     _validate_credential_keys(credentials=credentials)
     fsspec_config = _parse_fsspec_config(credentials=credentials)
 
+    has_aws = any(key.startswith("AWS_") for key in credentials)
     protocols = set(fsspec_config)
-    if any(key.startswith("AWS_") for key in credentials):
+    if has_aws:
         protocols.add("s3")
     if "GOOGLE_APPLICATION_CREDENTIALS" in credentials:
         protocols.add("gcs")
@@ -52,8 +62,16 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
         _get_filesystem_class(protocol=protocol) for protocol in sorted(protocols)
     ]
 
+    ca_bundle_path = _write_ca_bundle(credentials=credentials)
+
     _remove_stale_provider_env_vars(credentials=credentials)
-    os.environ.update(credentials)
+    os.environ.update(
+        {key: value for key, value in credentials.items() if key != _AWS_CA_BUNDLE_PEM_KEY}
+    )
+    if has_aws:
+        if ca_bundle_path is not None:
+            os.environ[_AWS_CA_BUNDLE_KEY] = ca_bundle_path
+        ca_bundle.delete_ca_bundles(keep=ca_bundle_path)
     for protocol, protocol_config in fsspec_config.items():
         # Replace instead of update so removed credential fields do not survive
         # a credential rotation.
@@ -71,6 +89,19 @@ def _validate_credential_keys(credentials: dict[str, str]) -> None:
             f"Credential keys are not allowed: {rejected}. "
             "Only AWS_*, GOOGLE_APPLICATION_CREDENTIALS, and FSSPEC_* keys are accepted."
         )
+
+
+def _write_ca_bundle(credentials: dict[str, str]) -> str | None:
+    """Write the custom CA certificates to a file and return its path, if present."""
+    pem = credentials.get(_AWS_CA_BUNDLE_PEM_KEY)
+    if pem is None:
+        return None
+    if _AWS_CA_BUNDLE_KEY in credentials:
+        raise ValueError(
+            f"Credential keys {_AWS_CA_BUNDLE_KEY} and {_AWS_CA_BUNDLE_PEM_KEY} "
+            "cannot be used together."
+        )
+    return ca_bundle.write_ca_bundle(pem=pem)
 
 
 def _remove_stale_provider_env_vars(credentials: dict[str, str]) -> None:

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
+from pathlib import Path
 
 import fsspec
 import pytest
@@ -12,9 +14,10 @@ from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture, MockType
 
-from lightly_studio import enterprise
+from lightly_studio import ca_bundle, enterprise
 from lightly_studio.analytics import tracking
 from lightly_studio.database import db_manager
+from tests import helpers_tls
 
 
 @pytest.fixture(autouse=True)
@@ -301,6 +304,31 @@ def test_connect__sets_aws_env_vars(
 
     assert os.environ["AWS_ACCESS_KEY_ID"] == access_key_id
     assert os.environ["AWS_SECRET_ACCESS_KEY"] == secret_access_key
+
+
+def test_connect__writes_ca_bundle(
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    patch_db_connect: MockType,  # noqa: ARG001
+) -> None:
+    mocker.patch.object(ca_bundle, "_written_files", [])
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    ca_pem = helpers_tls.create_ca(common_name="Test Root CA").certificate_pem()
+    mock_response = mocker.MagicMock()
+    mock_response.status_code = 200
+    mock_response.ok = True
+    mock_response.json.return_value = {
+        "engine_url": "postgresql://lightly:secret@10.0.0.5:5433/lightly_studio",
+        "cloud_credentials": {"AWS_ACCESS_KEY_ID": "key", "AWS_CA_BUNDLE_PEM": ca_pem},
+    }
+    mocker.patch.object(requests, "get", return_value=mock_response)
+
+    enterprise.connect(api_url="http://10.0.0.5:8100", token="token")
+
+    assert "AWS_CA_BUNDLE_PEM" not in os.environ
+    assert Path(os.environ["AWS_CA_BUNDLE"]).read_text().endswith(ca_pem)
+    ca_bundle.delete_ca_bundles(keep=None)
 
 
 def test_connect__applies_gcs_runtime_config(
