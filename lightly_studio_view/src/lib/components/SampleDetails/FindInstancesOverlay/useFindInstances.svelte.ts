@@ -119,7 +119,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         if (!canSave()) return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
-        const className = pickClassName([annotationClass, resultsPrompt]);
+        const className = pickClassName({ selected: annotationClass, hint: resultsPrompt });
         try {
             await saveAnnotationPreviews({
                 sampleId,
