@@ -15,6 +15,7 @@ export const useDragBox = (
     };
 
     const onPointerDown = (event: RectPointerEvent) => {
+        if (event.button !== 0) return;
         start = pointFromEvent(event);
         if (start) event.currentTarget.setPointerCapture(event.pointerId);
     };
