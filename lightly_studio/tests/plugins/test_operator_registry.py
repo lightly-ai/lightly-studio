@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 import importlib.metadata
+import site
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.plugins import operator_registry as _registry_module
 from lightly_studio.plugins.base_operator import BaseOperator, OperatorResult, OperatorStatus
 from lightly_studio.plugins.operator_context import ExecutionContext, OperatorScope
 from lightly_studio.plugins.operator_registry import ENTRY_POINT_GROUP, OperatorRegistry
@@ -206,6 +209,36 @@ def test_operator_registry__discover_new_plugins(
     assert isinstance(new_operator, FailingStartupOperator)
     assert new_operator.status == OperatorStatus.ERROR
     assert len(registry.get_all_metadata()) == 2
+
+
+def test_operator_registry__discover_plugins_retries_failed_entry_point(
+    mocker: MockerFixture,
+) -> None:
+    ep = _entry_point(mocker=mocker, name="test_plugin", loads=None)
+    ep.load.side_effect = [ImportError("missing dependency"), TestOperator]
+    _patch_distributions(mocker=mocker, distributions=[_distribution(mocker, "my_package", [ep])])
+    registry = OperatorRegistry()
+
+    assert registry.discover_plugins() == []
+    # The missing dependency was installed before the second scan.
+    assert len(registry.discover_plugins()) == 1
+
+
+def test_operator_registry__discover_plugins_activates_new_pth_files(
+    mocker: MockerFixture,
+) -> None:
+    _patch_distributions(mocker=mocker, distributions=[])
+    pth_files = [Path("/site/a.pth")]
+    mocker.patch.object(_registry_module, "_pth_files", side_effect=lambda: list(pth_files))
+    addpackage = mocker.patch.object(site, "addpackage")
+    registry = OperatorRegistry()
+
+    # An editable install adds a .pth file while the server runs.
+    pth_files.append(Path("/site/b.pth"))
+    registry.discover_plugins()
+    registry.discover_plugins()
+
+    addpackage.assert_called_once_with("/site", "b.pth", None)
 
 
 def _patch_distributions(mocker: MockerFixture, distributions: list[Any]) -> None:

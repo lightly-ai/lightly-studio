@@ -5,9 +5,11 @@ from __future__ import annotations
 import importlib
 import importlib.metadata
 import logging
+import site
 import threading
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from .base_operator import BaseOperator, OperatorStatus
 from .operator_context import OperatorScope
@@ -37,6 +39,8 @@ class OperatorRegistry:
         self._package_names: dict[str, str] = {}
         # The (distribution name, entry point name) pairs that are already registered.
         self._loaded_entry_points: set[tuple[str, str]] = set()
+        # Python reads the .pth files of the site directories only when the process starts.
+        self._known_pth_files: set[Path] = set(_pth_files())
         self._lock = threading.Lock()
 
     def register(self, operator: BaseOperator, package_name: str | None = None) -> str:
@@ -113,6 +117,8 @@ class OperatorRegistry:
         Returns:
             The IDs of the newly registered operators.
         """
+        # An editable install adds its source directory to sys.path with a .pth file.
+        self._activate_new_pth_files()
         # Python caches the directory listings of sys.path. A package installed after the start
         # of the process is only found after the caches are cleared.
         importlib.invalidate_caches()
@@ -121,12 +127,11 @@ class OperatorRegistry:
             key = (package_name, ep.name)
             if key in self._loaded_entry_points:
                 continue
-            # Mark the entry point as seen also if it fails, so that a broken plugin does not
-            # log the same error on each reload.
-            self._loaded_entry_points.add(key)
             try:
                 operator_class = ep.load()
                 operator = operator_class()
+                # A failed load is tried again on the next scan, because an install can fix it.
+                self._loaded_entry_points.add(key)
                 if not isinstance(operator, BaseOperator):
                     logger.warning(
                         "Plugin '%s' (%s) is not a BaseOperator subclass, skipping.",
@@ -156,6 +161,15 @@ class OperatorRegistry:
             _start_operator(operator_id=operator_id, operator=self._operators[operator_id])
         return new_operator_ids
 
+    def _activate_new_pth_files(self) -> None:
+        """Process the .pth files that were added to the site directories after the start."""
+        for pth_file in _pth_files():
+            if pth_file in self._known_pth_files:
+                continue
+            self._known_pth_files.add(pth_file)
+            logger.info("Adding the path entries of '%s'.", pth_file)
+            site.addpackage(str(pth_file.parent), pth_file.name, None)
+
 
 def _plugin_entry_points() -> list[tuple[str, importlib.metadata.EntryPoint]]:
     """Get the plugin entry points of all installed distributions.
@@ -176,6 +190,14 @@ def _plugin_entry_points() -> list[tuple[str, importlib.metadata.EntryPoint]]:
         seen_distributions.add(dist_name)
         result.extend((dist_name, ep) for ep in dist.entry_points if ep.group == ENTRY_POINT_GROUP)
     return result
+
+
+def _pth_files() -> list[Path]:
+    """Get the .pth files of the site directories."""
+    site_dirs = [*site.getsitepackages()]
+    if site.ENABLE_USER_SITE:
+        site_dirs.append(site.getusersitepackages())
+    return sorted(pth for site_dir in site_dirs for pth in Path(site_dir).glob("*.pth"))
 
 
 def _start_operator(operator_id: str, operator: BaseOperator) -> None:
