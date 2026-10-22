@@ -29,7 +29,6 @@ _SAM3_ENTRY = CatalogEntry(
     name="SAM3",
     description="Segments all instances",
     maintainer="lightly",
-    tags=["auto-labeling", "segmentation"],
     install_spec=(
         "git+https://github.com/lightly-ai/lightly-studio-plugins.git"
         "#subdirectory=plugins/sam3_segmentation"

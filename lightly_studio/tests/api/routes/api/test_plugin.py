@@ -19,7 +19,6 @@ _ENTRY = CatalogEntry(
     name="Demo",
     description="A demo plugin",
     maintainer="lightly",
-    tags=["demo"],
     install_spec="git+https://x#y",
 )
 
@@ -39,7 +38,6 @@ def test_get_plugin_catalog(test_client: TestClient, mocker: MockerFixture) -> N
                 "name": "Demo",
                 "description": "A demo plugin",
                 "maintainer": "lightly",
-                "tags": ["demo"],
                 "installed": True,
             }
         ],

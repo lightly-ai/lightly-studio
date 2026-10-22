@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from lightly_studio.plugins import plugin_catalog, plugin_installer
 from lightly_studio.plugins.plugin_installer import InstallJob, PluginInstallNotAllowedError
@@ -18,7 +18,6 @@ class CatalogPluginView(BaseModel):
     name: str
     description: str
     maintainer: str
-    tags: list[str] = Field(default_factory=list)
     installed: bool
 
 
@@ -46,7 +45,6 @@ def get_plugin_catalog(request: Request, refresh: bool = False) -> PluginCatalog
                 name=entry.name,
                 description=entry.description,
                 maintainer=entry.maintainer,
-                tags=entry.tags,
                 installed=plugin_catalog.is_installed(package_name=entry.id),
             )
             for entry in entries

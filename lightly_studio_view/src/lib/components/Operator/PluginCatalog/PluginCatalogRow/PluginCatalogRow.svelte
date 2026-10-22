@@ -1,7 +1,6 @@
 <script lang="ts">
     import { Check, Download, LoaderCircle } from '@lucide/svelte';
     import { Button } from '$lib/components/ui/button';
-    import { Badge } from '$lib/components/ui/badge';
     import {
         InstallJobStatus,
         type CatalogPluginView,
@@ -48,13 +47,6 @@
             </Button>
         {/if}
     </div>
-    {#if plugin.tags && plugin.tags.length > 0}
-        <div class="flex flex-wrap gap-1">
-            {#each plugin.tags as tag}
-                <Badge variant="secondary">{tag}</Badge>
-            {/each}
-        </div>
-    {/if}
     {#if isInstalling && job?.log}
         <p class="truncate font-mono text-xs text-muted-foreground">{job.log.split('\n').at(-1)}</p>
     {/if}

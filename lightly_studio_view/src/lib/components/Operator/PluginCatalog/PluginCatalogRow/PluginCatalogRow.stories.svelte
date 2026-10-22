@@ -8,7 +8,6 @@
         description:
             'Segments all instances matching a table of text prompts in a single image or the current image view',
         maintainer: 'lightly',
-        tags: ['auto-labeling', 'segmentation'],
         installed: false
     };
 

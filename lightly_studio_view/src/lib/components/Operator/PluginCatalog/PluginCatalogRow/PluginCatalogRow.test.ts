@@ -7,7 +7,6 @@ const plugin = {
     name: 'Demo',
     description: 'A demo plugin',
     maintainer: 'lightly',
-    tags: ['auto-labeling'],
     installed: false
 };
 
@@ -20,7 +19,6 @@ describe('PluginCatalogRow', () => {
 
         expect(screen.getByText('Demo')).toBeInTheDocument();
         expect(screen.getByText('A demo plugin')).toBeInTheDocument();
-        expect(screen.getByText('auto-labeling')).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: /Install/ }));
         expect(onInstall).toHaveBeenCalledWith(plugin);
     });

@@ -11,7 +11,7 @@ import time
 from typing import Any
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from lightly_studio.dataset import env
 from lightly_studio.errors import NotFoundError
@@ -38,7 +38,6 @@ class CatalogEntry(BaseModel):
     name: str
     description: str = ""
     maintainer: str = ""
-    tags: list[str] = Field(default_factory=list)
 
     install_spec: str
     """The requirement that is given to the installer, for example a ``git+https`` URL."""
@@ -160,7 +159,6 @@ def _parse_entry(raw: dict[str, Any]) -> CatalogEntry | None:
         name=raw.get("name", plugin_id),
         description=raw.get("description", ""),
         maintainer=raw.get("maintainer", ""),
-        tags=raw.get("tags", []),
         install_spec=install_spec,
     )
 
