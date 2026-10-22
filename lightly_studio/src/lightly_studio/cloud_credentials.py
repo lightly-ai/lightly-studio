@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import threading
 import warnings
 from typing import Any, cast
 
@@ -27,6 +28,10 @@ _ALLOWED_KEY_PATTERN = re.compile(
 # this value is written to a file instead of being set as an environment variable.
 _AWS_CA_BUNDLE_PEM_KEY = "AWS_CA_BUNDLE_PEM"
 _AWS_CA_BUNDLE_KEY = "AWS_CA_BUNDLE"
+
+# Serializes changes to the process environment, the fsspec configuration, and the CA bundle
+# files. The studio server applies credentials in worker threads.
+_apply_lock = threading.Lock()
 
 
 def apply_cloud_credentials(credentials: dict[str, str]) -> None:
@@ -62,23 +67,24 @@ def apply_cloud_credentials(credentials: dict[str, str]) -> None:
         _get_filesystem_class(protocol=protocol) for protocol in sorted(protocols)
     ]
 
-    ca_bundle_path = _write_ca_bundle(credentials=credentials)
+    with _apply_lock:
+        ca_bundle_path = _write_ca_bundle(credentials=credentials)
 
-    _remove_stale_provider_env_vars(credentials=credentials)
-    os.environ.update(
-        {key: value for key, value in credentials.items() if key != _AWS_CA_BUNDLE_PEM_KEY}
-    )
-    if has_aws:
-        if ca_bundle_path is not None:
-            os.environ[_AWS_CA_BUNDLE_KEY] = ca_bundle_path
-        ca_bundle.delete_ca_bundles(keep=ca_bundle_path)
-    for protocol, protocol_config in fsspec_config.items():
-        # Replace instead of update so removed credential fields do not survive
-        # a credential rotation.
-        fsspec.config.conf[protocol] = protocol_config
+        _remove_stale_provider_env_vars(credentials=credentials)
+        os.environ.update(
+            {key: value for key, value in credentials.items() if key != _AWS_CA_BUNDLE_PEM_KEY}
+        )
+        if has_aws:
+            if ca_bundle_path is not None:
+                os.environ[_AWS_CA_BUNDLE_KEY] = ca_bundle_path
+            ca_bundle.delete_ca_bundles(keep=ca_bundle_path)
+        for protocol, protocol_config in fsspec_config.items():
+            # Replace instead of update so removed credential fields do not survive
+            # a credential rotation.
+            fsspec.config.conf[protocol] = protocol_config
 
-    for filesystem_class in filesystem_classes:
-        filesystem_class.clear_instance_cache()
+        for filesystem_class in filesystem_classes:
+            filesystem_class.clear_instance_cache()
 
 
 def _validate_credential_keys(credentials: dict[str, str]) -> None:
