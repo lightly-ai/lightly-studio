@@ -67,21 +67,21 @@
             aria-label="Save as"
         >
             {#each saveAsOptions as option (option.value)}
-                <button
-                    type="button"
+                <Button
+                    variant="ghost"
                     class={cn(
-                        'flex h-8 flex-1 items-center justify-center gap-1 text-sm',
+                        'h-8 flex-1 gap-1 rounded-none',
                         saveAs === option.value
-                            ? 'bg-primary/20 text-primary'
-                            : 'text-muted-foreground hover:bg-muted'
+                            ? 'bg-primary/20 text-primary hover:bg-primary/20 hover:text-primary'
+                            : 'text-muted-foreground'
                     )}
                     aria-label={`Save as ${option.label}`}
                     aria-pressed={saveAs === option.value}
                     onclick={() => onSaveAsChange(option.value)}
                 >
-                    <option.icon class="size-4" />
+                    <option.icon />
                     {option.label}
-                </button>
+                </Button>
             {/each}
         </div>
 
