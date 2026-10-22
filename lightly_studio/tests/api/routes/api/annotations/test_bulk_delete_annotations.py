@@ -129,8 +129,9 @@ def test_bulk_delete_annotations__marks_evaluation_run_stale(
     )
     assert run.stale_since is None
 
+    # The path collection differs from the annotation collection on purpose.
     response = test_client.post(
-        f"/api/collections/{pred_annotation.annotation_collection_id}/annotations/bulk_delete",
+        f"/api/collections/{collection.collection_id}/annotations/bulk_delete",
         json={"annotation_ids": [str(pred_annotation.sample_id)]},
     )
 
