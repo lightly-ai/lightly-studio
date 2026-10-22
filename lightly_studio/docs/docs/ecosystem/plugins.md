@@ -17,7 +17,7 @@ LightlyStudio registers a plugin in one of two ways:
 
 | Mode | Use it for | What you do |
 |---|---|---|
-| Automatic discovery | Plugins installed as a Python package, such as the [LightlyStudio plugins](#lightlystudio-plugins) | Install the package. LightlyStudio registers it when the GUI starts. |
+| Automatic discovery | Plugins installed as a Python package, such as the [LightlyStudio plugins](#lightlystudio-plugins) | Install the package from the GUI or with `pip`. LightlyStudio registers it without a restart. |
 | Manual registration | Your own operator that is not packaged, for example a class in a local script | Call `operator_registry.register(...)` before `ls.start_gui()`. |
 
 Do not register an installed plugin by hand. It then shows up twice in the GUI.
@@ -142,19 +142,51 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
 
 ### Install LightlyStudio Plugins
 
+#### Install from the GUI
+
+1. Open **Menu** > **Plugins**.
+2. Select the **Browse** tab. It shows the plugins of the
+   [plugin catalog](https://github.com/lightly-ai/lightly-studio-plugins/blob/main/plugins.toml).
+3. Click **Install** next to a plugin.
+
+LightlyStudio installs the plugin into the Python environment that runs the GUI. When the
+install is complete, the plugin shows in the **Installed** tab. You do not need to restart
+the GUI.
+
+!!! note
+    - Plugins with large dependencies, such as `torch`, can take some minutes to install.
+    - If an install updates a package that LightlyStudio already uses, LightlyStudio tells you
+      to restart the GUI.
+    - Some plugins need more setup, for example an API key or access to a gated model. Read
+      the README of the plugin before you use it.
+
+By default, only a browser on the same machine as LightlyStudio can install plugins, because
+an install runs code on that machine. Set these environment variables to change this:
+
+| Variable | Effect |
+|---|---|
+| `LIGHTLY_STUDIO_ALLOW_PLUGIN_INSTALL` | `true` allows installs from all clients. `false` disables installs from the GUI. |
+| `LIGHTLY_STUDIO_PLUGIN_CATALOG_URL` | The URL of the `plugins.toml` file that the **Browse** tab shows. |
+
+#### Install with pip
+
 Replace `<plugin_name>` with the folder name of the plugin you want to install:
 
 ```bash
 pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
 ```
 
-Once installed, the plugin is registered automatically the next time you start the GUI.
+Once installed, the plugin is registered automatically.
 You do not need to call `operator_registry.register`. If the GUI is already running,
-restart it.
+open **Menu** > **Plugins** and click the reload button.
+
+#### Upgrade or Remove a Plugin
 
 To remove a plugin, uninstall its package with `pip uninstall`,
 using the package name defined in the plugin's `pyproject.toml` (typically matching the
 plugin folder name).
+Restart the GUI after you upgrade or remove a plugin. A running GUI keeps the code of a plugin
+that it already loaded.
 
 ### Example: LightlyStudio SAM3 Plugin
 

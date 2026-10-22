@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Browse the plugin catalog in the Plugins dialog and install a plugin with one click. The plugin is ready to use without a restart.
+- Reload the Plugins dialog to use plugins that you installed with `pip` while LightlyStudio runs.
 - Disabled buttons now show a tooltip explaining why they cannot be clicked.
 - Added a filter panel to the captions tab, with tag and metadata filters. The footer now counts the number of active captions.
 - Delete an evaluation from the evaluation panel. Grid filters and sorting that use the deleted evaluation are removed.
