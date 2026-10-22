@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: `start_gui()` stops without a `KeyboardInterrupt` traceback when you press Ctrl+C.
 - The GUI footer no longer shows a dev commit hash for released versions.
 - The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.
+- In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it.
 - Python SDK: Speed up `dataset.evaluate()` and evaluation recompute on large datasets. The metrics are now written in larger batches, so the annotations are no longer loaded again for each sample.
 
 ### Security

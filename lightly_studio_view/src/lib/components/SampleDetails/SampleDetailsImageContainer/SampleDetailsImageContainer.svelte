@@ -64,6 +64,9 @@
     }: SampleDetailsImageContainerProps = $props();
 
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
+    // Same as the CSS filter `brightness(b) contrast(c)`.
+    const filterSlope = $derived($imageBrightness * $imageContrast);
+    const filterIntercept = $derived(0.5 - 0.5 * $imageContrast);
     const { isHidden } = useHideAnnotations();
     const { enforceColoringByClassStore } = useSettings();
 
@@ -260,13 +263,22 @@
         {/if}
     {/snippet}
     {#snippet zoomableContent({ scale })}
-        <foreignObject x="0" y="0" width={sample.width} height={sample.height}>
-            <img
-                src={imageUrl}
-                alt=""
-                draggable="false"
-                style={`height: 100%; width: 100%; filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
-            />
+        <!-- SVG filter, because Safari does not scale an <img> with a CSS filter in a <foreignObject> -->
+        <filter id="sample-image-filter" color-interpolation-filters="sRGB">
+            <feComponentTransfer>
+                <feFuncR type="linear" slope={filterSlope} intercept={filterIntercept} />
+                <feFuncG type="linear" slope={filterSlope} intercept={filterIntercept} />
+                <feFuncB type="linear" slope={filterSlope} intercept={filterIntercept} />
+            </feComponentTransfer>
+        </filter>
+        <foreignObject
+            x="0"
+            y="0"
+            width={sample.width}
+            height={sample.height}
+            filter="url(#sample-image-filter)"
+        >
+            <img src={imageUrl} alt="" draggable="false" style="height: 100%; width: 100%;" />
         </foreignObject>
 
         <g class:invisible={$isHidden}>
