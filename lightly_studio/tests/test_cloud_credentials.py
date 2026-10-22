@@ -4,16 +4,24 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
+import tempfile
+import threading
 from collections.abc import Generator
+from pathlib import Path
 
 import fsspec
 import pytest
 from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
+from botocore.exceptions import EndpointConnectionError
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
+from moto.moto_server.werkzeug_app import DomainDispatcherApplication, create_backend_app
 from pytest_mock import MockerFixture
+from werkzeug.serving import make_server
 
-from lightly_studio import cloud_credentials
+from lightly_studio import ca_bundle, cloud_credentials
 from lightly_studio.cloud_credentials import apply_cloud_credentials
+from tests import helpers_tls
 
 
 @pytest.fixture(autouse=True)
@@ -25,6 +33,58 @@ def _reset_cloud_configuration(mocker: MockerFixture) -> Generator[None, None, N
     yield
     AzureBlobFileSystem.clear_instance_cache()
     GCSFileSystem.clear_instance_cache()
+
+
+@pytest.fixture(autouse=True)
+def _isolate_ca_bundle_files(
+    mocker: MockerFixture, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Generator[None, None, None]:
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    mocker.patch.object(ca_bundle, "_written_files", [])
+    yield
+    ca_bundle.delete_ca_bundles(keep=None)
+
+
+@pytest.fixture(scope="module")
+def private_root_ca() -> helpers_tls.CertificateWithKey:
+    return helpers_tls.create_ca(common_name="Test Root CA")
+
+
+@pytest.fixture(scope="module")
+def private_issuing_ca(
+    private_root_ca: helpers_tls.CertificateWithKey,
+) -> helpers_tls.CertificateWithKey:
+    return helpers_tls.create_ca(common_name="Test Issuing CA", issuer=private_root_ca)
+
+
+@pytest.fixture
+def private_s3_endpoint(
+    private_issuing_ca: helpers_tls.CertificateWithKey, tmp_path: Path
+) -> Generator[str, None, None]:
+    """Run a moto S3 server over TLS that sends only its leaf certificate.
+
+    The server does not send the issuing CA, so clients must have it in their CA bundle.
+    """
+    leaf = helpers_tls.create_server_certificate(issuer=private_issuing_ca, host="localhost")
+    certificate_path = tmp_path / "server.pem"
+    key_path = tmp_path / "server.key"
+    certificate_path.write_text(leaf.certificate_pem())
+    key_path.write_text(leaf.key_pem())
+    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context.load_cert_chain(certfile=certificate_path, keyfile=key_path)
+
+    server = make_server(
+        host="localhost",
+        port=0,
+        app=DomainDispatcherApplication(create_backend_app),
+        threaded=True,
+        ssl_context=ssl_context,
+    )
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    yield f"https://localhost:{server.port}"
+    server.shutdown()
+    thread.join()
 
 
 def test_apply_cloud_credentials__applies_gcs_runtime_config(
@@ -147,6 +207,141 @@ def test_apply_cloud_credentials__missing_filesystem_dependency(
 
     assert "FSSPEC_GCS" not in os.environ
     assert "gcs" not in fsspec.config.conf
+
+
+def test_apply_cloud_credentials__writes_ca_bundle(
+    private_root_ca: helpers_tls.CertificateWithKey,
+) -> None:
+    ca_pem = private_root_ca.certificate_pem()
+
+    apply_cloud_credentials(
+        credentials={"AWS_ACCESS_KEY_ID": "key", "AWS_CA_BUNDLE_PEM": ca_pem},
+    )
+
+    assert "AWS_CA_BUNDLE_PEM" not in os.environ
+    assert os.environ["AWS_ACCESS_KEY_ID"] == "key"
+    assert Path(os.environ["AWS_CA_BUNDLE"]).read_text().endswith(ca_pem)
+
+
+def test_apply_cloud_credentials__without_ca_bundle_writes_no_file(tmp_path: Path) -> None:
+    apply_cloud_credentials(
+        credentials={"AWS_ACCESS_KEY_ID": "key", "AWS_SECRET_ACCESS_KEY": "secret"},
+    )
+
+    assert "AWS_CA_BUNDLE" not in os.environ
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_apply_cloud_credentials__removes_ca_bundle_on_rotation(
+    private_root_ca: helpers_tls.CertificateWithKey,
+) -> None:
+    apply_cloud_credentials(
+        credentials={
+            "AWS_ACCESS_KEY_ID": "key",
+            "AWS_CA_BUNDLE_PEM": private_root_ca.certificate_pem(),
+        },
+    )
+    old_ca_bundle_path = os.environ["AWS_CA_BUNDLE"]
+
+    apply_cloud_credentials(credentials={"AWS_ACCESS_KEY_ID": "new-key"})
+
+    assert "AWS_CA_BUNDLE" not in os.environ
+    assert not os.path.exists(old_ca_bundle_path)
+
+
+def test_apply_cloud_credentials__replaces_ca_bundle(
+    private_root_ca: helpers_tls.CertificateWithKey,
+    private_issuing_ca: helpers_tls.CertificateWithKey,
+) -> None:
+    apply_cloud_credentials(
+        credentials={
+            "AWS_ACCESS_KEY_ID": "key",
+            "AWS_CA_BUNDLE_PEM": private_root_ca.certificate_pem(),
+        },
+    )
+    old_ca_bundle_path = os.environ["AWS_CA_BUNDLE"]
+
+    apply_cloud_credentials(
+        credentials={
+            "AWS_ACCESS_KEY_ID": "key",
+            "AWS_CA_BUNDLE_PEM": private_issuing_ca.certificate_pem(),
+        },
+    )
+
+    new_ca_bundle_path = os.environ["AWS_CA_BUNDLE"]
+    assert new_ca_bundle_path != old_ca_bundle_path
+    assert not os.path.exists(old_ca_bundle_path)
+    assert Path(new_ca_bundle_path).read_text().endswith(private_issuing_ca.certificate_pem())
+
+
+def test_apply_cloud_credentials__keeps_ca_bundle_on_other_provider_refresh(
+    private_root_ca: helpers_tls.CertificateWithKey,
+) -> None:
+    apply_cloud_credentials(
+        credentials={
+            "AWS_ACCESS_KEY_ID": "key",
+            "AWS_CA_BUNDLE_PEM": private_root_ca.certificate_pem(),
+        },
+    )
+    ca_bundle_path = os.environ["AWS_CA_BUNDLE"]
+
+    apply_cloud_credentials(credentials={"FSSPEC_GCS": json.dumps({"token": "anon"})})
+
+    assert os.environ["AWS_CA_BUNDLE"] == ca_bundle_path
+    assert os.path.exists(ca_bundle_path)
+
+
+def test_apply_cloud_credentials__rejects_invalid_ca_bundle(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("AWS_ACCESS_KEY_ID", "old-key")
+
+    with pytest.raises(ValueError, match="no PEM certificate"):
+        apply_cloud_credentials(
+            credentials={"AWS_ACCESS_KEY_ID": "new-key", "AWS_CA_BUNDLE_PEM": "not a certificate"},
+        )
+
+    assert os.environ["AWS_ACCESS_KEY_ID"] == "old-key"
+    assert "AWS_CA_BUNDLE" not in os.environ
+
+
+def test_apply_cloud_credentials__rejects_ca_bundle_path_and_pem(
+    private_root_ca: helpers_tls.CertificateWithKey,
+) -> None:
+    with pytest.raises(ValueError, match="cannot be used together"):
+        apply_cloud_credentials(
+            credentials={
+                "AWS_CA_BUNDLE": "/path/to/bundle.pem",
+                "AWS_CA_BUNDLE_PEM": private_root_ca.certificate_pem(),
+            },
+        )
+
+    assert "AWS_CA_BUNDLE" not in os.environ
+
+
+def test_apply_cloud_credentials__ca_bundle_trusts_private_s3_endpoint(
+    private_root_ca: helpers_tls.CertificateWithKey,
+    private_issuing_ca: helpers_tls.CertificateWithKey,
+    private_s3_endpoint: str,
+) -> None:
+    credentials = {
+        "AWS_ACCESS_KEY_ID": "testing",
+        "AWS_SECRET_ACCESS_KEY": "testing",
+        "AWS_DEFAULT_REGION": "us-east-1",
+        "AWS_ENDPOINT_URL_S3": private_s3_endpoint,
+        # Fail fast on the TLS error instead of retrying.
+        "AWS_MAX_ATTEMPTS": "1",
+    }
+    apply_cloud_credentials(credentials=credentials)
+    with pytest.raises(EndpointConnectionError):
+        fsspec.filesystem("s3").ls("")
+
+    ca_pem = private_issuing_ca.certificate_pem() + private_root_ca.certificate_pem()
+    apply_cloud_credentials(credentials={**credentials, "AWS_CA_BUNDLE_PEM": ca_pem})
+    filesystem = fsspec.filesystem("s3")
+    filesystem.mkdir("ca-test")
+
+    assert filesystem.ls("") == ["ca-test"]
 
 
 def test_validate_credential_keys__accepts_aws_keys() -> None:
