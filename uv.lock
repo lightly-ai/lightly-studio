@@ -3938,6 +3938,7 @@ dependencies = [
 cloud-storage = [
     { name = "adlfs", version = "2025.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "adlfs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "certifi" },
     { name = "gcsfs", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "gcsfs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "s3fs", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
@@ -3962,6 +3963,7 @@ cpu = [
 dev = [
     { name = "black", version = "25.11.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "black", version = "26.3.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "cryptography" },
     { name = "hatchling", version = "1.27.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "hatchling", version = "1.29.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "httpx" },
@@ -4010,6 +4012,7 @@ requires-dist = [
     { name = "alembic-postgresql-enum", specifier = ">=1.10.0" },
     { name = "av", specifier = ">=10.0.0" },
     { name = "brotli-asgi", specifier = ">=1.4.0" },
+    { name = "certifi", marker = "extra == 'cloud-storage'", specifier = ">=2023.7.22" },
     { name = "click", specifier = ">=8.0.0" },
     { name = "duckdb", specifier = ">=1.2.2,<1.6" },
     { name = "duckdb-engine", specifier = ">=0.15.0,<0.17" },
@@ -4060,6 +4063,7 @@ cpu = [
 ]
 dev = [
     { name = "black", specifier = ">=24.8.0" },
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "hatchling", specifier = ">=1.27.0" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "moto", extras = ["server"], specifier = ">=5.0.0" },
