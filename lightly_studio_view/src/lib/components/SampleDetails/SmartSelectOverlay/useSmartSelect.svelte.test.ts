@@ -130,6 +130,22 @@ describe('useSmartSelect', () => {
         );
     });
 
+    it('does not save while a newer preview is pending', async () => {
+        const newer = deferred();
+        mocks.mutateAsync.mockResolvedValueOnce({ prediction }).mockReturnValueOnce(newer.promise);
+        const smartSelect = setup();
+        smartSelect.addPoint(point, null);
+        await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
+
+        smartSelect.addPoint({ ...point, x: 0.6 }, null);
+        expect(smartSelect.canSave).toBe(false);
+        await smartSelect.save();
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+
+        newer.resolve({ prediction });
+        await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
+    });
+
     it('keeps the newest preview when an older response arrives late', async () => {
         const older = deferred();
         const newer = { ...prediction, score: 0.9 };
