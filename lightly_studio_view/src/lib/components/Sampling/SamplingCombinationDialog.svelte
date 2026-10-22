@@ -155,9 +155,11 @@
                                 metadataWeightingDisabledReason={!strategyOptions.hasMetadataFields
                                     ? 'No numeric metadata fields found. Index metadata on your samples to enable this strategy.'
                                     : undefined}
-                                classBalancingDisabledReason={!strategyOptions.hasAnnotationLabels
-                                    ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
-                                    : undefined}
+                                classBalancingDisabledReason={isSequenceCollection
+                                    ? 'Not available for sequence collections.'
+                                    : !strategyOptions.hasAnnotationLabels
+                                      ? 'No annotation labels found. Add annotations to your samples to enable this strategy.'
+                                      : undefined}
                                 metadataBalancingDisabledReason={!strategyOptions.hasCategoricalMetadataFields
                                     ? 'No categorical metadata fields found. Index string or boolean metadata on your samples to enable this strategy.'
                                     : undefined}
