@@ -77,6 +77,8 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
 
     const addPoint = (point: SmartSelectPoint, className: string | null) => {
         if (isSaving) return;
+        // The endpoint takes points or a box, so a click drops a box preview.
+        if (points.length === 0) clear();
         points = [...points, point];
         // The preview no longer matches the points, even if no new request starts.
         dropPreview();
@@ -122,6 +124,12 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         },
         get canSave() {
             return preview !== null && !isSaving;
+        },
+        get isPending() {
+            return mutation.isPending;
+        },
+        get needsPositivePoint() {
+            return points.length > 0 && !canInferFromPoints(points);
         },
         addPoint,
         selectBox,
