@@ -7,6 +7,8 @@
     interface Props {
         collectionId: string;
         sample: { sampleId: string; width: number; height: number; annotations: AnnotationView[] };
+        visibleAnnotations: AnnotationView[];
+        scale: number;
         interactionRect?: SVGRectElement | null;
         refetch: () => void;
         assistedLabeling: ReturnType<typeof useAssistedLabelingTools>;
@@ -15,6 +17,8 @@
     let {
         collectionId,
         sample,
+        visibleAnnotations,
+        scale,
         interactionRect = $bindable(),
         refetch,
         assistedLabeling
@@ -32,6 +36,9 @@
             {collectionId}
             sampleId={sample.sampleId}
             {sample}
+            annotations={visibleAnnotations}
+            {scale}
+            isPanning={assistedLabeling.isPanning}
             {refetch}
             saveAs={toolState.saveAs}
             annotationClass={assistedLabeling.smartSelectClass}

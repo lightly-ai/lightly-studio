@@ -395,6 +395,8 @@
                     bind:interactionRect
                     {collectionId}
                     {sample}
+                    visibleAnnotations={actualAnnotationsToShow}
+                    {scale}
                     {refetch}
                     {assistedLabeling}
                 />

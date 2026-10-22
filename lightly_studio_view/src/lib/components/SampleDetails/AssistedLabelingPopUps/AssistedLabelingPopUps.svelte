@@ -15,7 +15,7 @@
     const toolState = $derived(assistedLabeling.state);
 </script>
 
-{#if $isEditingMode && assistedLabeling.activeTool === 'smart-select'}
+{#if $isEditingMode && assistedLabeling.activeTool === 'smart-select' && !assistedLabeling.isPanning}
     <SmartSelectPopUp
         {collectionId}
         saveAs={toolState.saveAs}
@@ -23,6 +23,8 @@
         annotationClass={assistedLabeling.smartSelectClass}
         onAnnotationClassChange={(value) => (toolState.smartSelectClass = value)}
         canSave={toolState.smartSelect.canSave}
+        isPending={toolState.smartSelect.isPending}
+        needsPositivePoint={toolState.smartSelect.needsPositivePoint}
         onSave={toolState.smartSelect.save}
         onClear={toolState.smartSelect.clear}
     />
