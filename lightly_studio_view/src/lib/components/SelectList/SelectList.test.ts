@@ -134,6 +134,18 @@ describe('SelectList', () => {
         expect(screen.getByTestId('select-list-trigger')).toHaveTextContent(selectedItem.label);
     });
 
+    it('shows a selected item with an empty label instead of the field label', () => {
+        render(SelectList, {
+            props: {
+                items: [...mockItems, { value: '', label: '' }],
+                label: 'Choose a cat',
+                selectedItem: { value: '', label: '' }
+            }
+        });
+
+        expect(screen.getByTestId('select-list-trigger')).not.toHaveTextContent('Choose a cat');
+    });
+
     it('creates new item when pressing Enter with unique label', async () => {
         const user = userEvent.setup();
         const onSelect = vi.fn();
