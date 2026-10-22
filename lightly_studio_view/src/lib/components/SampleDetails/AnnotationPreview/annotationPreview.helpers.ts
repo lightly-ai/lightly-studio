@@ -1,9 +1,14 @@
 // Used when neither the selected class nor a hint gives a class name.
 const FALLBACK_CLASS_NAME = 'object';
 
-// The first non-blank candidate wins, e.g. the selected class before a hinted class.
-export const pickClassName = (candidates: (string | null | undefined)[]): string =>
-    candidates.map((candidate) => candidate?.trim()).find(Boolean) ?? FALLBACK_CLASS_NAME;
+// A selected class wins as is, even with a blank name. A blank hint falls back.
+export const pickClassName = ({
+    selected,
+    hint
+}: {
+    selected: string | null | undefined;
+    hint: string | null | undefined;
+}): string => selected ?? (hint?.trim() || FALLBACK_CLASS_NAME);
 
 export const getAnnotationPreviewErrorMessage = (error: unknown): string => {
     if (error && typeof error === 'object') {

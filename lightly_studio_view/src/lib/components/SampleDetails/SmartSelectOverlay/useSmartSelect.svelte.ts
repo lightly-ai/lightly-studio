@@ -83,7 +83,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         if (!preview || isSaving) return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
-        const className = pickClassName([annotationClass, hintedClass]);
+        const className = pickClassName({ selected: annotationClass, hint: hintedClass });
         try {
             await saveAnnotationPreviews({
                 sampleId,

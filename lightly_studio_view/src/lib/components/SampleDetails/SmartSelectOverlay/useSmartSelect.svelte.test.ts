@@ -34,14 +34,14 @@ const deferred = () => {
 
 let cleanup = () => {};
 
-const setup = () => {
+const setup = ({ annotationClass = null }: { annotationClass?: string | null } = {}) => {
     let smartSelect!: ReturnType<typeof useSmartSelect>;
     cleanup = $effect.root(() => {
         smartSelect = useSmartSelect(() => ({
             collectionId: 'collection-1',
             sampleId: 'sample-1',
             saveAs: 'mask',
-            annotationClass: null,
+            annotationClass,
             annotationSource: 'source',
             onSaved: vi.fn()
         }));
@@ -115,6 +115,19 @@ describe('useSmartSelect', () => {
             })
         );
         expect(smartSelect.preview).toBeNull();
+    });
+
+    it('saves the selected class even when its name is empty', async () => {
+        mocks.mutateAsync.mockResolvedValue({ prediction });
+        const smartSelect = setup({ annotationClass: '' });
+        smartSelect.addPoint(point, 'cat');
+        await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
+
+        await smartSelect.save();
+
+        expect(mocks.saveAnnotationPreviews).toHaveBeenCalledWith(
+            expect.objectContaining({ previews: [{ preview: prediction, className: '' }] })
+        );
     });
 
     it('keeps the newest preview when an older response arrives late', async () => {

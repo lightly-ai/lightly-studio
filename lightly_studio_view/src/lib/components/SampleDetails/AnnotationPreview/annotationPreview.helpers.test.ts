@@ -2,9 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { getAnnotationPreviewErrorMessage, pickClassName } from './annotationPreview.helpers';
 
 describe('annotationPreview.helpers', () => {
-    it('picks the first non-blank annotation class name', () => {
-        expect(pickClassName([null, '  ', ' car ', 'dog'])).toBe('car');
-        expect(pickClassName([undefined, ''])).toBe('object');
+    it('picks the selected annotation class name as is', () => {
+        expect(pickClassName({ selected: ' car ', hint: 'dog' })).toBe(' car ');
+        expect(pickClassName({ selected: '', hint: 'dog' })).toBe('');
+    });
+
+    it('picks the trimmed hint or the fallback without a selected class', () => {
+        expect(pickClassName({ selected: null, hint: ' dog ' })).toBe('dog');
+        expect(pickClassName({ selected: undefined, hint: '  ' })).toBe('object');
     });
 
     it('reads the error message from the response body', () => {
