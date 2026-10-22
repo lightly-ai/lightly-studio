@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a "Clear all filters" button to the filter sidebar.
 - Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
 - Python SDK: Filter samples by metadata with equality and ordering comparisons, including nested fields and array indices, e.g. `ImageSampleField.metadata["odometry.speed"] < 15`.
+- Python SDK: New tutorial and example on how to use an external embedding model, such as Gemini Embedding 2 through OpenRouter, for the embedding plot, text search and image search.
 - Python SDK: Report anonymous usage data on how data is loaded: the dataset format and whether it comes from the example dataset, a local folder or remote storage.
 
 ### Changed
