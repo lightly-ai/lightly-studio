@@ -26,6 +26,8 @@
         };
         /** Reloads the tick after a tag is added or removed. */
         onTagsChange?: () => void;
+        /** Deletes a cuboid annotation by ID. */
+        onDeleteCuboid?: (cuboidId: string) => void;
     }
 
     let {
@@ -34,7 +36,8 @@
         annotationSources = [],
         selectedCuboidId = $bindable(null),
         tick,
-        onTagsChange
+        onTagsChange,
+        onDeleteCuboid
     }: Props = $props();
 </script>
 
@@ -62,6 +65,7 @@
                 {annotationClasses}
                 {annotationSources}
                 bind:selectedCuboidId
+                {onDeleteCuboid}
             />
         </Segment>
     </div>
