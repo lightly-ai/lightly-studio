@@ -107,6 +107,65 @@ describe('createCuboidTransformState', () => {
         expect(result[0].size).toEqual([10, 20, 30]);
     });
 
+    it('clears overlay when a later edit lands before the drag refetch', async () => {
+        // Simulates: user drags (commit), then edits via side panel before the drag
+        // refetch updates source. The panel save's reconcile brings panel values
+        // (different from both the pre-drag baseline and the drag values).
+        // The drag overlay must be removed so the viewport reflects the panel edit.
+        const onTransform = vi.fn().mockResolvedValue(true);
+        const state = createCuboidTransformState({ onTransform });
+        state.reconcile([ANNOTATION_A]);
+        await state.commit({
+            annotationId: 'ann-a',
+            frameId: 'frame-1',
+            center: [1, 2, 3],
+            rotation: [0, 0, 0, 1],
+            size: [10, 20, 30]
+        });
+
+        // Panel edit refetch arrives with panel values — different from both
+        // the pre-drag baseline ([0,0,0]) and the drag values ([1,2,3]).
+        state.reconcile([{ ...ANNOTATION_A, center: [7, 8, 9] }]);
+
+        const result = get(state.annotations);
+        expect(result[0].center).toEqual([7, 8, 9]);
+    });
+
+    it('keeps the latest drag when an earlier refetch lands and the latest refresh fails', async () => {
+        let finishLatestSave!: (saved: boolean) => void;
+        const onTransform = vi
+            .fn()
+            .mockResolvedValueOnce(true)
+            .mockReturnValueOnce(new Promise<boolean>((resolve) => (finishLatestSave = resolve)));
+        const state = createCuboidTransformState({ onTransform });
+        const firstTransform = {
+            annotationId: ANNOTATION_A.id,
+            frameId: ANNOTATION_A.frameId,
+            center: ANNOTATION_A.center,
+            rotation: ANNOTATION_A.rotation,
+            size: ANNOTATION_A.size
+        };
+        state.reconcile([ANNOTATION_A]);
+        const firstCommit = state.commit({ ...firstTransform, center: [1, 0, 0] });
+        const latestCommit = state.commit({ ...firstTransform, center: [2, 0, 0] });
+
+        state.reconcile([{ ...ANNOTATION_A, center: [1, 0, 0] }]);
+        await firstCommit;
+        expect(get(state.annotations)[0].center).toEqual([2, 0, 0]);
+
+        // A successful write still resolves true when its refresh fails.
+        finishLatestSave(true);
+        await latestCommit;
+
+        expect(get(state.annotations)[0].center).toEqual([2, 0, 0]);
+
+        state.reconcile([ANNOTATION_A]);
+        expect(get(state.annotations)[0].center).toEqual([2, 0, 0]);
+
+        state.reconcile([{ ...ANNOTATION_A, center: [7, 8, 9] }]);
+        expect(get(state.annotations)[0].center).toEqual([7, 8, 9]);
+    });
+
     it('removes overlay when the annotation disappears from source', async () => {
         const onTransform = vi.fn().mockResolvedValue(true);
         const state = createCuboidTransformState({ onTransform });

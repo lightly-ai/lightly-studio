@@ -1,7 +1,10 @@
 import { eulerDegreesToQuaternion, rotationToEulerDegrees } from './pointCloudAnnotationDetails';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
-type AnnotationInput = Pick<CuboidAnnotation, 'id' | 'center' | 'size' | 'rotation' | 'trackNumber'>;
+type AnnotationInput = Pick<
+    CuboidAnnotation,
+    'id' | 'center' | 'size' | 'rotation' | 'trackNumber'
+>;
 type FieldName = 'x' | 'y' | 'z' | 'l' | 'w' | 'h' | 'rx' | 'ry' | 'rz';
 
 function replaceAxis(

@@ -2,7 +2,10 @@ import { rotationToEulerDegrees } from './pointCloudAnnotationDetails';
 import { updateAnnotationGeometry } from './updateAnnotationGeometry';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
-type AnnotationInput = Pick<CuboidAnnotation, 'id' | 'center' | 'size' | 'rotation' | 'trackNumber'>;
+type AnnotationInput = Pick<
+    CuboidAnnotation,
+    'id' | 'center' | 'size' | 'rotation' | 'trackNumber'
+>;
 type FieldName = Parameters<typeof updateAnnotationGeometry>[1];
 
 function isValidFieldValue(field: FieldName, value: number): boolean {
