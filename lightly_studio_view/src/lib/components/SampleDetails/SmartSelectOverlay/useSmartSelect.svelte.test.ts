@@ -159,6 +159,20 @@ describe('useSmartSelect', () => {
         expect(mocks.mutateAsync).toHaveBeenCalledTimes(1);
     });
 
+    it('drops a box response that arrives after a negative point', async () => {
+        const box = deferred();
+        mocks.mutateAsync.mockReturnValueOnce(box.promise);
+        const smartSelect = setup();
+
+        smartSelect.selectBox({ x: 0, y: 0, width: 0.5, height: 0.5 });
+        smartSelect.addPoint({ ...point, positive: false }, null);
+        box.resolve({ prediction });
+        await box.promise;
+
+        expect(smartSelect.preview).toBeNull();
+        expect(smartSelect.canSave).toBe(false);
+    });
+
     it('keeps the newest preview when an older response arrives late', async () => {
         const older = deferred();
         const newer = { ...prediction, score: 0.9 };

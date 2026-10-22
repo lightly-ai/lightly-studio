@@ -33,7 +33,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
     let preview = $state<AnnotationPreview | null>(null);
     let isSaving = $state(false);
     let hintedClass: string | null = null;
-    // Drops responses that a newer request or a clear made stale.
+    // Drops responses that a newer prompt or a clear made stale.
     let sequence = 0;
 
     const mutation = createMutation(() => createInteractiveAnnotationPreviewMutation());
@@ -56,10 +56,14 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         }
     };
 
-    const reset = () => {
+    const dropPreview = () => {
         sequence += 1;
-        points = [];
         preview = null;
+    };
+
+    const reset = () => {
+        dropPreview();
+        points = [];
         hintedClass = null;
     };
 
@@ -74,8 +78,8 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
     const addPoint = (point: SmartSelectPoint, className: string | null) => {
         if (isSaving) return;
         points = [...points, point];
-        // The preview no longer matches the points, so it cannot be saved.
-        preview = null;
+        // The preview no longer matches the points, even if no new request starts.
+        dropPreview();
         hintedClass = className ?? hintedClass;
         if (canInferFromPoints(points)) void infer({ points });
     };
