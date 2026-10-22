@@ -32,7 +32,6 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
     let points = $state<SmartSelectPoint[]>([]);
     let preview = $state<AnnotationPreview | null>(null);
     let isSaving = $state(false);
-    let isInferring = $state(false);
     let hintedClass: string | null = null;
     // Drops responses that a newer request or a clear made stale.
     let sequence = 0;
@@ -45,7 +44,6 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
 
     const infer = async (prompt: SmartSelectPrompt) => {
         const requestSequence = ++sequence;
-        isInferring = true;
         const { collectionId, sampleId } = getParams();
         try {
             const result = await mutation.mutateAsync({
@@ -55,8 +53,6 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         } catch (error) {
             if (requestSequence !== sequence) return;
             toast.error(`Smart select failed: ${getAnnotationPreviewErrorMessage(error)}`);
-        } finally {
-            if (requestSequence === sequence) isInferring = false;
         }
     };
 
@@ -65,7 +61,6 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         points = [];
         preview = null;
         hintedClass = null;
-        isInferring = false;
     };
 
     // Drops a request from a previous sample, e.g. after the overlay was keyed by a new one.
@@ -84,9 +79,11 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         void infer({ boxes: [box] });
     };
 
+    // A pending request means the preview does not match the prompts yet.
+    const canSave = () => preview !== null && !isSaving && !mutation.isPending;
+
     const save = async () => {
-        // A pending request means the preview does not match the prompts yet.
-        if (!preview || isSaving || isInferring) return;
+        if (!preview || !canSave()) return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
         const className = pickClassName({ selected: annotationClass, hint: hintedClass });
@@ -116,7 +113,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
             return preview;
         },
         get canSave() {
-            return preview !== null && !isSaving && !isInferring;
+            return canSave();
         },
         addPoint,
         selectBox,

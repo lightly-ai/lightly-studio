@@ -2,14 +2,18 @@ import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSmartSelect } from './useSmartSelect.svelte';
 
-const mocks = vi.hoisted(() => ({
-    mutateAsync: vi.fn(),
-    saveAnnotationPreviews: vi.fn(),
-    toastError: vi.fn()
-}));
+const mocks = vi.hoisted(() => {
+    const mutateAsync = vi.fn();
+    return {
+        mutateAsync,
+        mutation: { mutateAsync, isPending: false },
+        saveAnnotationPreviews: vi.fn(),
+        toastError: vi.fn()
+    };
+});
 
 vi.mock('@tanstack/svelte-query', () => ({
-    createMutation: () => ({ mutateAsync: mocks.mutateAsync })
+    createMutation: () => mocks.mutation
 }));
 vi.mock('$lib/hooks', () => ({
     useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
@@ -55,6 +59,7 @@ const point = { x: 0.5, y: 0.5, positive: true };
 describe('useSmartSelect', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mocks.mutation.isPending = false;
     });
 
     afterEach(() => cleanup());
@@ -131,19 +136,16 @@ describe('useSmartSelect', () => {
     });
 
     it('does not save while a newer preview is pending', async () => {
-        const newer = deferred();
-        mocks.mutateAsync.mockResolvedValueOnce({ prediction }).mockReturnValueOnce(newer.promise);
+        mocks.mutateAsync.mockResolvedValue({ prediction });
         const smartSelect = setup();
         smartSelect.addPoint(point, null);
         await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
 
-        smartSelect.addPoint({ ...point, x: 0.6 }, null);
-        expect(smartSelect.canSave).toBe(false);
+        mocks.mutation.isPending = true;
         await smartSelect.save();
-        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
 
-        newer.resolve({ prediction });
-        await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
+        expect(smartSelect.canSave).toBe(false);
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
     });
 
     it('keeps the newest preview when an older response arrives late', async () => {
