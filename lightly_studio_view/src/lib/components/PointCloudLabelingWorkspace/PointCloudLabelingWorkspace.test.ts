@@ -48,6 +48,26 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: [] })
 }));
 
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({ data: [] })
+}));
+
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() })
+}));
+
+vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
+    useCreateAnnotation: () => ({ createAnnotation: vi.fn() })
+}));
+
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        addReversibleAction: vi.fn(),
+        lastAnnotationLabel: { subscribe: vi.fn() },
+        updateLastAnnotationLabel: vi.fn()
+    })
+}));
+
 vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte', () => ({
     useMcapTickPrefetchScheduler: (params: typeof schedulerParams.current) => {
         schedulerParams.current = params ?? undefined;
