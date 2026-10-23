@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { untrack, type ComponentProps } from 'svelte';
+    import { untrack } from 'svelte';
     import RotationCursor from './RotationCursor/RotationCursor.svelte';
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
@@ -21,6 +21,7 @@
         CameraMode,
         WorkspaceTool
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { createCuboidTransformState } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidTransformState';
 
     /** Composes the shared Threlte scene from the point cloud and annotation layers. */
     interface Props {
@@ -29,10 +30,12 @@
         colorMode?: ColorMode;
         pointSize?: number;
         intensityRange?: [number, number];
-        /** Static cuboid annotations rendered over the point cloud. */
+        /** Cuboid annotations rendered over the point cloud (typically the transform overlay). */
         cuboids?: readonly CuboidAnnotation[];
         annotationClasses?: readonly AnnotationClass[];
         annotationSources?: readonly AnnotationSource[];
+        /** Transform state shared with the parent; drives the gizmo and face-resize interactions. */
+        transforms: ReturnType<typeof createCuboidTransformState>;
         pointCloudBounds?: Bounds3;
         /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
@@ -49,8 +52,6 @@
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
         /** Fires when the user clicks the ground plane in create-cuboid mode. */
         onCreateCuboid?: (position: Vector3) => void;
-        /** Fires when the user finishes transforming a cuboid via the gizmo. */
-        onCuboidTransform?: ComponentProps<typeof CuboidLayer>['onCuboidTransform'];
         /** Fires on the left arrow key. */
         onPreviousTick?: () => void;
         /** Fires on the right arrow key. */
@@ -75,6 +76,7 @@
         cuboids = [],
         annotationClasses = [],
         annotationSources = [],
+        transforms,
         pointCloudBounds = EMPTY_BOUNDS,
         fitKey,
         selectedAnnotationId = null,
@@ -83,7 +85,6 @@
         onselect,
         onhover,
         onCreateCuboid,
-        onCuboidTransform,
         onPreviousTick,
         onNextTick,
         cameraMode = 'perspective'
@@ -159,6 +160,7 @@
         <CuboidLayer
             {cuboids}
             {annotationClasses}
+            {transforms}
             {groundPlaneBounds}
             {selectedAnnotationId}
             {hoveredAnnotationId}
@@ -166,7 +168,6 @@
             {onselect}
             {onhover}
             {onCreateCuboid}
-            {onCuboidTransform}
         />
     </Canvas>
     <SceneNavigationControls />

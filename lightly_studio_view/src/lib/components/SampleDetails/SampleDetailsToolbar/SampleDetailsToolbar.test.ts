@@ -9,7 +9,7 @@ const { initializeSlic } = vi.hoisted(() => ({ initializeSlic: vi.fn(async () =>
 vi.mock('@lightly-ai/slic', () => ({ getSlicEngine: initializeSlic }));
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'bounding-box' | 'brush' | 'slic',
+    status: 'cursor' as ToolbarStatus,
     brush: {
         mode: 'brush' as 'brush' | 'eraser'
     },
@@ -43,7 +43,14 @@ vi.mock('$lib/hooks/useSettings', () => ({
     })
 }));
 
-vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
+const assistedLabelingStatus = { disabledReason: null as string | null };
+
+vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
+    useAssistedLabelingStatus: () => assistedLabelingStatus
+}));
+
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/contexts/SampleDetailsToolbar.svelte')>()),
     useSampleDetailsToolbarContext: () => ({
         context: mockSampleDetailsToolbarContext,
         setBrushMode(mode: BrushMode) {
@@ -91,6 +98,7 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.isErasing = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
+        assistedLabelingStatus.disabledReason = null;
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {
@@ -197,6 +205,47 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
         expect(mockSampleDetailsToolbarContext.status).toBe('slic');
         settingsStore.update((settings) => ({ ...settings, key_toolbar_slic: 'a' }));
+    });
+
+    it('activates the smart select tool', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Smart select'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('smart-select');
+    });
+
+    it('tells that smart select sends the image to fal.ai', async () => {
+        const view = render(SampleDetailsToolbar);
+
+        await fireEvent.pointerEnter(view.getByLabelText('Smart select').parentElement!);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent('Sends the image to fal.ai.');
+    });
+
+    it('resets the annotation type of the previous tool in smart select', () => {
+        mockSampleDetailsToolbarContext.status = 'smart-select';
+        mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBeNull();
+    });
+
+    it('keeps smart select inactive and shows why while it is unavailable', async () => {
+        assistedLabelingStatus.disabledReason = 'Set the FAL_KEY environment variable.';
+        const view = render(SampleDetailsToolbar);
+
+        const button = view.getByLabelText('Smart select');
+        await fireEvent.pointerEnter(button.parentElement!);
+        await fireEvent.click(button);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent(
+            'Set the FAL_KEY environment variable.'
+        );
+        expect(view.getByRole('tooltip')).not.toHaveTextContent('fal.ai');
+        expect(button).toBeDisabled();
+        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
     });
 
     it('activates drag tool', async () => {

@@ -19,11 +19,11 @@ export function computeCuboidVertices(
     rotation: DomainQuaternion
 ): Vector3[] {
     const [cx, cy, cz] = center;
-    const [width, height, depth] = size;
+    const [length, width, height] = size;
 
-    const hx = width / 2;
-    const hy = height / 2;
-    const hz = depth / 2;
+    const hx = length / 2;
+    const hy = width / 2;
+    const hz = height / 2;
 
     const orientation = new Quaternion(...rotation);
     const centerVector = new Vector3(cx, cy, cz);

@@ -8,6 +8,7 @@ A query helps you find images that match certain rules. For example, you can sea
 - large images
 - images with a specific file name
 - tagged images
+- images with specific metadata values
 - images with a certain annotation, such as a classification, bounding box, or segmentation mask
 - a logical combination of the above, using AND/OR/NOT operators.
 
@@ -46,6 +47,43 @@ file_path_abs != "/datasets/archive/bad.jpg"
 created_at >= "2025-01-01T00:00:00Z"
 ```
 
+
+## Metadata filtering
+
+Use `metadata["path"]` to compare sample metadata. Quote the path with double or single quotes.
+Use dots for nested fields and zero-based array indices in brackets:
+
+```mysql
+metadata["camera"] = "front"
+metadata["reviewed"] = true
+metadata["quality_score"] >= 0.8
+metadata["odometry.acc[1]"] < -0.2
+width >= 640 AND metadata["quality_score"] >= 0.8
+```
+
+Numbers support `=`, `!=`, `<`, `<=`, `>`, and `>=`. Strings and booleans support only `=` and `!=`. Boolean literals are case-insensitive, so `true` and `TRUE` mean the same thing.
+
+Metadata comparisons work on image and video samples. They are not supported inside annotation
+match functions. Metadata `IN (...)` and comparisons with `null` are not yet supported.
+
+### Missing values and negation
+
+A metadata comparison does not match a missing path, null, or a value of another type.
+This also applies to `!=`:
+
+```mysql
+# Matches string camera values other than "front"; excludes missing, null, and other types
+metadata["camera"] != "front"
+
+# Matches everything except the string camera value "front"; includes missing, null, and other types
+NOT metadata["camera"] = "front"
+```
+
+`NOT` negates the entire comparison, including whether a compatible metadata value exists.
+
+The editor suggests a `metadata["path"]` snippet in sample expressions and `true`/`false` after
+metadata `=` or `!=`. Hover over `metadata` for syntax and comparison help. Enter a path from
+your dataset; completion does not list dataset metadata keys.
 
 ## Tag filtering
 

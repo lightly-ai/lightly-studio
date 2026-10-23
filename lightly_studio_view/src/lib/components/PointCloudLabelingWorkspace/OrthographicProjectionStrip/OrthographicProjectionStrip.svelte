@@ -1,6 +1,7 @@
 <script lang="ts">
     import SceneViewport from '../SceneViewport/SceneViewport.svelte';
     import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
+    import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
     import type {
         AnnotationClass,
         AnnotationSource,
@@ -18,6 +19,7 @@
         cuboids: readonly CuboidAnnotation[];
         annotationClasses: readonly AnnotationClass[];
         annotationSources: readonly AnnotationSource[];
+        transforms: ReturnType<typeof createCuboidTransformState>;
         selectedAnnotationId?: string | null;
         hoveredAnnotationId?: string | null;
         onselect?: (annotationId: string | null) => void;
@@ -32,6 +34,7 @@
         cuboids,
         annotationClasses,
         annotationSources,
+        transforms,
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         onselect,
@@ -64,6 +67,7 @@
                 {cuboids}
                 {annotationClasses}
                 {annotationSources}
+                {transforms}
                 {selectedAnnotationId}
                 {hoveredAnnotationId}
                 activeTool="select"
