@@ -34,12 +34,15 @@ const deferred = () => {
 
 let cleanup = () => {};
 
+const params = $state({ sampleId: 'sample-1' });
+
 const setup = ({ annotationClass = null }: { annotationClass?: string | null } = {}) => {
+    params.sampleId = 'sample-1';
     let smartSelect!: ReturnType<typeof useSmartSelect>;
     cleanup = $effect.root(() => {
         smartSelect = useSmartSelect(() => ({
             collectionId: 'collection-1',
-            sampleId: 'sample-1',
+            sampleId: params.sampleId,
             saveAs: 'mask',
             annotationClass,
             annotationSource: 'source',
@@ -238,6 +241,34 @@ describe('useSmartSelect', () => {
 
         expect(smartSelect.preview).toEqual(prediction);
         expect(smartSelect.canSave).toBe(true);
+    });
+
+    it('drops the box preview when a negative point follows a box', async () => {
+        mocks.mutateAsync.mockResolvedValue({ prediction });
+        const smartSelect = setup();
+        smartSelect.selectBox({ x: 0, y: 0, width: 0.5, height: 0.5 });
+        await vi.waitFor(() => expect(smartSelect.preview).toEqual(prediction));
+
+        smartSelect.addPoint({ ...point, positive: false }, null);
+
+        expect(smartSelect.preview).toBeNull();
+        expect(smartSelect.needsPositivePoint).toBe(true);
+        expect(mocks.mutateAsync).toHaveBeenCalledOnce();
+    });
+
+    it('drops the prompts and a pending response of a previous sample', async () => {
+        const pending = deferred();
+        mocks.mutateAsync.mockReturnValueOnce(pending.promise);
+        const smartSelect = setup();
+
+        smartSelect.addPoint(point, null);
+        params.sampleId = 'sample-2';
+        flushSync();
+        pending.resolve({ prediction });
+        await pending.promise;
+
+        expect(smartSelect.points).toEqual([]);
+        expect(smartSelect.preview).toBeNull();
     });
 
     it('drops a pending response once torn down', async () => {
