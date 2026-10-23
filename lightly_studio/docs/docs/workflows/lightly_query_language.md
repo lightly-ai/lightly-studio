@@ -61,10 +61,7 @@ metadata["odometry.acc[1]"] < -0.2
 width >= 640 AND metadata["quality_score"] >= 0.8
 ```
 
-Numbers support `=`, `!=`, `<`, `<=`, `>`, and `>=`. Integers and floats compare numerically,
-and numbers can be negative. Strings and booleans support only `=` and `!=`.
-Values keep their JSON types: `true` differs from `"true"`, and `1` differs from `"1"`.
-Boolean literals are case-insensitive, so `true` and `TRUE` mean the same thing.
+Numbers support `=`, `!=`, `<`, `<=`, `>`, and `>=`. Strings and booleans support only `=` and `!=`. Boolean literals are case-insensitive, so `true` and `TRUE` mean the same thing.
 
 Metadata comparisons work on image and video samples. They are not supported inside annotation
 match functions. Metadata `IN (...)` and comparisons with `null` are not yet supported.
