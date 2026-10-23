@@ -28,6 +28,8 @@
         editable?: boolean;
         /** Called when the user commits a geometry change in the detail panel. */
         onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
+        /** Deletes a cuboid annotation by ID. */
+        onDeleteCuboid?: (cuboidId: string) => void;
     }
 
     let {
@@ -36,7 +38,8 @@
         annotationSources,
         selectedCuboidId = $bindable(null),
         editable = false,
-        onCuboidTransform
+        onCuboidTransform,
+        onDeleteCuboid
     }: Props = $props();
 
     const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
@@ -63,6 +66,7 @@
             onToggle={toggle}
             {editable}
             {onCuboidTransform}
+            onDelete={onDeleteCuboid}
         />
     {/each}
 {/snippet}

@@ -31,6 +31,8 @@
         editable?: boolean;
         /** Called when the user commits a geometry change in the detail panel. */
         onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
+        /** Deletes a cuboid annotation by ID. */
+        onDeleteCuboid?: (cuboidId: string) => void;
     }
 
     let {
@@ -41,7 +43,8 @@
         tick,
         onTagsChange,
         editable = false,
-        onCuboidTransform
+        onCuboidTransform,
+        onDeleteCuboid
     }: Props = $props();
 </script>
 
@@ -71,6 +74,7 @@
                 bind:selectedCuboidId
                 {editable}
                 {onCuboidTransform}
+                {onDeleteCuboid}
             />
         </Segment>
     </div>

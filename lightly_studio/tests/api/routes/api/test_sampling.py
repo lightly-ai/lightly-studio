@@ -12,14 +12,20 @@ from sqlmodel import Session
 from lightly_studio.api.routes.api import sampling as sampling_api
 from lightly_studio.metadata import compute_typicality
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
     image_resolver,
+    mcap_group_sequence_resolver,
+    recording_resolver,
     tag_resolver,
     video_resolver,
 )
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from lightly_studio.sampling.sampling_config import EmbeddingDiversityStrategy
@@ -1086,3 +1092,182 @@ def _sampling_request_data(
     if preselected_tag_id is not None:
         request_data["preselected_tag_id"] = str(preselected_tag_id)
     return request_data
+
+
+def test_create_combination_sampling__sequence_collection(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Sampling selects from the MCAP sequences that match the filter."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.SEQUENCE
+    )
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="test_embedding_model",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sequence_ids = []
+    for embedding in ([1.0, 0.0], [0.0, 1.0], [1.0, 1.0]):
+        sequence_id = mcap_group_sequence_resolver.create(
+            session=db_session, collection_id=collection.collection_id, recording_id=recording_id
+        )
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=sequence_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+        sequence_ids.append(sequence_id)
+
+    # The filter leaves out the third sequence, so both other sequences are selected.
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/sampling",
+        json={
+            "n_samples_to_select": 2,
+            "sampling_result_tag_name": "sequence_sampling",
+            "strategies": [
+                {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
+            ],
+            "filter": {
+                "filter_type": "mcap_sequence",
+                "sample_filter": {"sample_ids": [str(sequence_ids[0]), str(sequence_ids[1])]},
+            },
+        },
+    )
+
+    assert response.status_code == 204
+    created_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="sequence_sampling", collection_id=collection.collection_id
+    )
+    assert created_tag is not None
+    selected = mcap_group_sequence_resolver.get_sample_ids(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id])),
+    )
+    assert selected == {sequence_ids[0], sequence_ids[1]}
+
+
+def test_create_combination_sampling__sequence_collection_similarity(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Similarity sampling selects the MCAP sequences most similar to a tagged sequence."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.SEQUENCE
+    )
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="test_embedding_model",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    recording_id = recording_resolver.create(
+        session=db_session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    sequence_ids = []
+    for embedding in ([1.0, 0.0], [0.9, 0.1], [0.0, 1.0]):
+        sequence_id = mcap_group_sequence_resolver.create(
+            session=db_session, collection_id=collection.collection_id, recording_id=recording_id
+        )
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=sequence_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+        sequence_ids.append(sequence_id)
+    query_tag = helpers_resolvers.create_tag(
+        session=db_session, collection_id=collection.collection_id, tag_name="query_tag"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=query_tag.tag_id, sample_ids=[sequence_ids[0]]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/sampling",
+        json={
+            "n_samples_to_select": 2,
+            "sampling_result_tag_name": "similarity_sampling",
+            "strategies": [
+                {
+                    "strategy_name": "similarity",
+                    "query_tag_name": "query_tag",
+                    "embedding_model_name": "test_embedding_model",
+                }
+            ],
+        },
+    )
+
+    assert response.status_code == 204
+    created_tag = tag_resolver.get_by_name(
+        session=db_session, tag_name="similarity_sampling", collection_id=collection.collection_id
+    )
+    assert created_tag is not None
+    selected = mcap_group_sequence_resolver.get_sample_ids(
+        session=db_session,
+        collection_id=collection.collection_id,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(tag_ids=[created_tag.tag_id])),
+    )
+    # The first two sequences point in the direction of the tagged sequence.
+    assert selected == {sequence_ids[0], sequence_ids[1]}
+
+
+def test_create_combination_sampling__sequence_collection_rejects_image_filter(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Sequence collections reject image filters."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.SEQUENCE
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/sampling",
+        json={
+            "n_samples_to_select": 1,
+            "sampling_result_tag_name": "tag1",
+            "strategies": [
+                {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
+            ],
+            "filter": {"filter_type": "image", "width": {"min": 200}},
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == "Invalid filter type for sequence collection."
+
+
+def test_create_combination_sampling__unsupported_collection(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Collections of other sample types do not support sampling."""
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.GROUP
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/sampling",
+        json={
+            "n_samples_to_select": 1,
+            "sampling_result_tag_name": "tag1",
+            "strategies": [
+                {"strategy_name": "diversity", "embedding_model_name": "test_embedding_model"}
+            ],
+        },
+    )
+
+    assert response.status_code == 400
+    assert response.json()["detail"] == (
+        "Sampling is only supported for image, video and sequence collections."
+    )

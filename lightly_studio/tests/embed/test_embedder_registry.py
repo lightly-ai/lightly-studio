@@ -18,6 +18,7 @@ from lightly_studio_serve.embedder import (
     VideoPathEmbedder,
 )
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
+from PIL.Image import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio.embed import embedder_config, embedder_registry
@@ -88,6 +89,14 @@ class _FakeVideoImageEmbedder(VideoPathEmbedder, ImagePathEmbedder):
 
     def embed_images(self, paths: list[str]) -> EmbeddingResult:
         return self.embed_videos(paths=paths)
+
+
+class _FakeVideoFrameEmbedder(_FakeVideoImageEmbedder, ImagePILEmbedder):
+    def embed_images_pil(self, images: list[Image]) -> EmbeddingResult:
+        return EmbeddingResult(
+            embeddings=np.zeros((len(images), 2), dtype=np.float32),
+            kept_indices=list(range(len(images))),
+        )
 
 
 class TestEmbedderRegistry:
@@ -618,6 +627,17 @@ class TestEmbedderRegistry:
         load_builtin.assert_any_call(space_key="PE-Core-T16-384")
         load_builtin.assert_any_call(space_key="mobileclip_s0")
 
+    def test_get_embedder__frames_share_the_video_builtin(self, mocker: MockerFixture) -> None:
+        registry = EmbedderRegistry()
+        pe = _FakeVideoFrameEmbedder(space_key="PE-Core-T16-384")
+        load_builtin = mocker.patch.object(
+            embedder_registry, "_load_builtin_embedder", return_value=pe
+        )
+
+        assert registry.get_embedder(embedder_type=ImagePILEmbedder) is pe
+        assert registry.get_embedder(embedder_type=VideoPathEmbedder) is pe
+        load_builtin.assert_called_once_with(space_key="PE-Core-T16-384")
+
     def test_lazy_loading_preserves_custom_bootstrap_space(self, mocker: MockerFixture) -> None:
         registry = EmbedderRegistry()
         custom = _FakeImageEmbedder(space_key="custom")
@@ -663,6 +683,36 @@ class TestEmbedderRegistry:
             is NoEmbedderReason.LACKS_CAPABILITY
         )
         build_remote.assert_called_once()
+
+    def test_has_registered_bootstrap(self) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeImageEmbedder(space_key="image_model"))
+
+        assert registry.has_registered_bootstrap(embedder_type=ImagePathEmbedder)
+        # The built-in bootstrap of crops is not a registration
+        assert not registry.has_registered_bootstrap(embedder_type=ImageCropPathEmbedder)
+
+    def test_has_registered_bootstrap__empty_bootstrap_set(self) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeImageEmbedder(space_key="image_model"), bootstrap_for=set())
+
+        assert not registry.has_registered_bootstrap(embedder_type=ImagePathEmbedder)
+
+    def test_has_registered_bootstrap__replacement_lacks_capability(self) -> None:
+        registry = EmbedderRegistry()
+        registry.register(embedder=_FakeTextImageEmbedder(space_key="space-a"))
+
+        registry.register(embedder=_FakeImageEmbedder(space_key="space-a"), bootstrap_for=set())
+
+        # The replacement keeps the image bootstrap, but it cannot serve the text bootstrap
+        assert registry.has_registered_bootstrap(embedder_type=ImagePathEmbedder)
+        assert not registry.has_registered_bootstrap(embedder_type=TextEmbedder)
+
+    def test_has_registered_bootstrap__not_a_capability_type(self) -> None:
+        registry = EmbedderRegistry()
+
+        with pytest.raises(ValueError, match=r"not an embedder capability type"):
+            registry.has_registered_bootstrap(embedder_type=Embedder)
 
     def test_preload_builtin_embedders__loads_each_builtin_once(
         self, mocker: MockerFixture

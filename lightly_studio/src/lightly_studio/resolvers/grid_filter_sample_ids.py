@@ -7,10 +7,17 @@ from uuid import UUID
 from sqlmodel import Session
 from sqlmodel.sql.expression import SelectOfScalar
 
-from lightly_studio.resolvers import embedding_region_resolver, video_resolver
+from lightly_studio.resolvers import (
+    embedding_region_resolver,
+    mcap_group_sequence_resolver,
+    video_resolver,
+)
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.grid_filter import GridFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 
@@ -39,6 +46,10 @@ def build_sample_ids_query(
                 collection_id=collection_id,
                 region=grid_filter.sample_filter.embedding_region,
             )
+        )
+    elif isinstance(grid_filter, McapSequenceFilter):
+        mcap_group_sequence_resolver.resolve_embedding_region(
+            session=session, collection_id=collection_id, sequence_filter=grid_filter
         )
     elif isinstance(grid_filter, AnnotationsFilter) and grid_filter.embedding_region is not None:
         grid_filter.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(

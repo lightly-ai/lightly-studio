@@ -64,15 +64,15 @@ describe('useDeleteAnnotation', () => {
         });
     });
 
-    it('includes the provided annotation_type in the event', async () => {
+    it('uses an explicit collection after navigation and includes the annotation type', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
                 opts.onSuccess();
             }
         } as unknown as ReturnType<typeof createMutation>);
 
-        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
-        await deleteAnnotation('ann-1', 'object_detection');
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'new-col' });
+        await deleteAnnotation('ann-1', 'object_detection', 'col-1');
 
         expect(trackEvent).toHaveBeenCalledWith('annotation_deleted', {
             collection_id: 'col-1',

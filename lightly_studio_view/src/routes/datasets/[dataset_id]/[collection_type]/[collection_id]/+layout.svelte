@@ -127,6 +127,7 @@
         filterPanelCollapsed,
         toggleFilterPanelCollapsed,
         filteredSampleCount,
+        filteredCaptionCount,
         filteredAnnotationCount,
         // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
         // captures a store reference that never goes stale.
@@ -151,6 +152,10 @@
     const isAnnotationDetails = $derived(isAnnotationDetailsRoute(page.route.id));
     const isFrameDetails = $derived(isFrameDetailsRoute(page.route.id));
     const isCaptions = $derived(isCaptionsRoute(page.route.id));
+    // Captions list the parent collection's samples, so their tags and metadata filters use that collection.
+    const metadataCollectionId = $derived(
+        isCaptions ? (collection.parent_collection_id ?? collectionId) : collectionId
+    );
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
@@ -313,7 +318,7 @@
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
     const hasMediaWithEmbeddings = $derived(
-        (isImages || isVideos || isAnnotations) && hasEmbeddings
+        (isImages || isVideos || isAnnotations || isPointClouds) && hasEmbeddings
     );
     const collectionSearchPlaceholder = $derived(
         isAnnotations
@@ -326,7 +331,7 @@
         metadataInfo,
         categoricalMetadataValues,
         updateCategoricalMetadataValues
-    } = $derived.by(() => useMetadataFilters(collectionId));
+    } = $derived.by(() => useMetadataFilters(metadataCollectionId));
     const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
     const { dimensionsValues } = useDimensions(collectionIdStore);
 
@@ -495,7 +500,7 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups || isPointClouds
     );
-    const hasFilterPanel = $derived(isCollectionGrid && !isPointClouds);
+    const hasFilterPanel = $derived(isCollectionGrid || isCaptions);
 
     const panelIsVisible = $derived(
         isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
@@ -567,7 +572,7 @@
         showTour={onboardingEnabled}
         onShowTour={() => useOnboarding().requestReplay()}
     />
-    <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isImages} {isVideos} {isPointClouds} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -609,7 +614,8 @@
                                 </span>
                                 <span class="flex items-center gap-1">
                                     <ClearAllFiltersButton
-                                        {collectionId}
+                                        collectionId={metadataCollectionId}
+                                        {isCaptions}
                                         {isImages}
                                         {isVideos}
                                         {isVideoFrames}
@@ -641,7 +647,11 @@
                             {/if}
 
                             <div>
-                                <TagsMenu collection_id={collectionId} {gridType} />
+                                <TagsMenu
+                                    collection_id={metadataCollectionId}
+                                    {gridType}
+                                    allowAssign={!isCaptions}
+                                />
                             </div>
 
                             <EmbeddingSelectionFilterItem
@@ -649,6 +659,7 @@
                                 {isVideos}
                                 {isImages}
                                 {isAnnotations}
+                                isSequences={isPointClouds}
                             />
                             {#if isImages}
                                 <ConfusionCellFilterItem />
@@ -656,25 +667,32 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            <LabelsMenu
-                                {annotationFilterRows}
-                                onToggleAnnotationFilter={(label) =>
-                                    toggleAnnotationFilterSelection(label, collectionId)}
-                                showVisibilityToggle={showAnnotationVisibilityToggle}
-                            />
+                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
+                            {#if !isCaptions && !isPointClouds}
+                                <LabelsMenu
+                                    {annotationFilterRows}
+                                    onToggleAnnotationFilter={(label) =>
+                                        toggleAnnotationFilterSelection(label, collectionId)}
+                                    showVisibilityToggle={showAnnotationVisibilityToggle}
+                                />
+                            {/if}
 
-                            {#if isImages || isVideos || isVideoFrames}
+                            {#if isImages || isVideos || isVideoFrames || isCaptions}
                                 {#key collectionId}
                                     <MetadataFilterChips
-                                        {collectionId}
-                                        isImageCollection={isImages}
+                                        collectionId={metadataCollectionId}
+                                        isImageCollection={isImages || isCaptions}
                                         categoricalKeys={categoricalMetadataKeys}
                                     />
                                     <CombinedMetadataDimensionsFilters
+                                        collectionId={metadataCollectionId}
+                                        showDimensions={!isCaptions}
                                         {isVideos}
                                         {isVideoFrames}
-                                        isImageCollection={isImages}
-                                        categoricalFilter={imageAnnotationCountsFilter}
+                                        isImageCollection={isImages || isCaptions}
+                                        categoricalFilter={isCaptions
+                                            ? undefined
+                                            : imageAnnotationCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}
@@ -841,7 +859,7 @@
         </div>
         <Footer
             totalSamples={collection?.total_sample_count}
-            filteredSamples={$filteredSampleCount}
+            filteredSamples={isCaptions ? $filteredCaptionCount : $filteredSampleCount}
             {totalAnnotations}
             filteredAnnotations={$filteredAnnotationCount}
         />

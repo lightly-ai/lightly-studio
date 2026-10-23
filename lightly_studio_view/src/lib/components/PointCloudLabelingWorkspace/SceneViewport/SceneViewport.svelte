@@ -20,6 +20,7 @@
         Vector3,
         WorkspaceTool
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { createCuboidTransformState } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidTransformState';
 
     /** Composes the shared Threlte scene from the point cloud and annotation layers. */
     interface Props {
@@ -28,10 +29,12 @@
         colorMode?: ColorMode;
         pointSize?: number;
         intensityRange?: [number, number];
-        /** Static cuboid annotations rendered over the point cloud. */
+        /** Cuboid annotations rendered over the point cloud (typically the transform overlay). */
         cuboids?: readonly CuboidAnnotation[];
         annotationClasses?: readonly AnnotationClass[];
         annotationSources?: readonly AnnotationSource[];
+        /** Transform state shared with the parent; drives the gizmo and face-resize interactions. */
+        transforms: ReturnType<typeof createCuboidTransformState>;
         pointCloudBounds?: Bounds3;
         /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
@@ -73,6 +76,7 @@
         cuboids = [],
         annotationClasses = [],
         annotationSources = [],
+        transforms,
         pointCloudBounds = EMPTY_BOUNDS,
         fitKey,
         selectedAnnotationId = null,
@@ -148,6 +152,7 @@
         <CuboidLayer
             {cuboids}
             {annotationClasses}
+            {transforms}
             {groundPlaneBounds}
             {selectedAnnotationId}
             {hoveredAnnotationId}

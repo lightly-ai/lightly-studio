@@ -5,11 +5,12 @@ const mocks = vi.hoisted(() => ({ embedText: vi.fn() }));
 
 vi.mock('$lib/api/lightly_studio_local', () => ({ embedText: mocks.embedText }));
 
+// The texts have different norms, as with MobileCLIP.
 const EMBEDDINGS: Record<string, number[]> = {
     young: [1, 0, 0],
-    old: [3, 1, 0],
+    old: [0, 3, 0],
     sad: [0, 2, 0],
-    happy: [0, 2, 5]
+    happy: [0, 3, 4]
 };
 
 const TEXT_AXES = {
@@ -20,7 +21,7 @@ const TEXT_AXES = {
 describe('embedTextAxes', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('returns embed(positive) - embed(negative) per axis, one request at a time', async () => {
+    it('returns unit(positive) - unit(negative) per axis, one request at a time', async () => {
         let inFlight = 0;
         let maxInFlight = 0;
         mocks.embedText.mockImplementation(async ({ query }: { query: { query_text: string } }) => {
@@ -33,7 +34,7 @@ describe('embedTextAxes', () => {
 
         const axes = await embedTextAxes('collection-id', TEXT_AXES);
 
-        expect(axes).toEqual({ x: [2, 1, 0], y: [0, 0, 5] });
+        expect(axes).toEqual({ x: [-1, 1, 0], y: [0, -0.4, 0.8] });
         expect(maxInFlight).toBe(1);
         expect(mocks.embedText).toHaveBeenCalledWith({
             path: { collection_id: 'collection-id' },
@@ -49,6 +50,14 @@ describe('embedTextAxes', () => {
 
         await expect(embedTextAxes('collection-id', TEXT_AXES)).rejects.toThrow(
             'The embedding space cannot embed text.'
+        );
+    });
+
+    it('throws an Error instead of returning NaN axes for a zero embedding', async () => {
+        mocks.embedText.mockResolvedValue({ data: [0, 0, 0], error: undefined });
+
+        await expect(embedTextAxes('collection-id', TEXT_AXES)).rejects.toThrow(
+            'Cannot normalize a zero-norm embedding.'
         );
     });
 });

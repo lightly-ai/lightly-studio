@@ -1,13 +1,19 @@
 <script lang="ts">
     import { AnnotationType } from '$lib/api/lightly_studio_local';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
+    import {
+        isAssistedLabelingStatus,
+        useSampleDetailsToolbarContext
+    } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { onMount } from 'svelte';
     import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
-    import { MousePointer, Hand, Brush, Bot } from '@lucide/svelte';
-    import VectorSquareIcon from '$lib/components/VectorSquareIcon/VectorSquareIcon.svelte';
+    import { MousePointer, Hand, Brush, Bot, WandSparkles } from '@lucide/svelte';
+    import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
+    import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
+    import { isFrameDetailsRoute } from '$lib/routes';
+    import { page } from '$app/state';
 
     import { getSlicEngine } from '@lightly-ai/slic';
 
@@ -53,6 +59,12 @@
         setStatus
     } = useSampleDetailsToolbarContext();
 
+    const assistedLabelingStatus = useAssistedLabelingStatus();
+    // Assisted labeling supports images only, not video frames.
+    const showAssistedLabelingTools = $derived(
+        !annotationLabelContext.isOnAnnotationDetailsView && !isFrameDetailsRoute(page.route.id)
+    );
+
     const items = $derived<ToolbarItem[]>([
         {
             id: 'cursor',
@@ -84,6 +96,14 @@
             shortcut: $settingsStore.key_toolbar_slic ?? 'a',
             action: 'activate',
             visible: showSegmentationTool && slicAvailable
+        },
+        {
+            id: 'smart-select',
+            label: 'Smart select',
+            icon: WandSparkles,
+            hint: 'Segments the object that you click or box. Sends the image to fal.ai.',
+            visible: showAssistedLabelingTools,
+            disabledReason: assistedLabelingStatus.disabledReason ?? undefined
         },
         {
             id: 'brush',
@@ -155,6 +175,12 @@
         if (sampleDetailsToolbarContext.status === 'drag') {
             setAnnotationType(null);
         }
+        if (isAssistedLabelingStatus(sampleDetailsToolbarContext.status)) {
+            setAnnotationType(null);
+            setLastCreatedAnnotationId(null);
+            setIsDrawing(false);
+            setIsErasing(false);
+        }
     });
 
     const activateBoundingBox = () => {
@@ -210,6 +236,9 @@
                 if (trigger === 'shortcut' && !annotationLabelContext.isOnAnnotationDetailsView) {
                     setAnnotationId(null);
                 }
+                break;
+            case 'smart-select':
+                setStatus('smart-select');
                 break;
         }
     }

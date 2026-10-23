@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Checkbox } from '$lib/components/ui/checkbox';
+    import { cn } from '$lib/utils';
     import { X } from '@lucide/svelte';
     import type { Snippet } from 'svelte';
 
@@ -11,6 +12,8 @@
         onClear: () => void;
         onclick?: () => void;
         subtitle?: Snippet;
+        /** Replaces the title and subtitle; title still names the clear action. */
+        content?: Snippet;
         testId?: string;
     }
 
@@ -22,11 +25,24 @@
         onClear,
         onclick,
         subtitle,
+        content,
         testId
     }: Props = $props();
 </script>
 
-<div class="rounded-md border border-[#3c3c3c] bg-muted px-2 py-1.5" data-testid={testId}>
+{#snippet body()}
+    {#if content}
+        {@render content()}
+    {:else}
+        <div class="truncate text-sm font-medium" {title}>{title}</div>
+        {#if subtitle}{@render subtitle()}{/if}
+    {/if}
+{/snippet}
+
+<div
+    class={cn('rounded-md border border-[#3c3c3c] bg-muted px-2', content ? 'py-2' : 'py-1.5')}
+    data-testid={testId}
+>
     <div class="flex items-center gap-2">
         <Checkbox {checked} aria-label={checkboxLabel} {onCheckedChange} />
         {#if onclick}
@@ -36,18 +52,16 @@
                 data-testid={testId ? `${testId}-body` : undefined}
                 {onclick}
             >
-                <div class="truncate text-sm font-medium" {title}>{title}</div>
-                {#if subtitle}{@render subtitle()}{/if}
+                {@render body()}
             </button>
         {:else}
             <div class="min-w-0 flex-1">
-                <div class="truncate text-sm font-medium" {title}>{title}</div>
-                {#if subtitle}{@render subtitle()}{/if}
+                {@render body()}
             </div>
         {/if}
         <button
             type="button"
-            class="text-muted-foreground hover:text-foreground"
+            class="shrink-0 text-muted-foreground hover:text-foreground"
             onclick={onClear}
             title="Clear {title.toLowerCase()}"
             aria-label="Clear {title.toLowerCase()}"

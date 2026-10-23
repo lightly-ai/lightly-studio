@@ -2,7 +2,10 @@ import { rotationToEulerDegrees } from './pointCloudAnnotationDetails';
 import { updateAnnotationGeometry } from './updateAnnotationGeometry';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
-type AnnotationInput = Pick<CuboidAnnotation, 'center' | 'size' | 'rotation' | 'trackNumber'>;
+type AnnotationInput = Pick<
+    CuboidAnnotation,
+    'id' | 'center' | 'size' | 'rotation' | 'trackNumber'
+>;
 type FieldName = Parameters<typeof updateAnnotationGeometry>[1];
 
 function isValidFieldValue(field: FieldName, value: number): boolean {
@@ -28,9 +31,11 @@ export function useAnnotationDetailsEditing(
         rz: ''
     });
     let lastEmittedRotation: AnnotationInput['rotation'] | null = null;
+    let valueOnFocus = '';
 
     $effect(() => {
         const annotation = getAnnotation();
+
         for (const [index, field] of ['x', 'y', 'z'].entries()) {
             const name = field as FieldName;
             if (focusedField !== name) inputValues[name] = String(annotation.center[index]);
@@ -60,12 +65,18 @@ export function useAnnotationDetailsEditing(
 
     function handleFocus(field: FieldName): void {
         focusedField = field;
+        valueOnFocus = inputValues[field];
     }
 
     function handleCommit(field: FieldName): void {
         const raw = inputValues[field];
         const value = Number.parseFloat(raw);
-        if (raw !== '' && !Number.isNaN(value) && isValidFieldValue(field, value)) {
+        if (
+            raw !== valueOnFocus &&
+            raw !== '' &&
+            Number.isFinite(value) &&
+            isValidFieldValue(field, value)
+        ) {
             const updated = updateAnnotationGeometry(getAnnotation(), field, value, inputValues);
             if (field === 'rx' || field === 'ry' || field === 'rz') {
                 lastEmittedRotation = updated.rotation;

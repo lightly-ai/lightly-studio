@@ -16,4 +16,4 @@ dataset.add_images_from_path(path="dataset_examples/coco_subset_128_images/image
 video_dataset = VideoDataset.create(name="dataset_with_videos")
 video_dataset.add_videos_from_path(path="dataset_examples/youtube_vis_50_videos", embed=False)
 
-ls.start_gui()
+ls.start_gui(open_browser=False)

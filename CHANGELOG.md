@@ -9,17 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.
-- Added an image interpolation setting to show sharp pixel edges when zooming in.
-- Added a "Clear all filters" button to the filter sidebar.
-- Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
+- The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 
 ### Changed
-
-- Make embedding plot points excluded by filters or without a category easier to see on dark backgrounds.
-- Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
-- BREAKING: A tag now holds only samples of its own collection. For example, an image tag holds only images. Tags no longer have a `kind` field. The API returns 400 when a request adds a sample of another collection, or a sample that does not exist, to a tag. The PostgreSQL migration is automatic. It moves each sample that has a tag of another collection to a tag with the same name in the collection of the sample. DuckDB users must re-index their data before they can create tags.
-- Speed up adding many samples to a tag.
 
 ### Deprecated
 
@@ -27,10 +19,77 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The GUI footer no longer shows a dev commit hash for released versions.
-- The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.
+- In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
 
 ### Security
+
+## \[1.2.0\] - 2026-10-23
+
+### Added
+
+- Point clouds
+    - Explore MCAP point-cloud sequences in the GUI, now available to all users.
+    - Label 3D cuboids directly in the scene: create, move, rotate, resize by dragging a face, and delete.
+    - Search sequences by text, filter them by tag, see them in the embedding plot, and create selections of them.
+    - Play sequences smoothly: upcoming ticks are buffered and shown on the timeline, and you can buffer the whole sequence.
+
+- Evaluation
+    - Edit the settings of an evaluation and rerun it, in the evaluation panel or the API.
+    - Delete an evaluation in the evaluation panel or the API. Annotations stay unchanged, and filters that use the evaluation are removed.
+
+- Filtering
+    - Filter by metadata in the query editor, e.g. `metadata["score"] >= 0.8`.
+    - Python SDK: Filter images and videos by metadata, including nested fields, e.g. `ImageSampleField.metadata["odometry.speed"] < 15`.
+    - Filter captions by tag and metadata in the captions tab.
+    - Reset all filters with one click with the new "Clear all filters" button.
+
+- Annotations
+    - Copy an annotation to another annotation source in the details view, or create a new source while you copy.
+    - Set your own keyboard shortcut for AI-assisted labeling in the settings.
+
+- Other
+    - Get started quickly with a short onboarding tour on image datasets.
+    - See why a button is disabled in its tooltip.
+    - Show sharp pixel edges when you zoom into images with the new image interpolation setting.
+    - Python SDK: Embed video frames on a remote embedding server registered with `register_default_embedder`.
+    - Python SDK: Report anonymous usage data on how data is loaded (format and source). Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+
+### Changed
+
+- Tags
+    - BREAKING: A tag now holds only samples of its own collection, and tags no longer have a `kind` field. PostgreSQL migrates automatically. DuckDB users must re-index their data before they create tags.
+    - Adding many samples to a tag is faster.
+
+- Embeddings
+    - BREAKING: Python SDK: Image search in the GUI now needs an embedder that implements `ImageBytesEmbedder`. Implement it in your custom embedder to keep image search.
+    - Python SDK: New video datasets embed frames with Perception Encoder (`PE-Core-T16-384`) instead of MobileCLIP. Existing datasets are not changed.
+    - Python SDK: Crops and frames are embedded automatically with a previously used compatible remote embedder.
+
+- Embedding plot
+    - Set the text axes with the new "Define axes" button. The applied texts show at the plot edges, and "Reset axes" returns to PaCMAP.
+    - Text axes are now balanced and comparable. Lines at x = 0 and y = 0 split the plot into four parts, and axes with weak text matches now look small.
+    - Points that are filtered out or have no category are easier to see on dark backgrounds.
+
+- Evaluation
+    - The evaluation panel has clearer settings and confusion matrix filters. Sorts are grouped by metric, show the highest counts first, and mark missing results.
+    - Python SDK: `dataset.evaluate()` and evaluation recompute are faster on large datasets.
+
+- Other
+    - Python SDK: `start_gui()` opens the browser. Pass `open_browser=False`, or use `lightly-studio gui --no-browser`, to turn this off.
+
+### Fixed
+
+- Annotations
+    - Annotation cards stay aligned, source colors stay stable, and confidence stays visible when you hide annotations or switch to editing.
+    - Deleting annotations now also deletes their captions.
+
+- Evaluation
+    - Evaluation results are kept when a recompute fails.
+
+- Other
+    - The grids return to the exact scroll position when you go back from the details view.
+    - Python SDK: `start_gui()` stops cleanly on Ctrl+C, without a traceback.
+    - The GUI footer no longer shows a dev commit hash for released versions.
 
 ## \[1.1.3\] - 2026-10-07
 

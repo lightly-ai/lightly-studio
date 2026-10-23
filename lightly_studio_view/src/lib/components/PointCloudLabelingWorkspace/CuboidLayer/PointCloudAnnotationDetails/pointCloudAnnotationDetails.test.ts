@@ -145,4 +145,65 @@ describe('PointCloudAnnotationDetails - editable mode', () => {
 
         expect(onAnnotationChange).not.toHaveBeenCalled();
     });
+
+    it('does not fire onAnnotationChange when field value is unchanged after focus', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('does not fire onAnnotationChange for Infinity value', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '1e309' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('fires onAnnotationChange with updated size on dimension blur', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'dimension l' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '8' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({ size: [8, 1.8, 1.5] })
+        );
+    });
+
+    it('fires onAnnotationChange with updated rotation on rotation blur', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'rotation rz' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '90' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({
+                rotation: expect.arrayContaining([expect.any(Number)])
+            })
+        );
+    });
 });

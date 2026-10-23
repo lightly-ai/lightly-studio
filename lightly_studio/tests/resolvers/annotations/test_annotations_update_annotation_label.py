@@ -109,6 +109,7 @@ def test_update_annotation_label_object_detection(
     annotation = get_annotation_by_type(
         annotations=annotations, annotation_type=AnnotationType.OBJECT_DETECTION
     )
+    annotation_id = annotation.sample_id
 
     current_annotation_label_id = annotation.annotation_label_id
     new_annotation_label_id = annotations_test_data.annotation_labels[1].annotation_label_id
@@ -126,12 +127,12 @@ def test_update_annotation_label_object_detection(
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(
         db_session,
-        annotation.sample_id,
+        annotation_id,
         new_annotation_label_id,
     )
 
     # Verify that the label has been updated
-    updated_annotation = annotation_resolver.get_by_id(db_session, annotation.sample_id)
+    updated_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
 
     assert updated_annotation is not None
     assert updated_annotation.annotation_label_id == new_annotation_label_id
@@ -245,6 +246,7 @@ def test_update_annotation_label__deletes_evaluation_metrics(
         sample_id=image.sample_id,
         annotation_label_id=old_label.annotation_label_id,
     )
+    gt_annotation_id = gt_annotation.sample_id
     evaluation_annotation_metric_resolver.create_many(
         session=db_session,
         records=[
@@ -252,7 +254,7 @@ def test_update_annotation_label__deletes_evaluation_metrics(
                 evaluation_run_id=run.id,
                 sample_id=image.sample_id,
                 pred_annotation_id=pred_annotation.sample_id,
-                gt_annotation_id=gt_annotation.sample_id,
+                gt_annotation_id=gt_annotation_id,
                 metric_name="iou",
                 value=0.75,
             )
@@ -272,13 +274,13 @@ def test_update_annotation_label__deletes_evaluation_metrics(
 
     annotation_resolver.update_annotation_label(
         session=db_session,
-        annotation_id=gt_annotation.sample_id,
+        annotation_id=gt_annotation_id,
         annotation_label_id=new_label.annotation_label_id,
     )
 
     updated_annotation = annotation_resolver.get_by_id(
         session=db_session,
-        annotation_id=gt_annotation.sample_id,
+        annotation_id=gt_annotation_id,
     )
     annotation_metrics = evaluation_annotation_metric_resolver.get_all_by_evaluation_run_id(
         session=db_session,

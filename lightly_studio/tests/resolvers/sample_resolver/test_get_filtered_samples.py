@@ -8,6 +8,7 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
+    create_caption,
     create_collection,
     create_images,
     create_tag,
@@ -202,3 +203,63 @@ def test_get_filtered_samples__filters(
     assert len(result.samples) == 1
     assert result.total_count == 1
     assert result.samples[0].sample_id == samples[1].sample_id
+
+
+def test_get_filtered_samples__caption_count(
+    db_session: Session,
+) -> None:
+    # Create samples, where the first has two captions, the second one and the third none.
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[
+            ImageStub(path="sample1.png"),
+            ImageStub(path="sample2.png"),
+            ImageStub(path="sample3.png"),
+        ],
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=samples[0].sample_id,
+        text="first caption of sample 1",
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=samples[0].sample_id,
+        text="second caption of sample 1",
+    )
+    create_caption(
+        session=db_session,
+        collection_id=collection_id,
+        parent_sample_id=samples[1].sample_id,
+        text="caption of sample 2",
+    )
+
+    # All three captions are counted, but only two samples have captions.
+    result = sample_resolver.get_filtered_samples(
+        session=db_session,
+        collection_id=collection_id,
+        filters=SampleFilter(has_captions=True),
+    )
+    assert result.total_count == 2
+    assert result.total_caption_count == 3
+
+    # Only the captions of the matching sample are counted.
+    result = sample_resolver.get_filtered_samples(
+        session=db_session,
+        collection_id=collection_id,
+        filters=SampleFilter(sample_ids=[samples[0].sample_id]),
+    )
+    assert result.total_caption_count == 2
+
+    # Samples without captions do not add to the count.
+    result = sample_resolver.get_filtered_samples(
+        session=db_session,
+        collection_id=collection_id,
+        filters=SampleFilter(sample_ids=[samples[2].sample_id]),
+    )
+    assert result.total_caption_count == 0

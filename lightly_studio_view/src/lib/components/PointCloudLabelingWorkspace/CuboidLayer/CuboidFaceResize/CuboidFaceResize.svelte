@@ -8,17 +8,18 @@
 
     interface Props extends Pick<
         Parameters<typeof useCuboidFaceResize>[0],
-        'onResizeStart' | 'onResizeEnd'
+        'onResizeStart' | 'onResizeCancel' | 'onResizeEnd'
     > {
         annotation: ReturnType<Parameters<typeof useCuboidFaceResize>[0]['getAnnotation']>;
         baseColor: string;
     }
 
-    let { annotation, baseColor, onResizeStart, onResizeEnd }: Props = $props();
+    let { annotation, baseColor, onResizeStart, onResizeCancel, onResizeEnd }: Props = $props();
     const { hoveredFace, onFaceHoverEnter, onFaceHoverLeave, onFacePointerDown } =
         useCuboidFaceResize({
             getAnnotation: () => annotation,
             onResizeStart: () => onResizeStart?.(),
+            onResizeCancel: () => onResizeCancel?.(),
             onResizeEnd: (payload) => onResizeEnd?.(payload)
         });
     const highlightColor = $derived(new Color(baseColor).lerp(new Color(0xffffff), 0.65));

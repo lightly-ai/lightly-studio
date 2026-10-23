@@ -1,9 +1,10 @@
 import type { PrefetchSession } from './types';
 
 /** Creates an empty prefetch session for one buffering plan. */
-export function createPrefetchSession(requestId: string): PrefetchSession {
+export function createPrefetchSession(requestId: string, scopeKey = ''): PrefetchSession {
     return {
         requestId,
+        scopeKey,
         completed: new Set(),
         queued: [],
         pending: new Map(),

@@ -27,6 +27,10 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
+    import AssistedLabelingPopUps from '$lib/components/SampleDetails/AssistedLabelingPopUps/AssistedLabelingPopUps.svelte';
+    import AssistedLabelingOverlays from '$lib/components/SampleDetails/AssistedLabelingOverlays/AssistedLabelingOverlays.svelte';
+    import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
+    import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -64,6 +68,9 @@
     }: SampleDetailsImageContainerProps = $props();
 
     const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
+    // Same as the CSS filter `brightness(b) contrast(c)`.
+    const filterSlope = $derived($imageBrightness * $imageContrast);
+    const filterIntercept = $derived(0.5 - 0.5 * $imageContrast);
     const { isHidden } = useHideAnnotations();
     const { enforceColoringByClassStore } = useSettings();
 
@@ -74,6 +81,13 @@
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
+    // Source identity stays stable when annotations are temporarily hidden.
+    const showSourceLabels = $derived(countVisibleSources(sample.annotations) >= 2);
+    const assistedLabeling = useAssistedLabelingTools(() => ({
+        collectionId,
+        sampleId,
+        refetch
+    }));
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
@@ -86,12 +100,10 @@
             });
     });
 
-    // Color boxes by source only while annotations from multiple sources are visible and
-    // class coloring is not enforced, mirroring the side panel.
+    // Use all sources in this sample so visibility changes do not recolor annotations.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible:
-                countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2,
+            multipleSourcesVisible: showSourceLabels,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
@@ -219,7 +231,11 @@
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
-    panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
+    panEnabled={isPanEnabled({
+        isDrawing: annotationLabelContext.isDrawing,
+        isErasing: annotationLabelContext.isErasing,
+        status: sampleDetailsToolbarContext.status
+    })}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
     autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
@@ -247,6 +263,7 @@
         {#if shouldShowSlicToolPopup}
             <SlicToolPopUp isPending={$isPending} />
         {/if}
+        <AssistedLabelingPopUps {collectionId} {assistedLabeling} />
     {/snippet}
     {#snippet zoomPanelRightContent()}
         {#if $isPending}
@@ -260,13 +277,22 @@
         {/if}
     {/snippet}
     {#snippet zoomableContent({ scale })}
-        <foreignObject x="0" y="0" width={sample.width} height={sample.height}>
-            <img
-                src={imageUrl}
-                alt=""
-                draggable="false"
-                style={`height: 100%; width: 100%; filter: brightness(${$imageBrightness}) contrast(${$imageContrast})`}
-            />
+        <!-- SVG filter, because Safari does not scale an <img> with a CSS filter in a <foreignObject> -->
+        <filter id="sample-image-filter" color-interpolation-filters="sRGB">
+            <feComponentTransfer>
+                <feFuncR type="linear" slope={filterSlope} intercept={filterIntercept} />
+                <feFuncG type="linear" slope={filterSlope} intercept={filterIntercept} />
+                <feFuncB type="linear" slope={filterSlope} intercept={filterIntercept} />
+            </feComponentTransfer>
+        </filter>
+        <foreignObject
+            x="0"
+            y="0"
+            width={sample.width}
+            height={sample.height}
+            filter="url(#sample-image-filter)"
+        >
+            <img src={imageUrl} alt="" draggable="false" style="height: 100%; width: 100%;" />
         </foreignObject>
 
         <g class:invisible={$isHidden}>
@@ -286,6 +312,7 @@
                         {sample}
                         {scale}
                         {colorBySource}
+                        {showSourceLabels}
                         highlight={annotationLabelContext.isDrawing
                             ? 'disabled'
                             : determineHighlightForAnnotation(annotation.sample_id)}
@@ -365,6 +392,14 @@
                     {drawerStrokeColor}
                     {refetch}
                     onCreateBoundingBoxPendingChange={handlePendingChange}
+                />
+            {:else if assistedLabeling.activeTool}
+                <AssistedLabelingOverlays
+                    bind:interactionRect
+                    {sample}
+                    visibleAnnotations={actualAnnotationsToShow}
+                    {scale}
+                    {assistedLabeling}
                 />
             {/if}
         {/if}
