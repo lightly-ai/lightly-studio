@@ -21,6 +21,7 @@ class AssistedLabelingToolState {
     saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
     instancesClass = $state<string | null>(null);
+    // Kept across samples, so one prompt labels a whole series of images.
     instancesPrompt = $state('');
     maxInstances = $state(DEFAULT_MAX_INSTANCES);
     isDrawingInstancesBox = $state(false);
@@ -68,6 +69,11 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         };
     });
 
+    const clearInstances = () => {
+        instances.clear();
+        state.instancesPrompt = '';
+    };
+
     $effect(() => {
         if (
             isAssistedLabelingStatus(context.status) &&
@@ -81,11 +87,11 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         if (activeTool !== 'smart-select') smartSelect.clear();
     });
 
-    // Leaving the tool, e.g. by a tool switch or Escape, ends box drawing and drops its results.
+    // Leaving the tool, e.g. by a tool switch or Escape, ends box drawing and drops its prompts.
     $effect(() => {
         if (activeTool !== 'find-instances') {
             state.isDrawingInstancesBox = false;
-            instances.clear();
+            clearInstances();
         }
     });
 
@@ -93,6 +99,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         state,
         smartSelect,
         instances,
+        clearInstances,
         get activeTool() {
             return activeTool;
         },

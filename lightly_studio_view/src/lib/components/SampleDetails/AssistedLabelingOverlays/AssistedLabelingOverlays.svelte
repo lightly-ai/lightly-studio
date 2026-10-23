@@ -38,6 +38,7 @@
             bind:interactionRect
             {sample}
             {scale}
+            isPanning={assistedLabeling.isPanning}
             saveAs={assistedLabeling.state.saveAs}
             isDrawingBox={assistedLabeling.state.isDrawingInstancesBox}
             onDrawEnd={() => (assistedLabeling.state.isDrawingInstancesBox = false)}
