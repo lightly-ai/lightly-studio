@@ -15,7 +15,6 @@ import numpy as np
 from lightly_studio_serve.embedder import (
     ImageBytesEmbedder,
     ImageCropPathEmbedder,
-    ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
@@ -28,7 +27,6 @@ from tqdm import tqdm
 from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.resolvers import (
     annotation_resolver,
-    image_resolver,
     video_resolver,
 )
 from lightly_studio.utils import batching
@@ -38,9 +36,6 @@ logger = logging.getLogger(__name__)
 # Crops are embedded in chunks so an image's annotations tend to land in the same chunk,
 # keeping a single open per image.
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
-
-# Embed and commit images in chunks, so that an embedder failure keeps the earlier chunks
-_IMAGE_EMBED_BATCH_SIZE = 1024
 
 # Commit MCAP image-frame embeddings in chunks, so that a failure keeps the earlier chunks
 _MCAP_IMAGE_FRAMES_EMBED_BATCH_SIZE = 64
@@ -127,55 +122,6 @@ def embed_text_for_collection(session: Session, collection_id: UUID, text: str) 
         raise ValueError(f"The embedder produced no embedding for text {text!r}.")
     embedding: list[float] = result.embeddings[0].tolist()
     return embedding
-
-
-def embed_image_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
-    """Embed image samples with the collection's default model and store the result.
-
-    When the collection has a default embedding model, its space selects the embedder.
-    Otherwise the registry's default image embedder is used and registered as the
-    collection's default. Does nothing (and logs a warning) if no image embedder is
-    available.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The collection whose default embedding model is used.
-        sample_ids: Image sample IDs to embed.
-    """
-    if not sample_ids:
-        logger.warning("No image samples to embed. Skipping embedding generation.")
-        return
-
-    # Resolve and validate paths before selecting a default embedder, which mutates the
-    # collection's default model. A failed lookup must not leave a default model behind.
-    sample_id_to_filepath = {
-        sample.sample_id: sample.file_path_abs
-        for sample in image_resolver.get_many_by_id(session=session, sample_ids=sample_ids)
-    }
-    if len(sample_id_to_filepath) != len(sample_ids):
-        raise ValueError("Could not fetch all image paths for the provided IDs.")
-
-    default_embedder_and_model_id = default_embedder.resolve_default_embedder(
-        session=session,
-        collection_id=collection_id,
-        embedder_type=ImagePathEmbedder,
-    )
-    if default_embedder_and_model_id is None:
-        return
-    embedder, model_id = default_embedder_and_model_id
-
-    with tqdm(total=len(sample_ids), desc="Embedding images", unit=" images") as progress:
-        for sample_id_chunk in batching.batched(
-            items=sample_ids, batch_size=_IMAGE_EMBED_BATCH_SIZE
-        ):
-            _embed_image_chunk(
-                session=session,
-                embedder=embedder,
-                model_id=model_id,
-                sample_ids=sample_id_chunk,
-                filepaths=[sample_id_to_filepath[sample_id] for sample_id in sample_id_chunk],
-            )
-            progress.update(len(sample_id_chunk))
 
 
 def embed_annotation_collection(session: Session, annotation_collection_id: UUID) -> None:
@@ -431,37 +377,6 @@ def _pool_frame_embeddings(
     if norm > 0.0:
         mean_embedding = mean_embedding / norm
     return mean_embedding
-
-
-def _embed_image_chunk(
-    session: Session,
-    embedder: ImagePathEmbedder,
-    model_id: UUID,
-    sample_ids: list[UUID],
-    filepaths: list[str],
-) -> None:
-    """Embed and store one chunk of images, and commit it.
-
-    Images the embedder drops (see ``kept_indices``) are left out, so the stored sample
-    ids stay aligned with the returned embeddings.
-
-    Args:
-        session: Database session for resolver operations.
-        embedder: The image path embedder resolved for the collection.
-        model_id: The model id the embeddings are stored under.
-        sample_ids: The image sample ids in this chunk.
-        filepaths: The image paths, in the same order as ``sample_ids``.
-    """
-    result = embedder.embed_images(paths=filepaths)
-    kept_sample_ids = [sample_ids[index] for index in result.kept_indices]
-    # embed_image_samples shows the progress, thus this function shows no storage bar
-    embedding_storage.store_embeddings(
-        session=session,
-        model_id=model_id,
-        sample_ids=kept_sample_ids,
-        embeddings=result.embeddings,
-        show_progress=False,
-    )
 
 
 def _embed_annotation_chunk(
