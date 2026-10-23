@@ -9,7 +9,7 @@
     import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
-    import { MousePointer, Hand, Brush, Bot, WandSparkles } from '@lucide/svelte';
+    import { MousePointer, Hand, Brush, Bot, Layers3, WandSparkles } from '@lucide/svelte';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
     import { isFrameDetailsRoute } from '$lib/routes';
@@ -102,6 +102,14 @@
             label: 'Smart select',
             icon: WandSparkles,
             hint: 'Segments the object that you click or box. Sends the image to fal.ai.',
+            visible: showAssistedLabelingTools,
+            disabledReason: assistedLabelingStatus.disabledReason ?? undefined
+        },
+        {
+            id: 'find-instances',
+            label: 'Find all instances',
+            icon: Layers3,
+            hint: 'Finds all objects that match a text prompt. Sends the image to fal.ai.',
             visible: showAssistedLabelingTools,
             disabledReason: assistedLabelingStatus.disabledReason ?? undefined
         },
@@ -238,7 +246,8 @@
                 }
                 break;
             case 'smart-select':
-                setStatus('smart-select');
+            case 'find-instances':
+                setStatus(tool);
                 break;
         }
     }
