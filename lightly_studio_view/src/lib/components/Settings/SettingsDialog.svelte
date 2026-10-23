@@ -1,25 +1,31 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Select } from '$lib/components/Select';
-    import { Switch } from '$lib/components/ui/switch';
+    import * as Tabs from '$lib/components/ui/tabs';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { SettingsDialogState } from './settingsDialogState.svelte';
-    import { shortcutSettings, staticShortcuts } from './settingsDialogConfig';
-    import { ShortcutSettingRow } from './ShortcutSettingRow';
-    import { SettingsFieldRow } from './SettingsFieldRow';
+    import { ShortcutsTab } from './ShortcutsTab';
+    import { DisplayTab } from './DisplayTab';
+    import { AnnotationsTab } from './AnnotationsTab';
 
     const { settingsStore, saveSettings } = useSettings();
     const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
 
     const dialogState = new SettingsDialogState();
+    const tabs = [
+        { value: 'shortcuts', label: 'Shortcuts', component: ShortcutsTab },
+        { value: 'display', label: 'Display', component: DisplayTab },
+        { value: 'annotations', label: 'Annotations', component: AnnotationsTab }
+    ];
+    let activeTab = $state('shortcuts');
 
     // Hydrate form state each time the dialog opens.
     let wasDialogOpen = false;
     $effect(() => {
         if ($isSettingsDialogOpen && !wasDialogOpen) {
             dialogState.hydrate($settingsStore);
+            activeTab = 'shortcuts';
         }
         wasDialogOpen = $isSettingsDialogOpen;
     });
@@ -31,6 +37,11 @@
             closeSettingsDialog();
             dialogState.clearRecording();
         }
+    }
+
+    function handleTabChange(tab: string) {
+        activeTab = tab;
+        dialogState.clearRecording();
     }
 
     async function handleFormSubmit(event: Event) {
@@ -58,126 +69,44 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="max-h-[85vh] overflow-y-auto border-border bg-background dark:[color-scheme:dark] sm:max-w-[500px]"
+            class="flex h-[560px] max-h-[85vh] flex-col gap-0 border-border bg-background p-0 dark:[color-scheme:dark] sm:max-w-[760px]"
         >
-            <form onsubmit={handleFormSubmit}>
-                <Dialog.Header>
+            <form onsubmit={handleFormSubmit} class="flex min-h-0 flex-1 flex-col">
+                <Dialog.Header class="px-6 pt-6">
                     <Dialog.Title class="text-foreground">Settings</Dialog.Title>
-                    <Dialog.Description class="text-foreground">
+                    <Dialog.Description class="sr-only">
                         Configure your application preferences.
                     </Dialog.Description>
                 </Dialog.Header>
 
-                <div class="grid gap-4 py-4">
-                    <!-- Keyboard Shortcuts -->
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-foreground">Keyboard Shortcuts</h3>
-                        {#each shortcutSettings as setting (setting.id)}
-                            <ShortcutSettingRow
-                                id={setting.id}
-                                label={setting.label}
-                                value={dialogState.shortcuts[setting.key]}
-                                isRecording={dialogState.recordingShortcut === setting.key}
-                                onStartRecording={() => dialogState.startRecording(setting.key)}
-                            />
+                <Tabs.Root
+                    value={activeTab}
+                    onValueChange={handleTabChange}
+                    class="flex min-h-0 flex-1 flex-col"
+                >
+                    <Tabs.List
+                        class="mt-4 h-auto justify-start gap-6 rounded-none border-b border-border bg-transparent p-0 px-6"
+                    >
+                        {#each tabs as tab (tab.value)}
+                            <Tabs.Trigger
+                                value={tab.value}
+                                class="-mb-px rounded-none border-b-2 border-transparent px-0 pb-2.5 pt-0 text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                            >
+                                {tab.label}
+                            </Tabs.Trigger>
                         {/each}
-                        {#each staticShortcuts as setting (setting.id)}
-                            <ShortcutSettingRow
-                                id={setting.id}
-                                label={setting.label}
-                                value={setting.displayValue}
-                                isRecording={false}
-                                disabled
-                            />
-                        {/each}
-                    </div>
+                    </Tabs.List>
+                    {#each tabs as tab (tab.value)}
+                        <Tabs.Content
+                            value={tab.value}
+                            class="mt-0 min-h-0 flex-1 overflow-y-auto px-6 py-4"
+                        >
+                            <tab.component {dialogState} />
+                        </Tabs.Content>
+                    {/each}
+                </Tabs.Root>
 
-                    <!-- Grid View Settings -->
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-foreground">Display Settings</h3>
-                        <SettingsFieldRow id="image-interpolation" label="Image Interpolation">
-                            <Switch
-                                id="image-interpolation"
-                                bind:checked={dialogState.imageInterpolation}
-                                disabled={dialogState.isSaving}
-                            />
-                        </SettingsFieldRow>
-                        <SettingsFieldRow id="grid-view-rendering" label="Grid View Rendering">
-                            <Select
-                                items={[
-                                    { value: 'cover', label: 'Cover' },
-                                    { value: 'contain', label: 'Contain' }
-                                ]}
-                                value={dialogState.gridViewRendering}
-                                onValueChange={(v) =>
-                                    (dialogState.gridViewRendering =
-                                        v as typeof dialogState.gridViewRendering)}
-                            />
-                        </SettingsFieldRow>
-                        <SettingsFieldRow
-                            id="show-sample-filenames"
-                            label="Show filenames in grid view"
-                        >
-                            <Switch
-                                id="show-sample-filenames"
-                                bind:checked={dialogState.showSampleFilenames}
-                                disabled={dialogState.isSaving}
-                            />
-                        </SettingsFieldRow>
-                        <SettingsFieldRow
-                            id="grid-view-thumbnail-quality"
-                            label="Thumbnail Quality in Grid View"
-                        >
-                            <Select
-                                items={[
-                                    { value: 'raw', label: 'Original' },
-                                    { value: 'high', label: 'High' }
-                                ]}
-                                value={dialogState.gridViewThumbnailQuality}
-                                onValueChange={(v) =>
-                                    (dialogState.gridViewThumbnailQuality =
-                                        v as typeof dialogState.gridViewThumbnailQuality)}
-                            />
-                        </SettingsFieldRow>
-                    </div>
-
-                    <!-- Annotation Settings -->
-                    <div class="space-y-4">
-                        <h3 class="text-lg font-medium text-foreground">Annotation Settings</h3>
-                        <SettingsFieldRow
-                            id="show-bounding-boxes-for-segmentation"
-                            label="Show Bounding Boxes for Segmentation"
-                        >
-                            <Switch
-                                id="show-bounding-boxes-for-segmentation"
-                                bind:checked={dialogState.showBoundingBoxesForSegmentation}
-                                disabled={dialogState.isSaving}
-                            />
-                        </SettingsFieldRow>
-                        <SettingsFieldRow
-                            id="show-annotation-text-labels"
-                            label="Show Annotation Class Names"
-                        >
-                            <Switch
-                                id="show-annotation-text-labels"
-                                bind:checked={dialogState.showAnnotationTextLabels}
-                                disabled={dialogState.isSaving}
-                            />
-                        </SettingsFieldRow>
-                        <SettingsFieldRow
-                            id="enforce-coloring-by-class"
-                            label="Enforce Coloring by Class"
-                        >
-                            <Switch
-                                id="enforce-coloring-by-class"
-                                bind:checked={dialogState.enforceColoringByClass}
-                                disabled={dialogState.isSaving}
-                            />
-                        </SettingsFieldRow>
-                    </div>
-                </div>
-
-                <Dialog.Footer>
+                <Dialog.Footer class="border-t border-border px-6 py-4">
                     <Button
                         variant="outline"
                         buttonProps={{ type: 'button', onclick: () => setOpen(false) }}
@@ -188,7 +117,7 @@
                         variant="default"
                         buttonProps={{ type: 'submit', disabled: dialogState.isSaving }}
                     >
-                        {dialogState.isSaving ? 'Saving...' : 'Save Changes'}
+                        {dialogState.isSaving ? 'Saving...' : 'Save changes'}
                     </Button>
                 </Dialog.Footer>
             </form>
