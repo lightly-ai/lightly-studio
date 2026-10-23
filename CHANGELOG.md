@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Python SDK: Adding images with `embed=True` also embeds the images of the dataset that were added earlier with `embed=False`.
 - Make confusion matrix filters easier to read.
 - Improved filter consistency between the images and captions views.
 - Group image-grid evaluation sorts by metric, show highest counts first, and mark missing results.
