@@ -113,3 +113,39 @@ def test_get_annotation_crops_for_ids__unknown_ids(
     )
 
     assert result == []
+
+
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
+def test_get_annotation_crops_for_ids__fingerprint_matches_raw_box(
+    db_session: Session,
+    annotation_type: AnnotationType,
+) -> None:
+    """The fingerprint holds the raw box, for either detail table; the crop is clamped."""
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="/path/to/sample.png",
+        width=100,
+        height=100,
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=annotation_type,
+        annotation_data={"x": -5, "y": 3, "width": 20, "height": 10},
+    )
+
+    [crop] = annotation_resolver.get_annotation_crops_for_ids(
+        session=db_session,
+        annotation_sample_ids=[annotation.sample_id],
+    )
+
+    assert crop.source_fingerprint == "bbox1:-5,3,20,10"
+    assert crop.image_crop.x == 0

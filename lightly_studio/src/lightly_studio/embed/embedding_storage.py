@@ -40,24 +40,39 @@ def store_embeddings(
         model_id=model_id,
         sample_ids=sample_ids,
         embeddings=embeddings,
+        source_fingerprints=None,
         show_progress=show_progress,
         write_many=sample_embedding_resolver.create_many,
     )
 
 
-def replace_embeddings(
+def replace_embeddings(  # noqa: PLR0913
     session: Session,
     model_id: UUID,
     sample_ids: list[UUID],
     embeddings: NDArray[np.float32],
+    source_fingerprints: list[str],
     show_progress: bool = True,
 ) -> None:
-    """Like store_embeddings, but overwrites an existing embedding of the same sample and model."""
+    """Like store_embeddings, but overwrites an existing embedding of the same sample and model.
+
+    Stores ``source_fingerprints[i]`` with ``embeddings[i]``.
+
+    Raises:
+        ValueError: If there is not one fingerprint per sample ID, or the embeddings fail
+            validation.
+    """
+    if len(source_fingerprints) != len(sample_ids):
+        raise ValueError(
+            f"Number of fingerprints ({len(source_fingerprints)}) does not match number of "
+            f"sample IDs ({len(sample_ids)})."
+        )
     _write_embeddings(
         session=session,
         model_id=model_id,
         sample_ids=sample_ids,
         embeddings=embeddings,
+        source_fingerprints=source_fingerprints,
         show_progress=show_progress,
         write_many=sample_embedding_resolver.upsert_many,
     )
@@ -68,12 +83,17 @@ def _write_embeddings(  # noqa: PLR0913
     model_id: UUID,
     sample_ids: list[UUID],
     embeddings: NDArray[np.float32],
+    source_fingerprints: list[str] | None,
     show_progress: bool,
     write_many: Callable[..., None],
 ) -> None:
     """Validate embeddings and write them in batches with ``write_many``."""
     embeddings = _validate_and_coerce_embeddings(
         session=session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
+    )
+
+    fingerprints: list[str | None] = (
+        [None] * len(sample_ids) if source_fingerprints is None else list(source_fingerprints)
     )
 
     with tqdm(
@@ -83,15 +103,17 @@ def _write_embeddings(  # noqa: PLR0913
         disable=not show_progress,
     ) as progress:
         for batch in batching.batched(
-            items=zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
+            items=zip(sample_ids, embeddings, fingerprints),
+            batch_size=EMBEDDING_INSERTION_BATCH_SIZE,
         ):
             sample_embeddings = [
                 SampleEmbeddingCreate(
                     sample_id=sample_id,
                     embedding_model_id=model_id,
                     embedding=embedding,
+                    source_fingerprint=fingerprint,
                 )
-                for sample_id, embedding in batch
+                for sample_id, embedding, fingerprint in batch
             ]
             write_many(session=session, sample_embeddings=sample_embeddings, commit=False)
 

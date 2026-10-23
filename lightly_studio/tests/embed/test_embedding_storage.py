@@ -275,6 +275,7 @@ def test_replace_embeddings__overwrites_existing_embedding(
         model_id=model_id,
         sample_ids=[image.sample_id],
         embeddings=np.array([[4.0, 5.0, 6.0]], dtype=np.float32),
+        source_fingerprints=["bbox1:1,2,3,4"],
         show_progress=False,
     )
 
@@ -296,5 +297,23 @@ def test_replace_embeddings__rejects_dimension_mismatch(
             model_id=model_id,
             sample_ids=[image.sample_id],
             embeddings=np.zeros((1, _EMBEDDING_DIMENSION + 1), dtype=np.float32),
+            source_fingerprints=["bbox1:1,2,3,4"],
+            show_progress=False,
+        )
+
+
+def test_replace_embeddings__rejects_fingerprint_count_mismatch(
+    db_session: Session, collection: CollectionTable
+) -> None:
+    model_id = _create_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    with pytest.raises(ValueError, match="fingerprints"):
+        embedding_storage.replace_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=[image.sample_id],
+            embeddings=np.zeros((1, _EMBEDDING_DIMENSION), dtype=np.float32),
+            source_fingerprints=[],
             show_progress=False,
         )

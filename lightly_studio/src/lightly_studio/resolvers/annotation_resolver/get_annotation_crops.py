@@ -7,7 +7,8 @@ from dataclasses import dataclass
 from uuid import UUID
 
 from lightly_studio_serve.types import ImageCrop
-from sqlmodel import Session, col, select
+from sqlalchemy import ColumnElement, String, cast, func, literal, select
+from sqlmodel import Session, col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
@@ -16,16 +17,39 @@ from lightly_studio.models.image import ImageTable
 
 logger = logging.getLogger(__name__)
 
+CROP_FINGERPRINT_PREFIX = "bbox1:"
+
+
+def build_crop_fingerprint_expression() -> ColumnElement[str]:
+    """The crop fingerprint of an annotation's raw box, as SQL.
+
+    The query must outer join ObjectDetectionAnnotationTable and SegmentationAnnotationTable
+    on the annotation's sample_id.
+    """
+    box: ColumnElement[str] = literal(CROP_FINGERPRINT_PREFIX)
+    for index, name in enumerate(("x", "y", "width", "height")):
+        value = cast(
+            func.coalesce(
+                getattr(ObjectDetectionAnnotationTable, name),
+                getattr(SegmentationAnnotationTable, name),
+            ),
+            String,
+        )
+        box = box + value if index == 0 else box + "," + value
+    return box
+
 
 @dataclass(frozen=True)
 class AnnotationCrop:
     """A resolved annotation crop ready for embedding.
 
-    Binds an annotation sample to the image crop derived from its box.
+    Binds an annotation sample to the image crop derived from its box. The fingerprint
+    describes the raw box, read in the same query as the crop.
     """
 
     annotation_sample_id: UUID
     image_crop: ImageCrop
+    source_fingerprint: str
 
 
 def get_annotation_crops_for_ids(
@@ -48,12 +72,13 @@ def get_annotation_crops_for_ids(
     Returns:
         Resolved annotation crops ready for embedding.
     """
-    rows = session.exec(
+    rows = session.execute(
         select(
             AnnotationBaseTable,
             ImageTable,
             ObjectDetectionAnnotationTable,
             SegmentationAnnotationTable,
+            build_crop_fingerprint_expression(),
         )
         .join(ImageTable, col(ImageTable.sample_id) == col(AnnotationBaseTable.parent_sample_id))
         .outerjoin(
@@ -69,7 +94,7 @@ def get_annotation_crops_for_ids(
     ).all()
 
     annotation_crops: list[AnnotationCrop] = []
-    for annotation, image, object_detection, segmentation in rows:
+    for annotation, image, object_detection, segmentation, fingerprint in rows:
         # An annotation has a detail row in exactly one table, set by its type in
         # create_many, so at most one of these joins matches.
         box_source = object_detection or segmentation
@@ -92,7 +117,11 @@ def get_annotation_crops_for_ids(
             logger.warning("Skipping invalid annotation crop %s.", annotation.sample_id)
             continue
         annotation_crops.append(
-            AnnotationCrop(annotation_sample_id=annotation.sample_id, image_crop=image_crop)
+            AnnotationCrop(
+                annotation_sample_id=annotation.sample_id,
+                image_crop=image_crop,
+                source_fingerprint=fingerprint,
+            )
         )
 
     return annotation_crops

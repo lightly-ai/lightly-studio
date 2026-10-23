@@ -288,12 +288,16 @@ def _embed_annotation_chunk(
     result = embedder.embed_image_crops(crops=[crop.image_crop for crop in annotation_crops])
     crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
     kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
+    kept_fingerprints = [
+        annotation_crops[index].source_fingerprint for index in result.kept_indices
+    ]
     # embed_annotation_crops shows the progress, thus this function shows no storage bar
     embedding_storage.replace_embeddings(
         session=session,
         model_id=model_id,
         sample_ids=kept_sample_ids,
         embeddings=result.embeddings,
+        source_fingerprints=kept_fingerprints,
         show_progress=False,
     )
     return len(kept_sample_ids)
