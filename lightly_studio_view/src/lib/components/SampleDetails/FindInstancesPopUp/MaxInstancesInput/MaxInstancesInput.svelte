@@ -9,8 +9,15 @@
 
     let { value, onChange }: Props = $props();
 
-    const clamp = (input: number) =>
-        Math.min(MAX_INSTANCES_LIMIT, Math.max(1, Math.round(input) || 1));
+    // Follows the parent value and holds the typed text until it is committed.
+    let draft = $derived<number | null>(value);
+
+    const commit = () => {
+        // An empty or invalid field keeps the previous value.
+        const typed = draft === null || Number.isNaN(draft) ? value : Math.round(draft);
+        draft = Math.min(MAX_INSTANCES_LIMIT, Math.max(1, typed));
+        onChange(draft);
+    };
 </script>
 
 <label class="flex items-center justify-between gap-2 text-xs text-muted-foreground">
@@ -21,11 +28,7 @@
         wrapperClass="w-auto"
         min={1}
         max={MAX_INSTANCES_LIMIT}
-        {value}
-        onchange={(event) => {
-            const clamped = clamp(event.currentTarget.valueAsNumber);
-            event.currentTarget.value = String(clamped);
-            onChange(clamped);
-        }}
+        bind:value={draft}
+        onchange={commit}
     />
 </label>
