@@ -1,7 +1,7 @@
 <script lang="ts">
     import { T, useParentObject3D, useThrelte, useTask } from '@threlte/core';
     import type { IntersectionEvent } from '@threlte/extras';
-    import { Color, PerspectiveCamera, Vector3 } from 'three';
+    import { Color, Group, PerspectiveCamera, Vector3 } from 'three';
 
     const AXIS_COLORS = ['#e83030', '#30e830', '#3030e8'] as const;
     /** Overall size factor — same meaning as TransformControls `size`. */
@@ -40,19 +40,23 @@
     const parent = useParentObject3D();
     const worldPosition = new Vector3();
 
+    let groupRef: Group | undefined = $state();
     let scale = $state(1);
 
     useTask(
         () => {
             const parentObject = parent.current;
-            if (!parentObject) return;
-            parentObject.getWorldPosition(worldPosition);
+            if (!parentObject || !groupRef) return;
+            groupRef.getWorldPosition(worldPosition);
             const currentCamera = camera.current;
             const cameraDistance = currentCamera.position.distanceTo(worldPosition);
             const fov = currentCamera instanceof PerspectiveCamera ? currentCamera.fov : 60;
             // Cap mirrors TransformControls: prevents handles growing unbounded at extreme distances.
             const eyeDistance = Math.min(cameraDistance * Math.tan((Math.PI / 180) * (fov / 2)), 7);
-            scale = eyeDistance * HANDLE_SIZE;
+            // The annotation group's scale is modified during a resize drag (scale[axis] = newSize/origSize).
+            // Dividing by that scale counteracts the stretch so the handle keeps a constant screen-space size.
+            const axisScale = parentObject.scale.getComponent(axisIndex);
+            scale = (eyeDistance * HANDLE_SIZE) / (axisScale > 0 ? axisScale : 1);
         },
         { autoInvalidate: false }
     );
@@ -63,7 +67,7 @@
     local +Z points outward from the face. Shaft and cap are sized in local
     units and scaled to a constant screen-space size each frame.
 -->
-<T.Group {position} rotation={[...euler]} {scale}>
+<T.Group bind:ref={groupRef} {position} rotation={[...euler]} {scale}>
     <!-- Shaft: CylinderGeometry is along Y by default; rotate -90° on X → along +Z -->
     <T.Mesh
         position={[0, 0, SHAFT_LENGTH / 2]}
