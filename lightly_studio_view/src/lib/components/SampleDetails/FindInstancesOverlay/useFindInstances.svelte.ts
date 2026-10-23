@@ -163,6 +163,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         get isGenerating() {
             return isGenerating;
         },
+        get isSaving() {
+            return isSaving;
+        },
         get canSave() {
             return canSave();
         },
