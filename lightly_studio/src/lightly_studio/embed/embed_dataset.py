@@ -51,7 +51,7 @@ def compute_embeddings(
     embed_annotations: bool,
     recompute_annotations: bool,
 ) -> None:
-    """Embeds the images without an embedding, then the annotation crops.
+    """Embeds the images without an embedding, then the missing or stale annotation crops.
 
     A chunk where every file failed is logged and skipped.
 
@@ -60,7 +60,8 @@ def compute_embeddings(
         collection_id: The image collection to embed.
         embed_annotations: If True, the crops of every annotation source are embedded too.
         recompute_annotations: If True, every croppable annotation is re-embedded.
-            Otherwise only annotations without an embedding are embedded.
+            Otherwise only annotations without an embedding or with a moved or resized
+            box are embedded.
 
     Raises:
         NoUsableEmbedderError: If samples need an embedding and no embedder is available.
@@ -83,6 +84,7 @@ def compute_embeddings(
                 session=session,
                 annotation_collection_id=annotation_source.collection_id,
                 recompute=recompute_annotations,
+                include_stale=True,
                 skip_failed_chunks=True,
             )
             if annotation_result is None:
@@ -149,6 +151,7 @@ def embed_annotation_crops(
     session: Session,
     annotation_collection_id: UUID,
     recompute: bool = False,
+    include_stale: bool = False,
     skip_failed_chunks: bool = False,
 ) -> EmbedResult | None:
     """Embeds the crops of an annotation source that lack an embedding, or all with recompute.
@@ -169,6 +172,8 @@ def embed_annotation_crops(
         session: Database session for resolver operations.
         annotation_collection_id: The annotation collection whose crops are embedded.
         recompute: If True, embeds every croppable annotation, replacing stored embeddings.
+        include_stale: If True, also embeds crops whose stored embedding was computed from a
+            different box. Ignored with recompute.
         skip_failed_chunks: If True, a chunk where every file failed is logged and skipped.
             Otherwise the ``AllInputFilesFailedError`` propagates.
 
@@ -188,6 +193,7 @@ def embed_annotation_crops(
             session=session,
             annotation_collection_id=annotation_collection_id,
             embedding_model_id=default_model_id,
+            include_stale=include_stale,
         )
     if not annotation_sample_ids:
         return EmbedResult(stored=0, failed_chunks=0)

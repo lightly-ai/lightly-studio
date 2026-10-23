@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Python SDK: `ImageDataset.compute_embeddings()` embeds the images and annotations that have no embedding, for example after adding them with `embed=False` or creating annotations in the GUI. Pass `recompute_annotations=True` to re-embed every annotation.
+- Python SDK: `ImageDataset.compute_embeddings()` embeds the images and annotations that have no embedding, for example after adding them with `embed=False` or creating annotations in the GUI. It also re-embeds annotations whose box was moved or resized. Pass `recompute_annotations=True` to re-embed every annotation.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 
 ### Changed

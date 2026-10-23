@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -14,6 +16,9 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
     collection_resolver,
+)
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
+    BoundingBoxCoordinates,
 )
 from tests.helpers_resolvers import create_annotation, create_annotation_label
 
@@ -74,12 +79,15 @@ def test_compute_embeddings__recompute_annotations(
     )
     assert model_id is not None
     known_vector = (1.0, 2.0, 3.0)
+    [crop] = annotation_resolver.get_annotation_crops_for_ids(
+        session=dataset.session, annotation_sample_ids=[annotation_sample_id]
+    )
     embedding_storage.store_embeddings(
         session=dataset.session,
         model_id=model_id,
         sample_ids=[annotation_sample_id],
         embeddings=np.array([known_vector], dtype=np.float32),
-        source_fingerprints=["bbox1:0,0,1,1"],
+        source_fingerprints=[crop.source_fingerprint],
         show_progress=False,
         replace=True,
     )
@@ -94,6 +102,113 @@ def test_compute_embeddings__recompute_annotations(
         _vectors(dataset=dataset, sample_ids=[annotation_sample_id])[annotation_sample_id]
         != known_vector
     )
+
+
+def test_compute_embeddings__edited_box_gets_new_vector(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset = _create_dataset(tmp_path=tmp_path, image_names=["a.jpg", "b.jpg"])
+    for sample_id in _image_sample_ids(dataset=dataset):
+        _create_box(dataset=dataset, sample_id=sample_id, source="ground_truth")
+    dataset.compute_embeddings()
+    edited_id, untouched_id = _annotation_sample_ids(dataset=dataset)
+    before = _vectors(dataset=dataset, sample_ids=[edited_id, untouched_id])
+    annotation_resolver.update_bounding_box(
+        session=dataset.session,
+        annotation_id=edited_id,
+        coordinates=BoundingBoxCoordinates(x=60, y=50, width=20, height=20),
+    )
+
+    dataset.compute_embeddings()
+
+    after = _vectors(dataset=dataset, sample_ids=[edited_id, untouched_id])
+    assert after[edited_id] != before[edited_id]
+    assert after[untouched_id] == before[untouched_id]
+    # The upsert stored the new fingerprint, so nothing is stale any more.
+    annotation_collection = collection_resolver.get_annotation_collections(
+        session=dataset.session, parent_collection_id=dataset.collection_id
+    )[0]
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=dataset.session, collection_id=annotation_collection.collection_id
+    )
+    assert (
+        annotation_resolver.get_unembedded_annotation_ids(
+            session=dataset.session,
+            annotation_collection_id=annotation_collection.collection_id,
+            embedding_model_id=model_id,
+            include_stale=True,
+        )
+        == []
+    )
+
+
+def test_compute_embeddings__legacy_row_needs_recompute(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset = _create_dataset(tmp_path=tmp_path, image_names=["a.jpg"])
+    sample_id = _image_sample_ids(dataset=dataset)[0]
+    _create_box(dataset=dataset, sample_id=sample_id, source="ground_truth")
+    dataset.compute_embeddings()
+    annotation_sample_id = _annotation_sample_ids(dataset=dataset)[0]
+    annotation_collection = collection_resolver.get_annotation_collections(
+        session=dataset.session, parent_collection_id=dataset.collection_id
+    )[0]
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=dataset.session, collection_id=annotation_collection.collection_id
+    )
+    assert model_id is not None
+    known_vector = (1.0, 2.0, 3.0)
+    row = dataset.session.get(SampleEmbeddingTable, (annotation_sample_id, model_id))
+    assert row is not None
+    row.embedding = np.array([known_vector], dtype=np.float32)[0]
+    row.source_fingerprint = None
+    dataset.session.add(row)
+    dataset.session.commit()
+
+    dataset.compute_embeddings()
+    assert _vectors(dataset=dataset, sample_ids=[annotation_sample_id]) == {
+        annotation_sample_id: known_vector
+    }
+
+    dataset.compute_embeddings(recompute_annotations=True)
+    assert (
+        _vectors(dataset=dataset, sample_ids=[annotation_sample_id])[annotation_sample_id]
+        != known_vector
+    )
+
+
+def test_add_annotations__does_not_reembed_edited_box(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg", "image2.jpg"])
+    first_json = tmp_path / "first.json"
+    first_json.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
+    dataset.add_annotations_from_coco(
+        annotations_json=first_json,
+        images_root=images_path,
+        annotation_source="ground_truth",
+    )
+    [edited_id] = _annotation_sample_ids(dataset=dataset)
+    before = _vectors(dataset=dataset, sample_ids=[edited_id])
+    annotation_resolver.update_bounding_box(
+        session=dataset.session,
+        annotation_id=edited_id,
+        coordinates=BoundingBoxCoordinates(x=60, y=50, width=20, height=20),
+    )
+    second_json = tmp_path / "second.json"
+    second_json.write_text(json.dumps(_coco_dict_with(["image2.jpg"])))
+
+    dataset.add_annotations_from_coco(
+        annotations_json=second_json,
+        images_root=images_path,
+        annotation_source="ground_truth",
+    )
+
+    assert len(_annotation_sample_ids(dataset=dataset)) == 2
+    assert _vectors(dataset=dataset, sample_ids=[edited_id]) == before
 
 
 def _create_dataset(tmp_path: Path, image_names: list[str]) -> ImageDataset:
@@ -141,3 +256,34 @@ def _vectors(dataset: ImageDataset, sample_ids: list[UUID]) -> dict[UUID, tuple[
         select(SampleEmbeddingTable).where(col(SampleEmbeddingTable.sample_id).in_(sample_ids))
     ).all()
     return {row.sample_id: tuple(float(v) for v in row.embedding) for row in rows}
+
+
+def _coco_dict_with(file_names: list[str]) -> dict[str, Any]:
+    return {
+        "images": [
+            {"id": i + 1, "file_name": name, "width": 100, "height": 100}
+            for i, name in enumerate(file_names)
+        ],
+        "annotations": [
+            {
+                "id": i + 1,
+                "image_id": i + 1,
+                "category_id": 1,
+                "bbox": [10, 10, 20, 20],
+                "area": 400,
+                "iscrowd": 0,
+            }
+            for i in range(len(file_names))
+        ],
+        "categories": [{"id": 1, "name": "cat"}],
+    }
+
+
+def _setup_dataset_with_images(tmp_path: Path, file_names: list[str]) -> tuple[ImageDataset, Path]:
+    images_path = tmp_path / "images"
+    images_path.mkdir()
+    for name in file_names:
+        Image.new("RGB", (100, 100)).save(images_path / name)
+    dataset = ImageDataset.create(name="test_dataset")
+    dataset.add_images_from_path(path=images_path, embed=False)
+    return dataset, images_path

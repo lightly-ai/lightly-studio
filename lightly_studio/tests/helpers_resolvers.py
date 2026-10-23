@@ -448,6 +448,7 @@ def create_sample_embedding(
     sample_id: UUID,
     embedding_model_id: UUID,
     embedding: list[float],
+    source_fingerprint: str | None = None,
 ) -> SampleEmbeddingTable:
     """Helper function to create a sample embedding."""
     return sample_embedding_resolver.create(
@@ -456,6 +457,7 @@ def create_sample_embedding(
             sample_id=sample_id,
             embedding_model_id=embedding_model_id,
             embedding=np.asarray(embedding, dtype=np.float32),
+            source_fingerprint=source_fingerprint,
         ),
     )
 

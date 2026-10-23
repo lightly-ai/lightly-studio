@@ -662,6 +662,68 @@ def test_embed_annotation_crops__box_edited_during_run(
     assert row.source_fingerprint != current.source_fingerprint
 
 
+def test_embed_annotation_crops__box_edited_during_run_is_stale_after(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """A box edited while embedding is selected as stale by the next run."""
+    annotation_collection_id, annotation_ids = _create_annotation_collection(
+        session=db_session, box_xs=[10]
+    )
+    model_id = _register_default_random_model(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    _patch_registry(
+        mocker=mocker,
+        embedder=_EditBoxDuringEmbedCropEmbedder(
+            session=db_session, annotation_id=annotation_ids[0], new_x=30
+        ),
+    )
+    embed_dataset.embed_annotation_crops(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+
+    stale_ids = annotation_resolver.get_unembedded_annotation_ids(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+        include_stale=True,
+    )
+
+    assert stale_ids == annotation_ids
+
+
+def test_embed_annotation_crops__round_trip_negative_x(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """The stored fingerprint matches the SQL expression, also for a box clamped by the crop."""
+    annotation_collection_id, annotation_ids = _create_annotation_collection(
+        session=db_session, box_xs=[-5]
+    )
+    model_id = _register_default_random_model(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    _patch_registry(mocker=mocker, embedder=_BoxXImageCropEmbedder())
+    embed_dataset.embed_annotation_crops(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+
+    def _stale_ids() -> list[UUID]:
+        return annotation_resolver.get_unembedded_annotation_ids(
+            session=db_session,
+            annotation_collection_id=annotation_collection_id,
+            embedding_model_id=model_id,
+            include_stale=True,
+        )
+
+    assert _stale_ids() == []
+    annotation_resolver.update_bounding_box(
+        session=db_session,
+        annotation_id=annotation_ids[0],
+        coordinates=BoundingBoxCoordinates(x=-4, y=0, width=20, height=20),
+    )
+    assert _stale_ids() == annotation_ids
+
+
 @pytest.mark.usefixtures("patched_registry")
 def test_embed_annotation_crops__box_outside_image_is_skipped(
     db_session: Session, caplog: pytest.LogCaptureFixture
