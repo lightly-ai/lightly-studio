@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ComponentProps } from 'svelte';
 import FindInstancesOverlay from './FindInstancesOverlay.svelte';
 
 const prediction = {
@@ -8,10 +9,12 @@ const prediction = {
     score: null
 };
 
+type Instances = ComponentProps<typeof FindInstancesOverlay>['instances'];
+
 const mocks = vi.hoisted(() => ({
     instances: {
-        predictions: [] as unknown[],
-        boxes: [] as { x: number; y: number; width: number; height: number }[],
+        predictions: [] as Instances['predictions'],
+        boxes: [] as Instances['boxes'],
         isSaving: false,
         addBox: vi.fn(),
         removePrediction: vi.fn()
@@ -23,8 +26,9 @@ const defaultProps = {
     scale: 1,
     saveAs: 'box' as const,
     isDrawingBox: true,
-    onBoxDrawn: vi.fn(),
-    instances: mocks.instances as never
+    onDrawEnd: vi.fn(),
+    // Only the fields the overlay reads.
+    instances: mocks.instances as unknown as Instances
 };
 
 const getInteractionRect = (container: HTMLElement) => {
@@ -48,12 +52,13 @@ describe('FindInstancesOverlay', () => {
         vi.clearAllMocks();
         mocks.instances.predictions = [];
         mocks.instances.boxes = [];
+        mocks.instances.isSaving = false;
     });
 
     it('adds a drawn box and ends the drawing', async () => {
-        const onBoxDrawn = vi.fn();
+        const onDrawEnd = vi.fn();
         const { container } = render(FindInstancesOverlay, {
-            props: { ...defaultProps, onBoxDrawn }
+            props: { ...defaultProps, onDrawEnd }
         });
         const rect = getInteractionRect(container);
 
@@ -67,19 +72,32 @@ describe('FindInstancesOverlay', () => {
             width: 0.4,
             height: 0.4
         });
-        expect(onBoxDrawn).toHaveBeenCalledOnce();
+        expect(onDrawEnd).toHaveBeenCalledOnce();
     });
 
     it('ends the drawing when the pointer is cancelled', async () => {
-        const onBoxDrawn = vi.fn();
+        const onDrawEnd = vi.fn();
         const { container } = render(FindInstancesOverlay, {
-            props: { ...defaultProps, onBoxDrawn }
+            props: { ...defaultProps, onDrawEnd }
         });
 
         await fireEvent.pointerCancel(getInteractionRect(container));
 
         expect(mocks.instances.addBox).not.toHaveBeenCalled();
-        expect(onBoxDrawn).toHaveBeenCalledOnce();
+        expect(onDrawEnd).toHaveBeenCalledOnce();
+    });
+
+    it('keeps drawing after a right-click', async () => {
+        const onDrawEnd = vi.fn();
+        const { container } = render(FindInstancesOverlay, {
+            props: { ...defaultProps, onDrawEnd }
+        });
+        const rect = getInteractionRect(container);
+
+        await fireEvent(rect, new MouseEvent('pointerdown', { bubbles: true, button: 2 }));
+        await firePointer(rect, 'pointerup', 50);
+
+        expect(onDrawEnd).not.toHaveBeenCalled();
     });
 
     it('removes the instance of a clicked delete button', async () => {
@@ -90,5 +108,16 @@ describe('FindInstancesOverlay', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'Delete instance 1' }));
 
         expect(mocks.instances.removePrediction).toHaveBeenCalledWith(prediction);
+    });
+
+    it('disables the delete buttons while saving', () => {
+        mocks.instances.predictions = [prediction];
+        mocks.instances.isSaving = true;
+        render(FindInstancesOverlay, { props: { ...defaultProps, isDrawingBox: false } });
+
+        expect(screen.getByRole('button', { name: 'Delete instance 1' })).toHaveAttribute(
+            'aria-disabled',
+            'true'
+        );
     });
 });
