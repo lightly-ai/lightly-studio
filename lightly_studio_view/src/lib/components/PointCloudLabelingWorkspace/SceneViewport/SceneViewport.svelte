@@ -18,6 +18,7 @@
         CuboidAnnotation,
         CuboidHandle,
         Vector3,
+        CameraMode,
         WorkspaceTool
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
@@ -41,6 +42,7 @@
         hoveredAnnotationId?: string | null;
         /** Tool that determines whether cuboids can be selected. */
         activeTool?: WorkspaceTool;
+        cameraMode?: CameraMode;
         /** Fires when the user selects or deselects a cuboid. */
         onselect?: (annotationId: string | null) => void;
         /** Fires when the pointer enters or leaves a cuboid. */
@@ -83,7 +85,8 @@
         onCreateCuboid,
         onCuboidTransform,
         onPreviousTick,
-        onNextTick
+        onNextTick,
+        cameraMode = 'perspective'
     }: Props = $props();
 
     $effect(() => {
@@ -142,7 +145,15 @@
     bind:this={viewport}
 >
     <Canvas>
-        <PointCloudScene {batch} {colorMode} {pointSize} {intensityRange} {fitKey} {activeTool} />
+        <PointCloudScene
+            {batch}
+            {colorMode}
+            {pointSize}
+            {intensityRange}
+            {fitKey}
+            {activeTool}
+            {cameraMode}
+        />
         <GroundPlane pointCloudBounds={groundPlaneBounds} />
         <OriginAxes />
         <CuboidLayer

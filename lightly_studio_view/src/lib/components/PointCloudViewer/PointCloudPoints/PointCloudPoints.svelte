@@ -1,12 +1,13 @@
 <script lang="ts">
     import { T, useThrelte } from '@threlte/core';
     import { onDestroy, untrack } from 'svelte';
-    import type { PerspectiveCamera } from 'three';
+    import type { OrthographicCamera, PerspectiveCamera } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import { fitCameraToBounds } from '../pointCloudCamera';
     import { createPointCloudBuffer } from '../pointCloudBuffer';
     import type { ColorMode } from '../pointCloudUtils';
     import type { PointBatch } from '../types';
+    import type { CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
     interface Props {
         batch: PointBatch;
@@ -15,8 +16,9 @@
         intensityRange?: [number, number];
         /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
-        camera?: PerspectiveCamera;
+        camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
+        cameraMode?: CameraMode;
     }
     let {
         batch,
@@ -25,7 +27,8 @@
         intensityRange,
         fitKey = '',
         camera,
-        controls
+        controls,
+        cameraMode = 'perspective'
     }: Props = $props();
     const { invalidate } = useThrelte();
     const pointCloudBuffer = createPointCloudBuffer();
@@ -43,7 +46,7 @@
         untrack(() => {
             const bounds = pointCloudBuffer.updatePositions(currentBatch);
             if (fittedKey !== currentFitKey && bounds && currentCamera && currentControls) {
-                fitCameraToBounds(currentCamera, currentControls, bounds);
+                fitCameraToBounds(currentCamera, currentControls, bounds, cameraMode);
                 fittedKey = currentFitKey;
             }
             invalidate();

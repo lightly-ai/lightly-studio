@@ -5,6 +5,7 @@
     import ToolRail from './ToolRail/ToolRail.svelte';
     import SceneViewport from './SceneViewport/SceneViewport.svelte';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
+    import OrthographicProjectionStrip from './OrthographicProjectionStrip/OrthographicProjectionStrip.svelte';
     import PointCloudRightSidePanel from './PointCloudRightSidePanel';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
     import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
@@ -19,7 +20,8 @@
     import {
         useAnnotationCollections,
         useGlobalStorage,
-        useMcapTickPrefetchScheduler
+        useMcapTickPrefetchScheduler,
+        useSettings
     } from '$lib/hooks';
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
@@ -80,6 +82,7 @@
     }: Props = $props();
 
     const { isEditingMode } = useGlobalStorage();
+    const { showOrthographicViewsStore } = useSettings();
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
     const bufferEntireSequence = useSessionStorage<boolean>(
         'lightlyStudio_pointCloudBufferEntireSequence',
@@ -418,14 +421,30 @@
                         </PaneResizer>
                         <!-- Cameras and orthographic projections sit directly under the cloud. -->
                         <Pane defaultSize={26} minSize={12} maxSize={45} class="min-h-0">
-                            <CameraProjectionStrip
-                                {datasetId}
-                                {sequenceId}
-                                cameraChannels={workspace.cameraChannels}
-                                seqNumber={workspace.currentTick}
-                                displayFrameId={workspace.referenceFrameId}
-                                selectedChannelIds={cameraSelection.selectedChannelIds}
-                            />
+                            {#if $showOrthographicViewsStore && sceneSnapshot}
+                                <OrthographicProjectionStrip
+                                    batch={sceneSnapshot.frame.batch}
+                                    colorMode={displayedColorMode}
+                                    pointCloudBounds={sceneSnapshot.frame.bounds ?? undefined}
+                                    fitKey={sceneSnapshot.fitKey}
+                                    cuboids={sceneCuboids}
+                                    {annotationClasses}
+                                    {annotationSources}
+                                    selectedAnnotationId={selectedCuboidId}
+                                    hoveredAnnotationId={hoveredCuboidId}
+                                    onselect={(id) => (selectedCuboidId = id)}
+                                    onhover={(id) => (hoveredCuboidId = id)}
+                                />
+                            {:else}
+                                <CameraProjectionStrip
+                                    {datasetId}
+                                    {sequenceId}
+                                    cameraChannels={workspace.cameraChannels}
+                                    seqNumber={workspace.currentTick}
+                                    displayFrameId={workspace.referenceFrameId}
+                                    selectedChannelIds={cameraSelection.selectedChannelIds}
+                                />
+                            {/if}
                         </Pane>
                     </PaneGroup>
                     <!-- Fixed-height footer: the timeline only takes the space its controls need. -->

@@ -21,6 +21,7 @@ const TEST_SETTINGS: SettingView = {
     show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
     enforce_coloring_by_class: false,
+    show_orthographic_views: false,
     created_at: new Date(),
     updated_at: new Date(),
     key_toolbar_selection: 's',
@@ -52,7 +53,8 @@ describe('createSettingsDialogFormState', () => {
             showAnnotationTextLabels: false,
             showSampleFilenames: false,
             showBoundingBoxesForSegmentation: true,
-            enforceColoringByClass: false
+            enforceColoringByClass: false,
+            showOrthographicViews: false
         });
     });
 });
@@ -79,7 +81,8 @@ describe('createSettingsSavePayload', () => {
                 showAnnotationTextLabels: true,
                 showSampleFilenames: true,
                 showBoundingBoxesForSegmentation: false,
-                enforceColoringByClass: true
+                enforceColoringByClass: true,
+                showOrthographicViews: false
             })
         ).toEqual({
             key_hide_annotations: 'h',
@@ -92,6 +95,7 @@ describe('createSettingsSavePayload', () => {
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: false,
             enforce_coloring_by_class: true,
+            show_orthographic_views: false,
             key_toolbar_selection: 'a',
             key_toolbar_drag: 'g',
             key_toolbar_bounding_box: 'q',

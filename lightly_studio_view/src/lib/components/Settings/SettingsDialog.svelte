@@ -174,6 +174,16 @@
                                 disabled={dialogState.isSaving}
                             />
                         </SettingsFieldRow>
+                        <SettingsFieldRow
+                            id="show-orthographic-views"
+                            label="Show orthographic views"
+                        >
+                            <Switch
+                                id="show-orthographic-views"
+                                bind:checked={dialogState.showOrthographicViews}
+                                disabled={dialogState.isSaving}
+                            />
+                        </SettingsFieldRow>
                     </div>
                 </div>
 

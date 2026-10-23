@@ -63,6 +63,10 @@ class SettingBase(SQLModel):
         description="Controls whether annotations are always colored by class",
     )
 
+    show_orthographic_views: bool = Field(
+        description="Controls whether orthographic point-cloud views are shown",
+    )
+
     # Toolbar shortcuts
     key_toolbar_selection: str = Field(
         description="Key to activate the selection tool in the toolbar",
@@ -116,6 +120,9 @@ class SettingDefaults(SettingBase):
         default=True,
     )
     enforce_coloring_by_class: bool = Field(
+        default=False,
+    )
+    show_orthographic_views: bool = Field(
         default=False,
     )
     key_toolbar_selection: str = Field(

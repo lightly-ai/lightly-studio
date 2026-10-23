@@ -30,6 +30,7 @@ interface SettingsDialogFormState {
     showSampleFilenames: boolean;
     showBoundingBoxesForSegmentation: boolean;
     enforceColoringByClass: boolean;
+    showOrthographicViews: boolean;
 }
 
 interface ShortcutKeyboardEvent {
@@ -57,7 +58,8 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
         showAnnotationTextLabels: settings.show_annotation_text_labels,
         showSampleFilenames: settings.show_sample_filenames,
         showBoundingBoxesForSegmentation: settings.show_bounding_boxes_for_segmentation,
-        enforceColoringByClass: settings.enforce_coloring_by_class
+        enforceColoringByClass: settings.enforce_coloring_by_class,
+        showOrthographicViews: settings.show_orthographic_views
     };
 }
 
@@ -75,6 +77,7 @@ export function createSettingsSavePayload(
         show_sample_filenames: formState.showSampleFilenames,
         show_bounding_boxes_for_segmentation: formState.showBoundingBoxesForSegmentation,
         enforce_coloring_by_class: formState.enforceColoringByClass,
+        show_orthographic_views: formState.showOrthographicViews,
         key_toolbar_selection: formState.shortcutSettings.keyToolbarSelection,
         key_toolbar_drag: formState.shortcutSettings.keyToolbarDrag,
         key_toolbar_bounding_box: formState.shortcutSettings.keyToolbarBoundingBox,
@@ -127,6 +130,7 @@ export class SettingsDialogState {
     showSampleFilenames = $state(false);
     showBoundingBoxesForSegmentation = $state(true);
     enforceColoringByClass = $state(false);
+    showOrthographicViews = $state(false);
     recordingShortcut: ShortcutSettingKey | null = $state(null);
     isSaving = $state(false);
 
@@ -141,6 +145,7 @@ export class SettingsDialogState {
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
         this.enforceColoringByClass = formState.enforceColoringByClass;
+        this.showOrthographicViews = formState.showOrthographicViews;
     }
 
     startRecording(key: ShortcutSettingKey): void {
@@ -170,7 +175,8 @@ export class SettingsDialogState {
             showAnnotationTextLabels: this.showAnnotationTextLabels,
             showSampleFilenames: this.showSampleFilenames,
             showBoundingBoxesForSegmentation: this.showBoundingBoxesForSegmentation,
-            enforceColoringByClass: this.enforceColoringByClass
+            enforceColoringByClass: this.enforceColoringByClass,
+            showOrthographicViews: this.showOrthographicViews
         });
     }
 }

@@ -72,6 +72,7 @@ def set_settings(session: Session, settings: SettingView) -> SettingView:
 
     # Update annotation coloring enforcement
     current_settings.enforce_coloring_by_class = settings.enforce_coloring_by_class
+    current_settings.show_orthographic_views = settings.show_orthographic_views
 
     session.commit()
     session.refresh(current_settings)
