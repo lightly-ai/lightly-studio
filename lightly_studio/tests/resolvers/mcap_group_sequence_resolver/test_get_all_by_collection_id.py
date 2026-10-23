@@ -5,6 +5,8 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import UUID
 
+import numpy as np
+import pytest
 from sqlmodel import Session, insert
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -13,6 +15,7 @@ from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleCreate, SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.models.sequence import (
     SampleSequenceLinkCreate,
     SampleSequenceLinkTable,
@@ -24,10 +27,15 @@ from lightly_studio.resolvers import (
     mcap_group_component_definition_resolver,
     mcap_group_sequence_resolver,
     recording_resolver,
+    sample_embedding_resolver,
     sample_resolver,
     sequence_resolver,
 )
-from tests.helpers_resolvers import create_collection
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from tests.helpers_resolvers import create_collection, create_embedding_model
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 
 
@@ -393,6 +401,79 @@ def test_get_all_by_collection_id__no_sequence_frame_when_resolved_channel_has_n
     )
 
     assert result.samples[0].sequence_frame is None
+
+
+def test_get_all_by_collection_id__filters(db_session: Session) -> None:
+    """A sample filter restricts the sequences and the total count."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(session=db_session, collection_id=seq_col.collection_id, count=3)
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=seq_col.collection_id,
+        pagination=None,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(sample_ids=[seq_ids[2]])),
+    )
+
+    assert result.total_count == 1
+    assert [sample.sample_id for sample in result.samples] == [seq_ids[2]]
+
+
+def test_get_all_by_collection_id__text_embedding(db_session: Session) -> None:
+    """Sequences are ordered by similarity, and sequences without embedding are left out."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(session=db_session, collection_id=seq_col.collection_id, count=3)
+    model = create_embedding_model(
+        session=db_session,
+        collection_id=seq_col.collection_id,
+        embedding_dimension=3,
+        set_as_default=True,
+    )
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=seq_ids[0],
+                embedding_model_id=model.embedding_model_id,
+                embedding=np.array([1.0, 0.0, 0.0], dtype=np.float32),
+            ),
+            SampleEmbeddingCreate(
+                sample_id=seq_ids[1],
+                embedding_model_id=model.embedding_model_id,
+                embedding=np.array([0.0, 1.0, 0.0], dtype=np.float32),
+            ),
+        ],
+    )
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=seq_col.collection_id,
+        pagination=None,
+        text_embedding=[0.0, 1.0, 0.0],
+    )
+
+    assert result.total_count == 2
+    assert [sample.sample_id for sample in result.samples] == [seq_ids[1], seq_ids[0]]
+    assert result.samples[0].similarity_score == pytest.approx(1.0)
+    assert result.samples[1].similarity_score == pytest.approx(0.0)
+
+
+def _create_sequences(session: Session, collection_id: UUID, count: int) -> list[UUID]:
+    """Create MCAP sequences of one recording, in creation order."""
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    assert collection is not None
+    recording_id = recording_resolver.create(
+        session=session,
+        dataset_id=collection.dataset_id,
+        uri="/bags/drive_001.mcap",
+        format_=RecordingFormat.MCAP,
+    )
+    return [
+        mcap_group_sequence_resolver.create(
+            session=session, collection_id=collection_id, recording_id=recording_id
+        )
+        for _ in range(count)
+    ]
 
 
 def _link_frames_to_sequence(

@@ -96,6 +96,7 @@ class McapSequenceView(BaseModel):
     file_name: str
     sample_count: int
     sequence_frame: McapSequenceFrame | None = None
+    similarity_score: float | None = None
 
 
 class McapSequenceViewsWithCount(BaseModel):

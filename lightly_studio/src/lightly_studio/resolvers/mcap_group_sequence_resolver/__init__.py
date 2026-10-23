@@ -16,6 +16,10 @@ from lightly_studio.resolvers.mcap_group_sequence_resolver.get_first_video_frame
 )
 from lightly_studio.resolvers.mcap_group_sequence_resolver.get_info import get_info
 from lightly_studio.resolvers.mcap_group_sequence_resolver.get_keyframes import get_keyframes
+from lightly_studio.resolvers.mcap_group_sequence_resolver.get_sample_ids import get_sample_ids
+from lightly_studio.resolvers.mcap_group_sequence_resolver.resolve_embedding_region import (
+    resolve_embedding_region,
+)
 
 __all__ = [
     "create",
@@ -26,4 +30,6 @@ __all__ = [
     "get_first_video_frame_collection_id",
     "get_info",
     "get_keyframes",
+    "get_sample_ids",
+    "resolve_embedding_region",
 ]

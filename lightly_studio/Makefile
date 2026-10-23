@@ -349,7 +349,7 @@ start-example:
 .PHONY: start-example-mcap-s3
 start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
-	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
+	$(FLOCI_ENV) EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Runs the MCAP sequence-indexing example against a real (remote) S3 URI without
@@ -362,7 +362,7 @@ start-example-mcap-s3: setup-floci build
 .PHONY: start-example-mcap-remote-s3
 start-example-mcap-remote-s3: build
 	@echo "Starting MCAP sequence example (from remote S3: $(MCAP_REMOTE_S3_URI))..."
-	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(MCAP_REMOTE_S3_URI) \
+	EXAMPLES_MCAP_PATH=$(MCAP_REMOTE_S3_URI) \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 .PHONY: start-example-mcap-directory
@@ -393,7 +393,7 @@ setup-floci-dir: start-floci
 .PHONY: start-example-mcap-folder-s3
 start-example-mcap-folder-s3: setup-floci-dir build
 	@echo "Starting MCAP folder example (from S3: $(FLOCI_MCAP_DIR_S3_URI))..."
-	$(FLOCI_ENV) LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_DIR_S3_URI) \
+	$(FLOCI_ENV) EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_DIR_S3_URI) \
 		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Demo targets for the camera-frame endpoint.

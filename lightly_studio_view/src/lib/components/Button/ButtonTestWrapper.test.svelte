@@ -15,6 +15,7 @@
         buttonProps,
         collapseAt,
         isPending,
+        disabledReason,
         ariaLabel
     }: {
         label?: string;
@@ -25,6 +26,7 @@
         buttonProps?: ButtonProps;
         collapseAt?: CollapseAt;
         isPending?: boolean;
+        disabledReason?: string;
         ariaLabel?: string;
     } = $props();
 </script>
@@ -38,6 +40,7 @@
         {buttonProps}
         {collapseAt}
         {isPending}
+        {disabledReason}
         {ariaLabel}
     >
         {label}
@@ -51,6 +54,7 @@
         {buttonProps}
         {collapseAt}
         {isPending}
+        {disabledReason}
         ariaLabel={ariaLabel ?? 'Icon button'}
     />
 {/if}

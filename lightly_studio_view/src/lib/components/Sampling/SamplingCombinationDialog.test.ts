@@ -615,6 +615,19 @@ describe('SamplingCombinationDialog', () => {
         );
     });
 
+    it('disables class balancing in the add strategy menu for sequence collections', async () => {
+        pageMock.data.collection.sample_type = 'sequence';
+        annotationLabelsData = [{ annotation_label_name: 'car' }];
+
+        render(SamplingCombinationDialog);
+
+        await fireEvent.keyDown(screen.getByTestId('add-strategy-button'), { key: 'Enter' });
+
+        expect(await screen.findByTestId('add-strategy-class_balancing')).toHaveAttribute(
+            'data-disabled'
+        );
+    });
+
     it('disables subpart diversity when no croppable annotation sources exist', async () => {
         annotationCollectionsData = [];
 

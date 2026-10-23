@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Plus } from '@lucide/svelte';
-    import { Button } from '$lib/components/ui/button';
+    import { Button } from '$lib/components';
     import { getSplitCounts } from '../../splitPreview';
     import DatasetSplitRow from '../DatasetSplitRow/DatasetSplitRow.svelte';
 
@@ -24,12 +24,17 @@
         />
     {/each}
     <Button
-        type="button"
         variant="outline"
-        size="sm"
-        disabled={splits.length >= sampleCount}
-        onclick={() => (splits = [...splits, { tag_name: '', relative_size: 1 }])}
+        icon={Plus}
+        disabledReason={splits.length >= sampleCount
+            ? 'Cannot add more splits than the number of samples.'
+            : ''}
+        buttonProps={{
+            type: 'button',
+            size: 'sm',
+            onclick: () => (splits = [...splits, { tag_name: '', relative_size: 1 }])
+        }}
     >
-        <Plus /> Add split
+        Add split
     </Button>
 </div>

@@ -16,12 +16,17 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
-    import { useAnnotationCollections, useMcapTickPrefetchScheduler } from '$lib/hooks';
+    import {
+        useAnnotationCollections,
+        useGlobalStorage,
+        useMcapTickPrefetchScheduler
+    } from '$lib/hooks';
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
     import type { Vector3, WorkspaceTool } from './domain';
 
@@ -74,12 +79,14 @@
         onRetry
     }: Props = $props();
 
+    const { isEditingMode } = useGlobalStorage();
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
     const bufferEntireSequence = useSessionStorage<boolean>(
         'lightlyStudio_pointCloudBufferEntireSequence',
         false
     );
     let activeTool = $state<WorkspaceTool>('select');
+    const effectiveTool = $derived<WorkspaceTool>($isEditingMode ? activeTool : 'select');
     let seekWasPlaying = false;
     let bufferingSeekVersion = $state(0);
     let selectedBufferingTick = $state<number | undefined>(undefined);
@@ -313,6 +320,20 @@
         onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
     });
 
+    const { handleDeleteCuboid: deleteCuboidAnnotation } = useDeleteCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        getAnnotations: () => sceneSnapshot?.annotations ?? []
+    });
+
+    async function handleDeleteCuboid(cuboidId: string): Promise<void> {
+        const deleted = await deleteCuboidAnnotation(cuboidId);
+        if (!deleted) return;
+        await workspace.tickDetails.refetch();
+        if (selectedCuboidId === cuboidId) {
+            selectedCuboidId = null;
+        }
+    }
+
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await workspace.tickDetails.refetch({ throwOnError: true });
@@ -360,7 +381,12 @@
                     <PaneGroup direction="vertical" class="min-h-0 flex-1">
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
-                            <ToolRail {activeTool} onToolChange={(tool) => (activeTool = tool)} />
+                            {#if $isEditingMode}
+                                <ToolRail
+                                    {activeTool}
+                                    onToolChange={(tool) => (activeTool = tool)}
+                                />
+                            {/if}
                             {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
@@ -376,7 +402,7 @@
                                     {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
                                     hoveredAnnotationId={hoveredCuboidId}
-                                    {activeTool}
+                                    activeTool={effectiveTool}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
                                     onCreateCuboid={handleCreateCuboid}
@@ -460,6 +486,7 @@
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}
+                        onDeleteCuboid={$isEditingMode ? handleDeleteCuboid : undefined}
                     />
                 </Pane>
             </PaneGroup>

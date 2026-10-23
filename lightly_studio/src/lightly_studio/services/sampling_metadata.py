@@ -68,8 +68,8 @@ def _compute_metadata(
     """Compute the batch without committing individual metadata updates."""
     for computation in computations:
         if isinstance(computation, SimilarityComputation):
-            if collection.sample_type != SampleType.IMAGE:
-                raise ValueError("Similarity is only available for image collections.")
+            if collection.sample_type not in {SampleType.IMAGE, SampleType.SEQUENCE}:
+                raise ValueError("Similarity is only available for image and sequence collections.")
             tag = tag_resolver.get_by_id(session=session, tag_id=computation.query_tag_id)
             if tag is None or tag.collection_id != collection.collection_id:
                 raise ValueError("Similarity query tag must belong to the sampling collection.")

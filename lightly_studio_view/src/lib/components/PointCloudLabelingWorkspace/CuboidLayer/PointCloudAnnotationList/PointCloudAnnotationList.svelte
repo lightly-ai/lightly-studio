@@ -23,13 +23,16 @@
         annotationSources: readonly AnnotationSource[];
         /** ID of the currently expanded annotation row; bindable. */
         selectedCuboidId: string | null;
+        /** Deletes a cuboid annotation by ID. */
+        onDeleteCuboid?: (cuboidId: string) => void;
     }
 
     let {
         cuboids,
         annotationClasses,
         annotationSources,
-        selectedCuboidId = $bindable(null)
+        selectedCuboidId = $bindable(null),
+        onDeleteCuboid
     }: Props = $props();
 
     const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
@@ -54,6 +57,7 @@
                 sources: annotationSources
             })}
             onToggle={toggle}
+            onDelete={onDeleteCuboid}
         />
     {/each}
 {/snippet}

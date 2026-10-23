@@ -23,6 +23,7 @@ export {
     type GridThumbnailQuality
 } from './getGridThumbnailURL/getGridThumbnailURL';
 export { getVideoURLById } from './getVideoURLById/getVideoURLById';
+export { getMcapSequenceFrameURL } from './getMcapSequenceFrameURL/getMcapSequenceFrameURL';
 export {
     toVideoEvents,
     assignEventLanes,

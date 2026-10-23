@@ -6,15 +6,16 @@
 
     interface Props {
         collectionId: string;
+        isCaptions?: boolean;
         isImages: boolean;
         isVideos: boolean;
         isVideoFrames: boolean;
     }
 
-    let { collectionId, isImages, isVideos, isVideoFrames }: Props = $props();
+    let { collectionId, isCaptions = false, isImages, isVideos, isVideoFrames }: Props = $props();
 
     const { hasActiveFilters, clearAllFilters } = $derived(
-        useClearAllFilters({ collectionId, isImages, isVideos, isVideoFrames })
+        useClearAllFilters({ collectionId, isCaptions, isImages, isVideos, isVideoFrames })
     );
 </script>
 
