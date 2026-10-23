@@ -41,12 +41,7 @@
         onSaveAsChange={(value) => (toolState.saveAs = value)}
         isDrawingBox={toolState.isDrawingInstancesBox}
         onDrawBoxChange={(value) => (toolState.isDrawingInstancesBox = value)}
-        boxCount={instances.boxes.length}
-        isGenerating={instances.isGenerating}
-        resultCount={instances.predictions.length}
-        canSave={instances.canSave}
-        onGenerate={() => void instances.generate()}
-        onSave={() => void instances.save()}
+        {instances}
         onClear={() => {
             instances.clear();
             toolState.instancesPrompt = '';
