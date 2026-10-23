@@ -10,7 +10,12 @@ vi.mock('$env/static/public', () => ({
 
 const getVideoById = vi.hoisted(() => vi.fn());
 const getAnnotation = vi.hoisted(() => vi.fn());
-vi.mock('$lib/api/lightly_studio_local', () => ({ getVideoById, getAnnotation }));
+const listMcapSequences = vi.hoisted(() => vi.fn());
+vi.mock('$lib/api/lightly_studio_local', () => ({
+    getVideoById,
+    getAnnotation,
+    listMcapSequences
+}));
 
 describe('createThumbnailResolver', () => {
     beforeEach(() => {
@@ -53,6 +58,47 @@ describe('createThumbnailResolver', () => {
         expect(getAnnotation).toHaveBeenCalledWith({
             path: { collection_id: 'col-1', annotation_id: 'annotation-1' }
         });
+    });
+
+    it('resolves MCAP sequences via the camera frame that represents them', async () => {
+        listMcapSequences.mockResolvedValue({
+            data: {
+                data: [
+                    {
+                        sequence_frame: {
+                            dataset_id: 'dataset-1',
+                            recording_id: 'recording-1',
+                            channel_id: 3,
+                            keyframe_log_time_ns: '100'
+                        }
+                    }
+                ]
+            }
+        });
+        const resolve = createThumbnailResolver({ route: 'mcap_sequences', collectionId: 'col-1' });
+
+        await expect(resolve('sequence-1')).resolves.toEqual({
+            url:
+                'https://example.com/datasets/dataset-1/recordings/recording-1/camera-frame' +
+                '?channel_id=3&keyframe_timestamp_ns=100&w=256&h=256'
+        });
+        expect(listMcapSequences).toHaveBeenCalledWith({
+            path: { collection_id: 'col-1' },
+            query: { cursor: 0, limit: 1 },
+            body: {
+                filter: {
+                    filter_type: 'mcap_sequence',
+                    sample_filter: { sample_ids: ['sequence-1'] }
+                }
+            }
+        });
+    });
+
+    it('resolves no thumbnail for an MCAP sequence without a camera frame', async () => {
+        listMcapSequences.mockResolvedValue({ data: { data: [{ sequence_frame: null }] } });
+        const resolve = createThumbnailResolver({ route: 'mcap_sequences', collectionId: 'col-1' });
+
+        await expect(resolve('sequence-1')).resolves.toBeNull();
     });
 
     it('retries a failed API lookup for the same sample', async () => {

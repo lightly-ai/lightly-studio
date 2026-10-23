@@ -64,7 +64,7 @@ describe('McapSequencesGrid', () => {
         hasNextPage: false,
         isFetchingNextPage: false,
         onLoadMore: vi.fn(),
-        onSequenceClick: vi.fn()
+        onSequenceOpen: vi.fn()
     };
 
     beforeEach(() => {
@@ -95,12 +95,12 @@ describe('McapSequencesGrid', () => {
     });
 
     it('opens the selected MCAP sequence', async () => {
-        const onSequenceClick = vi.fn();
-        render(McapSequencesGridTestWrapper, { props: { ...defaultProps, onSequenceClick } });
+        const onSequenceOpen = vi.fn();
+        render(McapSequencesGridTestWrapper, { props: { ...defaultProps, onSequenceOpen } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'View MCAP sequence 1' }));
 
-        expect(onSequenceClick).toHaveBeenCalledWith(sequences[0].sampleId);
+        expect(onSequenceOpen).toHaveBeenCalledWith(sequences[0].sampleId);
     });
 
     it('loads another page when it is available', () => {

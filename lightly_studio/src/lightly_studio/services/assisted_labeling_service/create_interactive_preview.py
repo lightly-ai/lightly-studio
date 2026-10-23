@@ -30,14 +30,12 @@ def create_interactive_preview(
         ProviderError: If the provider fails.
     """
     prompt = SegmentationPrompt(
-        points=[
-            convert_prompts.to_point_prompt(point=point, width=image.width, height=image.height)
-            for point in request.points or []
-        ],
-        boxes=[
-            convert_prompts.to_box_prompt(box=box, width=image.width, height=image.height)
-            for box in request.boxes or []
-        ],
+        points=convert_prompts.to_point_prompts(
+            points=request.points, width=image.width, height=image.height
+        ),
+        boxes=convert_prompts.to_box_prompts(
+            boxes=request.boxes, width=image.width, height=image.height
+        ),
         text=None,
         max_masks=1,
     )

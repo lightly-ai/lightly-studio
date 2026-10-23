@@ -63,6 +63,12 @@ describe('useMcapSequencesInfinite', () => {
         expect(query.fetchNextPage).toHaveBeenCalledOnce();
     });
 
+    it('invalidates the sequences query on refresh', () => {
+        const { refresh } = renderHook();
+        refresh();
+        expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: expect.any(Array) });
+    });
+
     it('flattens sequences from every loaded page', () => {
         vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue({
             ...query,
@@ -72,5 +78,21 @@ describe('useMcapSequencesInfinite', () => {
         const { data } = renderHook();
 
         expect(get(data)).toEqual([...firstPage.data, ...secondPage.data]);
+    });
+
+    it('clears sequences and total count while a new query key is pending', () => {
+        const reactiveQuery = $state({ ...query, isPending: false });
+        vi.spyOn(tanstackQuery, 'createInfiniteQuery').mockReturnValue(
+            reactiveQuery as unknown as CreateInfiniteQueryResult<unknown, Error>
+        );
+        const { data, totalCount } = renderHook();
+        expect(get(data)).toEqual(firstPage.data);
+
+        reactiveQuery.isSuccess = false;
+        reactiveQuery.isPending = true;
+        flushSync();
+
+        expect(get(data)).toEqual([]);
+        expect(get(totalCount)).toBe(0);
     });
 });

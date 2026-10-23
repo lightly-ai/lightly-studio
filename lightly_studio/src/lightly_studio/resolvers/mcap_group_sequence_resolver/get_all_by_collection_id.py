@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import Any
 from uuid import UUID
 
+from sqlalchemy import ColumnElement
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -23,7 +25,7 @@ from lightly_studio.models.mcap_group_sequence import (
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable
-from lightly_studio.resolvers import mcap_group_sequence_resolver
+from lightly_studio.resolvers import mcap_group_sequence_resolver, similarity_utils
 from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
     McapSequenceFilter,
 )
@@ -35,37 +37,68 @@ def get_all_by_collection_id(
     collection_id: UUID,
     pagination: Paginated | None,
     filters: McapSequenceFilter | None = None,
+    text_embedding: list[float] | None = None,
 ) -> McapSequenceViewsWithCount:
     """Retrieve MCAP sequences for a collection ordered by creation time.
 
     Only sequences that have a corresponding ``McapGroupSequenceTable`` row are
     returned. Results are ordered by ascending ``created_at`` of the underlying sample.
+    When ``text_embedding`` is given and the collection has a default embedding model,
+    only sequences with an embedding are returned, ordered by similarity.
 
     Args:
         session: Database session for executing queries.
         collection_id: The ID of the collection to scope results to.
         pagination: Optional pagination parameters (offset and limit).
         filters: Optional filters for the sequences.
+        text_embedding: Optional embedding to order the sequences by similarity to.
 
     Returns:
         McapSequenceViewsWithCount containing the page of sequences, the total
         count before pagination, and a cursor for the next page.
     """
-    samples_query = _scope_query(
-        query=select(McapGroupSequenceTable), collection_id=collection_id, filters=filters
-    ).order_by(col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc())
+    mcap_group_sequence_resolver.resolve_embedding_region(
+        session=session, collection_id=collection_id, sequence_filter=filters
+    )
+    embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
+        session=session,
+        collection_id=collection_id,
+        text_embedding=text_embedding,
+    )
 
     total_count_query = _scope_query(
         query=select(func.count()).select_from(McapGroupSequenceTable),
         collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
         filters=filters,
     )
-
-    if pagination is not None:
-        samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
-
     total_count = session.exec(total_count_query).one()
-    sequences = session.exec(samples_query).all()
+
+    sequences: list[McapGroupSequenceTable]
+    similarity_scores: dict[UUID, float] = {}
+    if distance_expr is not None:
+        similarity_query = _scope_query(
+            query=select(McapGroupSequenceTable, distance_expr),
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            filters=filters,
+        ).order_by(distance_expr, *_default_order())
+        similarity_query = _paginate(query=similarity_query, pagination=pagination)
+        rows = session.exec(similarity_query).all()
+        sequences = [sequence for sequence, _ in rows]
+        similarity_scores = {
+            sequence.sample_id: similarity_utils.distance_to_similarity(distance)
+            for sequence, distance in rows
+        }
+    else:
+        samples_query = _scope_query(
+            query=select(McapGroupSequenceTable),
+            collection_id=collection_id,
+            embedding_model_id=None,
+            filters=filters,
+        ).order_by(*_default_order())
+        samples_query = _paginate(query=samples_query, pagination=pagination)
+        sequences = list(session.exec(samples_query).all())
 
     sequence_sample_ids = [seq.sample_id for seq in sequences]
 
@@ -98,6 +131,7 @@ def get_all_by_collection_id(
             file_name=file_name_by_recording_id[seq.recording_id],
             sample_count=sequence_sample_counts.get(seq.sample_id, 0),
             sequence_frame=sequence_frames.get(seq.sample_id),
+            similarity_score=similarity_scores.get(seq.sample_id),
         )
         for seq in sequences
     ]
@@ -110,15 +144,37 @@ def get_all_by_collection_id(
 
 
 def _scope_query(
-    query: QueryType, collection_id: UUID, filters: McapSequenceFilter | None
+    query: QueryType,
+    collection_id: UUID,
+    embedding_model_id: UUID | None,
+    filters: McapSequenceFilter | None,
 ) -> QueryType:
-    """Scope a query on McapGroupSequenceTable to a collection and filters."""
+    """Scope a query on McapGroupSequenceTable to a collection, embeddings and filters.
+
+    With an embedding model, only sequences with an embedding of that model are kept.
+    """
     query = query.join(
         SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id)
     ).where(col(SampleTable.collection_id) == collection_id)
+    query = similarity_utils.apply_similarity_join(
+        query=query,
+        sample_id_column=col(McapGroupSequenceTable.sample_id),
+        embedding_model_id=embedding_model_id,
+    )
     if filters is not None:
         query = filters.apply(query)
     return query
+
+
+def _default_order() -> list[ColumnElement[Any]]:
+    """Order by creation time, with the sample ID as tiebreaker for a stable order."""
+    return [col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc()]
+
+
+def _paginate(query: QueryType, pagination: Paginated | None) -> QueryType:
+    if pagination is None:
+        return query
+    return query.offset(pagination.offset).limit(pagination.limit)
 
 
 def _get_sequence_sample_counts(

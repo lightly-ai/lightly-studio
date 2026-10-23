@@ -318,7 +318,7 @@
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId }));
     const hasEmbeddings = $derived(!!hasEmbeddingsQuery.data);
     const hasMediaWithEmbeddings = $derived(
-        (isImages || isVideos || isAnnotations) && hasEmbeddings
+        (isImages || isVideos || isAnnotations || isPointClouds) && hasEmbeddings
     );
     const collectionSearchPlaceholder = $derived(
         isAnnotations
@@ -500,7 +500,7 @@
     const isCollectionGrid = $derived(
         isImages || isAnnotations || isVideos || isVideoFrames || isGroups || isPointClouds
     );
-    const hasFilterPanel = $derived((isCollectionGrid || isCaptions) && !isPointClouds);
+    const hasFilterPanel = $derived(isCollectionGrid || isCaptions);
 
     const panelIsVisible = $derived(
         isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
@@ -572,7 +572,7 @@
         showTour={onboardingEnabled}
         onShowTour={() => useOnboarding().requestReplay()}
     />
-    <MenuDialogHost {isImages} {isVideos} {hasEmbeddings} {collection} />
+    <MenuDialogHost {isImages} {isVideos} {isPointClouds} {hasEmbeddings} {collection} />
 </div>
 
 <div class="relative flex min-h-0 flex-1 flex-col">
@@ -659,6 +659,7 @@
                                 {isVideos}
                                 {isImages}
                                 {isAnnotations}
+                                isSequences={isPointClouds}
                             />
                             {#if isImages}
                                 <ConfusionCellFilterItem />
@@ -666,7 +667,8 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            {#if !isCaptions}
+                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
+                            {#if !isCaptions && !isPointClouds}
                                 <LabelsMenu
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>

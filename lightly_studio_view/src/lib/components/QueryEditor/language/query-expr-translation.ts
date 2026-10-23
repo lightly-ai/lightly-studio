@@ -8,6 +8,8 @@ import type {
 } from '$lib/api/lightly_studio_local';
 import {
     isBooleanExpression,
+    isBooleanLiteral,
+    isMetadataReference,
     isComparisonExpression,
     isFieldReference,
     isFunctionCall,
@@ -145,6 +147,9 @@ function visitComparisonExpression(
     table: QueryScope
 ): QueryExpr['match_expr'] {
     const left = expr.left;
+    if (isMetadataReference(left)) {
+        return visitMetadataComparison(expr);
+    }
     if (!isFieldReference(left)) {
         throw new Error(`Unsupported expression: ${expr.$type}`);
     }
@@ -300,6 +305,27 @@ function visitComparisonExpression(
     }
 
     throw new Error(`Unsupported comparison: ${fieldName} ${expr.operator} ${right.$type}`);
+}
+
+function visitMetadataComparison(expr: ComparisonExpression): QueryExpr['match_expr'] {
+    const right = expr.right;
+    if (!isMetadataReference(expr.left)) {
+        throw new Error('Expected a metadata reference');
+    }
+    if (!isNumberLiteral(right) && !isStringLiteral(right) && !isBooleanLiteral(right)) {
+        throw new Error(`Unsupported metadata value: ${right.$type}`);
+    }
+    if (isNumberLiteral(right) && !Number.isFinite(right.value)) {
+        throw new Error('Metadata comparison requires a finite number');
+    }
+    return {
+        type: 'metadata_comparison_expr',
+        path: expr.left.path,
+        operator: isNumberLiteral(right)
+            ? toOrdinalComparisonOperator(expr.operator)
+            : toEqualityComparisonOperator(expr.operator),
+        value: right.value
+    };
 }
 
 function getRootScope(parseResult: Query): Extract<QueryScope, 'image' | 'video'> {

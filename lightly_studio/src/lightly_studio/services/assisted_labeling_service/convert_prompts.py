@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 
 from lightly_studio.assisted_labeling.provider import BoxPrompt, PointPrompt
 from lightly_studio.models.assisted_labeling import AnnotationBox, AnnotationPoint
@@ -23,6 +24,13 @@ def to_point_prompt(point: AnnotationPoint, width: int, height: int) -> PointPro
     )
 
 
+def to_point_prompts(
+    points: Sequence[AnnotationPoint] | None, width: int, height: int
+) -> list[PointPrompt]:
+    """Returns the pixels of the normalized points, or no points for None."""
+    return [to_point_prompt(point=point, width=width, height=height) for point in points or []]
+
+
 def to_box_prompt(box: AnnotationBox, width: int, height: int) -> BoxPrompt:
     """Returns the smallest pixel box that contains the normalized box.
 
@@ -41,6 +49,13 @@ def to_box_prompt(box: AnnotationBox, width: int, height: int) -> BoxPrompt:
         x_max=max(x_max, x_min + 1),
         y_max=max(y_max, y_min + 1),
     )
+
+
+def to_box_prompts(
+    boxes: Sequence[AnnotationBox] | None, width: int, height: int
+) -> list[BoxPrompt]:
+    """Returns the pixel boxes of the normalized boxes, or no boxes for None."""
+    return [to_box_prompt(box=box, width=width, height=height) for box in boxes or []]
 
 
 def _clamp(value: int, upper: int) -> int:

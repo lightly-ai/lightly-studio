@@ -10,6 +10,8 @@
         class: className,
         triggerClass,
         ariaLabel,
+        noTriggerRole = false,
+        triggerTabIndex,
         children
     }: {
         content: string;
@@ -17,6 +19,10 @@
         class?: string;
         triggerClass?: string;
         ariaLabel?: string;
+        /** Set to true when wrapping an already-interactive element (e.g. a button) to avoid adding a redundant role="button" on the wrapper div. */
+        noTriggerRole?: boolean;
+        /** Override the wrapper tab stop when the child is disabled and cannot receive focus. */
+        triggerTabIndex?: number;
         children: Snippet;
     } = $props();
 
@@ -108,8 +114,8 @@
     onfocusout={hideTooltipHandler}
     onkeydown={(e) => e.key === 'Escape' && hideTooltipHandler()}
     bind:this={triggerElement}
-    tabindex={content ? 0 : undefined}
-    role={content ? 'button' : undefined}
+    tabindex={triggerTabIndex ?? (content && !noTriggerRole ? 0 : undefined)}
+    role={content && !noTriggerRole ? 'button' : undefined}
     aria-label={ariaLabel}
     aria-describedby={showTooltip && content ? 'tooltip' : undefined}
 >

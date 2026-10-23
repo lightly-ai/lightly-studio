@@ -3,6 +3,7 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useEmbeddingFilterForAnnotations } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
+    import { useEmbeddingFilterForMcapSequences } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForMcapSequences';
     import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { Readable } from 'svelte/store';
@@ -12,9 +13,16 @@
         isVideos: boolean;
         isImages: boolean;
         isAnnotations?: boolean;
+        isSequences?: boolean;
     };
 
-    let { collectionIdStore, isVideos, isImages, isAnnotations = false }: Props = $props();
+    let {
+        collectionIdStore,
+        isVideos,
+        isImages,
+        isAnnotations = false,
+        isSequences = false
+    }: Props = $props();
 
     const { setRangeSelectionForCollection } = useGlobalStorage();
 
@@ -40,8 +48,20 @@
         collectionIdStore,
         setRangeSelectionForCollection
     );
+
+    // svelte-ignore state_referenced_locally
+    const sequencesFilter = useEmbeddingFilterForMcapSequences(
+        collectionIdStore,
+        setRangeSelectionForCollection
+    );
     const embeddingFilter = $derived(
-        isAnnotations ? annotationsFilter : isVideos ? videosFilter : imagesFilter
+        isAnnotations
+            ? annotationsFilter
+            : isVideos
+              ? videosFilter
+              : isSequences
+                ? sequencesFilter
+                : imagesFilter
     );
 
     const plotFilterCountStore = $derived(embeddingFilter.effectiveCount);
@@ -56,12 +76,12 @@
     };
 
     const plotFilterItemLabel = $derived(
-        isAnnotations ? 'annotation' : isVideos ? 'video' : 'image'
+        isAnnotations ? 'annotation' : isVideos ? 'video' : isSequences ? 'sequence' : 'image'
     );
     const isPlotFilterApplied = $derived($isPlotFilterAppliedStore);
     const plotFilterCount = $derived($plotFilterCountStore);
     const hasPlotFilterContext = $derived(
-        (isImages || isVideos || isAnnotations) && plotFilterCount > 0
+        (isImages || isVideos || isAnnotations || isSequences) && plotFilterCount > 0
     );
 </script>
 

@@ -25,6 +25,7 @@ class ReadMcapSequencesRequest(BaseModel):
     filter: McapSequenceFilter | None = Field(
         None, description="Filter parameters for MCAP sequences"
     )
+    text_embedding: list[float] | None = Field(None, description="Text embedding to search for")
 
 
 class ReadMcapSequenceSampleIdsRequest(BaseModel):
@@ -51,7 +52,7 @@ def list_mcap_sequences(
         session: The database session.
         collection_id: The ID of the collection to fetch sequences for.
         pagination: Pagination parameters including offset (cursor) and limit.
-        body: Optional filters for the sequences.
+        body: Optional filters and text embedding to search for.
 
     Returns:
         A paginated list of MCAP sequences with total count and next cursor.
@@ -61,6 +62,7 @@ def list_mcap_sequences(
         collection_id=collection_id,
         pagination=Paginated(offset=pagination.offset, limit=pagination.limit),
         filters=body.filter if body is not None else None,
+        text_embedding=body.text_embedding if body is not None else None,
     )
 
 

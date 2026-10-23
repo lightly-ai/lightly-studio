@@ -6,7 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 import pydantic
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 from pydantic_core import PydanticCustomError
 
 
@@ -23,6 +23,10 @@ class AssistedLabelingStatusView(BaseModel):
 NormalizedCoordinate = Annotated[float, pydantic.Field(ge=0, le=1, allow_inf_nan=False)]
 _NORMALIZED_UPPER_BOUND = 1.000001
 MAX_INTERACTIVE_POINTS = 100
+DEFAULT_MAX_INSTANCES = 16
+MAX_INSTANCES_LIMIT = 32
+MAX_INSTANCES_BOXES = 100
+MAX_INSTANCES_TEXT_PROMPT_LENGTH = 200
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
 # context of a `ValueError` is not JSON serializable in the 422 response.
@@ -110,3 +114,32 @@ class InteractiveAnnotationResponse(BaseModel):
     """Single-object preview, or None if the provider finds no object."""
 
     prediction: AnnotationPreview | None
+
+
+class InstancesAnnotationRequest(BaseModel):
+    """Request for previews of all instances that match a text prompt.
+
+    Attributes:
+        text_prompt: What to find, for example a class name.
+        boxes: Optional examples of instances that the text prompt can miss.
+        max_instances: Maximum number of previews.
+    """
+
+    collection_id: UUID
+    sample_id: UUID
+    text_prompt: Annotated[
+        str,
+        StringConstraints(
+            strip_whitespace=True, min_length=1, max_length=MAX_INSTANCES_TEXT_PROMPT_LENGTH
+        ),
+    ]
+    boxes: list[AnnotationBox] | None = pydantic.Field(
+        default=None, min_length=1, max_length=MAX_INSTANCES_BOXES
+    )
+    max_instances: int = pydantic.Field(default=DEFAULT_MAX_INSTANCES, ge=1, le=MAX_INSTANCES_LIMIT)
+
+
+class InstancesAnnotationResponse(BaseModel):
+    """Instance previews sorted by descending score."""
+
+    predictions: list[AnnotationPreview]
