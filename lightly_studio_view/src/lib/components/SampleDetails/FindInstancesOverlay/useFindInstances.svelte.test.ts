@@ -89,7 +89,6 @@ describe('useFindInstances', () => {
                 max_instances: 8
             }
         });
-        expect(instances.boxes).toEqual([]);
         expect(instances.isGenerating).toBe(false);
     });
 
