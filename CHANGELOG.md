@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Evaluation
     - Edit the settings of an evaluation and rerun it, in the evaluation panel or the API.
-    -  Delete an evaluation in the evaluation panel or the API. Annotations stay unchanged, and filters that use the evaluation are removed.
+    - Delete an evaluation in the evaluation panel or the API. Annotations stay unchanged, and filters that use the evaluation are removed.
 
 - Filtering
     - Filter by metadata in the query editor, e.g. `metadata["score"] >= 0.8`.
@@ -52,26 +52,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- BREAKING: A tag now holds only samples of its own collection, and tags no longer have a `kind` field. PostgreSQL migrates automatically. DuckDB users must re-index their data before they create tags.
-- BREAKING: Python SDK: Image search in the GUI now needs an embedder that implements `ImageBytesEmbedder`.
-- Python SDK: `start_gui()` opens the browser. Pass `open_browser=False`, or use `lightly-studio gui --no-browser`, to turn this off.
-- Python SDK: New video datasets embed frames with Perception Encoder (`PE-Core-T16-384`) instead of MobileCLIP. Existing datasets are not changed.
-- Python SDK: Crops and frames are embedded automatically with a previously used compatible remote embedder.
-- Embedding plot: Set the text axes with the new "Define axes" button. The applied texts show at the plot edges, and "Reset axes" returns to PaCMAP.
-- Embedding plot: Text axes are now balanced and comparable. Lines at x = 0 and y = 0 split the plot into four parts, and axes with weak text matches now look small.
-- Evaluation panel: Clearer settings and confusion matrix filters. Sorts are grouped by metric, show the highest counts first, and mark missing results.
-- Embedding plot points that are filtered out or have no category are easier to see on dark backgrounds.
-- Adding many samples to a tag is faster.
+- Tags
+    - BREAKING: A tag now holds only samples of its own collection, and tags no longer have a `kind` field. PostgreSQL migrates automatically. DuckDB users must re-index their data before they create tags.
+    - Adding many samples to a tag is faster.
+
+- Embeddings
+    - BREAKING: Python SDK: Image search in the GUI now needs an embedder that implements `ImageBytesEmbedder`. Implement it in your custom embedder to keep image search.
+    - Python SDK: New video datasets embed frames with Perception Encoder (`PE-Core-T16-384`) instead of MobileCLIP. Existing datasets are not changed.
+    - Python SDK: Crops and frames are embedded automatically with a previously used compatible remote embedder.
+
+- Embedding plot
+    - Set the text axes with the new "Define axes" button. The applied texts show at the plot edges, and "Reset axes" returns to PaCMAP.
+    - Text axes are now balanced and comparable. Lines at x = 0 and y = 0 split the plot into four parts, and axes with weak text matches now look small.
+    - Points that are filtered out or have no category are easier to see on dark backgrounds.
+
+- Evaluation
+    - The evaluation panel has clearer settings and confusion matrix filters. Sorts are grouped by metric, show the highest counts first, and mark missing results.
+    - Python SDK: `dataset.evaluate()` and evaluation recompute are faster on large datasets.
+
+- Other
+    - Python SDK: `start_gui()` opens the browser. Pass `open_browser=False`, or use `lightly-studio gui --no-browser`, to turn this off.
 
 ### Fixed
 
-- Python SDK: `dataset.evaluate()` and evaluation recompute are faster on large datasets.
-- Annotation cards stay aligned, source colors stay stable, and confidence stays visible when you hide annotations or switch to editing.
-- Evaluation results are kept when a recompute fails.
-- Deleting annotations now also deletes their captions.
-- The grids return to the exact scroll position when you go back from the details view.
-- Python SDK: `start_gui()` stops cleanly on Ctrl+C, without a traceback.
-- The GUI footer no longer shows a dev commit hash for released versions.
+- Annotations
+    - Annotation cards stay aligned, source colors stay stable, and confidence stays visible when you hide annotations or switch to editing.
+    - Deleting annotations now also deletes their captions.
+
+- Evaluation
+    - Evaluation results are kept when a recompute fails.
+
+- Other
+    - The grids return to the exact scroll position when you go back from the details view.
+    - Python SDK: `start_gui()` stops cleanly on Ctrl+C, without a traceback.
+    - The GUI footer no longer shows a dev commit hash for released versions.
 
 ## \[1.1.3\] - 2026-10-07
 
