@@ -28,6 +28,7 @@
         >
             <Select
                 class="w-36"
+                disabled={dialogState.isSaving}
                 items={[
                     { value: 'cover', label: 'Cover' },
                     { value: 'contain', label: 'Contain' }
@@ -45,6 +46,7 @@
         >
             <Select
                 class="w-36"
+                disabled={dialogState.isSaving}
                 items={[
                     { value: 'raw', label: 'Original' },
                     { value: 'high', label: 'High' }

@@ -47,6 +47,7 @@
     async function handleFormSubmit(event: Event) {
         event.preventDefault();
         dialogState.isSaving = true;
+        dialogState.clearRecording();
 
         try {
             await saveSettings(dialogState.getSavePayload());
@@ -59,9 +60,12 @@
     }
 </script>
 
-<svelte:window
+<!-- Keep keys inside the dialog: app shortcuts listen on window, Bits UI on document. -->
+<svelte:document
     onkeydown={(e) => {
-        if ($isSettingsDialogOpen) dialogState.handleKeyDown(e);
+        if (!$isSettingsDialogOpen) return;
+        dialogState.handleKeyDown(e);
+        e.stopPropagation();
     }}
 />
 

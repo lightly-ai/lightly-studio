@@ -94,7 +94,7 @@ describe('SettingsDialog', () => {
 
         expect(screen.getByText('Press a key...')).toBeInTheDocument();
 
-        await fireEvent.keyDown(window, { key: 'z' });
+        await fireEvent.keyDown(document, { key: 'z' });
         expect(shortcutButton).toHaveTextContent('z');
 
         await fireEvent.click(screen.getByText('Save changes'));
@@ -105,6 +105,18 @@ describe('SettingsDialog', () => {
                 key_hide_annotations: 'z'
             })
         );
+    });
+
+    it('should not pass key presses to app shortcuts while open', async () => {
+        const appShortcutHandler = vi.fn();
+        window.addEventListener('keydown', appShortcutHandler);
+        render(SettingsDialog);
+        await openDialog();
+
+        await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'e' });
+
+        expect(appShortcutHandler).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', appShortcutHandler);
     });
 
     it('should open on the Shortcuts tab', async () => {
@@ -125,7 +137,7 @@ describe('SettingsDialog', () => {
         await fireEvent.click(screen.getByLabelText('Hide annotations'));
         await openTab('Annotations');
         await fireEvent.click(screen.getByRole('switch', { name: 'Always color by class' }));
-        await fireEvent.keyDown(window, { key: 'z' });
+        await fireEvent.keyDown(document, { key: 'z' });
         await openTab('Shortcuts');
 
         expect(screen.queryByText('Press a key...')).not.toBeInTheDocument();
@@ -253,7 +265,7 @@ describe('SettingsDialog', () => {
         // Make a change first
         const shortcutButton = screen.getByLabelText('Hide annotations');
         await fireEvent.click(shortcutButton);
-        await fireEvent.keyDown(window, { key: 'z' });
+        await fireEvent.keyDown(document, { key: 'z' });
 
         await fireEvent.click(screen.getByText('Cancel'));
 
