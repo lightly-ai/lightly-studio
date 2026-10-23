@@ -2,12 +2,18 @@ import * as monaco from 'monaco-editor';
 import { SCOPES, TOP_LEVEL_KEYWORDS, BOOLEAN_KEYWORDS } from '../../language/lightly-query-schema';
 import { ALLOWED_NESTED_KEYWORDS } from './completionAdapterShared';
 
+interface BuildSchemaCompletionsParams {
+    scope: keyof typeof SCOPES;
+    range: monaco.IRange;
+    includeBooleanLiterals?: boolean;
+}
+
 /** Build scope-aware schema fallback completion items. */
-export function buildSchemaCompletions<Scope extends keyof typeof SCOPES>(
-    scope: Scope,
-    range: monaco.IRange,
+export function buildSchemaCompletions({
+    scope,
+    range,
     includeBooleanLiterals = false
-): monaco.languages.CompletionItem[] {
+}: BuildSchemaCompletionsParams): monaco.languages.CompletionItem[] {
     const items: monaco.languages.CompletionItem[] = [];
     const { title, fields } = SCOPES[scope];
 

@@ -25,35 +25,51 @@ export function getMetadataQueryContext({
     return undefined;
 }
 
+interface MaskingState {
+    code: string;
+    quote?: string;
+    comment: boolean;
+}
+
+interface MaskCharacterParams {
+    state: MaskingState;
+    character: string;
+}
+
 /** Mask string contents and comments so they cannot introduce query syntax. */
 function maskLiteralsAndComments(text: string): MaskedQuery {
-    let quote: string | undefined;
-    let comment = false;
-    let code = '';
+    const state: MaskingState = { code: '', comment: false };
     for (let i = 0; i < text.length; i++) {
         const character = text[i];
-        if (comment && character !== '\n' && character !== '\r') continue;
-        comment = false;
-
-        if (quote && character === '\\') {
+        if (state.comment && character !== '\n' && character !== '\r') continue;
+        state.comment = false;
+        if (state.quote && character === '\\') {
             i++;
             continue;
         }
-        if (quote && character !== quote) continue;
-        if (quote) {
-            quote = undefined;
-            code += '""';
-            continue;
+        if (state.quote) {
+            maskQuotedCharacter({ state, character });
+        } else {
+            maskCodeCharacter({ state, character });
         }
-        if (character === '#') {
-            comment = true;
-            continue;
-        }
-        if (character === '"' || character === "'") {
-            quote = character;
-            continue;
-        }
-        code += character;
     }
-    return { code, blocked: quote !== undefined || comment };
+    return { code: state.code, blocked: state.quote !== undefined || state.comment };
+}
+
+/** Replace a completed string literal with an empty quoted string. */
+function maskQuotedCharacter({ state, character }: MaskCharacterParams): void {
+    if (character !== state.quote) return;
+    state.quote = undefined;
+    state.code += '""';
+}
+
+/** Preserve query syntax and enter comment or string state at delimiters. */
+function maskCodeCharacter({ state, character }: MaskCharacterParams): void {
+    if (character === '#') {
+        state.comment = true;
+    } else if (character === '"' || character === "'") {
+        state.quote = character;
+    } else {
+        state.code += character;
+    }
 }

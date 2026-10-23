@@ -6,7 +6,7 @@ import {
     type LightlyQueryServicesBundle
 } from '../language/lightly-query-module';
 import { detectScopeAt } from '../language/lightly-query-schema';
-import { getMetadataQueryContext } from '../language/metadataQueryContext';
+import { getMetadataQueryContext } from '$lib/components/QueryEditor/language';
 import {
     buildSchemaCompletions,
     lspToMonacoCompletion,
@@ -87,11 +87,11 @@ async function getCompletions(
     // never show up. Augment with scope-aware schema completions and dedupe
     // against the LSP results.
     const seen = new Set(lspSuggestions.map(completionLabel));
-    const schemaSuggestions = buildSchemaCompletions(
+    const schemaSuggestions = buildSchemaCompletions({
         scope,
-        fallbackRange,
-        metadataContext === 'boolean'
-    ).filter((suggestion) => !seen.has(completionLabel(suggestion)));
+        range: fallbackRange,
+        includeBooleanLiterals: metadataContext === 'boolean'
+    }).filter((suggestion) => !seen.has(completionLabel(suggestion)));
 
     return { suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported) };
 }
