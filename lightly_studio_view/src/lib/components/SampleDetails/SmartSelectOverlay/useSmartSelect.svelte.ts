@@ -123,6 +123,12 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         get canSave() {
             return preview !== null && !isSaving;
         },
+        get isPending() {
+            return mutation.isPending;
+        },
+        get needsPositivePoint() {
+            return points.length > 0 && !canInferFromPoints(points);
+        },
         addPoint,
         selectBox,
         clear,
