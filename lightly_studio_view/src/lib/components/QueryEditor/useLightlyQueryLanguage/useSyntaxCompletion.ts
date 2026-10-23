@@ -6,6 +6,7 @@ import {
     type LightlyQueryServicesBundle
 } from '../language/lightly-query-module';
 import { detectScopeAt } from '../language/lightly-query-schema';
+import { getMetadataQueryContext } from '$lib/components/QueryEditor/language';
 import {
     buildSchemaCompletions,
     lspToMonacoCompletion,
@@ -28,8 +29,14 @@ function completionLabel(item: monaco.languages.CompletionItem): string {
 // Keep parsing support for leading `video:` queries, but do not advertise the
 // prefix in autocomplete for now. Filtering here ensures it is removed no
 // matter whether it comes from Langium's LSP completions or our schema fallback.
-function shouldShowSuggestion(item: monaco.languages.CompletionItem): boolean {
-    return completionLabel(item) !== 'video:';
+function shouldShowSuggestion(
+    item: monaco.languages.CompletionItem,
+    metadataContext: ReturnType<typeof getMetadataQueryContext>
+): boolean {
+    const label = completionLabel(item);
+    if (label === 'metadata') return metadataContext === 'field';
+    if (label === 'true' || label === 'false') return metadataContext === 'boolean';
+    return label !== 'video:';
 }
 
 async function getCompletions(
@@ -63,20 +70,30 @@ async function getCompletions(
 
     const scope = detectScopeAt(model.getValue(), model.getOffsetAt(position));
 
+    const metadataContext = getMetadataQueryContext({
+        text: model.getValue(),
+        offset: model.getOffsetAt(position) - (position.column - word.startColumn)
+    });
+    const isSupported = (item: monaco.languages.CompletionItem) =>
+        shouldShowSuggestion(item, metadataContext);
     const lspSuggestions = (result?.items ?? [])
         .map((item) => lspToMonacoCompletion(item, fallbackRange, scope))
-        .filter(shouldShowSuggestion);
+        // Use the schema snippet instead of Langium's bare metadata keyword.
+        .filter((item) => completionLabel(item) !== 'metadata')
+        .filter(isSupported);
 
     // Langium's default provider only emits literal-string keywords from the
     // grammar, so terminal-defined names (width, fps, object_detection, …)
     // never show up. Augment with scope-aware schema completions and dedupe
     // against the LSP results.
     const seen = new Set(lspSuggestions.map(completionLabel));
-    const schemaSuggestions = buildSchemaCompletions(scope, fallbackRange).filter(
-        (suggestion) => !seen.has(completionLabel(suggestion))
-    );
+    const schemaSuggestions = buildSchemaCompletions({
+        scope,
+        range: fallbackRange,
+        includeBooleanLiterals: metadataContext === 'boolean'
+    }).filter((suggestion) => !seen.has(completionLabel(suggestion)));
 
-    return { suggestions: [...lspSuggestions, ...schemaSuggestions].filter(shouldShowSuggestion) };
+    return { suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported) };
 }
 
 /**

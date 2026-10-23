@@ -4,6 +4,7 @@
         AnnotationSource,
         CuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import {
         groupAnnotationsBySource,
         resolveAnnotationClassName,
@@ -23,6 +24,10 @@
         annotationSources: readonly AnnotationSource[];
         /** ID of the currently expanded annotation row; bindable. */
         selectedCuboidId: string | null;
+        /** When true, numeric fields in the selected annotation become editable. */
+        editable?: boolean;
+        /** Called when the user commits a geometry change in the detail panel. */
+        onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
     }
@@ -32,6 +37,8 @@
         annotationClasses,
         annotationSources,
         selectedCuboidId = $bindable(null),
+        editable = false,
+        onCuboidTransform,
         onDeleteCuboid
     }: Props = $props();
 
@@ -57,6 +64,8 @@
                 sources: annotationSources
             })}
             onToggle={toggle}
+            {editable}
+            {onCuboidTransform}
             onDelete={onDeleteCuboid}
         />
     {/each}

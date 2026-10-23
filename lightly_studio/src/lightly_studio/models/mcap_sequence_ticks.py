@@ -29,6 +29,21 @@ class TickListView(BaseModel):
     ticks: list[TickView]
 
 
+class CameraProjectionView(BaseModel):
+    """Calibration and pose needed to project scene points into a camera image."""
+
+    width: int = Field(gt=0, description="Calibrated image width in pixels.")
+    height: int = Field(gt=0, description="Calibrated image height in pixels.")
+    camera_matrix: list[float] = Field(
+        min_length=9, max_length=9, description="Row-major 3x3 camera matrix."
+    )
+    scene_to_camera: list[float] = Field(
+        min_length=16,
+        max_length=16,
+        description="Row-major 4x4 transform from the scene frame to the camera frame.",
+    )
+
+
 class TickChannelView(BaseModel):
     """MCAP seek locator for one component of a tick."""
 
@@ -43,6 +58,11 @@ class TickChannelView(BaseModel):
         description=(
             "Log time of the keyframe to seek to before decoding. `None` for non-video channels."
         ),
+    )
+    projection: CameraProjectionView | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Projection metadata for the active scene frame, when available.",
     )
 
     @classmethod

@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/svelte';
+import { describe, expect, it, vi } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 import PointCloudAnnotationDetails from './PointCloudAnnotationDetails.svelte';
 
@@ -45,5 +45,165 @@ describe('PointCloudAnnotationDetails', () => {
 
         expect(screen.getByText('Track number:')).toBeInTheDocument();
         expect(screen.getByText('0')).toBeInTheDocument();
+    });
+});
+
+describe('PointCloudAnnotationDetails - editable mode', () => {
+    const defaultEditableProps = {
+        annotation: defaultAnnotation,
+        annotationSourceName: 'Ground Truth',
+        editable: true
+    };
+
+    it('renders inputs for location, dimensions, and rotation', () => {
+        render(PointCloudAnnotationDetails, { props: defaultEditableProps });
+
+        expect(screen.getByRole('spinbutton', { name: 'location x' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'location y' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'location z' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'dimension l' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'dimension w' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'dimension h' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'rotation rx' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'rotation ry' })).toBeInTheDocument();
+        expect(screen.getByRole('spinbutton', { name: 'rotation rz' })).toBeInTheDocument();
+    });
+
+    it('shows full-precision values in location inputs', () => {
+        render(PointCloudAnnotationDetails, { props: defaultEditableProps });
+
+        expect(screen.getByRole('spinbutton', { name: 'location x' })).toHaveValue(10);
+        expect(screen.getByRole('spinbutton', { name: 'location y' })).toHaveValue(-2);
+        expect(screen.getByRole('spinbutton', { name: 'location z' })).toHaveValue(1.234);
+    });
+
+    it('annotation source and track number remain visible', () => {
+        render(PointCloudAnnotationDetails, { props: defaultEditableProps });
+
+        expect(screen.getByText('Ground Truth')).toBeInTheDocument();
+        expect(screen.getByText('Track number:')).toBeInTheDocument();
+    });
+
+    it('fires onAnnotationChange with updated center on blur', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '5' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({ center: [5, -2, 1.234] })
+        );
+    });
+
+    it('fires onAnnotationChange when Enter is pressed', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location y' });
+        // Use input.focus() to actually move jsdom's active element so that
+        // the handler's .blur() call correctly dispatches the blur event.
+        input.focus();
+        fireEvent.input(input, { target: { value: '3' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({ center: [10, 3, 1.234] })
+        );
+    });
+
+    it('does not fire onAnnotationChange for empty input', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('does not fire onAnnotationChange for dimension below minimum', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'dimension l' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '0.005' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('does not fire onAnnotationChange when field value is unchanged after focus', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('does not fire onAnnotationChange for Infinity value', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '1e309' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).not.toHaveBeenCalled();
+    });
+
+    it('fires onAnnotationChange with updated size on dimension blur', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'dimension l' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '8' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({ size: [8, 1.8, 1.5] })
+        );
+    });
+
+    it('fires onAnnotationChange with updated rotation on rotation blur', () => {
+        const onAnnotationChange = vi.fn();
+        render(PointCloudAnnotationDetails, {
+            props: { ...defaultEditableProps, onAnnotationChange }
+        });
+
+        const input = screen.getByRole('spinbutton', { name: 'rotation rz' });
+        fireEvent.focus(input);
+        fireEvent.input(input, { target: { value: '90' } });
+        fireEvent.blur(input);
+
+        expect(onAnnotationChange).toHaveBeenCalledWith(
+            expect.objectContaining({
+                rotation: expect.arrayContaining([expect.any(Number)])
+            })
+        );
     });
 });

@@ -41,4 +41,12 @@ describe('detectScopeAt', () => {
         const offset = text.lastIndexOf('width') + 2;
         expect(detectScopeAt(text, offset)).toBe('image');
     });
+    it.each([
+        { text: '# classification(\nwidth', scope: 'image' },
+        { text: '# note\nvideo: fps', scope: 'video' },
+        { text: 'classification(# )\nclass_name', scope: 'classification' },
+        { text: 'file_name = "#classification(" AND width', scope: 'image' }
+    ])('ignores comments while resolving $scope scope', ({ text, scope }) => {
+        expect(detectScopeAt(text, text.length)).toBe(scope);
+    });
 });
