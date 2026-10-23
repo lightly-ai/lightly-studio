@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.2.0\] - 2026-10-23
+
+### Added
+
 - Disabled buttons now show a tooltip explaining why they cannot be clicked.
 - Added a filter panel to the captions tab, with tag and metadata filters. The footer now counts the number of active captions.
 - Delete an evaluation from the evaluation panel. Grid filters and sorting that use the deleted evaluation are removed.
@@ -43,10 +57,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The embedding plot has a "Define axes" button instead of the PaCMAP/Text select, with a popover for the four axis texts. The plot edges show the applied texts, and "Reset axes" goes back to the PaCMAP layout.
 - Python SDK: New video datasets embed their video frames with Perception Encoder (`PE-Core-T16-384`), the model of the videos, instead of MobileCLIP. Existing datasets keep the model of their frames.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Keep source colors stable when hiding annotations in the details view, and show confidence while editing.
@@ -55,8 +65,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The GUI footer no longer shows a dev commit hash for released versions.
 - The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.
 - Python SDK: Speed up `dataset.evaluate()` and evaluation recompute on large datasets. The metrics are now written in larger batches, so the annotations are no longer loaded again for each sample.
-
-### Security
 
 ## \[1.1.3\] - 2026-10-07
 
