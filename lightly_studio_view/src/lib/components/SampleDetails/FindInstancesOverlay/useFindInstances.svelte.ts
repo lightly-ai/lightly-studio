@@ -47,31 +47,30 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         getDatasetId: () => page.params.dataset_id!
     });
 
-    const dropPredictions = () => {
+    // With isSaveIgnored, drops the predictions right away, also while a save runs.
+    const dropPredictions = ({ isSaveIgnored = false } = {}) => {
         sequence += 1;
         isGenerating = false;
-        isDropPending = isSaving;
-        if (!isSaving) predictions = [];
+        isDropPending = isSaving && !isSaveIgnored;
+        if (isSaveIgnored || !isSaving) predictions = [];
     };
 
     const canSave = () => predictions.length > 0 && !isSaving && !isGenerating;
 
-    const clear = () => {
-        dropPredictions();
+    const reset = ({ isSaveIgnored }: { isSaveIgnored: boolean }) => {
+        dropPredictions({ isSaveIgnored });
         boxes = [];
     };
 
+    const clear = () => reset({ isSaveIgnored: false });
+
     const currentSampleId = $derived(getParams().sampleId);
+    const currentPrompt = $derived(getParams().prompt.trim());
 
     // Drops the boxes, requests and results of a previous sample, also while a save runs.
     $effect(() => {
         void currentSampleId;
-        return () => {
-            sequence += 1;
-            isGenerating = false;
-            predictions = [];
-            boxes = [];
-        };
+        return () => reset({ isSaveIgnored: true });
     });
 
     $effect(() => () => {
@@ -80,15 +79,16 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     // A new prompt starts a new search and keeps the drawn boxes.
     $effect(() => {
-        const prompt = getParams().prompt.trim();
+        const prompt = currentPrompt;
         if (prompt === previousPrompt) return;
         previousPrompt = prompt;
-        untrack(dropPredictions);
+        untrack(() => dropPredictions());
     });
 
     const generate = async () => {
         const { collectionId, sampleId, prompt, maxInstances } = getParams();
         if (isSaving || isGenerating || !canGenerateInstances({ prompt })) return;
+        previousPrompt = prompt.trim();
         const requestSequence = ++sequence;
         isGenerating = true;
         try {
@@ -103,7 +103,6 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             });
             if (requestSequence !== sequence) return;
             predictions = result.predictions;
-            if (predictions.length > 0) boxes = [];
         } catch (error) {
             if (requestSequence !== sequence) return;
             toast.error(`Find all instances failed: ${getAnnotationPreviewErrorMessage(error)}`);
@@ -118,12 +117,12 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         boxes = [...boxes, box];
     };
 
-    const removeSavedPrediction = (preview: AnnotationPreview) => {
+    const filterOutPrediction = (preview: AnnotationPreview) => {
         predictions = predictions.filter((prediction) => prediction !== preview);
     };
 
     const removePrediction = (preview: AnnotationPreview) => {
-        if (!isSaving) removeSavedPrediction(preview);
+        if (!isSaving) filterOutPrediction(preview);
     };
 
     const save = async () => {
@@ -141,11 +140,10 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
                     preview,
                     className
                 })),
-                onPreviewSaved: removeSavedPrediction
+                onPreviewSaved: filterOutPrediction
             });
             if (!isDisposed) onSaved();
         } catch (error) {
-            if (isDisposed) return;
             toast.error(
                 `Could not save the annotations: ${getAnnotationPreviewErrorMessage(error)}`
             );

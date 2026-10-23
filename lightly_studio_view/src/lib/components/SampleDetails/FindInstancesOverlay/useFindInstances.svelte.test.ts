@@ -73,7 +73,7 @@ describe('useFindInstances', () => {
 
     afterEach(() => cleanup());
 
-    it('requests instances for the prompt and the drawn boxes', async () => {
+    it('requests instances for the prompt and keeps the drawn boxes', async () => {
         const { instances } = setup(' cars ');
         const box = { x: 0.1, y: 0.1, width: 0.2, height: 0.2 };
         instances.addBox(box);
@@ -89,19 +89,8 @@ describe('useFindInstances', () => {
                 max_instances: 8
             }
         });
-        expect(instances.boxes).toEqual([]);
-        expect(instances.isGenerating).toBe(false);
-    });
-
-    it('keeps the drawn boxes when no instances are found', async () => {
-        const { instances } = setup();
-        const box = { x: 0.1, y: 0.1, width: 0.2, height: 0.2 };
-        instances.addBox(box);
-        mocks.mutateAsync.mockResolvedValueOnce({ predictions: [] });
-
-        await instances.generate();
-
         expect(instances.boxes).toEqual([box]);
+        expect(instances.isGenerating).toBe(false);
     });
 
     it('does not request instances with boxes but without a prompt', async () => {
@@ -124,6 +113,16 @@ describe('useFindInstances', () => {
 
         expect(instances.predictions).toEqual([]);
         expect(instances.boxes).toEqual([box]);
+    });
+
+    it('keeps the response when the prompt changes right before a request', async () => {
+        const { instances, params } = setup();
+
+        params.prompt = 'trucks';
+        await generateResults(instances);
+        flushSync();
+
+        expect(instances.predictions).toHaveLength(2);
     });
 
     it('keeps the results when only whitespace around the prompt changes', async () => {
@@ -321,7 +320,23 @@ describe('useFindInstances', () => {
         expect(mocks.toastError).not.toHaveBeenCalled();
     });
 
-    it('skips the callbacks of a save that ends after teardown', async () => {
+    it('shows the error of a save that fails after teardown', async () => {
+        const saving = deferred();
+        const { instances } = setup();
+        await generateResults(instances);
+        mocks.saveAnnotationPreviews.mockReturnValue(saving.promise);
+
+        const save = instances.save();
+        cleanup();
+        saving.reject(new Error('server failed'));
+        await save;
+
+        expect(mocks.toastError).toHaveBeenCalledWith(
+            expect.stringContaining('Could not save the annotations')
+        );
+    });
+
+    it('skips onSaved of a save that ends after teardown', async () => {
         const saving = deferred();
         const { instances, onSaved } = setup();
         await generateResults(instances);
