@@ -182,7 +182,7 @@ function projectCameraPoint(
     [cameraX, cameraY, cameraZ]: CameraPoint,
     projection: CameraProjectionView
 ): ProjectedPoint | null {
-    if (cameraZ <= NEAR_PLANE) return null;
+    if (cameraZ < NEAR_PLANE) return null;
 
     const k = projection.camera_matrix;
     return {
@@ -300,25 +300,12 @@ export function projectCuboid(
     });
 }
 
-/** Projects every cuboid edge, keeping the complete wireframe visible in the overlay. */
+/** Projects the visible portions of all cuboid edges. */
 export function projectCuboidWireframe(
     cuboid: Cuboid3dAnnotationView,
     projection: CameraProjectionView
 ): ProjectedSegment[] {
-    const corners = cuboidCorners(cuboid).map((corner) =>
-        clampToNearPlane(toCameraPoint(corner, projection))
-    );
-    return CUBOID_EDGES.flatMap(([startIndex, endIndex]) => {
-        const start = projectCameraPoint(corners[startIndex], projection);
-        const end = projectCameraPoint(corners[endIndex], projection);
-        if (!start || !end) return [];
-        const clipped = clipToImage(start, end, projection);
-        return clipped ? [clipped] : [];
-    });
-}
-
-function clampToNearPlane(point: CameraPoint): CameraPoint {
-    return [point[0], point[1], Math.max(point[2], NEAR_PLANE)];
+    return projectCuboid(cuboid, projection);
 }
 
 export function projectCuboidFaces(
@@ -345,8 +332,8 @@ function clipPolygonToNearPlane(polygon: CameraPoint[]): CameraPoint[] {
     for (let index = 0; index < polygon.length; index += 1) {
         const start = polygon[index];
         const end = polygon[(index + 1) % polygon.length];
-        const startInside = start[2] > NEAR_PLANE;
-        const endInside = end[2] > NEAR_PLANE;
+        const startInside = start[2] >= NEAR_PLANE;
+        const endInside = end[2] >= NEAR_PLANE;
         if (startInside !== endInside) {
             const ratio = (NEAR_PLANE - start[2]) / (end[2] - start[2]);
             clipped.push([
@@ -372,8 +359,8 @@ function polygonIntersectsImage(
 }
 
 function clipToNearPlane(start: CameraPoint, end: CameraPoint): [CameraPoint, CameraPoint] | null {
-    const startInside = start[2] > NEAR_PLANE;
-    const endInside = end[2] > NEAR_PLANE;
+    const startInside = start[2] >= NEAR_PLANE;
+    const endInside = end[2] >= NEAR_PLANE;
     if (!startInside && !endInside) return null;
     if (startInside && endInside) return [start, end];
 

@@ -95,7 +95,11 @@ describe('projectionOverlay', () => {
             projection
         );
 
-        expect(faces.length).toBeGreaterThan(0);
+        expect(faces).toHaveLength(5);
+        expect(faces.every((face) => face.length === 4)).toBe(true);
+        expect(faces.flat().every(({ x, y }) => Number.isFinite(x) && Number.isFinite(y))).toBe(
+            true
+        );
     });
 
     it('keeps the cuboid wireframe when some corners are behind the camera', () => {
@@ -117,6 +121,10 @@ describe('projectionOverlay', () => {
             projection
         );
 
-        expect(segments.length).toBeGreaterThan(0);
+        expect(segments).toHaveLength(8);
+        const clippedEdges = segments.filter(({ start, end }) =>
+            [start, end].some(({ x, y }) => x === 0 || x === 100 || y === 0 || y === 80)
+        );
+        expect(clippedEdges).toHaveLength(4);
     });
 });
