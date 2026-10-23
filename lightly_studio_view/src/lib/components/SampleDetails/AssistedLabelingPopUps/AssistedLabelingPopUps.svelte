@@ -28,7 +28,7 @@
         onSave={() => void smartSelect.save()}
         onClear={smartSelect.clear}
     />
-{:else if assistedLabeling.activeTool === 'find-instances'}
+{:else if assistedLabeling.activeTool === 'find-instances' && !assistedLabeling.isPanning}
     <FindInstancesPopUp
         {collectionId}
         prompt={toolState.instancesPrompt}
@@ -42,9 +42,6 @@
         isDrawingBox={toolState.isDrawingInstancesBox}
         onDrawBoxChange={(value) => (toolState.isDrawingInstancesBox = value)}
         {instances}
-        onClear={() => {
-            instances.clear();
-            toolState.instancesPrompt = '';
-        }}
+        onClear={assistedLabeling.clearInstances}
     />
 {/if}
