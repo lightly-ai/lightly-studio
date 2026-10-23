@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- The settings dialog is wider and split into Shortcuts, Display, and Annotations tabs. Each display and annotation setting has a short description.
+- Reorganised the settings dialog into a tabbed layout.
 
 ### Deprecated
 
