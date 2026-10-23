@@ -495,4 +495,85 @@ describe('useSyntaxCompletion', () => {
         expect(result.suggestions[0].detail).toBeUndefined();
         expect(result.suggestions[0].documentation).toBeUndefined();
     });
+    it.each([
+        '',
+        'met',
+        'video: ',
+        'width > 1 AND ',
+        '(NOT ',
+        'metadata["camera"] = "front" OR ',
+        '# classification(\n'
+    ])('offers the metadata path snippet in sample expressions: %s', async (text) => {
+        const { provideCompletionItems } = await loadAndAttach([
+            { label: 'metadata', kind: LspCompletionItemKind.Keyword }
+        ]);
+        const partialWord = text === 'met' ? 3 : 0;
+        const result = await provideCompletionItems(
+            makeModel(text, {
+                startColumn: text.length - partialWord + 1,
+                endColumn: text.length + 1
+            }) as never,
+            { lineNumber: 1, column: text.length + 1 } as never
+        );
+        const suggestions = result.suggestions.filter((item) => item.label === 'metadata');
+        expect(suggestions).toHaveLength(1);
+        expect(suggestions[0]).toMatchObject({
+            insertText: 'metadata["${1:path}"]',
+            insertTextRules: 4,
+            documentation: { value: expect.stringContaining('Missing paths') }
+        });
+        expect(result.suggestions.map((item) => item.label)).not.toContain('true');
+    });
+
+    it.each([
+        'metadata["reviewed"] = ',
+        "video: metadata['reviewed'] != ",
+        'width > 1 AND metadata["reviewed"] = ',
+        'metadata["reviewed"] = # classification(\n',
+        'metadata["reviewed"] = tru'
+    ])('offers booleans for metadata equality values: %s', async (text) => {
+        const { provideCompletionItems } = await loadAndAttach([]);
+        const partialWord = text.endsWith('tru') ? 3 : 0;
+        const result = await provideCompletionItems(
+            makeModel(text, {
+                startColumn: text.length - partialWord + 1,
+                endColumn: text.length + 1
+            }) as never,
+            { lineNumber: 1, column: text.length + 1 } as never
+        );
+        const labels = result.suggestions.map((item) => item.label);
+        expect(labels).toEqual(expect.arrayContaining(['true', 'false']));
+        expect(result.suggestions.find((item) => item.label === 'true')?.sortText).toBe('0');
+        expect(labels).not.toContain('metadata');
+    });
+
+    it.each([
+        'object_detection(',
+        'classification(',
+        'segmentation_mask(',
+        'video: classification(metadata["reviewed"] = ',
+        'metadata["camera',
+        'file_name = "met',
+        'metadata["reviewed"] = "tru',
+        'metadata["score"] >= ',
+        'metadata["score"] == ',
+        'metadata["camera"] = "front" ',
+        '# metadata["reviewed"] = ',
+        'metadata[',
+        'width = '
+    ])('suppresses metadata suggestions in unsupported positions: %s', async (text) => {
+        const { provideCompletionItems } = await loadAndAttach(
+            ['metadata', 'true', 'false'].map((label) => ({
+                label,
+                kind: LspCompletionItemKind.Keyword
+            }))
+        );
+        const result = await provideCompletionItems(
+            makeModel(text, { startColumn: text.length + 1, endColumn: text.length + 1 }) as never,
+            { lineNumber: 1, column: text.length + 1 } as never
+        );
+        expect(result.suggestions.map((item) => item.label)).not.toEqual(
+            expect.arrayContaining([expect.stringMatching(/^(metadata|true|false)$/)])
+        );
+    });
 });

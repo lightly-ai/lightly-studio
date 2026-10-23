@@ -27,6 +27,10 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { onDestroy, onMount } from 'svelte';
     import { usePendingState } from '../usePendingState';
+    import AssistedLabelingPopUps from '$lib/components/SampleDetails/AssistedLabelingPopUps/AssistedLabelingPopUps.svelte';
+    import AssistedLabelingOverlays from '$lib/components/SampleDetails/AssistedLabelingOverlays/AssistedLabelingOverlays.svelte';
+    import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
+    import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -79,6 +83,11 @@
     let sampleId = $derived(sample.sampleId);
     // Source identity stays stable when annotations are temporarily hidden.
     const showSourceLabels = $derived(countVisibleSources(sample.annotations) >= 2);
+    const assistedLabeling = useAssistedLabelingTools(() => ({
+        collectionId,
+        sampleId,
+        refetch
+    }));
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
@@ -222,7 +231,11 @@
 <ZoomableContainer
     width={sample.width}
     height={sample.height}
-    panEnabled={!(annotationLabelContext.isDrawing || annotationLabelContext.isErasing)}
+    panEnabled={isPanEnabled({
+        isDrawing: annotationLabelContext.isDrawing,
+        isErasing: annotationLabelContext.isErasing,
+        status: sampleDetailsToolbarContext.status
+    })}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
     autoFocusEnabled={annotationLabelContext.isOnAnnotationDetailsView}
@@ -250,6 +263,7 @@
         {#if shouldShowSlicToolPopup}
             <SlicToolPopUp isPending={$isPending} />
         {/if}
+        <AssistedLabelingPopUps {collectionId} {assistedLabeling} />
     {/snippet}
     {#snippet zoomPanelRightContent()}
         {#if $isPending}
@@ -378,6 +392,14 @@
                     {drawerStrokeColor}
                     {refetch}
                     onCreateBoundingBoxPendingChange={handlePendingChange}
+                />
+            {:else if assistedLabeling.activeTool}
+                <AssistedLabelingOverlays
+                    bind:interactionRect
+                    {sample}
+                    visibleAnnotations={actualAnnotationsToShow}
+                    {scale}
+                    {assistedLabeling}
                 />
             {/if}
         {/if}

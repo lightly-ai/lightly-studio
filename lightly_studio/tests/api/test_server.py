@@ -101,6 +101,13 @@ def test_app_has_brotli_middleware() -> None:
     assert BrotliMiddleware in middleware_classes  # type: ignore[comparison-overlap]
 
 
+def test_app_allows_local_vite_origin() -> None:
+    response = TestClient(app).get("/healthz", headers={"Origin": "http://localhost:5173"})
+
+    assert response.headers["access-control-allow-origin"] == "*"
+    assert "access-control-allow-credentials" not in response.headers
+
+
 def test__get_available_port__preferred_port_in_use() -> None:
     """Test that a different port is returned if the preferred port is used."""
     host = "localhost"

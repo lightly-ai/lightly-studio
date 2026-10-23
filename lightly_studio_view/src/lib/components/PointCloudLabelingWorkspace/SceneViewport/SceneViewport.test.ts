@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
+import { readonly, writable } from 'svelte/store';
 import SceneViewport from './SceneViewport.svelte';
+
+const transforms = {
+    annotations: readonly(writable([])),
+    reconcile: vi.fn(),
+    begin: vi.fn(),
+    cancel: vi.fn(),
+    commit: vi.fn()
+};
 
 vi.mock('@threlte/core', () => ({ Canvas: () => {} }));
 vi.mock('$lib/components/PointCloudViewer', () => ({ PointCloudScene: () => {} }));
@@ -32,7 +41,7 @@ describe('SceneViewport arrow-key navigation', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        render(SceneViewport, { props: { onPreviousTick, onNextTick } });
+        render(SceneViewport, { props: { transforms, onPreviousTick, onNextTick } });
     });
 
     it('calls the previous and next handlers and prevents the default action', () => {

@@ -67,8 +67,13 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         hintedClass = null;
     };
 
-    // Drops a request from a previous sample, e.g. after the overlay was keyed by a new one.
-    $effect(() => reset);
+    const currentSampleId = $derived(getParams().sampleId);
+
+    // Drops the prompts and requests of a previous sample, also while a save runs.
+    $effect(() => {
+        void currentSampleId;
+        return reset;
+    });
 
     // Keeps the preview while a save runs, so a failed save can be retried.
     const clear = () => {
@@ -122,6 +127,12 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         },
         get canSave() {
             return preview !== null && !isSaving;
+        },
+        get isPending() {
+            return mutation.isPending;
+        },
+        get needsPositivePoint() {
+            return points.length > 0 && !canInferFromPoints(points);
         },
         addPoint,
         selectBox,

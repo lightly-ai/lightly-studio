@@ -4,6 +4,7 @@
         AnnotationSource,
         CuboidAnnotation
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import PointCloudAnnotationList from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList';
     import { Segment, SegmentTags } from '$lib/components';
 
@@ -26,6 +27,10 @@
         };
         /** Reloads the tick after a tag is added or removed. */
         onTagsChange?: () => void;
+        /** When true, numeric fields in the selected annotation become editable. */
+        editable?: boolean;
+        /** Called when the user commits a geometry change in the detail panel. */
+        onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
     }
@@ -37,6 +42,8 @@
         selectedCuboidId = $bindable(null),
         tick,
         onTagsChange,
+        editable = false,
+        onCuboidTransform,
         onDeleteCuboid
     }: Props = $props();
 </script>
@@ -65,6 +72,8 @@
                 {annotationClasses}
                 {annotationSources}
                 bind:selectedCuboidId
+                {editable}
+                {onCuboidTransform}
                 {onDeleteCuboid}
             />
         </Segment>

@@ -64,6 +64,7 @@
                     Image fields: <code>file_name</code>, <code>file_path_abs</code>,
                     <code>width</code>, <code>height</code>, <code>created_at</code>
                 </li>
+                <li>Metadata: <code>metadata["quality_score"] &gt;= 0.8</code></li>
                 <li>Tag membership: <code>"tag_name" IN tags</code></li>
                 <li>
                     Annotation conditions: <code>segmentation_mask(…)</code>,
