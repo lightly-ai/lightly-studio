@@ -10,6 +10,7 @@
     let { collectionId, assistedLabeling }: Props = $props();
 
     const toolState = $derived(assistedLabeling.state);
+    const smartSelect = $derived(assistedLabeling.smartSelect);
 </script>
 
 {#if assistedLabeling.activeTool === 'smart-select' && !assistedLabeling.isPanning}
@@ -19,10 +20,10 @@
         onSaveAsChange={(value) => (toolState.saveAs = value)}
         annotationClass={assistedLabeling.smartSelectClass}
         onAnnotationClassChange={(value) => (toolState.smartSelectClass = value)}
-        canSave={toolState.smartSelect.canSave}
-        isPending={toolState.smartSelect.isPending}
-        needsPositivePoint={toolState.smartSelect.needsPositivePoint}
-        onSave={toolState.smartSelect.save}
-        onClear={toolState.smartSelect.clear}
+        canSave={smartSelect.canSave}
+        isPending={smartSelect.isPending}
+        needsPositivePoint={smartSelect.needsPositivePoint}
+        onSave={() => void smartSelect.save()}
+        onClear={smartSelect.clear}
     />
 {/if}

@@ -6,32 +6,23 @@ import {
 } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte';
 
-const noop = () => undefined;
-const idleSmartSelect = {
-    canSave: false,
-    isPending: false,
-    needsPositivePoint: false,
-    save: noop,
-    clear: noop
-};
+interface UseAssistedLabelingToolsParams {
+    collectionId: string;
+    sampleId: string;
+    refetch: () => void;
+}
 
 // A class, so child components can update the fields without mutating a $state prop.
 class AssistedLabelingToolState {
     saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
-    smartSelect = $state<{
-        canSave: boolean;
-        isPending: boolean;
-        needsPositivePoint: boolean;
-        save: () => void;
-        clear: () => void;
-    }>(idleSmartSelect);
 }
 
 // Shares the tool state between the pop-up and the overlay, and falls back to the cursor
 // tool when edit mode ends or assisted labeling becomes unusable.
-export const useAssistedLabelingTools = () => {
+export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToolsParams) => {
     const assistedLabelingStatus = useAssistedLabelingStatus();
     const { context, setStatus } = useSampleDetailsToolbarContext();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
@@ -45,6 +36,17 @@ export const useAssistedLabelingTools = () => {
     const smartSelectClass = $derived(
         state.smartSelectClass ?? annotationLabelContext.annotationLabel
     );
+    const smartSelect = useSmartSelect(() => {
+        const { collectionId, sampleId, refetch } = getParams();
+        return {
+            collectionId,
+            sampleId,
+            saveAs: state.saveAs,
+            annotationClass: smartSelectClass,
+            annotationSource: annotationLabelContext.annotationSource,
+            onSaved: refetch
+        };
+    });
 
     $effect(() => {
         if (
@@ -54,13 +56,14 @@ export const useAssistedLabelingTools = () => {
             setStatus('cursor');
     });
 
-    // Leaving the tool drops the actions of its unmounted overlay.
+    // Leaving the tool drops its prompts.
     $effect(() => {
-        if (activeTool !== 'smart-select') state.smartSelect = idleSmartSelect;
+        if (activeTool !== 'smart-select') smartSelect.clear();
     });
 
     return {
         state,
+        smartSelect,
         get activeTool() {
             return activeTool;
         },

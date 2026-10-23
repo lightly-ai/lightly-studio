@@ -6,7 +6,8 @@ import { useAssistedLabelingTools } from './useAssistedLabelingTools.svelte';
 const mocks = vi.hoisted(() => ({
     context: { status: 'smart-select' as string, panFrom: undefined as string | undefined },
     status: { disabledReason: null as string | null },
-    isEditingMode: undefined as unknown as Writable<boolean>
+    isEditingMode: undefined as unknown as Writable<boolean>,
+    clearSmartSelect: vi.fn()
 }));
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
@@ -25,6 +26,9 @@ vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({ isEditingMode: mocks.isEditingMode })
 }));
+vi.mock('$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte', () => ({
+    useSmartSelect: () => ({ clear: mocks.clearSmartSelect })
+}));
 
 let cleanup = () => {};
 
@@ -36,14 +40,21 @@ const setup = () => {
     mocks.isEditingMode = writable(true);
     let tools!: ReturnType<typeof useAssistedLabelingTools>;
     cleanup = $effect.root(() => {
-        tools = useAssistedLabelingTools();
+        tools = useAssistedLabelingTools(() => ({
+            collectionId: 'collection-1',
+            sampleId: 'sample-1',
+            refetch: vi.fn()
+        }));
     });
     flushSync();
     return { context, status, tools };
 };
 
 describe('useAssistedLabelingTools', () => {
-    afterEach(() => cleanup());
+    afterEach(() => {
+        cleanup();
+        vi.clearAllMocks();
+    });
 
     it('keeps the tool active while Space panning', () => {
         const { context, tools } = setup();
@@ -57,13 +68,13 @@ describe('useAssistedLabelingTools', () => {
 
     it('drops the tool for the hand tool', () => {
         const { context, tools } = setup();
-        tools.state.smartSelect = { ...tools.state.smartSelect, canSave: true };
+        expect(mocks.clearSmartSelect).not.toHaveBeenCalled();
 
         context.status = 'drag';
         flushSync();
         expect(tools.activeTool).toBeNull();
         expect(tools.isPanning).toBe(false);
-        expect(tools.state.smartSelect.canSave).toBe(false);
+        expect(mocks.clearSmartSelect).toHaveBeenCalledOnce();
     });
 
     it('falls back to the cursor tool when edit mode ends or the tool is disabled', () => {

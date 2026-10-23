@@ -83,7 +83,11 @@
     let sampleId = $derived(sample.sampleId);
     // Source identity stays stable when annotations are temporarily hidden.
     const showSourceLabels = $derived(countVisibleSources(sample.annotations) >= 2);
-    const assistedLabeling = useAssistedLabelingTools();
+    const assistedLabeling = useAssistedLabelingTools(() => ({
+        collectionId,
+        sampleId,
+        refetch
+    }));
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
@@ -392,11 +396,9 @@
             {:else if assistedLabeling.activeTool}
                 <AssistedLabelingOverlays
                     bind:interactionRect
-                    {collectionId}
                     {sample}
                     visibleAnnotations={actualAnnotationsToShow}
                     {scale}
-                    {refetch}
                     {assistedLabeling}
                 />
             {/if}
