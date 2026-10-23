@@ -16,6 +16,7 @@
         id="show-annotation-text-labels"
         label="Show annotation class names"
         description="Show the class name next to each annotation."
+        isLabelClickable
     >
         <Switch
             id="show-annotation-text-labels"
@@ -27,6 +28,7 @@
         id="show-bounding-boxes-for-segmentation"
         label="Show bounding boxes for segmentation masks"
         description="Draw a bounding box around each segmentation mask."
+        isLabelClickable
     >
         <Switch
             id="show-bounding-boxes-for-segmentation"
@@ -38,6 +40,7 @@
         id="enforce-coloring-by-class"
         label="Always color by class"
         description="Use class colors even when several annotation sources are visible."
+        isLabelClickable
     >
         <Switch
             id="enforce-coloring-by-class"

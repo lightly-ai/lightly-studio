@@ -14,7 +14,7 @@
     const { id, label, value, isRecording, disabled = false, onStartRecording }: Props = $props();
 </script>
 
-<SettingsFieldRow {id} {label}>
+<SettingsFieldRow {id} {label} isLabelClickable>
     <button
         {id}
         type="button"

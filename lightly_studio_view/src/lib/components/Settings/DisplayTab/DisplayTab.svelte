@@ -53,6 +53,7 @@
             id="show-sample-filenames"
             label="Show filenames"
             description="Show the filename with each sample in the grid."
+            isLabelClickable
         >
             <Switch
                 id="show-sample-filenames"
@@ -66,6 +67,7 @@
             id="image-interpolation"
             label="Image interpolation"
             description="Smooth images when they are scaled. Turn off to see individual pixels."
+            isLabelClickable
         >
             <Switch
                 id="image-interpolation"
