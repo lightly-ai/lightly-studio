@@ -15,7 +15,7 @@
         interactionRect?: SVGRectElement | null;
         saveAs: SaveAs;
         isDrawingBox: boolean;
-        onBoxDrawn: () => void;
+        onDrawEnd: () => void;
         // Owned by the parent, so the pop-up reads the same boxes and results.
         instances: ReturnType<typeof useFindInstances>;
     }
@@ -26,26 +26,32 @@
         interactionRect = $bindable(),
         saveAs,
         isDrawingBox,
-        onBoxDrawn,
+        onDrawEnd,
         instances
     }: Props = $props();
 
     const drag = useDragBox(() => ({ interactionRect }));
 
     const onPointerUp = (event: PointerEvent & { currentTarget: SVGRectElement }) => {
-        const { box } = drag.onPointerUp(event);
+        const { start, box } = drag.onPointerUp(event);
         if (box) instances.addBox(box);
-        onBoxDrawn();
+        // A right-click or a click outside the rect did not start a drawing.
+        if (start) onDrawEnd();
+    };
+
+    const onPointerCancel = (event: PointerEvent & { currentTarget: SVGRectElement }) => {
+        drag.onPointerCancel(event);
+        onDrawEnd();
     };
 </script>
 
-{#each instances.predictions as preview, index (index)}
+{#each instances.predictions as preview (preview)}
     <AnnotationPreview {preview} image={sample} {saveAs} />
 {/each}
 {#if drag.box}
     <NormalizedBoxRect box={drag.box} image={sample} dashed />
 {/if}
-{#each instances.boxes as box, index (index)}
+{#each instances.boxes as box (box)}
     <NormalizedBoxRect {box} image={sample} />
 {/each}
 {#if isDrawingBox}
@@ -56,13 +62,11 @@
         onpointerdown={drag.onPointerDown}
         onpointermove={drag.onPointerMove}
         onpointerup={onPointerUp}
-        onpointercancel={(event) => {
-            drag.onPointerCancel(event);
-            onBoxDrawn();
-        }}
+        onpointercancel={onPointerCancel}
     />
 {/if}
-{#each instances.predictions as preview, index (index)}
+<!-- After the interaction rect, so the delete buttons stay clickable. -->
+{#each instances.predictions as preview, index (preview)}
     <InstanceDeleteButton
         bbox={preview.bbox}
         {index}
