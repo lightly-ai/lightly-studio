@@ -113,7 +113,7 @@ export function drawProjectionOverlay(
             context.strokeStyle = color;
             context.lineWidth = 2;
             context.beginPath();
-            for (const segment of projectCuboid(cuboid, projection)) {
+            for (const segment of projectCuboidWireframe(cuboid, projection)) {
                 context.moveTo(segment.start.x, segment.start.y);
                 context.lineTo(segment.end.x, segment.end.y);
             }
@@ -300,56 +300,75 @@ export function projectCuboid(
     });
 }
 
-function projectCuboidFaces(
+/** Projects every cuboid edge, keeping the complete wireframe visible in the overlay. */
+export function projectCuboidWireframe(
+    cuboid: Cuboid3dAnnotationView,
+    projection: CameraProjectionView
+): ProjectedSegment[] {
+    const corners = cuboidCorners(cuboid).map((corner) =>
+        clampToNearPlane(toCameraPoint(corner, projection))
+    );
+    return CUBOID_EDGES.flatMap(([startIndex, endIndex]) => {
+        const start = projectCameraPoint(corners[startIndex], projection);
+        const end = projectCameraPoint(corners[endIndex], projection);
+        if (!start || !end) return [];
+        const clipped = clipToImage(start, end, projection);
+        return clipped ? [clipped] : [];
+    });
+}
+
+function clampToNearPlane(point: CameraPoint): CameraPoint {
+    return [point[0], point[1], Math.max(point[2], NEAR_PLANE)];
+}
+
+export function projectCuboidFaces(
     cuboid: Cuboid3dAnnotationView,
     projection: CameraProjectionView
 ): ProjectedPoint[][] {
     const corners = cuboidCorners(cuboid).map((corner) => toCameraPoint(corner, projection));
     return CUBOID_FACES.flatMap((face) => {
-        const projected = face.map((index) => {
-            const cameraPoint = corners[index];
-            return cameraPoint[2] > NEAR_PLANE ? projectCameraPoint(cameraPoint, projection) : null;
-        });
-        if (projected.some((point) => point === null)) return [];
-        const clipped = clipPolygonToImage(
-            projected as ProjectedPoint[],
-            projection.width,
-            projection.height
-        );
-        return clipped.length >= 3 ? [clipped] : [];
+        const clippedToNearPlane = clipPolygonToNearPlane(face.map((index) => corners[index]));
+        if (clippedToNearPlane.length < 3) return [];
+        const projected = clippedToNearPlane.map((point) => projectCameraPoint(point, projection));
+        const faceInImage = projected.filter((point): point is ProjectedPoint => point !== null);
+        // Keep every valid face that can intersect the image. The canvas clips the
+        // polygon at its own bounds; clipping it here can incorrectly drop a face
+        // when the projected polygon is partially outside the image.
+        return faceInImage.length >= 3 && polygonIntersectsImage(faceInImage, projection)
+            ? [faceInImage]
+            : [];
     });
 }
 
-function clipPolygonToImage(
-    polygon: ProjectedPoint[],
-    width: number,
-    height: number
-): ProjectedPoint[] {
-    let clipped = polygon;
-    for (const [axis, limit, keepGreater] of [
-        ['x', 0, true],
-        ['x', width, false],
-        ['y', 0, true],
-        ['y', height, false]
-    ] as const) {
-        const input = clipped;
-        clipped = [];
-        for (let index = 0; index < input.length; index += 1) {
-            const start = input[index];
-            const end = input[(index + 1) % input.length];
-            const startInside = keepGreater ? start[axis] >= limit : start[axis] <= limit;
-            const endInside = keepGreater ? end[axis] >= limit : end[axis] <= limit;
-            if (startInside !== endInside) {
-                const ratio = (limit - start[axis]) / (end[axis] - start[axis]);
-                clipped.push({
-                    x: start.x + ratio * (end.x - start.x),
-                    y: start.y + ratio * (end.y - start.y)
-                });
-            }
-            if (endInside) clipped.push(end);
+function clipPolygonToNearPlane(polygon: CameraPoint[]): CameraPoint[] {
+    const clipped: CameraPoint[] = [];
+    for (let index = 0; index < polygon.length; index += 1) {
+        const start = polygon[index];
+        const end = polygon[(index + 1) % polygon.length];
+        const startInside = start[2] > NEAR_PLANE;
+        const endInside = end[2] > NEAR_PLANE;
+        if (startInside !== endInside) {
+            const ratio = (NEAR_PLANE - start[2]) / (end[2] - start[2]);
+            clipped.push([
+                start[0] + ratio * (end[0] - start[0]),
+                start[1] + ratio * (end[1] - start[1]),
+                NEAR_PLANE
+            ]);
         }
+        if (endInside) clipped.push(end);
     }
     return clipped;
+}
+
+function polygonIntersectsImage(
+    polygon: readonly ProjectedPoint[],
+    projection: CameraProjectionView
+): boolean {
+    const minX = Math.min(...polygon.map(({ x }) => x));
+    const maxX = Math.max(...polygon.map(({ x }) => x));
+    const minY = Math.min(...polygon.map(({ y }) => y));
+    const maxY = Math.max(...polygon.map(({ y }) => y));
+    return minX <= projection.width && maxX >= 0 && minY <= projection.height && maxY >= 0;
 }
 
 function clipToNearPlane(start: CameraPoint, end: CameraPoint): [CameraPoint, CameraPoint] | null {

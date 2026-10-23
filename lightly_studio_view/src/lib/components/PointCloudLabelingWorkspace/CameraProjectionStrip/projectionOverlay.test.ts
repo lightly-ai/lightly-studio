@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { CameraProjectionView } from '$lib/api/lightly_studio_local/types.gen';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
-import { projectCuboid, projectPoint, projectPointCloud } from './projectionOverlay';
+import {
+    projectCuboid,
+    projectCuboidFaces,
+    projectCuboidWireframe,
+    projectPoint,
+    projectPointCloud
+} from './projectionOverlay';
 
 const projection: CameraProjectionView = {
     width: 100,
@@ -68,5 +74,49 @@ describe('projectionOverlay', () => {
         );
 
         expect(segments).toEqual([]);
+    });
+
+    it('keeps a cuboid face when only part of it is in front of the camera', () => {
+        const faces = projectCuboidFaces(
+            {
+                frame_id: 'scene',
+                px: 0,
+                py: 0,
+                pz: 0.5,
+                qx: 0,
+                qy: 0,
+                qz: 0,
+                qw: 1,
+                sx: 2,
+                sy: 2,
+                sz: 2,
+                interpolated: false
+            },
+            projection
+        );
+
+        expect(faces.length).toBeGreaterThan(0);
+    });
+
+    it('keeps the cuboid wireframe when some corners are behind the camera', () => {
+        const segments = projectCuboidWireframe(
+            {
+                frame_id: 'scene',
+                px: 0,
+                py: 0,
+                pz: 0.5,
+                qx: 0,
+                qy: 0,
+                qz: 0,
+                qw: 1,
+                sx: 2,
+                sy: 2,
+                sz: 2,
+                interpolated: false
+            },
+            projection
+        );
+
+        expect(segments.length).toBeGreaterThan(0);
     });
 });
