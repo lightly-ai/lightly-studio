@@ -90,10 +90,8 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         void infer({ boxes: [box] });
     };
 
-    const canSave = () => preview !== null && !isSaving;
-
     const save = async () => {
-        if (!preview || !canSave()) return;
+        if (!preview || isSaving) return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
         const className = pickClassName({ selected: annotationClass, hint: hintedClass });
@@ -123,7 +121,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
             return preview;
         },
         get canSave() {
-            return canSave();
+            return preview !== null && !isSaving;
         },
         addPoint,
         selectBox,
