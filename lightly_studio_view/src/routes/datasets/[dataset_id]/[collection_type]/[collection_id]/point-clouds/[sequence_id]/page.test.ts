@@ -9,7 +9,8 @@ import type { PageData } from './$types';
 let summaryData: { file_name: string; lidar_channels: []; camera_channels: [] } | undefined;
 const adjacentSequences = vi.hoisted(() => ({
     data: undefined as
-        { previous_sample_id: string | null; next_sample_id: string | null } | undefined
+        | { previous_sample_id: string | null; next_sample_id: string | null }
+        | undefined
 }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));

@@ -1,5 +1,10 @@
 export type SceneNavigationAction =
-    'forward' | 'backward' | 'left' | 'right' | 'rotate-left' | 'rotate-right';
+    | 'forward'
+    | 'backward'
+    | 'left'
+    | 'right'
+    | 'rotate-left'
+    | 'rotate-right';
 
 export interface SceneNavigationEvent {
     action: SceneNavigationAction;

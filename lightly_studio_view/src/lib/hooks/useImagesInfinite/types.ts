@@ -45,4 +45,5 @@ export type SamplesQueryKey = readonly [
 ];
 
 export type ImageSortExpr =
-    ImageSortFieldExpr | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);
+    | ImageSortFieldExpr
+    | ({ source: 'evaluation_metric' } & EvaluationMetricSortExpr);

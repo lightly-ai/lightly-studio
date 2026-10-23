@@ -30,7 +30,8 @@ vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
 
 const renderProvider = () => {
     let result:
-        { created: PointCloudWorkspaceContext; used: PointCloudWorkspaceContext } | undefined;
+        | { created: PointCloudWorkspaceContext; used: PointCloudWorkspaceContext }
+        | undefined;
     render(ProviderHarness, {
         datasetId: 'dataset-1',
         sequenceId: 'seq-1',
