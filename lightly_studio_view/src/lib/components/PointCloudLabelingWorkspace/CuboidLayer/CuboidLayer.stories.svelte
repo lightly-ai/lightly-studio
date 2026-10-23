@@ -1,11 +1,13 @@
 <script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
+    import type { ComponentProps } from 'svelte';
     import { Canvas, T } from '@threlte/core';
     import { OrbitControls } from '@threlte/extras';
     import * as THREE from 'three';
     import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
     import { createCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import CuboidLayer from './CuboidLayer.svelte';
+    import { createCuboidTransformState } from './cuboidTransformState';
     import CuboidTooltipOverlay from './CuboidTooltip/CuboidTooltipOverlay.svelte';
 
     const classes = [
@@ -40,6 +42,12 @@
         });
     });
 
+    function createStoryTransforms(cuboids: ComponentProps<typeof CuboidLayer>['cuboids']) {
+        const transforms = createCuboidTransformState({ onTransform: async () => true });
+        transforms.reconcile(cuboids);
+        return transforms;
+    }
+
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/CuboidLayer',
         component: CuboidLayer,
@@ -47,7 +55,7 @@
         parameters: { layout: 'fullscreen' },
         args: {
             annotationClasses: classes,
-            pointCloudBounds: bounds,
+            groundPlaneBounds: bounds,
             selectedAnnotationId: null,
             hoveredAnnotationId: null,
             activeTool: 'select' as const
@@ -68,6 +76,7 @@
 </script>
 
 {#snippet scene(args)}
+    {@const transforms = createStoryTransforms(args.cuboids ?? [])}
     <div
         class="relative h-screen w-screen bg-black"
         role="application"
@@ -92,6 +101,7 @@
             <T.GridHelper args={[24, 24, '#344054', '#202938']} rotation={[Math.PI / 2, 0, 0]} />
             <CuboidLayer
                 {...args}
+                {transforms}
                 {hoveredAnnotationId}
                 onhover={(id) => {
                     hoveredAnnotationId = id;

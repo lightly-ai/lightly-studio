@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, type Mock } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 import PointCloudAnnotationListItem from './PointCloudAnnotationListItem.svelte';
 
@@ -60,6 +60,42 @@ describe('PointCloudAnnotationListItem', () => {
                 annotationId: cuboid.id,
                 frameId: cuboid.frameId,
                 center: [99, -2, 1]
+            })
+        );
+    });
+
+    it('uses the current annotation prop as base after a viewport drag updates the geometry', async () => {
+        const onCuboidTransform: Mock = vi.fn();
+        const { rerender } = render(PointCloudAnnotationListItem, {
+            props: { ...defaultProps, isSelected: true, editable: true, onCuboidTransform }
+        });
+
+        // Panel sets X=99 and commits.
+        const xInput = screen.getByRole('spinbutton', { name: 'location x' });
+        fireEvent.focus(xInput);
+        fireEvent.input(xInput, { target: { value: '99' } });
+        fireEvent.blur(xInput);
+
+        // Viewport drag updates the annotation prop (as $annotations would after transforms.commit).
+        const draggedCuboid = { ...cuboid, center: [-20.69, 12.12, 0] as [number, number, number] };
+        await rerender({
+            ...defaultProps,
+            cuboid: draggedCuboid,
+            isSelected: true,
+            editable: true,
+            onCuboidTransform
+        });
+
+        // Second panel commit: L=12. Must build from drag geometry, not the first panel commit.
+        const lInput = screen.getByRole('spinbutton', { name: 'dimension l' });
+        fireEvent.focus(lInput);
+        fireEvent.input(lInput, { target: { value: '12' } });
+        fireEvent.blur(lInput);
+
+        expect(onCuboidTransform).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                center: [-20.69, 12.12, 0],
+                size: [12, cuboid.size[1], cuboid.size[2]]
             })
         );
     });

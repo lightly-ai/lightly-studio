@@ -31,22 +31,10 @@ export function useAnnotationDetailsEditing(
         rz: ''
     });
     let lastEmittedRotation: AnnotationInput['rotation'] | null = null;
-    // Accumulates uncommitted field edits so that a second commit does not
-    // rebuild geometry from the stale prop while a previous save is in-flight.
-    let pendingAnnotation: AnnotationInput | null = null;
-    // Tracks the identity of the annotation currently shown so that
-    // pendingAnnotation is cleared only when a different cuboid is selected,
-    // not when the same cuboid is refetched with a new object reference.
-    let lastAnnotationId: string | null = null;
     let valueOnFocus = '';
 
     $effect(() => {
         const annotation = getAnnotation();
-
-        if (annotation.id !== lastAnnotationId) {
-            lastAnnotationId = annotation.id;
-            pendingAnnotation = null;
-        }
 
         for (const [index, field] of ['x', 'y', 'z'].entries()) {
             const name = field as FieldName;
@@ -89,12 +77,10 @@ export function useAnnotationDetailsEditing(
             Number.isFinite(value) &&
             isValidFieldValue(field, value)
         ) {
-            const base = pendingAnnotation ?? getAnnotation();
-            const updated = updateAnnotationGeometry(base, field, value, inputValues);
+            const updated = updateAnnotationGeometry(getAnnotation(), field, value, inputValues);
             if (field === 'rx' || field === 'ry' || field === 'rz') {
                 lastEmittedRotation = updated.rotation;
             }
-            pendingAnnotation = updated;
             onAnnotationChange(updated);
         }
         focusedField = null;

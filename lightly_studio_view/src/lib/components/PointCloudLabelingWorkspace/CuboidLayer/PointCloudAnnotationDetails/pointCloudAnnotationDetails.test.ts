@@ -206,24 +206,4 @@ describe('PointCloudAnnotationDetails - editable mode', () => {
             })
         );
     });
-
-    it('preserves first field change when a second field is committed before save completes', () => {
-        const onAnnotationChange = vi.fn();
-        render(PointCloudAnnotationDetails, {
-            props: { ...defaultEditableProps, onAnnotationChange }
-        });
-
-        const xInput = screen.getByRole('spinbutton', { name: 'location x' });
-        fireEvent.focus(xInput);
-        fireEvent.input(xInput, { target: { value: '5' } });
-        fireEvent.blur(xInput);
-
-        const yInput = screen.getByRole('spinbutton', { name: 'location y' });
-        fireEvent.focus(yInput);
-        fireEvent.input(yInput, { target: { value: '3' } });
-        fireEvent.blur(yInput);
-
-        const lastCall = onAnnotationChange.mock.calls.at(-1)?.[0];
-        expect(lastCall).toMatchObject({ center: [5, 3, 1.234] });
-    });
 });

@@ -27,6 +27,7 @@
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
+    import { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
     import type { Vector3, WorkspaceTool } from './domain';
 
     /**
@@ -308,6 +309,20 @@
         onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
     });
 
+    const transforms = createCuboidTransformState({
+        onTransform: (payload) => handleCuboidTransform(payload)
+    });
+    const { annotations } = transforms;
+
+    $effect(() => {
+        transforms.reconcile(sceneCuboids);
+    });
+
+    const panelCuboidTransform: typeof handleCuboidTransform = async (payload) => {
+        await transforms.commit(payload);
+        return true;
+    };
+
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await workspace.tickDetails.refetch({ throwOnError: true });
@@ -371,16 +386,16 @@
                                     colorMode={displayedColorMode}
                                     pointCloudBounds={sceneSnapshot.frame.bounds ?? undefined}
                                     fitKey={sceneSnapshot.fitKey}
-                                    cuboids={sceneCuboids}
+                                    cuboids={$annotations}
                                     {annotationClasses}
                                     {annotationSources}
+                                    {transforms}
                                     selectedAnnotationId={selectedCuboidId}
                                     hoveredAnnotationId={hoveredCuboidId}
                                     activeTool={effectiveTool}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
                                     onCreateCuboid={handleCreateCuboid}
-                                    onCuboidTransform={handleCuboidTransform}
                                     onPreviousTick={goToPreviousFrame}
                                     onNextTick={goToNextFrame}
                                 />
@@ -449,14 +464,14 @@
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
                     <PointCloudRightSidePanel
-                        {cuboids}
+                        cuboids={$annotations}
                         {annotationClasses}
                         {annotationSources}
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}
                         editable={$isEditingMode}
-                        onCuboidTransform={handleCuboidTransform}
+                        onCuboidTransform={panelCuboidTransform}
                     />
                 </Pane>
             </PaneGroup>
