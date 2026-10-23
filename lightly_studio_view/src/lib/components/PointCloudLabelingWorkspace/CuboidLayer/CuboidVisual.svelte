@@ -53,7 +53,8 @@
 </script>
 
 <T is={LineSegments2} geometry={item.geometry}>
-    <T is={LineMaterial} color={edgeColor} linewidth={2} />
+    <!-- Keep the annotation outline visible through dense point-cloud regions. -->
+    <T is={LineMaterial} color={edgeColor} linewidth={2} depthTest={false} />
 </T>
 <T.ArrowHelper
     args={[new Vector3(1, 0, 0), item.headingOrigin, item.arrowLength, baseColor, 0.35, 0.2]}
