@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver, collection_resolver
 from tests.helpers_resolvers import (
@@ -106,3 +107,61 @@ def test_get_unembedded_annotation_ids__orders_by_image_path(
     )
 
     assert unembedded_ids == [annotation_a.sample_id, annotation_b.sample_id]
+
+
+def test_get_unembedded_annotation_ids__none_model_returns_all_croppable(
+    db_session: Session,
+) -> None:
+    """Without a model every croppable annotation is returned, classifications are not."""
+    collection = create_collection(session=db_session)
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    image_a = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/b.png"
+    )
+    image_c = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/c.png"
+    )
+    detection = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image_a.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image_b.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.CLASSIFICATION,
+    )
+    embedded_detection = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image_c.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=embedded_detection.sample_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        embedding=[0.1, 0.2, 0.3],
+    )
+
+    ids = annotation_resolver.get_unembedded_annotation_ids(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=None,
+    )
+
+    assert ids == [detection.sample_id, embedded_detection.sample_id]
