@@ -9,13 +9,11 @@
     import SmartSelectPoints from './SmartSelectPoints.svelte';
     import { getClassNameAtPoint } from './SmartSelectOverlay.helpers';
     import { useDragBox } from '$lib/components/SampleDetails/useDragBox/useDragBox.svelte';
-    import { useSmartSelect } from './useSmartSelect.svelte';
+    import type { useSmartSelect } from './useSmartSelect.svelte';
 
     type SaveAs = ComponentProps<typeof AnnotationPreview>['saveAs'];
 
     interface Props {
-        collectionId: string;
-        sampleId: string;
         sample: { width: number; height: number };
         // Visible annotations, so the class hint never comes from a hidden one.
         annotations: AnnotationView[];
@@ -23,55 +21,24 @@
         // Lets pan events through while keeping the prompts.
         isPanning: boolean;
         interactionRect?: SVGRectElement | null;
-        refetch: () => void;
         saveAs: SaveAs;
-        annotationClass?: string | null;
-        annotationSource?: string | null;
-        onActionsChange: (actions: {
-            canSave: boolean;
-            isPending: boolean;
-            needsPositivePoint: boolean;
-            save: () => void;
-            clear: () => void;
-        }) => void;
+        // Owned by the parent, so the pop-up reads the same prompts.
+        smartSelect: ReturnType<typeof useSmartSelect>;
     }
 
     let {
-        collectionId,
-        sampleId,
         sample,
         annotations,
         scale,
         isPanning,
         interactionRect = $bindable(),
-        refetch,
         saveAs,
-        annotationClass,
-        annotationSource,
-        onActionsChange
+        smartSelect
     }: Props = $props();
 
-    const smartSelect = useSmartSelect(() => ({
-        collectionId,
-        sampleId,
-        saveAs,
-        annotationClass,
-        annotationSource,
-        onSaved: refetch
-    }));
     const drag = useDragBox(() => ({ interactionRect }));
     const save = () => void smartSelect.save();
     const { settingsStore } = useSettings();
-
-    $effect(() => {
-        onActionsChange({
-            canSave: smartSelect.canSave,
-            isPending: smartSelect.isPending,
-            needsPositivePoint: smartSelect.needsPositivePoint,
-            save,
-            clear: smartSelect.clear
-        });
-    });
 
     const onPointerUp = (event: PointerEvent & { currentTarget: SVGRectElement }) => {
         const { start, box } = drag.onPointerUp(event);

@@ -1,12 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import SmartSelectOverlay from './SmartSelectOverlay.svelte';
 
 const mocks = vi.hoisted(() => ({
     smartSelect: {
         points: [] as { x: number; y: number; positive: boolean }[],
-        preview: null as object | null,
+        preview: null as AnnotationPreview | null,
         canSave: false,
         isPending: false,
         needsPositivePoint: false,
@@ -17,21 +18,17 @@ const mocks = vi.hoisted(() => ({
     }
 }));
 
-vi.mock('./useSmartSelect.svelte', () => ({ useSmartSelect: () => mocks.smartSelect }));
 vi.mock('$lib/hooks/useSettings', () => ({
     useSettings: () => ({ settingsStore: writable({ key_go_back: 'Escape' }) })
 }));
 
 const defaultProps = {
-    collectionId: 'collection-1',
-    sampleId: 'sample-1',
     sample: { width: 100, height: 100 },
     annotations: [],
     scale: 1,
     isPanning: false,
-    refetch: vi.fn(),
     saveAs: 'mask' as const,
-    onActionsChange: vi.fn()
+    smartSelect: mocks.smartSelect
 };
 
 const renderOverlay = (props = {}) => {
