@@ -49,9 +49,37 @@ view of the GUI.
 Object embeddings are on by default; the `add_annotations_from_*` methods accept
 `embed_annotations=False` to skip them.
 
-!!! warning "Editing an annotation does not update its embedding"
-    An object keeps the embedding of its original crop. If you move or resize a box,
-    LightlyStudio does **not** recompute its embedding. Support for this is planned.
+### Embed images and objects later
+
+Use `compute_embeddings()` to embed the samples that have no embedding. This is useful
+after you add images with `embed=False`, or after you create annotations in the GUI.
+
+```python
+dataset.compute_embeddings()
+```
+
+The method embeds the images first. Then it embeds the objects of every annotation source.
+It skips samples that already have an embedding. A second call does nothing.
+
+It has two flags:
+
+- `embed_annotations` (default `True`): Embed the objects. Set it to `False` to embed only images.
+- `recompute_annotations` (default `False`): Embed every object again and replace its
+  stored embedding.
+
+If you move or resize a box, LightlyStudio does **not** update its embedding.
+Call `compute_embeddings(recompute_annotations=True)` after you edit boxes.
+
+If the files of a batch are missing or broken, LightlyStudio logs a warning and
+continues with the next batch. If no embedding model is available, the method raises
+`NoUsableEmbedderError`.
+
+!!! note "After you embed again"
+    - Typicality metadata and similarity metadata are not refreshed. Compute them again.
+    - An active lasso region on the embedding plot is not refreshed.
+    - Do not edit annotations in the GUI while `compute_embeddings` runs.
+    - On DuckDB, each embedded row is rewritten. This uses about 3.3 KB per
+      512-dimension embedding. `CHECKPOINT` does not reclaim this space.
 
 ## Built-in Embedding Models
 

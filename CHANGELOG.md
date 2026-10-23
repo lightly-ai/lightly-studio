@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python SDK: `ImageDataset.compute_embeddings()` embeds the images and annotations that have no embedding, for example after adding them with `embed=False` or creating annotations in the GUI. Pass `recompute_annotations=True` to re-embed every annotation.
 - Disabled buttons now show a tooltip explaining why they cannot be clicked.
 - Added a filter panel to the captions tab, with tag and metadata filters. The footer now counts the number of active captions.
 - Delete an evaluation from the evaluation panel. Grid filters and sorting that use the deleted evaluation are removed.
