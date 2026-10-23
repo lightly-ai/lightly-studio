@@ -132,6 +132,7 @@ export class AnnotationDetailsPage {
 
         await this.page.getByTestId('menu-trigger').click();
         await this.page.getByTestId('menu-settings').click();
+        await this.page.getByRole('tab', { name: 'Annotations' }).click();
 
         const toggle = this.page.locator('#show-annotation-text-labels');
 
