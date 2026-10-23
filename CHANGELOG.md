@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog.
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
 
 ### Security
