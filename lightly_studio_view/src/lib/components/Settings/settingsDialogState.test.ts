@@ -168,6 +168,17 @@ describe('SettingsDialogState', () => {
         expect(state.recordingShortcut).toBeNull();
     });
 
+    it('ignores Escape while recording', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        state.startRecording('hideAnnotations');
+
+        state.handleKeyDown(new KeyboardEvent('keydown', { key: 'Escape' }));
+
+        expect(state.shortcuts.hideAnnotations).toBe('v');
+        expect(state.recordingShortcut).toBe('hideAnnotations');
+    });
+
     it('ignores keydown when not recording', () => {
         const state = new SettingsDialogState();
         state.hydrate(TEST_SETTINGS);

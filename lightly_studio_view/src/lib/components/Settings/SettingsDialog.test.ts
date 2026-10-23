@@ -132,6 +132,19 @@ describe('SettingsDialog', () => {
         );
     });
 
+    it('should cancel recording on Escape and keep the dialog open', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const shortcutButton = screen.getByLabelText('Hide annotations');
+        await fireEvent.click(shortcutButton);
+        await fireEvent.keyDown(document, { key: 'Escape' });
+
+        expect(screen.queryByText('Press a key...')).not.toBeInTheDocument();
+        expect(shortcutButton).toHaveTextContent('v');
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+    });
+
     it('should open on the Shortcuts tab', async () => {
         render(SettingsDialog);
         await openDialog();
