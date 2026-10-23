@@ -38,6 +38,9 @@ vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
 vi.mock('$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte', () => ({
     useSmartSelect: () => ({ clear: vi.fn() })
 }));
+vi.mock('$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte', () => ({
+    useFindInstances: () => ({ clear: vi.fn() })
+}));
 // jsdom lacks the SVG matrix operations used to keep labels the same size while zooming.
 vi.mock('$lib/components/ZoomableContainer/unscale', () => ({ unscale: vi.fn() }));
 

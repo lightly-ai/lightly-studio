@@ -223,6 +223,22 @@ describe('SampleDetailsToolbar', () => {
         expect(view.getByRole('tooltip')).toHaveTextContent('Sends the image to fal.ai.');
     });
 
+    it('activates the find all instances tool', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Find all instances'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('find-instances');
+    });
+
+    it('tells that find all instances sends the image to fal.ai', async () => {
+        const view = render(SampleDetailsToolbar);
+
+        await fireEvent.pointerEnter(view.getByLabelText('Find all instances').parentElement!);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent('Sends the image to fal.ai.');
+    });
+
     it('resets the annotation type of the previous tool in smart select', () => {
         mockSampleDetailsToolbarContext.status = 'smart-select';
         mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
