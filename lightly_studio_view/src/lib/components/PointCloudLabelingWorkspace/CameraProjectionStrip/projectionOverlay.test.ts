@@ -6,7 +6,8 @@ import {
     projectCuboidFaces,
     projectCuboidWireframe,
     projectPoint,
-    projectPointCloud
+    projectPointCloud,
+    projectPointCloudData
 } from './projectionOverlay';
 
 const projection: CameraProjectionView = {
@@ -29,6 +30,16 @@ describe('projectionOverlay', () => {
             count: 2
         };
         expect(projectPointCloud(batch, projection)).toEqual([{ x: 50, y: 40 }]);
+    });
+
+    it('filters visible points before limiting the projected point count', () => {
+        const batch: PointBatch = {
+            positions: new Float32Array([20, 0, 2, 0, 0, 2, 21, 0, 2, 1, 0, 2]),
+            intensities: new Float32Array(4),
+            count: 4
+        };
+
+        expect(projectPointCloudData(batch, projection, 2)).toHaveLength(2);
     });
 
     it('clips a cuboid edge when the cuboid intersects the image boundary', () => {

@@ -163,7 +163,30 @@ export function projectPoint(
     point: readonly [number, number, number],
     projection: CameraProjectionView
 ): ProjectedPoint | null {
-    return projectCameraPoint(toCameraPoint(point, projection), projection);
+    return projectScenePoint(point, projection)?.screenPoint ?? null;
+}
+
+interface ProjectedScenePoint {
+    cameraPoint: CameraPoint;
+    screenPoint: ProjectedPoint;
+}
+
+function projectScenePoint(
+    point: readonly [number, number, number],
+    projection: CameraProjectionView
+): ProjectedScenePoint | null {
+    const cameraPoint = toCameraPoint(point, projection);
+    const [cameraX, cameraY, cameraZ] = cameraPoint;
+    if (cameraZ < NEAR_PLANE) return null;
+
+    const k = projection.camera_matrix;
+    return {
+        cameraPoint,
+        screenPoint: {
+            x: (k[0] * cameraX + k[1] * cameraY + k[2] * cameraZ) / cameraZ,
+            y: (k[3] * cameraX + k[4] * cameraY + k[5] * cameraZ) / cameraZ
+        }
+    };
 }
 
 function toCameraPoint(
@@ -179,9 +202,10 @@ function toCameraPoint(
 }
 
 function projectCameraPoint(
-    [cameraX, cameraY, cameraZ]: CameraPoint,
+    cameraPoint: CameraPoint,
     projection: CameraProjectionView
 ): ProjectedPoint | null {
+    const [cameraX, cameraY, cameraZ] = cameraPoint;
     if (cameraZ < NEAR_PLANE) return null;
 
     const k = projection.camera_matrix;
@@ -227,39 +251,48 @@ export function projectPointCloudData(
     maxPoints = 5000,
     includeDensity = false
 ): ProjectedPointData[] {
-    const step = Math.max(1, Math.ceil(batch.count / maxPoints));
     const densityByCell = includeDensity ? getDensityByCell(batch) : undefined;
-    const points: ProjectedPointData[] = [];
-    for (let index = 0; index < batch.count; index += step) {
+    const visiblePoints: Array<{
+        index: number;
+        position: readonly [number, number, number];
+        projected: ProjectedScenePoint;
+    }> = [];
+    for (let index = 0; index < batch.count; index++) {
         const offset = index * 3;
         const position: [number, number, number] = [
             batch.positions[offset],
             batch.positions[offset + 1],
             batch.positions[offset + 2]
         ];
-        const cameraPoint = toCameraPoint(position, projection);
-        const point = projectCameraPoint(cameraPoint, projection);
+        const projected = projectScenePoint(position, projection);
         if (
-            point &&
-            point.x >= 0 &&
-            point.x <= projection.width &&
-            point.y >= 0 &&
-            point.y <= projection.height
+            projected &&
+            projected.screenPoint.x >= 0 &&
+            projected.screenPoint.x <= projection.width &&
+            projected.screenPoint.y >= 0 &&
+            projected.screenPoint.y <= projection.height
         ) {
-            points.push({
-                ...point,
-                depth: cameraPoint[2],
-                height: position[2],
-                intensity: batch.intensities[index],
-                distance: Math.hypot(...position),
-                density: densityByCell
-                    ? Math.log1p(densityByCell.get(getCellKey(position)) ?? 1)
-                    : 0,
-                rgb: batch.colors
-                    ? [batch.colors[offset], batch.colors[offset + 1], batch.colors[offset + 2]]
-                    : undefined
-            });
+            visiblePoints.push({ index, position, projected });
         }
+    }
+
+    const step = Math.max(1, Math.ceil(visiblePoints.length / maxPoints));
+    const points: ProjectedPointData[] = [];
+    for (let visibleIndex = 0; visibleIndex < visiblePoints.length; visibleIndex += step) {
+        const { index, position, projected } = visiblePoints[visibleIndex];
+        const offset = index * 3;
+        const { cameraPoint, screenPoint } = projected;
+        points.push({
+            ...screenPoint,
+            depth: cameraPoint[2],
+            height: position[2],
+            intensity: batch.intensities[index],
+            distance: Math.hypot(...position),
+            density: densityByCell ? Math.log1p(densityByCell.get(getCellKey(position)) ?? 1) : 0,
+            rgb: batch.colors
+                ? [batch.colors[offset], batch.colors[offset + 1], batch.colors[offset + 2]]
+                : undefined
+        });
     }
     return points;
 }
