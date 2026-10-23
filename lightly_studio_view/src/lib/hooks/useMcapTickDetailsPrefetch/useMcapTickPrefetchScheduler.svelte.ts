@@ -6,7 +6,6 @@ import type { McapTickPrefetchSchedulerParams } from './types';
 
 const DEFAULT_CHUNK_SIZE = 10;
 const DEFAULT_DELAY_MS = 200;
-const RETRY_DELAY_MS = 1000;
 
 /**
  * Gradually fills the cache with ticks that may be needed soon.
@@ -40,10 +39,9 @@ export const useMcapTickPrefetchScheduler = ({
     // The same request ID means “continue filling the same buffer”.
     // A new request ID means “start a different buffer”, such as after a jump.
     let currentRequestId: string | undefined;
-    let cancelled = $state(false);
 
     $effect(() => {
-        if (!getEnabled() || cancelled) return;
+        if (!getEnabled()) return;
 
         const requestId = getRequestId();
         if (currentRequestId !== undefined && currentRequestId !== requestId) {
@@ -69,26 +67,8 @@ export const useMcapTickPrefetchScheduler = ({
         });
     });
 
-    const hasErrors = $derived(executor.errors.size > 0);
-    $effect(() => {
-        if (!getEnabled() || cancelled || !hasErrors) return;
-        const requestId = getRequestId();
-        const timer = setInterval(() => {
-            const indexes = getTickIndexes(getRanges(), getTicks().length).filter((index) =>
-                executor.errors.has(index)
-            );
-            if (indexes.length === 0) return;
-            void executor.prefetchRanges({
-                requestId,
-                ranges: indexes.map((index) => ({ startIndex: index, endIndex: index }))
-            });
-        }, RETRY_DELAY_MS);
-        return () => clearInterval(timer);
-    });
-
     const cancel = () => {
         // Stop delayed chunk loops as well as work already queued in the executor.
-        cancelled = true;
         sessionVersion += 1;
         executor.cancel();
     };

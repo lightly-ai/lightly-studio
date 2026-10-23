@@ -4,25 +4,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import Harness from './UseMcapTickPrefetchSchedulerHarness.svelte';
 
-const { prefetchRanges, cancel, setErrors } = vi.hoisted(() => ({
+const { prefetchRanges, cancel } = vi.hoisted(() => ({
     prefetchRanges: vi.fn().mockResolvedValue(undefined),
-    cancel: vi.fn(),
-    setErrors: vi.fn<(errors: Map<number, unknown>) => void>()
+    cancel: vi.fn()
 }));
 
 vi.mock('./useMcapTickDetailsPrefetch.svelte', () => ({
-    useMcapTickDetailsPrefetch: () => {
-        let errors = $state(new Map<number, unknown>());
-        setErrors.mockImplementation((nextErrors) => (errors = nextErrors));
-        return {
-            prefetchRanges,
-            cancel,
-            bufferedRanges: [],
-            get errors() {
-                return errors;
-            }
-        };
-    }
+    useMcapTickDetailsPrefetch: () => ({
+        prefetchRanges,
+        cancel,
+        bufferedRanges: []
+    })
 }));
 
 const ticks: TickView[] = Array.from({ length: 5 }, (_, seq_number) => ({
@@ -77,46 +69,6 @@ describe('useMcapTickPrefetchScheduler', () => {
             requestId: 'test',
             ranges: [{ startIndex: 2, endIndex: 3 }]
         });
-    });
-
-    it('retries a failed tick until buffering succeeds without advancing playback', async () => {
-        render(Harness, {
-            props: { ticks, ranges: [{ startIndex: 0, endIndex: 1 }], onReady: () => undefined }
-        });
-        flushSync();
-        setErrors(new Map([[1, new Error('Temporary loading failure')]]));
-        flushSync();
-
-        await vi.advanceTimersByTimeAsync(2000);
-        expect(prefetchRanges).toHaveBeenCalledTimes(3);
-        expect(prefetchRanges).toHaveBeenLastCalledWith({
-            requestId: 'test',
-            ranges: [{ startIndex: 1, endIndex: 1 }]
-        });
-
-        setErrors(new Map());
-        flushSync();
-        await vi.advanceTimersByTimeAsync(2000);
-        expect(prefetchRanges).toHaveBeenCalledTimes(3);
-    });
-
-    it('stops retrying failed ticks when buffering is cancelled', async () => {
-        let stop: (() => void) | undefined;
-        render(Harness, {
-            props: {
-                ticks,
-                ranges: [{ startIndex: 0, endIndex: 1 }],
-                onReady: (value) => (stop = value.cancel)
-            }
-        });
-        flushSync();
-        setErrors(new Map([[1, new Error('Temporary loading failure')]]));
-        flushSync();
-        stop?.();
-        flushSync();
-
-        await vi.advanceTimersByTimeAsync(2000);
-        expect(prefetchRanges).toHaveBeenCalledOnce();
     });
 
     it('keeps loading an earlier plan when playback moves the look-ahead window', async () => {
