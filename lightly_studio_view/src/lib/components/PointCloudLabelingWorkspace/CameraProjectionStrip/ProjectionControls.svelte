@@ -24,6 +24,17 @@
             (document.activeElement as HTMLElement | null)?.blur();
         }, 0);
     };
+
+    const isInteractiveTarget = (target: EventTarget | null) =>
+        target instanceof HTMLElement &&
+        target.closest(
+            'button, input, select, textarea, [role="button"], [role="combobox"], [role="slider"], [role="switch"], [contenteditable="true"]'
+        ) !== null;
+
+    const preventSpaceInPopover = (event: KeyboardEvent) => {
+        if (isInteractiveTarget(event.target)) return;
+        preventSpaceActivation(event);
+    };
 </script>
 
 <Popover.Root bind:open>
@@ -45,12 +56,12 @@
     </Popover.Trigger>
     <Popover.Content
         class="max-h-[calc(100vh-2rem)] w-72 space-y-4 overflow-y-auto p-4"
-        onkeydown={preventSpaceActivation}
+        onkeydown={preventSpaceInPopover}
     >
         <div class="space-y-1">
             <h3 class="text-sm font-medium">Camera projection settings</h3>
             <p class="text-xs text-muted-foreground">Adjust the camera overlay visibility.</p>
         </div>
-        <ProjectionSettingsFields {settings} {onChange} onKeydown={preventSpaceActivation} />
+        <ProjectionSettingsFields {settings} {onChange} onKeydown={preventSpaceInPopover} />
     </Popover.Content>
 </Popover.Root>

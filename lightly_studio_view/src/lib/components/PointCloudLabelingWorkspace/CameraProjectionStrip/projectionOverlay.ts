@@ -368,7 +368,7 @@ function clipToNearPlane(start: CameraPoint, end: CameraPoint): [CameraPoint, Ca
     const intersection: CameraPoint = [
         start[0] + t * (end[0] - start[0]),
         start[1] + t * (end[1] - start[1]),
-        NEAR_PLANE
+        NEAR_PLANE + Number.EPSILON
     ];
     return startInside ? [start, intersection] : [intersection, end];
 }

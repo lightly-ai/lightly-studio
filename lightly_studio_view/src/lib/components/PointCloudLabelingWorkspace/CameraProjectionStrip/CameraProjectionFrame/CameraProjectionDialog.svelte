@@ -38,8 +38,6 @@
 
     function handleKeydown(event: KeyboardEvent) {
         if (event.code !== 'Space' || event.repeat) return;
-        event.preventDefault();
-        event.stopPropagation();
         const target = event.target as HTMLElement;
         if (
             target.closest(
@@ -48,6 +46,8 @@
         ) {
             return;
         }
+        event.preventDefault();
+        event.stopPropagation();
         onPlaybackToggle?.();
     }
 </script>
