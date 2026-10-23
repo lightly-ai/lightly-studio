@@ -72,6 +72,8 @@ class ImageDataset:
   that are missing or stale.
 - `recompute_annotations=True`: re-embed every crop. This covers rows from before this change
   (no fingerprint) and a custom embedder that changed under the same name.
+- Stale detection lands in PR 4 (see "PR split"). Until then the default call fills missing crops
+  only, and `recompute_annotations=True` is the way to refresh edited boxes.
 - Returns nothing and logs counts, like `add_*` and `compute_typicality_metadata`.
 - The method on `ImageDataset` is a thin wrapper. The orchestration lives in a new module,
   embed/embed_dataset.py (`embed_samples.py` is 505 lines, over the 400-line limit).
@@ -253,9 +255,17 @@ Race:
 
 ## PR split
 
+The public API ships before the only breaking change. PRs 1 and 2 need no schema change.
+
 1. Image fill fix: resolve the model first, `LEFT JOIN` in both missing queries, chunked fetch.
-   No schema change.
-2. Store the crop fingerprint: column, Postgres revision, BREAKING CHANGELOG entry, fingerprint
-   selected with the crop and written with the vector, race test.
-3. Missing-or-stale selection, upsert helper, tests on both backends, Postgres 10M measurement.
-4. `compute_embeddings` on ImageDataset, in embed/embed_dataset.py, error handling, docs, CHANGELOG.
+   CHANGELOG `Changed`: the first `add_*` with `embed=True` on a dataset added with `embed=False`
+   now embeds the earlier images too.
+2. `compute_embeddings` on ImageDataset, in embed/embed_dataset.py. Fills missing images and
+   crops. `recompute_annotations=True` re-embeds every crop through the new upsert helper. Error
+   handling, docs, CHANGELOG `Added`.
+3. Store the crop fingerprint: column, Postgres revision, BREAKING CHANGELOG entry, fingerprint
+   selected with the crop and written with the vector, race test. The PR title starts with
+   `BREAKING:`, as the CHANGELOG entries do, for example
+   `BREAKING: Store the crop fingerprint with annotation embeddings`.
+4. Missing-or-stale selection, tests on both backends, Postgres 10M measurement.
+   `compute_embeddings` picks up edited boxes by default. CHANGELOG `Changed`.
