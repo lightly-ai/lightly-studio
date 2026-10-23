@@ -171,12 +171,12 @@ def _camera_projections(
             if projection_timestamp_ns is None:
                 continue
             if projection_timestamp_ns not in dynamic_transforms_by_timestamp:
-                dynamic_transforms_by_timestamp[
-                    projection_timestamp_ns
-                ] = load_dynamic_transforms.load_dynamic_transforms_near(
-                    session=session,
-                    recording_id=recording_id,
-                    timestamp_ns=projection_timestamp_ns,
+                dynamic_transforms_by_timestamp[projection_timestamp_ns] = (
+                    load_dynamic_transforms.load_dynamic_transforms_near(
+                        session=session,
+                        recording_id=recording_id,
+                        timestamp_ns=projection_timestamp_ns,
+                    )
                 )
             matrix = _get_camera_projection_matrix(
                 reader=reader,
