@@ -11,9 +11,11 @@ from tqdm import tqdm
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.embed import default_embedder, embedding_storage
+from lightly_studio.embed.errors import NoUsableEmbedderError
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
+    collection_resolver,
     image_resolver,
 )
 from lightly_studio.utils import batching
@@ -26,6 +28,52 @@ _IMAGE_EMBED_BATCH_SIZE = 1024
 # Crops are embedded in chunks so an image's annotations tend to land in the same chunk,
 # keeping a single open per image.
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
+
+
+def compute_embeddings(
+    session: Session,
+    collection_id: UUID,
+    embed_annotations: bool,
+    recompute_annotations: bool,
+) -> None:
+    """Embeds the images without an embedding, then the annotation crops.
+
+    A chunk where every file failed is logged and skipped.
+
+    Args:
+        session: Database session for resolver operations.
+        collection_id: The image collection to embed.
+        embed_annotations: If True, the crops of every annotation source are embedded too.
+        recompute_annotations: If True, every croppable annotation is re-embedded.
+            Otherwise only annotations without an embedding are embedded.
+
+    Raises:
+        NoUsableEmbedderError: If samples need an embedding and no embedder is available.
+    """
+    image_count = embed_missing_images(
+        session=session, collection_id=collection_id, skip_failed_chunks=True
+    )
+    if image_count is None:
+        raise NoUsableEmbedderError("No image embedder is available to embed the images.")
+
+    annotation_count = 0
+    if embed_annotations:
+        for annotation_source in collection_resolver.get_annotation_collections(
+            session=session, parent_collection_id=collection_id
+        ):
+            stored = embed_annotation_crops(
+                session=session,
+                annotation_collection_id=annotation_source.collection_id,
+                recompute=recompute_annotations,
+                skip_failed_chunks=True,
+            )
+            if stored is None:
+                raise NoUsableEmbedderError(
+                    "No crop embedder is available to embed the annotations of the "
+                    f"annotation source {annotation_source.name!r}."
+                )
+            annotation_count += stored
+    logger.info("Embedded %d images and %d annotations.", image_count, annotation_count)
 
 
 def embed_missing_images(

@@ -780,6 +780,34 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.COCO_CAPTION
         )
 
+    def compute_embeddings(
+        self, embed_annotations: bool = True, recompute_annotations: bool = False
+    ) -> None:
+        """Embeds images and annotation crops that have no embedding.
+
+        Use it after adding images with `embed=False`, or after creating annotations
+        in the GUI. A chunk where every file failed is logged and skipped.
+
+        Until stale embeddings are detected, an edited box keeps its old embedding.
+        Pass `recompute_annotations=True` to re-embed it.
+
+        Args:
+            embed_annotations: If True, embed the annotations of every annotation source.
+            recompute_annotations: If True, re-embed every annotation, replacing the
+                stored embeddings. Otherwise only annotations without an embedding
+                are embedded. Has no effect when `embed_annotations` is False.
+
+        Raises:
+            NoUsableEmbedderError: If images or annotations need an embedding and no
+                embedder is available for them.
+        """
+        embed_dataset.compute_embeddings(
+            session=self.session,
+            collection_id=self.collection_id,
+            embed_annotations=embed_annotations,
+            recompute_annotations=recompute_annotations,
+        )
+
     def evaluate(self, query: DatasetQuery | None = None) -> ImageDatasetEvaluate:
         """Return the evaluation facade for this dataset.
 
