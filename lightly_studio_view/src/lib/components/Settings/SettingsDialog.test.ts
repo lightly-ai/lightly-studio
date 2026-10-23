@@ -119,6 +119,19 @@ describe('SettingsDialog', () => {
         window.removeEventListener('keydown', appShortcutHandler);
     });
 
+    it('should close on Escape', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+        await waitFor(() =>
+            expect(
+                screen.queryByText('Configure your application preferences.')
+            ).not.toBeInTheDocument()
+        );
+    });
+
     it('should open on the Shortcuts tab', async () => {
         render(SettingsDialog);
         await openDialog();
