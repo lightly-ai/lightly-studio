@@ -40,7 +40,7 @@
             {scale}
             saveAs={assistedLabeling.state.saveAs}
             isDrawingBox={assistedLabeling.state.isDrawingInstancesBox}
-            onBoxDrawn={() => (assistedLabeling.state.isDrawingInstancesBox = false)}
+            onDrawEnd={() => (assistedLabeling.state.isDrawingInstancesBox = false)}
             instances={assistedLabeling.instances}
         />
     {/if}
