@@ -8,8 +8,7 @@ import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus'
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte';
 import { DEFAULT_MAX_INSTANCES } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
-
-const noop = (): void => undefined;
+import { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';
 
 interface UseAssistedLabelingToolsParams {
     collectionId: string;
@@ -25,15 +24,6 @@ class AssistedLabelingToolState {
     instancesPrompt = $state('');
     maxInstances = $state(DEFAULT_MAX_INSTANCES);
     isDrawingInstancesBox = $state(false);
-    instances = $state({
-        boxCount: 0,
-        isGenerating: false,
-        resultCount: 0,
-        canSave: false,
-        generate: noop,
-        save: noop,
-        clear: noop
-    });
 }
 
 // Shares the tool state between the pop-ups and the overlays, and falls back to the cursor
@@ -64,6 +54,19 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             onSaved: refetch
         };
     });
+    const instances = useFindInstances(() => {
+        const { collectionId, sampleId, refetch } = getParams();
+        return {
+            collectionId,
+            sampleId,
+            prompt: state.instancesPrompt,
+            maxInstances: state.maxInstances,
+            saveAs: state.saveAs,
+            annotationClass: instancesClass,
+            annotationSource: annotationLabelContext.annotationSource,
+            onSaved: refetch
+        };
+    });
 
     $effect(() => {
         if (
@@ -78,14 +81,18 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         if (activeTool !== 'smart-select') smartSelect.clear();
     });
 
-    // Leaving the tool, e.g. by a tool switch or Escape, ends box drawing.
+    // Leaving the tool, e.g. by a tool switch or Escape, ends box drawing and drops its results.
     $effect(() => {
-        if (activeTool !== 'find-instances') state.isDrawingInstancesBox = false;
+        if (activeTool !== 'find-instances') {
+            state.isDrawingInstancesBox = false;
+            instances.clear();
+        }
     });
 
     return {
         state,
         smartSelect,
+        instances,
         get activeTool() {
             return activeTool;
         },
