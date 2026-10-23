@@ -25,6 +25,7 @@ def store_embeddings(  # noqa: PLR0913
     embeddings: NDArray[np.float32],
     show_progress: bool = True,
     replace: bool = False,
+    source_fingerprints: list[str] | None = None,
 ) -> None:
     """Store embeddings in the database.
 
@@ -40,12 +41,24 @@ def store_embeddings(  # noqa: PLR0913
         show_progress: Whether to show a progress bar.
         replace: If True, overwrite an existing embedding of the same sample and model.
             If False, keep the existing embedding.
+        source_fingerprints: Optional fingerprints, one per sample ID. Row i is stored with
+            `embeddings[i]`. If None, the stored fingerprints are None.
 
     Raises:
-        ValueError: If the embeddings fail validation. See `_validate_and_coerce_embeddings`.
+        ValueError: If there is not one fingerprint per sample ID, or the embeddings fail
+            validation. See `_validate_and_coerce_embeddings`.
     """
+    if source_fingerprints is not None and len(source_fingerprints) != len(sample_ids):
+        raise ValueError(
+            f"Number of fingerprints ({len(source_fingerprints)}) does not match number of "
+            f"sample IDs ({len(sample_ids)})."
+        )
     embeddings = _validate_and_coerce_embeddings(
         session=session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
+    )
+
+    fingerprints: list[str | None] = (
+        [None] * len(sample_ids) if source_fingerprints is None else list(source_fingerprints)
     )
 
     with tqdm(
@@ -55,15 +68,17 @@ def store_embeddings(  # noqa: PLR0913
         disable=not show_progress,
     ) as progress:
         for batch in batching.batched(
-            items=zip(sample_ids, embeddings), batch_size=EMBEDDING_INSERTION_BATCH_SIZE
+            items=zip(sample_ids, embeddings, fingerprints),
+            batch_size=EMBEDDING_INSERTION_BATCH_SIZE,
         ):
             sample_embeddings = [
                 SampleEmbeddingCreate(
                     sample_id=sample_id,
                     embedding_model_id=model_id,
                     embedding=embedding,
+                    source_fingerprint=fingerprint,
                 )
-                for sample_id, embedding in batch
+                for sample_id, embedding, fingerprint in batch
             ]
             if replace:
                 sample_embedding_resolver.upsert_many(

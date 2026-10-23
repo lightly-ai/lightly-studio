@@ -327,3 +327,21 @@ def test_store_embeddings__replace_rejects_dimension_mismatch(
             show_progress=False,
             replace=True,
         )
+
+
+def test_store_embeddings__fingerprint_count_mismatch_raises(
+    db_session: Session, collection: CollectionTable
+) -> None:
+    model_id = _create_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    with pytest.raises(ValueError, match="fingerprints"):
+        embedding_storage.store_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=[image.sample_id],
+            embeddings=np.zeros((1, _EMBEDDING_DIMENSION), dtype=np.float32),
+            source_fingerprints=[],
+            show_progress=False,
+            replace=True,
+        )

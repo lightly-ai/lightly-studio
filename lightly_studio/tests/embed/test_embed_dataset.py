@@ -22,10 +22,14 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_embedding_model_resolver,
     collection_resolver,
     image_resolver,
     sample_embedding_resolver,
+)
+from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
+    BoundingBoxCoordinates,
 )
 from tests.helpers_resolvers import (
     ImageStub,
@@ -116,6 +120,34 @@ class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
         kept_indices = list(range(len(crops) - 1 if self._drop_last else len(crops)))
         embeddings = np.array([[crops[index].x] * 3 for index in kept_indices], dtype=np.float32)
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
+
+
+class _EditBoxDuringEmbedCropEmbedder(ImageCropPathEmbedder):
+    """Embeds crops as [x, x, x], after moving the box of an annotation in the database.
+
+    Simulates a user editing a box while the embedder runs.
+    """
+
+    __slots__ = ("_annotation_id", "_new_x", "_session")
+
+    def __init__(self, session: Session, annotation_id: UUID, new_x: int) -> None:
+        self._session = session
+        self._annotation_id = annotation_id
+        self._new_x = new_x
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+        """Edit the box, then embed the crops that were read before the edit."""
+        annotation_resolver.update_bounding_box(
+            session=self._session,
+            annotation_id=self._annotation_id,
+            coordinates=BoundingBoxCoordinates(x=self._new_x, y=0, width=20, height=20),
+        )
+        embeddings = np.array([[crop.x] * 3 for crop in crops], dtype=np.float32)
+        return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(crops))))
 
 
 @pytest.fixture
@@ -571,6 +603,63 @@ def test_embed_annotation_crops__dropped_crop_keeps_old_vector(
         session=db_session, annotation_ids=annotation_ids, model_id=model_id
     )
     assert stored == {annotation_ids[0]: [100.0] * 3, annotation_ids[1]: [0.0] * 3}
+
+
+def test_embed_annotation_crops__stores_fingerprint(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """The stored row carries the fingerprint of the box the crop was read from."""
+    annotation_collection_id, annotation_ids = _create_annotation_collection(
+        session=db_session, box_xs=[100]
+    )
+    model_id = _register_default_random_model(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    _patch_registry(mocker=mocker, embedder=_BoxXImageCropEmbedder())
+
+    embed_dataset.embed_annotation_crops(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+
+    row = db_session.get(SampleEmbeddingTable, (annotation_ids[0], model_id))
+    assert row is not None
+    [crop] = annotation_resolver.get_annotation_crops_for_ids(
+        session=db_session, annotation_sample_ids=annotation_ids
+    )
+    assert row.source_fingerprint == crop.source_fingerprint
+
+
+def test_embed_annotation_crops__box_edited_during_run(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """A box edited while embedding leaves the old vector with the old fingerprint."""
+    annotation_collection_id, annotation_ids = _create_annotation_collection(
+        session=db_session, box_xs=[10]
+    )
+    model_id = _register_default_random_model(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    _patch_registry(
+        mocker=mocker,
+        embedder=_EditBoxDuringEmbedCropEmbedder(
+            session=db_session, annotation_id=annotation_ids[0], new_x=30
+        ),
+    )
+
+    embed_dataset.embed_annotation_crops(
+        session=db_session, annotation_collection_id=annotation_collection_id
+    )
+
+    stored = _stored_by_annotation(
+        session=db_session, annotation_ids=annotation_ids, model_id=model_id
+    )
+    assert stored == {annotation_ids[0]: [10.0] * 3}
+    row = db_session.get(SampleEmbeddingTable, (annotation_ids[0], model_id))
+    assert row is not None
+    [current] = annotation_resolver.get_annotation_crops_for_ids(
+        session=db_session, annotation_sample_ids=annotation_ids
+    )
+    assert row.source_fingerprint != current.source_fingerprint
 
 
 @pytest.mark.usefixtures("patched_registry")

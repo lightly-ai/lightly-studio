@@ -91,7 +91,7 @@ def upsert_many(
         table=SampleEmbeddingTable,
         rows=rows,
         conflict_columns=["sample_id", "embedding_model_id"],
-        update_columns=["embedding"],
+        update_columns=["embedding", "source_fingerprint"],
     )
     if commit:
         session.commit()
