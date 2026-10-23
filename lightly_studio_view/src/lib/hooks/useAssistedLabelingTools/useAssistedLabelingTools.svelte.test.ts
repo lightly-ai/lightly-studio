@@ -7,7 +7,8 @@ const mocks = vi.hoisted(() => ({
     context: { status: 'smart-select' as string, panFrom: undefined as string | undefined },
     status: { disabledReason: null as string | null },
     isEditingMode: undefined as unknown as Writable<boolean>,
-    clearSmartSelect: vi.fn()
+    clearSmartSelect: vi.fn(),
+    clearInstances: vi.fn()
 }));
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
@@ -28,6 +29,9 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
 }));
 vi.mock('$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte', () => ({
     useSmartSelect: () => ({ clear: mocks.clearSmartSelect })
+}));
+vi.mock('$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte', () => ({
+    useFindInstances: () => ({ clear: mocks.clearInstances })
 }));
 
 let cleanup = () => {};
@@ -91,15 +95,17 @@ describe('useAssistedLabelingTools', () => {
         expect(context.status).toBe('cursor');
     });
 
-    it('ends box drawing when the find all instances tool is left', () => {
+    it('ends box drawing and drops the results when the find all instances tool is left', () => {
         const { context, tools } = setup('find-instances');
         tools.state.isDrawingInstancesBox = true;
         flushSync();
         expect(tools.state.isDrawingInstancesBox).toBe(true);
+        expect(mocks.clearInstances).not.toHaveBeenCalled();
 
         context.status = 'cursor';
         flushSync();
 
         expect(tools.state.isDrawingInstancesBox).toBe(false);
+        expect(mocks.clearInstances).toHaveBeenCalledOnce();
     });
 });
