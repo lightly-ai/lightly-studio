@@ -37,6 +37,7 @@
         <FindInstancesOverlay
             bind:interactionRect
             {sample}
+            {scale}
             saveAs={assistedLabeling.state.saveAs}
             isDrawingBox={assistedLabeling.state.isDrawingInstancesBox}
             onBoxDrawn={() => (assistedLabeling.state.isDrawingInstancesBox = false)}
