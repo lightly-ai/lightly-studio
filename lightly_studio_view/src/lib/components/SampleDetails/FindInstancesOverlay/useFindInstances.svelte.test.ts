@@ -269,6 +269,7 @@ describe('useFindInstances', () => {
         const save = instances.save();
         instances.removePrediction(instances.predictions[0]);
 
+        expect(instances.isSaving).toBe(true);
         expect(instances.predictions).toEqual([first, second]);
         saving.resolve(undefined);
         await save;
