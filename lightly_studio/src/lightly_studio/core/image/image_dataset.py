@@ -788,14 +788,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Use it after adding images with `embed=False`, or after creating annotations
         in the GUI. A chunk where every file failed is logged and skipped.
 
-        Until stale embeddings are detected, an edited box keeps its old embedding.
-        Pass `recompute_annotations=True` to re-embed it.
+        An annotation whose box was moved or resized is embedded again. Pass
+        `recompute_annotations=True` to also replace embeddings from before this
+        version, or after you change a custom embedder.
 
         Args:
             embed_annotations: If True, embed the annotations of every annotation source.
             recompute_annotations: If True, re-embed every annotation, replacing the
                 stored embeddings. Otherwise only annotations without an embedding
-                are embedded.
+                or with a moved or resized box are embedded.
 
         Raises:
             NoUsableEmbedderError: If images or annotations need an embedding and no

@@ -67,8 +67,9 @@ It has two flags:
 - `recompute_annotations` (default `False`): Embed every object again and replace its
   stored embedding.
 
-If you move or resize a box, LightlyStudio does **not** update its embedding.
-Call `compute_embeddings(recompute_annotations=True)` after you edit boxes.
+The default call also embeds again the objects whose box you moved or resized. Use
+`recompute_annotations=True` for embeddings from before this version, or after you change
+a custom embedder.
 
 If the files of a batch are missing or broken, LightlyStudio logs a warning and
 continues with the next batch. If no embedding model is available, the method raises
