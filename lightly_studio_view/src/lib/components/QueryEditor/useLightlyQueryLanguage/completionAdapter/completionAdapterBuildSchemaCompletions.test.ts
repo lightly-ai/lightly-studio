@@ -12,7 +12,7 @@ describe('buildSchemaCompletions', () => {
         const { buildSchemaCompletions } =
             await import('./completionAdapterBuildSchemaCompletions');
         const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
-        const items = buildSchemaCompletions('image', range as never);
+        const items = buildSchemaCompletions({ scope: 'image', range });
         const labels = items.map((i) => i.label);
         expect(labels).toContain('width');
         expect(labels).not.toContain('video:');
@@ -24,7 +24,7 @@ describe('buildSchemaCompletions', () => {
         const { buildSchemaCompletions } =
             await import('./completionAdapterBuildSchemaCompletions');
         const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
-        const items = buildSchemaCompletions('video', range as never);
+        const items = buildSchemaCompletions({ scope: 'video', range });
         const labels = items.map((i) => i.label);
         expect(labels).toContain('fps');
         expect(labels).not.toContain('video:');
@@ -34,7 +34,7 @@ describe('buildSchemaCompletions', () => {
         const { buildSchemaCompletions } =
             await import('./completionAdapterBuildSchemaCompletions');
         const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
-        const items = buildSchemaCompletions('segmentation_mask', range as never);
+        const items = buildSchemaCompletions({ scope: 'segmentation_mask', range });
         const labels = items.map((i) => i.label);
         expect(labels).toContain('class_name');
         expect(labels).toContain('width');

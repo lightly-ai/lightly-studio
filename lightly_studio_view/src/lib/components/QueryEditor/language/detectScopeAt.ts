@@ -4,11 +4,15 @@ import type { Scope } from './types';
  *
  * The parser here is lightweight: it scans only the prefix up to `offset`,
  * tracks scope-changing function calls and parentheses, ignores parentheses
- * that appear inside string literals, and then resolves top-level video scope
+ * that appear inside string literals or comments, and then resolves top-level video scope
  * by checking for a leading `video:` prefix.
  */
 export function detectScopeAt(text: string, offset: number): Scope {
-    const upTo = text.slice(0, offset).replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'/g, '""');
+    const upTo = text
+        .slice(0, offset)
+        .replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|#[^\n\r]*/g, (token) =>
+            token.startsWith('#') ? '' : '""'
+        );
     type Frame = Scope | 'paren';
     const stack: Frame[] = [];
     const re = /\b(object_detection|classification|segmentation_mask)\s*\(|\(|\)/g;
@@ -37,6 +41,6 @@ export function detectScopeAt(text: string, offset: number): Scope {
             return frame;
         }
     }
-    if (/^\s*video:/i.test(text)) return 'video';
+    if (/^\s*video:/i.test(upTo)) return 'video';
     return 'image';
 }
