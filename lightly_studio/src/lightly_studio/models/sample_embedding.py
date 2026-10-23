@@ -18,6 +18,7 @@ class SampleEmbeddingBase(SQLModel):
         foreign_key="embedding_model.embedding_model_id", primary_key=True, index=True
     )
     embedding: NumpyArray = Field(sa_column=Column(VectorType()))
+    source_fingerprint: str | None = None
 
 
 class SampleEmbeddingCreate(SampleEmbeddingBase):

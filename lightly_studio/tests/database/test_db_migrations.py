@@ -508,6 +508,116 @@ def test_postgres_embedding_model_api_key__added_and_dropped(
         engine.dispose()
 
 
+def test_postgres_sample_embedding_source_fingerprint__added_and_dropped(
+    postgres_url: str | None,
+) -> None:
+    """The fingerprint migration adds a nullable column and the downgrade removes it again."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    normalized_url = db_url.ensure_psycopg3_driver(engine_url=postgres_url)
+    engine = create_engine(normalized_url)
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    dataset_id = "00000000-0000-0000-0000-000000000001"
+    collection_id = "00000000-0000-0000-0000-000000000002"
+    model_id = "00000000-0000-0000-0000-000000000003"
+    sample_id = "00000000-0000-0000-0000-000000000004"
+    previous_revision = "d5e6f7a8b9c0"
+
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision=previous_revision
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                statement=text("INSERT INTO dataset (dataset_id) VALUES (:dataset_id)"),
+                parameters={"dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO collection (
+                        name, sample_type, collection_id, dataset_id, created_at, updated_at
+                    ) VALUES (
+                        'collection', 'IMAGE', :collection_id, :dataset_id, NOW(), NOW()
+                    )
+                    """
+                ),
+                parameters={"collection_id": collection_id, "dataset_id": dataset_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO embedding_model (
+                        name, embedding_dimension, dataset_id, embedding_model_id, created_at
+                    ) VALUES (
+                        'model', 3, :dataset_id, :model_id, NOW()
+                    )
+                    """
+                ),
+                parameters={"dataset_id": dataset_id, "model_id": model_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sample (collection_id, sample_id, created_at, updated_at)
+                    VALUES (:collection_id, :sample_id, NOW(), NOW())
+                    """
+                ),
+                parameters={"collection_id": collection_id, "sample_id": sample_id},
+            )
+            connection.execute(
+                statement=text(
+                    """
+                    INSERT INTO sample_embedding (sample_id, embedding_model_id, embedding)
+                    VALUES (:sample_id, :model_id, '[1,2,3]')
+                    """
+                ),
+                parameters={"sample_id": sample_id, "model_id": model_id},
+            )
+
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(
+            table_name="sample_embedding"
+        )
+        fingerprint_column = next(
+            column for column in columns if column["name"] == "source_fingerprint"
+        )
+        assert fingerprint_column["nullable"] is True
+
+        # The existing row needs no backfill.
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    statement=text("SELECT source_fingerprint FROM sample_embedding")
+                ).scalar_one()
+                is None
+            )
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+
+        # The downgrade drops the column and keeps the row.
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.downgrade, revision=previous_revision
+        )
+        columns = db_migrations._get_inspector(engine=engine).get_columns(
+            table_name="sample_embedding"
+        )
+        assert "source_fingerprint" not in {column["name"] for column in columns}
+        with engine.connect() as connection:
+            remaining = connection.execute(
+                statement=text("SELECT sample_id FROM sample_embedding")
+            ).scalar_one()
+        assert str(remaining) == sample_id
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
 def test_postgres_tag_name_uniqueness__consolidates_cross_kind_duplicates(
     postgres_url: str | None,
 ) -> None:
