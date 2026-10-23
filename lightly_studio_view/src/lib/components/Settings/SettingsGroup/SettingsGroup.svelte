@@ -19,10 +19,8 @@
     {/if}
     <div
         class={cn(
-            '[&>*]:border-t [&>*]:border-border/40',
-            columns === 2
-                ? 'grid grid-cols-2 gap-x-10 [&>*:nth-child(-n+2)]:border-t-0'
-                : '[&>*:first-child]:border-t-0'
+            '[&>*:first-child]:border-t-0 [&>*]:border-t [&>*]:border-border/40',
+            columns === 2 && 'sm:grid sm:grid-cols-2 sm:gap-x-10 sm:[&>*:nth-child(2)]:border-t-0'
         )}
     >
         {@render children()}

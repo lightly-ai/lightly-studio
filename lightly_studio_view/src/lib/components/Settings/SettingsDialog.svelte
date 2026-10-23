@@ -106,7 +106,9 @@
                     {/each}
                 </Tabs.Root>
 
-                <Dialog.Footer class="border-t border-border px-6 py-4">
+                <Dialog.Footer
+                    class="flex-row justify-end space-x-2 border-t border-border px-6 py-4"
+                >
                     <Button
                         variant="outline"
                         buttonProps={{ type: 'button', onclick: () => setOpen(false) }}
