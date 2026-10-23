@@ -76,7 +76,8 @@ export function drawProjectionOverlay(
         const size = settings.pointSize;
         const halfSize = size / 2;
         context.globalAlpha = settings.pointOpacity;
-        const metrics = getColorMetrics(settings.colorMode);
+        const isRgb = settings.colorMode === 'rgb';
+        const metrics = isRgb ? [] : getColorMetrics(settings.colorMode);
         const points = projectPointCloudData(batch, projection, 5000, metrics.includes('density'));
         const ranges = metrics.map((metric) => {
             const values = points.map((point) => getMetricValue(point, metric));
@@ -85,7 +86,9 @@ export function drawProjectionOverlay(
         for (const point of points) {
             context.fillStyle = 'rgba(0, 0, 0, 0.8)';
             context.fillRect(point.x - halfSize - 1, point.y - halfSize - 1, size + 2, size + 2);
-            context.fillStyle = getPointColor(normalizePoint(point, metrics, ranges));
+            context.fillStyle = isRgb
+                ? getRgbPointColor(point.rgb)
+                : getPointColor(normalizePoint(point, metrics, ranges));
             context.fillRect(point.x - halfSize, point.y - halfSize, size, size);
         }
     }
@@ -152,6 +155,11 @@ function normalizePoint(
 
 function normalize(value: number, min: number, max: number): number {
     return max === min ? 0.5 : Math.max(0, Math.min(1, (value - min) / (max - min)));
+}
+
+function getRgbPointColor(rgb: readonly [number, number, number] | undefined): string {
+    if (!rgb) return 'rgb(128,128,128)';
+    return `rgb(${Math.round(rgb[0] * 255)},${Math.round(rgb[1] * 255)},${Math.round(rgb[2] * 255)})`;
 }
 
 function getPointColor(normalizedValue: number): string {

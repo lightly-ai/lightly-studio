@@ -18,7 +18,8 @@
         { value: 'distance', label: 'Distance' },
         { value: 'density', label: 'Density' },
         { value: 'height-distance', label: 'Height + Distance' },
-        { value: 'height-density', label: 'Height + Density' }
+        { value: 'height-density', label: 'Height + Density' },
+        { value: 'rgb', label: 'RGB' }
     ];
 
     const update = (changes: Partial<ProjectionSettings>) => onChange({ ...settings, ...changes });

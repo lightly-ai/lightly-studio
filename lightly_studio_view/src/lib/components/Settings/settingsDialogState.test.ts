@@ -21,6 +21,7 @@ const TEST_SETTINGS: SettingView = {
     show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
     enforce_coloring_by_class: false,
+    show_orthographic_views: false,
     created_at: new Date(),
     updated_at: new Date(),
     key_toolbar_selection: 's',

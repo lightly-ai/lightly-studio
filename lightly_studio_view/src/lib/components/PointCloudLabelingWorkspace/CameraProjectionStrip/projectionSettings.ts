@@ -1,6 +1,6 @@
 import type { ColorMode } from '$lib/components/PointCloudViewer';
 
-export type ProjectionColorMode = Exclude<ColorMode, 'none' | 'rgb'>;
+export type ProjectionColorMode = Exclude<ColorMode, 'none'>;
 
 export type ProjectionSettings = {
     pointSize: number;
