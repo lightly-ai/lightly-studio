@@ -4,13 +4,14 @@
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
     import NormalizedBoxRect from '$lib/components/SampleDetails/NormalizedBoxRect/NormalizedBoxRect.svelte';
     import { useDragBox } from '$lib/components/SampleDetails/useDragBox/useDragBox.svelte';
-    import InstanceDeleteButton from './InstanceDeleteButton.svelte';
+    import InstanceDeleteButton from './InstanceDeleteButton/InstanceDeleteButton.svelte';
     import type { useFindInstances } from './useFindInstances.svelte';
 
     type SaveAs = ComponentProps<typeof AnnotationPreview>['saveAs'];
 
     interface Props {
         sample: { width: number; height: number };
+        scale: number;
         interactionRect?: SVGRectElement | null;
         saveAs: SaveAs;
         isDrawingBox: boolean;
@@ -21,6 +22,7 @@
 
     let {
         sample,
+        scale,
         interactionRect = $bindable(),
         saveAs,
         isDrawingBox,
@@ -64,6 +66,8 @@
     <InstanceDeleteButton
         bbox={preview.bbox}
         {index}
+        {scale}
+        disabled={instances.isSaving}
         onDelete={() => instances.removePrediction(preview)}
     />
 {/each}
