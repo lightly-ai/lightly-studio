@@ -1,11 +1,12 @@
 import * as monaco from 'monaco-editor';
-import { SCOPES, TOP_LEVEL_KEYWORDS } from '../../language/lightly-query-schema';
+import { SCOPES, TOP_LEVEL_KEYWORDS, BOOLEAN_KEYWORDS } from '../../language/lightly-query-schema';
 import { ALLOWED_NESTED_KEYWORDS } from './completionAdapterShared';
 
 /** Build scope-aware schema fallback completion items. */
 export function buildSchemaCompletions<Scope extends keyof typeof SCOPES>(
     scope: Scope,
-    range: monaco.IRange
+    range: monaco.IRange,
+    includeBooleanLiterals = false
 ): monaco.languages.CompletionItem[] {
     const items: monaco.languages.CompletionItem[] = [];
     const { title, fields } = SCOPES[scope];
@@ -21,7 +22,10 @@ export function buildSchemaCompletions<Scope extends keyof typeof SCOPES>(
         });
     }
 
-    const keywords = TOP_LEVEL_KEYWORDS.filter((kw) => {
+    const keywords = [
+        ...TOP_LEVEL_KEYWORDS,
+        ...(includeBooleanLiterals ? BOOLEAN_KEYWORDS : [])
+    ].filter((kw) => {
         if (scope === 'image' || scope === 'video') return kw.name !== 'video:';
         return ALLOWED_NESTED_KEYWORDS.has(kw.name);
     });
@@ -31,6 +35,7 @@ export function buildSchemaCompletions<Scope extends keyof typeof SCOPES>(
         const isSnippet = insertText.includes('$');
         items.push({
             label: kw.name,
+            sortText: BOOLEAN_KEYWORDS.includes(kw) ? '0' : undefined,
             kind: monaco.languages.CompletionItemKind.Keyword,
             detail: kw.description,
             documentation: { value: kw.description },

@@ -132,7 +132,21 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     }
 };
 
+export const BOOLEAN_KEYWORDS: KeywordDoc[] = [
+    { name: 'true', description: 'Boolean true. Use with `=` or `!=` on sample metadata.' },
+    { name: 'false', description: 'Boolean false. Use with `=` or `!=` on sample metadata.' }
+];
+
 export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
+    {
+        name: 'metadata',
+        description:
+            'Sample metadata at a quoted path, e.g. `metadata["camera"] = "front"` or `metadata["odometry.acc[1]"] < -0.2`. ' +
+            'Numbers support `=`, `!=`, `<`, `<=`, `>`, and `>=`. Strings and booleans support `=` and `!=`. ' +
+            'Missing paths, null, and values of another type do not match, including for `!=`. ' +
+            '`NOT metadata["camera"] = "front"` also matches missing paths, null, and values of another type.',
+        insertText: 'metadata["${1:path}"]'
+    },
     { name: 'AND', description: 'Boolean AND. Combines two conditions.' },
     { name: 'OR', description: 'Boolean OR.' },
     { name: 'NOT', description: 'Boolean NOT.' },
@@ -169,6 +183,8 @@ export function findFieldInScope(scope: Scope, name: string): FieldDoc | undefin
 }
 
 export function findKeyword(name: string): KeywordDoc | undefined {
-    return TOP_LEVEL_KEYWORDS.find((k) => k.name.toLowerCase() === name.toLowerCase());
+    return [...TOP_LEVEL_KEYWORDS, ...BOOLEAN_KEYWORDS].find(
+        (k) => k.name.toLowerCase() === name.toLowerCase()
+    );
 }
 export { detectScopeAt } from './detectScopeAt';
