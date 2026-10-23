@@ -12,7 +12,7 @@
     const { dialogState }: Props = $props();
 </script>
 
-<div class="space-y-5">
+<div class="space-y-8">
     <SettingsGroup title="Grid view">
         <SettingsFieldRow
             id="grid-view-rendering"

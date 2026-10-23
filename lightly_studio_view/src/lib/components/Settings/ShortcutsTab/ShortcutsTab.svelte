@@ -23,7 +23,7 @@
     {/each}
 {/snippet}
 
-<div class="space-y-5">
+<div class="space-y-8">
     <SettingsGroup title="General" columns={2}>
         {@render recordableRows(generalShortcuts)}
     </SettingsGroup>

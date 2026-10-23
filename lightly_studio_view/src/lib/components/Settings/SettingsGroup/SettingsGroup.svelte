@@ -13,7 +13,9 @@
 
 <section class="space-y-1">
     {#if title}
-        <h3 class="text-sm font-medium text-muted-foreground">{title}</h3>
+        <h3 class="pb-1 text-sm font-semibold text-foreground">
+            {title}
+        </h3>
     {/if}
     <div
         class={cn(

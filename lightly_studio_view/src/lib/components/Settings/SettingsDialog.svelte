@@ -69,7 +69,7 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="flex h-[560px] max-h-[85vh] flex-col gap-0 border-border bg-background p-0 dark:[color-scheme:dark] sm:max-w-[760px]"
+            class="flex h-[600px] max-h-[85vh] flex-col gap-0 border-border bg-background p-0 dark:[color-scheme:dark] sm:max-w-[760px]"
         >
             <form onsubmit={handleFormSubmit} class="flex min-h-0 flex-1 flex-col">
                 <Dialog.Header class="px-6 pt-6">
