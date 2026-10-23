@@ -240,6 +240,19 @@ describe('useSmartSelect', () => {
         expect(smartSelect.canSave).toBe(true);
     });
 
+    it('drops the box preview when a negative point follows a box', async () => {
+        mocks.mutateAsync.mockResolvedValue({ prediction });
+        const smartSelect = setup();
+        smartSelect.selectBox({ x: 0, y: 0, width: 0.5, height: 0.5 });
+        await vi.waitFor(() => expect(smartSelect.preview).toEqual(prediction));
+
+        smartSelect.addPoint({ ...point, positive: false }, null);
+
+        expect(smartSelect.preview).toBeNull();
+        expect(smartSelect.needsPositivePoint).toBe(true);
+        expect(mocks.mutateAsync).toHaveBeenCalledOnce();
+    });
+
     it('drops a pending response once torn down', async () => {
         const pending = deferred();
         mocks.mutateAsync.mockReturnValueOnce(pending.promise);
