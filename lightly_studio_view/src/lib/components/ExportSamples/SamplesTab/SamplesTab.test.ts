@@ -39,7 +39,8 @@ describe('SamplesTab', () => {
 
     it('calls the API with correct arguments on download and triggers the download URL', async () => {
         mocks.exportCollectionPrepare.mockResolvedValue({ data: { export_key: 'key123' } });
-        render(SamplesTab);
+        const onExportTriggered = vi.fn();
+        render(SamplesTab, { props: { onExportTriggered } });
         await fireEvent.click(screen.getByTestId('submit-button-samples'));
         await waitFor(() => {
             expect(mocks.exportCollectionPrepare).toHaveBeenCalledWith({
@@ -49,15 +50,18 @@ describe('SamplesTab', () => {
             expect(mocks.triggerDownload).toHaveBeenCalledWith(
                 expect.stringContaining('/export/download/key123')
             );
+            expect(onExportTriggered).toHaveBeenCalledWith(true);
         });
     });
 
     it('shows an error message when the API fails', async () => {
         mocks.exportCollectionPrepare.mockRejectedValue(new Error('Network error'));
-        render(SamplesTab);
+        const onExportTriggered = vi.fn();
+        render(SamplesTab, { props: { onExportTriggered } });
         await fireEvent.click(screen.getByTestId('submit-button-samples'));
         await waitFor(() => {
             expect(screen.getByText(/Export failed/)).toBeInTheDocument();
+            expect(onExportTriggered).toHaveBeenCalledWith(false);
         });
     });
 

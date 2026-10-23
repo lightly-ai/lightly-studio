@@ -27,6 +27,8 @@
         sampleType: 'image' | 'video';
         /** Optional callback invoked when the download button is clicked. */
         onDownloadClick?: () => void;
+        /** Optional callback invoked after the export completes with success or failure. */
+        onExportTriggered?: (success: boolean) => void;
     }
 
     let {
@@ -36,7 +38,8 @@
         selectedAnnotationCollectionId = $bindable(),
         testId,
         sampleType,
-        onDownloadClick
+        onDownloadClick,
+        onExportTriggered
     }: Props = $props();
 
     const collectionId = page.params.collection_id!;
@@ -84,9 +87,10 @@
     <ExportDownloadButton
         isLoading={$isLoading}
         errorMessage={$errorMessage}
-        onclick={() => {
+        onclick={async () => {
             onDownloadClick?.();
-            handleDownload();
+            const success = await handleDownload();
+            onExportTriggered?.(success);
         }}
         {testId}
     />
