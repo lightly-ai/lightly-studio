@@ -20,9 +20,25 @@ describe('InstanceDeleteButton', () => {
         expect(onDelete).toHaveBeenCalledOnce();
     });
 
-    it('is disabled while the instances are saved', () => {
-        render(InstanceDeleteButton, { props: { ...defaultProps, disabled: true } });
-        expect(screen.getByRole('button')).toBeDisabled();
+    it('deletes the instance on Enter', async () => {
+        const onDelete = vi.fn();
+        render(InstanceDeleteButton, { props: { ...defaultProps, onDelete } });
+
+        await fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
+
+        expect(onDelete).toHaveBeenCalledOnce();
+    });
+
+    it('does not delete while the instances are saved', async () => {
+        const onDelete = vi.fn();
+        render(InstanceDeleteButton, { props: { ...defaultProps, disabled: true, onDelete } });
+        const button = screen.getByRole('button');
+
+        await fireEvent.click(button);
+        await fireEvent.keyDown(button, { key: 'Enter' });
+
+        expect(button).toHaveAttribute('aria-disabled', 'true');
+        expect(onDelete).not.toHaveBeenCalled();
     });
 
     it('keeps its screen size at the top right of the box when zoomed out', () => {
