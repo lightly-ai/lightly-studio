@@ -32,10 +32,10 @@ interface UseFindInstancesParams {
 export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
     let boxes = $state<NormalizedBox[]>([]);
     let predictions = $state<AnnotationPreview[]>([]);
-    // Prompt of the current predictions, fixed when they were generated so retries keep it.
-    let resultsPrompt = '';
     let isGenerating = $state(false);
     let isSaving = $state(false);
+    // A clear or new prompt during a save drops the unsaved predictions once it ends.
+    let isDropPending = false;
     // Drops responses that a newer prompt, box or clear made stale.
     let sequence = 0;
     let isDisposed = false;
@@ -47,13 +47,11 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         getDatasetId: () => page.params.dataset_id!
     });
 
-    // Keeps the predictions while a save runs, so a failed save keeps the unsaved ones.
     const dropPredictions = () => {
         sequence += 1;
         isGenerating = false;
-        if (isSaving) return;
-        predictions = [];
-        resultsPrompt = '';
+        isDropPending = isSaving;
+        if (!isSaving) predictions = [];
     };
 
     const canSave = () => predictions.length > 0 && !isSaving && !isGenerating;
@@ -63,10 +61,21 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         boxes = [];
     };
 
-    // Drops a request from a previous sample, e.g. after the overlay was keyed by a new one.
+    const currentSampleId = $derived(getParams().sampleId);
+
+    // Drops the boxes, requests and results of a previous sample, also while a save runs.
+    $effect(() => {
+        void currentSampleId;
+        return () => {
+            sequence += 1;
+            isGenerating = false;
+            predictions = [];
+            boxes = [];
+        };
+    });
+
     $effect(() => () => {
         isDisposed = true;
-        clear();
     });
 
     // A new prompt starts a new search and keeps the drawn boxes.
@@ -94,8 +103,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             });
             if (requestSequence !== sequence) return;
             predictions = result.predictions;
-            resultsPrompt = prompt;
-            boxes = [];
+            if (predictions.length > 0) boxes = [];
         } catch (error) {
             if (requestSequence !== sequence) return;
             toast.error(`Find all instances failed: ${getAnnotationPreviewErrorMessage(error)}`);
@@ -121,8 +129,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
     const save = async () => {
         if (!canSave()) return;
         isSaving = true;
-        const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
-        const className = pickClassName({ selected: annotationClass, hint: resultsPrompt });
+        const { sampleId, prompt, saveAs, annotationClass, annotationSource, onSaved } =
+            getParams();
+        const className = pickClassName({ selected: annotationClass, hint: prompt });
         try {
             await saveAnnotationPreviews({
                 sampleId,
@@ -142,6 +151,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             );
         } finally {
             isSaving = false;
+            if (isDropPending) dropPredictions();
         }
     };
 

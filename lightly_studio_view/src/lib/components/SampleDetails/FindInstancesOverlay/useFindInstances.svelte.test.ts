@@ -37,7 +37,8 @@ const deferred = () => {
 let cleanup = () => {};
 
 const setup = (initialPrompt = 'cars') => {
-    const params = $state<{ prompt: string; annotationClass: string | null }>({
+    const params = $state<{ sampleId: string; prompt: string; annotationClass: string | null }>({
+        sampleId: 'sample-1',
         prompt: initialPrompt,
         annotationClass: null
     });
@@ -46,7 +47,7 @@ const setup = (initialPrompt = 'cars') => {
     cleanup = $effect.root(() => {
         instances = useFindInstances(() => ({
             collectionId: 'collection-1',
-            sampleId: 'sample-1',
+            sampleId: params.sampleId,
             prompt: params.prompt,
             maxInstances: 8,
             saveAs: 'box',
@@ -90,6 +91,17 @@ describe('useFindInstances', () => {
         });
         expect(instances.boxes).toEqual([]);
         expect(instances.isGenerating).toBe(false);
+    });
+
+    it('keeps the drawn boxes when no instances are found', async () => {
+        const { instances } = setup();
+        const box = { x: 0.1, y: 0.1, width: 0.2, height: 0.2 };
+        instances.addBox(box);
+        mocks.mutateAsync.mockResolvedValueOnce({ predictions: [] });
+
+        await instances.generate();
+
+        expect(instances.boxes).toEqual([box]);
     });
 
     it('does not request instances with boxes but without a prompt', async () => {
@@ -213,7 +225,7 @@ describe('useFindInstances', () => {
         );
     });
 
-    it('keeps the unsaved instances when cleared during a failing save', async () => {
+    it('drops the unsaved instances when cleared during a failing save', async () => {
         const saving = deferred();
         const { instances, params } = setup();
         await generateResults(instances);
@@ -226,10 +238,11 @@ describe('useFindInstances', () => {
         instances.clear();
         params.prompt = '';
         flushSync();
+        expect(instances.predictions).toEqual([second]);
         saving.reject(new Error('create failed'));
         await save;
 
-        expect(instances.predictions).toEqual([second]);
+        expect(instances.predictions).toEqual([]);
     });
 
     it('saves only once while a save is in flight', async () => {
@@ -261,28 +274,6 @@ describe('useFindInstances', () => {
         await save;
     });
 
-    it('retries a failed save with the class of the generated results', async () => {
-        const { instances, params } = setup('car');
-        await generateResults(instances);
-        mocks.saveAnnotationPreviews.mockImplementationOnce(
-            async ({ previews, onPreviewSaved }) => {
-                onPreviewSaved(previews[0].preview);
-                params.prompt = 'truck';
-                flushSync();
-                throw new Error('create failed');
-            }
-        );
-        await instances.save();
-        expect(instances.predictions).toEqual([second]);
-        mocks.saveAnnotationPreviews.mockResolvedValueOnce(undefined);
-
-        await instances.save();
-
-        expect(mocks.saveAnnotationPreviews).toHaveBeenLastCalledWith(
-            expect.objectContaining({ previews: [{ preview: second, className: 'car' }] })
-        );
-    });
-
     it('saves with a class picked after the results were generated', async () => {
         const { instances, params } = setup('car');
         await generateResults(instances);
@@ -300,6 +291,21 @@ describe('useFindInstances', () => {
                 ]
             })
         );
+    });
+
+    it('drops the results of a previous sample while a save runs', async () => {
+        const saving = deferred();
+        const { instances, params } = setup();
+        await generateResults(instances);
+        mocks.saveAnnotationPreviews.mockReturnValue(saving.promise);
+        const save = instances.save();
+
+        params.sampleId = 'sample-2';
+        flushSync();
+
+        expect(instances.predictions).toEqual([]);
+        saving.resolve(undefined);
+        await save;
     });
 
     it('drops a pending response once torn down', async () => {
