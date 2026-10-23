@@ -15,8 +15,7 @@ const mocks = vi.hoisted(() => ({
     runsParams: [] as { datasetId: string; enabled?: boolean }[],
     adjacentProxy: {
         data: { previous_sample_id: 'annotation-0', next_sample_id: 'annotation-2' } as
-            | { previous_sample_id: string | null; next_sample_id: string | null }
-            | undefined
+            { previous_sample_id: string | null; next_sample_id: string | null } | undefined
     },
     // The order the adjacent query applied. A similarity search leaves it undefined.
     adjacentSortBy: undefined as AnnotationEvaluationMetricSortExpr | undefined

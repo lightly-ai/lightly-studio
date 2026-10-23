@@ -7,8 +7,7 @@ import Captions from './Captions.svelte';
 const mocks = vi.hoisted(() => ({
     tagsSelected: new Set<string>(),
     getSamplesParams: undefined as
-        | (() => { body: { filters: Record<string, unknown> } })
-        | undefined,
+        (() => { body: { filters: Record<string, unknown> } }) | undefined,
     metadataFilters: [{ name: 'width', min: 1, max: 2 }],
     pages: [] as { total_count: number; total_caption_count: number }[]
 }));

@@ -33,13 +33,11 @@ export function useVideoSortFields(): UseVideoSortFieldsReturn {
     const metadataSortFields = derived(metadataInfo, ($metadataInfo) =>
         ($metadataInfo ?? [])
             .filter((info) => ['integer', 'float', 'string', 'boolean'].includes(info.type))
-            .map(
-                (info): ColumnSortField => ({
-                    source: 'metadata' as VideoSortFieldExpr['source'],
-                    value: info.name,
-                    label: `metadata.${info.name}`
-                })
-            )
+            .map((info): ColumnSortField => ({
+                source: 'metadata' as VideoSortFieldExpr['source'],
+                value: info.name,
+                label: `metadata.${info.name}`
+            }))
     );
 
     const allSortFields = derived(metadataSortFields, ($metadataSortFields) => [

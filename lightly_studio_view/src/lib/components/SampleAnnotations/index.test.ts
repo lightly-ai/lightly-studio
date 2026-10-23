@@ -48,7 +48,6 @@ vi.mock('$lib/hooks/useSettings', async () => {
         show_sample_filenames: true,
         show_bounding_boxes_for_segmentation: true,
         enforce_coloring_by_class: false,
-        show_orthographic_views: false,
         created_at: new Date('1970-01-01T00:00:00.000Z'),
         updated_at: new Date('1970-01-01T00:00:00.000Z'),
         key_toolbar_selection: 's',
