@@ -31,6 +31,8 @@ describe('QueryEditorPanel', () => {
     it('updates the query and invalidates all queries when re-applying the same query', async () => {
         render(QueryEditorPanel, { props: { onClose: vi.fn() } });
 
+        expect(screen.getByText('metadata["quality_score"] >= 0.8')).toBeInTheDocument();
+
         await fireEvent.click(screen.getByRole('button', { name: 'Re-apply' }));
 
         expect(updateQueryExpr).toHaveBeenCalledWith({
