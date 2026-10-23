@@ -12,6 +12,7 @@
 
     const toolState = $derived(assistedLabeling.state);
     const smartSelect = $derived(assistedLabeling.smartSelect);
+    const instances = $derived(assistedLabeling.instances);
 </script>
 
 {#if assistedLabeling.activeTool === 'smart-select' && !assistedLabeling.isPanning}
@@ -40,12 +41,15 @@
         onSaveAsChange={(value) => (toolState.saveAs = value)}
         isDrawingBox={toolState.isDrawingInstancesBox}
         onDrawBoxChange={(value) => (toolState.isDrawingInstancesBox = value)}
-        boxCount={toolState.instances.boxCount}
-        isGenerating={toolState.instances.isGenerating}
-        resultCount={toolState.instances.resultCount}
-        canSave={toolState.instances.canSave}
-        onGenerate={toolState.instances.generate}
-        onSave={toolState.instances.save}
-        onClear={toolState.instances.clear}
+        boxCount={instances.boxes.length}
+        isGenerating={instances.isGenerating}
+        resultCount={instances.predictions.length}
+        canSave={instances.canSave}
+        onGenerate={() => void instances.generate()}
+        onSave={() => void instances.save()}
+        onClear={() => {
+            instances.clear();
+            toolState.instancesPrompt = '';
+        }}
     />
 {/if}

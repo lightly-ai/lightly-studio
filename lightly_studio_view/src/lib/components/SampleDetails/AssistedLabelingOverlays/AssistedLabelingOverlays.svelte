@@ -36,19 +36,11 @@
     {:else if assistedLabeling.activeTool === 'find-instances'}
         <FindInstancesOverlay
             bind:interactionRect
-            {collectionId}
-            sampleId={sample.sampleId}
             {sample}
-            {refetch}
-            prompt={toolState.instancesPrompt}
-            onPromptChange={(value) => (toolState.instancesPrompt = value)}
-            maxInstances={toolState.maxInstances}
-            saveAs={toolState.saveAs}
-            annotationClass={assistedLabeling.instancesClass}
-            annotationSource={annotationLabelContext.annotationSource}
-            isDrawingBox={toolState.isDrawingInstancesBox}
-            onBoxDrawn={() => (toolState.isDrawingInstancesBox = false)}
-            onStateChange={(state) => (toolState.instances = state)}
+            saveAs={assistedLabeling.state.saveAs}
+            isDrawingBox={assistedLabeling.state.isDrawingInstancesBox}
+            onBoxDrawn={() => (assistedLabeling.state.isDrawingInstancesBox = false)}
+            instances={assistedLabeling.instances}
         />
     {/if}
 {/key}
