@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentProps } from 'svelte';
+import { writable } from 'svelte/store';
 import FindInstancesOverlay from './FindInstancesOverlay.svelte';
 
 const prediction = {
@@ -21,9 +22,14 @@ const mocks = vi.hoisted(() => ({
     }
 }));
 
+vi.mock('$lib/hooks/useSettings', () => ({
+    useSettings: () => ({ settingsStore: writable({ key_go_back: 'Escape' }) })
+}));
+
 const defaultProps = {
     sample: { width: 100, height: 100 },
     scale: 1,
+    isPanning: false,
     saveAs: 'box' as const,
     isDrawingBox: true,
     onDrawEnd: vi.fn(),
@@ -112,6 +118,42 @@ describe('FindInstancesOverlay', () => {
         await firePointer(rect, 'pointerup', 50);
 
         expect(onDrawEnd).not.toHaveBeenCalled();
+    });
+
+    it('ends the drawing on Escape and keeps the tool open', async () => {
+        const onDrawEnd = vi.fn();
+        const onWindowKeyDown = vi.fn();
+        window.addEventListener('keydown', onWindowKeyDown);
+        render(FindInstancesOverlay, { props: { ...defaultProps, onDrawEnd } });
+
+        await fireEvent.keyDown(document.body, { key: 'Escape' });
+
+        expect(onDrawEnd).toHaveBeenCalledOnce();
+        expect(onWindowKeyDown).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', onWindowKeyDown);
+    });
+
+    it('lets Escape through when not drawing', async () => {
+        const onDrawEnd = vi.fn();
+        const onWindowKeyDown = vi.fn();
+        window.addEventListener('keydown', onWindowKeyDown);
+        render(FindInstancesOverlay, {
+            props: { ...defaultProps, isDrawingBox: false, onDrawEnd }
+        });
+
+        await fireEvent.keyDown(document.body, { key: 'Escape' });
+
+        expect(onDrawEnd).not.toHaveBeenCalled();
+        expect(onWindowKeyDown).toHaveBeenCalledOnce();
+        window.removeEventListener('keydown', onWindowKeyDown);
+    });
+
+    it('lets pan events through while panning', () => {
+        const { container } = render(FindInstancesOverlay, {
+            props: { ...defaultProps, isPanning: true }
+        });
+
+        expect(getInteractionRect(container)).toHaveAttribute('pointer-events', 'none');
     });
 
     it('removes the instance of a clicked delete button', async () => {

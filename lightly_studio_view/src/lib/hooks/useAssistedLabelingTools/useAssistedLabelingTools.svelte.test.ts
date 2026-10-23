@@ -95,9 +95,10 @@ describe('useAssistedLabelingTools', () => {
         expect(context.status).toBe('cursor');
     });
 
-    it('ends box drawing and drops the results when the find all instances tool is left', () => {
+    it('ends box drawing and drops the prompts when the find all instances tool is left', () => {
         const { context, tools } = setup('find-instances');
         tools.state.isDrawingInstancesBox = true;
+        tools.state.instancesPrompt = 'cars';
         flushSync();
         expect(tools.state.isDrawingInstancesBox).toBe(true);
         expect(mocks.clearInstances).not.toHaveBeenCalled();
@@ -106,6 +107,7 @@ describe('useAssistedLabelingTools', () => {
         flushSync();
 
         expect(tools.state.isDrawingInstancesBox).toBe(false);
+        expect(tools.state.instancesPrompt).toBe('');
         expect(mocks.clearInstances).toHaveBeenCalledOnce();
     });
 });

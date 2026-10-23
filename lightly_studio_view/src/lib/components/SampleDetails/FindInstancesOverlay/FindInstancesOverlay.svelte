@@ -1,5 +1,8 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
+    import { get } from 'svelte/store';
+    import { useSettings } from '$lib/hooks/useSettings';
+    import { isTextInputTarget } from '$lib/utils';
     import SampleAnnotationRect from '$lib/components/SampleDetails/SampleAnnotationRect/SampleAnnotationRect.svelte';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
     import NormalizedBoxRect from '$lib/components/SampleDetails/NormalizedBoxRect/NormalizedBoxRect.svelte';
@@ -12,6 +15,8 @@
     interface Props {
         sample: { width: number; height: number };
         scale: number;
+        // Lets pan events through while keeping the boxes and results.
+        isPanning: boolean;
         interactionRect?: SVGRectElement | null;
         saveAs: SaveAs;
         isDrawingBox: boolean;
@@ -23,6 +28,7 @@
     let {
         sample,
         scale,
+        isPanning,
         interactionRect = $bindable(),
         saveAs,
         isDrawingBox,
@@ -31,6 +37,16 @@
     }: Props = $props();
 
     const drag = useDragBox(() => ({ interactionRect }));
+    const { settingsStore } = useSettings();
+
+    // Captured before the panel's handler, so Escape ends the drawing and keeps the tool.
+    const onKeyDown = (event: KeyboardEvent) => {
+        if (!isDrawingBox || isTextInputTarget(event.target)) return;
+        if (event.key !== get(settingsStore).key_go_back) return;
+        event.stopPropagation();
+        drag.cancel();
+        onDrawEnd();
+    };
 
     const onPointerUp = (event: PointerEvent & { currentTarget: SVGRectElement }) => {
         const { box } = drag.onPointerUp(event);
@@ -46,6 +62,8 @@
     };
 </script>
 
+<svelte:window onkeydowncapture={onKeyDown} />
+
 {#each instances.predictions as preview (preview)}
     <AnnotationPreview {preview} image={sample} {saveAs} />
 {/each}
@@ -60,6 +78,7 @@
         bind:interactionRect
         {sample}
         cursor="crosshair"
+        pointerEvents={isPanning ? 'none' : 'all'}
         onpointerdown={drag.onPointerDown}
         onpointermove={drag.onPointerMove}
         onpointerup={onPointerUp}
