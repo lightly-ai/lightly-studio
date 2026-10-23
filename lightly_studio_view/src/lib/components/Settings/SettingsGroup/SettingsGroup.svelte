@@ -13,13 +13,13 @@
 
 <section class="space-y-1">
     {#if title}
-        <h3 class="pb-1 text-sm font-semibold text-foreground">
+        <h3 class="border-b border-foreground/30 pb-2 text-sm font-semibold text-foreground">
             {title}
         </h3>
     {/if}
     <div
         class={cn(
-            '[&>*]:border-t [&>*]:border-border/60',
+            '[&>*]:border-t [&>*]:border-border/40',
             columns === 2
                 ? 'grid grid-cols-2 gap-x-10 [&>*:nth-child(-n+2)]:border-t-0'
                 : '[&>*:first-child]:border-t-0'
