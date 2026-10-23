@@ -72,6 +72,31 @@ def create_many(
         session.commit()
 
 
+def upsert_many(
+    session: Session, sample_embeddings: list[SampleEmbeddingCreate], commit: bool = True
+) -> None:
+    """Create many sample embeddings, overwriting existing ones.
+
+    Replaces the stored vector of an embedding whose sample and model already have one.
+
+    Args:
+        session: The database session.
+        sample_embeddings: The embeddings to insert or overwrite.
+        commit: Whether to commit. Pass ``False`` to write as part of a larger
+            transaction that the caller commits, so multiple calls stay atomic.
+    """
+    rows = [SampleEmbeddingTable.model_validate(e).model_dump() for e in sample_embeddings]
+    db_insert.upsert_rows(
+        session=session,
+        table=SampleEmbeddingTable,
+        rows=rows,
+        conflict_columns=["sample_id", "embedding_model_id"],
+        update_columns=["embedding"],
+    )
+    if commit:
+        session.commit()
+
+
 # get_by_sample_ids and get_all_by_collection_id differ only by their input (which samples
 # to load), not by backend. Each picks the backend and then uses a shared
 # backend read path:

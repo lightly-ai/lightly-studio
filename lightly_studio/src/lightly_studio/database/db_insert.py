@@ -41,6 +41,33 @@ def insert_ignoring_conflicts(
             session.exec(insert(table).values(batch).prefix_with("OR IGNORE"))
 
 
+def upsert_rows(
+    session: Session,
+    table: type[SQLModel],
+    rows: Sequence[Mapping[str, Any]],
+    conflict_columns: Sequence[str],
+    update_columns: Sequence[str],
+) -> None:
+    """Inserts rows, and on a key conflict overwrites update_columns. Does not commit.
+
+    ``conflict_columns`` must match a unique or primary-key constraint of ``table``.
+    Batches ``rows`` like ``insert_ignoring_conflicts``. Does not flush; the caller owns
+    the transaction. No-op for empty ``rows``.
+    """
+    if not rows:
+        return
+
+    # The PostgreSQL ``ON CONFLICT DO UPDATE`` statement also runs on DuckDB.
+    for batch in batching.batched(items=rows):
+        stmt = pg_insert(table).values(batch)
+        session.exec(
+            stmt.on_conflict_do_update(
+                index_elements=list(conflict_columns),
+                set_={column: stmt.excluded[column] for column in update_columns},
+            )
+        )
+
+
 def insert_from_select_ignoring_conflicts(
     session: Session,
     table: type[SQLModel],
