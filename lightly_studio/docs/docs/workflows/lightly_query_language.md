@@ -68,7 +68,7 @@ match functions. Metadata `IN (...)` and comparisons with `null` are not yet sup
 
 ### Missing values and negation
 
-A metadata comparison does not match a missing path, JSON null, or a value of another type.
+A metadata comparison does not match a missing path, null, or a value of another type.
 This also applies to `!=`:
 
 ```mysql
