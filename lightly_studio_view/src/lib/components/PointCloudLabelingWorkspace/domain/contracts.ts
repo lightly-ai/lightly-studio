@@ -141,7 +141,7 @@ export interface CuboidAnnotation {
     readonly keyframeId: string | null;
     /** Cuboid centre in the canonical coordinate frame. */
     readonly center: Vector3;
-    /** Positive full extents along the cuboid's local x, y, z axes, in meters. */
+    /** Positive full extents along the cuboid's local x, y, z axes (length, width, height), in meters. */
     readonly size: Vector3;
     /** Cuboid orientation as a unit xyzw quaternion. */
     readonly rotation: Quaternion;

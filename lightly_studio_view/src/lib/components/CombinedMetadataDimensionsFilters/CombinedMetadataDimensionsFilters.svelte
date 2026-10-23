@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { page } from '$app/state';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { Slider } from '$lib/components/ui/slider/index.js';
     import CategoricalMetadataFilters from '$lib/components/CategoricalMetadataFilters/CategoricalMetadataFilters.svelte';
@@ -12,9 +11,11 @@
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
     import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
 
-    const collectionId = page.params.collection_id!;
-
     interface Props {
+        /** Collection whose metadata fields are listed. */
+        collectionId: string;
+        /** Whether to show the width and height sliders. Views whose samples cannot be filtered by size hide them. */
+        showDimensions?: boolean;
         /** Whether the collection contains videos; shows video field filters instead of dimension filters. */
         isVideos?: boolean;
         /** Whether the collection contains video frames; shows frame number filter. */
@@ -29,6 +30,8 @@
     }
 
     const {
+        collectionId,
+        showDimensions = true,
         isVideos = false,
         isVideoFrames = false,
         onFilterChanged,
@@ -69,8 +72,9 @@
     };
 
     // Metadata filters logic
-    const { metadataBounds, metadataValues, updateMetadataValues } =
-        useMetadataFilters(collectionId);
+    const { metadataBounds, metadataValues, updateMetadataValues } = $derived.by(() =>
+        useMetadataFilters(collectionId)
+    );
 
     const numericalMetadata = $derived.by(() =>
         Object.keys($metadataBounds).filter((key) => {
@@ -106,7 +110,7 @@
             />
         {/if}
 
-        {#if !isVideos && !isVideoFrames && $bounds && $values}
+        {#if showDimensions && !isVideos && !isVideoFrames && $bounds && $values}
             <!-- Dimension Filters -->
             <div class="space-y-1">
                 <h2 class="text-md">Width</h2>

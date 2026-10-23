@@ -89,13 +89,11 @@
     // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
     const seededHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
 
-    // Annotations are colored by source only while multiple sources are visible and class
-    // coloring is not enforced, matching the details canvas. Swatches are shown only when
-    // they match the colors drawn on the image: source markers in the group headers when
-    // coloring by source, label legends in the rows otherwise.
+    // Keep source markers and row layout stable when annotations are hidden, matching
+    // the details canvas. The explicit class-color preference still takes priority.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2,
+            multipleSourcesVisible: countVisibleSources(annotationsSort) >= 2,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );

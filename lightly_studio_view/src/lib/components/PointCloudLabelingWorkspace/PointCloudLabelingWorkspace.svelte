@@ -16,12 +16,18 @@
     import type { ColorMode } from '$lib/components/PointCloudViewer';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
-    import { useAnnotationCollections, useMcapTickPrefetchScheduler } from '$lib/hooks';
+    import {
+        useAnnotationCollections,
+        useGlobalStorage,
+        useMcapTickPrefetchScheduler
+    } from '$lib/hooks';
     import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
     import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
     import { tickAnnotationsToClasses, tickAnnotationsToCuboids } from './tickAnnotationsToCuboids';
     import { useChannelSelection } from './useChannelSelection.svelte';
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
+    import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation';
+    import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
     import type { Vector3, WorkspaceTool } from './domain';
 
     /**
@@ -73,12 +79,17 @@
         onRetry
     }: Props = $props();
 
+    const { isEditingMode } = useGlobalStorage();
     let selectedColorMode = $state<Exclude<ColorMode, 'none'> | null>(null);
     const bufferEntireSequence = useSessionStorage<boolean>(
         'lightlyStudio_pointCloudBufferEntireSequence',
         false
     );
     let activeTool = $state<WorkspaceTool>('select');
+    const effectiveTool = $derived<WorkspaceTool>($isEditingMode ? activeTool : 'select');
+    let seekWasPlaying = false;
+    let bufferingSeekVersion = $state(0);
+    let selectedBufferingTick = $state<number | undefined>(undefined);
 
     let workspace = $state<PointCloudWorkspaceContext>({} as PointCloudWorkspaceContext);
     const lidarSelection = useChannelSelection({
@@ -107,15 +118,15 @@
         // Changing the mode creates a new session, which cancels the old queue. This is important
         // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
         getRequestId: () =>
-            `${datasetId}/${sequenceId}/playback/${$bufferEntireSequence ? 'entire' : 'window'}`,
+            `${datasetId}/${sequenceId}/playback/${workspace.referenceFrameId || 'sensor'}/${$bufferEntireSequence ? `entire/${selectedBufferingTick ?? workspace.currentTick}` : `window/${bufferingSeekVersion}`}`,
         getRanges: () => {
+            const activeTick = selectedBufferingTick ?? workspace.currentTick;
+            const activeIndex = workspace.ticks.findIndex((tick) => tick.seq_number === activeTick);
+
             if ($bufferEntireSequence) {
-                return [{ startIndex: 0, endIndex: workspace.ticks.length - 1 }];
+                return [{ startIndex: activeIndex, endIndex: workspace.ticks.length - 1 }];
             }
 
-            const activeIndex = workspace.ticks.findIndex(
-                (tick) => tick.seq_number === workspace.currentTick
-            );
             return getMcapTickPrefetchRange({
                 activeIndex,
                 tickCount: workspace.ticks.length,
@@ -135,6 +146,34 @@
             getOnTickChange: () => onTickChange,
             getIsTickBuffered: isTickBuffered
         });
+    const handleSeekStart = () => {
+        seekWasPlaying = workspace.isPlaying;
+        if (seekWasPlaying) workspace.togglePlayback();
+    };
+    const handleSeekEnd = () => {
+        if (seekWasPlaying && !workspace.isPlaying) workspace.togglePlayback();
+        seekWasPlaying = false;
+    };
+    const handleSelectTick = (seqNumber: number) => {
+        selectedBufferingTick = seqNumber;
+        bufferingSeekVersion += 1;
+        goToFrame(seqNumber);
+    };
+    const handleWindowKeydown = (event: KeyboardEvent) => {
+        if (event.code !== 'Space' || event.repeat) return;
+        const target = event.target;
+        if (
+            target instanceof Element &&
+            ((target instanceof HTMLElement && target.isContentEditable) ||
+                target.closest(
+                    'button, a, input, select, textarea, [role="button"], [role="option"], [role="menuitem"]'
+                ))
+        ) {
+            return;
+        }
+        event.preventDefault();
+        togglePlayback();
+    };
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     const { customLabelColorsStore } = useCustomLabelColors();
@@ -265,6 +304,25 @@
         return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
     });
 
+    const { handleCuboidTransform } = useUpdateCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
+    });
+
+    const { handleDeleteCuboid: deleteCuboidAnnotation } = useDeleteCuboidAnnotation({
+        getCollectionId: () => annotationSourceCollectionId,
+        getAnnotations: () => sceneSnapshot?.annotations ?? []
+    });
+
+    async function handleDeleteCuboid(cuboidId: string): Promise<void> {
+        const deleted = await deleteCuboidAnnotation(cuboidId);
+        if (!deleted) return;
+        await workspace.tickDetails.refetch();
+        if (selectedCuboidId === cuboidId) {
+            selectedCuboidId = null;
+        }
+    }
+
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await workspace.tickDetails.refetch({ throwOnError: true });
@@ -273,6 +331,8 @@
         });
     }
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div
     bind:this={containerEl}
@@ -310,7 +370,12 @@
                     <PaneGroup direction="vertical" class="min-h-0 flex-1">
                         <!-- The point cloud dominates: full width of the working column. -->
                         <Pane defaultSize={62} minSize={30} class="relative min-h-0">
-                            <ToolRail {activeTool} onToolChange={(tool) => (activeTool = tool)} />
+                            {#if $isEditingMode}
+                                <ToolRail
+                                    {activeTool}
+                                    onToolChange={(tool) => (activeTool = tool)}
+                                />
+                            {/if}
                             {#if workspace.tickDetails.isError || workspace.cloudPointFrame.isError}
                                 <WorkspaceStatusPanel status="error" onRetry={workspace.retry} />
                             {:else if workspace.status === 'empty'}
@@ -326,10 +391,11 @@
                                     {annotationSources}
                                     selectedAnnotationId={selectedCuboidId}
                                     hoveredAnnotationId={hoveredCuboidId}
-                                    {activeTool}
+                                    activeTool={effectiveTool}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
                                     onCreateCuboid={handleCreateCuboid}
+                                    onCuboidTransform={handleCuboidTransform}
                                     onPreviousTick={goToPreviousFrame}
                                     onNextTick={goToNextFrame}
                                 />
@@ -377,7 +443,9 @@
                             onNextFrame={goToNextFrame}
                             onPlayToggle={togglePlayback}
                             onPlaybackIntervalChange={workspace.setPlaybackIntervalMs}
-                            onSelectTick={goToFrame}
+                            onSelectTick={handleSelectTick}
+                            onSeekStart={handleSeekStart}
+                            onSeekEnd={handleSeekEnd}
                             {onPreviousSequence}
                             {onNextSequence}
                         />
@@ -402,6 +470,7 @@
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}
+                        onDeleteCuboid={$isEditingMode ? handleDeleteCuboid : undefined}
                     />
                 </Pane>
             </PaneGroup>

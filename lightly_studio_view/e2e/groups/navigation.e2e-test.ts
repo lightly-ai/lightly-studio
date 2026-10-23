@@ -2,6 +2,9 @@ import { test, expect } from '../utils';
 
 test.describe('groups-menu-navigation', () => {
     test('navigate between collections', async ({ page }) => {
+        await page.addInitScript(() => {
+            localStorage.setItem('lightly-studio:onboarding-invitation:v1', 'shown');
+        });
         await page.goto('/');
 
         // Verify groups page loads with group items

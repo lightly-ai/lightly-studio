@@ -1,11 +1,17 @@
 <script lang="ts">
+    import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Button, SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
-    import { cn, formatConfidence, resolveEffectiveColorBySource } from '$lib/utils';
+    import {
+        cn,
+        countVisibleSources,
+        formatConfidence,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -76,7 +82,7 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { isSourceVisible, multipleSourcesVisible } = useAnnotationCollectionsFilter();
+    const { isSourceVisible } = useAnnotationCollectionsFilter();
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
@@ -89,11 +95,10 @@
         computeSeededHiddenIds(classificationAnnotations, $isSourceVisible)
     );
 
-    // Color source group headers by source only when multiple sources are visible and class
-    // coloring is not enforced, mirroring the annotation segment and canvas behavior.
+    // Local visibility changes must not alter source colors or card layout.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: $multipleSourcesVisible,
+            multipleSourcesVisible: countVisibleSources(classificationAnnotations) >= 2,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
@@ -235,7 +240,7 @@
 
 {#snippet classificationRow(annotation: AnnotationView)}
     <div
-        class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-3 text-left"
+        class="flex w-full items-center justify-between gap-2 rounded-sm bg-card px-4 py-2 text-left"
         data-annotation-id={annotation.sample_id}
     >
         <span class="flex min-w-0 flex-1 flex-col gap-1">
@@ -258,7 +263,7 @@
                             )}
                             name="classification-label"
                             placeholder="Select or create a class"
-                            className="w-full min-w-0"
+                            className="h-8 w-full min-w-0 px-3"
                             contentClassName="w-full min-w-0"
                             onSelect={async (item) => {
                                 await updateClassificationLabel(annotation, item.value);
@@ -269,26 +274,29 @@
                             {/snippet}
                         </SelectList>
                     {:else}
-                        <span class="block min-w-0 truncate">
-                            {annotation.annotation_label.annotation_label_name}
+                        <span class="flex h-8 min-w-0 items-center">
+                            <span class="truncate">
+                                {annotation.annotation_label.annotation_label_name}
+                            </span>
                         </span>
-                        {#if annotation.confidence != null}
-                            {@const formattedConfidence = formatConfidence(annotation.confidence)}
-                            <span class="text-xs text-muted-foreground"
-                                >Confidence: {formattedConfidence}</span
-                            >
-                        {/if}
-                        {#if annotation.object_track_number != null}
-                            <span class="shrink-0 font-mono text-xs opacity-80"
-                                >#{annotation.object_track_number}</span
-                            >
-                        {/if}
+                    {/if}
+                    {#if annotation.confidence != null}
+                        {@const formattedConfidence = formatConfidence(annotation.confidence)}
+                        <span class="text-xs text-muted-foreground"
+                            >Confidence: {formattedConfidence}</span
+                        >
+                    {/if}
+                    {#if annotation.object_track_number != null}
+                        <span class="shrink-0 font-mono text-xs opacity-80"
+                            >#{annotation.object_track_number}</span
+                        >
                     {/if}
                 </span>
             </span>
         </span>
         <div class="flex shrink-0 items-center gap-3">
             {#if $isEditingMode}
+                <CopyAnnotationToSource {collectionId} {annotation} onCopied={refetch} />
                 <Button
                     icon={Trash2}
                     ariaLabel="Delete classification"
@@ -348,7 +356,7 @@
                 {#each draftClassifications as draftId (draftId)}
                     <div
                         class={cn(
-                            'flex w-full items-center justify-between gap-2 rounded-sm px-4 py-3 text-left',
+                            'flex w-full items-center justify-between gap-2 rounded-sm px-4 py-2 text-left',
                             'bg-card'
                         )}
                         data-annotation-id={draftId}
@@ -359,7 +367,7 @@
                                     {items}
                                     name="classification-label"
                                     placeholder="Select or create a class"
-                                    className="w-full min-w-0"
+                                    className="h-8 w-full min-w-0 px-3"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
                                         const created = await createClassificationAnnotation(

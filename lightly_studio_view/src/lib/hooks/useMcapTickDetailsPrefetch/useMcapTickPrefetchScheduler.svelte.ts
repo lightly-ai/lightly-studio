@@ -23,6 +23,7 @@ export const useMcapTickPrefetchScheduler = ({
     getTicks,
     getRequestId,
     getRanges,
+    getEnabled = () => true,
     getChunkSize = () => DEFAULT_CHUNK_SIZE,
     getDelayMs = () => DEFAULT_DELAY_MS
 }: McapTickPrefetchSchedulerParams) => {
@@ -40,11 +41,14 @@ export const useMcapTickPrefetchScheduler = ({
     let currentRequestId: string | undefined;
 
     $effect(() => {
+        if (!getEnabled()) return;
+
         const requestId = getRequestId();
         if (currentRequestId !== undefined && currentRequestId !== requestId) {
-            // A jump or a new sequence makes the old buffer irrelevant.
+            // A jump invalidates the old plan, but completed ranges remain useful. The executor
+            // discards pending work when the next request is enqueued and carries completed ticks
+            // into the new session.
             sessionVersion += 1;
-            executor.cancel();
         }
         currentRequestId = requestId;
         const currentSessionVersion = sessionVersion;

@@ -25,9 +25,9 @@ describe('PointCloudAnnotationDetails', () => {
         expect(screen.getByText('Y -2.00')).toBeInTheDocument();
         expect(screen.getByText('Z 1.23')).toBeInTheDocument();
 
-        expect(screen.getByText('W 4.50')).toBeInTheDocument();
-        expect(screen.getByText('H 1.80')).toBeInTheDocument();
-        expect(screen.getByText('D 1.50')).toBeInTheDocument();
+        expect(screen.getByText('L 4.50')).toBeInTheDocument();
+        expect(screen.getByText('W 1.80')).toBeInTheDocument();
+        expect(screen.getByText('H 1.50')).toBeInTheDocument();
 
         expect(screen.getByText('rx 0.0°')).toBeInTheDocument();
         expect(screen.getByText('ry 0.0°')).toBeInTheDocument();

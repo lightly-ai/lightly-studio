@@ -19,6 +19,7 @@ from lightly_studio.core.dataset_query.classification_query import (
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.metadata_expression import MetadataField
 from lightly_studio.core.dataset_query.object_detection_query import (
     ObjectDetectionField,
     ObjectDetectionQuery,
@@ -44,6 +45,7 @@ from lightly_studio.models.query_expr import (
     FieldRef,
     IntegerExpr,
     MatchExpr,
+    MetadataComparisonExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
@@ -238,8 +240,10 @@ def evaluation_metric_sort_to_order_by(
     return order_by
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C901
+def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PLR0912 C901
     """Translate a validated query-language expression to a dataset-query expression."""
+    if isinstance(expr, MetadataComparisonExpr):
+        return _metadata_to_match_expression(expr=expr)
     if isinstance(expr, StringExpr):
         return _apply_equality_operator(
             field=_lookup(mapping=_STRING_FIELDS, field=expr.field, type_="string"),
@@ -290,6 +294,17 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 C9
     if isinstance(expr, NotExpr):
         return NOT(to_match_expression(expr=expr.child))
     assert_never(expr)
+
+
+def _metadata_to_match_expression(expr: MetadataComparisonExpr) -> MatchExpression:
+    field = MetadataField(path=expr.path)
+    if expr.operator is OrdinalComparisonOperator.EQ:
+        return field == expr.value
+    if expr.operator is OrdinalComparisonOperator.NEQ:
+        return field != expr.value
+    if isinstance(expr.value, (int, float)) and not isinstance(expr.value, bool):
+        return _apply_ordinal_operator(field=field, operator=expr.operator, value=expr.value)
+    raise QueryExprError("Metadata ordering comparisons require a number.")
 
 
 def _apply_equality_operator(

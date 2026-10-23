@@ -17,6 +17,7 @@ from lightly_studio.embed.errors import (
     RemoteEmbedderUnavailableError,
 )
 from lightly_studio.embed.remote.endpoint import PersistableEmbedder
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_model import EmbeddingModelCreate, EmbeddingModelTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -40,9 +41,15 @@ def resolve_default_embedder(
     capability the caller needs (image, text, ...) from the registry:
 
     - The collection has a default model in the DB: its embedding space selects the embedder.
-    - The collection has no default in the DB yet: the registry's bootstrap embedder is used and
-      registered as the collection's default. The model stores the server of an embedder that
-      names one, see ``PersistableEmbedder``.
+    - The collection has no default in the DB yet: an embedder that a registration set as the
+      bootstrap of the capability comes first. Else, if the parent collection has a default
+      model, its space is used. Else, the registry's built-in bootstrap embedder is used. The
+      chosen space is registered as the collection's default. The model stores the server of an
+      embedder that names one, see ``PersistableEmbedder``.
+
+    The parent's space is not used in two cases. If no embedder serves it at this time, the
+    collection gets no default, so that a later call can use the parent's space. If its embedder
+    lacks the capability, the bootstrap embedder is used.
 
     Logs a warning and returns None when the registry has no matching embedder, so the
     caller only needs to return on None.
@@ -73,7 +80,18 @@ def resolve_default_embedder(
             return None
         return embedder, default_model.embedding_model_id
 
-    embedder = embedder_registry.get_registry().get_embedder(embedder_type=embedder_type)
+    registry = embedder_registry.get_registry()
+    parent_embedder: _EmbedderT | NoEmbedderReason | None = None
+    if not registry.has_registered_bootstrap(embedder_type=embedder_type):
+        parent_embedder = _parent_space_embedder(
+            session=session, collection_id=collection_id, embedder_type=embedder_type
+        )
+    if parent_embedder is NoEmbedderReason.UNAVAILABLE:
+        return None
+    if parent_embedder is None or isinstance(parent_embedder, NoEmbedderReason):
+        embedder = registry.get_embedder(embedder_type=embedder_type)
+    else:
+        embedder = parent_embedder
     if isinstance(embedder, NoEmbedderReason):
         logger.warning("No embedding model loaded. Skipping embedding generation.")
         return None
@@ -161,6 +179,55 @@ def _embedder_for_model(
             f"'{default_model.name}'. A wrongly registered embedder is likely."
         )
     return embedder
+
+
+def _parent_space_embedder(
+    session: Session,
+    collection_id: UUID,
+    embedder_type: type[_EmbedderT],
+) -> _EmbedderT | NoEmbedderReason | None:
+    """Resolve the embedder of the parent collection's default space.
+
+    Logs a warning when the space has no usable embedder.
+
+    Returns:
+        The embedder of the parent's space, or why no source has a matching embedder. None if
+        the collection does not exist, has no parent, or the parent has no default model.
+    """
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None or collection.parent_collection_id is None:
+        return None
+    parent_model = collection_embedding_model_resolver.get_default_model_by_collection_id(
+        session=session, collection_id=collection.parent_collection_id
+    )
+    if parent_model is None:
+        return None
+    embedder = _embedder_for_model(default_model=parent_model, embedder_type=embedder_type)
+    if embedder is NoEmbedderReason.UNAVAILABLE:
+        logger.warning(
+            "No embedder is available for the space %r of the parent collection. Skipping "
+            "embedding generation for the %s %r. A later run uses the parent's "
+            "space when its embedder is available.",
+            parent_model.name,
+            _collection_kind(sample_type=collection.sample_type),
+            collection.name,
+        )
+    elif embedder is NoEmbedderReason.LACKS_CAPABILITY:
+        logger.warning(
+            "The embedder of the parent collection's space %r cannot embed the %s %r. Using "
+            "the default embedder instead.",
+            parent_model.name,
+            _collection_kind(sample_type=collection.sample_type),
+            collection.name,
+        )
+    return embedder
+
+
+def _collection_kind(sample_type: SampleType) -> str:
+    """Get how a message names a collection of the sample type, such as "video frame collection"."""
+    if sample_type == SampleType.ANNOTATION:
+        return "annotation source"
+    return f"{sample_type.value.replace('_', ' ')} collection"
 
 
 def _register_default_model(session: Session, collection_id: UUID, embedder: Embedder) -> UUID:

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -111,16 +112,20 @@
 
 <div
     class={cn(
-        'gap-2 rounded-sm px-4 py-3 text-left align-baseline transition-colors',
+        'relative flex items-center gap-2 rounded-sm px-4 py-2 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
         canHighlight ? 'border border-primary' : ''
     )}
 >
     <button
         type="button"
-        class="flex w-full min-w-0 items-stretch justify-between text-left"
+        class="absolute inset-0 rounded-sm"
+        aria-label={`Select ${annotationLabelName} annotation`}
         data-annotation-id={annotation.sample_id}
         onclick={onClick}
+    ></button>
+    <div
+        class="pointer-events-none relative flex w-full min-w-0 items-stretch justify-between text-left"
     >
         <div class="w-full">
             <div class="flex min-w-0">
@@ -141,7 +146,7 @@
                         <div class="flex min-w-0 flex-1 flex-col justify-center gap-1">
                             {#if $isEditingMode}
                                 <div
-                                    class="min-w-0"
+                                    class="pointer-events-auto min-w-0"
                                     role="button"
                                     tabindex="0"
                                     onkeydown={(e) => {
@@ -151,9 +156,8 @@
                                         }
                                     }}
                                     onclick={(e) => {
-                                        if (!onClickSelectList) return;
                                         e.stopPropagation();
-                                        onClickSelectList();
+                                        (onClickSelectList ?? onClick)();
                                     }}
                                 >
                                     <SelectList
@@ -161,7 +165,7 @@
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
                                         placeholder="Select or create a class"
-                                        className="w-full min-w-0"
+                                        className="h-8 w-full min-w-0 px-3"
                                         contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {
                                             addAnnotationLabelChangeToUndoStack({
@@ -193,27 +197,17 @@
                                     </SelectList>
                                 </div>
                             {:else}
-                                <div
-                                    class="flex w-full min-w-0 flex-1 flex-col gap-1 overflow-hidden"
-                                >
+                                <div class="flex h-8 w-full min-w-0 items-center overflow-hidden">
                                     <span class="truncate">{annotationLabelName}</span>
-                                    {#if annotation.confidence != null}
-                                        {@const formattedConfidence = formatConfidence(
-                                            annotation.confidence
-                                        )}
-                                        <span class="text-xs text-muted-foreground"
-                                            >Confidence: {formattedConfidence}</span
-                                        >
-                                    {/if}
                                 </div>
                             {/if}
                         </div>
                     </div>
                 </div>
                 <div
-                    class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-1"
+                    class="flex shrink-0 flex-col items-end justify-center gap-2 self-stretch pl-3"
                 >
-                    <div class="flex shrink-0 gap-3">
+                    <div class="pointer-events-auto flex shrink-0 items-center gap-3">
                         {#if $isEditingMode && annotation.annotation_type != 'object_detection'}
                             {#if isLocked}
                                 <Tooltip
@@ -255,6 +249,11 @@
                         {/if}
 
                         {#if $isEditingMode}
+                            <CopyAnnotationToSource
+                                {collectionId}
+                                {annotation}
+                                onCopied={onUpdate}
+                            />
                             <Tooltip content="Delete annotation">
                                 <Trash2
                                     class="size-4"
@@ -268,6 +267,11 @@
                     </div>
                 </div>
             </div>
+            {#if annotation.confidence != null}
+                <div class="pt-1 text-xs text-muted-foreground">
+                    Confidence: {formatConfidence(annotation.confidence)}
+                </div>
+            {/if}
             {#if annotation.object_track_number != null}
                 <div class="pt-1">
                     <span class="text-xs text-muted-foreground">
@@ -289,5 +293,5 @@
                 </span>
             </div>
         </div>
-    </button>
+    </div>
 </div>

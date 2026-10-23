@@ -2,10 +2,13 @@
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
-    import { Select } from '$lib/components/Select';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
-    import PlotTextAxesInputs from './PlotTextAxesInputs/PlotTextAxesInputs.svelte';
+    import { PlotAxesEditor } from './PlotAxesEditor';
+    import { PlotAxesLabels } from './PlotAxesLabels';
+    import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
+    import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
+    import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
     import type { ToolMode } from './PlotToolPill/selectionTool';
     import {
         EmbeddingView,
@@ -41,7 +44,8 @@
         NO_CATEGORY_LABEL
     } from './plotCategories';
     import { page } from '$app/state';
-    import { isAnnotationsRoute, isVideosRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
+    import { useMcapSequenceFilters } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
@@ -67,16 +71,20 @@
     const isVideos = $derived(isVideosRoute(page.route?.id ?? null));
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
-    // Everything that isn't videos or annotations is the images grid.
-    const isImages = $derived(!isVideos && !isAnnotations);
+    // The MCAP sequences grid lives on the point clouds route.
+    const isSequences = $derived(isPointCloudsRoute(page.route?.id ?? null));
+    // Everything that isn't videos, annotations or sequences is the images grid.
+    const isImages = $derived(!isVideos && !isAnnotations && !isSequences);
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
+    const sequenceFilters = useMcapSequenceFilters();
     const { annotationPlotRegion, saveRegion: saveAnnotationRegion } = useAnnotationPlotSelection();
 
-    const imageFilter = $derived(isVideos ? null : imageFilters.imageFilter);
+    const imageFilter = $derived(isVideos || isSequences ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
+    const sequenceFilter = $derived(isSequences ? sequenceFilters.mcapSequenceFilter : null);
     const activeSampleIds = $derived(
         isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
     );
@@ -92,6 +100,15 @@
         // empty annotations filter so all points count as included).
         if (isAnnotations) {
             return $selectedAnnotationsFilter ?? { filter_type: 'annotations' as const };
+        }
+        if (isSequences) {
+            // The plot highlights its own selection rather than filtering by it, so only
+            // the tags of the grid filter are sent.
+            const tagIds = $sequenceFilter?.sample_filter?.tag_ids;
+            return {
+                filter_type: 'mcap_sequence' as const,
+                ...(tagIds ? { sample_filter: { tag_ids: tagIds } } : {})
+            };
         }
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
@@ -133,14 +150,14 @@
         annotationLabels
     });
 
-    const PLOT_LAYOUT_ITEMS = [
-        { value: 'pacmap', label: 'PaCMAP' },
-        { value: 'text', label: 'Text' }
-    ];
-    const { plotLayout, textAxesDraft, isEmbeddingAxes, plotAxes, commitTextAxes } = usePlotLayout(
-        untrack(() => collectionId)
-    );
-    const isAwaitingAxes = $derived($plotLayout === 'text' && $plotAxes === null);
+    const {
+        plotLayout,
+        textAxesDraft,
+        appliedTextAxes,
+        isEmbeddingAxes,
+        plotAxes,
+        commitTextAxes
+    } = usePlotLayout(untrack(() => collectionId));
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
@@ -191,15 +208,19 @@
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
     // highlight from the stored polygon to keep reflecting the actually selected points. Videos
     // and images keep the region on their filter stores; annotations use the shared plot store.
+    const committedSampleRegion = $derived(
+        isSequences
+            ? ($sequenceFilter?.sample_filter?.embedding_region ?? null)
+            : isVideos
+              ? ($videoFilter?.sample_filter?.embedding_region ?? null)
+              : isImages
+                ? ($imageFilter?.sample_filter?.embedding_region ?? null)
+                : null
+    );
     const committedHighlightRegion = $derived(
-        isImages || isVideos
-            ? ((isVideos
-                  ? $videoFilter?.sample_filter?.embedding_region
-                  : $imageFilter?.sample_filter?.embedding_region
-              )?.polygon ?? null)
-            : isAnnotations
-              ? ($annotationPlotRegion?.polygon ?? null)
-              : null
+        isAnnotations
+            ? ($annotationPlotRegion?.polygon ?? null)
+            : (committedSampleRegion?.polygon ?? null)
     );
 
     // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
@@ -241,6 +262,8 @@
             imageFilters.updateEmbeddingRegion(region);
         } else if (isVideos) {
             videoFilters.updateEmbeddingRegion(region);
+        } else if (isSequences) {
+            sequenceFilters.updateEmbeddingRegion(region);
         } else {
             saveAnnotationRegion(region);
         }
@@ -335,7 +358,7 @@
     });
 
     const reset = () => {
-        viewportState = null;
+        userViewportState = null;
     };
 
     const isReady = true;
@@ -368,20 +391,15 @@
     // Videos and images track their committed selection on their filter stores; annotations use
     // the shared plot region store.
     const regionSelected = $derived(
-        isImages || isVideos
-            ? ((isVideos
-                  ? $videoFilter?.sample_filter?.embedding_region
-                  : $imageFilter?.sample_filter?.embedding_region) ?? null) !== null
-            : isAnnotations
-              ? $annotationPlotRegion !== null
-              : false
+        isAnnotations ? $annotationPlotRegion !== null : committedSampleRegion !== null
     );
     const hasActiveSelection = $derived(
         $rangeSelection !== null || activeSampleIds.length > 0 || regionSelected
     );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Escape') {
+        // An open popover handles Escape itself and prevents the default.
+        if (event.defaultPrevented || event.key !== 'Escape') {
             return;
         }
         if (!hasActiveSelection) {
@@ -411,15 +429,20 @@
         setRangeSelection(normalizedSelection);
     };
 
-    let viewportState: ViewportState | null = $state(null);
+    // The viewport after the user pans or zooms. Until then, the default follows the plot size,
+    // because the size is 0 when the panel mounts and the default scale depends on it.
+    let userViewportState: ViewportState | null = $state(null);
+    const viewportState = $derived(
+        userViewportState ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
+    );
     const onViewportState = (state: ViewportState) => {
-        viewportState = state;
+        userViewportState = state;
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        viewportState = null;
+        userViewportState = null;
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {
@@ -427,7 +450,10 @@
         resetForNewLayout();
     };
     const commitPlotAxes = async (textAxes: Parameters<typeof commitTextAxes>[0]) => {
-        if (await commitTextAxes(textAxes)) resetForNewLayout();
+        if ($plotLayout === 'text' && areTextAxesEqual(textAxes, $appliedTextAxes)) return true;
+        const success = await commitTextAxes(textAxes);
+        if (success) resetForNewLayout();
+        return success;
     };
 
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
@@ -464,7 +490,13 @@
     );
     const resolveThumbnail = $derived.by(() =>
         createThumbnailResolver({
-            route: isAnnotations ? 'annotations' : isVideos ? 'videos' : 'images',
+            route: isAnnotations
+                ? 'annotations'
+                : isVideos
+                  ? 'videos'
+                  : isSequences
+                    ? 'mcap_sequences'
+                    : 'images',
             collectionId
         })
     );
@@ -481,16 +513,15 @@
 </script>
 
 <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card p-4" data-testid="plot-panel">
-    <div class="mb-5 mt-2 flex items-center justify-between">
-        <div class="flex items-center gap-3">
+    <div class="mb-5 mt-2 flex items-start justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-3">
             <div class="text-lg font-semibold">Embedding Plot</div>
-            <Select
-                items={PLOT_LAYOUT_ITEMS}
-                value={$plotLayout}
-                onValueChange={(value) => selectPlotLayout(value as PlotLayout)}
-                size="xs"
-                class="w-28"
-                testId="plot-layout-select"
+            <PlotAxesEditor
+                bind:draft={$textAxesDraft}
+                active={$plotLayout === 'text'}
+                isPending={$isEmbeddingAxes}
+                onCommit={commitPlotAxes}
+                onReset={() => selectPlotLayout('pacmap')}
             />
         </div>
         <Button
@@ -505,14 +536,8 @@
             ✕
         </Button>
     </div>
-    <!-- Relative: the text-axis inputs overlay every state below, so the user can fix the texts
-         while the plot loads or shows an error. -->
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if isAwaitingAxes}
-            <div class="flex flex-1 items-center justify-center p-8 text-muted-foreground">
-                <div class="text-lg">Type the four axis texts and press Enter.</div>
-            </div>
-        {:else if embeddingsData.isLoading}
+        {#if embeddingsData.isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
@@ -546,6 +571,16 @@
                             rangeSelection={$rangeSelection}
                         />
                     </div>
+
+                    <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
+                         as close to X− as to X+. -->
+                    {#if $plotAxes && overlayProxy}
+                        <PlotAxisLines proxy={overlayProxy} />
+                    {/if}
+
+                    {#if $plotLayout === 'text' && $appliedTextAxes}
+                        <PlotAxesLabels axes={$appliedTextAxes} />
+                    {/if}
 
                     {#if hoverPreview}
                         <div
@@ -585,13 +620,6 @@
             <div class="flex items-center justify-center p-8">
                 <div class="text-lg">No data available</div>
             </div>
-        {/if}
-        {#if $plotLayout === 'text'}
-            <PlotTextAxesInputs
-                bind:draft={$textAxesDraft}
-                onCommit={commitPlotAxes}
-                isPending={$isEmbeddingAxes}
-            />
         {/if}
     </div>
     {#if isReady}

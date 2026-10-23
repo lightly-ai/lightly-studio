@@ -8,6 +8,7 @@ import pytest
 
 from lightly_studio.core.dataset_query import query_translation
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.metadata_expression import MetadataComparisonExpression
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.query_expr import (
     AndExpr,
@@ -17,6 +18,7 @@ from lightly_studio.models.query_expr import (
     EqualityFloatExpr,
     FieldRef,
     IntegerExpr,
+    MetadataComparisonExpr,
     NotExpr,
     ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
@@ -26,6 +28,19 @@ from lightly_studio.models.query_expr import (
     StringExpr,
     TagsContainsExpr,
 )
+
+
+@pytest.mark.parametrize("operator", list(OrdinalComparisonOperator))
+@pytest.mark.parametrize("value", [1, 0.8])
+def test_to_match_expression__metadata_numbers(
+    operator: OrdinalComparisonOperator, value: int | float
+) -> None:
+    expr = MetadataComparisonExpr(path="odometry.acc[1]", operator=operator, value=value)
+    translated = query_translation.to_match_expression(expr=expr)
+    assert isinstance(translated, MetadataComparisonExpression)
+    assert translated.path == "odometry.acc[1]"
+    assert translated.comparison == operator.value
+    assert translated.value == value
 
 
 def test_to_match_expression__string_eq() -> None:

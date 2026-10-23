@@ -1,15 +1,26 @@
 ---
 title: "Plugins: Extend LightlyStudio's Workflows"
-description: Extend LightlyStudio with plugins for auto-labeling, SAM3 image segmentation, and video bounding box propagation, or build your own custom plugin.
+description: Extend LightlyStudio with plugins for auto-labeling, SAM3 image segmentation, zero-shot image classification, image captioning, and video bounding box propagation, or build your own custom plugin.
 ---
 
 # Plugins
 
 LightlyStudio offers the possibility to extend its functionality by using plugins. Users can define their own plugins or use pre-defined ones.
 
-LightlyStudio plugins can add workflows such as image segmentation with SAM3, auto-labeling for object detection, and video plugins for tasks like bounding box propagation across frames. This makes it possible to extend LightlyStudio with model-assisted annotation and dataset-specific automation directly inside the UI.
+LightlyStudio plugins can add workflows such as image segmentation with SAM3, auto-labeling for object detection, zero-shot image classification, image captioning with a vision-language model, and video plugins for tasks like bounding box propagation across frames. This makes it possible to extend LightlyStudio with model-assisted annotation and dataset-specific automation directly inside the UI.
 
 Plugins are shown in the UI based on their scope. The scope tells LightlyStudio which modality and context a plugin supports, for example dataset-level, image, or video frame context. The current view then determines which items the plugin runs on: in grid view, it uses the items matching the active filters; in detail view, it runs on the currently open item.
+
+## How Plugins Are Registered
+
+LightlyStudio registers a plugin in one of two ways:
+
+| Mode | Use it for | What you do |
+|---|---|---|
+| Automatic discovery | Plugins installed as a Python package, such as the [LightlyStudio plugins](#lightlystudio-plugins) | Install the package. LightlyStudio registers it when the GUI starts. |
+| Manual registration | Your own operator that is not packaged, for example a class in a local script | Call `operator_registry.register(...)` before `ls.start_gui()`. |
+
+Do not register an installed plugin by hand. It then shows up twice in the GUI.
 
 ## LightlyStudio Plugins
 
@@ -35,22 +46,51 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
         - Install:
           `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/bbox_auto_propagation_nano_tracker/`
 
-- [SAM3 Segmentation](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/sam3_segmentation/)  
-  Segments all instances matching a text prompt in a single image or across the current view.
+- [SAM3](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/sam3_segmentation/)  
+  Segments all instances matching a table of text prompts in a single image or across the current view.
 
     ??? note "Details"
 
         This is designed for dataset-wide prompt-based labeling workflows with
-        class-like prompts such as `person`, `car`, or `dog`.
+        class-like prompts such as `person`, `car`, or `dog`. All prompts run in
+        one pass of the model.
 
         - Scope: single image or images in the current view
-        - Input: text prompt
-        - Output: segmentation masks
-        - Annotation class: the prompt text is used as the annotation class name
+        - Input: a table of text prompts, each with an optional annotation class name
+          in the `label` column
+        - Output: segmentation masks, or only bounding boxes if you select
+          `bounding_boxes_only`
+        - Annotation classes: taken from the `label` column. If `label` is empty, the
+          prompt text is the annotation class name. Rows with the same `label` give one
+          annotation class, for example `car` and `truck` both as `vehicle`
         - Requirement: Hugging Face access to `facebook/sam3`
         - Maintainer: Lightly
         - Install:
           `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/sam3_segmentation/`
+
+- [Zero-Shot Classification](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/zero_shot_classification/)  
+  Classifies samples against a table of text prompts, with no training.
+
+    ??? note "Details"
+
+        You define the annotation classes in the GUI as rows of `prompt` and `label`.
+        The plugin scores each sample against every prompt. The sample gets the
+        annotation class of the best match. The plugin uses the embeddings that
+        LightlyStudio already computed for the collection, so it loads no vision model.
+
+        - Scope: images, videos, or video frames in the current view
+        - Input: a table of at least two text prompts, each with an optional
+          annotation class name in the `label` column
+        - Output: classification annotations, at most one per sample
+        - Annotation classes: taken from the `label` column. If `label` is empty, the
+          prompt text is the annotation class name
+        - Requirement: embeddings for the collection. LightlyStudio computes them on
+          ingestion. Samples without an embedding are skipped
+        - Tip: every sample gets the closest prompt. Add a catch-all row such as
+          `a photo of something else` for samples that match no class
+        - Maintainer: Lightly
+        - Install:
+          `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/zero_shot_classification/`
 
 - [LightlyTrain object detection inference](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/lightly_train_object_detection_inference/)  
   Runs LightlyTrain object detection inference on one image or the current view for auto-labeling.
@@ -73,6 +113,31 @@ Ready-to-use plugins are available in the [`lightly-studio-plugins`](https://git
         - Install:
           `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/lightly_train_object_detection_inference/`
 
+- [OpenRouter image captioning](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/openrouter_image_captioning/)  
+  Captions a single image or the current view with a vision model served through OpenRouter.
+
+    ??? note "Details"
+
+        The plugin uses the OpenAI-compatible API of [OpenRouter](https://openrouter.ai/).
+        You can use any vision-capable model on OpenRouter. Change the `model`
+        parameter to select a different model.
+
+        - Scope: single image or images in the current view
+        - Input: OpenRouter model name and prompt
+        - Output: LightlyStudio captions. New captions are added next to the
+          existing captions
+        - Default model: `qwen/qwen3-vl-8b-instruct`. Any vision-capable model from
+          [openrouter.ai/models](https://openrouter.ai/models) works
+        - Requirement: an OpenRouter API key from
+          [openrouter.ai/keys](https://openrouter.ai/keys). Enter it in the `api_key`
+          field, or set the `OPENROUTER_API_KEY` environment variable before you start
+          LightlyStudio. A `.env` file in the start directory also works
+        - Tradeoff: each run calls a paid API and blocks until it finishes. Filter the
+          view before you caption
+        - Maintainer: Lightly
+        - Install:
+          `pip install git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/openrouter_image_captioning/`
+
 **[Explore all available plugins on GitHub →](https://github.com/lightly-ai/lightly-studio-plugins)**
 
 ### Install LightlyStudio Plugins
@@ -83,7 +148,9 @@ Replace `<plugin_name>` with the folder name of the plugin you want to install:
 pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdirectory=plugins/<plugin_name>/"
 ```
 
-Once installed, the plugin is auto-registered and will appear in the GUI automatically.
+Once installed, the plugin is registered automatically the next time you start the GUI.
+You do not need to call `operator_registry.register`. If the GUI is already running,
+restart it.
 
 To remove a plugin, uninstall its package with `pip uninstall`,
 using the package name defined in the plugin's `pyproject.toml` (typically matching the
@@ -105,13 +172,21 @@ pip install "git+https://github.com/lightly-ai/lightly-studio-plugins.git#subdir
     [sam3_segmentation README](https://github.com/lightly-ai/lightly-studio-plugins/tree/main/plugins/sam3_segmentation)
     before installing to make sure you have the necessary access and dependencies set up.
 
-Once installed, the SAM3 segmentation plugin appears in the operator menu. Select an
-image or a set of images, trigger the operator, and SAM3 will generate segmentation
-masks directly inside LightlyStudio.
+Once installed, the SAM3 plugin appears in the operator menu. To use it:
+
+1. Select an image, or filter the grid view to a set of images.
+2. Open the SAM3 plugin.
+3. Add one row per prompt to the `prompts` table. Optionally, set the annotation class
+   name in the `label` column.
+4. To store only bounding boxes, select `bounding_boxes_only`.
+5. Run the plugin.
+
+SAM3 creates a segmentation mask or a bounding box for each instance that matches a
+prompt. Each annotation gets the annotation class of its row.
 
 ## Build Your Own Plugin
 
-The LightlyStudio operator plugin makes it possible to call a python function in the backend through a dialog in the graphical user interface (GUI) alias frontend. After you register an operator through the Python API, the GUI lists it automatically. For operators using the builtin parameter types, the dialog in the GUI is generated and rendered automatically.
+An operator plugin lets you run backend code from a dialog in the LightlyStudio GUI. You write a subclass of `BaseOperator` and put the action in its `execute` method. After you register an operator, the GUI lists it automatically. While you develop an operator, register it manually in your script (see below). To share it, package it with a `lightly_studio.plugins` entry point so LightlyStudio discovers it on install. See [Contributing Plugins](https://github.com/lightly-ai/lightly-studio-plugins#contributing-plugins). For operators that use the built-in parameter types, the GUI generates and renders the dialog automatically.
 
 ### Operator Plugin
 
@@ -167,7 +242,7 @@ class GreetingOperator(BaseOperator):
         return OperatorResult(success=True, message=f"Hello {your_name}!")
 ```
 
-To make an operator known to the application, you have to register it. For this you need to extend our main execution .py file:
+To make an operator known to the application, you register it manually (see [How Plugins Are Registered](#how-plugins-are-registered)). For this you need to extend our main execution .py file:
 
 ```python title="example_operator.py"
 import lightly_studio as ls

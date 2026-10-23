@@ -5,7 +5,7 @@ import type { toTextAxes } from './textAxesDraft';
 type TextAxes = NonNullable<ReturnType<typeof toTextAxes>>;
 
 // Embeds the four texts with the default embedding model of the collection and returns the
-// axis directions embed(positive) - embed(negative). Throws an Error with the server message.
+// axis directions unit(positive) - unit(negative). Throws an Error with the server message.
 export const embedTextAxes = async (
     collectionId: string,
     { x, y }: TextAxes
@@ -14,7 +14,10 @@ export const embedTextAxes = async (
     // for each other and only add load.
     const embeddings: number[][] = [];
     for (const text of [x.negative, x.positive, y.negative, y.positive]) {
-        embeddings.push(await embed(collectionId, text));
+        // With unit vectors p and n, the midpoint (p + n) / 2 projects to (|p|² - |n|²) / 2 = 0
+        // on the axis p - n, so x = 0 is where a sample is as similar to n as to p. With other
+        // norms (for example from MobileCLIP), x = 0 moves away from the midpoint.
+        embeddings.push(normalize(await embed(collectionId, text)));
     }
     const [xNegative, xPositive, yNegative, yPositive] = embeddings;
     return { x: subtract(xPositive, xNegative), y: subtract(yPositive, yNegative) };
@@ -32,6 +35,14 @@ const embed = async (collectionId: string, text: string): Promise<number[]> => {
         );
     }
     return data;
+};
+
+const normalize = (vector: number[]): number[] => {
+    const norm = Math.hypot(...vector);
+    if (norm === 0) {
+        throw new Error('Cannot normalize a zero-norm embedding.');
+    }
+    return vector.map((value) => value / norm);
 };
 
 const subtract = (minuend: number[], subtrahend: number[]): number[] =>

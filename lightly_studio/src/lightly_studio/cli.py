@@ -12,6 +12,7 @@ from lightly_studio.analytics import tracking
 from lightly_studio.analytics.tracking import LaunchSource
 from lightly_studio.database import db_manager
 from lightly_studio.evaluation.image_dataset_evaluate import ObjectDetectionEvaluationConfig
+from lightly_studio.utils import download
 
 
 @click.group()
@@ -102,7 +103,7 @@ def quickstart(port: int | None, force_download: bool, no_browser: bool) -> None
 )
 def quickstart_enterprise(api_url: str | None, token: str | None, api_key: str | None) -> None:
     """Seed a remote enterprise instance with a COCO object detection evaluation demo dataset."""
-    data_root = "hf://datasets/lightly-ai/coco_subset_128_images"
+    data_root = download.EXAMPLE_DATASET_HF_URI
     evaluation_config = ObjectDetectionEvaluationConfig(
         iou_threshold=0.5,
         classwise=False,
@@ -162,11 +163,18 @@ def quickstart_enterprise(api_url: str | None, token: str | None, api_key: str |
         "Full database URL, e.g. 'duckdb:///lightly_studio.db'. Mutually exclusive with --db-file."
     ),
 )
+@click.option(
+    "--no-browser",
+    is_flag=True,
+    default=False,
+    help="Do not open a browser automatically once the GUI server is ready.",
+)
 def gui(
     host: str | None,
     port: int | None,
     db_file: str | None,
     db_url: str | None,
+    no_browser: bool,
 ) -> None:
     """Start the web interface."""
     if db_file is not None and db_url is not None:
@@ -176,7 +184,7 @@ def gui(
         event=tracking.APP_LAUNCHED,
         properties={"launch_source": LaunchSource.GUI.value},
     )
-    lightly_studio.start_gui(host=host, port=port)
+    lightly_studio.start_gui(host=host, port=port, open_browser=not no_browser)
 
 
 def _has_evaluation(dataset: lightly_studio.ImageDataset, name: str) -> bool:

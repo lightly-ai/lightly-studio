@@ -19,7 +19,8 @@
         toggleAnnotationSelection,
         highlight = 'auto',
         scale = 1,
-        colorBySource
+        colorBySource,
+        showSourceLabels = false
     }: {
         sampleId: string;
         collectionId: string;
@@ -34,6 +35,7 @@
         highlight?: 'active' | 'disabled' | 'auto';
         scale: number;
         colorBySource?: boolean;
+        showSourceLabels?: boolean;
     } = $props();
     const { addReversibleAction } = useGlobalStorage();
     const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
@@ -85,7 +87,7 @@
         >
             <SampleAnnotation
                 {annotation}
-                showLabel={$showAnnotationTextLabelsStore || colorBySource}
+                showLabel={$showAnnotationTextLabelsStore || showSourceLabels}
                 {showBoundingBox}
                 imageWidth={sample.width}
                 constraintBox={{

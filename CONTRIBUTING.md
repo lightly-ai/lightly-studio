@@ -263,7 +263,7 @@ the public version from the lockfile. This does not affect explicit `uv sync` co
 
 ```bash
 cd lightly_studio
-uv sync --locked --group docs --extra cloud-storage
+uv sync --locked --group docs --extra cloud-storage --extra fal
 uv pip install --reinstall "lightly-mundig==$MUNDIG_DEV_VERSION"
 export UV_NO_SYNC=1
 make test

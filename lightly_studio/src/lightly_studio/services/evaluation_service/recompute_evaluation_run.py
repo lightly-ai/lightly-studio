@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+from typing import Any
 from uuid import UUID
 
 from sqlmodel import Session
@@ -31,11 +33,14 @@ from lightly_studio.resolvers import (
     evaluation_sample_metric_resolver,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def recompute_evaluation_run(
     session: Session,
     *,
     run: EvaluationRunTable,
+    config_json: dict[str, Any] | None = None,
 ) -> EvaluationResult:
     """Re-run an evaluation in-place, replacing its metrics.
 
@@ -48,10 +53,33 @@ def recompute_evaluation_run(
     Args:
         session: Database session.
         run: The evaluation run to recompute.
+        config_json: Optional replacement parameters, saved only if the rerun succeeds.
 
     Returns:
         Summary of the recomputed run, including its ID and input counts.
     """
+    try:
+        # Batch writers may commit. This session only flushes their changes into
+        # the outer transaction, allowing rollback after a later batch fails.
+        with Session(bind=session.connection(), join_transaction_mode="rollback_only") as work:
+            # Load current state so an older caller cannot overwrite a newer stale marker.
+            target = work.get(EvaluationRunTable, run.id)
+            if target is None:
+                raise ValueError("Evaluation run no longer exists.")
+            if config_json is not None:
+                target.config_json = config_json
+            result = _recompute_evaluation_run(session=work, run=target)
+        session.commit()
+    except Exception:
+        try:
+            session.rollback()
+        except Exception:
+            logger.exception("Rollback failed after evaluation rerun error")
+        raise
+    return result
+
+
+def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> EvaluationResult:
     observed_stale_since = run.stale_since
     data = _fetch_annotations_for_run(session=session, run=run)
     evaluation_annotation_metric_resolver.delete_by_evaluation_run_id(

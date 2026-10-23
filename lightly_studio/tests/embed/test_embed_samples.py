@@ -960,6 +960,92 @@ def test_embed_frame_samples__count_mismatch_raises(
     assert _stored_embeddings(session=db_session) == []
 
 
+def test_embed_mcap_image_frames(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Each sample stores the unit-length mean of its frame embeddings."""
+    collection = create_collection(session=db_session)
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="a.png"), ImageStub(path="b.png"), ImageStub(path="c.png")],
+    )
+    sample_ids = [image.sample_id for image in images]
+    model_id = _register_default_random_model(
+        session=db_session, collection_id=collection.collection_id
+    )
+    registry = EmbedderRegistry()
+    registry.register(embedder=_PILOnlyEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+    # The embedder embeds a frame as its top-left pixel. The mean of (3, 0, 0) and
+    # (0, 4, 0) is (1.5, 2, 0), of length 2.5. The second sample has no frames.
+    frames_by_sample_id = {
+        sample_ids[0]: [
+            Image.new(mode="RGB", size=(2, 2), color=(3, 0, 0)),
+            Image.new(mode="RGB", size=(2, 2), color=(0, 4, 0)),
+        ],
+        sample_ids[1]: [],
+        sample_ids[2]: [Image.new(mode="RGB", size=(2, 2), color=(0, 0, 2))],
+    }
+
+    embed_samples.embed_mcap_image_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_ids=sample_ids,
+        load_frames=lambda sample_id: frames_by_sample_id[sample_id],
+    )
+
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=sample_ids, embedding_model_id=model_id
+    )
+    stored = {row.sample_id: list(row.embedding) for row in rows}
+    assert stored.keys() == {sample_ids[0], sample_ids[2]}
+    assert stored[sample_ids[0]] == pytest.approx([0.6, 0.8, 0.0])
+    assert stored[sample_ids[2]] == pytest.approx([0.0, 0.0, 1.0])
+
+
+def test_embed_mcap_image_frames__no_registered_embedder_loads_no_frames(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """With no embedder for the default model's space, no frame is loaded or stored."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    _register_default_random_model(session=db_session, collection_id=collection.collection_id)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    load_frames = mocker.Mock(return_value=[])
+
+    embed_samples.embed_mcap_image_frames(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_ids=[image.sample_id],
+        load_frames=load_frames,
+    )
+
+    load_frames.assert_not_called()
+    assert _stored_embeddings(session=db_session) == []
+
+
+def test_embed_mcap_image_frames__empty_ids_warns_and_skips(
+    db_session: Session,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """An empty sample_ids list logs a warning and stores nothing."""
+    collection = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+
+    with caplog.at_level(level=logging.WARNING):
+        embed_samples.embed_mcap_image_frames(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_ids=[],
+            load_frames=lambda _: [],
+        )
+
+    assert "No samples to embed" in caplog.text
+    assert _stored_embeddings(session=db_session) == []
+
+
 @pytest.mark.usefixtures("patched_registry")
 def test_has_frame_embedder__true_when_embedder_available(db_session: Session) -> None:
     """The guard reports True when the registry can supply a frame embedder."""

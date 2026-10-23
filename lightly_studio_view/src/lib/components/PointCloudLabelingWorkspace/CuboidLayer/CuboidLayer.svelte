@@ -4,36 +4,17 @@
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
     import { GroundPlaneClickTarget } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
     import CuboidGizmo from './CuboidGizmo.svelte';
+    import { CuboidFaceResize } from './CuboidFaceResize';
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
+    import { createCuboidHoverTracker } from './cuboidHoverTracker';
+    import { createCuboidTransformState } from './cuboidTransformState';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
-    import { addCuboidSelectionListeners, pickSmallestFromIntersections } from './cuboidSelection';
-
-    type CuboidIntersection = Parameters<typeof pickSmallestFromIntersections>[0][number];
+    import { addCuboidSelectionListeners } from './cuboidSelection';
+    import { GIZMO_MODES, buildCuboidTransformPayload } from './cuboidTransform';
+    import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
 
     interactivity();
-
-    /** Renders cuboid annotations with selection, hover highlights, and manipulation handles. */
-    interface Props {
-        /** Cuboids to render in the active point-cloud frame. */
-        cuboids: readonly Domain.CuboidAnnotation[];
-        /** Annotation classes used to resolve each cuboid's display color. */
-        annotationClasses: readonly Domain.AnnotationClass[];
-        /** Identity of the currently selected cuboid, or null. */
-        selectedAnnotationId?: string | null;
-        /** Identity of the currently hovered cuboid, or null. */
-        hoveredAnnotationId?: string | null;
-        /** Tool that determines whether cuboids can be selected. */
-        activeTool?: Domain.WorkspaceTool;
-        /** Retained bounds that keep the click plane aligned with the visible ground plane. */
-        groundPlaneBounds: Domain.Bounds3;
-        /** Fires when the user selects or deselects a cuboid. */
-        onselect?: (annotationId: string | null) => void;
-        /** Fires when the pointer enters or leaves a cuboid. */
-        onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
-        /** Fires when the user clicks the ground plane in create-cuboid mode. */
-        onCreateCuboid?: (position: Domain.Vector3) => void;
-    }
 
     let {
         cuboids,
@@ -44,57 +25,37 @@
         groundPlaneBounds,
         onselect,
         onhover,
-        onCreateCuboid
-    }: Props = $props();
+        onCreateCuboid,
+        onCuboidTransform
+    }: {
+        cuboids: readonly Domain.CuboidAnnotation[];
+        annotationClasses: readonly Domain.AnnotationClass[];
+        selectedAnnotationId?: string | null;
+        hoveredAnnotationId?: string | null;
+        activeTool?: Domain.WorkspaceTool;
+        groundPlaneBounds: Domain.Bounds3;
+        onselect?: (annotationId: string | null) => void;
+        onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
+        onCreateCuboid?: (position: Domain.Vector3) => void;
+        onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
+    } = $props();
 
     const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
-    let cuboidClicked = false;
-
-    // Pending hits from the current click event — all overlapping cuboids report here.
-    let pendingHits: CuboidIntersection[] = [];
-    let hitScheduled = false;
-
-    // Currently-hovered cuboids: annotationId → volume. Maintained across pointer-enter/leave
-    // events so that the smallest overlapping cuboid is always highlighted.
-    let hoveredCuboids = new Map<string, number>();
-
-    function onCuboidHit(annotationId: string, volume: number): void {
-        if (activeTool !== 'select') return;
-        cuboidClicked = true;
-        pendingHits.push({ annotationId, volume });
-        if (!hitScheduled) {
-            hitScheduled = true;
-            queueMicrotask(() => {
-                const winnerId = pickSmallestFromIntersections(pendingHits);
-                if (winnerId !== null) onselect?.(winnerId);
-                pendingHits = [];
-                hitScheduled = false;
-            });
-        }
-    }
-
-    function hoveredAsIntersections(): CuboidIntersection[] {
-        return [...hoveredCuboids.entries()].map(([annotationId, volume]) => ({
-            annotationId,
-            volume
-        }));
-    }
-
-    function onCuboidHoverEnter(annotationId: string, volume: number): void {
-        hoveredCuboids.set(annotationId, volume);
-        onhover?.(pickSmallestFromIntersections(hoveredAsIntersections()), null);
-    }
-
-    function onCuboidHoverLeave(annotationId: string): void {
-        hoveredCuboids.delete(annotationId);
-        onhover?.(pickSmallestFromIntersections(hoveredAsIntersections()), null);
-    }
+    const transforms = createCuboidTransformState({
+        onTransform: (payload) => onCuboidTransform?.(payload)
+    });
+    const { annotations } = transforms;
+    const hoverTracker = createCuboidHoverTracker((id, handle) => onhover?.(id, handle));
 
     $effect(() => {
-        hoveredCuboids.clear();
+        hoverTracker.clear();
         onhover?.(null, null);
-        const next = createCuboidRenderItems(cuboids);
+        transforms.reconcile(cuboids);
+    });
+
+    $effect(() => {
+        const next = createCuboidRenderItems($annotations);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
     });
@@ -104,41 +65,69 @@
             canvas: renderer.domElement,
             activeTool,
             onselect,
-            onhover: (id, handle) => {
-                if (id === null) hoveredCuboids.clear();
-                onhover?.(id, handle);
-            },
-            isCuboidClicked: () => cuboidClicked,
-            resetCuboidClicked: () => (cuboidClicked = false)
+            onhover: (id) => hoverTracker.handleSelectionHover(id),
+            isCuboidClicked: () => hoverTracker.isClicked(),
+            resetCuboidClicked: () => hoverTracker.resetClicked()
         });
     });
 </script>
 
 {#if activeTool === 'create-cuboid'}
-    <GroundPlaneClickTarget
-        bounds={groundPlaneBounds}
-        onclick={(position) => onCreateCuboid?.(position)}
-    />
+    <GroundPlaneClickTarget bounds={groundPlaneBounds} onclick={(p) => onCreateCuboid?.(p)} />
 {/if}
 
 {#each renderCuboids as item (item.annotation.id)}
     {@const base = resolveCuboidColor(annotationClasses, item.annotation.annotationClassId)}
     {@const isSelected = selectedAnnotationId === item.annotation.id}
     {@const isHovered = hoveredAnnotationId === item.annotation.id}
-    {@const color = highlightCuboidColor(base, isSelected, isHovered)}
-    <T.Group position={[...item.annotation.center]} quaternion={[...item.annotation.rotation]}>
+    {@const gizmoMode = GIZMO_MODES[activeTool]}
+    <T.Group
+        position.x={item.annotation.center[0]}
+        position.y={item.annotation.center[1]}
+        position.z={item.annotation.center[2]}
+        quaternion.x={item.annotation.rotation[0]}
+        quaternion.y={item.annotation.rotation[1]}
+        quaternion.z={item.annotation.rotation[2]}
+        quaternion.w={item.annotation.rotation[3]}
+    >
         <CuboidVisual
             {item}
             baseColor={base}
-            edgeColor={color}
+            edgeColor={highlightCuboidColor(base, isSelected, isHovered)}
             {isHovered}
             {isSelected}
-            onhit={onCuboidHit}
-            onhoverenter={onCuboidHoverEnter}
-            onhoverleave={onCuboidHoverLeave}
+            onhit={(id, vol) => {
+                hoverTracker.markClicked();
+                if (activeTool === 'select' && onselect) hoverTracker.hit(id, vol, onselect);
+            }}
+            onhoverenter={(id, vol) => hoverTracker.enter(id, vol)}
+            onhoverleave={(id) => hoverTracker.leave(id)}
         />
         {#if isSelected}
-            <CuboidGizmo />
+            {#if gizmoMode}
+                <CuboidGizmo
+                    mode={gizmoMode}
+                    onTransformEnd={(obj) =>
+                        void transforms.commit(buildCuboidTransformPayload(item.annotation, obj))}
+                    onInteractionStart={() => {
+                        hoverTracker.markClicked();
+                        transforms.begin(item.annotation);
+                    }}
+                    onInteractionCancel={() => transforms.cancel(item.annotation.id)}
+                />
+            {/if}
+            {#if activeTool === 'resize'}
+                <CuboidFaceResize
+                    annotation={item.annotation}
+                    baseColor={base}
+                    onResizeStart={() => {
+                        hoverTracker.markClicked();
+                        transforms.begin(item.annotation);
+                    }}
+                    onResizeCancel={() => transforms.cancel(item.annotation.id)}
+                    onResizeEnd={(payload) => void transforms.commit(payload)}
+                />
+            {/if}
         {/if}
     </T.Group>
 {/each}
