@@ -1,9 +1,9 @@
 <script lang="ts">
     import { Select } from '$lib/components/Select';
-    import { Switch } from '$lib/components/ui/switch';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { SettingsFieldRow } from '../SettingsFieldRow';
     import { SettingsGroup } from '../SettingsGroup';
+    import { SettingsSwitchRow } from '../SettingsSwitchRow';
 
     interface Props {
         dialogState: Pick<
@@ -58,31 +58,21 @@
                         v as typeof dialogState.gridViewThumbnailQuality)}
             />
         </SettingsFieldRow>
-        <SettingsFieldRow
+        <SettingsSwitchRow
             id="show-sample-filenames"
             label="Show filenames"
             description="Show the filename with each sample in the grid."
-            isLabelClickable
-        >
-            <Switch
-                id="show-sample-filenames"
-                bind:checked={dialogState.showSampleFilenames}
-                disabled={dialogState.isSaving}
-            />
-        </SettingsFieldRow>
+            bind:checked={dialogState.showSampleFilenames}
+            disabled={dialogState.isSaving}
+        />
     </SettingsGroup>
     <SettingsGroup title="Images">
-        <SettingsFieldRow
+        <SettingsSwitchRow
             id="image-interpolation"
             label="Image interpolation"
             description="Smooth images when they are scaled. Turn off to see individual pixels."
-            isLabelClickable
-        >
-            <Switch
-                id="image-interpolation"
-                bind:checked={dialogState.imageInterpolation}
-                disabled={dialogState.isSaving}
-            />
-        </SettingsFieldRow>
+            bind:checked={dialogState.imageInterpolation}
+            disabled={dialogState.isSaving}
+        />
     </SettingsGroup>
 </div>

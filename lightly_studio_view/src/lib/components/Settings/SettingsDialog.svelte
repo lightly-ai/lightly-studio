@@ -1,23 +1,15 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import * as Tabs from '$lib/components/ui/tabs';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { SettingsDialogState } from './settingsDialogState.svelte';
-    import { ShortcutsTab } from './ShortcutsTab';
-    import { DisplayTab } from './DisplayTab';
-    import { AnnotationsTab } from './AnnotationsTab';
+    import { SettingsTabs } from './SettingsTabs';
 
     const { settingsStore, saveSettings } = useSettings();
     const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
 
     const dialogState = new SettingsDialogState();
-    const tabs = [
-        { value: 'shortcuts', label: 'Shortcuts', component: ShortcutsTab },
-        { value: 'display', label: 'Display', component: DisplayTab },
-        { value: 'annotations', label: 'Annotations', component: AnnotationsTab }
-    ];
     let activeTab = $state('shortcuts');
 
     // Hydrate form state each time the dialog opens.
@@ -37,11 +29,6 @@
             closeSettingsDialog();
             dialogState.clearRecording();
         }
-    }
-
-    function handleTabChange(tab: string) {
-        activeTab = tab;
-        dialogState.clearRecording();
     }
 
     async function handleFormSubmit(event: Event) {
@@ -86,32 +73,7 @@
                     </Dialog.Description>
                 </Dialog.Header>
 
-                <Tabs.Root
-                    value={activeTab}
-                    onValueChange={handleTabChange}
-                    class="flex min-h-0 flex-1 flex-col"
-                >
-                    <Tabs.List
-                        class="mt-4 h-auto justify-start gap-6 rounded-none border-b border-border bg-transparent p-0 px-6"
-                    >
-                        {#each tabs as tab (tab.value)}
-                            <Tabs.Trigger
-                                value={tab.value}
-                                class="-mb-px rounded-none border-b-2 border-transparent px-0 pb-2.5 pt-0 text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
-                            >
-                                {tab.label}
-                            </Tabs.Trigger>
-                        {/each}
-                    </Tabs.List>
-                    {#each tabs as tab (tab.value)}
-                        <Tabs.Content
-                            value={tab.value}
-                            class="mt-0 min-h-0 flex-1 overflow-y-auto px-6 py-4"
-                        >
-                            <tab.component {dialogState} />
-                        </Tabs.Content>
-                    {/each}
-                </Tabs.Root>
+                <SettingsTabs bind:value={activeTab} {dialogState} />
 
                 <Dialog.Footer
                     class="flex-row justify-end space-x-2 border-t border-border px-6 py-4"
