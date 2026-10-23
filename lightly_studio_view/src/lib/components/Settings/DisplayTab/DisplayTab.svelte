@@ -6,7 +6,14 @@
     import { SettingsGroup } from '../SettingsGroup';
 
     interface Props {
-        dialogState: SettingsDialogState;
+        dialogState: Pick<
+            SettingsDialogState,
+            | 'gridViewRendering'
+            | 'gridViewThumbnailQuality'
+            | 'imageInterpolation'
+            | 'showSampleFilenames'
+            | 'isSaving'
+        >;
     }
 
     const { dialogState }: Props = $props();

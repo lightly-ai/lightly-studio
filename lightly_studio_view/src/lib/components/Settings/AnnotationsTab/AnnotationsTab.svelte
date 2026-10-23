@@ -5,7 +5,13 @@
     import { SettingsGroup } from '../SettingsGroup';
 
     interface Props {
-        dialogState: SettingsDialogState;
+        dialogState: Pick<
+            SettingsDialogState,
+            | 'showAnnotationTextLabels'
+            | 'showBoundingBoxesForSegmentation'
+            | 'enforceColoringByClass'
+            | 'isSaving'
+        >;
     }
 
     const { dialogState }: Props = $props();

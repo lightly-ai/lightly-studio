@@ -5,7 +5,10 @@
     import { ShortcutSettingRow } from '../ShortcutSettingRow';
 
     interface Props {
-        dialogState: SettingsDialogState;
+        dialogState: Pick<
+            SettingsDialogState,
+            'shortcuts' | 'recordingShortcut' | 'startRecording'
+        >;
     }
 
     const { dialogState }: Props = $props();
