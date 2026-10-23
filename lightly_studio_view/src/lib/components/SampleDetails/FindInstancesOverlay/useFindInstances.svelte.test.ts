@@ -97,6 +97,7 @@ describe('useFindInstances', () => {
         const { instances } = setup('  ');
         instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
 
+        expect(instances.canGenerate).toBe(false);
         await instances.generate();
 
         expect(mocks.mutateAsync).not.toHaveBeenCalled();
@@ -253,6 +254,7 @@ describe('useFindInstances', () => {
         const firstSave = instances.save();
         const secondSave = instances.save();
         expect(instances.canSave).toBe(false);
+        expect(instances.canGenerate).toBe(false);
         saving.resolve(undefined);
         await Promise.all([firstSave, secondSave]);
 
