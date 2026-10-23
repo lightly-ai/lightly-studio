@@ -56,6 +56,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const canSave = () => predictions.length > 0 && !isSaving && !isGenerating;
 
+    const canGenerate = () =>
+        !isSaving && !isGenerating && canGenerateInstances({ prompt: getParams().prompt });
+
     const clear = () => {
         dropPredictions();
         boxes = [];
@@ -88,7 +91,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const generate = async () => {
         const { collectionId, sampleId, prompt, maxInstances } = getParams();
-        if (isSaving || isGenerating || !canGenerateInstances({ prompt })) return;
+        if (!canGenerate()) return;
         const requestSequence = ++sequence;
         isGenerating = true;
         try {
@@ -170,6 +173,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         },
         get canSave() {
             return canSave();
+        },
+        get canGenerate() {
+            return canGenerate();
         },
         generate,
         addBox,

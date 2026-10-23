@@ -1,10 +1,24 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
+import type { ComponentProps } from 'svelte';
 import { describe, expect, it, vi } from 'vitest';
 import FindInstancesPopUp from './FindInstancesPopUp.svelte';
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({ data: [], isLoading: false })
 }));
+
+type Instances = ComponentProps<typeof FindInstancesPopUp>['instances'];
+
+const makeInstances = ({ boxes = 0, predictions = 0 }) =>
+    ({
+        boxes: Array(boxes).fill({ x: 0, y: 0, width: 1, height: 1 }),
+        predictions: Array(predictions).fill({}),
+        isGenerating: false,
+        canGenerate: true,
+        canSave: predictions > 0,
+        generate: vi.fn(),
+        save: vi.fn()
+    }) as unknown as Instances;
 
 const defaultProps = {
     collectionId: 'collection-1',
@@ -18,29 +32,18 @@ const defaultProps = {
     onSaveAsChange: vi.fn(),
     isDrawingBox: false,
     onDrawBoxChange: vi.fn(),
-    boxCount: 0,
-    isGenerating: false,
-    resultCount: 0,
-    canSave: false,
-    onGenerate: vi.fn(),
-    onSave: vi.fn(),
+    instances: makeInstances({}),
     onClear: vi.fn()
 };
 
 describe('FindInstancesPopUp', () => {
-    it('finds instances on Enter only with a prompt, also when boxes are drawn', async () => {
-        const onGenerate = vi.fn();
+    it('shows how many boxes are drawn and how many instances are found', async () => {
         const { rerender } = render(FindInstancesPopUp, {
-            props: { ...defaultProps, onGenerate, boxCount: 2 }
+            props: { ...defaultProps, instances: makeInstances({ boxes: 2 }) }
         });
-        const input = screen.getByLabelText('Instance prompt');
+        expect(screen.getByText(/Boxes drawn: 2\./)).toBeInTheDocument();
 
-        await fireEvent.keyDown(input, { key: 'Enter' });
-        expect(onGenerate).not.toHaveBeenCalled();
-        expect(screen.getByRole('button', { name: 'Find instances' })).toBeDisabled();
-
-        await rerender({ ...defaultProps, onGenerate, prompt: 'cars' });
-        await fireEvent.keyDown(input, { key: 'Enter' });
-        expect(onGenerate).toHaveBeenCalledOnce();
+        await rerender({ ...defaultProps, instances: makeInstances({ predictions: 5 }) });
+        expect(screen.getByText('Instances found: 5.')).toBeInTheDocument();
     });
 });
