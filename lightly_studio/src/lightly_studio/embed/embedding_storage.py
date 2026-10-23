@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from uuid import UUID
 
 import numpy as np
@@ -34,6 +35,43 @@ def store_embeddings(
     Raises:
         ValueError: If the embeddings fail validation. See `_validate_and_coerce_embeddings`.
     """
+    _write_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,
+        show_progress=show_progress,
+        write_many=sample_embedding_resolver.create_many,
+    )
+
+
+def replace_embeddings(
+    session: Session,
+    model_id: UUID,
+    sample_ids: list[UUID],
+    embeddings: NDArray[np.float32],
+    show_progress: bool = True,
+) -> None:
+    """Like store_embeddings, but overwrites an existing embedding of the same sample and model."""
+    _write_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=sample_ids,
+        embeddings=embeddings,
+        show_progress=show_progress,
+        write_many=sample_embedding_resolver.upsert_many,
+    )
+
+
+def _write_embeddings(  # noqa: PLR0913
+    session: Session,
+    model_id: UUID,
+    sample_ids: list[UUID],
+    embeddings: NDArray[np.float32],
+    show_progress: bool,
+    write_many: Callable[..., None],
+) -> None:
+    """Validate embeddings and write them in batches with ``write_many``."""
     embeddings = _validate_and_coerce_embeddings(
         session=session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
     )
@@ -55,9 +93,7 @@ def store_embeddings(
                 )
                 for sample_id, embedding in batch
             ]
-            sample_embedding_resolver.create_many(
-                session=session, sample_embeddings=sample_embeddings, commit=False
-            )
+            write_many(session=session, sample_embeddings=sample_embeddings, commit=False)
 
             progress.update(len(sample_embeddings))
 
