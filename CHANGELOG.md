@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- BREAKING: Annotation embeddings now remember the box they were computed from. The PostgreSQL migration is automatic. DuckDB users must re-index their data.
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
 - Reorganised the settings dialog into a tabbed layout.
 
