@@ -9,7 +9,8 @@ const mockAnnotationLabelContext: Record<string, unknown> = {};
 const isEditingMode = writable(false);
 const toggleSampleSelection = vi.fn();
 const handleEscape = vi.fn();
-vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/contexts/SampleDetailsToolbar.svelte')>()),
     createSampleDetailsToolbarContext: () => mockToolbarContext,
     useSampleDetailsToolbarContext: () => ({
         context: mockToolbarContext,
@@ -94,6 +95,15 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         expect(toggleSampleSelection).toHaveBeenCalledWith('sample-1', 'collection-1');
         await fireEvent.keyDown(window, { key: 'Escape' });
         expect(handleEscape).toHaveBeenCalledOnce();
+    });
+
+    it('exits smart select on escape in editing mode', async () => {
+        isEditingMode.set(true);
+        mockToolbarContext.status = 'smart-select';
+        render(SampleDetailsPanel, { props: defaultProps });
+        await fireEvent.keyDown(window, { key: 'Escape' });
+        expect(mockToolbarContext.status).toBe('cursor');
+        expect(handleEscape).not.toHaveBeenCalled();
     });
 
     it.each([false, true])('ignores fields and dialog buttons with editing=%s', async (editing) => {
