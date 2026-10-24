@@ -5,17 +5,24 @@ import { createQuery } from '@tanstack/svelte-query';
 
 type EmbeddingsColorBy = GetEmbeddings2dRequest['color_by'];
 type EmbeddingsAxes = GetEmbeddings2dRequest['axes'];
+type EmbeddingsMarkerEmbeddings = GetEmbeddings2dRequest['marker_embeddings'];
 
 export function useEmbeddings(
     collectionId: string,
     filters: GetEmbeddings2dRequest['filters'] | null,
     colorBy: EmbeddingsColorBy = null,
-    axes: EmbeddingsAxes = null
+    axes: EmbeddingsAxes = null,
+    markerEmbeddings: EmbeddingsMarkerEmbeddings = null
 ) {
     return createQuery(() =>
         get2dEmbeddingsOptions({
             path: { collection_id: collectionId },
-            body: { filters: filters ?? {}, color_by: colorBy, axes }
+            body: {
+                filters: filters ?? {},
+                color_by: colorBy,
+                axes,
+                marker_embeddings: markerEmbeddings
+            }
         })
     );
 }
