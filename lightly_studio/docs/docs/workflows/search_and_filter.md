@@ -199,7 +199,7 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     #### Metadata queries
 
-    Filter samples by comparing a metadata value with a string, boolean, or number.
+    Filter samples by comparing a metadata value with a string, boolean, number, or timestamp.
     Use `ImageSampleField.metadata["camera"]` for images or
     `VideoSampleField.metadata["camera"]` for videos, replacing `"camera"` with your metadata key.
 
@@ -209,6 +209,8 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     negative indices count from the end, so `"odometry.acc[-1]"` selects the last element.
 
     ```py
+    from datetime import datetime
+
     from lightly_studio.core.dataset_query import AND, ImageSampleField
 
     # String and boolean equality or inequality
@@ -221,6 +223,11 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     query = dataset.match(ImageSampleField.metadata["temperature"] >= 25.3)
     query = dataset.match(ImageSampleField.metadata["odometry.speed"] > 10)
     query = dataset.match(ImageSampleField.metadata["odometry.acc[1]"] < 15)
+
+    # Parse an ISO 8601 metadata string before comparing it with a datetime
+    query = dataset.match(
+        ImageSampleField.metadata["timestamp"].as_timestamp() > datetime.now()
+    )
 
     # Combine metadata filters with other sample filters
     query = dataset.match(
@@ -242,6 +249,7 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     | `str` | `==`, `!=` | String |
     | `bool` | `==`, `!=` | Boolean |
     | `int` or `float` | `==`, `!=`, `<`, `<=`, `>`, `>=` | Number (integer or float) |
+    | `datetime` with `.as_timestamp()` | `==`, `!=`, `<`, `<=`, `>`, `>=` | ISO 8601 string |
 
     Integers and floats are treated as one numeric type: comparing with `3` or `3.0` gives
     the same results. Values are not converted between types: the string `"3"` and the
@@ -277,8 +285,10 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     !!! note "Unsupported comparison values"
 
-        Comparing with `None`, lists, dictionaries, or datetime objects raises `TypeError`.
-        Ordering comparisons require a number; strings and booleans raise `TypeError`.
+        Comparing with `None`, lists, dictionaries, or datetime objects without calling
+        `.as_timestamp()` raises `TypeError`. Timestamp comparisons require an ISO 8601 string
+        and a `datetime` comparison value. Numeric ordering requires a number; strings and
+        booleans raise `TypeError`.
         Comparing with `float("nan")` raises `ValueError`.
 
     See [Metadata](metadata.md#metadata-in-python) for adding or updating metadata and the
