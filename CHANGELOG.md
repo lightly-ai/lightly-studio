@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
+- Include a path-derived token in exported video-frame image file names so two videos with the same name in different folders no longer overwrite each other.
 
 ### Security
 
