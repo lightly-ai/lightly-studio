@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
 - Reorganised the settings dialog into a tabbed layout.
+- Speed up exporting video frames to image files by decoding videos in parallel.
 
 ### Deprecated
 

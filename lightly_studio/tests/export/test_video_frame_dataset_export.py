@@ -127,6 +127,38 @@ class TestVideoFrameDatasetExport:
             with PILImage.open(image_file) as img:
                 assert img.size == (100, 100)
 
+    def test_to_image_files__preserves_order_across_multiple_videos(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Exports frames from several videos in first-seen video order."""
+        dataset = VideoDataset.create(name="test_video_dataset")
+        for name in ("video_a", "video_b", "video_c"):
+            video_path = tmp_path / f"{name}.mp4"
+            create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
+            create_video_with_frames(
+                session=dataset.session,
+                collection_id=dataset.collection_id,
+                video=VideoStub(
+                    path=str(video_path), width=100, height=100, duration_s=3 / 30.0, fps=30.0
+                ),
+            )
+        output_dir = tmp_path / "frames"
+
+        frames = dataset.frames()
+        exported_paths = frames.export(frames.query()).to_image_files(output_dir=output_dir)
+
+        expected_names = [
+            f"{name}-{index}-mp4.png"
+            for name in ("video_a", "video_b", "video_c")
+            for index in range(3)
+        ]
+        assert exported_paths == [
+            f"{output_dir}/{name}".replace("\\", "/") for name in expected_names
+        ]
+        assert sorted(path.name for path in output_dir.glob("*.png")) == sorted(expected_names)
+
     def test_to_image_files__respects_query_filter(
         self,
         tmp_path: Path,
