@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import threading
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import cast
@@ -110,6 +111,12 @@ class VideoFrameDatasetExport(DatasetExport):
         total_frames = sum(len(frame_samples) for frame_samples in frames_by_video.values())
         exported_paths: list[str] = []
         pbar = tqdm(total=total_frames, desc="Exporting frames", unit=" frames")
+        progress_lock = threading.Lock()
+
+        def advance_progress() -> None:
+            # tqdm.update is not atomic; workers call this concurrently.
+            with progress_lock:
+                pbar.update(1)
 
         def export_one(item: tuple[str, list[VideoFrameSample]]) -> list[str]:
             video_path, frame_samples = item
@@ -119,7 +126,7 @@ class VideoFrameDatasetExport(DatasetExport):
                 fs=fs,
                 output_dir=output_dir_str,
                 extension=extension_lower,
-                on_frame_written=pbar.update,
+                on_frame_written=advance_progress,
             )
 
         with pbar:
