@@ -183,9 +183,11 @@ def test_add_annotations__does_not_reembed_edited_box(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
-    dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg", "image2.jpg"])
+    dataset, images_path = _setup_dataset_with_images(
+        tmp_path=tmp_path, file_names=["image1.jpg", "image2.jpg"]
+    )
     first_json = tmp_path / "first.json"
-    first_json.write_text(json.dumps(_coco_dict_with(["image1.jpg"])))
+    first_json.write_text(json.dumps(_coco_dict_with(file_names=["image1.jpg"])))
     dataset.add_annotations_from_coco(
         annotations_json=first_json,
         images_root=images_path,
@@ -199,7 +201,7 @@ def test_add_annotations__does_not_reembed_edited_box(
         coordinates=BoundingBoxCoordinates(x=60, y=50, width=20, height=20),
     )
     second_json = tmp_path / "second.json"
-    second_json.write_text(json.dumps(_coco_dict_with(["image2.jpg"])))
+    second_json.write_text(json.dumps(_coco_dict_with(file_names=["image2.jpg"])))
 
     dataset.add_annotations_from_coco(
         annotations_json=second_json,
