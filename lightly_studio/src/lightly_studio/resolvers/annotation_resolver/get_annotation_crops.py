@@ -21,19 +21,6 @@ CROP_FINGERPRINT_PREFIX = "bbox1:"
 _BOX_COLUMN_NAMES = ("x", "y", "width", "height")
 
 
-def build_crop_fingerprint_expression() -> ColumnElement[str]:
-    """The crop fingerprint of an annotation's raw box, as SQL.
-
-    The query must outer join ObjectDetectionAnnotationTable and SegmentationAnnotationTable
-    on the annotation's sample_id.
-    """
-    box: ColumnElement[str] = literal(CROP_FINGERPRINT_PREFIX)
-    for index, name in enumerate(_BOX_COLUMN_NAMES):
-        value = cast(_box_column(name=name), String)
-        box = box + value if index == 0 else box + "," + value
-    return box
-
-
 @dataclass(frozen=True)
 class AnnotationCrop:
     """A resolved annotation crop ready for embedding.
@@ -45,6 +32,19 @@ class AnnotationCrop:
     annotation_sample_id: UUID
     image_crop: ImageCrop
     source_fingerprint: str
+
+
+def build_crop_fingerprint_expression() -> ColumnElement[str]:
+    """The crop fingerprint of an annotation's raw box, as SQL.
+
+    The query must outer join ObjectDetectionAnnotationTable and SegmentationAnnotationTable
+    on the annotation's sample_id.
+    """
+    box: ColumnElement[str] = literal(CROP_FINGERPRINT_PREFIX)
+    for index, name in enumerate(_BOX_COLUMN_NAMES):
+        value = cast(_box_column(name=name), String)
+        box = box + value if index == 0 else box + "," + value
+    return box
 
 
 def get_annotation_crops_for_ids(
