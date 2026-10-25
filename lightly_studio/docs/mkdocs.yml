@@ -164,6 +164,7 @@ nav:
     - Annotate:
       - Create and Edit Annotations: workflows/annotations.md
       - Find Wrong Annotations: workflows/annotation_qa.md
+      - Validate Annotations: workflows/validation.md
       - Add Captions: workflows/captions.md
     - Evaluate:
       - Model Evaluation: workflows/evaluation.md
@@ -184,6 +185,7 @@ nav:
       - Plugin: api/plugin.md
       - Annotation: api/annotation.md
       - Model Evaluation: api/evaluation.md
+      - Annotation Validation: api/validation.md
     - About Us: about_us/index.md
   - Tutorials:
     - All Tutorials: tutorials/index.md
@@ -276,6 +278,7 @@ plugins:
           - workflows/embeddings.md
           - workflows/annotations.md
           - workflows/annotation_qa.md
+          - workflows/validation.md
           - workflows/captions.md
           - workflows/evaluation.md
           - workflows/export.md
@@ -293,6 +296,7 @@ plugins:
           - api/plugin.md
           - api/annotation.md
           - api/evaluation.md
+          - api/validation.md
           - about_us/index.md
         Tutorials:
           - tutorials/index.md

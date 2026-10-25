@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
+- Python SDK: Find object-detection boxes with zero size or outside the image with `dataset.validate()`.
 
 ### Changed
 
