@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import hashlib
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import cast
 from uuid import UUID
@@ -106,6 +106,11 @@ class VideoFrameDatasetExport(DatasetExport):
             video_path = frame_sample.parent_video.file_path_abs
             frames_by_video.setdefault(video_path, []).append(frame_sample)
 
+        # Decode independent videos on a worker pool. thread_imap_lazy preserves order.
+        total_frames = sum(len(frame_samples) for frame_samples in frames_by_video.values())
+        exported_paths: list[str] = []
+        pbar = tqdm(total=total_frames, desc="Exporting frames", unit=" frames")
+
         def export_one(item: tuple[str, list[VideoFrameSample]]) -> list[str]:
             video_path, frame_samples = item
             return _export_frames_from_video(
@@ -114,19 +119,16 @@ class VideoFrameDatasetExport(DatasetExport):
                 fs=fs,
                 output_dir=output_dir_str,
                 extension=extension_lower,
+                on_frame_written=pbar.update,
             )
 
-        # Decode independent videos on a worker pool. thread_imap_lazy preserves order.
-        total_frames = sum(len(frame_samples) for frame_samples in frames_by_video.values())
-        exported_paths: list[str] = []
-        with tqdm(total=total_frames, desc="Exporting frames", unit=" frames") as pbar:
-            for video_paths in parallelize.thread_imap_lazy(
+        with pbar:
+            for frame_paths in parallelize.thread_imap_lazy(
                 function=export_one,
                 iterable=frames_by_video.items(),
                 max_workers=executor.get_media_worker_count(),
             ):
-                exported_paths.extend(video_paths)
-                pbar.update(len(video_paths))
+                exported_paths.extend(frame_paths)
         return exported_paths
 
 
@@ -151,12 +153,13 @@ def video_frame_to_image(sample: Sample, image_id: int, use_relative_filename: b
     )
 
 
-def _export_frames_from_video(
+def _export_frames_from_video(  # noqa: PLR0913
     video_path: str,
     frames: Sequence[VideoFrameSample],
     fs: fsspec.AbstractFileSystem,
     output_dir: str,
     extension: str,
+    on_frame_written: Callable[[], object],
 ) -> list[str]:
     """Open a video once and export the requested frames as image files.
 
@@ -210,6 +213,7 @@ def _export_frames_from_video(
                 with fs.open(out_path, "wb") as f:
                     pil_image.save(f, format=pil_format)
                 exported_paths.append(out_path)
+                on_frame_written()
                 if not frames_by_number:
                     break
         except (OSError, FFmpegError) as e:
