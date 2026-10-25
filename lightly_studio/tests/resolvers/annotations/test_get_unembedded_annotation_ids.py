@@ -134,6 +134,7 @@ def test_get_unembedded_annotation_ids__none_model_returns_all_croppable(
         collection_id=collection.collection_id,
         sample_id=image_a.sample_id,
         annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
     )
     create_annotation(
         session=db_session,
@@ -147,6 +148,7 @@ def test_get_unembedded_annotation_ids__none_model_returns_all_croppable(
         collection_id=collection.collection_id,
         sample_id=image_c.sample_id,
         annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
     )
     embedding_model = create_embedding_model(
         session=db_session, collection_id=annotation_collection_id

@@ -28,6 +28,8 @@ from tests.helpers_resolvers import (
     create_images,
 )
 
+_RANDOM_EMBEDDING_DIMENSION = 3
+
 
 class _FailOnCallEmbedder(ImagePathEmbedder):
     """Embeds paths as zeros and raises on a known call, as a failing embedder does.
@@ -60,7 +62,7 @@ class _FailOnCallEmbedder(ImagePathEmbedder):
 def patched_registry(mocker: MockerFixture) -> EmbedderRegistry:
     """Route embedding to a fresh registry so tests never touch the shared singleton."""
     registry = EmbedderRegistry()
-    registry.register(embedder=RandomEmbedder())
+    registry.register(embedder=RandomEmbedder(dimension=_RANDOM_EMBEDDING_DIMENSION))
     mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
     return registry
 
@@ -289,7 +291,7 @@ def test_embed_missing_images__enables_text_query(db_session: Session) -> None:
     embedding = embed_samples.embed_text_for_collection(
         session=db_session, collection_id=collection.collection_id, text="a red car"
     )
-    assert len(embedding) == 3
+    assert len(embedding) == _RANDOM_EMBEDDING_DIMENSION
 
 
 def _register_default_random_model(session: Session, collection_id: UUID) -> UUID:

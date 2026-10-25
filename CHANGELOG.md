@@ -13,7 +13,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Python SDK: Adding images with `embed=True` also embeds the images of the dataset that were added earlier with `embed=False`.
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
 - Reorganised the settings dialog into a tabbed layout.
 
@@ -23,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Python SDK: Adding images with `embed=True` also embeds the images of the dataset that were added earlier with `embed=False`.
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
 
 ### Security
