@@ -42,6 +42,7 @@ from lightly_studio.models.collection_embedding_model import CollectionEmbedding
 from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.dynamic_transform import DynamicTransformTable
 from lightly_studio.models.embedding_model import EmbeddingModelTable
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricTable
 from lightly_studio.models.evaluation_run import EvaluationRunTable
@@ -222,12 +223,17 @@ def _delete_sample_sequence_links(session: Session, dataset_id: UUID) -> None:
 
 
 def _delete_sample_embeddings(session: Session, dataset_id: UUID) -> None:
-    """Delete sample embeddings for the dataset's samples."""
+    """Delete sample embeddings and saved plots for the dataset."""
     session.exec(
         delete(SampleEmbeddingTable).where(
             col(SampleEmbeddingTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+    session.exec(
+        delete(EmbeddingPlotTable)
+        .where(col(EmbeddingPlotTable.collection_id).in_(_collection_ids_subquery(dataset_id)))
+        .execution_options(**_DELETE_EXECUTION_OPTIONS)
     )
 
 
