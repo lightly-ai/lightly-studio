@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import { fromStore } from 'svelte/store';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import {
@@ -40,6 +41,11 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const tool = $derived(context.status === 'drag' ? context.panFrom : context.status);
     const activeTool = $derived(tool && isAssistedLabelingStatus(tool) ? tool : null);
     const isPanning = $derived(context.status === 'drag' && activeTool !== null);
+    // Smart select uses drags for its boxes, find instances only while drawing a box.
+    const blocksPan = $derived(
+        context.status === 'smart-select' ||
+            (context.status === 'find-instances' && state.isDrawingInstancesBox)
+    );
     const smartSelectClass = $derived(
         state.smartSelectClass ?? annotationLabelContext.annotationLabel
     );
@@ -86,17 +92,17 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             setStatus('cursor');
     });
 
-    // Leaving the tool drops its prompts.
+    // Leaving a tool, e.g. by a tool switch or Escape, ends box drawing and drops its prompts.
+    // Untracked, so the state the clears read, e.g. isSaving, does not rerun this.
     $effect(() => {
-        if (activeTool !== 'smart-select') smartSelect.clear();
-    });
-
-    // Leaving the tool, e.g. by a tool switch or Escape, ends box drawing and drops its prompts.
-    $effect(() => {
-        if (activeTool !== 'find-instances') {
-            endInstancesBoxDrawing();
-            clearInstances();
-        }
+        const tool = activeTool;
+        untrack(() => {
+            if (tool !== 'smart-select') smartSelect.clear();
+            if (tool !== 'find-instances') {
+                endInstancesBoxDrawing();
+                clearInstances();
+            }
+        });
     });
 
     return {
@@ -110,6 +116,9 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         },
         get isPanning() {
             return isPanning;
+        },
+        get blocksPan() {
+            return blocksPan;
         },
         get smartSelectClass() {
             return smartSelectClass;

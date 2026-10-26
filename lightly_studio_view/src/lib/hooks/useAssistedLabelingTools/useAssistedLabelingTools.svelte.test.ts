@@ -143,4 +143,17 @@ describe('useAssistedLabelingTools', () => {
             annotationClass: 'bus'
         });
     });
+
+    it('blocks panning for smart select and while drawing a find instances box', () => {
+        const { context, tools } = setup();
+        expect(tools.blocksPan).toBe(true);
+
+        context.status = 'find-instances';
+        flushSync();
+        expect(tools.blocksPan).toBe(false);
+
+        tools.state.isDrawingInstancesBox = true;
+        flushSync();
+        expect(tools.blocksPan).toBe(true);
+    });
 });

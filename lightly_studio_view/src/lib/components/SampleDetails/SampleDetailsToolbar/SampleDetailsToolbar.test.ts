@@ -115,6 +115,20 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
     });
 
+    it.each([
+        ['bounding-box', AnnotationType.OBJECT_DETECTION],
+        ['brush', AnnotationType.SEGMENTATION_MASK],
+        ['slic', AnnotationType.SEGMENTATION_MASK]
+    ] as const)('sets the annotation type of an active %s tool on mount', (status, type) => {
+        mockSampleDetailsToolbarContext.status = status;
+        mockAnnotationLabelContext.lastCreatedAnnotationId = 'id-2';
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBe(type);
+        expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
+    });
+
     it('activates bounding box tool and sets annotation type', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
