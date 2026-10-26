@@ -883,7 +883,7 @@ def _generate_embeddings_annotations(
     )
     if annotation_collection_id is None:
         return
-    embed_dataset.embed_annotation_collection(
+    embed_dataset.embed_annotation_crops(
         session=session, annotation_collection_id=annotation_collection_id
     )
 
