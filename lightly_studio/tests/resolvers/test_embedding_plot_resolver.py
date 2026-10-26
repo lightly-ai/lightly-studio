@@ -65,13 +65,19 @@ def test_embedding_plot__storage(db_session: Session) -> None:
 
 
 @pytest.mark.parametrize(
-    "operation", ["single", "batch", "rollback", "empty", "unknown", "duplicate"]
+    "operation", ["single", "batch", "mixed", "rollback", "empty", "duplicate"]
 )
 def test_mark_dirty__embedding_writes(db_session: Session, operation: str) -> None:
     collection = create_collection(session=db_session)
-    model = create_embedding_model(
-        session=db_session, collection_id=collection.collection_id, embedding_dimension=2
-    )
+    model, other_model = [
+        create_embedding_model(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_name=name,
+            embedding_dimension=2,
+        )
+        for name in ["first", "second"]
+    ]
     sample = create_image(session=db_session, collection_id=collection.collection_id)
     embedding = SampleEmbeddingCreate(
         sample_id=sample.sample_id,
@@ -81,15 +87,12 @@ def test_mark_dirty__embedding_writes(db_session: Session, operation: str) -> No
     if operation == "duplicate":
         sample_embedding_resolver.create(session=db_session, sample_embedding=embedding)
     plots = [
-        EmbeddingPlotTable(
-            collection_id=collection.collection_id,
-            embedding_model_id=model.embedding_model_id,
-            is_dirty=False,
-        ),
-        EmbeddingPlotTable(
-            collection_id=collection.collection_id, embedding_model_id=uuid4(), is_dirty=False
-        ),
-        EmbeddingPlotTable(collection_id=uuid4(), embedding_model_id=uuid4(), is_dirty=False),
+        EmbeddingPlotTable(collection_id=collection_id, embedding_model_id=model_id, is_dirty=False)
+        for collection_id, model_id in [
+            (collection.collection_id, model.embedding_model_id),
+            (collection.collection_id, other_model.embedding_model_id),
+            (uuid4(), uuid4()),
+        ]
     ]
     tokens = [plot.write_token for plot in plots]
     db_session.add_all(plots)
@@ -98,29 +101,25 @@ def test_mark_dirty__embedding_writes(db_session: Session, operation: str) -> No
         sample_embedding_resolver.create(session=db_session, sample_embedding=embedding)
     elif operation == "empty":
         sample_embedding_resolver.create_many(session=db_session, sample_embeddings=[])
-    elif operation == "unknown":
-        embedding_plot_resolver.mark_dirty(session=db_session, sample_ids=[uuid4()])
-        db_session.commit()
     else:
+        embeddings = [embedding]
+        if operation == "mixed":
+            other_id = other_model.embedding_model_id
+            embeddings.append(embedding.model_copy(update={"embedding_model_id": other_id}))
         sample_embedding_resolver.create_many(
-            session=db_session, sample_embeddings=[embedding], commit=False
+            session=db_session, sample_embeddings=embeddings, commit=False
         )
         if operation == "rollback":
             db_session.rollback()
         else:
             db_session.commit()
     db_session.expire_all()
-    dirty = operation in ("single", "batch", "duplicate")
-    assert [plot.is_dirty for plot in plots] == [dirty, dirty, False]
-    assert [plot.write_token != token for plot, token in zip(plots, tokens)] == [
-        dirty,
-        dirty,
-        False,
-    ]
-    assert (
-        db_session.get(SampleEmbeddingTable, (sample.sample_id, model.embedding_model_id))
-        is not None
-    ) == dirty
+    dirty = operation in ("single", "batch", "mixed", "duplicate")
+    expected = [dirty, operation == "mixed", False]
+    assert [plot.is_dirty for plot in plots] == expected
+    assert [plot.write_token != token for plot, token in zip(plots, tokens)] == expected
+    saved = db_session.get(SampleEmbeddingTable, (sample.sample_id, model.embedding_model_id))
+    assert (saved is not None) == dirty
 
 
 def test_embedding_plot__dataset_cleanup(db_session: Session) -> None:
