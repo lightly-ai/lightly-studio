@@ -1,5 +1,6 @@
 """Saved plot serialization and database storage tests."""
 
+import importlib
 from uuid import uuid4
 
 import numpy as np
@@ -122,8 +123,8 @@ def test_mark_dirty__embedding_writes(db_session: Session, operation: str) -> No
     ) == dirty
 
 
-@pytest.mark.postgres_only
-def test_embedding_plot__dataset_copy_and_delete(db_session: Session) -> None:
+def test_embedding_plot__dataset_cleanup(db_session: Session) -> None:
+    use_postgres = db_session.get_bind().dialect.name == "postgresql"
     collection = create_collection(session=db_session)
     child = create_collection(session=db_session, parent_collection_id=collection.collection_id)
     plots = [
@@ -133,13 +134,20 @@ def test_embedding_plot__dataset_copy_and_delete(db_session: Session) -> None:
     retained = EmbeddingPlotTable(collection_id=uuid4(), embedding_model_id=uuid4())
     db_session.add_all([*plots, retained])
     db_session.commit()
-    dataset_resolver.deep_copy(
-        session=db_session, dataset_id=collection.dataset_id, copy_name="copy"
-    )
-    assert len(db_session.exec(select(EmbeddingPlotTable)).all()) == 3
+    if use_postgres:
+        dataset_resolver.deep_copy(
+            session=db_session, dataset_id=collection.dataset_id, copy_name="copy"
+        )
+        assert len(db_session.exec(select(EmbeddingPlotTable)).all()) == 3
     keys = [(plot.collection_id, plot.embedding_model_id) for plot in plots]
     retained_key = (retained.collection_id, retained.embedding_model_id)
-    dataset_resolver.delete_dataset(session=db_session, dataset_id=collection.dataset_id)
+    if use_postgres:
+        dataset_resolver.delete_dataset(session=db_session, dataset_id=collection.dataset_id)
+    else:
+        # The package exports a function with the same name as this module.
+        module = importlib.import_module("lightly_studio.resolvers.dataset_resolver.delete_dataset")
+        module._delete_sample_embeddings(session=db_session, dataset_id=collection.dataset_id)
+        db_session.commit()
     assert all(db_session.get(EmbeddingPlotTable, key) is None for key in keys)
     assert db_session.get(EmbeddingPlotTable, retained_key) is not None
 
