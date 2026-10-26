@@ -46,7 +46,6 @@ from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import 
     get_by_id_with_payload,
 )
 from lightly_studio.resolvers.annotation_resolver.get_croppable_annotation_ids import (
-    build_croppable_annotations_query,
     get_croppable_annotation_ids,
 )
 from lightly_studio.resolvers.annotation_resolver.get_label_ids_by_sample_ids import (
@@ -79,7 +78,6 @@ __all__ = [
     "AnnotationCrop",
     "AnnotationOrdering",
     "BulkCreateClassificationsResult",
-    "build_croppable_annotations_query",
     "build_sample_ids_query",
     "bulk_create_classifications",
     "create_many",

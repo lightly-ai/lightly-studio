@@ -9,7 +9,7 @@ from sqlmodel import Session, col
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers.annotation_resolver import croppable_annotations_query
 
 
 def get_unembedded_annotation_ids(
@@ -35,9 +35,7 @@ def get_unembedded_annotation_ids(
     Returns:
         Annotation sample IDs that still need an embedding, ordered by image path.
     """
-    query = annotation_resolver.build_croppable_annotations_query(
-        annotation_collection_id=annotation_collection_id
-    )
+    query = croppable_annotations_query.build(annotation_collection_id=annotation_collection_id)
     if embedding_model_id is not None:
         query = query.outerjoin(
             SampleEmbeddingTable,
