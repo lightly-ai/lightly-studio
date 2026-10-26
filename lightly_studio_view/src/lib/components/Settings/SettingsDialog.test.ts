@@ -148,6 +148,9 @@ describe('SettingsDialog', () => {
     it('should open on the Shortcuts tab', async () => {
         render(SettingsDialog);
         await openDialog();
+        await openTab('Annotations');
+        await fireEvent.click(screen.getByText('Cancel'));
+        await openDialog();
 
         expect(screen.getByRole('tab', { name: 'Shortcuts' })).toHaveAttribute(
             'aria-selected',
