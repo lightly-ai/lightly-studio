@@ -1,9 +1,12 @@
 import { writable } from 'svelte/store';
 
 const isSettingsDialogOpen = writable(false);
+const settingsDialogTab = writable<string | undefined>(undefined);
 
 export function useSettingsDialog() {
-    const openSettingsDialog = () => {
+    // Opens the dialog on the given tab, or on the default tab.
+    const openSettingsDialog = (tab?: string) => {
+        settingsDialogTab.set(tab);
         isSettingsDialogOpen.set(true);
     };
 
@@ -13,6 +16,7 @@ export function useSettingsDialog() {
 
     return {
         isSettingsDialogOpen,
+        settingsDialogTab,
         openSettingsDialog,
         closeSettingsDialog
     };

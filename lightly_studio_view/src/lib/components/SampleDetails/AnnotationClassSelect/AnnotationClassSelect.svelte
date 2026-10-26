@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks';
-    import { SelectList } from '$lib/components/SelectList';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import type { ListItem } from '$lib/components/SelectList/types';
     import { cn } from '$lib/utils';
@@ -28,7 +28,7 @@
     });
 </script>
 
-<SelectList
+<AnnotationClassSelectList
     {items}
     {selectedItem}
     name="annotation-class"

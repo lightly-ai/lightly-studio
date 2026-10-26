@@ -2,7 +2,7 @@
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
@@ -160,11 +160,11 @@
                                         (onClickSelectList ?? onClick)();
                                     }}
                                 >
-                                    <SelectList
+                                    <AnnotationClassSelectList
                                         {items}
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
-                                        placeholder="Select or create a class"
+                                        placeholder="Select a class"
                                         className="h-8 w-full min-w-0 px-3"
                                         contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {
@@ -194,7 +194,7 @@
                                         {#snippet notFound({ inputValue })}
                                             <LabelNotFound label={inputValue} />
                                         {/snippet}
-                                    </SelectList>
+                                    </AnnotationClassSelectList>
                                 </div>
                             {:else}
                                 <div class="flex h-8 w-full min-w-0 items-center overflow-hidden">

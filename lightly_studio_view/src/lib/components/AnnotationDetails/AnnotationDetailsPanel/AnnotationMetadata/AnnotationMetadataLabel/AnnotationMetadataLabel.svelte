@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import type { Readable } from 'svelte/store';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
@@ -52,11 +52,11 @@
 
 {#if $isEditingMode}
     <div class="min-w-0">
-        <SelectList
+        <AnnotationClassSelectList
             {items}
             selectedItem={items.find((i) => i.value === value?.value)}
             name="annotation-label"
-            placeholder="Select or create a class"
+            placeholder="Select a class"
             className="w-full min-w-0"
             contentClassName="w-full min-w-0"
             onSelect={(item) => {
@@ -83,7 +83,7 @@
             {#snippet notFound({ inputValue })}
                 <LabelNotFound label={inputValue} />
             {/snippet}
-        </SelectList>
+        </AnnotationClassSelectList>
     </div>
 {:else}
     <span class="break-all text-sm" data-testid={`annotation-metadata-label`}>

@@ -7,7 +7,8 @@
     import { SettingsTabs } from './SettingsTabs';
 
     const { settingsStore, saveSettings } = useSettings();
-    const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
+    const { isSettingsDialogOpen, settingsDialogTab, openSettingsDialog, closeSettingsDialog } =
+        useSettingsDialog();
 
     const dialogState = new SettingsDialogState();
     let activeTab = $state('shortcuts');
@@ -17,14 +18,14 @@
     $effect(() => {
         if ($isSettingsDialogOpen && !wasDialogOpen) {
             dialogState.hydrate($settingsStore);
-            activeTab = 'shortcuts';
+            activeTab = $settingsDialogTab ?? 'shortcuts';
         }
         wasDialogOpen = $isSettingsDialogOpen;
     });
 
     function setOpen(isOpen: boolean) {
         if (isOpen) {
-            openSettingsDialog();
+            openSettingsDialog($settingsDialogTab);
         } else {
             closeSettingsDialog();
             dialogState.clearRecording();

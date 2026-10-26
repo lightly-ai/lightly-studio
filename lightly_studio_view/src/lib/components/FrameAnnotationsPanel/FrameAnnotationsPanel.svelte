@@ -4,7 +4,7 @@
     import LabelNotFound from '../LabelNotFound/LabelNotFound.svelte';
     import SampleDetailsSidePanelAnnotation from '../SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { getSelectionItems } from '../SelectList/getSelectionItems';
-    import SelectList from '../SelectList/SelectList.svelte';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
     import type { ListItem } from '../SelectList/types';
     import { page } from '$app/state';
     import { type SampleView, type VideoFrameView } from '$lib/api/lightly_studio_local';
@@ -70,15 +70,15 @@
                 </div>
                 {#if addAnnotationEnabled}
                     <label class="flex w-full flex-col gap-3 text-muted-foreground">
-                        <div class="text-sm">Select or create a class for a new annotation.</div>
-                        <SelectList
+                        <div class="text-sm">Select a class for a new annotation.</div>
+                        <AnnotationClassSelectList
                             {items}
                             selectedItem={items.find((i) => i.value === addAnnotationLabel?.value)}
                             name="annotation-label"
-                            label="Choose or create a class"
+                            label="Choose a class"
                             className="w-full"
                             contentClassName="w-full"
-                            placeholder="Select or create a class"
+                            placeholder="Select a class"
                             onSelect={(item) => {
                                 addAnnotationLabel = item;
                             }}
@@ -86,7 +86,7 @@
                             {#snippet notFound({ inputValue })}
                                 <LabelNotFound label={inputValue} />
                             {/snippet}
-                        </SelectList>
+                        </AnnotationClassSelectList>
                     </label>
                 {/if}
             </div>

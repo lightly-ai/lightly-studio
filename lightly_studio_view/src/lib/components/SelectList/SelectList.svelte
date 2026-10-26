@@ -43,7 +43,9 @@
         disabled = false,
         isLoading = false,
         onKeyboardConfirm,
-        labelledBy
+        labelledBy,
+        allowCreate = true,
+        footer
     }: {
         placeholder?: string;
         name?: string;
@@ -60,6 +62,10 @@
         disabled?: boolean;
         isLoading?: boolean;
         onKeyboardConfirm?: (item: ListItem) => void;
+        // Whether typing a name that is not in the list offers to create it.
+        allowCreate?: boolean;
+        // Rendered below the list, for example a link to manage the items.
+        footer?: Snippet<[{ close: () => void }]>;
     } = $props();
 
     // Part of the trigger's accessible name, so it reads as "<field label> <selected value>".
@@ -105,7 +111,7 @@
 
     const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue) {
+            if (event.key === 'Enter' && !highlightedValue && inputValue && allowCreate) {
                 createNewItem(inputValue);
                 event.preventDefault();
                 event.stopPropagation();
@@ -119,7 +125,7 @@
 
         if (highlightedItem) {
             confirmWithKeyboard(highlightedItem);
-        } else if (inputValue) {
+        } else if (inputValue && allowCreate) {
             const existingItem = items.find(
                 (item) => item.value.toLowerCase() === inputValue.toLowerCase()
             );
@@ -210,7 +216,7 @@
                         </Command.Item>
                     {/each}
                 </Command.Group>
-                {#if inputValue.trim()}
+                {#if inputValue.trim() && allowCreate}
                     <div class="border-t">
                         <Command.Item
                             value="__create__"
@@ -234,5 +240,10 @@
                 {/if}
             </Command.List>
         </Command.Root>
+        {#if footer}
+            <div class="border-t p-1">
+                {@render footer({ close: () => (open = false) })}
+            </div>
+        {/if}
     </Popover.Content>
 </Popover.Root>
