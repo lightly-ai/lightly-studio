@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest import mock
-
 import numpy as np
 import pytest
 from pytest_mock import MockerFixture
@@ -34,7 +32,9 @@ def test__calculate_2d_embeddings__2_samples() -> None:
 
 
 @pytest.mark.parametrize("existing", [False, True])
-def test_get_twodim_embeddings__write_during_rebuild(db_session: Session, existing: bool) -> None:
+def test_get_twodim_embeddings__write_during_rebuild(
+    db_session: Session, existing: bool, mocker: MockerFixture
+) -> None:
     collection = helpers_resolvers.create_collection(
         session=db_session, collection_name="no_samples"
     )
@@ -68,13 +68,14 @@ def test_get_twodim_embeddings__write_during_rebuild(db_session: Session, existi
             embedding_model_id=key[1],
             embedding=np.ones(embedding_model.embedding_dimension, dtype=np.float32),
         )
-        with mock.patch.object(
+        calculation_mock = mocker.patch.object(
             twodim_embedding_resolver, "_calculate_2d_embeddings", side_effect=calculate
-        ):
-            _, _, ids = twodim_embedding_resolver.get_twodim_embeddings(
-                session=db_session, collection_id=key[0], embedding_model_id=key[1]
-            )
-            assert ids == []
+        )
+        _, _, ids = twodim_embedding_resolver.get_twodim_embeddings(
+            session=db_session, collection_id=key[0], embedding_model_id=key[1]
+        )
+        assert ids == []
+        mocker.stop(calculation_mock)
         sample_embedding_resolver.create_many(session=writer, sample_embeddings=[embedding])
         assert twodim_embedding_resolver.get_twodim_embeddings(
             session=db_session, collection_id=key[0], embedding_model_id=key[1]
