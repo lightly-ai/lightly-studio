@@ -132,6 +132,32 @@ describe('SettingsDialog', () => {
         );
     });
 
+    it('should show Go back as a fixed Escape shortcut', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const goBack = screen.getByLabelText('Go back');
+        expect(goBack).toHaveTextContent('Escape');
+        expect(goBack).toBeDisabled();
+    });
+
+    it('should cancel recording on Escape and keep the dialog open', async () => {
+        const appShortcutHandler = vi.fn();
+        window.addEventListener('keydown', appShortcutHandler);
+        render(SettingsDialog);
+        await openDialog();
+
+        const shortcutButton = screen.getByLabelText('Hide annotations');
+        await fireEvent.click(shortcutButton);
+        await fireEvent.keyDown(document, { key: 'Escape' });
+
+        expect(screen.queryByText('Press a key...')).not.toBeInTheDocument();
+        expect(shortcutButton).toHaveTextContent('v');
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(appShortcutHandler).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', appShortcutHandler);
+    });
+
     it('should open on the Shortcuts tab', async () => {
         render(SettingsDialog);
         await openDialog();
@@ -230,7 +256,6 @@ describe('SettingsDialog', () => {
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith({
             key_hide_annotations: 'v',
-            key_go_back: 'Escape',
             key_toggle_edit_mode: 'e',
             grid_view_sample_rendering: 'contain',
             grid_view_thumbnail_quality: 'raw',
