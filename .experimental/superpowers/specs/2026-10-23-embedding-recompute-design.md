@@ -300,8 +300,15 @@ the spec, gave these decisions:
    from before the fingerprint, because a `NULL` fingerprint is not stale.
 4. `add_*` with `embed=True` and no default model embeds every image without an embedding, as main
    already does when a default model exists (section 7.1).
-5. Code quality, no behavior change: one `store_embeddings` with a `replace` flag instead of an
-   injected write function; the crop embedding move from `embed_samples.py` to `embed_dataset.py`
-   is its own commit; one shared chunk loop for images and crops; the croppable-annotation query
-   stays private to the resolver package; the selection branches are tested at the resolver level
-   and `ImageDataset.compute_embeddings` gets a few end-to-end tests.
+5. Code quality, no behavior change:
+   - One `store_embeddings` with a `replace` flag. It replaces `replace_embeddings` and the
+     `_write_embeddings` helper that takes the write function as a `Callable`.
+   - The crop embedding move from `embed_samples.py` to `embed_dataset.py` is its own commit,
+     with no change to the moved code. The rewrite follows in a second commit.
+   - Images and crops share one chunk loop in `embed_dataset.py` (progress bar, skip of a failed
+     chunk, count).
+   - `get_unembedded_annotation_ids.py` imports `build_croppable_annotations_query` from its
+     module, not from its own package, and the query leaves the public `__all__`.
+   - Tests: the selection branches are tested once, at the resolver level.
+     `test_image_dataset__compute_embeddings.py` keeps 3-4 end-to-end tests for the wiring. Target:
+     about 600 fewer test lines across `test_embed_dataset.py` and that file.
