@@ -113,7 +113,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const addBox = (box: NormalizedBox) => {
         if (isSaving) return;
-        dropPredictions();
+        // Drops a running request, the results stay until the next search replaces them.
+        sequence += 1;
+        isGenerating = false;
         boxes = [...boxes, box];
     };
 
@@ -162,6 +164,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         },
         get isGenerating() {
             return isGenerating;
+        },
+        get isSaving() {
+            return isSaving;
         },
         get canSave() {
             return canSave();

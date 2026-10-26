@@ -115,6 +115,29 @@ describe('useFindInstances', () => {
         expect(instances.boxes).toEqual([box]);
     });
 
+    it('keeps the results when a box is drawn', async () => {
+        const { instances } = setup();
+        await generateResults(instances);
+
+        instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
+
+        expect(instances.predictions).toEqual([first, second]);
+    });
+
+    it('drops a response that arrives after a box is drawn', async () => {
+        const { instances } = setup();
+        const request = deferred();
+        mocks.mutateAsync.mockReturnValueOnce(request.promise);
+        const generating = instances.generate();
+
+        instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
+        request.resolve({ predictions: [first] });
+        await generating;
+
+        expect(instances.predictions).toEqual([]);
+        expect(instances.isGenerating).toBe(false);
+    });
+
     it('keeps the response when the prompt changes right before a request', async () => {
         const { instances, params } = setup();
 
@@ -268,6 +291,7 @@ describe('useFindInstances', () => {
         const save = instances.save();
         instances.removePrediction(instances.predictions[0]);
 
+        expect(instances.isSaving).toBe(true);
         expect(instances.predictions).toEqual([first, second]);
         saving.resolve(undefined);
         await save;
