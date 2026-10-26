@@ -79,6 +79,7 @@ def test_compute_embeddings__recompute_annotations(
         model_id=model_id,
         sample_ids=[annotation_sample_id],
         embeddings=np.array([known_vector], dtype=np.float32),
+        source_fingerprints=["bbox1:0,0,1,1"],
         show_progress=False,
         replace=True,
     )
