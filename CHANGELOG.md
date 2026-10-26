@@ -9,12 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Python SDK: `ImageDataset.compute_embeddings()` embeds the images and annotations that have no embedding, for example after adding them with `embed=False` or creating annotations in the GUI. Pass `recompute_annotations=True` to re-embed every annotation.
+- Python SDK: `ImageDataset.compute_embeddings()` embeds the images and annotations that have no embedding, for example after adding them with `embed=False` or creating annotations in the GUI, and re-embeds annotations whose box was moved or resized. Pass `recompute_annotations=True` to re-embed every annotation.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 - Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
 
 ### Changed
 
+- Python SDK: Adding annotations to an annotation source also re-embeds the annotations of that source whose box was moved or resized.
 - BREAKING: Annotation embeddings now remember the box they were computed from. The PostgreSQL migration is automatic. DuckDB users must re-index their data.
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
 - Reorganised the settings dialog into a tabbed layout.

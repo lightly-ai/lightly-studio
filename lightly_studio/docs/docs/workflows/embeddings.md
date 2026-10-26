@@ -47,7 +47,8 @@ objects, the same way they work for whole images. Browse objects in the **Annota
 view of the GUI.
 
 Object embeddings are on by default; the `add_annotations_from_*` methods accept
-`embed_annotations=False` to skip them.
+`embed_annotations=False` to skip them. When you add annotations to an annotation source,
+LightlyStudio also re-embeds the objects of that source whose box you moved or resized.
 
 ### Embed images and objects later
 
@@ -59,7 +60,7 @@ dataset.compute_embeddings()
 ```
 
 The method embeds the images first. Then it embeds the objects of every annotation source.
-It skips samples that already have an embedding. A second call does nothing.
+It skips samples whose embedding is up to date. A second call does nothing.
 
 It has two flags:
 
@@ -67,8 +68,9 @@ It has two flags:
 - `recompute_annotations` (default `False`): Re-embed every object and replace its
   stored embedding.
 
-If you move or resize a box, LightlyStudio does **not** update its embedding.
-Call `compute_embeddings(recompute_annotations=True)` after you edit boxes.
+The default call also re-embeds the objects whose box you moved or resized. Use
+`recompute_annotations=True` for embeddings from before this version, or after you change
+a custom embedder.
 
 If the files of a batch are missing or broken, LightlyStudio logs a warning and
 continues with the next batch. If every batch fails, the method raises
@@ -79,7 +81,7 @@ continues with the next batch. If every batch fails, the method raises
     - Typicality metadata and similarity metadata are not refreshed. Compute them again.
     - An active lasso region on the embedding plot is not refreshed.
     - Do not edit annotations in the GUI while `compute_embeddings` runs.
-    - On DuckDB, each embedded row is rewritten. This uses about 3.3 KB per
+    - On DuckDB, each re-embedded row is rewritten. This uses about 3.3 KB per
       512-dimension embedding. `CHECKPOINT` does not reclaim this space.
 
 ## Built-in Embedding Models

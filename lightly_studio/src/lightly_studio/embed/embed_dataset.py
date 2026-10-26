@@ -51,7 +51,7 @@ def compute_embeddings(
     embed_annotations: bool,
     recompute_annotations: bool,
 ) -> None:
-    """Embeds the images without an embedding, then the annotation crops.
+    """Embeds the images without an embedding, then the missing or stale annotation crops.
 
     A chunk where every file failed is logged and skipped.
 
@@ -60,7 +60,8 @@ def compute_embeddings(
         collection_id: The image collection to embed.
         embed_annotations: If True, the crops of every annotation source are embedded too.
         recompute_annotations: If True, every croppable annotation is re-embedded.
-            Otherwise only annotations without an embedding are embedded.
+            Otherwise only annotations without an embedding or with a moved or resized
+            box are embedded.
 
     Raises:
         NoUsableEmbedderError: If samples need an embedding and no embedder is available.
@@ -151,7 +152,9 @@ def embed_annotation_crops(
     recompute: bool = False,
     skip_failed_chunks: bool = False,
 ) -> EmbedResult | None:
-    """Embeds the crops of an annotation source that lack an embedding, or all with recompute.
+    """Embeds the crops of an annotation source with a missing or stale embedding.
+
+    With recompute, every croppable annotation is embedded.
 
     The selection runs before the embedder is resolved. Resolving registers a default
     model when the collection has none, so an annotation source without croppable
