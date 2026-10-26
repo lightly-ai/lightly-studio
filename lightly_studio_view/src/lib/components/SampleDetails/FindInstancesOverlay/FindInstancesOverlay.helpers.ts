@@ -1,8 +1,9 @@
 import type { InstancesAnnotationRequest } from '$lib/api/lightly_studio_local';
+import { InstancesAnnotationRequestSchema } from '$lib/api/lightly_studio_local/schemas.gen';
 import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 
-// Matches the limit of the instances preview endpoint.
-export const MAX_INSTANCES_LIMIT = 32;
+export const MAX_INSTANCES_LIMIT =
+    InstancesAnnotationRequestSchema.properties.max_instances.maximum;
 
 interface BuildInstancesRequestBodyParams {
     collectionId: string;

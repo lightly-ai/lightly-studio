@@ -48,6 +48,13 @@ describe('FindInstancesPopUp', () => {
         expect(screen.getByText(/Instances found: 5\. Pick a class/)).toBeInTheDocument();
     });
 
+    it('asks to press Enter once a prompt is typed', () => {
+        render(FindInstancesPopUp, {
+            props: { ...defaultProps, prompt: 'cars', instances: makeInstances({ boxes: 1 }) }
+        });
+        expect(screen.getByText(/Boxes drawn: 1\. Press Enter to search\./)).toBeInTheDocument();
+    });
+
     it('says when a search finds no instances', () => {
         render(FindInstancesPopUp, {
             props: { ...defaultProps, instances: makeInstances({ isEmptyResult: true }) }

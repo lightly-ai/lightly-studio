@@ -46,11 +46,16 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         getDatasetId: () => page.params.dataset_id!
     });
 
-    // With isSaveIgnored, drops the predictions right away, also while a save runs.
-    const dropPredictions = ({ isSaveIgnored = false } = {}) => {
+    // Drops a running request and the empty result hint.
+    const cancelSearch = () => {
         sequence += 1;
         isGenerating = false;
         isEmptyResult = false;
+    };
+
+    // With isSaveIgnored, drops the predictions right away, also while a save runs.
+    const dropPredictions = ({ isSaveIgnored = false } = {}) => {
+        cancelSearch();
         isDropPending = isSaving && !isSaveIgnored;
         if (isSaveIgnored || !isSaving) predictions = [];
     };
@@ -118,10 +123,8 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const addBox = (box: NormalizedBox) => {
         if (isSaving) return;
-        // Drops a running request, the results stay until the next search replaces them.
-        sequence += 1;
-        isGenerating = false;
-        isEmptyResult = false;
+        // The results stay until the next search replaces them.
+        cancelSearch();
         boxes = [...boxes, box];
     };
 

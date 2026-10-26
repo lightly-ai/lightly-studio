@@ -33,6 +33,7 @@ describe('InstancePromptInput', () => {
         const input = screen.getByLabelText('Instance prompt');
 
         await fireEvent.keyDown(input, { key: 'Enter', isComposing: true });
+        await fireEvent.keyDown(input, { key: 'Enter', keyCode: 229 });
         expect(instances.generate).not.toHaveBeenCalled();
 
         await fireEvent.keyDown(input, { key: 'Enter' });

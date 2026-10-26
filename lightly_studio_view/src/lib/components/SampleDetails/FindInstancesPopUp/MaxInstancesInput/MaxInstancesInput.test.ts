@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
+import { MAX_INSTANCES_LIMIT } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
 import MaxInstancesInput from './MaxInstancesInput.svelte';
 
 describe('MaxInstancesInput', () => {
@@ -10,8 +11,8 @@ describe('MaxInstancesInput', () => {
 
         await fireEvent.input(input, { target: { value: '100' } });
         await fireEvent.change(input);
-        expect(onChange).toHaveBeenLastCalledWith(32);
-        expect(input).toHaveValue(32);
+        expect(onChange).toHaveBeenLastCalledWith(MAX_INSTANCES_LIMIT);
+        expect(input).toHaveValue(MAX_INSTANCES_LIMIT);
 
         await fireEvent.input(input, { target: { value: '0' } });
         await fireEvent.change(input);

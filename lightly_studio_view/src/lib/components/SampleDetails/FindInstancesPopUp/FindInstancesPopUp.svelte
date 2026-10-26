@@ -58,10 +58,11 @@
             {#if !annotationClass}Pick a class to save them.{/if}
         {:else if instances.isEmptyResult}
             No instances found. Try another prompt or draw boxes.
-        {:else if instances.boxes.length > 0}
-            Boxes drawn: {instances.boxes.length}. Type a prompt to find instances.
         {:else}
-            Type a prompt. Draw boxes to show more examples.
+            {#if instances.boxes.length > 0}Boxes drawn: {instances.boxes.length}.{/if}
+            {prompt.trim()
+                ? 'Press Enter to search.'
+                : 'Type a prompt. Draw boxes to show more examples.'}
         {/if}
     </p>
     <InstancePromptInput {prompt} {onPromptChange} {isDrawingBox} {onDrawBoxChange} {instances} />

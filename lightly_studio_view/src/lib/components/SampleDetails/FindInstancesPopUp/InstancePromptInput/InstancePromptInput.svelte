@@ -16,7 +16,9 @@
 
     const onKeydown = (event: KeyboardEvent) => {
         // Enter also confirms an input method candidate, which must not start a search.
-        if (event.key !== 'Enter' || event.isComposing || !instances.canGenerate) return;
+        // Safari sends that Enter with isComposing false and keyCode 229.
+        const isComposing = event.isComposing || event.keyCode === 229;
+        if (event.key !== 'Enter' || isComposing || !instances.canGenerate) return;
         void instances.generate();
     };
 </script>
