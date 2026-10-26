@@ -6,6 +6,7 @@ from uuid import uuid4
 import numpy as np
 import pyarrow as pa
 import pytest
+import sqlalchemy
 from pyarrow import ipc
 from sqlmodel import Session, select
 
@@ -43,6 +44,7 @@ def test_encode__unequal_lengths(x: int, y: int, ids: int) -> None:
 
 
 def test_embedding_plot__storage(db_session: Session) -> None:
+    assert not sqlalchemy.inspect(db_session.get_bind()).has_table("two_dim_embeddings")
     collection_id, model_id = uuid4(), uuid4()
     sample_ids = [uuid4()]
     data = embedding_plot_resolver.encode(x=[1.0], y=[2.0], sample_ids=sample_ids)
