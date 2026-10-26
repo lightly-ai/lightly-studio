@@ -4,17 +4,19 @@ from __future__ import annotations
 
 from array import array
 from collections.abc import Sequence
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import numpy as np
 from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
+from pyarrow import ipc
 from sqlmodel import Session
 
+from lightly_studio.database import db_insert
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.embedding_model import EmbeddingModelTable
-from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
-from lightly_studio.resolvers import sample_embedding_resolver
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
+from lightly_studio.resolvers import embedding_plot_resolver, sample_embedding_resolver
 
 
 def get_twodim_embeddings(
@@ -24,9 +26,7 @@ def get_twodim_embeddings(
 ) -> tuple[NDArray[np.float32], NDArray[np.float32], list[UUID]]:
     """Return cached 2D embeddings together with their sample identifiers.
 
-    Uses a cache to avoid recomputing the 2D embeddings. The cache key combines the sorted
-    sample identifiers with a deterministic 64-bit hash over the stored high-dimensional
-    embeddings.
+    Clean plots are read without loading source vectors. Missing or dirty plots are rebuilt.
 
     Args:
         session: Database session.
@@ -36,58 +36,59 @@ def get_twodim_embeddings(
     Returns:
         Tuple of (x coordinates, y coordinates, ordered sample IDs).
     """
-    embedding_model = session.get(EmbeddingModelTable, embedding_model_id)
-    if embedding_model is None:
+    data = get_plot(
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+    )
+    table = ipc.open_stream(data).read_all()
+    return (
+        table["x"].to_numpy(),
+        table["y"].to_numpy(),
+        [UUID(value) for value in table["sample_id"].to_pylist()],
+    )
+
+
+def get_plot(session: Session, collection_id: UUID, embedding_model_id: UUID) -> bytes:
+    """Read saved Arrow data; serialize rebuilds with embedding writes on the plot row."""
+    if session.get(EmbeddingModelTable, embedding_model_id) is None:
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
-
-    # Check if we have a cached 2D embedding for the given collection and embedding model.
-    cache_key, sample_ids_of_samples_with_embeddings = (
-        sample_embedding_resolver.get_hash_by_collection_id(
-            session=session,
-            collection_id=collection_id,
-            embedding_model_id=embedding_model_id,
+    key = (collection_id, embedding_model_id)
+    plot = session.get(EmbeddingPlotTable, key, populate_existing=True)
+    if plot is not None and not plot.is_dirty:
+        return plot.data
+    if plot is None:
+        plot = EmbeddingPlotTable(
+            collection_id=collection_id, embedding_model_id=embedding_model_id
         )
-    )
-
-    if not sample_ids_of_samples_with_embeddings:
-        empty = np.array([], dtype=np.float32)
-        return empty, empty, []
-
-    # If there is a cached entry, return it.
-    cached = session.get(TwoDimEmbeddingTable, cache_key)
-    if cached is not None:
-        x_values = np.array(cached.x, dtype=np.float32)
-        y_values = np.array(cached.y, dtype=np.float32)
-        return x_values, y_values, sample_ids_of_samples_with_embeddings
-
-    # No cached entry found - load the high-dimensional embeddings.
-    # The order is defined by sample_ids_of_samples_with_embeddings.
-    sample_embeddings = sample_embedding_resolver.get_by_sample_ids(
-        session=session,
-        sample_ids=sample_ids_of_samples_with_embeddings,
-        embedding_model_id=embedding_model_id,
-    )
-
-    # If there are no embeddings, return empty arrays.
-    if not sample_embeddings:
-        empty = np.array([], dtype=np.float32)
-        return empty, empty, []
-
-    # Compute the 2D embedding from the high-dimensional embeddings.
-    # The order is now defined by sample_embeddings. They are the ordered subset of the
-    # sample_ids_of_samples_with_embeddings that have embeddings.
-    sample_ids_of_samples_with_embeddings = [embedding.sample_id for embedding in sample_embeddings]
-    embedding_values = [embedding.embedding for embedding in sample_embeddings]
-    planar_embeddings = _calculate_2d_embeddings(embedding_values)
-    embeddings_2d = np.asarray(planar_embeddings, dtype=np.float32)
-    x_values, y_values = embeddings_2d[:, 0], embeddings_2d[:, 1]
-
-    # Write the computed 2D embeddings to the cache.
-    cache_entry = TwoDimEmbeddingTable(hash=cache_key, x=list(x_values), y=list(y_values))
-    session.add(cache_entry)
+        db_insert.insert_ignoring_conflicts(
+            session=session, table=EmbeddingPlotTable, rows=[plot.model_dump()]
+        )
+        # Publish the placeholder before rebuilding so DuckDB writers can see it.
+        session.commit()
+        plot = session.get(EmbeddingPlotTable, key, populate_existing=True)
+        assert plot is not None
+    # Hold a real write through commit: PostgreSQL writers wait; DuckDB conflicts
+    # require rollback and retry. Refresh after waiting for another rebuild.
+    plot.write_token = uuid4()
+    session.add(plot)
+    session.flush()
+    session.refresh(plot)
+    if plot.is_dirty:
+        embeddings = sample_embedding_resolver.get_all_by_collection_id(
+            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+        )
+        coordinates = np.asarray(
+            _calculate_2d_embeddings([embedding.embedding for embedding in embeddings]),
+            dtype=np.float32,
+        ).reshape(-1, 2)
+        plot.data = embedding_plot_resolver.encode(
+            x=coordinates[:, 0],
+            y=coordinates[:, 1],
+            sample_ids=[embedding.sample_id for embedding in embeddings],
+        )
+        plot.is_dirty = False
+    data = plot.data
     session.commit()
-
-    return x_values, y_values, sample_ids_of_samples_with_embeddings
+    return data
 
 
 def get_twodim_embeddings_from_axes(

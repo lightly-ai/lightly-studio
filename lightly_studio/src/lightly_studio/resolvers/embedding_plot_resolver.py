@@ -11,8 +11,10 @@ from numpy.typing import NDArray
 from pyarrow import ipc
 from sqlmodel import Session, col, select, update
 
+from lightly_studio.database import db_insert
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.utils import batching
 
 
@@ -23,6 +25,25 @@ def mark_dirty(
     for batch in batching.batched(items=sample_ids):
         collection_ids = select(SampleTable.collection_id).where(
             col(SampleTable.sample_id).in_(batch)
+        )
+        # Writers must create the row too: a first rebuild must not miss an in-flight write.
+        if embedding_model_id is not None:
+            keys = [(cid, embedding_model_id) for cid in session.exec(collection_ids.distinct())]
+        else:
+            pairs = (
+                select(SampleTable.collection_id, SampleEmbeddingTable.embedding_model_id)
+                .join(SampleEmbeddingTable)
+                .where(col(SampleTable.sample_id).in_(batch))
+                .distinct()
+            )
+            keys = list(session.exec(pairs))
+        db_insert.insert_ignoring_conflicts(
+            session=session,
+            table=EmbeddingPlotTable,
+            rows=[
+                EmbeddingPlotTable(collection_id=cid, embedding_model_id=mid).model_dump()
+                for cid, mid in keys
+            ],
         )
         stmt = update(EmbeddingPlotTable).where(
             col(EmbeddingPlotTable.collection_id).in_(collection_ids)
