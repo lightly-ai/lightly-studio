@@ -28,11 +28,15 @@
 
     async function handleDelete() {
         if (get(isPending)) return;
+        const snapshot = get(getSelectAllAnnotationSnapshot(collectionId));
         const result = await deleteAnnotations({
             collectionId,
             rootCollectionId: page.params.dataset_id!,
             selectedIds,
-            selectAllSnapshot: get(getSelectAllAnnotationSnapshot(collectionId))
+            selectAllSnapshot:
+                snapshot?.filter.filter_type === 'annotations'
+                    ? { filter: snapshot.filter, size: snapshot.size }
+                    : null
         });
         if (result.ok) {
             clearSelectedSampleAnnotationCrops(collectionId);
