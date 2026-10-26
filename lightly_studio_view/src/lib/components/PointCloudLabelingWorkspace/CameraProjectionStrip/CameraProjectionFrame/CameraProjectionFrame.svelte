@@ -1,7 +1,15 @@
 <script lang="ts">
     import { Camera } from '@lucide/svelte';
-    import * as Dialog from '$lib/components/ui/dialog';
     import { getCameraFrameUrl } from '../getCameraFrameUrl/getCameraFrameUrl';
+    import ProjectionOverlay from '../ProjectionOverlay.svelte';
+    import CameraProjectionDialog from './CameraProjectionDialog.svelte';
+    import type {
+        AnnotationView,
+        CameraProjectionView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+    import type { ProjectionSettings } from '../projectionSettings';
+    import type { AnnotationClassColor } from '../projectionOverlay';
 
     /**
      * A single camera tile in the projection strip, with a placeholder icon when the
@@ -23,10 +31,31 @@
         blob?: Blob;
         /** Studio slot name shown as the caption, e.g. `front`. */
         label: string;
+        batch?: PointBatch;
+        annotations?: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
+        projection?: CameraProjectionView;
+        projectionSettings?: ProjectionSettings;
+        onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
+        onPlaybackToggle?: () => void;
     }
 
-    let { datasetId, recordingId, channelId, keyframeTimestampNs, logTimeNs, blob, label }: Props =
-        $props();
+    let {
+        datasetId,
+        recordingId,
+        channelId,
+        keyframeTimestampNs,
+        logTimeNs,
+        blob,
+        label,
+        batch,
+        annotations = [],
+        annotationClasses = [],
+        projection,
+        onPlaybackToggle,
+        projectionSettings,
+        onProjectionSettingsChange
+    }: Props = $props();
 
     const fullFrameUrl = $derived(
         recordingId && keyframeTimestampNs && logTimeNs
@@ -71,33 +100,44 @@
     {#if frameUrl && frameUrl !== failedFrameUrl}
         <button
             type="button"
-            class="block min-h-0 flex-1 cursor-zoom-in"
+            class="flex min-h-0 flex-1 cursor-zoom-in flex-col"
             aria-label={`Enlarge ${label}`}
             onclick={() => (isEnlarged = true)}
         >
-            <img
-                src={frameUrl}
-                alt={label}
-                class="h-full w-full object-contain"
-                onload={(event) => {
-                    const { naturalWidth, naturalHeight } = event.currentTarget as HTMLImageElement;
-                    if (naturalWidth && naturalHeight) aspectRatio = naturalWidth / naturalHeight;
-                }}
-                onerror={() => (failedFrameUrl = frameUrl)}
-            />
-        </button>
-        <Dialog.Root bind:open={isEnlarged}>
-            <Dialog.Content class="max-w-[90vw] gap-2 p-3 sm:max-w-[90vw]">
-                <Dialog.Title class="text-sm font-medium">{label}</Dialog.Title>
-                <Dialog.Description class="sr-only">Enlarged camera frame</Dialog.Description>
-                <!-- Renders only while open, so the full frame loads on demand. -->
+            <div class="relative min-h-0 flex-1">
                 <img
-                    src={fullFrameUrl ?? frameUrl}
-                    alt={`${label} enlarged`}
-                    class="max-h-[80vh] w-full rounded-md object-contain"
+                    src={frameUrl}
+                    alt={label}
+                    class="h-full w-full object-contain"
+                    onload={(event) => {
+                        const { naturalWidth, naturalHeight } =
+                            event.currentTarget as HTMLImageElement;
+                        if (naturalWidth && naturalHeight)
+                            aspectRatio = naturalWidth / naturalHeight;
+                    }}
+                    onerror={() => (failedFrameUrl = frameUrl)}
                 />
-            </Dialog.Content>
-        </Dialog.Root>
+                <ProjectionOverlay
+                    {batch}
+                    {annotations}
+                    {annotationClasses}
+                    {projection}
+                    settings={projectionSettings}
+                />
+            </div>
+        </button>
+        <CameraProjectionDialog
+            bind:open={isEnlarged}
+            {label}
+            imageUrl={fullFrameUrl ?? frameUrl}
+            {batch}
+            {annotations}
+            {annotationClasses}
+            {projection}
+            {projectionSettings}
+            {onProjectionSettingsChange}
+            {onPlaybackToggle}
+        />
     {:else}
         <div class="flex min-h-0 flex-1 items-center justify-center text-muted-foreground">
             <Camera class="size-5" aria-hidden="true" />

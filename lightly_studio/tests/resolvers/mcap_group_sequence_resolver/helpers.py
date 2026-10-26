@@ -39,6 +39,7 @@ def create_mcap_sequence(
     session: Session,
     uri: str = "/data/perception.mcap",
     extra_slots: list[tuple[str, SampleType]] | None = None,
+    camera_frame_id: str = "main",
 ) -> McapSequenceFixture:
     """Creates a SEQUENCE collection with a GROUP child of two MCAP slots and a bag.
 
@@ -50,6 +51,7 @@ def create_mcap_sequence(
         uri: The bag path to record on the recording.
         extra_slots: Additional, non-MCAP, group components to create alongside the
             two MCAP slots, e.g. `[("thumbnail", SampleType.IMAGE)]`.
+        camera_frame_id: Frame ID for the front camera component.
     """
     sequence_collection = create_collection(session=session, sample_type=SampleType.SEQUENCE)
     group_collection = create_collection(
@@ -69,7 +71,7 @@ def create_mcap_sequence(
         collection_id=slots["front"].collection_id,
         mcap_data_type=McapDataType.VIDEO_FRAME,
         channel_id=3,
-        frame_id="main",
+        frame_id=camera_frame_id,
     )
     mcap_group_component_definition_resolver.create(
         session=session,

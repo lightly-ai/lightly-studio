@@ -230,6 +230,20 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
     });
 
+    it('uses the Space shortcut inside the expanded camera dialog', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+        const dialog = document.createElement('div');
+        dialog.setAttribute('role', 'dialog');
+        const closeButton = document.createElement('button');
+        dialog.append(closeButton);
+        document.body.append(dialog);
+
+        await fireEvent.keyDown(closeButton, { code: 'Space', key: ' ' });
+
+        expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
+        dialog.remove();
+    });
+
     it('shows loading when no cloud frame is available', () => {
         tickDetails.isLoading = true;
         render(PointCloudLabelingWorkspace, { props: defaultProps });
