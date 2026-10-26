@@ -124,6 +124,42 @@ def test_postgres_fresh_database__upgrade_head(
         engine.close()
 
 
+def test_postgres_embedding_plot__upgrade_preserves_existing_cache(
+    postgres_url: str | None,
+) -> None:
+    """Adding plot storage leaves the previous cache available to old readers."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+    _reset_postgres_database(engine_url=postgres_url)
+    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="e4c3c74ae338"
+        )
+        with engine.begin() as connection:
+            connection.execute(
+                text(
+                    "INSERT INTO two_dim_embeddings (hash, x, y) "
+                    "VALUES ('123', ARRAY[1.0], ARRAY[2.0])"
+                )
+            )
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        assert db_migrations._get_inspector(engine=engine).has_table(table_name="embedding_plot")
+        with engine.connect() as connection:
+            assert connection.execute(text("SELECT hash, x, y FROM two_dim_embeddings")).one() == (
+                "123",
+                [1.0],
+                [2.0],
+            )
+            assert connection.execute(text("SELECT count(*) FROM embedding_plot")).scalar_one() == 0
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
 def test_postgres_embedding_model_dataset_id__backfilled(
     postgres_url: str | None,
 ) -> None:
