@@ -132,6 +132,15 @@ describe('SettingsDialog', () => {
         );
     });
 
+    it('should show Go back as a fixed Escape shortcut', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const goBack = screen.getByLabelText('Go back');
+        expect(goBack).toHaveTextContent('Escape');
+        expect(goBack).toBeDisabled();
+    });
+
     it('should cancel recording on Escape and keep the dialog open', async () => {
         render(SettingsDialog);
         await openDialog();
@@ -243,7 +252,6 @@ describe('SettingsDialog', () => {
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith({
             key_hide_annotations: 'v',
-            key_go_back: 'Escape',
             key_toggle_edit_mode: 'e',
             grid_view_sample_rendering: 'contain',
             grid_view_thumbnail_quality: 'raw',

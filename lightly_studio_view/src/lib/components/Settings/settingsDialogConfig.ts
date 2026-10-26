@@ -8,7 +8,6 @@
 /** Keys of the shortcut state object that can be recorded by the user. */
 export type ShortcutSettingKey =
     | 'hideAnnotations'
-    | 'goBack'
     | 'toggleEditMode'
     | 'keyToolbarSelection'
     | 'keyToolbarDrag'
@@ -37,7 +36,6 @@ export interface StaticShortcutConfig {
 /** Recordable shortcuts for navigation and general actions. */
 export const generalShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'hide-annotations', label: 'Hide annotations', key: 'hideAnnotations' },
-    { id: 'go-back', label: 'Go back', key: 'goBack' },
     { id: 'toggle-edit-mode', label: 'Toggle edit mode', key: 'toggleEditMode' }
 ] as const;
 
@@ -56,7 +54,12 @@ export const toolShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'toolbar-eraser-mode', label: 'Eraser', key: 'keyToolbarEraser' }
 ] as const;
 
-/** Non-recordable shortcut rows (static display only). */
+/** Non-recordable general shortcut rows (static display only). */
+export const staticGeneralShortcuts: readonly StaticShortcutConfig[] = [
+    { id: 'go-back', label: 'Go back', displayValue: 'Escape' }
+] as const;
+
+/** Non-recordable tool shortcut rows (static display only). */
 export const staticToolShortcuts: readonly StaticShortcutConfig[] = [
     { id: 'change-brush-size', label: 'Brush size', displayValue: 'Alt + scroll' }
 ] as const;

@@ -10,7 +10,6 @@ type ThumbnailQualityMode = GridViewThumbnailQualityType;
 
 interface SettingsDialogShortcutState {
     hideAnnotations: string;
-    goBack: string;
     toggleEditMode: string;
     keyToolbarSelection: string;
     keyToolbarDrag: string;
@@ -41,7 +40,6 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
     return {
         shortcutSettings: {
             hideAnnotations: settings.key_hide_annotations,
-            goBack: settings.key_go_back,
             toggleEditMode: settings.key_toggle_edit_mode,
             keyToolbarSelection: settings.key_toolbar_selection,
             keyToolbarDrag: settings.key_toolbar_drag,
@@ -66,7 +64,6 @@ export function createSettingsSavePayload(
 ): Partial<SettingView> {
     return {
         key_hide_annotations: formState.shortcutSettings.hideAnnotations,
-        key_go_back: formState.shortcutSettings.goBack,
         key_toggle_edit_mode: formState.shortcutSettings.toggleEditMode,
         grid_view_sample_rendering: formState.gridViewRendering,
         grid_view_thumbnail_quality: formState.gridViewThumbnailQuality,
@@ -110,7 +107,6 @@ export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
 export class SettingsDialogState {
     shortcuts = $state<SettingsDialogShortcutState>({
         hideAnnotations: 'v',
-        goBack: 'Escape',
         toggleEditMode: 'e',
         keyToolbarSelection: 's',
         keyToolbarDrag: 'd',
