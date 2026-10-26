@@ -164,12 +164,6 @@ def delete_dataset(
     _delete_mcap_group_component_definitions(session=session, dataset_id=dataset_id)
     _delete_group_component_definitions(session=session, dataset_id=dataset_id)
 
-    session.exec(
-        delete(EmbeddingPlotTable)
-        .where(col(EmbeddingPlotTable.collection_id).in_(_collection_ids_subquery(dataset_id)))
-        .execution_options(**_DELETE_EXECUTION_OPTIONS)
-    )
-
     # 6. Collections (single statement; self-FK satisfied at statement end).
     _delete_collections(session=session, dataset_id=dataset_id)
 
@@ -229,12 +223,17 @@ def _delete_sample_sequence_links(session: Session, dataset_id: UUID) -> None:
 
 
 def _delete_sample_embeddings(session: Session, dataset_id: UUID) -> None:
-    """Delete sample embeddings for the dataset's samples."""
+    """Delete sample embeddings and saved plots for the dataset."""
     session.exec(
         delete(SampleEmbeddingTable).where(
             col(SampleEmbeddingTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+    session.exec(
+        delete(EmbeddingPlotTable)
+        .where(col(EmbeddingPlotTable.collection_id).in_(_collection_ids_subquery(dataset_id)))
+        .execution_options(**_DELETE_EXECUTION_OPTIONS)
     )
 
 
