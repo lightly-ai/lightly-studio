@@ -31,7 +31,10 @@ interface BulkDeleteAnnotationsInput {
     selectAllSnapshot: SelectAllSnapshot | null;
 }
 
-type BulkDeleteAnnotationsResult = { ok: true; deletedCount: number } | { ok: false };
+interface BulkDeleteAnnotationsResult {
+    data?: Awaited<ReturnType<typeof bulkDeleteAnnotations>>['data'];
+    error?: unknown;
+}
 
 export interface UseBulkDeleteAnnotations {
     deleteAnnotations: (input: BulkDeleteAnnotationsInput) => Promise<BulkDeleteAnnotationsResult>;
@@ -82,14 +85,13 @@ export const useBulkDeleteAnnotations = (): UseBulkDeleteAnnotations => {
     ): Promise<BulkDeleteAnnotationsResult> => {
         isPending.set(true);
         try {
-            const { data } = await requestBulkDelete(input);
-            if (!data) {
-                return { ok: false };
+            const { data, error } = await requestBulkDelete(input);
+            if (data) {
+                invalidateQueries(input);
             }
-            invalidateQueries(input);
-            return { ok: true, deletedCount: data.deleted_count };
-        } catch {
-            return { ok: false };
+            return { data, error };
+        } catch (error) {
+            return { error };
         } finally {
             isPending.set(false);
         }

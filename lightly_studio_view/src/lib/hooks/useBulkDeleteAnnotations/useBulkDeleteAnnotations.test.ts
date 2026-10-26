@@ -65,7 +65,7 @@ describe('useBulkDeleteAnnotations', () => {
             body: { annotation_ids: ['a', 'b'] }
         });
         expect(mocks.bulkDeleteAnnotationsByFilter).not.toHaveBeenCalled();
-        expect(result).toEqual({ ok: true, deletedCount: 2 });
+        expect(result).toEqual({ data: { deleted_count: 2 } });
     });
 
     it('deletes by ids when the selection differs from the select-all snapshot', async () => {
@@ -90,7 +90,7 @@ describe('useBulkDeleteAnnotations', () => {
             body: { filter }
         });
         expect(mocks.bulkDeleteAnnotations).not.toHaveBeenCalled();
-        expect(result).toEqual({ ok: true, deletedCount: 5 });
+        expect(result).toEqual({ data: { deleted_count: 5 } });
     });
 
     it('invalidates the affected queries after a delete', async () => {
@@ -110,7 +110,7 @@ describe('useBulkDeleteAnnotations', () => {
         );
     });
 
-    it('reports failures without refetching', async () => {
+    it('returns the error without refetching', async () => {
         mocks.bulkDeleteAnnotations.mockResolvedValue({
             error: { detail: 'Boom' },
             response: { status: 500 }
@@ -119,8 +119,18 @@ describe('useBulkDeleteAnnotations', () => {
 
         const result = await deleteAnnotations(defaultInput);
 
-        expect(result).toEqual({ ok: false });
+        expect(result).toEqual({ error: { detail: 'Boom' } });
         expect(mocks.invalidateQueries).not.toHaveBeenCalled();
+    });
+
+    it('returns a thrown error', async () => {
+        const error = new Error('Network down');
+        mocks.bulkDeleteAnnotations.mockRejectedValue(error);
+        const { deleteAnnotations } = useBulkDeleteAnnotations();
+
+        const result = await deleteAnnotations(defaultInput);
+
+        expect(result).toEqual({ error });
     });
 
     it('is pending while the request runs', async () => {
