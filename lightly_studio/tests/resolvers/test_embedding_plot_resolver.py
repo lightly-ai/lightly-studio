@@ -95,7 +95,7 @@ def test_mark_dirty__embedding_writes(db_session: Session, operation: str) -> No
         ]
     ]
     tokens = [plot.write_token for plot in plots]
-    db_session.add_all(plots)
+    plots = [db_session.merge(plot) for plot in plots]
     db_session.commit()
     if operation == "single":
         sample_embedding_resolver.create(session=db_session, sample_embedding=embedding)

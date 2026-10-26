@@ -157,7 +157,7 @@ def test_delete_annotations_by_ids__deletes_tag_links_and_embeddings(
         embedding_model_id=embedding_model.embedding_model_id,
         is_dirty=False,
     )
-    db_session.add(plot)
+    plot = db_session.merge(plot)
     db_session.commit()
 
     annotation_resolver.delete_annotations_by_ids(session=db_session, annotation_ids=[to_delete_id])
@@ -209,7 +209,7 @@ def test_delete_annotations_by_ids__delete_samples_false_keeps_sample(db_session
     plot = EmbeddingPlotTable(
         collection_id=annotation.sample.collection_id, embedding_model_id=uuid4(), is_dirty=False
     )
-    db_session.add(plot)
+    plot = db_session.merge(plot)
     db_session.commit()
 
     deleted_count = annotation_resolver.delete_annotations_by_ids(
