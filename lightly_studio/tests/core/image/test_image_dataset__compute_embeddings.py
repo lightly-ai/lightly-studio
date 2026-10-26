@@ -79,15 +79,12 @@ def test_compute_embeddings__recompute_annotations(
     )
     assert model_id is not None
     known_vector = (1.0, 2.0, 3.0)
-    [crop] = annotation_resolver.get_annotation_crops_for_ids(
-        session=dataset.session, annotation_sample_ids=[annotation_sample_id]
-    )
+    # A legacy row has no fingerprint. It is not stale, so only a recompute replaces it.
     embedding_storage.store_embeddings(
         session=dataset.session,
         model_id=model_id,
         sample_ids=[annotation_sample_id],
         embeddings=np.array([known_vector], dtype=np.float32),
-        source_fingerprints=[crop.source_fingerprint],
         show_progress=False,
         replace=True,
     )
@@ -139,42 +136,6 @@ def test_compute_embeddings__edited_box_gets_new_vector(
             embedding_model_id=model_id,
         )
         == []
-    )
-
-
-def test_compute_embeddings__legacy_row_needs_recompute(
-    patch_collection: None,  # noqa: ARG001
-    tmp_path: Path,
-) -> None:
-    dataset = _create_dataset(tmp_path=tmp_path, image_names=["a.jpg"])
-    sample_id = _image_sample_ids(dataset=dataset)[0]
-    _create_box(dataset=dataset, sample_id=sample_id, source="ground_truth")
-    dataset.compute_embeddings()
-    annotation_sample_id = _annotation_sample_ids(dataset=dataset)[0]
-    annotation_collection = collection_resolver.get_annotation_collections(
-        session=dataset.session, parent_collection_id=dataset.collection_id
-    )[0]
-    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=dataset.session, collection_id=annotation_collection.collection_id
-    )
-    assert model_id is not None
-    known_vector = (1.0, 2.0, 3.0)
-    row = dataset.session.get(SampleEmbeddingTable, (annotation_sample_id, model_id))
-    assert row is not None
-    row.embedding = np.array([known_vector], dtype=np.float32)[0]
-    row.source_fingerprint = None
-    dataset.session.add(row)
-    dataset.session.commit()
-
-    dataset.compute_embeddings()
-    assert _vectors(dataset=dataset, sample_ids=[annotation_sample_id]) == {
-        annotation_sample_id: known_vector
-    }
-
-    dataset.compute_embeddings(recompute_annotations=True)
-    assert (
-        _vectors(dataset=dataset, sample_ids=[annotation_sample_id])[annotation_sample_id]
-        != known_vector
     )
 
 

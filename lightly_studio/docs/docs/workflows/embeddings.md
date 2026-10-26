@@ -47,7 +47,8 @@ objects, the same way they work for whole images. Browse objects in the **Annota
 view of the GUI.
 
 Object embeddings are on by default; the `add_annotations_from_*` methods accept
-`embed_annotations=False` to skip them.
+`embed_annotations=False` to skip them. When you add annotations to an annotation source,
+LightlyStudio also embeds again the objects of that source whose box you moved or resized.
 
 ### Embed images and objects later
 

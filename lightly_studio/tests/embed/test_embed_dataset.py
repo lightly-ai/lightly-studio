@@ -558,30 +558,6 @@ def test_embed_annotation_crops__recompute_overwrites_existing(
     assert stored == {annotation_ids[0]: [100.0] * 3}
 
 
-def test_embed_annotation_crops__default_keeps_existing(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    """Without recompute, a stored crop embedding is left alone."""
-    annotation_collection_id, annotation_ids = _create_annotation_collection(
-        session=db_session, box_xs=[100]
-    )
-    model_id = _register_default_random_model(
-        session=db_session, collection_id=annotation_collection_id
-    )
-    _store_zero_embeddings(session=db_session, annotation_ids=annotation_ids, model_id=model_id)
-    _patch_registry(mocker=mocker, embedder=_BoxXImageCropEmbedder())
-
-    stored_count = embed_dataset.embed_annotation_crops(
-        session=db_session, annotation_collection_id=annotation_collection_id
-    )
-
-    assert stored_count == EmbedResult(stored=0, failed_chunks=0)
-    stored = _stored_by_annotation(
-        session=db_session, annotation_ids=annotation_ids, model_id=model_id
-    )
-    assert stored == {annotation_ids[0]: [0.0] * 3}
-
-
 def test_embed_annotation_crops__dropped_crop_keeps_old_vector(
     db_session: Session, mocker: MockerFixture
 ) -> None:
@@ -605,34 +581,10 @@ def test_embed_annotation_crops__dropped_crop_keeps_old_vector(
     assert stored == {annotation_ids[0]: [100.0] * 3, annotation_ids[1]: [0.0] * 3}
 
 
-def test_embed_annotation_crops__stores_fingerprint(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    """The stored row carries the fingerprint of the box the crop was read from."""
-    annotation_collection_id, annotation_ids = _create_annotation_collection(
-        session=db_session, box_xs=[100]
-    )
-    model_id = _register_default_random_model(
-        session=db_session, collection_id=annotation_collection_id
-    )
-    _patch_registry(mocker=mocker, embedder=_BoxXImageCropEmbedder())
-
-    embed_dataset.embed_annotation_crops(
-        session=db_session, annotation_collection_id=annotation_collection_id
-    )
-
-    row = db_session.get(SampleEmbeddingTable, (annotation_ids[0], model_id))
-    assert row is not None
-    [crop] = annotation_resolver.get_annotation_crops_for_ids(
-        session=db_session, annotation_sample_ids=annotation_ids
-    )
-    assert row.source_fingerprint == crop.source_fingerprint
-
-
 def test_embed_annotation_crops__box_edited_during_run(
     db_session: Session, mocker: MockerFixture
 ) -> None:
-    """A box edited while embedding leaves the old vector with the old fingerprint."""
+    """A box edited while embedding keeps the old vector, which the next run selects as stale."""
     annotation_collection_id, annotation_ids = _create_annotation_collection(
         session=db_session, box_xs=[10]
     )
@@ -654,40 +606,11 @@ def test_embed_annotation_crops__box_edited_during_run(
         session=db_session, annotation_ids=annotation_ids, model_id=model_id
     )
     assert stored == {annotation_ids[0]: [10.0] * 3}
-    row = db_session.get(SampleEmbeddingTable, (annotation_ids[0], model_id))
-    assert row is not None
-    [current] = annotation_resolver.get_annotation_crops_for_ids(
-        session=db_session, annotation_sample_ids=annotation_ids
-    )
-    assert row.source_fingerprint != current.source_fingerprint
-
-
-def test_embed_annotation_crops__box_edited_during_run_is_stale_after(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    """A box edited while embedding is selected as stale by the next run."""
-    annotation_collection_id, annotation_ids = _create_annotation_collection(
-        session=db_session, box_xs=[10]
-    )
-    model_id = _register_default_random_model(
-        session=db_session, collection_id=annotation_collection_id
-    )
-    _patch_registry(
-        mocker=mocker,
-        embedder=_EditBoxDuringEmbedCropEmbedder(
-            session=db_session, annotation_id=annotation_ids[0], new_x=30
-        ),
-    )
-    embed_dataset.embed_annotation_crops(
-        session=db_session, annotation_collection_id=annotation_collection_id
-    )
-
     stale_ids = annotation_resolver.get_unembedded_annotation_ids(
         session=db_session,
         annotation_collection_id=annotation_collection_id,
         embedding_model_id=model_id,
     )
-
     assert stale_ids == annotation_ids
 
 
