@@ -1,0 +1,39 @@
+<script lang="ts">
+    import type { Snippet } from 'svelte';
+    import type { SceneViewState } from '$lib/components/PointCloudViewer';
+
+    /** Inputs and callbacks for scene viewport content harness. */
+    interface Props {
+        /** Optional header rendered inside the viewport focus boundary. */
+        header?: Snippet;
+        /** Optional editing controls anchored inside the viewport. */
+        tools?: Snippet;
+        /** Projection orientation used for rendering and editing. */
+        cameraMode?: string;
+        /** Shared camera state received through the workspace context. */
+        viewState?: SceneViewState | null;
+        /** Simulates camera navigation without creating a WebGL renderer. */
+        onViewStateChange?: (state: SceneViewState) => void;
+    }
+
+    let {
+        header,
+        tools,
+        cameraMode = 'perspective',
+        viewState,
+        onViewStateChange
+    }: Props = $props();
+</script>
+
+<section aria-label={cameraMode} data-testid="scene-viewport-instance">
+    {@render header?.()}
+    {@render tools?.()}
+    <output aria-label={`${cameraMode} scale`}>{viewState?.worldUnitsPerPixel ?? 'unset'}</output>
+    <button
+        onclick={() =>
+            onViewStateChange?.({
+                target: [1, 2, 3],
+                worldUnitsPerPixel: cameraMode === 'perspective' ? 0.05 : 0.025
+            })}>Navigate {cameraMode}</button
+    >
+</section>
