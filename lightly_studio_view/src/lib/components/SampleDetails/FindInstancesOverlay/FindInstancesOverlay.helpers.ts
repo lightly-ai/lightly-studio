@@ -2,7 +2,9 @@ import type { InstancesAnnotationRequest } from '$lib/api/lightly_studio_local';
 import { InstancesAnnotationRequestSchema } from '$lib/api/lightly_studio_local/schemas.gen';
 import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 
-export const MAX_INSTANCES_LIMIT =
+export const DEFAULT_MAX_INSTANCES: number =
+    InstancesAnnotationRequestSchema.properties.max_instances.default;
+export const MAX_INSTANCES_LIMIT: number =
     InstancesAnnotationRequestSchema.properties.max_instances.maximum;
 
 interface BuildInstancesRequestBodyParams {

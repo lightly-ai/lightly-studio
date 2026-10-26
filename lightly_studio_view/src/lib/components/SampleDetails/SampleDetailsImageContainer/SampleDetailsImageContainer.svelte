@@ -234,7 +234,7 @@
     panEnabled={isPanEnabled({
         isDrawing: annotationLabelContext.isDrawing,
         isErasing: annotationLabelContext.isErasing,
-        status: sampleDetailsToolbarContext.status
+        blocksPan: assistedLabeling.blocksPan
     })}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}

@@ -3,7 +3,7 @@ import { getContext, setContext } from 'svelte';
 export type BrushMode = 'brush' | 'eraser';
 export type SlicLevel = 'coarse' | 'medium' | 'fine';
 export type SlicStatus = 'idle' | 'computing' | 'ready' | 'error';
-export type AssistedLabelingStatus = 'smart-select';
+export type AssistedLabelingStatus = 'smart-select' | 'find-instances';
 export type ToolbarStatus =
     | 'bounding-box'
     | 'brush'
@@ -91,4 +91,4 @@ export function useSampleDetailsToolbarContext(): {
 }
 
 export const isAssistedLabelingStatus = (status: ToolbarStatus): status is AssistedLabelingStatus =>
-    status === 'smart-select';
+    status === 'smart-select' || status === 'find-instances';
