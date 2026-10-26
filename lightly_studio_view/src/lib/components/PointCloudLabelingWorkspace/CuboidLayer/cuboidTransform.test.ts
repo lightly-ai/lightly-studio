@@ -3,6 +3,7 @@ import { Object3D } from 'three';
 import {
     buildCuboidTransformPayload,
     captureTransformSnapshot,
+    getCuboidGizmoMode,
     restoreTransformSnapshot
 } from './cuboidTransform';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
@@ -44,6 +45,14 @@ const ANNOTATION: CuboidAnnotation = {
 };
 
 describe('buildCuboidTransformPayload', () => {
+    it('keeps dimensions positive when a scale handle crosses the cuboid center', () => {
+        const result = buildCuboidTransformPayload(
+            ANNOTATION,
+            fakeObj([1, 2, 3], [0, 0, 0, 1], [-1, 0, 2])
+        );
+        expect(result.size).toEqual([0.01, 0.01, 8]);
+        expect(result.center).toEqual([1, 2, 3]);
+    });
     it('uses annotation.size when no currentSize is provided', () => {
         const obj = fakeObj([5, 6, 7], [0, 0, 0, 1], [1.5, 2, 0.5]);
 
@@ -83,6 +92,21 @@ describe('buildCuboidTransformPayload', () => {
             first.size
         );
         expect(second.size).toEqual([6, 3, 4]);
+    });
+});
+
+describe('orthographic editing tools', () => {
+    it.each(['top', 'side', 'front'] as const)(
+        'supports movement, rotation, and resizing in %s',
+        (mode) => {
+            expect(getCuboidGizmoMode('translate', mode)).toBe('translate');
+            expect(getCuboidGizmoMode('rotate', mode)).toBe('rotate');
+            expect(getCuboidGizmoMode('resize', mode)).toBe('scale');
+            expect(getCuboidGizmoMode('select', mode)).toBeUndefined();
+        }
+    );
+    it('keeps face resizing in the perspective view', () => {
+        expect(getCuboidGizmoMode('resize', 'perspective')).toBeUndefined();
     });
 });
 
