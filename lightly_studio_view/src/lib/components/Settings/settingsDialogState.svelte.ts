@@ -155,13 +155,15 @@ export class SettingsDialogState {
     }
 
     handleKeyDown(event: KeyboardEvent): void {
-        // Escape is left to the dialog, which cancels recording.
-        if (!this.recordingShortcut || event.key === 'Escape') return;
+        if (!this.recordingShortcut) return;
 
         event.preventDefault();
         event.stopPropagation();
 
-        this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
+        // Escape cancels recording. Stopping it also keeps the dialog open.
+        if (event.key !== 'Escape') {
+            this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
+        }
         this.recordingShortcut = null;
     }
 

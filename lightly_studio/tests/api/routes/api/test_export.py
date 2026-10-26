@@ -71,6 +71,7 @@ def test_export_collection_prepare(
 
     export_job = db_session.get(ExportJobTable, export_key)
     assert export_job is not None
+    assert ":" not in Path(export_job.export_path).name  # Colons are invalid in Windows filenames.
     file_content = Path(export_job.export_path).read_text()
     assert set(file_content.splitlines()) == {"path/a.png", "path/b.png"}
 

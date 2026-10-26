@@ -48,8 +48,8 @@
 </script>
 
 <!--
-    Keep keys from the app shortcuts on window. Let Escape through: Svelte skips
-    the Bits UI document listener that closes the dialog after stopPropagation.
+    Keep keys from the app shortcuts on window. Let Escape through unless it cancels
+    recording: Svelte skips the Bits UI listener that closes the dialog after stopPropagation.
 -->
 <svelte:document
     onkeydown={(e) => {
@@ -64,12 +64,6 @@
         <Dialog.Overlay />
         <Dialog.Content
             class="flex h-[600px] max-h-[85vh] flex-col gap-0 border-border bg-background p-0 dark:[color-scheme:dark] sm:max-w-[760px]"
-            onEscapeKeydown={(e) => {
-                // Escape cancels shortcut recording instead of closing the dialog.
-                if (!dialogState.recordingShortcut) return;
-                e.preventDefault();
-                dialogState.clearRecording();
-            }}
         >
             <form onsubmit={handleFormSubmit} class="flex min-h-0 flex-1 flex-col">
                 <Dialog.Header class="px-6 pt-6">
