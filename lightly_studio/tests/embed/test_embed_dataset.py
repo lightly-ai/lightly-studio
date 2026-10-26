@@ -19,7 +19,8 @@ from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.errors import NoUsableEmbedderError
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.annotation.annotation_base import AnnotationType
-from lightly_studio.models.collection import SampleType
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -148,6 +149,19 @@ class _EditBoxDuringEmbedCropEmbedder(ImageCropPathEmbedder):
         )
         embeddings = np.array([[crop.x] * 3 for crop in crops], dtype=np.float32)
         return EmbeddingResult(embeddings=embeddings, kept_indices=list(range(len(crops))))
+
+
+class _FailingImageCropEmbedder(ImageCropPathEmbedder):
+    """Raises for every call. Shares the random model's space."""
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+        """Fail as if every crop file were unreadable."""
+        del crops
+        raise AllInputFilesFailedError("All input files failed.")
 
 
 @pytest.fixture
@@ -704,6 +718,37 @@ def test_compute_embeddings__every_chunk_fails_raises(
         embed_dataset.compute_embeddings(
             session=db_session,
             collection_id=collection.collection_id,
+            embed_annotations=False,
+            recompute_annotations=False,
+        )
+
+
+def test_compute_embeddings__every_crop_chunk_fails_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """With the images already embedded, a crop embed where every chunk fails raises."""
+    annotation_collection_id, _ = _create_annotation_collection(session=db_session, box_xs=[100])
+    annotation_collection = db_session.get(CollectionTable, annotation_collection_id)
+    assert annotation_collection is not None
+    image_collection_id = annotation_collection.parent_collection_id
+    assert image_collection_id is not None
+    image_model_id = _register_default_random_model(
+        session=db_session, collection_id=image_collection_id
+    )
+    for image_sample_id in db_session.exec(select(ImageTable.sample_id)).all():
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image_sample_id,
+            embedding_model_id=image_model_id,
+            embedding=[0.0, 0.0, 0.0],
+        )
+    _register_default_random_model(session=db_session, collection_id=annotation_collection_id)
+    _patch_registry(mocker=mocker, embedder=_FailingImageCropEmbedder())
+
+    with pytest.raises(AllInputFilesFailedError):
+        embed_dataset.compute_embeddings(
+            session=db_session,
+            collection_id=image_collection_id,
             embed_annotations=True,
             recompute_annotations=False,
         )

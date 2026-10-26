@@ -202,7 +202,8 @@ chunk. `add_*` has the same risk today. A real fix needs a short-lived session p
 
 ### 10. Plot
 
-No change. A re-embedded vector has a new first float, so today's 2D cache key
+Re-embedding marks the saved embedding plots of the model dirty: the upsert path calls
+`embedding_plot_resolver.mark_dirty`, as `create_many` does since #2936. A re-embedded vector has a new first float, so today's 2D cache key
 (`get_hash_by_collection_id`) changes and the next plot open recomputes
 PaCMAP once per `compute_embeddings` run. The future on-request projection should key on
 the sample ID and source fingerprint of each row, which catches replaced vectors without reading them.
