@@ -18,7 +18,7 @@ from pytest_mock import MockerFixture
 import lightly_studio
 from lightly_studio import ImageDataset, VideoDataset
 from lightly_studio.core.annotation import CreateObjectDetection
-from lightly_studio.embed import embed_samples, embedder_registry
+from lightly_studio.embed import embed_dataset, embed_samples, embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.remote import connection
 from lightly_studio.embed.remote.embedder import RemoteEmbedder
@@ -103,7 +103,7 @@ def test_embed_annotation_collection__uses_the_server_space(
 ) -> None:
     annotation_collection_id = _add_box_to_each_image(dataset=dataset)
 
-    embed_samples.embed_annotation_collection(
+    embed_dataset.embed_annotation_collection(
         session=dataset.session, annotation_collection_id=annotation_collection_id
     )
 
@@ -124,14 +124,14 @@ def test_embed_annotation_collection__after_restart(
     dataset: ImageDataset, query_embedder: ColorQueryEmbedder, mocker: MockerFixture
 ) -> None:
     annotation_collection_id = _add_box_to_each_image(dataset=dataset)
-    embed_samples.embed_annotation_collection(
+    embed_dataset.embed_annotation_collection(
         session=dataset.session, annotation_collection_id=annotation_collection_id
     )
     mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
     _add_box_to_each_image(dataset=dataset)
     call_count = query_embedder.call_count
 
-    embed_samples.embed_annotation_collection(
+    embed_dataset.embed_annotation_collection(
         session=dataset.session, annotation_collection_id=annotation_collection_id
     )
 
@@ -154,7 +154,7 @@ def test_embed_annotation_collection__new_collection_after_restart(
     mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
     annotation_collection_id = _add_box_to_each_image(dataset=dataset)
 
-    embed_samples.embed_annotation_collection(
+    embed_dataset.embed_annotation_collection(
         session=dataset.session, annotation_collection_id=annotation_collection_id
     )
 

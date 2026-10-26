@@ -11,13 +11,12 @@ import pytest
 from lightly_studio_serve.embedder import (
     Embedder,
     ImageBytesEmbedder,
-    ImageCropPathEmbedder,
     ImagePathEmbedder,
     ImagePILEmbedder,
     TextEmbedder,
     VideoPathEmbedder,
 )
-from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, ImageCrop
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 from PIL import Image
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
@@ -30,13 +29,10 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
-    collection_resolver,
     sample_embedding_resolver,
 )
 from tests.helpers_resolvers import (
     ImageStub,
-    create_annotation,
-    create_annotation_label,
     create_collection,
     create_embedding_model,
     create_image,
@@ -94,28 +90,6 @@ class _PathIndexVideoEmbedder(VideoPathEmbedder):
         embeddings = np.array(
             [[_path_number(path=paths[index])] * 2 for index in kept_indices], dtype=np.float32
         )
-        return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
-
-
-class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
-    """Embeds each crop as its left edge x and drops the last crop.
-
-    Deriving the vector from the crop's box, not the input position, makes the test fail
-    if ``embed_annotation_collection`` matches crops to the wrong annotation IDs. A dropped
-    input verifies that only kept embeddings are stored. Shares the random model's space so
-    it resolves as the collection's default.
-    """
-
-    __slots__ = ()
-
-    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        """Describe the shared random embedding space with dimension 3."""
-        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
-
-    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
-        """Embed all crops but the last as [x, x, x], read from the crop's left edge."""
-        kept_indices = list(range(len(crops) - 1))
-        embeddings = np.array([[crops[index].x] * 3 for index in kept_indices], dtype=np.float32)
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
 
 
@@ -346,121 +320,6 @@ def test_embed_text_for_collection__no_embedding_raises(
         embed_samples.embed_text_for_collection(
             session=db_session, collection_id=collection.collection_id, text="a red car"
         )
-
-
-@pytest.mark.usefixtures("patched_registry")
-def test_embed_annotation_collection(
-    db_session: Session,
-) -> None:
-    """Annotation crops are stored under the collection's default model, via the registry."""
-    annotation_collection_id = _create_annotation_collection(session=db_session)
-    model_id = _register_default_random_model(
-        session=db_session, collection_id=annotation_collection_id
-    )
-
-    embed_samples.embed_annotation_collection(
-        session=db_session, annotation_collection_id=annotation_collection_id
-    )
-
-    count = sample_embedding_resolver.get_embedding_count(
-        session=db_session, collection_id=annotation_collection_id, embedding_model_id=model_id
-    )
-    assert count == 1
-
-
-@pytest.mark.usefixtures("patched_registry")
-def test_embed_annotation_collection__no_default_registers_registry_default(
-    db_session: Session,
-) -> None:
-    """With no default model, the registry's crop embedder is used and set as default."""
-    annotation_collection_id = _create_annotation_collection(session=db_session)
-
-    embed_samples.embed_annotation_collection(
-        session=db_session, annotation_collection_id=annotation_collection_id
-    )
-
-    # The registry embedder's space is registered as the collection's default.
-    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=db_session, collection_id=annotation_collection_id
-    )
-    assert model_id is not None
-    count = sample_embedding_resolver.get_embedding_count(
-        session=db_session, collection_id=annotation_collection_id, embedding_model_id=model_id
-    )
-    assert count == 1
-
-
-def test_embed_annotation_collection__no_registered_embedder_skips(
-    db_session: Session,
-    mocker: MockerFixture,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    """With a default model but no embedder for its space, annotation embedding is skipped."""
-    annotation_collection_id = _create_annotation_collection(session=db_session)
-    _register_default_random_model(session=db_session, collection_id=annotation_collection_id)
-    # An empty registry cannot supply an embedder for the default model's space.
-    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
-
-    with caplog.at_level(level=logging.WARNING):
-        embed_samples.embed_annotation_collection(
-            session=db_session, annotation_collection_id=annotation_collection_id
-        )
-
-    assert "No embedding model loaded" in caplog.text
-    assert _stored_embeddings(session=db_session) == []
-
-
-def test_embed_annotation_collection__stores_only_kept_crops(
-    db_session: Session,
-    mocker: MockerFixture,
-) -> None:
-    """Crops the embedder drops are left out, and kept vectors match their annotation IDs."""
-    collection = create_collection(session=db_session)
-    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
-    # One annotation per image at a distinct box x, on ordered paths so the resolver returns
-    # the crops in a known order (it sorts by image path).
-    box_xs = [100, 200, 300]
-    annotation_sample_ids = []
-    for index, box_x in enumerate(box_xs):
-        image = create_image(
-            session=db_session,
-            collection_id=collection.collection_id,
-            file_path_abs=f"/path/to/sample_{index}.png",
-        )
-        annotation = create_annotation(
-            session=db_session,
-            collection_id=collection.collection_id,
-            sample_id=image.sample_id,
-            annotation_label_id=label.annotation_label_id,
-            annotation_data={"x": box_x, "y": 0, "width": 20, "height": 20},
-        )
-        annotation_sample_ids.append(annotation.sample_id)
-    annotation_collection_id = collection_resolver.get_or_create_child_collection(
-        session=db_session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
-    )
-    model_id = _register_default_random_model(
-        session=db_session, collection_id=annotation_collection_id
-    )
-    registry = EmbedderRegistry()
-    registry.register(embedder=_BoxXImageCropEmbedder())
-    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
-
-    embed_samples.embed_annotation_collection(
-        session=db_session, annotation_collection_id=annotation_collection_id
-    )
-
-    # The embedder drops the last crop by path order, so only the first two are stored, each
-    # with the vector encoding its box's left edge.
-    rows = sample_embedding_resolver.get_by_sample_ids(
-        session=db_session, sample_ids=annotation_sample_ids, embedding_model_id=model_id
-    )
-    stored = {row.sample_id: list(row.embedding) for row in rows}
-    assert stored == {
-        annotation_sample_ids[0]: [box_xs[0]] * 3,
-        annotation_sample_ids[1]: [box_xs[1]] * 3,
-    }
 
 
 def test_embed_video_samples(
@@ -888,24 +747,6 @@ def _register_default_random_model(
         set_as_default=True,
     )
     return model.embedding_model_id
-
-
-def _create_annotation_collection(session: Session) -> UUID:
-    """Create a collection with one annotated image and return its annotation child collection."""
-    collection = create_collection(session=session)
-    image = create_image(session=session, collection_id=collection.collection_id)
-    label = create_annotation_label(session=session, root_collection_id=collection.collection_id)
-    create_annotation(
-        session=session,
-        collection_id=collection.collection_id,
-        sample_id=image.sample_id,
-        annotation_label_id=label.annotation_label_id,
-    )
-    return collection_resolver.get_or_create_child_collection(
-        session=session,
-        collection_id=collection.collection_id,
-        sample_type=SampleType.ANNOTATION,
-    )
 
 
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:

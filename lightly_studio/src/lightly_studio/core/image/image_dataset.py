@@ -32,7 +32,7 @@ from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister, remote_storage
-from lightly_studio.embed import embed_dataset, embed_samples
+from lightly_studio.embed import embed_dataset
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -883,7 +883,7 @@ def _generate_embeddings_annotations(
     )
     if annotation_collection_id is None:
         return
-    embed_samples.embed_annotation_collection(
+    embed_dataset.embed_annotation_collection(
         session=session, annotation_collection_id=annotation_collection_id
     )
 
