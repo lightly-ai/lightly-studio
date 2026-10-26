@@ -14,7 +14,9 @@ from sqlmodel import Session, select
 
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.embed import default_embedder, embed_dataset, embed_samples, embedder_registry
+from lightly_studio.embed.embed_dataset import EmbedResult
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
+from lightly_studio.embed.errors import NoUsableEmbedderError
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -67,6 +69,31 @@ class _FailOnCallEmbedder(ImagePathEmbedder):
         )
 
 
+class _FailOnPathsEmbedder(ImagePathEmbedder):
+    """Embeds paths as zeros, but raises when every path of a call is in ``failing_paths``.
+
+    Shares the random model's space so it resolves as the collection's default.
+    """
+
+    __slots__ = ("_failing_paths",)
+
+    def __init__(self, failing_paths: set[str]) -> None:
+        self._failing_paths = failing_paths
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        """Describe the shared random embedding space with dimension 3."""
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
+
+    def embed_images(self, paths: list[str]) -> EmbeddingResult:
+        """Embed every path as zeros, or raise if all paths are failing."""
+        if all(path in self._failing_paths for path in paths):
+            raise AllInputFilesFailedError("All input files failed.")
+        return EmbeddingResult(
+            embeddings=np.zeros((len(paths), 3), dtype=np.float32),
+            kept_indices=list(range(len(paths))),
+        )
+
+
 class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
     """Embeds each crop as its left edge x, optionally dropping the last crop.
 
@@ -89,34 +116,6 @@ class _BoxXImageCropEmbedder(ImageCropPathEmbedder):
         kept_indices = list(range(len(crops) - 1 if self._drop_last else len(crops)))
         embeddings = np.array([[crops[index].x] * 3 for index in kept_indices], dtype=np.float32)
         return EmbeddingResult(embeddings=embeddings, kept_indices=kept_indices)
-
-
-class _FailOnCallCropEmbedder(ImageCropPathEmbedder):
-    """Embeds crops as zeros and raises on a known call.
-
-    Shares the random model's space so it resolves as the collection's default.
-    """
-
-    __slots__ = ("_call_count", "_error", "_fail_on_call")
-
-    def __init__(self, fail_on_call: int, error: Exception) -> None:
-        self._call_count = 0
-        self._error = error
-        self._fail_on_call = fail_on_call
-
-    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
-        """Describe the shared random embedding space with dimension 3."""
-        return EmbeddingSpaceSpec(space_key="random_model", dimension=3)
-
-    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
-        """Embed every crop as zeros, or raise on call number ``fail_on_call``."""
-        self._call_count += 1
-        if self._call_count == self._fail_on_call:
-            raise self._error
-        return EmbeddingResult(
-            embeddings=np.zeros((len(crops), 3), dtype=np.float32),
-            kept_indices=list(range(len(crops))),
-        )
 
 
 @pytest.fixture
@@ -145,7 +144,7 @@ def test_embed_missing_images(db_session: Session) -> None:
         session=db_session, collection_id=collection.collection_id
     )
 
-    assert stored == 2
+    assert stored == EmbedResult(stored=2, failed_chunks=0)
     count = sample_embedding_resolver.get_embedding_count(
         session=db_session, collection_id=collection.collection_id, embedding_model_id=model_id
     )
@@ -162,12 +161,9 @@ def test_embed_missing_images__skips_embedded_images(db_session: Session) -> Non
         images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
     )
     _register_default_random_model(session=db_session, collection_id=collection.collection_id)
-    assert (
-        embed_dataset.embed_missing_images(
-            session=db_session, collection_id=collection.collection_id
-        )
-        == 2
-    )
+    assert embed_dataset.embed_missing_images(
+        session=db_session, collection_id=collection.collection_id
+    ) == EmbedResult(stored=2, failed_chunks=0)
     create_images(
         db_session=db_session,
         collection_id=collection.collection_id,
@@ -178,7 +174,7 @@ def test_embed_missing_images__skips_embedded_images(db_session: Session) -> Non
         session=db_session, collection_id=collection.collection_id
     )
 
-    assert stored == 1
+    assert stored == EmbedResult(stored=1, failed_chunks=0)
     assert len(_stored_embeddings(session=db_session)) == 3
 
 
@@ -232,7 +228,7 @@ def test_embed_missing_images__no_default_embeds_all_and_registers(
         session=db_session, collection_id=collection.collection_id
     )
 
-    assert stored == 3
+    assert stored == EmbedResult(stored=3, failed_chunks=0)
     model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     )
@@ -252,7 +248,7 @@ def test_embed_missing_images__no_images_registers_no_default(db_session: Sessio
         session=db_session, collection_id=collection.collection_id
     )
 
-    assert stored == 0
+    assert stored == EmbedResult(stored=0, failed_chunks=0)
     model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=db_session, collection_id=collection.collection_id
     )
@@ -271,19 +267,16 @@ def test_embed_missing_images__nothing_missing_does_not_resolve(
         collection_id=collection.collection_id,
         images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
     )
-    assert (
-        embed_dataset.embed_missing_images(
-            session=db_session, collection_id=collection.collection_id
-        )
-        == 2
-    )
+    assert embed_dataset.embed_missing_images(
+        session=db_session, collection_id=collection.collection_id
+    ) == EmbedResult(stored=2, failed_chunks=0)
     spy = mocker.spy(default_embedder, "resolve_default_embedder")
 
     stored = embed_dataset.embed_missing_images(
         session=db_session, collection_id=collection.collection_id
     )
 
-    assert stored == 0
+    assert stored == EmbedResult(stored=0, failed_chunks=0)
     spy.assert_not_called()
 
 
@@ -306,7 +299,7 @@ def test_embed_missing_images__fetches_paths_per_chunk(
         session=db_session, collection_id=collection.collection_id
     )
 
-    assert stored == 5
+    assert stored == EmbedResult(stored=5, failed_chunks=0)
     assert [len(call.kwargs["sample_ids"]) for call in spy.call_args_list] == [2, 2, 1]
 
 
@@ -377,7 +370,7 @@ def test_embed_missing_images__skip_failed_chunks_continues(
         session=db_session, collection_id=collection.collection_id, skip_failed_chunks=True
     )
 
-    assert stored == 1
+    assert stored == EmbedResult(stored=1, failed_chunks=1)
 
 
 def test_embed_missing_images__failed_chunk_raises_by_default(
@@ -415,7 +408,7 @@ def test_embed_annotation_crops(db_session: Session) -> None:
         session=db_session, annotation_collection_id=annotation_collection_id
     )
 
-    assert stored == 1
+    assert stored == EmbedResult(stored=1, failed_chunks=0)
     count = sample_embedding_resolver.get_embedding_count(
         session=db_session, collection_id=annotation_collection_id, embedding_model_id=model_id
     )
@@ -477,7 +470,7 @@ def test_embed_annotation_crops__classification_only_registers_no_default(
         session=db_session, annotation_collection_id=annotation_collection_id
     )
 
-    assert stored == 0
+    assert stored == EmbedResult(stored=0, failed_chunks=0)
     spy.assert_not_called()
     assert (
         collection_embedding_model_resolver.get_default_by_collection_id(
@@ -550,7 +543,7 @@ def test_embed_annotation_crops__default_keeps_existing(
         session=db_session, annotation_collection_id=annotation_collection_id
     )
 
-    assert stored_count == 0
+    assert stored_count == EmbedResult(stored=0, failed_chunks=0)
     stored = _stored_by_annotation(
         session=db_session, annotation_ids=annotation_ids, model_id=model_id
     )
@@ -598,48 +591,79 @@ def test_embed_annotation_crops__box_outside_image_is_skipped(
         session=db_session, annotation_collection_id=annotation_collection_id
     )
 
-    assert first == 1
+    assert first == EmbedResult(stored=1, failed_chunks=0)
     assert "Skipping invalid annotation crop" in caplog.text
-    assert second == 0
+    assert second == EmbedResult(stored=0, failed_chunks=0)
 
 
-def test_embed_annotation_crops__skip_failed_chunks_continues(
+def test_compute_embeddings__every_chunk_fails_raises(
     db_session: Session, mocker: MockerFixture
 ) -> None:
-    """With skip_failed_chunks, a chunk where every file failed is skipped."""
-    annotation_collection_id, _ = _create_annotation_collection(
-        session=db_session, box_xs=[100, 200]
+    """When at least one chunk failed and nothing was stored, the error propagates."""
+    collection = create_collection(session=db_session)
+    create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
     )
-    _register_default_random_model(session=db_session, collection_id=annotation_collection_id)
-    mocker.patch.object(embed_dataset, "_ANNOTATION_EMBED_BATCH_SIZE", 1)
-    _patch_registry(
-        mocker=mocker,
-        embedder=_FailOnCallCropEmbedder(fail_on_call=1, error=AllInputFilesFailedError("failed")),
-    )
-
-    stored = embed_dataset.embed_annotation_crops(
-        session=db_session,
-        annotation_collection_id=annotation_collection_id,
-        skip_failed_chunks=True,
-    )
-
-    assert stored == 1
-
-
-def test_embed_annotation_crops__failed_chunk_raises_by_default(
-    db_session: Session, mocker: MockerFixture
-) -> None:
-    """Without skip_failed_chunks, AllInputFilesFailedError propagates."""
-    annotation_collection_id, _ = _create_annotation_collection(session=db_session, box_xs=[100])
-    _register_default_random_model(session=db_session, collection_id=annotation_collection_id)
-    _patch_registry(
-        mocker=mocker,
-        embedder=_FailOnCallCropEmbedder(fail_on_call=1, error=AllInputFilesFailedError("failed")),
+    mocker.patch.object(embed_dataset, "_IMAGE_EMBED_BATCH_SIZE", 1)
+    _patch_image_registry(
+        mocker=mocker, embedder=_FailOnPathsEmbedder(failing_paths={"/test/a.jpg", "/test/b.jpg"})
     )
 
     with pytest.raises(AllInputFilesFailedError):
-        embed_dataset.embed_annotation_crops(
-            session=db_session, annotation_collection_id=annotation_collection_id
+        embed_dataset.compute_embeddings(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embed_annotations=True,
+            recompute_annotations=False,
+        )
+
+
+def test_compute_embeddings__some_chunks_fail(db_session: Session, mocker: MockerFixture) -> None:
+    """A failed chunk is skipped while the other chunks are stored."""
+    collection = create_collection(session=db_session)
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg"), ImageStub(path="/test/b.jpg")],
+    )
+    mocker.patch.object(embed_dataset, "_IMAGE_EMBED_BATCH_SIZE", 1)
+    _patch_image_registry(
+        mocker=mocker, embedder=_FailOnPathsEmbedder(failing_paths={"/test/a.jpg"})
+    )
+
+    embed_dataset.compute_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embed_annotations=True,
+        recompute_annotations=False,
+    )
+
+    stored_ids = [embedding.sample_id for embedding in _stored_embeddings(session=db_session)]
+    assert stored_ids == [images[1].sample_id]
+
+
+def test_compute_embeddings__no_usable_embedder_raises(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Images that need an embedding and no embedder raise NoUsableEmbedderError."""
+    collection = create_collection(session=db_session)
+    create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="/test/a.jpg")],
+    )
+    mocker.patch.object(embedder_registry, "get_registry", return_value=EmbedderRegistry())
+    # No built-in model loads in this test
+    mocker.patch.object(embedder_registry, "_load_builtin_embedder", return_value=None)
+
+    with pytest.raises(NoUsableEmbedderError):
+        embed_dataset.compute_embeddings(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embed_annotations=True,
+            recompute_annotations=False,
         )
 
 
@@ -658,6 +682,13 @@ def _register_default_random_model(session: Session, collection_id: UUID) -> UUI
 def _stored_embeddings(session: Session) -> list[SampleEmbeddingTable]:
     """Return every stored sample embedding, for asserting the skip path stores nothing."""
     return list(session.exec(select(SampleEmbeddingTable)).all())
+
+
+def _patch_image_registry(mocker: MockerFixture, embedder: ImagePathEmbedder) -> None:
+    """Route embedding to a fresh registry holding only the given image embedder."""
+    registry = EmbedderRegistry()
+    registry.register(embedder=embedder)
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
 
 
 def _patch_registry(mocker: MockerFixture, embedder: ImageCropPathEmbedder) -> None:

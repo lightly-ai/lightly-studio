@@ -21,7 +21,6 @@ from lightly_studio.embed import (
     embedding_storage,
 )
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
-from lightly_studio.embed.errors import NoUsableEmbedderError
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.resolvers import (
@@ -166,18 +165,6 @@ def test_compute_embeddings__second_run_is_noop(
     spy.assert_not_called()
 
 
-def test_compute_embeddings__no_usable_embedder_raises(
-    patch_collection: None,  # noqa: ARG001
-    tmp_path: Path,
-    mocker: Mocker,
-) -> None:
-    dataset = _create_dataset(tmp_path=tmp_path, image_names=["a.jpg"])
-    _patch_empty_registry(mocker=mocker)
-
-    with pytest.raises(NoUsableEmbedderError):
-        dataset.compute_embeddings()
-
-
 def test_compute_embeddings__nothing_to_embed_and_no_embedder__empty_dataset(
     patch_collection: None,  # noqa: ARG001
     mocker: Mocker,
@@ -246,26 +233,6 @@ def test_compute_embeddings__failed_chunk_is_logged_and_next_embedded(
 
     assert _embedded_file_names(dataset=dataset) == {"b.jpg"}
     assert caplog.text.count(_SKIP_WARNING) == 1
-
-
-def test_compute_embeddings__every_chunk_fails(
-    patch_collection: None,  # noqa: ARG001
-    tmp_path: Path,
-    mocker: Mocker,
-    caplog: pytest.LogCaptureFixture,
-) -> None:
-    names = ["a.jpg", "b.jpg", "c.jpg"]
-    dataset = _create_dataset(tmp_path=tmp_path, image_names=names)
-    mocker.patch.object(embed_dataset, "_IMAGE_EMBED_BATCH_SIZE", 1)
-    for name in names:
-        (tmp_path / name).unlink()
-    _patch_registry(mocker=mocker)
-
-    with caplog.at_level(logging.WARNING):
-        dataset.compute_embeddings()
-
-    assert caplog.text.count(_SKIP_WARNING) == 3
-    assert _embedded_file_names(dataset=dataset) == set()
 
 
 def _create_dataset(tmp_path: Path, image_names: list[str]) -> ImageDataset:

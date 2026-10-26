@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from dataclasses import dataclass
 from uuid import UUID
 
 from lightly_studio_serve.embedder import ImageCropPathEmbedder, ImagePathEmbedder
@@ -30,6 +32,19 @@ _IMAGE_EMBED_BATCH_SIZE = 1024
 _ANNOTATION_EMBED_BATCH_SIZE = 2048
 
 
+@dataclass(frozen=True)
+class EmbedResult:
+    """Outcome of embedding one set of samples.
+
+    Attributes:
+        stored: The number of stored embeddings.
+        failed_chunks: The number of chunks skipped because every file in them failed.
+    """
+
+    stored: int
+    failed_chunks: int
+
+
 def compute_embeddings(
     session: Session,
     collection_id: UUID,
@@ -49,36 +64,42 @@ def compute_embeddings(
 
     Raises:
         NoUsableEmbedderError: If samples need an embedding and no embedder is available.
+        AllInputFilesFailedError: If at least one chunk failed and no embedding was stored.
     """
-    image_count = embed_missing_images(
+    image_result = embed_missing_images(
         session=session, collection_id=collection_id, skip_failed_chunks=True
     )
-    if image_count is None:
+    if image_result is None:
         raise NoUsableEmbedderError("No image embedder is available to embed the images.")
+    image_count = image_result.stored
+    failed_chunks = image_result.failed_chunks
 
     annotation_count = 0
     if embed_annotations:
         for annotation_source in collection_resolver.get_annotation_collections(
             session=session, parent_collection_id=collection_id
         ):
-            stored = embed_annotation_crops(
+            annotation_result = embed_annotation_crops(
                 session=session,
                 annotation_collection_id=annotation_source.collection_id,
                 recompute=recompute_annotations,
                 skip_failed_chunks=True,
             )
-            if stored is None:
+            if annotation_result is None:
                 raise NoUsableEmbedderError(
                     "No crop embedder is available to embed the annotations of the "
                     f"annotation source {annotation_source.name!r}."
                 )
-            annotation_count += stored
+            annotation_count += annotation_result.stored
+            failed_chunks += annotation_result.failed_chunks
     logger.info("Embedded %d images and %d annotations.", image_count, annotation_count)
+    if failed_chunks > 0 and image_count + annotation_count == 0:
+        raise AllInputFilesFailedError("Every chunk failed and no embedding was stored.")
 
 
 def embed_missing_images(
     session: Session, collection_id: UUID, skip_failed_chunks: bool = False
-) -> int | None:
+) -> EmbedResult | None:
     """Embeds every image of the collection without an embedding of the default model.
 
     The selection runs before the embedder is resolved. Resolving registers a default
@@ -92,7 +113,7 @@ def embed_missing_images(
             Otherwise the ``AllInputFilesFailedError`` propagates.
 
     Returns:
-        The number of stored embeddings, or None if the selection is not empty and no
+        The embed result, or None if the selection is not empty and no
         image embedder is available.
     """
     default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
@@ -102,7 +123,7 @@ def embed_missing_images(
         session=session, collection_id=collection_id, embedding_model_id=default_model_id
     )
     if not sample_ids:
-        return 0
+        return EmbedResult(stored=0, failed_chunks=0)
 
     resolved = default_embedder.resolve_default_embedder(
         session=session,
@@ -113,26 +134,15 @@ def embed_missing_images(
         return None
     embedder, model_id = resolved
 
-    stored = 0
-    with tqdm(total=len(sample_ids), desc="Embedding images", unit=" images") as progress:
-        for sample_id_chunk in batching.batched(
-            items=sample_ids, batch_size=_IMAGE_EMBED_BATCH_SIZE
-        ):
-            try:
-                stored += _embed_image_chunk(
-                    session=session,
-                    embedder=embedder,
-                    model_id=model_id,
-                    sample_ids=sample_id_chunk,
-                )
-            except AllInputFilesFailedError:
-                if not skip_failed_chunks:
-                    raise
-                logger.warning(
-                    "Skipping a chunk of %d images where every file failed.", len(sample_id_chunk)
-                )
-            progress.update(len(sample_id_chunk))
-    return stored
+    return _embed_in_chunks(
+        ids=sample_ids,
+        batch_size=_IMAGE_EMBED_BATCH_SIZE,
+        label="images",
+        embed_chunk=lambda chunk: _embed_image_chunk(
+            session=session, embedder=embedder, model_id=model_id, sample_ids=chunk
+        ),
+        skip_failed_chunks=skip_failed_chunks,
+    )
 
 
 def embed_annotation_crops(
@@ -140,7 +150,7 @@ def embed_annotation_crops(
     annotation_collection_id: UUID,
     recompute: bool = False,
     skip_failed_chunks: bool = False,
-) -> int | None:
+) -> EmbedResult | None:
     """Embeds the crops of an annotation source that lack an embedding, or all with recompute.
 
     The selection runs before the embedder is resolved. Resolving registers a default
@@ -163,7 +173,7 @@ def embed_annotation_crops(
             Otherwise the ``AllInputFilesFailedError`` propagates.
 
     Returns:
-        The number of stored embeddings, or None if the selection is not empty and no
+        The embed result, or None if the selection is not empty and no
         crop embedder is available.
     """
     default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
@@ -180,7 +190,7 @@ def embed_annotation_crops(
             embedding_model_id=default_model_id,
         )
     if not annotation_sample_ids:
-        return 0
+        return EmbedResult(stored=0, failed_chunks=0)
 
     resolved = default_embedder.resolve_default_embedder(
         session=session,
@@ -191,28 +201,55 @@ def embed_annotation_crops(
         return None
     embedder, model_id = resolved
 
+    return _embed_in_chunks(
+        ids=annotation_sample_ids,
+        batch_size=_ANNOTATION_EMBED_BATCH_SIZE,
+        label="crops",
+        embed_chunk=lambda chunk: _embed_annotation_chunk(
+            session=session,
+            embedder=embedder,
+            model_id=model_id,
+            annotation_sample_ids=chunk,
+        ),
+        skip_failed_chunks=skip_failed_chunks,
+    )
+
+
+def _embed_in_chunks(
+    ids: list[UUID],
+    batch_size: int,
+    label: str,
+    embed_chunk: Callable[[list[UUID]], int],
+    skip_failed_chunks: bool,
+) -> EmbedResult:
+    """Embeds the ids chunk by chunk and shows a progress bar.
+
+    Args:
+        ids: The sample ids to embed.
+        batch_size: The number of ids per chunk.
+        label: What the ids are, ``"images"`` or ``"crops"``. Used in the bar and the log.
+        embed_chunk: Embeds and stores one chunk and returns the number of stored embeddings.
+        skip_failed_chunks: If True, a chunk where every file failed is logged and skipped.
+            Otherwise the ``AllInputFilesFailedError`` propagates.
+
+    Returns:
+        The number of stored embeddings and of skipped chunks.
+    """
     stored = 0
-    with tqdm(
-        total=len(annotation_sample_ids), desc="Embedding annotations", unit=" crops"
-    ) as progress:
-        for sample_id_chunk in batching.batched(
-            items=annotation_sample_ids, batch_size=_ANNOTATION_EMBED_BATCH_SIZE
-        ):
+    failed_chunks = 0
+    with tqdm(total=len(ids), desc=f"Embedding {label}", unit=f" {label}") as progress:
+        for id_chunk in batching.batched(items=ids, batch_size=batch_size):
             try:
-                stored += _embed_annotation_chunk(
-                    session=session,
-                    embedder=embedder,
-                    model_id=model_id,
-                    annotation_sample_ids=sample_id_chunk,
-                )
+                stored += embed_chunk(id_chunk)
             except AllInputFilesFailedError:
                 if not skip_failed_chunks:
                     raise
+                failed_chunks += 1
                 logger.warning(
-                    "Skipping a chunk of %d crops where every file failed.", len(sample_id_chunk)
+                    "Skipping a chunk of %d %s where every file failed.", len(id_chunk), label
                 )
-            progress.update(len(sample_id_chunk))
-    return stored
+            progress.update(len(id_chunk))
+    return EmbedResult(stored=stored, failed_chunks=failed_chunks)
 
 
 def _embed_image_chunk(
