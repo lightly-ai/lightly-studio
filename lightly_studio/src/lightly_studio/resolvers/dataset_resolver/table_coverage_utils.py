@@ -11,13 +11,13 @@ from sqlmodel import SQLModel
 # - export_job is handled by delete_dataset only (its collection_id FK must be cleared
 #   before the collection is deleted); deep_copy intentionally leaves it alone since a job
 #   is a transient download token, not data worth duplicating.
-_HANDLED_TABLES_COUNT = 38
+# - embedding_plot is deleted with its dataset; copies rebuild plots with their new sample IDs.
+_HANDLED_TABLES_COUNT = 39
 
 # Tables not relevant for collection operations:
 # - setting (application-level, not collection-specific)
 # - two_dim_embeddings (cached projections, regenerated as needed)
-# - embedding_plot (unused cache storage; lifecycle handling accompanies cache writes)
-_EXCLUDED_TABLES_COUNT = 3
+_EXCLUDED_TABLES_COUNT = 2
 
 _TOTAL_TABLES_COUNT = _HANDLED_TABLES_COUNT + _EXCLUDED_TABLES_COUNT
 
