@@ -142,6 +142,8 @@ describe('SettingsDialog', () => {
     });
 
     it('should cancel recording on Escape and keep the dialog open', async () => {
+        const appShortcutHandler = vi.fn();
+        window.addEventListener('keydown', appShortcutHandler);
         render(SettingsDialog);
         await openDialog();
 
@@ -152,6 +154,8 @@ describe('SettingsDialog', () => {
         expect(screen.queryByText('Press a key...')).not.toBeInTheDocument();
         expect(shortcutButton).toHaveTextContent('v');
         expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(appShortcutHandler).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', appShortcutHandler);
     });
 
     it('should open on the Shortcuts tab', async () => {
