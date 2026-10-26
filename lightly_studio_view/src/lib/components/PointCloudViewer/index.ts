@@ -4,3 +4,4 @@ export type { ColorMode } from './pointCloudUtils';
 export type { PointBatch, PointCloudBuffer } from './types';
 export { navigateScene, startSceneNavigation, stopSceneNavigation } from './sceneNavigation';
 export type { SceneNavigationAction } from './sceneNavigation';
+export type { SceneViewState } from './sceneViewState';
