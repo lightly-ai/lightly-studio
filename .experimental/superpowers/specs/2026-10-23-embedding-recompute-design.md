@@ -1,6 +1,7 @@
 # Embedding recompute: design
 
-Date: 2026-10-23. Status: approved in brainstorming, pending spec review.
+Date: 2026-10-23. Status: approved. Amended 2026-10-26 after a review of the PR stack, see
+"Review decisions".
 
 ## Goal
 
@@ -126,7 +127,12 @@ ON CONFLICT (sample_id, embedding_model_id) DO UPDATE SET embedding, source_fing
 ```
 
 The selection returns unique IDs, so no statement holds the same key twice (Postgres rejects that).
-`create_many` keeps first-writer-wins for every other caller.
+`create_many` keeps first-writer-wins for every other caller: it skips conflicts so that two
+concurrent `add_*` calls do not fail on Postgres (#2604).
+
+`embedding_storage.store_embeddings` is the one storage entry point. It takes optional
+`source_fingerprints` and a `replace` flag, and calls `create_many` or the upsert with a plain
+`if`.
 
 ### 5. Selection
 
@@ -144,7 +150,7 @@ WHERE s.collection_id = :annotation_collection_id
   AND a.annotation_type IN (<croppable types>)
   AND (
     e.sample_id IS NULL                                  -- missing
-    OR (:include_stale AND e.source_fingerprint <> <fingerprint expr>)  -- stale
+    OR e.source_fingerprint <> <fingerprint expr>        -- stale
   )
 ORDER BY i.file_path_abs
 ```
@@ -158,9 +164,10 @@ ORDER BY i.file_path_abs
 
 ### 6. `add_*` behavior
 
-`add_*` keeps filling missing embeddings only (`include_stale=False`). Stale crops are refreshed
-only by `compute_embeddings`. This keeps the cost of an ingest call bounded: adding 100 annotations
-never re-embeds the 50k crops someone edited earlier.
+`add_*` uses the same missing-or-stale selection as `compute_embeddings`, for the annotation source
+it adds to. There is one selection, no `include_stale` flag. The extra work is bounded by the
+number of edited boxes in that source, not by the dataset size, and the stale query costs at most
+1.1x the missing one (see "Postgres risk").
 
 ### 7. Fixes on the shared path
 
@@ -182,7 +189,9 @@ never re-embeds the 50k crops someone edited earlier.
 - A chunk where every file fails (`AllInputFilesFailedError`, embed/image_crop_embedding.py:154):
   `compute_embeddings` logs it and continues with the next chunk. Without this, one moved folder
   blocks every rerun, because committed chunks drop out of the selection and the failing chunk comes
-  first again. `add_*` keeps raising.
+  first again. If at least one chunk failed and nothing was stored, `compute_embeddings` raises
+  `AllInputFilesFailedError` at the end, so a run where nothing worked is not silent. `add_*` keeps
+  raising on the first failed chunk.
 - A crop that fails to re-embed keeps its old vector and stays selected as stale.
 
 ### 9. Concurrency
@@ -222,6 +231,10 @@ adds a covering index:
 CREATE INDEX ... ON sample_embedding (embedding_model_id, sample_id) INCLUDE (source_fingerprint);
 ```
 
+Measured on #2929 (Postgres, 10M annotations, 1% missing, 1% stale, `EXPLAIN ANALYZE`): missing
+only 5.3-5.7 s warm, missing or stale 5.4-5.9 s warm. The stale query is at most 1.1x, under the
+2x limit, so the covering index is not added.
+
 ## Testing
 
 Resolver, one test per branch, box values in the test body (style of
@@ -229,7 +242,7 @@ tests/resolvers/annotations/test_get_unembedded_annotation_ids.py):
 
 - missing → selected
 - fingerprint matches → not selected
-- box edited → selected with `include_stale`, not selected without
+- box edited → selected
 - `NULL` fingerprint → not selected
 
 Round trip on both backends (`pytest --postgres`):
@@ -251,7 +264,8 @@ Race:
 - `recompute_annotations=True` re-embeds a crop that has no fingerprint. The default does not.
 - No usable embedder raises.
 - A chunk where all files fail is logged and the next chunk is embedded.
-- `add_*` after a box edit does not re-embed the edited crop.
+- `add_*` after a box edit re-embeds the edited crop of that annotation source.
+- Every chunk fails → `compute_embeddings` raises `AllInputFilesFailedError`.
 
 ## PR split
 
@@ -269,3 +283,25 @@ The public API ships before the only breaking change. PRs 1 and 2 need no schema
    `BREAKING: Store the crop fingerprint with annotation embeddings`.
 4. Missing-or-stale selection, tests on both backends, Postgres 10M measurement.
    `compute_embeddings` picks up edited boxes by default. CHANGELOG `Changed`.
+
+## Review decisions (2026-10-26)
+
+A review of the PR stack (#2926-#2929) against this spec, with a second reviewer who did not read
+the spec, gave these decisions:
+
+1. Stale detection keeps the fingerprint column. Deleting the crop embedding on a box edit was the
+   alternative. Two code paths edit a box (`annotation_resolver.update_bounding_box` and the
+   `DBField` setters of the annotation classes), and a third would silently skip the delete. Also a
+   deleted embedding drops the annotation from the plot and from similarity search, and the GUI has
+   no way to recompute it. The DuckDB re-index is the usual cost of a schema change.
+2. One selection, missing or stale, in `add_*` and `compute_embeddings`. See section 6.
+3. `compute_embeddings` keeps both parameters. `embed_annotations` matches the `embed_annotations`
+   flag of every `add_*` method. `recompute_annotations` is the only way to refresh embeddings
+   from before the fingerprint, because a `NULL` fingerprint is not stale.
+4. `add_*` with `embed=True` and no default model embeds every image without an embedding, as main
+   already does when a default model exists (section 7.1).
+5. Code quality, no behavior change: one `store_embeddings` with a `replace` flag instead of an
+   injected write function; the crop embedding move from `embed_samples.py` to `embed_dataset.py`
+   is its own commit; one shared chunk loop for images and crops; the croppable-annotation query
+   stays private to the resolver package; the selection branches are tested at the resolver level
+   and `ImageDataset.compute_embeddings` gets a few end-to-end tests.
