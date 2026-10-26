@@ -190,6 +190,18 @@ describe('SettingsDialogState', () => {
         expect(state.shortcuts.toggleEditMode).toBe('e');
     });
 
+    it('reports changes against the hydrated settings', () => {
+        const state = new SettingsDialogState();
+        state.hydrate(TEST_SETTINGS);
+        expect(state.hasChanges).toBe(false);
+
+        state.shortcuts.hideAnnotations = 'z';
+        expect(state.hasChanges).toBe(true);
+
+        state.shortcuts.hideAnnotations = 'v';
+        expect(state.hasChanges).toBe(false);
+    });
+
     it('getSavePayload includes both modified and unmodified fields', () => {
         const state = new SettingsDialogState();
         state.hydrate(TEST_SETTINGS);
