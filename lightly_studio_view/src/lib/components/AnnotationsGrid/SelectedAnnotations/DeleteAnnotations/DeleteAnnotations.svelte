@@ -29,7 +29,7 @@
     async function handleDelete() {
         if (get(isPending)) return;
         const snapshot = get(getSelectAllAnnotationSnapshot(collectionId));
-        const result = await deleteAnnotations({
+        const { data } = await deleteAnnotations({
             collectionId,
             rootCollectionId: page.params.dataset_id!,
             selectedIds,
@@ -38,10 +38,10 @@
                     ? { filter: snapshot.filter, size: snapshot.size }
                     : null
         });
-        if (result.ok) {
+        if (data) {
             clearSelectedSampleAnnotationCrops(collectionId);
-            const noun = result.deletedCount === 1 ? 'annotation' : 'annotations';
-            toast.success(`Deleted ${result.deletedCount} ${noun}`);
+            const noun = data.deleted_count === 1 ? 'annotation' : 'annotations';
+            toast.success(`Deleted ${data.deleted_count} ${noun}`);
         } else {
             toast.error('Failed to delete annotations. Please try again.');
         }

@@ -51,7 +51,7 @@ describe('DeleteAnnotations', () => {
         vi.clearAllMocks();
         mocks.isEditingMode.set(true);
         mocks.hasMinimumRole.mockReturnValue(true);
-        mocks.deleteAnnotations.mockResolvedValue({ ok: true, deletedCount: 2 });
+        mocks.deleteAnnotations.mockResolvedValue({ data: { deleted_count: 2 } });
     });
 
     it('shows the button to labelers in editing mode', () => {
@@ -76,7 +76,7 @@ describe('DeleteAnnotations', () => {
     });
 
     it('deletes the selection, clears it and reports the deleted count', async () => {
-        mocks.deleteAnnotations.mockResolvedValue({ ok: true, deletedCount: 1 });
+        mocks.deleteAnnotations.mockResolvedValue({ data: { deleted_count: 1 } });
         render(DeleteAnnotations, { props: { collectionId: 'col-1' } });
 
         await confirmDelete();
@@ -92,7 +92,7 @@ describe('DeleteAnnotations', () => {
     });
 
     it('keeps the selection and shows an error when deleting fails', async () => {
-        mocks.deleteAnnotations.mockResolvedValue({ ok: false });
+        mocks.deleteAnnotations.mockResolvedValue({ error: { detail: 'Boom' } });
         render(DeleteAnnotations, { props: { collectionId: 'col-1' } });
 
         await confirmDelete();
