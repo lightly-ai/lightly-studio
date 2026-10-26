@@ -2,10 +2,11 @@
     const { label }: { label: string } = $props();
 </script>
 
-{#if label.length > 0}
-    <div class="text-md m-2">
-        Press Enter to create a new <span class="font-semibold">"{label}"</span> annotation class.
-    </div>
-{:else}
-    <div class="text-md m-2">Type to create a new annotation class.</div>
-{/if}
+<div class="px-2 py-4 text-center text-sm text-muted-foreground">
+    {#if label.length > 0}
+        No annotation class matches
+        <span class="break-all font-medium text-foreground">{label}</span>.
+    {:else}
+        This dataset has no annotation classes yet.
+    {/if}
+</div>

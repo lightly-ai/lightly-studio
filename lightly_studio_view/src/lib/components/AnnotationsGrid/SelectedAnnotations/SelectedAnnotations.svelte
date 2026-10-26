@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Card, CardContent } from '$lib/components';
     import { Segment } from '$lib/components';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
@@ -32,10 +32,10 @@
                     <div class="text-md mb-2">
                         You can edit annotation classes for multiple annotations at once.
                     </div>
-                    <SelectList
+                    <AnnotationClassSelectList
                         {items}
                         name="annotation-label"
-                        placeholder="Select or create a class"
+                        placeholder="Select a class"
                         label="Select a class"
                         {onSelect}
                         {isLoading}
@@ -44,7 +44,7 @@
                         {#snippet notFound({ inputValue })}
                             <LabelNotFound label={inputValue} />
                         {/snippet}
-                    </SelectList>
+                    </AnnotationClassSelectList>
                 </div>
             </Segment>
         </div>

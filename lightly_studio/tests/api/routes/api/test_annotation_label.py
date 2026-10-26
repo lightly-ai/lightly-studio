@@ -1,15 +1,21 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.resolvers import annotation_label_resolver
-from tests.helpers_resolvers import create_annotation_label, create_collection
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 
 
 def test_create_annotation_label(db_session: Session, test_client: TestClient) -> None:
@@ -81,6 +87,27 @@ def test_update_annotation_label(db_session: Session, test_client: TestClient) -
     assert label["annotation_label_name"] == "dog"
 
 
+def test_read_annotation_labels_with_counts(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_id = create_image(session=db_session, collection_id=collection_id).sample_id
+    cat_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="dog")
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image_id,
+        annotation_label_id=cat_id,
+    )
+
+    result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels_with_counts")
+
+    assert result.status_code == HTTP_STATUS_OK
+    counts = {row["annotation_label_name"]: row["annotation_count"] for row in result.json()}
+    assert counts == {"cat": 1, "dog": 0}
+
+
 def test_delete_annotation_label(db_session: Session, test_client: TestClient) -> None:
     collection_id = create_collection(session=db_session).collection_id
     label_id = create_annotation_label(
@@ -93,3 +120,29 @@ def test_delete_annotation_label(db_session: Session, test_client: TestClient) -
 
     label_result = test_client.get(f"/api/annotation_labels/{label_id!s}")
     assert label_result.status_code == HTTP_STATUS_NOT_FOUND
+
+
+def test_delete_annotation_label__deletes_its_annotations(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_id = create_image(session=db_session, collection_id=collection_id).sample_id
+    cat_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    dog_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    ).annotation_label_id
+    for label_id in (cat_id, cat_id, dog_id):
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=image_id,
+            annotation_label_id=label_id,
+        )
+
+    result = test_client.delete(f"/api/annotation_labels/{cat_id!s}")
+    assert result.status_code == HTTP_STATUS_OK
+
+    remaining_label_ids = db_session.exec(select(AnnotationBaseTable.annotation_label_id)).all()
+    assert remaining_label_ids == [dog_id]

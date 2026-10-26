@@ -54,6 +54,7 @@
                         names={classNames}
                         disabled={isApplying}
                         onSelect={onClassSelect}
+                        annotationClasses
                     />
                     <ConfirmApplyDialog
                         {selectedCount}

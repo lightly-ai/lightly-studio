@@ -4,7 +4,7 @@
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Button, SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import {
         cn,
@@ -256,13 +256,13 @@
                 {/if}
                 <span class="flex min-w-0 flex-1 flex-col gap-1">
                     {#if $isEditingMode}
-                        <SelectList
+                        <AnnotationClassSelectList
                             {items}
                             selectedItem={items.find(
                                 (i) => i.value === getLabelValue(annotation)?.value
                             )}
                             name="classification-label"
-                            placeholder="Select or create a class"
+                            placeholder="Select a class"
                             className="h-8 w-full min-w-0 px-3"
                             contentClassName="w-full min-w-0"
                             onSelect={async (item) => {
@@ -272,7 +272,7 @@
                             {#snippet notFound({ inputValue })}
                                 <LabelNotFound label={inputValue} />
                             {/snippet}
-                        </SelectList>
+                        </AnnotationClassSelectList>
                     {:else}
                         <span class="flex h-8 min-w-0 items-center">
                             <span class="truncate">
@@ -363,10 +363,10 @@
                     >
                         <span class="flex min-w-0 flex-1 flex-col gap-1">
                             <span class="min-w-0 text-sm font-medium">
-                                <SelectList
+                                <AnnotationClassSelectList
                                     {items}
                                     name="classification-label"
-                                    placeholder="Select or create a class"
+                                    placeholder="Select a class"
                                     className="h-8 w-full min-w-0 px-3"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
@@ -381,7 +381,7 @@
                                     {#snippet notFound({ inputValue })}
                                         <LabelNotFound label={inputValue} />
                                     {/snippet}
-                                </SelectList>
+                                </AnnotationClassSelectList>
                             </span>
                         </span>
                         <div class="flex shrink-0 items-center gap-3">

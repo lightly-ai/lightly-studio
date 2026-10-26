@@ -253,6 +253,11 @@
     }
 
     // Toggle the picker open/closed
+    // Inside a modal dialog, the panel must be in the dialog. Otherwise the dialog blocks
+    // pointer events and keyboard focus outside of it.
+    const getPortalTarget = (): HTMLElement | string =>
+        triggerElement?.closest<HTMLElement>('[role="dialog"]') ?? 'body';
+
     function togglePicker(e: Event) {
         e.stopPropagation();
         e.preventDefault();
@@ -375,11 +380,23 @@
             if (left + pickerWidth > viewportWidth - 10) left = viewportWidth - pickerWidth - 10;
             if (top + pickerHeight > viewportHeight - 10) top = viewportHeight - pickerHeight - 10;
 
+            // A transformed ancestor, for example a centered dialog, is the containing
+            // block of a fixed element, so the position is relative to it.
+            const container = getTransformedAncestor(pickerElement);
+            const offset = container?.getBoundingClientRect() ?? { left: 0, top: 0 };
+
             // Apply the calculated position
             pickerElement.style.position = 'fixed';
-            pickerElement.style.left = `${left}px`;
-            pickerElement.style.top = `${top}px`;
+            pickerElement.style.left = `${left - offset.left}px`;
+            pickerElement.style.top = `${top - offset.top}px`;
         });
+    }
+
+    function getTransformedAncestor(element: HTMLElement): HTMLElement | null {
+        for (let node = element.parentElement; node; node = node.parentElement) {
+            if (getComputedStyle(node).transform !== 'none') return node;
+        }
+        return null;
     }
 
     $effect(() => {
@@ -405,13 +422,13 @@
 
     <!-- Color picker panel with portal via fixed positioning -->
     {#if isOpen}
-        <DialogPrimitive.Portal>
+        <DialogPrimitive.Portal to={getPortalTarget()}>
             <div
                 id="color-picker-panel"
                 role="dialog"
                 aria-label="Color picker"
                 class={cn(
-                    'bg-popover text-popover-foreground z-50 w-56 rounded-md border shadow-md',
+                    'bg-popover text-popover-foreground pointer-events-auto z-50 w-56 rounded-md border shadow-md',
                     className
                 )}
                 transition:fly={{

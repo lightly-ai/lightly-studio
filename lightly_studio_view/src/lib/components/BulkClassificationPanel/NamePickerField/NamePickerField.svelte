@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import { SelectList } from '$lib/components/SelectList';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
 
     type ListItem = ComponentProps<typeof SelectList>['items'][number];
 
@@ -11,9 +12,21 @@
         names: string[];
         disabled?: boolean;
         onSelect: (name: string) => void;
+        // Picks only existing annotation classes instead of creating names.
+        annotationClasses?: boolean;
     }
 
-    let { label, placeholder, selectedName, names, disabled = false, onSelect }: Props = $props();
+    let {
+        label,
+        placeholder,
+        selectedName,
+        names,
+        disabled = false,
+        onSelect,
+        annotationClasses = false
+    }: Props = $props();
+
+    const Picker = $derived(annotationClasses ? AnnotationClassSelectList : SelectList);
 
     const labelId = $props.id();
 
@@ -29,13 +42,13 @@
 
 <div class="space-y-1.5">
     <div id={labelId} class="text-xs font-medium text-muted-foreground">{label}</div>
-    <SelectList
+    <Picker
         {items}
         {selectedItem}
         labelledBy={labelId}
         name={label}
         label={placeholder}
-        placeholder="Search or create…"
+        placeholder={annotationClasses ? 'Search…' : 'Search or create…'}
         className="w-full"
         contentClassName="w-[var(--bits-popover-anchor-width)]"
         onSelect={handleSelect}

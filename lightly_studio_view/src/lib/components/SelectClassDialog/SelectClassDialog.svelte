@@ -1,7 +1,7 @@
 <script lang="ts">
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
+    import { AnnotationClassSelectList } from '$lib/components/AnnotationClassSelectList';
     import type { ListItem } from '$lib/components/SelectList/types';
 
     type Props = {
@@ -64,11 +64,11 @@
         </Dialog.Header>
 
         <div class="min-w-0 space-y-1 py-2">
-            <SelectList
+            <AnnotationClassSelectList
                 bind:selectedItem
                 {items}
                 label="Select a class..."
-                placeholder="Search or create a class..."
+                placeholder="Search a class..."
                 className="w-full"
                 autoOpen
                 autoFocus
