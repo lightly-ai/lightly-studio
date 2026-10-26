@@ -4,7 +4,7 @@ import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
 const params = {
     isDrawing: false,
     isErasing: false,
-    status: 'cursor' as const
+    blocksPan: false
 };
 
 describe('isPanEnabled', () => {
@@ -17,7 +17,7 @@ describe('isPanEnabled', () => {
         expect(isPanEnabled({ ...params, isErasing: true })).toBe(false);
     });
 
-    it('disables panning for assisted labeling tools', () => {
-        expect(isPanEnabled({ ...params, status: 'smart-select' })).toBe(false);
+    it('disables panning for an assisted labeling tool that blocks it', () => {
+        expect(isPanEnabled({ ...params, blocksPan: true })).toBe(false);
     });
 });

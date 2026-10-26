@@ -40,10 +40,6 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useSettings', () => ({
-    useSettings: () => ({ settingsStore: writable({ key_go_back: 'Escape' }) })
-}));
-
 vi.mock('$lib/hooks/useHideAnnotations', () => ({
     useHideAnnotations: () => ({ handleKeyEvent: vi.fn() })
 }));
@@ -97,14 +93,17 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         expect(handleEscape).toHaveBeenCalledOnce();
     });
 
-    it('exits smart select on escape in editing mode', async () => {
-        isEditingMode.set(true);
-        mockToolbarContext.status = 'smart-select';
-        render(SampleDetailsPanel, { props: defaultProps });
-        await fireEvent.keyDown(window, { key: 'Escape' });
-        expect(mockToolbarContext.status).toBe('cursor');
-        expect(handleEscape).not.toHaveBeenCalled();
-    });
+    it.each(['smart-select', 'find-instances'] as const)(
+        'exits %s on escape in editing mode',
+        async (status) => {
+            isEditingMode.set(true);
+            mockToolbarContext.status = status;
+            render(SampleDetailsPanel, { props: defaultProps });
+            await fireEvent.keyDown(window, { key: 'Escape' });
+            expect(mockToolbarContext.status).toBe('cursor');
+            expect(handleEscape).not.toHaveBeenCalled();
+        }
+    );
 
     it.each([false, true])('ignores fields and dialog buttons with editing=%s', async (editing) => {
         isEditingMode.set(editing);

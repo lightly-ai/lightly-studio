@@ -10,7 +10,6 @@ type ThumbnailQualityMode = GridViewThumbnailQualityType;
 
 interface SettingsDialogShortcutState {
     hideAnnotations: string;
-    goBack: string;
     toggleEditMode: string;
     keyToolbarSelection: string;
     keyToolbarDrag: string;
@@ -41,7 +40,6 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
     return {
         shortcutSettings: {
             hideAnnotations: settings.key_hide_annotations,
-            goBack: settings.key_go_back,
             toggleEditMode: settings.key_toggle_edit_mode,
             keyToolbarSelection: settings.key_toolbar_selection,
             keyToolbarDrag: settings.key_toolbar_drag,
@@ -66,7 +64,6 @@ export function createSettingsSavePayload(
 ): Partial<SettingView> {
     return {
         key_hide_annotations: formState.shortcutSettings.hideAnnotations,
-        key_go_back: formState.shortcutSettings.goBack,
         key_toggle_edit_mode: formState.shortcutSettings.toggleEditMode,
         grid_view_sample_rendering: formState.gridViewRendering,
         grid_view_thumbnail_quality: formState.gridViewThumbnailQuality,
@@ -110,7 +107,6 @@ export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
 export class SettingsDialogState {
     shortcuts = $state<SettingsDialogShortcutState>({
         hideAnnotations: 'v',
-        goBack: 'Escape',
         toggleEditMode: 'e',
         keyToolbarSelection: 's',
         keyToolbarDrag: 'd',
@@ -129,6 +125,16 @@ export class SettingsDialogState {
     enforceColoringByClass = $state(false);
     recordingShortcut: ShortcutSettingKey | null = $state(null);
     isSaving = $state(false);
+    // Payload of the last hydrated settings, to detect unsaved changes.
+    savedPayload: Partial<SettingView> = $state(this.getSavePayload());
+
+    /** Whether any form value differs from the hydrated settings. */
+    get hasChanges(): boolean {
+        const payload = this.getSavePayload();
+        return Object.entries(payload).some(
+            ([key, value]) => this.savedPayload[key as keyof SettingView] !== value
+        );
+    }
 
     /** Populate form fields from the latest store values. */
     hydrate(settings: SettingView): void {
@@ -141,6 +147,7 @@ export class SettingsDialogState {
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
         this.enforceColoringByClass = formState.enforceColoringByClass;
+        this.savedPayload = createSettingsSavePayload(formState);
     }
 
     startRecording(key: ShortcutSettingKey): void {
@@ -153,7 +160,10 @@ export class SettingsDialogState {
         event.preventDefault();
         event.stopPropagation();
 
-        this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
+        // Escape cancels recording. Stopping it also keeps the dialog open.
+        if (event.key !== 'Escape') {
+            this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
+        }
         this.recordingShortcut = null;
     }
 

@@ -48,8 +48,8 @@
 </script>
 
 <!--
-    Keep keys from the app shortcuts on window. Let Escape through: Svelte skips
-    the Bits UI document listener that closes the dialog after stopPropagation.
+    Keep keys from the app shortcuts on window. Let Escape through unless it cancels
+    recording: Svelte skips the Bits UI listener that closes the dialog after stopPropagation.
 -->
 <svelte:document
     onkeydown={(e) => {
@@ -86,7 +86,9 @@
                     </Button>
                     <Button
                         variant="default"
-                        buttonProps={{ type: 'submit', disabled: dialogState.isSaving }}
+                        buttonProps={{ type: 'submit' }}
+                        isPending={dialogState.isSaving}
+                        disabledReason={dialogState.hasChanges ? undefined : 'No changes to save'}
                     >
                         {dialogState.isSaving ? 'Saving...' : 'Save changes'}
                     </Button>
