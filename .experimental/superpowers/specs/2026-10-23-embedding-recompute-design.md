@@ -11,8 +11,9 @@ Let a Python user fill the embedding gaps in an image dataset with one call:
 2. Annotations that have no embedding, for example annotations created in the GUI.
 3. Annotations whose embedding is stale because their box was edited after embedding.
 
-Success: after `dataset.compute_embeddings`, every image and every croppable annotation of the
-dataset has an embedding of the default model, and every crop embedding matches the current box.
+Success: after `dataset.compute_embeddings`, every image of the dataset has an embedding of the
+default model. With `embed_annotations=True`, the default, so does every croppable annotation, and
+every crop embedding matches the current box.
 Files that fail to load are the exception: their chunk is logged and skipped (section 8), and the
 next run picks them up again.
 
@@ -167,9 +168,10 @@ ORDER BY i.file_path_abs
 ### 6. `add_*` behavior
 
 `add_*` uses the same missing-or-stale selection as `compute_embeddings`, for the annotation source
-it adds to. There is one selection, no `include_stale` flag. The extra work is bounded by the
-number of edited boxes in that source, not by the dataset size. The stale query measured 1.1x the
-missing one in one benchmark (see "Postgres risk").
+it adds to. There is one selection, no `include_stale` flag. The number of crops it re-embeds is
+bounded by the number of edited boxes in that source. The query itself still scans the source's
+embedding rows, so its cost grows with the source size: it measured 1.1x the missing-only query in
+one benchmark (see "Postgres risk").
 
 ### 7. Fixes on the shared path
 
