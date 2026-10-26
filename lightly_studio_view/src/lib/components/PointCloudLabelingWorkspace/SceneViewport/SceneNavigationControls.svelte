@@ -6,7 +6,7 @@
     /** Inputs and callbacks for scene navigation controls. */
     interface Props {
         /** Whether this viewport currently owns navigation input. */
-        isActive?: boolean;
+        isActive: boolean;
         /** Whether navigation buttons and shortcut hints are shown. */
         showNavigationHelpers?: boolean;
         /** Identifies the viewport receiving navigation commands. */
@@ -16,7 +16,7 @@
     }
 
     let {
-        isActive = true,
+        isActive,
         showNavigationHelpers = true,
         navigationId,
         allowRotation = true
