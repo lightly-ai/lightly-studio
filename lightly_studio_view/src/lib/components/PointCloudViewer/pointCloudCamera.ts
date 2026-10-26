@@ -1,16 +1,40 @@
-import type { Box3, PerspectiveCamera } from 'three';
+import { Sphere, Vector3, type Box3, type OrthographicCamera, type PerspectiveCamera } from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { computeCameraPlacement } from './pointCloudUtils';
 
 export function fitCameraToBounds(
-    camera: PerspectiveCamera | undefined,
+    camera: PerspectiveCamera | OrthographicCamera | undefined,
     controls: OrbitControls | undefined,
-    bounds: Box3
+    bounds: Box3,
+    mode: 'perspective' | 'top' | 'side' | 'front' = 'perspective',
+    viewportAspect = 1
 ): void {
     if (!camera) return;
 
+    if (mode !== 'perspective') {
+        fitOrthographicCameraToBounds(
+            camera as OrthographicCamera,
+            controls,
+            bounds,
+            mode,
+            viewportAspect
+        );
+        return;
+    }
+
     const placement = computeCameraPlacement(bounds);
-    camera.position.set(...placement.position);
+    const perspectiveCamera = camera as PerspectiveCamera;
+    const aspect = Number.isFinite(viewportAspect) && viewportAspect > 0 ? viewportAspect : 1;
+    const verticalHalfFov = (perspectiveCamera.fov * Math.PI) / 360;
+    const horizontalHalfFov = Math.atan(Math.tan(verticalHalfFov) * aspect);
+    const fittingHalfFov = Math.min(verticalHalfFov, horizontalHalfFov);
+    const sphere = bounds.getBoundingSphere(new Sphere());
+    const distance = (Math.max(sphere.radius, 1) / Math.tan(fittingHalfFov)) * 1.1;
+    const direction = new Vector3(...placement.position)
+        .sub(new Vector3(...placement.target))
+        .normalize();
+    const position = new Vector3(...placement.target).add(direction.multiplyScalar(distance));
+    camera.position.copy(position);
     if (!controls) {
         camera.lookAt(...placement.target);
         return;
@@ -21,4 +45,44 @@ export function fitCameraToBounds(
     controls.target.set(...placement.target);
     controls.update();
     controls.enableDamping = wasDamping;
+}
+
+function fitOrthographicCameraToBounds(
+    camera: OrthographicCamera,
+    controls: OrbitControls | undefined,
+    bounds: Box3,
+    mode: 'top' | 'side' | 'front',
+    viewportAspect: number
+): void {
+    const center = bounds.getCenter(new Vector3());
+    const size = bounds.getSize(new Vector3());
+    const projectedWidth = mode === 'side' ? size.y : size.x;
+    const projectedHeight = mode === 'top' ? size.y : size.z;
+    const aspect = Number.isFinite(viewportAspect) && viewportAspect > 0 ? viewportAspect : 1;
+    const projectedExtent = Math.max(projectedHeight, projectedWidth / aspect, 1);
+    const distance = projectedExtent * 2;
+    const direction = {
+        top: [0, 0, 1],
+        side: [1, 0, 0],
+        front: [0, -1, 0]
+    }[mode];
+
+    camera.left = -aspect;
+    camera.right = aspect;
+    camera.top = 1;
+    camera.bottom = -1;
+    camera.position.set(
+        center.x + direction[0] * distance,
+        center.y + direction[1] * distance,
+        center.z + direction[2] * distance
+    );
+    camera.zoom = 1.8 / projectedExtent;
+    camera.updateProjectionMatrix();
+    if (!controls) {
+        camera.lookAt(center.x, center.y, center.z);
+        return;
+    }
+
+    controls.target.copy(center);
+    controls.update();
 }
