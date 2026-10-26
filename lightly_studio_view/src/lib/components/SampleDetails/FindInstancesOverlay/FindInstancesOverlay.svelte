@@ -33,10 +33,11 @@
     const drag = useDragBox(() => ({ interactionRect }));
 
     const onPointerUp = (event: PointerEvent & { currentTarget: SVGRectElement }) => {
-        const { start, box } = drag.onPointerUp(event);
-        if (box) instances.addBox(box);
-        // A right-click or a click outside the rect did not start a drawing.
-        if (start) onDrawEnd();
+        const { box } = drag.onPointerUp(event);
+        // A click without a drag keeps the tool open.
+        if (!box) return;
+        instances.addBox(box);
+        onDrawEnd();
     };
 
     const onPointerCancel = (event: PointerEvent & { currentTarget: SVGRectElement }) => {

@@ -87,6 +87,20 @@ describe('FindInstancesOverlay', () => {
         expect(onDrawEnd).toHaveBeenCalledOnce();
     });
 
+    it('keeps drawing after a click without a drag', async () => {
+        const onDrawEnd = vi.fn();
+        const { container } = render(FindInstancesOverlay, {
+            props: { ...defaultProps, onDrawEnd }
+        });
+        const rect = getInteractionRect(container);
+
+        await firePointer(rect, 'pointerdown', 10);
+        await firePointer(rect, 'pointerup', 10);
+
+        expect(mocks.instances.addBox).not.toHaveBeenCalled();
+        expect(onDrawEnd).not.toHaveBeenCalled();
+    });
+
     it('keeps drawing after a right-click', async () => {
         const onDrawEnd = vi.fn();
         const { container } = render(FindInstancesOverlay, {
