@@ -559,7 +559,7 @@ def test_postgres_sample_embedding_source_fingerprint__added_and_dropped(
     collection_id = "00000000-0000-0000-0000-000000000002"
     model_id = "00000000-0000-0000-0000-000000000003"
     sample_id = "00000000-0000-0000-0000-000000000004"
-    previous_revision = "e4c3c74ae338"
+    previous_revision = "a3e921f6d502"
 
     try:
         db_migrations._run_alembic_command(
