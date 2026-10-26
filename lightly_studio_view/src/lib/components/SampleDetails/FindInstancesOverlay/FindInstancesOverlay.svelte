@@ -2,7 +2,7 @@
     import type { ComponentProps } from 'svelte';
     import { get } from 'svelte/store';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { isTextInputTarget } from '$lib/utils';
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import SampleAnnotationRect from '$lib/components/SampleDetails/SampleAnnotationRect/SampleAnnotationRect.svelte';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
     import NormalizedBoxRect from '$lib/components/SampleDetails/NormalizedBoxRect/NormalizedBoxRect.svelte';
@@ -39,13 +39,20 @@
     const drag = useDragBox(() => ({ interactionRect }));
     const { settingsStore } = useSettings();
 
-    // Captured before the panel's handler, so Escape ends the drawing and keeps the tool.
+    // Captured before the panel's handler, so Escape ends the drawing, then clears the boxes
+    // and results, and only then closes the tool.
     const onKeyDown = (event: KeyboardEvent) => {
-        if (!isDrawingBox || isTextInputTarget(event.target)) return;
+        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
         if (event.key !== get(settingsStore).key_go_back) return;
+        if (isDrawingBox) {
+            drag.cancel();
+            onDrawEnd();
+        } else if (instances.boxes.length > 0 || instances.predictions.length > 0) {
+            instances.clear();
+        } else {
+            return;
+        }
         event.stopPropagation();
-        drag.cancel();
-        onDrawEnd();
     };
 
     const onPointerUp = (event: PointerEvent & { currentTarget: SVGRectElement }) => {

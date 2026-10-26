@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => ({
         boxes: [] as Instances['boxes'],
         isSaving: false,
         addBox: vi.fn(),
-        removePrediction: vi.fn()
+        removePrediction: vi.fn(),
+        clear: vi.fn()
     }
 }));
 
@@ -129,6 +130,35 @@ describe('FindInstancesOverlay', () => {
         await fireEvent.keyDown(document.body, { key: 'Escape' });
 
         expect(onDrawEnd).toHaveBeenCalledOnce();
+        expect(onWindowKeyDown).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', onWindowKeyDown);
+    });
+
+    it('lets Escape through to an open overlay while drawing', async () => {
+        const onDrawEnd = vi.fn();
+        const listbox = document.createElement('div');
+        listbox.setAttribute('role', 'listbox');
+        const onListboxKeyDown = vi.fn();
+        listbox.addEventListener('keydown', onListboxKeyDown);
+        document.body.append(listbox);
+        render(FindInstancesOverlay, { props: { ...defaultProps, onDrawEnd } });
+
+        await fireEvent.keyDown(listbox, { key: 'Escape' });
+
+        expect(onDrawEnd).not.toHaveBeenCalled();
+        expect(onListboxKeyDown).toHaveBeenCalledOnce();
+        listbox.remove();
+    });
+
+    it('clears the boxes and results on Escape before closing the tool', async () => {
+        const onWindowKeyDown = vi.fn();
+        window.addEventListener('keydown', onWindowKeyDown);
+        mocks.instances.predictions = [prediction];
+        render(FindInstancesOverlay, { props: { ...defaultProps, isDrawingBox: false } });
+
+        await fireEvent.keyDown(document.body, { key: 'Escape' });
+
+        expect(mocks.instances.clear).toHaveBeenCalledOnce();
         expect(onWindowKeyDown).not.toHaveBeenCalled();
         window.removeEventListener('keydown', onWindowKeyDown);
     });
