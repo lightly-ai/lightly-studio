@@ -125,6 +125,16 @@ export class SettingsDialogState {
     enforceColoringByClass = $state(false);
     recordingShortcut: ShortcutSettingKey | null = $state(null);
     isSaving = $state(false);
+    // Payload of the last hydrated settings, to detect unsaved changes.
+    savedPayload: Partial<SettingView> = $state(this.getSavePayload());
+
+    /** Whether any form value differs from the hydrated settings. */
+    get hasChanges(): boolean {
+        const payload = this.getSavePayload();
+        return Object.entries(payload).some(
+            ([key, value]) => this.savedPayload[key as keyof SettingView] !== value
+        );
+    }
 
     /** Populate form fields from the latest store values. */
     hydrate(settings: SettingView): void {
@@ -137,6 +147,7 @@ export class SettingsDialogState {
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
         this.enforceColoringByClass = formState.enforceColoringByClass;
+        this.savedPayload = createSettingsSavePayload(formState);
     }
 
     startRecording(key: ShortcutSettingKey): void {
