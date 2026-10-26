@@ -18,6 +18,7 @@ from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetri
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
+from lightly_studio.resolvers import embedding_plot_resolver
 from lightly_studio.utils import batching
 
 
@@ -55,6 +56,8 @@ def delete_annotations_by_ids(
             session=session, parent_sample_ids=existing_annotation_ids
         )
         sample_ids = existing_annotation_ids + caption_sample_ids
+
+    embedding_plot_resolver.mark_dirty(session=session, sample_ids=sample_ids)
 
     # DuckDB rejects the delete of a parent row in the transaction that deleted its child
     # rows, so each foreign key level is committed separately. PostgreSQL does not need this,

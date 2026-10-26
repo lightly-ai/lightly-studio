@@ -106,7 +106,9 @@ def export_collection_prepare(
     )
 
     temp_dir = PathlibPath(tempfile.mkdtemp())
-    filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
+    filename = (
+        f"{collection.name}_exported_{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H-%M-%S')}.txt"
+    )
     output_path = temp_dir / filename
     try:
         output_path.write_text("\n".join(exported))

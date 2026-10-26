@@ -13,7 +13,7 @@ env:
   # Every run restores the uv cache, only main writes one: per-ref copies are
   # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
   # The Python version is part of the uv cache key, so each step passes the one its job runs:
-  # the 3.9 jobs share an entry instead of the release-tooling key, whose deps are ~30MB.
+  # the 3.10 jobs share an entry instead of the release-tooling key, whose deps are ~30MB.
   UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
 
 concurrency:
@@ -101,14 +101,14 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
-          python-version: "3.9"
+          python-version: "3.10"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -133,13 +133,13 @@ jobs:
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
-          python-version: "3.9"
+          python-version: "3.10"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
@@ -180,7 +180,7 @@ jobs:
         include:
           # Postgres is only tested on 3.14 because PostgreSQL dialect/driver
           # behavior doesn't vary by Python version.
-          - python: "3.9"
+          - python: "3.10"
             database: DuckDB
             make_target: test
           - python: "3.14"
@@ -251,13 +251,13 @@ jobs:
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
-          python-version: "3.9"
+          python-version: "3.10"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
@@ -305,14 +305,14 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
-          python-version: "3.9"
+          python-version: "3.10"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
 
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -393,9 +393,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The floor and the ceiling of `requires-python`; nothing in the package is version
-        # specific.
-        python: ["3.9", "3.14"]
+        # The lowest Python that CI runs and the ceiling of `requires-python`; nothing in the
+        # package is version specific.
+        python: ["3.10", "3.14"]
     # This job runs Makefile targets the pull request itself supplies. The repository default is
     # a write-scoped token, so it is pinned to read-only and kept out of .git/config, the same
     # way check-release-tooling is.
