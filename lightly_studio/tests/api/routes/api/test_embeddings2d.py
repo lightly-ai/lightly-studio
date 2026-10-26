@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import time
+from typing import Any
 
 import numpy as np
 import pyarrow as pa
@@ -13,16 +14,21 @@ from pyarrow import ipc
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api import embeddings2d
 from lightly_studio.embed.mobileclip_embedder import EMBEDDING_DIMENSION
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagCreate
 from lightly_studio.resolvers import (
+    embedding_plot_resolver,
     image_resolver,
     mcap_group_sequence_resolver,
     recording_resolver,
     sample_resolver,
     tag_resolver,
+    twodim_embedding_resolver,
     video_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -38,6 +44,97 @@ from tests.helpers_resolvers import (
     fill_db_with_samples_and_embeddings,
 )
 from tests.resolvers.video.helpers import VideoStub, create_videos
+
+
+@pytest.mark.parametrize("count", [0, 2])
+@pytest.mark.parametrize(
+    "case",
+    [
+        (SampleType.IMAGE, {}),
+        (SampleType.IMAGE, {"sample_filter": {}}),
+        (SampleType.VIDEO, {"filter_type": "video", "sample_filter": {}}),
+        (SampleType.ANNOTATION, {"filter_type": "annotations"}),
+        (SampleType.SEQUENCE, {"filter_type": "mcap_sequence", "sample_filter": {}}),
+    ],
+)
+def test_get_embeddings2d__saved_unfiltered(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+    case: tuple[SampleType, dict[str, Any]],
+    count: int,
+) -> None:
+    """Return saved columns, including empty plots, without resolving sample IDs."""
+    sample_type, filters = case
+    collection = create_collection(session=db_session, sample_type=sample_type)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, set_as_default=True
+    )
+    samples = [SampleTable(collection_id=collection.collection_id) for _ in range(count)]
+    db_session.add_all(samples)
+    db_session.commit()
+    ids = [sample.sample_id for sample in samples]
+    db_session.add(
+        EmbeddingPlotTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+            is_dirty=False,
+            data=embedding_plot_resolver.encode(x=[0.5] * count, y=[-0.5] * count, sample_ids=ids),
+        )
+    )
+    db_session.commit()
+    mocker.patch.object(
+        embeddings2d, "_get_matching_sample_ids", side_effect=AssertionError("Sample lookup")
+    )
+    mocker.patch.object(
+        twodim_embedding_resolver,
+        "get_twodim_embeddings",
+        side_effect=AssertionError("UUID conversion"),
+    )
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/embeddings2d/default",
+        json={"filters": filters},
+    )
+    assert response.status_code == 200
+    table = ipc.open_stream(response.content).read_all()
+    assert table.to_pydict() == {
+        "x": [0.5] * count,
+        "y": [-0.5] * count,
+        "sample_id": [str(sample_id) for sample_id in ids],
+        "fulfils_filter": [1] * count,
+        "color_categories": [[]] * count,
+    }
+    assert table.column_names == ["x", "y", "fulfils_filter", "color_categories", "sample_id"]
+    assert table.schema.metadata == {b"color_legend": b"{}"}
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        ({"sample_filter": {"has_captions": False}}, [1, 1]),
+        ({"sample_filter": {"region_sample_ids": []}}, [0, 0]),
+        ({"sample_filter": {"annotations_filter": {}}}, [0, 0]),
+        ({"width": {"min": 0}}, [1, 1]),
+    ],
+)
+def test_get_embeddings2d__active_filter(
+    test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+    case: tuple[dict[str, Any], list[int]],
+) -> None:
+    """False, zero and an empty region must still go through filtering."""
+    filters, expected = case
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session, n_samples=2, embedding_model_names=["model"], embedding_dimension=3
+    )
+    lookup = mocker.spy(embeddings2d, "_get_matching_sample_ids")
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default", json={"filters": filters}
+    )
+    assert response.status_code == 200
+    lookup.assert_called_once()
+    assert ipc.open_stream(response.content).read_all()["fulfils_filter"].to_pylist() == expected
 
 
 def test_get_embeddings2d__2d(
