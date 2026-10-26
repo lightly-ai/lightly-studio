@@ -16,19 +16,25 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.utils import batching
 
 
-def mark_dirty(session: Session, sample_ids: Sequence[UUID]) -> None:
-    """Invalidate every model's plot in affected collections without committing."""
+def mark_dirty(
+    session: Session, sample_ids: Sequence[UUID], embedding_model_id: UUID | None = None
+) -> None:
+    """Invalidate affected plots without committing; omit the model for sample deletion."""
     for batch in batching.batched(items=sample_ids):
         collection_ids = select(SampleTable.collection_id).where(
             col(SampleTable.sample_id).in_(batch)
         )
+        stmt = update(EmbeddingPlotTable).where(
+            col(EmbeddingPlotTable.collection_id).in_(collection_ids)
+        )
+        if embedding_model_id is not None:
+            stmt = stmt.where(col(EmbeddingPlotTable.embedding_model_id) == embedding_model_id)
         # Change the token even for dirty plots so concurrent rebuilds conflict with writes.
         # Disable ORM synchronization: DuckDB UPDATE RETURNING can skip conflicting writes.
         session.exec(
-            update(EmbeddingPlotTable)
-            .where(col(EmbeddingPlotTable.collection_id).in_(collection_ids))
-            .values(is_dirty=True, write_token=uuid4())
-            .execution_options(synchronize_session=False)
+            stmt.values(is_dirty=True, write_token=uuid4()).execution_options(
+                synchronize_session=False
+            )
         )
 
 
