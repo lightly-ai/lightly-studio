@@ -79,18 +79,30 @@
                 <Dialog.Footer
                     class="flex-row justify-end space-x-2 border-t border-border px-6 py-4"
                 >
-                    <Button
-                        variant="outline"
-                        buttonProps={{ type: 'button', onclick: () => setOpen(false) }}
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        variant="default"
-                        buttonProps={{ type: 'submit', disabled: dialogState.isSaving }}
-                    >
-                        {dialogState.isSaving ? 'Saving...' : 'Save changes'}
-                    </Button>
+                    {#if activeTab === 'annotation-classes'}
+                        <p class="mr-auto self-center text-sm text-muted-foreground">
+                            Changes save immediately.
+                        </p>
+                        <Button
+                            variant="outline"
+                            buttonProps={{ type: 'button', onclick: () => setOpen(false) }}
+                        >
+                            Close
+                        </Button>
+                    {:else}
+                        <Button
+                            variant="outline"
+                            buttonProps={{ type: 'button', onclick: () => setOpen(false) }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="default"
+                            buttonProps={{ type: 'submit', disabled: dialogState.isSaving }}
+                        >
+                            {dialogState.isSaving ? 'Saving...' : 'Save changes'}
+                        </Button>
+                    {/if}
                 </Dialog.Footer>
             </form>
         </Dialog.Content>
