@@ -686,7 +686,6 @@ def test_embed_annotation_crops__box_edited_during_run_is_stale_after(
         session=db_session,
         annotation_collection_id=annotation_collection_id,
         embedding_model_id=model_id,
-        include_stale=True,
     )
 
     assert stale_ids == annotation_ids
@@ -712,7 +711,6 @@ def test_embed_annotation_crops__round_trip_negative_x(
             session=db_session,
             annotation_collection_id=annotation_collection_id,
             embedding_model_id=model_id,
-            include_stale=True,
         )
 
     assert _stale_ids() == []

@@ -137,7 +137,6 @@ def test_compute_embeddings__edited_box_gets_new_vector(
             session=dataset.session,
             annotation_collection_id=annotation_collection.collection_id,
             embedding_model_id=model_id,
-            include_stale=True,
         )
         == []
     )
@@ -179,12 +178,12 @@ def test_compute_embeddings__legacy_row_needs_recompute(
     )
 
 
-def test_add_annotations__does_not_reembed_edited_box(
+def test_add_annotations__reembeds_edited_box(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
     dataset, images_path = _setup_dataset_with_images(
-        tmp_path=tmp_path, file_names=["image1.jpg", "image2.jpg"]
+        tmp_path=tmp_path, file_names=["image1.jpg", "image2.jpg", "image3.jpg"]
     )
     first_json = tmp_path / "first.json"
     first_json.write_text(json.dumps(_coco_dict_with(file_names=["image1.jpg"])))
@@ -194,14 +193,22 @@ def test_add_annotations__does_not_reembed_edited_box(
         annotation_source="ground_truth",
     )
     [edited_id] = _annotation_sample_ids(dataset=dataset)
-    before = _vectors(dataset=dataset, sample_ids=[edited_id])
+    other_json = tmp_path / "other.json"
+    other_json.write_text(json.dumps(_coco_dict_with(file_names=["image2.jpg"])))
+    dataset.add_annotations_from_coco(
+        annotations_json=other_json,
+        images_root=images_path,
+        annotation_source="predictions",
+    )
+    [other_id] = set(_annotation_sample_ids(dataset=dataset)) - {edited_id}
+    before = _vectors(dataset=dataset, sample_ids=[edited_id, other_id])
     annotation_resolver.update_bounding_box(
         session=dataset.session,
         annotation_id=edited_id,
         coordinates=BoundingBoxCoordinates(x=60, y=50, width=20, height=20),
     )
     second_json = tmp_path / "second.json"
-    second_json.write_text(json.dumps(_coco_dict_with(file_names=["image2.jpg"])))
+    second_json.write_text(json.dumps(_coco_dict_with(file_names=["image3.jpg"])))
 
     dataset.add_annotations_from_coco(
         annotations_json=second_json,
@@ -209,8 +216,10 @@ def test_add_annotations__does_not_reembed_edited_box(
         annotation_source="ground_truth",
     )
 
-    assert len(_annotation_sample_ids(dataset=dataset)) == 2
-    assert _vectors(dataset=dataset, sample_ids=[edited_id]) == before
+    after = _vectors(dataset=dataset, sample_ids=[edited_id, other_id])
+    assert len(_annotation_sample_ids(dataset=dataset)) == 3
+    assert after[edited_id] != before[edited_id]
+    assert after[other_id] == before[other_id]
 
 
 def _create_dataset(tmp_path: Path, image_names: list[str]) -> ImageDataset:

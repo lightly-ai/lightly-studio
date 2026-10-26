@@ -84,7 +84,6 @@ def compute_embeddings(
                 session=session,
                 annotation_collection_id=annotation_source.collection_id,
                 recompute=recompute_annotations,
-                include_stale=True,
                 skip_failed_chunks=True,
             )
             if annotation_result is None:
@@ -151,10 +150,11 @@ def embed_annotation_crops(
     session: Session,
     annotation_collection_id: UUID,
     recompute: bool = False,
-    include_stale: bool = False,
     skip_failed_chunks: bool = False,
 ) -> EmbedResult | None:
-    """Embeds the crops of an annotation source that lack an embedding, or all with recompute.
+    """Embeds the crops of an annotation source with a missing or stale embedding.
+
+    With recompute, every croppable annotation is embedded.
 
     The selection runs before the embedder is resolved. Resolving registers a default
     model when the collection has none, so an annotation source without croppable
@@ -172,8 +172,6 @@ def embed_annotation_crops(
         session: Database session for resolver operations.
         annotation_collection_id: The annotation collection whose crops are embedded.
         recompute: If True, embeds every croppable annotation, replacing stored embeddings.
-        include_stale: If True, also embeds crops whose stored embedding was computed from a
-            different box. Ignored with recompute.
         skip_failed_chunks: If True, a chunk where every file failed is logged and skipped.
             Otherwise the ``AllInputFilesFailedError`` propagates.
 
@@ -193,7 +191,6 @@ def embed_annotation_crops(
             session=session,
             annotation_collection_id=annotation_collection_id,
             embedding_model_id=default_model_id,
-            include_stale=include_stale,
         )
     if not annotation_sample_ids:
         return EmbedResult(stored=0, failed_chunks=0)

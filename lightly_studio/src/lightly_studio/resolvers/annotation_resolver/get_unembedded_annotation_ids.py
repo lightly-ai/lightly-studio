@@ -1,4 +1,4 @@
-"""Query for croppable annotations lacking an embedding."""
+"""Query for croppable annotations whose embedding is missing or stale."""
 
 from __future__ import annotations
 
@@ -21,9 +21,11 @@ def get_unembedded_annotation_ids(
     session: Session,
     annotation_collection_id: UUID,
     embedding_model_id: UUID | None,
-    include_stale: bool = False,
 ) -> list[UUID]:
-    """Return IDs of croppable annotations in the collection lacking an embedding.
+    """Return IDs of croppable annotations whose embedding is missing or stale.
+
+    An embedding is stale when it was computed from a different box than the current one. An
+    embedding without a stored box is not stale.
 
     Object-detection and segmentation-mask annotations are both included; each annotation
     source is assumed to hold a single annotation type.
@@ -34,14 +36,12 @@ def get_unembedded_annotation_ids(
     Args:
         session: Database session for resolver operations.
         annotation_collection_id: The annotation collection to scan.
-        embedding_model_id: Model whose existing embeddings mark an annotation as done. `None`
+        embedding_model_id: Model whose up-to-date embeddings mark an annotation as done. `None`
             means the collection has no default model yet, so every croppable annotation is
             returned.
-        include_stale: If True, annotations whose stored embedding was computed from a different
-            box are returned too. An embedding without a stored box is not stale.
 
     Returns:
-        Annotation sample IDs that still need an embedding, ordered by image path.
+        Annotation sample IDs that need an embedding, ordered by image path.
     """
     query = croppable_annotations_query.build(annotation_collection_id=annotation_collection_id)
     if embedding_model_id is None:
@@ -54,20 +54,17 @@ def get_unembedded_annotation_ids(
         ),
     )
     is_missing = col(SampleEmbeddingTable.sample_id).is_(None)
-    if include_stale:
-        query = (
-            query.outerjoin(
-                ObjectDetectionAnnotationTable,
-                col(ObjectDetectionAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
-            )
-            .outerjoin(
-                SegmentationAnnotationTable,
-                col(SegmentationAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
-            )
-            .where(or_(is_missing, _is_stale_clause()))
+    query = (
+        query.outerjoin(
+            ObjectDetectionAnnotationTable,
+            col(ObjectDetectionAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
         )
-    else:
-        query = query.where(is_missing)
+        .outerjoin(
+            SegmentationAnnotationTable,
+            col(SegmentationAnnotationTable.sample_id) == col(AnnotationBaseTable.sample_id),
+        )
+        .where(or_(is_missing, _is_stale_clause()))
+    )
     return list(session.exec(query).all())
 
 

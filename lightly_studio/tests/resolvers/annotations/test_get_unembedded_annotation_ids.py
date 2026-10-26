@@ -179,14 +179,13 @@ def test_get_unembedded_annotation_ids__missing_is_selected(db_session: Session)
         session=db_session, source_fingerprint=None, embed=False
     )
 
-    for include_stale in (False, True):
-        ids = annotation_resolver.get_unembedded_annotation_ids(
-            session=db_session,
-            annotation_collection_id=annotation_collection_id,
-            embedding_model_id=model_id,
-            include_stale=include_stale,
-        )
-        assert ids == [annotation_id]
+    ids = annotation_resolver.get_unembedded_annotation_ids(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=model_id,
+    )
+
+    assert ids == [annotation_id]
 
 
 def test_get_unembedded_annotation_ids__matching_fingerprint_not_selected(
@@ -200,13 +199,12 @@ def test_get_unembedded_annotation_ids__matching_fingerprint_not_selected(
         session=db_session,
         annotation_collection_id=annotation_collection_id,
         embedding_model_id=model_id,
-        include_stale=True,
     )
 
     assert ids == []
 
 
-def test_get_unembedded_annotation_ids__edited_box_selected_only_with_include_stale(
+def test_get_unembedded_annotation_ids__edited_box_selected(
     db_session: Session,
 ) -> None:
     annotation_collection_id, annotation_id, model_id = _create_embedded_detection(
@@ -218,21 +216,13 @@ def test_get_unembedded_annotation_ids__edited_box_selected_only_with_include_st
         coordinates=BoundingBoxCoordinates(x=60, y=50, width=20, height=20),
     )
 
-    stale_ids = annotation_resolver.get_unembedded_annotation_ids(
+    ids = annotation_resolver.get_unembedded_annotation_ids(
         session=db_session,
         annotation_collection_id=annotation_collection_id,
         embedding_model_id=model_id,
-        include_stale=True,
-    )
-    missing_ids = annotation_resolver.get_unembedded_annotation_ids(
-        session=db_session,
-        annotation_collection_id=annotation_collection_id,
-        embedding_model_id=model_id,
-        include_stale=False,
     )
 
-    assert stale_ids == [annotation_id]
-    assert missing_ids == []
+    assert ids == [annotation_id]
 
 
 def test_get_unembedded_annotation_ids__null_fingerprint_not_selected(
@@ -246,7 +236,6 @@ def test_get_unembedded_annotation_ids__null_fingerprint_not_selected(
         session=db_session,
         annotation_collection_id=annotation_collection_id,
         embedding_model_id=model_id,
-        include_stale=True,
     )
 
     assert ids == []
