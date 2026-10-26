@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -175,7 +176,7 @@ def test_get_unembedded_annotation_ids__none_model_returns_all_croppable(
 
 
 def test_get_unembedded_annotation_ids__missing_is_selected(db_session: Session) -> None:
-    annotation_collection_id, annotation_id, model_id = _create_embedded_detection(
+    annotation_collection_id, annotation_id, model_id = _create_embedded_annotation(
         session=db_session, source_fingerprint=None, embed=False
     )
 
@@ -188,11 +189,18 @@ def test_get_unembedded_annotation_ids__missing_is_selected(db_session: Session)
     assert ids == [annotation_id]
 
 
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
 def test_get_unembedded_annotation_ids__matching_fingerprint_not_selected(
     db_session: Session,
+    annotation_type: AnnotationType,
 ) -> None:
-    annotation_collection_id, _, model_id = _create_embedded_detection(
-        session=db_session, source_fingerprint="bbox1:50,50,20,20"
+    annotation_collection_id, _, model_id = _create_embedded_annotation(
+        session=db_session,
+        source_fingerprint="bbox1:50,50,20,20",
+        annotation_type=annotation_type,
     )
 
     ids = annotation_resolver.get_unembedded_annotation_ids(
@@ -204,11 +212,18 @@ def test_get_unembedded_annotation_ids__matching_fingerprint_not_selected(
     assert ids == []
 
 
+@pytest.mark.parametrize(
+    "annotation_type",
+    [AnnotationType.OBJECT_DETECTION, AnnotationType.SEGMENTATION_MASK],
+)
 def test_get_unembedded_annotation_ids__edited_box_selected(
     db_session: Session,
+    annotation_type: AnnotationType,
 ) -> None:
-    annotation_collection_id, annotation_id, model_id = _create_embedded_detection(
-        session=db_session, source_fingerprint="bbox1:50,50,20,20"
+    annotation_collection_id, annotation_id, model_id = _create_embedded_annotation(
+        session=db_session,
+        source_fingerprint="bbox1:50,50,20,20",
+        annotation_type=annotation_type,
     )
     annotation_resolver.update_bounding_box(
         session=db_session,
@@ -228,7 +243,7 @@ def test_get_unembedded_annotation_ids__edited_box_selected(
 def test_get_unembedded_annotation_ids__null_fingerprint_not_selected(
     db_session: Session,
 ) -> None:
-    annotation_collection_id, _, model_id = _create_embedded_detection(
+    annotation_collection_id, _, model_id = _create_embedded_annotation(
         session=db_session, source_fingerprint=None
     )
 
@@ -241,10 +256,13 @@ def test_get_unembedded_annotation_ids__null_fingerprint_not_selected(
     assert ids == []
 
 
-def _create_embedded_detection(
-    session: Session, source_fingerprint: str | None, embed: bool = True
+def _create_embedded_annotation(
+    session: Session,
+    source_fingerprint: str | None,
+    embed: bool = True,
+    annotation_type: AnnotationType = AnnotationType.OBJECT_DETECTION,
 ) -> tuple[UUID, UUID, UUID]:
-    """Create a default-box detection, optionally embedded with the given fingerprint.
+    """Create a default-box annotation, optionally embedded with the given fingerprint.
 
     Returns the annotation collection, annotation and embedding model IDs.
     """
@@ -261,6 +279,7 @@ def _create_embedded_detection(
         collection_id=collection.collection_id,
         sample_id=image.sample_id,
         annotation_label_id=label.annotation_label_id,
+        annotation_type=annotation_type,
     )
     embedding_model = create_embedding_model(
         session=session, collection_id=annotation_collection_id
