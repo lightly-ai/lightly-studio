@@ -113,11 +113,8 @@ class TestVideoFrameDatasetExport:
         frames = dataset.frames()
         exported_paths = frames.export(frames.query()).to_image_files(output_dir=output_dir)
 
-        expected_names = [
-            "test_video-0-mp4.png",
-            "test_video-1-mp4.png",
-            "test_video-2-mp4.png",
-        ]
+        video_token = video_frame_dataset_export._video_path_token(str(tmp_path / "test_video.mp4"))
+        expected_names = [f"test_video-{video_token}-{index}-mp4.png" for index in range(3)]
         assert exported_paths == [
             f"{output_dir}/{name}".replace("\\", "/") for name in expected_names
         ]
@@ -126,6 +123,69 @@ class TestVideoFrameDatasetExport:
         for image_file in exported_files:
             with PILImage.open(image_file) as img:
                 assert img.size == (100, 100)
+
+    def test_to_image_files__preserves_order_across_multiple_videos(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Exports frames from several videos in first-seen video order."""
+        dataset = VideoDataset.create(name="test_video_dataset")
+        for name in ("video_a", "video_b", "video_c"):
+            video_path = tmp_path / f"{name}.mp4"
+            create_video_file(video_path, width=100, height=100, num_frames=3, fps=30)
+            create_video_with_frames(
+                session=dataset.session,
+                collection_id=dataset.collection_id,
+                video=VideoStub(
+                    path=str(video_path), width=100, height=100, duration_s=3 / 30.0, fps=30.0
+                ),
+            )
+        output_dir = tmp_path / "frames"
+
+        frames = dataset.frames()
+        exported_paths = frames.export(frames.query()).to_image_files(output_dir=output_dir)
+
+        tokens = {
+            name: video_frame_dataset_export._video_path_token(str(tmp_path / f"{name}.mp4"))
+            for name in ("video_a", "video_b", "video_c")
+        }
+        expected_names = [
+            f"{name}-{tokens[name]}-{index}-mp4.png"
+            for name in ("video_a", "video_b", "video_c")
+            for index in range(3)
+        ]
+        assert exported_paths == [
+            f"{output_dir}/{name}".replace("\\", "/") for name in expected_names
+        ]
+        assert sorted(path.name for path in output_dir.glob("*.png")) == sorted(expected_names)
+
+    def test_to_image_files__gives_same_named_videos_distinct_filenames(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Two videos with the same name in different directories do not overwrite each other."""
+        dataset = VideoDataset.create(name="test_video_dataset")
+        for subdir in ("dir_a", "dir_b"):
+            video_path = tmp_path / subdir / "clip.mp4"
+            video_path.parent.mkdir()
+            create_video_file(video_path, width=100, height=100, num_frames=2, fps=30)
+            create_video_with_frames(
+                session=dataset.session,
+                collection_id=dataset.collection_id,
+                video=VideoStub(
+                    path=str(video_path), width=100, height=100, duration_s=2 / 30.0, fps=30.0
+                ),
+            )
+        output_dir = tmp_path / "frames"
+
+        frames = dataset.frames()
+        exported_paths = frames.export(frames.query()).to_image_files(output_dir=output_dir)
+
+        # Same basename "clip.mp4", but the path token keeps every output path distinct.
+        assert len(exported_paths) == len(set(exported_paths))
+        assert len(list(output_dir.glob("*.png"))) == 4
 
     def test_to_image_files__respects_query_filter(
         self,
@@ -139,10 +199,13 @@ class TestVideoFrameDatasetExport:
         query = frames.query().match(VideoFrameSampleField.frame_number == 0)
         exported_paths = frames.export(query).to_image_files(output_dir=output_dir)
 
-        assert exported_paths == [f"{output_dir}/test_video-0-mp4.png".replace("\\", "/")]
+        video_token = video_frame_dataset_export._video_path_token(str(tmp_path / "test_video.mp4"))
+        assert exported_paths == [
+            f"{output_dir}/test_video-{video_token}-0-mp4.png".replace("\\", "/")
+        ]
         exported_files = list(output_dir.glob("*.png"))
         assert len(exported_files) == 1
-        assert exported_files[0].name == "test_video-0-mp4.png"
+        assert exported_files[0].name == f"test_video-{video_token}-0-mp4.png"
 
 
 def test_video_frame_to_image__coco_uses_absolute_video_path(
@@ -197,12 +260,19 @@ def test_video_frame_filename() -> None:
     assert (
         video_frame_dataset_export._video_frame_filename(
             video_filename="video_001.mp4",
+            video_token="ab12cd34ef56",
             decode_index=7,
             zero_padding=2,
             file_extension=".jpg",
         )
-        == "video_001-07-mp4.jpg"
+        == "video_001-ab12cd34ef56-07-mp4.jpg"
     )
+
+
+def test_video_path_token__is_stable_and_path_specific() -> None:
+    token = video_frame_dataset_export._video_path_token
+    assert token("/a/clip.mp4") == token("/a/clip.mp4")
+    assert token("/a/clip.mp4") != token("/b/clip.mp4")
 
 
 def test_frame_to_pil_image__applies_rotation(mocker: MockerFixture) -> None:
