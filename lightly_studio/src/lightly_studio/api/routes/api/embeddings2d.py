@@ -7,6 +7,7 @@ import json
 from typing import Annotated
 from uuid import UUID
 
+import numpy as np
 import pyarrow as pa
 from fastapi import APIRouter, HTTPException, Path, Response
 from pyarrow import ipc
@@ -71,6 +72,27 @@ def get_2d_embeddings(
     if embedding_model_id is None:
         raise ValueError("No embedding model configured.")
 
+    filter_values = body.filters.model_dump(exclude_none=True, exclude_defaults=True)
+    # The frontend can send an empty sample filter even when no filter is active.
+    if filter_values.get("sample_filter") == {}:
+        del filter_values["sample_filter"]
+    if not filter_values and body.color_by is None and body.axes is None:
+        data = twodim_embedding_resolver.get_plot(
+            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+        )
+        table = ipc.open_stream(data).read_all()
+        table = table.append_column(
+            "fulfils_filter", pa.array(np.ones(table.num_rows, dtype=np.uint8))
+        ).append_column(
+            "color_categories",
+            # Repeated zero offsets represent empty lists without per-sample Python objects.
+            pa.ListArray.from_arrays(
+                np.zeros(table.num_rows + 1, dtype=np.int32), pa.array([], type=pa.uint8())
+            ),
+        )
+        table = table.select(["x", "y", "fulfils_filter", "color_categories", "sample_id"])
+        return _arrow_response(table=table.replace_schema_metadata({"color_legend": "{}"}))
+
     # A region drawn on this plot carries the same axes, so that
     # embedding_region_resolver.get_sample_ids_in_region computes the same layout.
     if body.axes is None:
@@ -133,7 +155,11 @@ def get_2d_embeddings(
         },
         schema=schema,
     )
+    return _arrow_response(table=table)
 
+
+def _arrow_response(table: pa.Table) -> Response:
+    """Serialize a plot with the same schema and headers for every request path."""
     buffer = io.BytesIO()
     with ipc.new_stream(buffer, table.schema) as writer:
         writer.write_table(table)

@@ -14,7 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Speed up loading saved embedding plots.
+- Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
 - Reorganised the settings dialog into a tabbed layout.
 - In the settings dialog, "Save changes" is enabled only when there are changes to save.
