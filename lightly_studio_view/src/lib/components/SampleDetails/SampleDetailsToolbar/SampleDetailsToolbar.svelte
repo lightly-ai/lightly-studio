@@ -152,42 +152,40 @@
         };
     });
 
-    $effect(() => {
-        // Reset annotation label and type when switching to cursor tool
-        if (sampleDetailsToolbarContext.status === 'cursor') {
-            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
-            setAnnotationType(null);
-            setLastCreatedAnnotationId(null);
-            setIsDrawing(false);
-            setIsErasing(false);
+    const resetDrawing = () => {
+        setAnnotationType(null);
+        setLastCreatedAnnotationId(null);
+        setIsDrawing(false);
+        setIsErasing(false);
+    };
 
+    const applyDrawingTool = (status: 'bounding-box' | 'brush' | 'slic') => {
+        setLastCreatedAnnotationId(null);
+        if (status === 'brush') {
+            setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+            return;
+        }
+        setBrushMode('brush');
+        if (status === 'slic') {
+            setAnnotationType(AnnotationType.SEGMENTATION_MASK);
+        } else if (!annotationLabelContext.isOnAnnotationDetailsView) {
+            setAnnotationType(AnnotationType.OBJECT_DETECTION);
+        }
+    };
+
+    $effect(() => {
+        const { status } = sampleDetailsToolbarContext;
+        // Reset annotation label and type when switching to cursor tool
+        if (status === 'cursor') {
+            if (!annotationLabelContext.isOnAnnotationDetailsView) setAnnotationId(null);
+            resetDrawing();
             setBrushMode('brush');
-        } else if (
-            sampleDetailsToolbarContext.status === 'bounding-box' ||
-            sampleDetailsToolbarContext.status === 'brush' ||
-            sampleDetailsToolbarContext.status === 'slic'
-        ) {
-            setLastCreatedAnnotationId(null);
-            if (sampleDetailsToolbarContext.status === 'bounding-box') {
-                if (!annotationLabelContext.isOnAnnotationDetailsView) {
-                    setAnnotationType(AnnotationType.OBJECT_DETECTION);
-                }
-                setBrushMode('brush');
-            } else if (sampleDetailsToolbarContext.status === 'brush') {
-                setAnnotationType(AnnotationType.SEGMENTATION_MASK);
-            } else if (sampleDetailsToolbarContext.status === 'slic') {
-                setAnnotationType(AnnotationType.SEGMENTATION_MASK);
-                setBrushMode('brush');
-            }
-        }
-        if (sampleDetailsToolbarContext.status === 'drag') {
+        } else if (status === 'bounding-box' || status === 'brush' || status === 'slic') {
+            applyDrawingTool(status);
+        } else if (status === 'drag') {
             setAnnotationType(null);
-        }
-        if (isAssistedLabelingStatus(sampleDetailsToolbarContext.status)) {
-            setAnnotationType(null);
-            setLastCreatedAnnotationId(null);
-            setIsDrawing(false);
-            setIsErasing(false);
+        } else if (isAssistedLabelingStatus(status)) {
+            resetDrawing();
         }
     });
 
@@ -209,8 +207,14 @@
         setLastCreatedAnnotationId(null);
     };
 
-    const activateSlic = () => {
-        if (!showSegmentationTool || !slicAvailable) return;
+    const activateSlic = (trigger: ToolbarTrigger) => {
+        if (
+            !showSegmentationTool ||
+            !slicAvailable ||
+            annotationLabelContext.isDrawing ||
+            isPending
+        )
+            return;
 
         const shouldKeepSelectedAnnotation =
             annotationLabelContext.annotationId != null &&
@@ -218,7 +222,10 @@
 
         setStatus('slic');
         setAnnotationType(AnnotationType.SEGMENTATION_MASK);
-        if (!annotationLabelContext.isOnAnnotationDetailsView && !shouldKeepSelectedAnnotation) {
+        if (
+            !annotationLabelContext.isOnAnnotationDetailsView &&
+            (trigger === 'shortcut' || !shouldKeepSelectedAnnotation)
+        ) {
             setAnnotationId(null);
         }
         setLastCreatedAnnotationId(null);
@@ -239,11 +246,7 @@
                 activateBrush();
                 break;
             case 'slic':
-                if (annotationLabelContext.isDrawing || isPending) return;
-                activateSlic();
-                if (trigger === 'shortcut' && !annotationLabelContext.isOnAnnotationDetailsView) {
-                    setAnnotationId(null);
-                }
+                activateSlic(trigger);
                 break;
             case 'smart-select':
             case 'find-instances':

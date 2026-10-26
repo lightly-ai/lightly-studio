@@ -69,6 +69,10 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         };
     });
 
+    const endInstancesBoxDrawing = () => {
+        state.isDrawingInstancesBox = false;
+    };
+
     const clearInstances = () => {
         instances.clear();
         state.instancesPrompt = '';
@@ -90,7 +94,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     // Leaving the tool, e.g. by a tool switch or Escape, ends box drawing and drops its prompts.
     $effect(() => {
         if (activeTool !== 'find-instances') {
-            state.isDrawingInstancesBox = false;
+            endInstancesBoxDrawing();
             clearInstances();
         }
     });
@@ -100,6 +104,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         smartSelect,
         instances,
         clearInstances,
+        endInstancesBoxDrawing,
         get activeTool() {
             return activeTool;
         },
