@@ -64,17 +64,18 @@ It skips samples that already have an embedding. A second call does nothing.
 It has two flags:
 
 - `embed_annotations` (default `True`): Embed the objects. Set it to `False` to embed only images.
-- `recompute_annotations` (default `False`): Embed every object again and replace its
+- `recompute_annotations` (default `False`): Re-embed every object and replace its
   stored embedding.
 
 If you move or resize a box, LightlyStudio does **not** update its embedding.
 Call `compute_embeddings(recompute_annotations=True)` after you edit boxes.
 
 If the files of a batch are missing or broken, LightlyStudio logs a warning and
-continues with the next batch. If no embedding model is available, the method raises
-`NoUsableEmbedderError`.
+continues with the next batch. If every batch fails, the method raises
+`lightly_studio.core.file_outcome_report.AllInputFilesFailedError`. If no embedding model is available, it raises
+`lightly_studio.embed.errors.NoUsableEmbedderError`.
 
-!!! note "After you embed again"
+!!! note "After you re-embed"
     - Typicality metadata and similarity metadata are not refreshed. Compute them again.
     - An active lasso region on the embedding plot is not refreshed.
     - Do not edit annotations in the GUI while `compute_embeddings` runs.
