@@ -126,12 +126,13 @@ def test_compute_embeddings__recompute_annotations(
     )
     assert model_id is not None
     known_vector = (1.0, 2.0, 3.0)
-    embedding_storage.replace_embeddings(
+    embedding_storage.store_embeddings(
         session=dataset.session,
         model_id=model_id,
         sample_ids=[annotation_sample_id],
         embeddings=np.array([known_vector], dtype=np.float32),
         show_progress=False,
+        replace=True,
     )
 
     dataset.compute_embeddings()

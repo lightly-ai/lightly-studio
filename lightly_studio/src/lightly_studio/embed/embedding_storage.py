@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
 from uuid import UUID
 
 import numpy as np
@@ -19,12 +18,13 @@ from lightly_studio.utils import batching
 EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
 
-def store_embeddings(
+def store_embeddings(  # noqa: PLR0913
     session: Session,
     model_id: UUID,
     sample_ids: list[UUID],
     embeddings: NDArray[np.float32],
     show_progress: bool = True,
+    replace: bool = False,
 ) -> None:
     """Store embeddings in the database.
 
@@ -32,46 +32,18 @@ def store_embeddings(
     together. A caller that embeds in chunks calls this once per chunk, so a failure
     keeps the chunks stored before it.
 
+    Args:
+        session: Database session.
+        model_id: ID of the embedding model that produced the embeddings.
+        sample_ids: Sample IDs, one per row of `embeddings`.
+        embeddings: Array of shape (N, D) with one row per sample.
+        show_progress: Whether to show a progress bar.
+        replace: If True, overwrite an existing embedding of the same sample and model.
+            If False, keep the existing embedding.
+
     Raises:
         ValueError: If the embeddings fail validation. See `_validate_and_coerce_embeddings`.
     """
-    _write_embeddings(
-        session=session,
-        model_id=model_id,
-        sample_ids=sample_ids,
-        embeddings=embeddings,
-        show_progress=show_progress,
-        write_many=sample_embedding_resolver.create_many,
-    )
-
-
-def replace_embeddings(
-    session: Session,
-    model_id: UUID,
-    sample_ids: list[UUID],
-    embeddings: NDArray[np.float32],
-    show_progress: bool = True,
-) -> None:
-    """Like store_embeddings, but overwrites an existing embedding of the same sample and model."""
-    _write_embeddings(
-        session=session,
-        model_id=model_id,
-        sample_ids=sample_ids,
-        embeddings=embeddings,
-        show_progress=show_progress,
-        write_many=sample_embedding_resolver.upsert_many,
-    )
-
-
-def _write_embeddings(  # noqa: PLR0913
-    session: Session,
-    model_id: UUID,
-    sample_ids: list[UUID],
-    embeddings: NDArray[np.float32],
-    show_progress: bool,
-    write_many: Callable[..., None],
-) -> None:
-    """Validate embeddings and write them in batches with ``write_many``."""
     embeddings = _validate_and_coerce_embeddings(
         session=session, model_id=model_id, sample_ids=sample_ids, embeddings=embeddings
     )
@@ -93,7 +65,14 @@ def _write_embeddings(  # noqa: PLR0913
                 )
                 for sample_id, embedding in batch
             ]
-            write_many(session=session, sample_embeddings=sample_embeddings, commit=False)
+            if replace:
+                sample_embedding_resolver.upsert_many(
+                    session=session, sample_embeddings=sample_embeddings, commit=False
+                )
+            else:
+                sample_embedding_resolver.create_many(
+                    session=session, sample_embeddings=sample_embeddings, commit=False
+                )
 
             progress.update(len(sample_embeddings))
 

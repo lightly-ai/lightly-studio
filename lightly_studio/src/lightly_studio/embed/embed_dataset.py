@@ -254,6 +254,7 @@ def _embed_image_chunk(
         sample_ids=kept_sample_ids,
         embeddings=result.embeddings,
         show_progress=False,
+        replace=True,
     )
     return len(kept_sample_ids)
 
@@ -289,11 +290,12 @@ def _embed_annotation_chunk(
     crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
     kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
     # embed_annotation_crops shows the progress, thus this function shows no storage bar
-    embedding_storage.replace_embeddings(
+    embedding_storage.store_embeddings(
         session=session,
         model_id=model_id,
         sample_ids=kept_sample_ids,
         embeddings=result.embeddings,
         show_progress=False,
+        replace=True,
     )
     return len(kept_sample_ids)
