@@ -802,6 +802,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             NoUsableEmbedderError: If images or annotations need an embedding and no
                 embedder is available for them.
+            AllInputFilesFailedError: If every chunk of files failed and nothing was
+                embedded.
         """
         embed_dataset.compute_embeddings(
             session=self.session,

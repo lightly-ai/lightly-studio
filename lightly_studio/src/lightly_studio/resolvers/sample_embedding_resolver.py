@@ -98,6 +98,13 @@ def upsert_many(
             transaction that the caller commits, so multiple calls stay atomic.
     """
     rows = [SampleEmbeddingTable.model_validate(e).model_dump() for e in sample_embeddings]
+    sample_ids_by_model: dict[UUID, list[UUID]] = {}
+    for embedding in sample_embeddings:
+        sample_ids_by_model.setdefault(embedding.embedding_model_id, []).append(embedding.sample_id)
+    for model_id, sample_ids in sample_ids_by_model.items():
+        embedding_plot_resolver.mark_dirty(
+            session=session, sample_ids=sample_ids, embedding_model_id=model_id
+        )
     db_insert.upsert_rows(
         session=session,
         table=SampleEmbeddingTable,
