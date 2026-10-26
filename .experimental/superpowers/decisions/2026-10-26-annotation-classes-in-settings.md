@@ -26,6 +26,8 @@ and someone must clean them up.
    annotations it deletes.
 8. A class belongs to the dataset. Its annotation count includes all annotations of the class in
    the dataset, of all annotation and sample types, so it matches what a delete removes.
+9. Only annotation classes change. Tags and annotation sources can still be created while
+   labeling.
 
 ## Open questions
 
