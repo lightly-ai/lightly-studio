@@ -1,45 +1,9 @@
 <script lang="ts">
     import { Camera } from '@lucide/svelte';
-    import { getCameraFrameUrl } from '../getCameraFrameUrl/getCameraFrameUrl';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
     import CameraProjectionDialog from './CameraProjectionDialog.svelte';
-    import type {
-        AnnotationView,
-        CameraProjectionView
-    } from '$lib/api/lightly_studio_local/types.gen';
-    import type { PointBatch } from '$lib/components/PointCloudViewer/types';
-    import type { ProjectionSettings } from '../projectionSettings';
-    import type { AnnotationClassColor } from '../projectionOverlay';
-
-    /**
-     * A single camera tile in the projection strip, with a placeholder icon when the
-     * image is missing or fails to load. Clicking the tile enlarges the frame at full
-     * resolution in a dialog that follows the active tick.
-     */
-    interface Props {
-        /** Dataset the recording belongs to. */
-        datasetId: string;
-        /** Recording that owns the frame. */
-        recordingId?: string;
-        /** MCAP channel to render. */
-        channelId: number;
-        /** Keyframe to decode from, in nanoseconds, as a string to preserve full precision. */
-        keyframeTimestampNs?: string;
-        /** Frame to show, in nanoseconds, as a string to preserve full precision. */
-        logTimeNs?: string;
-        /** Tile-size JPEG of the frame, from the tick data. */
-        blob?: Blob;
-        /** Studio slot name shown as the caption, e.g. `front`. */
-        label: string;
-        batch?: PointBatch;
-        annotations?: readonly AnnotationView[];
-        annotationClasses?: readonly AnnotationClassColor[];
-        projection?: CameraProjectionView;
-        projectionSettings?: ProjectionSettings;
-        onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
-        onPlaybackToggle?: () => void;
-    }
-
+    import type { CameraProjectionFrameProps } from './cameraProjectionFrameProps';
+    import { useCameraFrame } from './useCameraFrame/useCameraFrame.svelte';
     let {
         datasetId,
         recordingId,
@@ -55,49 +19,26 @@
         onPlaybackToggle,
         projectionSettings,
         onProjectionSettingsChange
-    }: Props = $props();
+    }: CameraProjectionFrameProps = $props();
 
-    const fullFrameUrl = $derived(
-        recordingId && keyframeTimestampNs && logTimeNs
-            ? getCameraFrameUrl({
-                  datasetId,
-                  recordingId,
-                  channelId,
-                  keyframeTimestampNs,
-                  logTimeNs
-              })
-            : null
-    );
-
-    let frameUrl = $state<string | null>(null);
-    $effect(() => {
-        if (!blob) {
-            frameUrl = null;
-            return;
-        }
-        const url = URL.createObjectURL(blob);
-        frameUrl = url;
-        return () => URL.revokeObjectURL(url);
-    });
-
-    let failedFrameUrl = $state<string | null>(null);
     let isEnlarged = $state(false);
-    // Tile width follows the frame's own aspect ratio; square until the image has loaded.
-    let aspectRatio = $state(1);
-    let figureHeight = $state(0);
-    const CAPTION_HEIGHT_PX = 24;
-    const BORDER_PX = 2;
-    const tileWidth = $derived(
-        Math.max(0, figureHeight - CAPTION_HEIGHT_PX) * aspectRatio + BORDER_PX
-    );
+    const frame = useCameraFrame(() => ({
+        datasetId,
+        recordingId,
+        channelId,
+        keyframeTimestampNs,
+        logTimeNs,
+        blob,
+        label
+    }));
 </script>
 
 <figure
-    class="flex h-full shrink-0 flex-col overflow-hidden rounded-md border bg-muted/30"
-    style:width={`${tileWidth}px`}
-    bind:clientHeight={figureHeight}
+    class="flex h-full shrink-0 flex-col overflow-hidden bg-muted/30"
+    style:width={`${frame.tileWidth}px`}
+    bind:clientHeight={frame.figureHeight}
 >
-    {#if frameUrl && frameUrl !== failedFrameUrl}
+    {#if frame.frameUrl && frame.frameUrl !== frame.failedFrameUrl}
         <button
             type="button"
             class="flex min-h-0 flex-1 cursor-zoom-in flex-col"
@@ -106,16 +47,11 @@
         >
             <div class="relative min-h-0 flex-1">
                 <img
-                    src={frameUrl}
+                    src={frame.frameUrl}
                     alt={label}
                     class="h-full w-full object-contain"
-                    onload={(event) => {
-                        const { naturalWidth, naturalHeight } =
-                            event.currentTarget as HTMLImageElement;
-                        if (naturalWidth && naturalHeight)
-                            aspectRatio = naturalWidth / naturalHeight;
-                    }}
-                    onerror={() => (failedFrameUrl = frameUrl)}
+                    onload={frame.handleLoad}
+                    onerror={frame.handleError}
                 />
                 <ProjectionOverlay
                     {batch}
@@ -129,7 +65,7 @@
         <CameraProjectionDialog
             bind:open={isEnlarged}
             {label}
-            imageUrl={fullFrameUrl ?? frameUrl}
+            imageUrl={frame.fullFrameUrl ?? frame.frameUrl}
             {batch}
             {annotations}
             {annotationClasses}
