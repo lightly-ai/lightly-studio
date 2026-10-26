@@ -40,7 +40,7 @@ const setup = (initialPrompt = 'cars') => {
     const params = $state<{ sampleId: string; prompt: string; annotationClass: string | null }>({
         sampleId: 'sample-1',
         prompt: initialPrompt,
-        annotationClass: null
+        annotationClass: 'car'
     });
     const onSaved = vi.fn();
     let instances!: ReturnType<typeof useFindInstances>;
@@ -223,8 +223,8 @@ describe('useFindInstances', () => {
                 saveAs: 'box',
                 annotationSource: 'source',
                 previews: [
-                    { preview: first, className: 'cars' },
-                    { preview: second, className: 'cars' }
+                    { preview: first, className: 'car' },
+                    { preview: second, className: 'car' }
                 ]
             })
         );
@@ -299,8 +299,36 @@ describe('useFindInstances', () => {
         await save;
     });
 
+    it('does not save without a class', async () => {
+        const { instances, params } = setup();
+        params.annotationClass = null;
+        await generateResults(instances);
+
+        expect(instances.canSave).toBe(false);
+        await instances.save();
+
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+    });
+
+    it('marks a search without instances until the next box or prompt', async () => {
+        const { instances, params } = setup();
+        mocks.mutateAsync.mockResolvedValueOnce({ predictions: [] });
+        await instances.generate();
+        expect(instances.isEmptyResult).toBe(true);
+
+        instances.addBox({ x: 0.1, y: 0.1, width: 0.2, height: 0.2 });
+        expect(instances.isEmptyResult).toBe(false);
+
+        mocks.mutateAsync.mockResolvedValueOnce({ predictions: [] });
+        await instances.generate();
+        params.prompt = 'trucks';
+        flushSync();
+        expect(instances.isEmptyResult).toBe(false);
+    });
+
     it('saves with a class picked after the results were generated', async () => {
         const { instances, params } = setup('car');
+        params.annotationClass = null;
         await generateResults(instances);
         params.annotationClass = 'truck';
         flushSync();

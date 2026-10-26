@@ -9,11 +9,12 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
 
 type Instances = ComponentProps<typeof FindInstancesPopUp>['instances'];
 
-const makeInstances = ({ boxes = 0, predictions = 0 }) =>
+const makeInstances = ({ boxes = 0, predictions = 0, isEmptyResult = false }) =>
     ({
         boxes: Array(boxes).fill({ x: 0, y: 0, width: 1, height: 1 }),
         predictions: Array(predictions).fill({}),
         isGenerating: false,
+        isEmptyResult,
         canGenerate: true,
         canSave: predictions > 0,
         generate: vi.fn(),
@@ -44,6 +45,13 @@ describe('FindInstancesPopUp', () => {
         expect(screen.getByText(/Boxes drawn: 2\./)).toBeInTheDocument();
 
         await rerender({ ...defaultProps, instances: makeInstances({ predictions: 5 }) });
-        expect(screen.getByText('Instances found: 5.')).toBeInTheDocument();
+        expect(screen.getByText(/Instances found: 5\. Pick a class/)).toBeInTheDocument();
+    });
+
+    it('says when a search finds no instances', () => {
+        render(FindInstancesPopUp, {
+            props: { ...defaultProps, instances: makeInstances({ isEmptyResult: true }) }
+        });
+        expect(screen.getByText(/No instances found\./)).toBeInTheDocument();
     });
 });

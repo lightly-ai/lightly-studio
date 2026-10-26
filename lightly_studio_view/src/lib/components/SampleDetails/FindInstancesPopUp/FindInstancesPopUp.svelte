@@ -55,6 +55,9 @@
     <p class="text-xs text-muted-foreground">
         {#if instances.predictions.length > 0}
             Instances found: {instances.predictions.length}.
+            {#if !annotationClass}Pick a class to save them.{/if}
+        {:else if instances.isEmptyResult}
+            No instances found. Try another prompt or draw boxes.
         {:else if instances.boxes.length > 0}
             Boxes drawn: {instances.boxes.length}. Type a prompt to find instances.
         {:else}
