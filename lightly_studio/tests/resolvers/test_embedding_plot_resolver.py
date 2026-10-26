@@ -2,13 +2,20 @@
 
 from uuid import uuid4
 
+import numpy as np
 import pyarrow as pa
 import pytest
 from pyarrow import ipc
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
-from lightly_studio.resolvers import embedding_plot_resolver
+from lightly_studio.models.sample_embedding import SampleEmbeddingCreate, SampleEmbeddingTable
+from lightly_studio.resolvers import (
+    dataset_resolver,
+    embedding_plot_resolver,
+    sample_embedding_resolver,
+)
+from tests.helpers_resolvers import create_collection, create_embedding_model, create_image
 
 
 @pytest.mark.parametrize("count", [0, 2])
@@ -54,3 +61,98 @@ def test_embedding_plot__storage(db_session: Session) -> None:
     assert saved.write_token == write_token
     assert saved.data == data
     assert ipc.open_stream(saved.data).read_all()["sample_id"].to_pylist() == [str(sample_ids[0])]
+
+
+@pytest.mark.parametrize(
+    "operation", ["single", "batch", "rollback", "empty", "unknown", "duplicate"]
+)
+def test_mark_dirty__embedding_writes(db_session: Session, operation: str) -> None:
+    collection = create_collection(session=db_session)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=2
+    )
+    sample = create_image(session=db_session, collection_id=collection.collection_id)
+    embedding = SampleEmbeddingCreate(
+        sample_id=sample.sample_id,
+        embedding_model_id=model.embedding_model_id,
+        embedding=np.array([1.0, 2.0], dtype=np.float32),
+    )
+    if operation == "duplicate":
+        sample_embedding_resolver.create(session=db_session, sample_embedding=embedding)
+    plots = [
+        EmbeddingPlotTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+            is_dirty=False,
+        ),
+        EmbeddingPlotTable(
+            collection_id=collection.collection_id, embedding_model_id=uuid4(), is_dirty=False
+        ),
+        EmbeddingPlotTable(collection_id=uuid4(), embedding_model_id=uuid4(), is_dirty=False),
+    ]
+    tokens = [plot.write_token for plot in plots]
+    db_session.add_all(plots)
+    db_session.commit()
+    if operation == "single":
+        sample_embedding_resolver.create(session=db_session, sample_embedding=embedding)
+    elif operation == "empty":
+        sample_embedding_resolver.create_many(session=db_session, sample_embeddings=[])
+    elif operation == "unknown":
+        embedding_plot_resolver.mark_dirty(session=db_session, sample_ids=[uuid4()])
+        db_session.commit()
+    else:
+        sample_embedding_resolver.create_many(
+            session=db_session, sample_embeddings=[embedding], commit=False
+        )
+        if operation == "rollback":
+            db_session.rollback()
+        else:
+            db_session.commit()
+    db_session.expire_all()
+    dirty = operation in ("single", "batch", "duplicate")
+    assert [plot.is_dirty for plot in plots] == [dirty, dirty, False]
+    assert [plot.write_token != token for plot, token in zip(plots, tokens)] == [
+        dirty,
+        dirty,
+        False,
+    ]
+    assert (
+        db_session.get(SampleEmbeddingTable, (sample.sample_id, model.embedding_model_id))
+        is not None
+    ) == dirty
+
+
+@pytest.mark.postgres_only
+def test_embedding_plot__dataset_copy_and_delete(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    child = create_collection(session=db_session, parent_collection_id=collection.collection_id)
+    plots = [
+        EmbeddingPlotTable(collection_id=c.collection_id, embedding_model_id=uuid4())
+        for c in (collection, child)
+    ]
+    retained = EmbeddingPlotTable(collection_id=uuid4(), embedding_model_id=uuid4())
+    db_session.add_all([*plots, retained])
+    db_session.commit()
+    dataset_resolver.deep_copy(
+        session=db_session, dataset_id=collection.dataset_id, copy_name="copy"
+    )
+    assert len(db_session.exec(select(EmbeddingPlotTable)).all()) == 3
+    keys = [(plot.collection_id, plot.embedding_model_id) for plot in plots]
+    retained_key = (retained.collection_id, retained.embedding_model_id)
+    dataset_resolver.delete_dataset(session=db_session, dataset_id=collection.dataset_id)
+    assert all(db_session.get(EmbeddingPlotTable, key) is None for key in keys)
+    assert db_session.get(EmbeddingPlotTable, retained_key) is not None
+
+
+def test_mark_dirty__already_dirty(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    sample = create_image(session=db_session, collection_id=collection.collection_id)
+    plot = EmbeddingPlotTable(collection_id=collection.collection_id, embedding_model_id=uuid4())
+    db_session.add(plot)
+    db_session.commit()
+    old_token = plot.write_token
+    embedding_plot_resolver.mark_dirty(session=db_session, sample_ids=[sample.sample_id])
+    db_session.commit()
+    db_session.refresh(plot)
+    assert plot.is_dirty is True
+    assert plot.write_token != old_token
