@@ -48,7 +48,7 @@ view of the GUI.
 
 Object embeddings are on by default; the `add_annotations_from_*` methods accept
 `embed_annotations=False` to skip them. When you add annotations to an annotation source,
-LightlyStudio also embeds again the objects of that source whose box you moved or resized.
+LightlyStudio also re-embeds the objects of that source whose box you moved or resized.
 
 ### Embed images and objects later
 
@@ -68,7 +68,7 @@ It has two flags:
 - `recompute_annotations` (default `False`): Re-embed every object and replace its
   stored embedding.
 
-The default call also embeds again the objects whose box you moved or resized. Use
+The default call also re-embeds the objects whose box you moved or resized. Use
 `recompute_annotations=True` for embeddings from before this version, or after you change
 a custom embedder.
 
