@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import SmartSelectOverlay from './SmartSelectOverlay.svelte';
@@ -16,10 +15,6 @@ const mocks = vi.hoisted(() => ({
         clear: vi.fn(),
         save: vi.fn()
     }
-}));
-
-vi.mock('$lib/hooks/useSettings', () => ({
-    useSettings: () => ({ settingsStore: writable({ key_go_back: 'Escape' }) })
 }));
 
 const defaultProps = {

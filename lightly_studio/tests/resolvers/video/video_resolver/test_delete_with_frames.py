@@ -1,6 +1,7 @@
 from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
@@ -40,6 +41,14 @@ def test_delete_with_frames(db_session: Session) -> None:
             embedding=[1.0, 2.0],
         )
 
+    plot = EmbeddingPlotTable(
+        collection_id=deleted_video.video_frames_collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        is_dirty=False,
+    )
+    db_session.add(plot)
+    db_session.commit()
+
     video_resolver.delete_with_frames(
         session=db_session, video_sample_id=deleted_video.video_sample_id
     )
@@ -71,3 +80,6 @@ def test_delete_with_frames(db_session: Session) -> None:
             )
             is not None
         )
+
+    db_session.refresh(plot)
+    assert plot.is_dirty is True

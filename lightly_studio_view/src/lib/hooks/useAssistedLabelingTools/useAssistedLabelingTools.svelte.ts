@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import { fromStore } from 'svelte/store';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import {
@@ -7,6 +8,8 @@ import {
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte';
+import { DEFAULT_MAX_INSTANCES } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
+import { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';
 
 interface UseAssistedLabelingToolsParams {
     collectionId: string;
@@ -18,9 +21,14 @@ interface UseAssistedLabelingToolsParams {
 class AssistedLabelingToolState {
     saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
+    instancesClass = $state<string | null>(null);
+    // Kept across samples, so one prompt labels a whole series of images.
+    instancesPrompt = $state('');
+    maxInstances = $state(DEFAULT_MAX_INSTANCES);
+    isDrawingInstancesBox = $state(false);
 }
 
-// Shares the tool state between the pop-up and the overlay, and falls back to the cursor
+// Shares the tool state between the pop-ups and the overlays, and falls back to the cursor
 // tool when edit mode ends or assisted labeling becomes unusable.
 export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToolsParams) => {
     const assistedLabelingStatus = useAssistedLabelingStatus();
@@ -33,9 +41,15 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const tool = $derived(context.status === 'drag' ? context.panFrom : context.status);
     const activeTool = $derived(tool && isAssistedLabelingStatus(tool) ? tool : null);
     const isPanning = $derived(context.status === 'drag' && activeTool !== null);
+    // Smart select uses drags for its boxes, find instances only while drawing a box.
+    const blocksPan = $derived(
+        context.status === 'smart-select' ||
+            (context.status === 'find-instances' && state.isDrawingInstancesBox)
+    );
     const smartSelectClass = $derived(
         state.smartSelectClass ?? annotationLabelContext.annotationLabel
     );
+    const instancesClass = $derived(state.instancesClass ?? annotationLabelContext.annotationLabel);
     const smartSelect = useSmartSelect(() => {
         const { collectionId, sampleId, refetch } = getParams();
         return {
@@ -47,6 +61,28 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             onSaved: refetch
         };
     });
+    const instances = useFindInstances(() => {
+        const { collectionId, sampleId, refetch } = getParams();
+        return {
+            collectionId,
+            sampleId,
+            prompt: state.instancesPrompt,
+            maxInstances: state.maxInstances,
+            saveAs: state.saveAs,
+            annotationClass: instancesClass,
+            annotationSource: annotationLabelContext.annotationSource,
+            onSaved: refetch
+        };
+    });
+
+    const endInstancesBoxDrawing = () => {
+        state.isDrawingInstancesBox = false;
+    };
+
+    const clearInstances = () => {
+        instances.clear();
+        state.instancesPrompt = '';
+    };
 
     $effect(() => {
         if (
@@ -56,22 +92,39 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             setStatus('cursor');
     });
 
-    // Leaving the tool drops its prompts.
+    // Leaving a tool, e.g. by a tool switch or Escape, ends box drawing and drops its prompts.
+    // Untracked, so the state the clears read, e.g. isSaving, does not rerun this.
     $effect(() => {
-        if (activeTool !== 'smart-select') smartSelect.clear();
+        const tool = activeTool;
+        untrack(() => {
+            if (tool !== 'smart-select') smartSelect.clear();
+            if (tool !== 'find-instances') {
+                endInstancesBoxDrawing();
+                clearInstances();
+            }
+        });
     });
 
     return {
         state,
         smartSelect,
+        instances,
+        clearInstances,
+        endInstancesBoxDrawing,
         get activeTool() {
             return activeTool;
         },
         get isPanning() {
             return isPanning;
         },
+        get blocksPan() {
+            return blocksPan;
+        },
         get smartSelectClass() {
             return smartSelectClass;
+        },
+        get instancesClass() {
+            return instancesClass;
         }
     };
 };
