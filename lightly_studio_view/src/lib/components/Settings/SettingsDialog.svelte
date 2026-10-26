@@ -86,7 +86,9 @@
                     </Button>
                     <Button
                         variant="default"
-                        buttonProps={{ type: 'submit', disabled: dialogState.isSaving }}
+                        buttonProps={{ type: 'submit' }}
+                        isPending={dialogState.isSaving}
+                        disabledReason={dialogState.hasChanges ? undefined : 'No changes to save'}
                     >
                         {dialogState.isSaving ? 'Saving...' : 'Save changes'}
                     </Button>
