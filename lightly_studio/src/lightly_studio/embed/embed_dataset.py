@@ -254,7 +254,6 @@ def _embed_image_chunk(
         sample_ids=kept_sample_ids,
         embeddings=result.embeddings,
         show_progress=False,
-        replace=True,
     )
     return len(kept_sample_ids)
 
