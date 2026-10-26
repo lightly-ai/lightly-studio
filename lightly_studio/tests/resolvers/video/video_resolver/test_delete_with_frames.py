@@ -46,7 +46,7 @@ def test_delete_with_frames(db_session: Session) -> None:
         embedding_model_id=embedding_model.embedding_model_id,
         is_dirty=False,
     )
-    db_session.add(plot)
+    plot = db_session.merge(plot)
     db_session.commit()
 
     video_resolver.delete_with_frames(

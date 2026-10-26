@@ -1,10 +1,17 @@
 from __future__ import annotations
 
-import numpy as np
-from pytest_mock import MockerFixture
-from sqlmodel import Session
+from unittest import mock
 
-from lightly_studio.resolvers import twodim_embedding_resolver
+import numpy as np
+import pytest
+from pytest_mock import MockerFixture
+from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
+from sqlmodel import Session, create_engine
+
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
+from lightly_studio.resolvers import sample_embedding_resolver, twodim_embedding_resolver
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
@@ -26,9 +33,8 @@ def test__calculate_2d_embeddings__2_samples() -> None:
     assert projected == [(0.0, 0.0), (1.0, 1.0)]
 
 
-def test_get_twodim_embeddings__no_samples(
-    db_session: Session,
-) -> None:
+@pytest.mark.parametrize("existing", [False, True])
+def test_get_twodim_embeddings__write_during_rebuild(db_session: Session, existing: bool) -> None:
     collection = helpers_resolvers.create_collection(
         session=db_session, collection_name="no_samples"
     )
@@ -38,15 +44,42 @@ def test_get_twodim_embeddings__no_samples(
         embedding_dimension=3,
     )
 
-    x_values, y_values, sample_ids = twodim_embedding_resolver.get_twodim_embeddings(
-        session=db_session,
-        collection_id=collection.collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
+    sample = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection.collection_id
     )
+    key = (collection.collection_id, embedding_model.embedding_model_id)
+    if existing:
+        db_session.add(EmbeddingPlotTable(collection_id=key[0], embedding_model_id=key[1]))
+        db_session.commit()
+    engine = create_engine(db_session.connection().engine.url)
+    with Session(engine) as writer:
 
-    assert len(x_values) == 0
-    assert len(y_values) == 0
-    assert sample_ids == []
+        def calculate(_embedding_values: object) -> list[tuple[float, float]]:
+            # Fail promptly instead of blocking this synchronous test on the rebuild lock.
+            if engine.dialect.name == "postgresql":
+                writer.execute(text("SET LOCAL lock_timeout = '100ms'"))
+            with pytest.raises(DBAPIError, match=r"[Cc]onflict|lock timeout"):
+                sample_embedding_resolver.create_many(session=writer, sample_embeddings=[embedding])
+            writer.rollback()
+            return []
+
+        embedding = SampleEmbeddingCreate(
+            sample_id=sample.sample_id,
+            embedding_model_id=key[1],
+            embedding=np.ones(embedding_model.embedding_dimension, dtype=np.float32),
+        )
+        with mock.patch.object(
+            twodim_embedding_resolver, "_calculate_2d_embeddings", side_effect=calculate
+        ):
+            _, _, ids = twodim_embedding_resolver.get_twodim_embeddings(
+                session=db_session, collection_id=key[0], embedding_model_id=key[1]
+            )
+            assert ids == []
+        sample_embedding_resolver.create_many(session=writer, sample_embeddings=[embedding])
+        assert twodim_embedding_resolver.get_twodim_embeddings(
+            session=db_session, collection_id=key[0], embedding_model_id=key[1]
+        )[2] == [sample.sample_id]
+    engine.dispose()
 
 
 def test_get_twodim_embeddings__no_samples_with_embeddings(
@@ -114,6 +147,8 @@ def test_get_twodim_embeddings__cache_hit(
     assert y_first.shape == (2,)
     assert len(sample_ids_first_call) == 2
 
+    for name in ("get_hash_by_collection_id", "get_all_by_collection_id", "get_by_sample_ids"):
+        mocker.patch.object(sample_embedding_resolver, name, side_effect=AssertionError(name))
     # Second call - should use cache, not call _calculate_2d_embeddings again.
     x_second, y_second, sample_ids_second_call = twodim_embedding_resolver.get_twodim_embeddings(
         session=db_session,
