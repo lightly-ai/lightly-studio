@@ -32,7 +32,7 @@ from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import fsspec_lister, remote_storage
-from lightly_studio.embed import embed_dataset, embed_samples
+from lightly_studio.embed import embed_dataset
 from lightly_studio.evaluation.image_dataset_evaluate import ImageDatasetEvaluate
 from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -780,6 +780,36 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.COCO_CAPTION
         )
 
+    def compute_embeddings(
+        self, embed_annotations: bool = True, recompute_annotations: bool = False
+    ) -> None:
+        """Embeds images and annotation crops that have no embedding.
+
+        Use it after adding images with `embed=False`, or after creating annotations
+        in the GUI. A chunk where every file failed is logged and skipped.
+
+        Until stale embeddings are detected, an edited box keeps its old embedding.
+        Pass `recompute_annotations=True` to re-embed it.
+
+        Args:
+            embed_annotations: If True, embed the annotations of every annotation source.
+            recompute_annotations: If True, re-embed every annotation, replacing the
+                stored embeddings. Otherwise only annotations without an embedding
+                are embedded. Has no effect when `embed_annotations` is False.
+
+        Raises:
+            NoUsableEmbedderError: If images or annotations need an embedding and no
+                embedder is available for them.
+            AllInputFilesFailedError: If every chunk of files failed and nothing was
+                embedded.
+        """
+        embed_dataset.compute_embeddings(
+            session=self.session,
+            collection_id=self.collection_id,
+            embed_annotations=embed_annotations,
+            recompute_annotations=recompute_annotations,
+        )
+
     def evaluate(self, query: DatasetQuery | None = None) -> ImageDatasetEvaluate:
         """Return the evaluation facade for this dataset.
 
@@ -883,7 +913,7 @@ def _generate_embeddings_annotations(
     )
     if annotation_collection_id is None:
         return
-    embed_samples.embed_annotation_collection(
+    embed_dataset.embed_annotation_crops(
         session=session, annotation_collection_id=annotation_collection_id
     )
 

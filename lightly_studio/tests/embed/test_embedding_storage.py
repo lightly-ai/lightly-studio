@@ -255,3 +255,75 @@ def _create_model(session: Session, collection: CollectionTable) -> UUID:
         embedding_dimension=_EMBEDDING_DIMENSION,
     )
     return model.embedding_model_id
+
+
+def test_store_embeddings__replace_overwrites_existing(
+    db_session: Session, collection: CollectionTable
+) -> None:
+    model_id = _create_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    embedding_storage.store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=[image.sample_id],
+        embeddings=np.array([[1.0, 2.0, 3.0]], dtype=np.float32),
+        show_progress=False,
+    )
+
+    embedding_storage.store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=[image.sample_id],
+        embeddings=np.array([[4.0, 5.0, 6.0]], dtype=np.float32),
+        show_progress=False,
+        replace=True,
+    )
+
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=[image.sample_id], embedding_model_id=model_id
+    )
+    assert [[float(v) for v in row.embedding] for row in rows] == [[4.0, 5.0, 6.0]]
+
+
+def test_store_embeddings__default_keeps_existing(
+    db_session: Session, collection: CollectionTable
+) -> None:
+    model_id = _create_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    embedding_storage.store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=[image.sample_id],
+        embeddings=np.array([[1.0, 2.0, 3.0]], dtype=np.float32),
+        show_progress=False,
+    )
+
+    embedding_storage.store_embeddings(
+        session=db_session,
+        model_id=model_id,
+        sample_ids=[image.sample_id],
+        embeddings=np.array([[4.0, 5.0, 6.0]], dtype=np.float32),
+        show_progress=False,
+    )
+
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=[image.sample_id], embedding_model_id=model_id
+    )
+    assert [[float(v) for v in row.embedding] for row in rows] == [[1.0, 2.0, 3.0]]
+
+
+def test_store_embeddings__replace_rejects_dimension_mismatch(
+    db_session: Session, collection: CollectionTable
+) -> None:
+    model_id = _create_model(session=db_session, collection=collection)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    with pytest.raises(ValueError, match="does not match"):
+        embedding_storage.store_embeddings(
+            session=db_session,
+            model_id=model_id,
+            sample_ids=[image.sample_id],
+            embeddings=np.zeros((1, _EMBEDDING_DIMENSION + 1), dtype=np.float32),
+            show_progress=False,
+            replace=True,
+        )

@@ -10,9 +10,11 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_insert
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
+    create_embedding_model,
     create_images,
     create_tag,
 )
@@ -166,3 +168,57 @@ def test_insert_from_select_ignoring_conflicts__empty_select_is_noop(db_session:
     db_session.commit()
 
     assert _linked_sample_ids(session=db_session, tag_id=tag.tag_id) == set()
+
+
+def test_upsert_rows__overwrites_update_columns_and_inserts_new(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    model = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=2
+    )
+    samples = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="/p/0.png"), ImageStub(path="/p/1.png")],
+    )
+    model_id = model.embedding_model_id
+
+    def _row(sample: Any, vector: list[float]) -> dict[str, Any]:
+        return {
+            "sample_id": sample.sample_id,
+            "embedding_model_id": model_id,
+            "embedding": vector,
+        }
+
+    db_insert.upsert_rows(
+        session=db_session,
+        table=SampleEmbeddingTable,
+        rows=[_row(samples[0], [1.0, 2.0])],
+        conflict_columns=["sample_id", "embedding_model_id"],
+        update_columns=["embedding"],
+    )
+    db_insert.upsert_rows(
+        session=db_session,
+        table=SampleEmbeddingTable,
+        rows=[_row(samples[0], [3.0, 4.0]), _row(samples[1], [5.0, 6.0])],
+        conflict_columns=["sample_id", "embedding_model_id"],
+        update_columns=["embedding"],
+    )
+    db_session.commit()
+
+    stored = {
+        row.sample_id: [float(v) for v in row.embedding]
+        for row in db_session.exec(select(SampleEmbeddingTable)).all()
+    }
+    assert stored == {samples[0].sample_id: [3.0, 4.0], samples[1].sample_id: [5.0, 6.0]}
+
+
+def test_upsert_rows__empty_rows_is_noop(db_session: Session) -> None:
+    db_insert.upsert_rows(
+        session=db_session,
+        table=SampleEmbeddingTable,
+        rows=[],
+        conflict_columns=["sample_id", "embedding_model_id"],
+        update_columns=["embedding"],
+    )
+
+    assert db_session.exec(select(SampleEmbeddingTable)).all() == []

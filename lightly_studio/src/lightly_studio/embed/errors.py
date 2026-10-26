@@ -5,6 +5,10 @@ from __future__ import annotations
 from lightly_studio_serve.embedder import Embedder
 
 
+class NoUsableEmbedderError(Exception):
+    """Raised when samples need an embedding and no embedder is available for them."""
+
+
 class QueryEmbedderError(ValueError):
     """Raised when no embedder can answer a query for a collection."""
 

@@ -18,18 +18,28 @@ from lightly_studio.utils import batching
 EMBEDDING_INSERTION_BATCH_SIZE = 1024
 
 
-def store_embeddings(
+def store_embeddings(  # noqa: PLR0913
     session: Session,
     model_id: UUID,
     sample_ids: list[UUID],
     embeddings: NDArray[np.float32],
     show_progress: bool = True,
+    replace: bool = False,
 ) -> None:
     """Store embeddings in the database.
 
     Insertion is batched to reduce peak memory. All batches of one call are committed
     together. A caller that embeds in chunks calls this once per chunk, so a failure
     keeps the chunks stored before it.
+
+    Args:
+        session: Database session.
+        model_id: ID of the embedding model that produced the embeddings.
+        sample_ids: Sample IDs, one per row of `embeddings`.
+        embeddings: Array of shape (N, D) with one row per sample.
+        show_progress: Whether to show a progress bar.
+        replace: If True, overwrite an existing embedding of the same sample and model.
+            If False, keep the existing embedding.
 
     Raises:
         ValueError: If the embeddings fail validation. See `_validate_and_coerce_embeddings`.
@@ -55,9 +65,14 @@ def store_embeddings(
                 )
                 for sample_id, embedding in batch
             ]
-            sample_embedding_resolver.create_many(
-                session=session, sample_embeddings=sample_embeddings, commit=False
-            )
+            if replace:
+                sample_embedding_resolver.upsert_many(
+                    session=session, sample_embeddings=sample_embeddings, commit=False
+                )
+            else:
+                sample_embedding_resolver.create_many(
+                    session=session, sample_embeddings=sample_embeddings, commit=False
+                )
 
             progress.update(len(sample_embeddings))
 

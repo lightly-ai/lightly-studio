@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
@@ -124,6 +125,125 @@ def test_create_many__skips_existing_embeddings(db_session: Session) -> None:
         embedding_model_id=embedding_model.embedding_model_id,
     )
     assert [list(row.embedding) for row in rows] == [[1.0, 2.0]]
+
+
+def _stored_vectors(
+    session: Session, sample_id: UUID, embedding_model_id: UUID
+) -> list[list[float]]:
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=session, sample_ids=[sample_id], embedding_model_id=embedding_model_id
+    )
+    return [[float(v) for v in row.embedding] for row in rows]
+
+
+def _upsert_input(sample_id: UUID, model_id: UUID, vector: list[float]) -> SampleEmbeddingCreate:
+    return SampleEmbeddingCreate(
+        sample_id=sample_id,
+        embedding_model_id=model_id,
+        embedding=np.asarray(vector, dtype=np.float32),
+    )
+
+
+def test_upsert_many__overwrites_existing_embedding(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=3
+    )
+    create_sample_embedding(
+        session=db_session,
+        sample_id=image.sample_id,
+        embedding_model_id=model.embedding_model_id,
+        embedding=[0.1, 0.2, 0.3],
+    )
+
+    sample_embedding_resolver.upsert_many(
+        session=db_session,
+        sample_embeddings=[
+            _upsert_input(
+                sample_id=image.sample_id, model_id=model.embedding_model_id, vector=[0.5, 0.5, 0.5]
+            )
+        ],
+    )
+
+    assert _stored_vectors(
+        session=db_session, sample_id=image.sample_id, embedding_model_id=model.embedding_model_id
+    ) == [[0.5, 0.5, 0.5]]
+
+
+def test_upsert_many__marks_saved_plots_dirty(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=3
+    )
+    plot = EmbeddingPlotTable(
+        collection_id=collection.collection_id,
+        embedding_model_id=model.embedding_model_id,
+        is_dirty=False,
+    )
+    db_session.add(plot)
+    db_session.commit()
+    old_token = plot.write_token
+
+    sample_embedding_resolver.upsert_many(
+        session=db_session,
+        sample_embeddings=[
+            _upsert_input(
+                sample_id=image.sample_id, model_id=model.embedding_model_id, vector=[0.5, 0.5, 0.5]
+            )
+        ],
+    )
+
+    db_session.expire_all()
+    assert plot.is_dirty is True
+    assert plot.write_token != old_token
+
+
+def test_upsert_many__inserts_new_embedding(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=3
+    )
+
+    sample_embedding_resolver.upsert_many(
+        session=db_session,
+        sample_embeddings=[
+            _upsert_input(
+                sample_id=image.sample_id,
+                model_id=model.embedding_model_id,
+                vector=[0.5, 0.25, 0.75],
+            )
+        ],
+    )
+
+    assert _stored_vectors(
+        session=db_session, sample_id=image.sample_id, embedding_model_id=model.embedding_model_id
+    ) == [[0.5, 0.25, 0.75]]
+
+
+def test_upsert_many__same_key_twice_in_one_transaction(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=3
+    )
+    for vector in ([0.5, 0.5, 0.5], [0.25, 0.75, 0.125]):
+        sample_embedding_resolver.upsert_many(
+            session=db_session,
+            sample_embeddings=[
+                _upsert_input(
+                    sample_id=image.sample_id, model_id=model.embedding_model_id, vector=vector
+                )
+            ],
+            commit=False,
+        )
+    db_session.commit()
+
+    assert _stored_vectors(
+        session=db_session, sample_id=image.sample_id, embedding_model_id=model.embedding_model_id
+    ) == [[0.25, 0.75, 0.125]]
 
 
 def test_add_sample_embedding_to_sample(db_session: Session) -> None:
