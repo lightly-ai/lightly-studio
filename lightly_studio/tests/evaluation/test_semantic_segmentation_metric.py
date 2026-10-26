@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import numpy as np
 import pytest
+from numpy.typing import NDArray
 from sqlmodel import Session
 
 from lightly_studio.evaluation import semantic_segmentation_metric
@@ -51,11 +52,11 @@ def test_compute_iou__both_empty() -> None:
 def test_compute_class_ious__equal_weight_mean() -> None:
     label_a = uuid4()
     label_b = uuid4()
-    gt_masks = {
+    gt_masks: dict[UUID, NDArray[np.bool_]] = {
         label_a: np.array([[1, 0], [0, 0]], dtype=np.bool_),
         label_b: np.array([[0, 0], [0, 0]], dtype=np.bool_),
     }
-    pred_masks = {
+    pred_masks: dict[UUID, NDArray[np.bool_]] = {
         label_a: np.array([[1, 0], [0, 0]], dtype=np.bool_),
         label_b: np.array([[0, 1], [0, 0]], dtype=np.bool_),
     }

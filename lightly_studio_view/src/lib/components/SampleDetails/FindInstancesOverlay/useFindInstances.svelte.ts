@@ -4,10 +4,7 @@ import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInstancesAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { useSaveAnnotationPreviews } from '$lib/hooks';
-import {
-    getAnnotationPreviewErrorMessage,
-    pickClassName
-} from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import { getAnnotationPreviewErrorMessage } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 import { page } from '$app/state';
 import { buildInstancesRequestBody, canGenerateInstances } from './FindInstancesOverlay.helpers';
@@ -33,6 +30,8 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
     let boxes = $state<NormalizedBox[]>([]);
     let predictions = $state<AnnotationPreview[]>([]);
     let isGenerating = $state(false);
+    // Set when the last search returned no instances.
+    let isEmptyResult = $state(false);
     let isSaving = $state(false);
     // A clear or new prompt during a save drops the unsaved predictions once it ends.
     let isDropPending = false;
@@ -47,15 +46,25 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         getDatasetId: () => page.params.dataset_id!
     });
 
-    // With isSaveIgnored, drops the predictions right away, also while a save runs.
-    const dropPredictions = ({ isSaveIgnored = false } = {}) => {
+    // Drops a running request and the empty result hint.
+    const cancelSearch = () => {
         sequence += 1;
         isGenerating = false;
+        isEmptyResult = false;
+    };
+
+    // With isSaveIgnored, drops the predictions right away, also while a save runs.
+    const dropPredictions = ({ isSaveIgnored = false } = {}) => {
+        cancelSearch();
         isDropPending = isSaving && !isSaveIgnored;
         if (isSaveIgnored || !isSaving) predictions = [];
     };
 
-    const canSave = () => predictions.length > 0 && !isSaving && !isGenerating;
+    const canSave = () =>
+        predictions.length > 0 && !!getParams().annotationClass && !isSaving && !isGenerating;
+
+    const canGenerate = () =>
+        !isSaving && !isGenerating && canGenerateInstances({ prompt: getParams().prompt });
 
     const reset = ({ isSaveIgnored }: { isSaveIgnored: boolean }) => {
         dropPredictions({ isSaveIgnored });
@@ -87,7 +96,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const generate = async () => {
         const { collectionId, sampleId, prompt, maxInstances } = getParams();
-        if (isSaving || isGenerating || !canGenerateInstances({ prompt })) return;
+        if (!canGenerate()) return;
         previousPrompt = prompt.trim();
         const requestSequence = ++sequence;
         isGenerating = true;
@@ -103,6 +112,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             });
             if (requestSequence !== sequence) return;
             predictions = result.predictions;
+            isEmptyResult = predictions.length === 0;
         } catch (error) {
             if (requestSequence !== sequence) return;
             toast.error(`Find all instances failed: ${getAnnotationPreviewErrorMessage(error)}`);
@@ -113,9 +123,8 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const addBox = (box: NormalizedBox) => {
         if (isSaving) return;
-        // Drops a running request, the results stay until the next search replaces them.
-        sequence += 1;
-        isGenerating = false;
+        // The results stay until the next search replaces them.
+        cancelSearch();
         boxes = [...boxes, box];
     };
 
@@ -128,11 +137,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
     };
 
     const save = async () => {
-        if (!canSave()) return;
+        const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
+        if (!annotationClass || !canSave()) return;
         isSaving = true;
-        const { sampleId, prompt, saveAs, annotationClass, annotationSource, onSaved } =
-            getParams();
-        const className = pickClassName({ selected: annotationClass, hint: prompt });
         try {
             await saveAnnotationPreviews({
                 sampleId,
@@ -140,7 +147,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
                 annotationSource,
                 previews: predictions.map((preview) => ({
                     preview,
-                    className
+                    className: annotationClass
                 })),
                 onPreviewSaved: filterOutPrediction
             });
@@ -165,11 +172,17 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
         get isGenerating() {
             return isGenerating;
         },
+        get isEmptyResult() {
+            return isEmptyResult;
+        },
         get isSaving() {
             return isSaving;
         },
         get canSave() {
             return canSave();
+        },
+        get canGenerate() {
+            return canGenerate();
         },
         generate,
         addBox,

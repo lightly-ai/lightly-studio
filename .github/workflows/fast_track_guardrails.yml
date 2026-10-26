@@ -76,14 +76,14 @@ jobs:
         if: steps.changes.outputs.python == 'true' || steps.changes.outputs.frontend == 'true'
         uses: actions/setup-python@v6
         with:
-          python-version: "3.9"
+          python-version: "3.10"
 
       - name: Set Up uv
         if: steps.changes.outputs.python == 'true' || steps.changes.outputs.frontend == 'true'
         uses: astral-sh/setup-uv@v10.0.1
         with:
           version: "0.12.6"
-          python-version: "3.9"
+          python-version: "3.10"
           enable-cache: true
           save-cache: false
 
