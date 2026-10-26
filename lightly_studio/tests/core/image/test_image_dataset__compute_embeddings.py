@@ -143,14 +143,14 @@ def test_add_annotations__reembeds_edited_box(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
 ) -> None:
-    dataset, images_path = _setup_dataset_with_images(
-        tmp_path=tmp_path, file_names=["image1.jpg", "image2.jpg", "image3.jpg"]
+    dataset = _create_dataset(
+        tmp_path=tmp_path, image_names=["image1.jpg", "image2.jpg", "image3.jpg"]
     )
     first_json = tmp_path / "first.json"
     first_json.write_text(json.dumps(_coco_dict_with(file_names=["image1.jpg"])))
     dataset.add_annotations_from_coco(
         annotations_json=first_json,
-        images_root=images_path,
+        images_root=tmp_path,
         annotation_source="ground_truth",
     )
     [edited_id] = _annotation_sample_ids(dataset=dataset)
@@ -158,7 +158,7 @@ def test_add_annotations__reembeds_edited_box(
     other_json.write_text(json.dumps(_coco_dict_with(file_names=["image2.jpg"])))
     dataset.add_annotations_from_coco(
         annotations_json=other_json,
-        images_root=images_path,
+        images_root=tmp_path,
         annotation_source="predictions",
     )
     [other_id] = set(_annotation_sample_ids(dataset=dataset)) - {edited_id}
@@ -173,7 +173,7 @@ def test_add_annotations__reembeds_edited_box(
 
     dataset.add_annotations_from_coco(
         annotations_json=second_json,
-        images_root=images_path,
+        images_root=tmp_path,
         annotation_source="ground_truth",
     )
 
@@ -249,13 +249,3 @@ def _coco_dict_with(file_names: list[str]) -> dict[str, Any]:
         ],
         "categories": [{"id": 1, "name": "cat"}],
     }
-
-
-def _setup_dataset_with_images(tmp_path: Path, file_names: list[str]) -> tuple[ImageDataset, Path]:
-    images_path = tmp_path / "images"
-    images_path.mkdir()
-    for name in file_names:
-        Image.new("RGB", (100, 100)).save(images_path / name)
-    dataset = ImageDataset.create(name="test_dataset")
-    dataset.add_images_from_path(path=images_path, embed=False)
-    return dataset, images_path
