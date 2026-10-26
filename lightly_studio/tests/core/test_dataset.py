@@ -448,7 +448,6 @@ def test_generate_embeddings(
     image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
-        sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 1
 
@@ -471,12 +470,11 @@ def test_generate_embeddings__no_generator(
     image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
-        sample_ids=[image1.sample_id],
     )
     assert len(image1.sample.embeddings) == 0
 
 
-def test_generate_embeddings__empty_sample_ids(
+def test_generate_embeddings__no_images(
     mocker: MockerFixture,
     patch_collection: None,  # noqa: ARG001
 ) -> None:
@@ -488,10 +486,9 @@ def test_generate_embeddings__empty_sample_ids(
     image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
-        sample_ids=[],
     )
 
-    # Embedder resolution should be skipped when sample_ids is empty.
+    # Embedder resolution should be skipped when no image needs an embedding.
     spy_get_embedder.assert_not_called()
 
 
@@ -506,7 +503,6 @@ def test_generate_embeddings__rerun_embeds_missing_samples(
     image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
-        sample_ids=[image1.sample_id],
     )
     # This image has no embedding, as after an embedder failure
     image2 = create_image(
@@ -516,7 +512,6 @@ def test_generate_embeddings__rerun_embeds_missing_samples(
     image_dataset._generate_embeddings_image(
         session=session,
         collection_id=dataset.collection_id,
-        sample_ids=[],
     )
 
     assert len(image1.sample.embeddings) == 1

@@ -201,6 +201,23 @@ class TestDataset:
         assert len(samples) == 1
         assert len(samples[0].sample_table.embeddings) == 0
 
+    def test_dataset_add_images_from_path__embeds_earlier_unembedded_images(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        _create_sample_images(image_paths=[tmp_path / "folder_a" / "image1.jpg"])
+        _create_sample_images(image_paths=[tmp_path / "folder_b" / "image2.jpg"])
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_images_from_path(path=tmp_path / "folder_a", embed=False)
+
+        dataset.add_images_from_path(path=tmp_path / "folder_b", embed=True)
+
+        assert _embedding_count_by_file_name(dataset=dataset) == {
+            "image1.jpg": 1,
+            "image2.jpg": 1,
+        }
+
     def test_dataset_add_images_from_path__embedder_dimension_mismatch(
         self,
         patch_collection: None,  # noqa: ARG002
