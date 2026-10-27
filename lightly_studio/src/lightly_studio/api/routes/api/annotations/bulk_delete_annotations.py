@@ -12,9 +12,8 @@ from pydantic import BaseModel, Field
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import grid_filter_sample_ids
+from lightly_studio.resolvers import annotation_resolver, grid_filter_sample_ids
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
-from lightly_studio.services import annotations_service
 
 bulk_delete_annotations_router = APIRouter()
 
@@ -55,7 +54,7 @@ def bulk_delete_annotations(
     IDs that do not exist are ignored.
     """
     return BulkDeleteAnnotationsResult(
-        deleted_count=annotations_service.delete_annotations_by_ids(
+        deleted_count=annotation_resolver.delete_annotations_by_ids(
             session=session, annotation_ids=body.annotation_ids
         )
     )
@@ -81,7 +80,7 @@ def bulk_delete_annotations_by_filter(
         grid_filter=body.filter,
     )
     return BulkDeleteAnnotationsResult(
-        deleted_count=annotations_service.delete_annotations_by_ids(
+        deleted_count=annotation_resolver.delete_annotations_by_ids(
             session=session, annotation_ids=session.exec(annotation_ids_query).all()
         )
     )

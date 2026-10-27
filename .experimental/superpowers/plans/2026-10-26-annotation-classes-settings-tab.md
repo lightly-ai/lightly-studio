@@ -31,7 +31,7 @@ Each PR is based on the one above it.
 | # | Branch | Content | Plan task |
 |---|---|---|---|
 | 1 | `michal-lig-11319-annotation-class-counts` | Counts endpoint, duplicate rename test | 2 |
-| 2 | `michal-lig-11319-delete-class-annotations` | Shared delete service, class delete deletes its annotations | 1, 3 |
+| 2 | `michal-lig-11319-delete-class-annotations` | Annotation delete marks evaluation runs stale, class delete deletes its annotations | 1, 3 |
 | 3 | `michal-lig-11319-color-picker-in-dialog` | Color picker fix for modal dialogs | 4 |
 | 4 | `michal-lig-11319-annotation-classes-hook` | `useAnnotationClasses` | 5 |
 | 5 | `michal-lig-11319-delete-class-dialog` | Delete confirmation dialog | 6 |
