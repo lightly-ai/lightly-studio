@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 
+from lightly_studio.core.mcap import add_labels
+from lightly_studio.core.mcap.annotation_mcap import DEFAULT_SCENE_UPDATE_TOPIC
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.recording import Recording
+from lightly_studio.core.mcap.type_definitions import SceneUpdateLabels
 from lightly_studio.database import db_manager
+from lightly_studio.errors import ExportError
+from lightly_studio.export import mcap_scene_update_export
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.recording import RecordingFormat
@@ -16,6 +23,8 @@ from lightly_studio.resolvers import (
     mcap_group_component_definition_resolver,
     mcap_group_sequence_resolver,
 )
+from tests.core.mcap import helpers
+from tests.export import mcap_helpers
 from tests.helpers_resolvers import create_collection
 
 COMPONENTS = [
@@ -304,6 +313,87 @@ class TestMcapDataset:
 
         with pytest.raises(ValueError, match=f"Recording with id {recording_id} not found"):
             mcap_ds.create_sequence(recording_id=recording_id)
+
+    def test_export_scene_update_mcaps(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        mcap_ds = _index_labeled_recording(tmp_path=tmp_path)
+        output_dir = tmp_path / "out"
+
+        uris = mcap_ds.export_scene_update_mcaps(
+            output_dir=str(output_dir),
+            annotation_source="ground_truth",
+            target_frame_id="odom",
+        )
+
+        expected = (output_dir / "recording_labeled.mcap").as_posix()
+        assert [uri.replace("\\", "/") for uri in uris] == [expected]
+        messages = add_labels.read_scene_updates(uris[0], DEFAULT_SCENE_UPDATE_TOPIC)
+        assert len(messages) == 2
+
+    def test_export_scene_update_mcaps__unknown_source(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        mcap_ds = _index_labeled_recording(tmp_path=tmp_path)
+
+        with pytest.raises(ValueError, match="ground_truth"):
+            mcap_ds.export_scene_update_mcaps(
+                output_dir=str(tmp_path / "out"), annotation_source="nope"
+            )
+
+    def test_export_scene_update_mcaps__default_target_frame(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        # The recording has no transform from "odom" to the reference frame "base_link",
+        # so only the stored cuboid frame "odom" works as the default.
+        mcap_ds, _, _ = mcap_helpers.index_recording(
+            tmp_path=tmp_path, reference_frame_ids=[helpers.BASE_FRAME_ID]
+        )
+        _write_cuboid_labels(mcap_ds=mcap_ds, frame_id="odom")
+
+        uris = mcap_ds.export_scene_update_mcaps(output_dir=str(tmp_path / "out"))
+
+        messages = add_labels.read_scene_updates(uris[0], DEFAULT_SCENE_UPDATE_TOPIC)
+        cuboid_frame_ids = [cuboid.frame_id for _, labels in messages for cuboid in labels.cuboids]
+        assert cuboid_frame_ids == ["odom"]
+
+    def test_export_scene_update_mcaps__no_common_frame(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+        tmp_path: Path,
+    ) -> None:
+        mcap_ds = _index_labeled_recording(tmp_path=tmp_path)
+        mocker.patch.object(mcap_scene_update_export, "export_frame_ids", return_value=[])
+        output_dir = tmp_path / "out"
+
+        with pytest.raises(ExportError, match="share no coordinate frame"):
+            mcap_ds.export_scene_update_mcaps(output_dir=str(output_dir))
+
+        assert not output_dir.exists()
+
+
+def _index_labeled_recording(tmp_path: Path) -> McapDataset:
+    mcap_ds, _, _ = mcap_helpers.index_recording(tmp_path=tmp_path)
+    _write_cuboid_labels(mcap_ds=mcap_ds, frame_id="odom")
+    return mcap_ds
+
+
+def _write_cuboid_labels(mcap_ds: McapDataset, frame_id: str) -> None:
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    cuboid = mcap_helpers.cuboid(timestamp_ns=timestamp_ns, track_id=7, frame_id=frame_id)
+    add_labels.write_sequence_labels(
+        dataset=mcap_ds,
+        sequence=mcap_ds.get_sequences()[0],
+        annotation_mcap_uri="memory://ground_truth_labeled.mcap",
+        messages=[(timestamp_ns, SceneUpdateLabels(cuboids=(cuboid,)))],
+    )
 
 
 def _duplicate_name_components() -> list[McapComponentSpec]:
