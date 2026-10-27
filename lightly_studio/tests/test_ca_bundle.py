@@ -59,6 +59,14 @@ def test_write_ca_bundle__keeps_only_certificate_blocks(ca_pem: str) -> None:
     assert Path(path).read_text() == _DEFAULT_BUNDLE + ca_pem
 
 
+def test_write_ca_bundle__ignores_unterminated_certificate_block(ca_pem: str) -> None:
+    pem = f"-----BEGIN CERTIFICATE-----\nbm90IGVuZGVk\n{ca_pem}"
+
+    path = ca_bundle.write_ca_bundle(pem=pem)
+
+    assert Path(path).read_text() == _DEFAULT_BUNDLE + ca_pem
+
+
 def test_write_ca_bundle__multiple_certificates() -> None:
     root = helpers_tls.create_ca(common_name="Test Root CA")
     intermediate = helpers_tls.create_ca(common_name="Test Issuing CA", issuer=root)
@@ -122,6 +130,20 @@ def test_write_ca_bundle__rejected_bundle_writes_no_file(tmp_path: Path) -> None
 
     with pytest.raises(ValueError, match="no PEM certificate"):
         ca_bundle.write_ca_bundle(pem="not a certificate")
+
+    assert set(tmp_path.iterdir()) == files_before
+
+
+def test_write_ca_bundle__failed_write_is_deleted_on_cleanup(
+    ca_pem: str, mocker: MockerFixture, tmp_path: Path
+) -> None:
+    files_before = set(tmp_path.iterdir())
+    # A lone surrogate cannot be encoded as UTF-8, so the write fails after the file exists.
+    mocker.patch.object(ca_bundle, "_read_default_ca_bundle", return_value="\ud800")
+    with pytest.raises(UnicodeEncodeError):
+        ca_bundle.write_ca_bundle(pem=ca_pem)
+
+    ca_bundle.delete_ca_bundles(keep=None)
 
     assert set(tmp_path.iterdir()) == files_before
 
