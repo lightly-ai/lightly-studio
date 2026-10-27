@@ -321,7 +321,7 @@ class McapDataset:
             dataset=self, path=path, topic=topic, suffix=suffix, annotation_source=annotation_source
         )
 
-    def export_scene_update_mcaps(  # noqa: PLR0913
+    def export_annotations_to_folder(  # noqa: PLR0913
         self,
         output_dir: str,
         sequences: Sequence[McapSequence] | None = None,
@@ -358,7 +358,7 @@ class McapDataset:
             import lightly_studio as ls
 
             dataset = ls.McapDataset.load(name="perception")
-            uris = dataset.export_scene_update_mcaps(output_dir="s3://bucket/labels")
+            uris = dataset.export_annotations_to_folder(output_dir="s3://bucket/labels")
             ```
         """
         exported = self.get_sequences() if sequences is None else list(sequences)
