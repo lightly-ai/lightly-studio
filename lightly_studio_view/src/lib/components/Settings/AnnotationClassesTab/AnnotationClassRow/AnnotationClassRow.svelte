@@ -1,5 +1,5 @@
 <script lang="ts">
-    import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
+    import { AnnotationColorLegend } from '$lib/components/AnnotationColorLegend';
     import { Input } from '$lib/components/ui/input';
     import { cn, formatInteger } from '$lib/utils';
     import { AnnotationClassRowActions } from '../AnnotationClassRowActions';
