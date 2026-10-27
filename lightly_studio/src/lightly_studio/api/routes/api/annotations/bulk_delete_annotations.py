@@ -2,25 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Path
 from fastapi.params import Body
 from pydantic import BaseModel, Field
-from sqlmodel import Session
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import (
-    annotation_resolver,
-    evaluation_run_resolver,
-    grid_filter_sample_ids,
-    sample_resolver,
-)
+from lightly_studio.resolvers import grid_filter_sample_ids
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
+from lightly_studio.services import annotations_service
 
 bulk_delete_annotations_router = APIRouter()
 
@@ -60,7 +54,11 @@ def bulk_delete_annotations(
 
     IDs that do not exist are ignored.
     """
-    return _delete_annotations(session=session, annotation_ids=body.annotation_ids)
+    return BulkDeleteAnnotationsResult(
+        deleted_count=annotations_service.delete_annotations_by_ids(
+            session=session, annotation_ids=body.annotation_ids
+        )
+    )
 
 
 @bulk_delete_annotations_router.post(
@@ -82,26 +80,8 @@ def bulk_delete_annotations_by_filter(
         collection_id=collection.collection_id,
         grid_filter=body.filter,
     )
-    return _delete_annotations(
-        session=session, annotation_ids=session.exec(annotation_ids_query).all()
-    )
-
-
-def _delete_annotations(
-    session: Session, annotation_ids: Sequence[UUID]
-) -> BulkDeleteAnnotationsResult:
-    """Delete annotations and mark the evaluation runs of their collections stale."""
-    annotation_collection_ids = {
-        sample.collection_id
-        for sample in sample_resolver.get_many_by_id(
-            session=session, sample_ids=list(annotation_ids)
+    return BulkDeleteAnnotationsResult(
+        deleted_count=annotations_service.delete_annotations_by_ids(
+            session=session, annotation_ids=session.exec(annotation_ids_query).all()
         )
-    }
-    deleted_count = annotation_resolver.delete_annotations_by_ids(
-        session=session, annotation_ids=annotation_ids
     )
-    for annotation_collection_id in annotation_collection_ids:
-        evaluation_run_resolver.mark_stale_by_collection_id(
-            session=session, collection_id=annotation_collection_id
-        )
-    return BulkDeleteAnnotationsResult(deleted_count=deleted_count)
