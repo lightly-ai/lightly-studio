@@ -27,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
+- In the annotation grid, changing the class after "Select all" now changes every selected annotation, not only the first 100. The selected annotations count and undo also cover all of them.
 
 ### Security
 
