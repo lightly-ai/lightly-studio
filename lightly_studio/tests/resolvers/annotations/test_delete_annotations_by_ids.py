@@ -12,6 +12,7 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -19,6 +20,7 @@ from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
 from tests.helpers_resolvers import (
@@ -316,6 +318,46 @@ def test_delete_annotations_by_ids__deletes_evaluation_metrics(db_session: Sessi
         == []
     )
     assert db_session.get(AnnotationBaseTable, pred_annotation_id) is not None
+
+
+def test_delete_annotations_by_ids__marks_evaluation_run_stale(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation_details = [
+        AnnotationDetails(sample_id=image.sample_id, annotation_label_id=label.annotation_label_id)
+    ]
+    gt_annotation = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=annotation_details,
+        collection_name="ground_truth",
+    )[0]
+    pred_annotation = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=annotation_details,
+        collection_name="predictions",
+    )[0]
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run",
+            gt_annotation_collection_id=gt_annotation.annotation_collection_id,
+            pred_annotation_collection_id=pred_annotation.annotation_collection_id,
+            dataset_id=collection.dataset_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    assert run.stale_since is None
+
+    annotation_resolver.delete_annotations_by_ids(
+        session=db_session, annotation_ids=[pred_annotation.sample_id]
+    )
+
+    refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    assert refreshed is not None
+    assert refreshed.stale_since is not None
 
 
 def _create_image_in_new_collection(session: Session) -> ImageTable:
