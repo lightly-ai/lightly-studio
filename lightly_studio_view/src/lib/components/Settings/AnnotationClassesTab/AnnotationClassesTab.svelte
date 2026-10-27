@@ -46,21 +46,29 @@
     // The last added class is highlighted and scrolled into view, so the user can
     // edit it, for example its color, straight away.
     let addedId = $state<string | null>(null);
+    // Blocks a second add of the same name before the list refreshes.
+    let isAdding = false;
 
     const add = async () => {
-        if (!canAdd || dialogState?.isSaving) return;
+        if (!canAdd || isAdding || dialogState?.isSaving) return;
         const name = trimmedQuery;
+        isAdding = true;
         try {
             const created = await classes.addClass(name);
             query = '';
             addedId = created.annotation_label_id ?? null;
         } catch {
             // The hook already shows an error toast. Keep the typed name so the user can retry.
+        } finally {
+            isAdding = false;
         }
     };
     // The input is inside the settings form, so Enter must not submit it.
+    // Enter while an IME composes text confirms the text. Safari sends that Enter with
+    // isComposing false and keyCode 229.
     const onKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Enter') return;
+        const isComposing = event.isComposing || event.keyCode === 229;
+        if (event.key !== 'Enter' || isComposing) return;
         event.preventDefault();
         if (canAddWithEnter) add();
     };

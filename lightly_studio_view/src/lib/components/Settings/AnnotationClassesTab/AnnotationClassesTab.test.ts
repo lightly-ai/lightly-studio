@@ -72,6 +72,26 @@ describe('AnnotationClassesTab', () => {
         await vi.waitFor(() => expect(input()).toHaveValue(''));
     });
 
+    it('does not add a class twice while adding', async () => {
+        mocks.addClass.mockReturnValue(new Promise(() => {}));
+        render(AnnotationClassesTab);
+        await fireEvent.input(input(), { target: { value: 'wolf' } });
+
+        await fireEvent.keyDown(input(), { key: 'Enter' });
+        await fireEvent.keyDown(input(), { key: 'Enter' });
+
+        expect(mocks.addClass).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not add on Enter while an IME composes text', async () => {
+        render(AnnotationClassesTab);
+        await fireEvent.input(input(), { target: { value: 'wolf' } });
+
+        await fireEvent.keyDown(input(), { key: 'Enter', isComposing: true });
+
+        expect(mocks.addClass).not.toHaveBeenCalled();
+    });
+
     it('does not throw when adding fails', async () => {
         mocks.addClass.mockRejectedValue(new Error('boom'));
         render(AnnotationClassesTab);
