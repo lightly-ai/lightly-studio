@@ -165,7 +165,11 @@ def send(
         session: HTTP session for the request.
         sleep: Waits the given number of seconds between attempts.
     """
-    payload = {"events": [event.to_json() for event in events]}
+    try:
+        payload = {"events": [event.to_json() for event in events]}
+    except Exception:
+        logger.warning("Could not serialize usage of %d events.", len(events), exc_info=True)
+        return
     for retry_delay_s in (*RETRY_DELAYS_S, None):
         try:
             response = session.post(

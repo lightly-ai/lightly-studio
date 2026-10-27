@@ -197,6 +197,16 @@ def test_send__never_raises(mocker: MockerFixture) -> None:
     session.post.assert_called_once()
 
 
+def test_send__never_raises_for_an_invalid_event(mocker: MockerFixture) -> None:
+    session = mocker.Mock()
+    # Violates the type of `occurred_at`, so the event cannot be serialized
+    event = dataclasses.replace(EVENT, occurred_at="2026-08-03")  # type: ignore[arg-type]
+
+    usage_reporter.send(events=[event], url=URL, token="t0k", session=session)
+
+    session.post.assert_not_called()
+
+
 def test_take_events__returns_at_most_one_batch() -> None:
     event_queue: queue.Queue[usage_reporter.UsageEvent] = queue.Queue()
     for _ in range(usage_reporter.MAX_EVENTS_PER_REPORT + 1):
