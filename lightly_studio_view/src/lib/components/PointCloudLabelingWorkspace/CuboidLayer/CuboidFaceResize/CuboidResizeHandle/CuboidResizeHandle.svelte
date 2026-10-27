@@ -1,7 +1,7 @@
 <script lang="ts">
     import { T, useParentObject3D, useThrelte, useTask } from '@threlte/core';
     import type { IntersectionEvent } from '@threlte/extras';
-    import { Color, Group, PerspectiveCamera, Vector3 } from 'three';
+    import { Color, Group, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
 
     import { computeHandleScale } from './cuboidResizeHandle';
 
@@ -51,11 +51,14 @@
             const currentCamera = camera.current;
             const cameraDistance = currentCamera.position.distanceTo(worldPosition);
             const fov = currentCamera instanceof PerspectiveCamera ? currentCamera.fov : 60;
-            // Cap mirrors TransformControls: prevents handles growing unbounded at extreme distances.
             const parentScale = parentObject.scale;
             scale = computeHandleScale({
                 cameraDistance,
                 fov,
+                orthographicSpan:
+                    currentCamera instanceof OrthographicCamera
+                        ? (currentCamera.top - currentCamera.bottom) / currentCamera.zoom
+                        : undefined,
                 parentScale: [parentScale.x, parentScale.y, parentScale.z],
                 axisIndex
             });
@@ -64,11 +67,7 @@
     );
 </script>
 
-<!--
-    Group is positioned at the face center with face euler applied so that
-    local +Z points outward from the face. Shaft and cap are sized in local
-    units and scaled to a constant screen-space size each frame.
--->
+<!-- Face-local +Z points outward; scale keeps the handle size stable on screen. -->
 <T.Group bind:ref={groupRef} {position} rotation={[...euler]} {scale}>
     <!-- Shaft: CylinderGeometry is along Y by default; rotate -90° on X → along +Z -->
     <T.Mesh

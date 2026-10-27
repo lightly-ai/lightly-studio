@@ -3,10 +3,16 @@
     import { TransformControls } from '@threlte/extras';
     import type { TransformControls as ThreeTransformControls } from 'three/examples/jsm/controls/TransformControls.js';
     import type { Object3D } from 'three';
-    import { captureTransformSnapshot, restoreTransformSnapshot } from './cuboidTransform';
+    import {
+        captureTransformSnapshot,
+        restoreTransformSnapshot,
+        getCuboidGizmoOptions
+    } from './cuboidTransform';
+    import type { CameraMode } from '../domain';
 
     interface Props {
         mode: 'translate' | 'rotate' | 'scale';
+        cameraMode: CameraMode;
         enabled?: boolean;
         /** Called when the user finishes a drag; receives the mutated parent Object3D and a snapshot of its pre-drag transform. */
         onTransformEnd?: (
@@ -20,6 +26,7 @@
 
     let {
         mode,
+        cameraMode,
         enabled = true,
         onTransformEnd,
         onInteractionStart,
@@ -28,6 +35,7 @@
 
     const parentObject3D = useParentObject3D();
     let controlsRef = $state<ThreeTransformControls | undefined>();
+    const options = $derived(getCuboidGizmoOptions(mode, cameraMode));
 
     $effect(() => {
         const controls = controlsRef;
@@ -72,7 +80,10 @@
     bind:controls={controlsRef}
     {enabled}
     {mode}
-    space="local"
+    space={options.space}
+    showX={options.showX}
+    showY={options.showY}
+    showZ={options.showZ}
     size={0.75}
     autoPauseControls={true}
     object={parentObject3D.current}

@@ -18,6 +18,8 @@ interface ComputeHandleScaleParams {
     cameraDistance: number;
     /** Camera vertical field of view in degrees. */
     fov: number;
+    /** Vertical world span visible through an orthographic camera. */
+    orthographicSpan?: number;
     parentScale: [number, number, number];
     axisIndex: 0 | 1 | 2;
 }
@@ -36,11 +38,15 @@ interface ComputeHandleScaleParams {
 export function computeHandleScale({
     cameraDistance,
     fov,
+    orthographicSpan,
     parentScale,
     axisIndex
 }: ComputeHandleScaleParams): [number, number, number] {
     // Cap mirrors TransformControls: prevents handles growing unbounded at extreme distances.
-    const eyeDistance = Math.min(cameraDistance * Math.tan((Math.PI / 180) * (fov / 2)), 7);
+    const eyeDistance =
+        orthographicSpan === undefined
+            ? Math.min(cameraDistance * Math.tan((Math.PI / 180) * (fov / 2)), 7)
+            : orthographicSpan / 4;
     const base = eyeDistance * HANDLE_SIZE;
     const [xIdx, yIdx] = PERP_SCALE_INDICES[axisIndex];
     const sz = base / (parentScale[axisIndex] > 0 ? parentScale[axisIndex] : 1);

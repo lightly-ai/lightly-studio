@@ -2,7 +2,7 @@
     import { T, useThrelte } from '@threlte/core';
     import { onDestroy, untrack } from 'svelte';
     import { createPointCloudBuffer } from '../pointCloudBuffer';
-    import type { OrthographicCamera, PerspectiveCamera } from 'three';
+    import type { OrthographicCamera, PerspectiveCamera, Plane } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type { ColorMode } from '../pointCloudUtils';
     import type { PointBatch } from '../types';
@@ -11,6 +11,7 @@
     import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
     interface Props {
         batch: PointBatch;
+        clippingPlanes?: Plane[];
         colorMode: ColorMode;
         pointSize: number;
         intensityRange?: [number, number];
@@ -24,6 +25,7 @@
     }
     let {
         batch,
+        clippingPlanes = [],
         colorMode,
         pointSize,
         intensityRange,
@@ -36,7 +38,8 @@
         onViewStateChange
     }: Props = $props();
 
-    const { invalidate } = useThrelte();
+    const { invalidate, renderer } = useThrelte();
+    renderer.localClippingEnabled = true;
     const pointCloudBuffer = createPointCloudBuffer();
     onDestroy(() => pointCloudBuffer.dispose());
     const cameraSync = usePointCloudCamera(() => ({
@@ -72,5 +75,5 @@
 </script>
 
 <T.Points geometry={pointCloudBuffer.geometry}>
-    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} />
+    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} {clippingPlanes} />
 </T.Points>

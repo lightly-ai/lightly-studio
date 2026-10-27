@@ -1,4 +1,8 @@
-import type { Quaternion, Vector3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
+import type {
+    CameraMode,
+    Quaternion,
+    Vector3
+} from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 /** Minimum allowed cuboid dimension in meters. */
 export const MIN_CUBOID_SIZE = 0.01;
@@ -22,6 +26,16 @@ export const FACE_DEFINITIONS: readonly FaceDefinition[] = [
     { axis: 2, sign: 1, euler: [0, 0, 0] }, // +Z
     { axis: 2, sign: -1, euler: [PI, 0, 0] } // -Z
 ] as const;
+
+/** Excludes faces whose resize direction points straight into the projection. */
+export function getEditableCuboidFaces(rotation: Quaternion, cameraMode: CameraMode) {
+    if (cameraMode === 'perspective') return FACE_DEFINITIONS;
+    const depthAxis = { top: 2, side: 0, front: 1 }[cameraMode];
+    return FACE_DEFINITIONS.filter((face) => {
+        const normal = computeFaceNormalWorld({ ...face, rotation });
+        return Math.abs(normal[depthAxis]) < 0.99;
+    });
+}
 
 interface FaceNormalParams extends Pick<FaceDefinition, 'axis' | 'sign'> {
     rotation: Quaternion;

@@ -5,13 +5,21 @@
     import { GroundPlane } from '../../GroundPlane';
     import OriginAxes from '../../OriginAxes/OriginAxes.svelte';
     import { useSceneViewportContext } from '../sceneViewportContext';
+    import { getAnnotationPointClipping } from '../annotationPointClipping';
     const { getProps, interaction } = useSceneViewportContext();
     const props = $derived(getProps());
+    const clippingPlanes = $derived(
+        getAnnotationPointClipping(
+            props.cameraMode,
+            props.cuboids.find((annotation) => annotation.id === props.selectedAnnotationId)
+        )
+    );
 </script>
 
 <Canvas>
     <PointCloudScene
         batch={props.batch}
+        {clippingPlanes}
         colorMode={props.colorMode}
         pointSize={props.pointSize}
         intensityRange={props.intensityRange}

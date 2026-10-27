@@ -48,7 +48,13 @@
     const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
     const annotations = $derived(transforms.annotations);
-    const cuboidIdsKey = $derived(JSON.stringify(cuboids.map(({ id }) => id)));
+    const cuboidIdsKey = $derived(
+        JSON.stringify(
+            cuboids
+                .filter(({ id }) => cameraMode === 'perspective' || id === selectedAnnotationId)
+                .map(({ id }) => id)
+        )
+    );
     const hoverTracker = createCuboidHoverTracker((id, handle) => onhover?.(id, handle));
     provideCuboidLayerContext(() => ({
         annotationClasses,
@@ -69,7 +75,11 @@
     });
 
     $effect(() => {
-        const next = createCuboidRenderItems($annotations);
+        const visibleAnnotations =
+            cameraMode === 'perspective'
+                ? $annotations
+                : $annotations.filter(({ id }) => id === selectedAnnotationId);
+        const next = createCuboidRenderItems(visibleAnnotations);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
     });

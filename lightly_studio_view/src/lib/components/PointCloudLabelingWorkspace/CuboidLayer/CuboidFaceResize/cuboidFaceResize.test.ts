@@ -1,5 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { computeFaceNormalWorld, computeResizedCuboid, MIN_CUBOID_SIZE } from './cuboidFaceResize';
+import {
+    computeFaceNormalWorld,
+    computeResizedCuboid,
+    getEditableCuboidFaces,
+    MIN_CUBOID_SIZE
+} from './cuboidFaceResize';
+
+describe('projection resize handles', () => {
+    it.each([
+        ['top', 2],
+        ['side', 0],
+        ['front', 1]
+    ] as const)('exposes both ends of each editable axis in %s', (mode, depthAxis) => {
+        const faces = getEditableCuboidFaces([0, 0, 0, 1], mode);
+        expect(faces).toHaveLength(4);
+        expect(faces.every((face) => face.axis !== depthAxis)).toBe(true);
+    });
+    it('uses the rotated face direction to exclude depth handles', () => {
+        const faces = getEditableCuboidFaces([0, 0, Math.SQRT1_2, Math.SQRT1_2], 'side');
+        expect(faces).toHaveLength(4);
+        expect(faces.every((face) => face.axis !== 1)).toBe(true);
+    });
+});
 
 describe('computeFaceNormalWorld', () => {
     it('returns the local normal unchanged for identity rotation', () => {

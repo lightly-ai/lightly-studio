@@ -2,7 +2,8 @@
     import { T } from '@threlte/core';
     import type { IntersectionEvent } from '@threlte/extras';
     import { Color, DoubleSide } from 'three';
-    import { FACE_DEFINITIONS, getCuboidFaceLayout } from './cuboidFaceResize';
+    import { getEditableCuboidFaces, getCuboidFaceLayout } from './cuboidFaceResize';
+    import type { CameraMode } from '../../domain';
     import { useCuboidFaceResize } from './useCuboidFaceResize';
     import { CuboidResizeHandle } from './CuboidResizeHandle';
 
@@ -12,9 +13,18 @@
     > {
         annotation: ReturnType<Parameters<typeof useCuboidFaceResize>[0]['getAnnotation']>;
         baseColor: string;
+        cameraMode?: CameraMode;
     }
 
-    let { annotation, baseColor, onResizeStart, onResizeCancel, onResizeEnd }: Props = $props();
+    let {
+        annotation,
+        baseColor,
+        cameraMode = 'perspective',
+        onResizeStart,
+        onResizeCancel,
+        onResizeEnd
+    }: Props = $props();
+    const faces = $derived(getEditableCuboidFaces(annotation.rotation, cameraMode));
     const { hoveredFace, onFaceHoverEnter, onFaceHoverLeave, onFacePointerDown } =
         useCuboidFaceResize({
             getAnnotation: () => annotation,
@@ -25,7 +35,7 @@
     const highlightColor = $derived(new Color(baseColor).lerp(new Color(0xffffff), 0.65));
 </script>
 
-{#each FACE_DEFINITIONS as face}
+{#each faces as face}
     {@const { position, planeSize } = getCuboidFaceLayout({ face, size: annotation.size })}
 
     <!-- Invisible hit-test plane: always raycasted, owns all pointer events -->

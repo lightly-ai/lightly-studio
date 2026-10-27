@@ -4,6 +4,7 @@ import {
     buildCuboidTransformPayload,
     captureTransformSnapshot,
     getCuboidGizmoMode,
+    getCuboidGizmoOptions,
     restoreTransformSnapshot
 } from './cuboidTransform';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
@@ -96,17 +97,33 @@ describe('buildCuboidTransformPayload', () => {
 });
 
 describe('orthographic editing tools', () => {
-    it.each(['top', 'side', 'front'] as const)(
-        'supports movement, rotation, and resizing in %s',
-        (mode) => {
-            expect(getCuboidGizmoMode('translate', mode)).toBe('translate');
-            expect(getCuboidGizmoMode('rotate', mode)).toBe('rotate');
-            expect(getCuboidGizmoMode('resize', mode)).toBe('scale');
-            expect(getCuboidGizmoMode('select', mode)).toBeUndefined();
+    it.each([
+        ['top', false, false, true],
+        ['side', true, false, false],
+        ['front', false, true, false]
+    ] as const)(
+        'restricts %s rotation to the world axis perpendicular to the view',
+        (mode, showX, showY, showZ) => {
+            expect(getCuboidGizmoOptions('rotate', mode)).toEqual({
+                space: 'world',
+                showX,
+                showY,
+                showZ
+            });
         }
     );
-    it('keeps face resizing in the perspective view', () => {
-        expect(getCuboidGizmoMode('resize', 'perspective')).toBeUndefined();
+    it('uses face resizing instead of symmetric scale handles', () => {
+        expect(getCuboidGizmoMode('resize')).toBeUndefined();
+        expect(getCuboidGizmoMode('translate')).toBe('translate');
+        expect(getCuboidGizmoMode('rotate')).toBe('rotate');
+    });
+    it('keeps all local rotation axes in perspective', () => {
+        expect(getCuboidGizmoOptions('rotate', 'perspective')).toEqual({
+            space: 'local',
+            showX: true,
+            showY: true,
+            showZ: true
+        });
     });
 });
 

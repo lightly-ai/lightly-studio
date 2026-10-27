@@ -16,6 +16,20 @@ describe('PERP_SCALE_INDICES', () => {
 });
 
 describe('computeHandleScale', () => {
+    it('sizes orthographic handles by zoom rather than camera distance', () => {
+        const params = {
+            fov: 60,
+            parentScale: [1, 1, 1] as [number, number, number],
+            axisIndex: 0 as const,
+            orthographicSpan: 8
+        };
+        const scale = computeHandleScale({ ...params, cameraDistance: 10 });
+        expect(scale).toEqual([1, 1, 1]);
+        expect(computeHandleScale({ ...params, cameraDistance: 1000 })).toEqual(scale);
+        expect(computeHandleScale({ ...params, cameraDistance: 10, orthographicSpan: 4 })).toEqual([
+            0.5, 0.5, 0.5
+        ]);
+    });
     // fov=60°, tan(30°) ≈ 0.57735
     // cameraDistance=10: eyeDistance = min(10 * 0.57735, 7) = 5.7735, base = 5.7735 * 0.5 = 2.8868
     const base = 10 * Math.tan((Math.PI / 180) * 30) * HANDLE_SIZE;

@@ -1,6 +1,6 @@
 <script lang="ts">
     import { T } from '@threlte/core';
-    import type { PerspectiveCamera, OrthographicCamera } from 'three';
+    import type { PerspectiveCamera, OrthographicCamera, Plane } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
     import SceneCamera from './SceneCamera/SceneCamera.svelte';
@@ -14,6 +14,7 @@
     import { useSceneCameraNavigation } from './useSceneCameraNavigation/useSceneCameraNavigation.svelte';
     interface Props {
         batch: PointBatch;
+        clippingPlanes?: Plane[];
         colorMode?: ColorMode;
         pointSize?: number;
         intensityRange?: [number, number];
@@ -28,6 +29,7 @@
     }
     let {
         batch,
+        clippingPlanes = [],
         colorMode = 'none',
         pointSize = 2,
         intensityRange,
@@ -56,6 +58,7 @@
 <T.AmbientLight intensity={1} />
 <PointCloudPoints
     {batch}
+    {clippingPlanes}
     {colorMode}
     {pointSize}
     {intensityRange}

@@ -26,8 +26,18 @@ export const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'ro
         rotate: 'rotate'
     };
 
-export function getCuboidGizmoMode(tool: Domain.WorkspaceTool, cameraMode: Domain.CameraMode) {
-    return tool === 'resize' && cameraMode !== 'perspective' ? 'scale' : GIZMO_MODES[tool];
+export function getCuboidGizmoMode(tool: Domain.WorkspaceTool) {
+    return GIZMO_MODES[tool];
+}
+
+export function getCuboidGizmoOptions(mode: string, cameraMode: Domain.CameraMode) {
+    const constrained = mode === 'rotate' && cameraMode !== 'perspective';
+    return {
+        space: constrained ? ('world' as const) : ('local' as const),
+        showX: !constrained || cameraMode === 'side',
+        showY: !constrained || cameraMode === 'front',
+        showZ: !constrained || cameraMode === 'top'
+    };
 }
 
 type CuboidTransformPayload = Parameters<

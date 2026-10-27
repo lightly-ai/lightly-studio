@@ -20,7 +20,7 @@
     );
     const isSelected = $derived(layer.selectedAnnotationId === item.annotation.id);
     const isHovered = $derived(layer.hoveredAnnotationId === item.annotation.id);
-    const gizmoMode = $derived(getCuboidGizmoMode(layer.activeTool, layer.cameraMode));
+    const gizmoMode = $derived(getCuboidGizmoMode(layer.activeTool));
 </script>
 
 <T.Group
@@ -50,6 +50,7 @@
         {#if gizmoMode}
             <CuboidGizmo
                 mode={gizmoMode}
+                cameraMode={layer.cameraMode}
                 onTransformEnd={(obj) => {
                     const payload = buildCuboidTransformPayload(item.annotation, obj);
                     layer.onCuboidTransform?.(payload);
@@ -62,9 +63,10 @@
                 onInteractionCancel={() => layer.transforms.cancel(item.annotation.id)}
             />
         {/if}
-        {#if layer.activeTool === 'resize' && layer.cameraMode === 'perspective'}
+        {#if layer.activeTool === 'resize'}
             <CuboidFaceResize
                 annotation={item.annotation}
+                cameraMode={layer.cameraMode}
                 baseColor={base}
                 onResizeStart={() => {
                     layer.hoverTracker.markClicked();
