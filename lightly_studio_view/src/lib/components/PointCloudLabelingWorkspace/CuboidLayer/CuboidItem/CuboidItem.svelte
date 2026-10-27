@@ -51,6 +51,7 @@
             <CuboidGizmo
                 mode={gizmoMode}
                 cameraMode={layer.cameraMode}
+                size={item.annotation.size}
                 onTransformEnd={(obj) => {
                     const payload = buildCuboidTransformPayload(item.annotation, obj);
                     layer.onCuboidTransform?.(payload);
