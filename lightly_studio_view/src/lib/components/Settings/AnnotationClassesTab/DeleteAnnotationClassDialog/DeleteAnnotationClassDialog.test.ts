@@ -17,11 +17,10 @@ describe('DeleteAnnotationClassDialog', () => {
     it('warns about annotations and out of date evaluation runs', async () => {
         renderDialog(3);
 
-        await waitFor(() =>
-            expect(screen.getByText(/This also deletes 3 annotations/)).toBeInTheDocument()
-        );
+        await waitFor(() => expect(screen.getByText(/This also deletes/)).toBeInTheDocument());
+        expect(screen.getByText('3 annotations').tagName).toBe('STRONG');
         expect(
-            screen.getByText(/Evaluation runs of these annotations become out of date\./)
+            screen.getByText(/Evaluation runs that use these annotations become out of date\./)
         ).toBeInTheDocument();
         expect(
             screen.getByRole('button', { name: 'Delete class and 3 annotations' })

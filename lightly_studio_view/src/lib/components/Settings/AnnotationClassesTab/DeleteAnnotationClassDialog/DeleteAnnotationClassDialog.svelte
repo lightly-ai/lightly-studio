@@ -41,8 +41,10 @@
                 </Dialog.Title>
                 <Dialog.Description>
                     {#if annotationCount > 0}
-                        This also deletes {annotationsText} of this class. Evaluation runs of these annotations
-                        become out of date. You cannot undo this.
+                        This also deletes
+                        <strong class="font-semibold text-primary">{annotationsText}</strong> of this
+                        class. Evaluation runs that use these annotations become out of date. You cannot
+                        undo this.
                     {:else}
                         No annotations use this class. You cannot undo this.
                     {/if}
