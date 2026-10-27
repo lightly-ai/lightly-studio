@@ -18,6 +18,13 @@
         `${formatInteger(annotationCount)} ${annotationCount === 1 ? 'annotation' : 'annotations'}`
     );
 
+    // Keep the dialog open while the deletion runs. Closing it would not stop the request.
+    const setOpen = (value: boolean) => {
+        if (!isDeleting) {
+            open = value;
+        }
+    };
+
     const confirm = async () => {
         isDeleting = true;
         try {
@@ -31,42 +38,44 @@
     };
 </script>
 
-<Dialog.Root bind:open>
-    <Dialog.Portal>
-        <Dialog.Overlay />
-        <Dialog.Content class="border-border bg-background sm:max-w-md">
-            <Dialog.Header>
-                <Dialog.Title class="text-foreground">
-                    Delete annotation class "{name}"?
-                </Dialog.Title>
-                <Dialog.Description>
-                    {#if annotationCount > 0}
-                        This also deletes {annotationsText} of this class. Evaluation runs of these annotations
-                        become out of date. You cannot undo this.
-                    {:else}
-                        No annotations use this class. You cannot undo this.
-                    {/if}
-                </Dialog.Description>
-            </Dialog.Header>
-            <Dialog.Footer class="gap-2">
-                <Button
-                    variant="outline"
-                    buttonProps={{ type: 'button', onclick: () => (open = false) }}
-                >
-                    Cancel
-                </Button>
-                <Button
-                    variant="destructive"
-                    isPending={isDeleting}
-                    buttonProps={{ type: 'button', onclick: confirm }}
-                >
-                    {#if annotationCount > 0}
-                        Delete class and {annotationsText}
-                    {:else}
-                        Delete annotation class
-                    {/if}
-                </Button>
-            </Dialog.Footer>
-        </Dialog.Content>
-    </Dialog.Portal>
+<Dialog.Root bind:open={() => open, setOpen}>
+    <Dialog.Content class="border-border bg-background sm:max-w-md">
+        <Dialog.Header>
+            <Dialog.Title class="text-foreground">
+                Delete annotation class "{name}"?
+            </Dialog.Title>
+            <Dialog.Description>
+                {#if annotationCount > 0}
+                    This also deletes
+                    <strong class="font-semibold text-primary">{annotationsText}</strong> of this class.
+                    Evaluation runs that use these annotations become out of date. You cannot undo this.
+                {:else}
+                    No annotations use this class. You cannot undo this.
+                {/if}
+            </Dialog.Description>
+        </Dialog.Header>
+        <Dialog.Footer class="gap-2">
+            <Button
+                variant="outline"
+                buttonProps={{
+                    type: 'button',
+                    disabled: isDeleting,
+                    onclick: () => setOpen(false)
+                }}
+            >
+                Cancel
+            </Button>
+            <Button
+                variant="destructive"
+                isPending={isDeleting}
+                buttonProps={{ type: 'button', onclick: confirm }}
+            >
+                {#if annotationCount > 0}
+                    Delete class and {annotationsText}
+                {:else}
+                    Delete annotation class
+                {/if}
+            </Button>
+        </Dialog.Footer>
+    </Dialog.Content>
 </Dialog.Root>
