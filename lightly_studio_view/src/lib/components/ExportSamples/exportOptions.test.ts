@@ -24,4 +24,11 @@ describe('export options', () => {
             }
         ]);
     });
+
+    it('offers the SceneUpdate MCAP export for sequences', () => {
+        expect(getExportOptions('sequence')).toEqual([
+            { value: 'scene_update_mcap', label: 'Cuboid Annotations (MCAP)' }
+        ]);
+        expect(getDefaultExportType('sequence')).toBe('scene_update_mcap');
+    });
 });
