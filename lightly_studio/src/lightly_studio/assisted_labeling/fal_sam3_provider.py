@@ -23,6 +23,7 @@ from lightly_studio.assisted_labeling.provider import (
     Prediction,
     ProviderError,
     ProviderImage,
+    ProviderNotCalledError,
     ProviderUnavailableError,
     SegmentationPrompt,
 )
@@ -38,6 +39,7 @@ MISSING_EXTRA_REASON = 'Install the fal extra: pip install "lightly-studio[fal]"
 MAX_CACHED_IMAGE_URLS = 256
 REQUEST_TIMEOUT_S = 60.0
 TIMEOUT_MESSAGE = f"fal.ai did not answer within {REQUEST_TIMEOUT_S:g} s."
+UNREADABLE_IMAGE_MESSAGE = "The image file cannot be read."
 
 ENDPOINT = "fal-ai/sam-3/image-rle"
 
@@ -66,6 +68,9 @@ class FalSam3Provider:
     needs a restart.
     """
 
+    vendor = "fal"
+    model = ENDPOINT
+
     def __init__(self) -> None:
         """Creates the provider."""
         self._client: SyncClient | None = None
@@ -84,7 +89,14 @@ class FalSam3Provider:
     def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:
         """Runs SAM 3 on fal.ai and returns the predicted masks."""
         client = self._get_client()
-        image_url = self._get_image_url(client=client, image=image)
+        try:
+            image_url = self._get_image_url(client=client, image=image)
+        except ProviderError as error:
+            raise ProviderNotCalledError(str(error)) from error
+        except OSError as error:
+            # API callers see the message, so the file path goes only to the log
+            logger.warning("%s Details: %r", UNREADABLE_IMAGE_MESSAGE, error)
+            raise ProviderNotCalledError(UNREADABLE_IMAGE_MESSAGE) from error
         # fal-client retries connection errors and status 408, 409 and 429. With
         # `start_timeout`, it does not retry timeouts of `run`, but it retries upload timeouts.
         import fal_client  # noqa: PLC0415
