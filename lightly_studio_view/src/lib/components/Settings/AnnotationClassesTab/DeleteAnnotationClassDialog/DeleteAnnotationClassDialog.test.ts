@@ -17,11 +17,10 @@ describe('DeleteAnnotationClassDialog', () => {
     it('warns about annotations and out of date evaluation runs', async () => {
         renderDialog(3);
 
-        await waitFor(() =>
-            expect(screen.getByText(/This also deletes 3 annotations/)).toBeInTheDocument()
-        );
+        await waitFor(() => expect(screen.getByText(/This also deletes/)).toBeInTheDocument());
+        expect(screen.getByText('3 annotations')).toBeInTheDocument();
         expect(
-            screen.getByText(/Evaluation runs of these annotations become out of date\./)
+            screen.getByText(/Evaluation runs that use these annotations become out of date\./)
         ).toBeInTheDocument();
         expect(
             screen.getByRole('button', { name: 'Delete class and 3 annotations' })
@@ -47,6 +46,26 @@ describe('DeleteAnnotationClassDialog', () => {
 
         await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
         expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('cannot be closed while the deletion runs', async () => {
+        let resolveDelete = () => {};
+        renderDialog(
+            0,
+            vi.fn(() => new Promise<void>((resolve) => (resolveDelete = resolve)))
+        );
+
+        await fireEvent.click(
+            await screen.findByRole('button', { name: 'Delete annotation class' })
+        );
+
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled());
+        await fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+        await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+        resolveDelete();
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     });
 
     it('stays open when onConfirm rejects', async () => {
