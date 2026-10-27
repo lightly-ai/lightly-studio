@@ -32,7 +32,8 @@ Out (no change, or a follow-up):
    deleted and warns that the evaluation runs that use them become stale.
 5. **Colors** stay in browser memory by class name (`useCustomLabelColors`). A rename moves the
    color. Colors are lost on reload and are not shared.
-6. Changes apply at once, not on the dialog's "Save changes" *(my call, as in the prototype)*.
+6. Changes apply at once, not on the dialog's "Save changes" *(my call, as in the prototype)*. The
+   tab says so. The dialog footer stays the same, so unsaved changes from other tabs are kept.
    They refresh every class list in the app. A delete invalidates all cached data.
 
 ## Backend

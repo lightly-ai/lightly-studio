@@ -66,7 +66,12 @@
 - Produces: `class AnnotationLabelWithCountView(AnnotationLabelView): annotation_count: int`.
 - Produces: `GET /api/collections/{collection_id}/annotation_labels_with_counts -> list[AnnotationLabelWithCountView]`; generated client `readAnnotationLabelsWithCountsOptions`.
 
-- [ ] **Step 1: Write the failing tests.** Port `test_get_annotation_counts` and `test_read_annotation_labels_with_counts` from PROTO (expect `{"cat": 1, "dog": 0}` and `{cat: 2, dog: 0}`, other dataset's label excluded). Add `test_get_annotation_counts__counts_all_collections`: one label, one annotation in each of two annotation collections (`create_annotations(..., collection_name="ground_truth")` and `"predictions"`) → count `2`. Add `test_update_annotation_label__duplicate_name`: rename "dog" to existing "cat" via `PUT /api/annotation_labels/{id}` → assert a 4xx status (pin whatever the route returns today; if it raises a 500, make it return `HTTP_STATUS_CONFLICT` 409 with detail "Annotation label already exists").
+- [ ] **Step 1: Write the failing tests.** Port from PROTO:
+  - `test_get_annotation_counts` (resolver, keyed by ID): `{cat.annotation_label_id: 2, dog.annotation_label_id: 0}`; the other dataset's label is excluded.
+  - `test_read_annotation_labels_with_counts` (route; the test maps the response rows by name): `{"cat": 1, "dog": 0}`.
+
+  - `test_get_annotation_counts__counts_all_collections`: one label, one annotation in each of two annotation collections (`create_annotations(..., collection_name="ground_truth")` and `"predictions"`) → count `2`.
+  - `test_update_annotation_label__duplicate_name`: rename "dog" to existing "cat" via `PUT /api/annotation_labels/{id}` → assert a 4xx status (pin whatever the route returns today; if it raises a 500, make it return `HTTP_STATUS_CONFLICT` 409 with detail "Annotation label already exists").
 - [ ] **Step 2: Run** `uv run pytest tests/resolvers/annotation_label_resolver/test_get_annotation_counts.py tests/api/routes/api/test_annotation_label.py -v` → new tests FAIL.
 - [ ] **Step 3: Implement** the resolver, view model, and route (port from PROTO); fix the duplicate rename status if needed.
 - [ ] **Step 4: Run** the tests → PASS; `make static-checks`.
@@ -119,11 +124,14 @@ Before starting: regenerate `openapi.json` and the API client (Global Constraint
 **Interfaces:**
 - Produces: `useAnnotationClasses(getParams: () => { collectionId: string; datasetId: string }) => { query, addClass(name: string): Promise<AnnotationLabel>, renameClass(labelId: string, oldName: string, name: string): Promise<void>, deleteClass(labelId: string): Promise<unknown> }`. `query.data` is `AnnotationLabelWithCountView[]`. The query is disabled while `collectionId` is empty.
 - Error toasts: "Could not add the annotation class.", "Could not rename the annotation class.", "Could not delete the annotation class."
+- Refresh: add and rename invalidate the counts query and every class list (`queryKey: [{ _id: 'readAnnotationLabels' }]`), so the class pickers show the change. Delete invalidates all queries, because annotations disappeared.
 
 - [ ] **Step 1: Write the failing tests** (mock `@tanstack/svelte-query` `createMutation` to return `{ mutateAsync }` spies and `useCustomLabelColors`):
   - `renameClass moves the custom color to the new name`: `getCustomColor('cat')` returns a color → `setCustomColor('kitty', color, alpha)` and `deleteCustomColor('cat')` called.
   - `renameClass keeps colors when the rename fails`: `mutateAsync` rejects → `setCustomColor` not called, promise rejects.
   - `query is disabled without a collection`: `collectionId: ''` → query options have `enabled: false`.
+  - `addClass refreshes every class list`: spy on `queryClient.invalidateQueries`; after `addClass('wolf')` it was called with `{ queryKey: [{ _id: 'readAnnotationLabels' }] }` and with the counts query key.
+  - `deleteClass refreshes all queries`: after `deleteClass(id)`, `invalidateQueries` was called with no filter.
 - [ ] **Step 2: Run** `npx vitest run src/lib/components/Settings/AnnotationClassesTab/useAnnotationClasses.svelte.test.ts` → FAIL.
 - [ ] **Step 3: Port** the hook from PROTO; add `enabled: !!getParams().collectionId` to the query options.
 - [ ] **Step 4: Run** → PASS.
@@ -174,7 +182,7 @@ Before starting: regenerate `openapi.json` and the API client (Global Constraint
 **Files:**
 - Create: `lightly_studio_view/src/lib/components/Settings/AnnotationClassesTab/{AnnotationClassesTab.svelte,index.ts}` (port from PROTO)
 - Modify: `lightly_studio_view/src/lib/components/Settings/SettingsTabs/SettingsTabs.svelte` (add `{ value: 'annotation-classes', label: 'Annotation classes', component: AnnotationClassesTab }` last)
-- Modify: `lightly_studio_view/src/lib/components/Settings/SettingsDialog.svelte` (footer: on the `annotation-classes` tab show "Changes save immediately." and a "Close" button instead of "Cancel"/"Save changes"; port from PROTO, without the `settingsDialogTab` change)
+- Do not modify the `SettingsDialog.svelte` footer. It keeps "Cancel" / "Save changes" on every tab, so unsaved changes from other tabs can still be saved. Do not port PROTO's footer or `settingsDialogTab` changes.
 - Test: `.../AnnotationClassesTab/AnnotationClassesTab.test.ts`, `lightly_studio_view/src/lib/components/Settings/SettingsDialog.test.ts`
 
 **Interfaces:**
@@ -186,9 +194,10 @@ Before starting: regenerate `openapi.json` and the API client (Global Constraint
   - typing "wolf" + Enter → `addClass('wolf')`; input cleared.
   - typing "Bear" → "already exists" text, no add row.
   - no `collection_id` → "Open a dataset to manage its annotation classes." and no rows.
-  - `SettingsDialog.test.ts`: opening the "Annotation classes" tab shows "Close" and "Changes save immediately.", and no "Save changes".
+  - the tab shows "Changes to annotation classes save immediately."
+  - `SettingsDialog.test.ts`: change a Display setting, open the "Annotation classes" tab, click "Save changes" → `saveSettings` receives the changed Display setting.
 - [ ] **Step 2: Run** → FAIL.
-- [ ] **Step 3: Port** the tab, register it, change the footer.
+- [ ] **Step 3: Port** the tab, add the "Changes to annotation classes save immediately." note below the find-or-add field, and register the tab.
 - [ ] **Step 4: Run** `make static-checks && make test` → PASS.
 - [ ] **Step 5: Manual check** with the run skill: add, find, rename, change a color (picker opens inside the dialog and is clickable), delete a used class (modal text, annotations gone, class pickers updated).
 - [ ] **Step 6: Commit** `Add the annotation classes tab to the settings`, then open PR 2 stacked on PR 1.
