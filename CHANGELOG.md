@@ -17,8 +17,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
 - Reorganised the settings dialog into a tabbed layout.
+- In the settings dialog, "Save changes" is enabled only when there are changes to save.
 
 ### Deprecated
 
@@ -26,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
 
 ### Security

@@ -11,6 +11,7 @@ from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.caption import CaptionTable
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -151,9 +152,19 @@ def test_delete_annotations_by_ids__deletes_tag_links_and_embeddings(
     db_session.commit()
     to_delete_id, to_keep_id = to_delete.sample_id, to_keep.sample_id
 
+    plot = EmbeddingPlotTable(
+        collection_id=annotation_collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        is_dirty=False,
+    )
+    plot = db_session.merge(plot)
+    db_session.commit()
+
     annotation_resolver.delete_annotations_by_ids(session=db_session, annotation_ids=[to_delete_id])
 
     assert _get_tag_link_sample_ids(session=db_session) == [to_keep_id]
+    db_session.refresh(plot)
+    assert plot.is_dirty is True
     assert _get_embedding_sample_ids(session=db_session) == [to_keep_id]
     assert db_session.get(SampleTable, to_delete_id) is None
 
@@ -195,6 +206,11 @@ def test_delete_annotations_by_ids__delete_samples_false_keeps_sample(db_session
     db_session.add(annotation.sample)
     db_session.commit()
     annotation_id = annotation.sample_id
+    plot = EmbeddingPlotTable(
+        collection_id=annotation.sample.collection_id, embedding_model_id=uuid4(), is_dirty=False
+    )
+    plot = db_session.merge(plot)
+    db_session.commit()
 
     deleted_count = annotation_resolver.delete_annotations_by_ids(
         session=db_session, annotation_ids=[annotation_id], delete_samples=False
@@ -205,6 +221,8 @@ def test_delete_annotations_by_ids__delete_samples_false_keeps_sample(db_session
     assert db_session.get(ObjectDetectionAnnotationTable, annotation_id) is None
     assert db_session.get(SampleTable, annotation_id) is not None
     assert _get_tag_link_sample_ids(session=db_session) == [annotation_id]
+    db_session.refresh(plot)
+    assert plot.is_dirty is False
 
 
 def test_delete_annotations_by_ids__multiple(db_session: Session) -> None:
