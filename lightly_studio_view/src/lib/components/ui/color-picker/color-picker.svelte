@@ -1,4 +1,8 @@
 <script lang="ts">
+    // TODO(Michal, 10/2026): Replace the custom panel portal, positioning and dismissal with
+    // the Popover from $lib/components/ui/popover. Floating UI handles dialogs and containing
+    // blocks, so getPortalTarget and getTransformedAncestor can go.
+
     import { Button } from '$lib/components/ui/button';
     import { Slider } from '$lib/components/ui/slider';
     import { cn } from '$lib/utils/shadcn.js';
@@ -252,9 +256,6 @@
         e.preventDefault();
     }
 
-    // TODO(Michal, 10/2026): Replace the custom panel portal, positioning and dismissal with
-    // the Popover from $lib/components/ui/popover. Floating UI handles dialogs and containing
-    // blocks, so getPortalTarget and getTransformedAncestor can go.
     // Inside a modal dialog, the panel must be in the dialog. Otherwise the dialog blocks
     // pointer events and keyboard focus outside of it.
     const getPortalTarget = (): HTMLElement | string =>
