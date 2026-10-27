@@ -14,7 +14,7 @@
 
 ## Global Constraints
 
-- Branch from `origin/main`, not from the current LIG-11301 branch. Two PRs: Tasks 1–3 (backend), then Tasks 4–8 (frontend), the second stacked on the first.
+- Branch from `origin/main`, not from the current LIG-11301 branch. Delivered as a stack of seven PRs, see "PR stack" below.
 - Load the skills from `AGENTS.md` before editing: python-guide + backend-guide for `lightly_studio/src/**`, frontend-guide for `lightly_studio_view/**`, glossary for user-visible text.
 - User-visible term is "annotation class" (never "label"). Evaluation run staleness is called "out of date" in the UI.
 - No change to class pickers, Smart select, Find all instances, roles, tags, or annotation sources.
@@ -22,6 +22,23 @@
 - Tab changes apply at once; they do not go through the dialog's "Save changes".
 - The generated API client (`lightly_studio_view/src/lib/api/lightly_studio_local`) and `lightly_studio/openapi.json` are gitignored. After backend changes, regenerate locally: `cd lightly_studio && uv run python -m lightly_studio.export_schema` (check the module for the exact invocation), then `cd lightly_studio_view && npm run generate-api-client`.
 - Validation per PR: backend `cd lightly_studio && make static-checks && uv run pytest <affected tests>`; frontend `cd lightly_studio_view && make static-checks && make test`.
+
+## PR stack
+
+The two PRs were too large to review, so the work is split into one linear stack of seven PRs.
+Each PR is based on the one above it.
+
+| # | Branch | Content | Plan task |
+|---|---|---|---|
+| 1 | `michal-lig-11319-annotation-class-counts` | Counts endpoint, duplicate rename test | 2 |
+| 2 | `michal-lig-11319-delete-class-annotations` | Shared delete service, class delete deletes its annotations | 1, 3 |
+| 3 | `michal-lig-11319-color-picker-in-dialog` | Color picker fix for modal dialogs | 4 |
+| 4 | `michal-lig-11319-annotation-classes-hook` | `useAnnotationClasses` | 5 |
+| 5 | `michal-lig-11319-delete-class-dialog` | Delete confirmation dialog | 6 |
+| 6 | `michal-lig-11319-annotation-class-row` | Class row and its actions | 7 |
+| 7 | `michal-lig-11319-annotation-classes-tab-ui` | The tab, its parts, registration in the settings | 8 |
+
+PRs 3 and 5 do not depend on the backend and could also be reviewed alone against `main`.
 
 ## Review Focus
 
