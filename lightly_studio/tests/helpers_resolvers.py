@@ -29,6 +29,7 @@ from lightly_studio.models.embedding_model import (
     EmbeddingModelCreate,
     EmbeddingModelTable,
 )
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.image import ImageCreate, ImageTable
 from lightly_studio.models.mcap import McapCreate, McapTable
 from lightly_studio.models.sample_embedding import (
@@ -43,6 +44,7 @@ from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     collection_resolver,
     embedding_model_resolver,
+    embedding_plot_resolver,
     group_resolver,
     image_resolver,
     mcap_resolver,
@@ -598,3 +600,24 @@ def fill_db_with_video_samples_and_embeddings(
                 embedding=[i] * embedding_dimension,
             )
     return collection.collection_id
+
+
+def create_saved_plot(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    coordinates: dict[UUID, tuple[float, float]],
+) -> list[UUID]:
+    """Save fixed plot coordinates and return their aligned sample IDs."""
+    sample_ids = list(coordinates)
+    x, y = zip(*coordinates.values())
+    session.merge(
+        EmbeddingPlotTable(
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            is_dirty=False,
+            data=embedding_plot_resolver.encode(x=x, y=y, sample_ids=sample_ids),
+        )
+    )
+    session.commit()
+    return sample_ids

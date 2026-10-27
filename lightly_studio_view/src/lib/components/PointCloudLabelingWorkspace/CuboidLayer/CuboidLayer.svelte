@@ -26,7 +26,8 @@
         groundPlaneBounds,
         onselect,
         onhover,
-        onCreateCuboid
+        onCreateCuboid,
+        onCuboidTransform
     }: {
         cuboids: readonly Domain.CuboidAnnotation[];
         annotationClasses: readonly Domain.AnnotationClass[];
@@ -38,6 +39,9 @@
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         onCreateCuboid?: (position: Domain.Vector3) => void;
+        onCuboidTransform?: (
+            payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
+        ) => void;
     } = $props();
 
     const { renderer } = useThrelte();
@@ -105,8 +109,11 @@
             {#if gizmoMode}
                 <CuboidGizmo
                     mode={gizmoMode}
-                    onTransformEnd={(obj) =>
-                        void transforms.commit(buildCuboidTransformPayload(item.annotation, obj))}
+                    onTransformEnd={(obj) => {
+                        const payload = buildCuboidTransformPayload(item.annotation, obj);
+                        onCuboidTransform?.(payload);
+                        void transforms.commit(payload);
+                    }}
                     onInteractionStart={() => {
                         hoverTracker.markClicked();
                         transforms.begin(item.annotation);

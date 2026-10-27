@@ -4,8 +4,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
-from lightly_studio.resolvers import collection_resolver, sample_embedding_resolver
+from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
@@ -14,6 +13,7 @@ from tests.helpers_resolvers import (
     create_embedding_model,
     create_image,
     create_samples_with_embeddings,
+    create_saved_plot,
 )
 
 
@@ -108,24 +108,17 @@ def _setup_embedding_region(
             (ImageStub(path="sample_c.png"), [2.1, 0.2, 0.3]),
         ],
     )
-    cache_key, ordered_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
     coordinates = {
         image_a.sample_id: (1.0, 1.0),
         image_b.sample_id: (5.0, 5.0),
         image_c.sample_id: (100.0, 100.0),
     }
-    db_session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates[sid][0] for sid in ordered_sample_ids],
-            y=[coordinates[sid][1] for sid in ordered_sample_ids],
-        )
+    create_saved_plot(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates=coordinates,
     )
-    db_session.commit()
     region = EmbeddingRegion(
         polygon=[
             Point2D(x=0, y=0),

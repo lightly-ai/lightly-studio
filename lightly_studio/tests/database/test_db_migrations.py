@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 import json
+from uuid import uuid4
 
+import numpy as np
 import pytest
 from alembic import command
 from alembic.config import Config
 from pytest_mock import MockerFixture
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
-from sqlmodel import SQLModel
+from sqlmodel import Session, SQLModel
 
 from lightly_studio.database import db_migrations, db_url
 from lightly_studio.database.db_manager import DatabaseEngine
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from tests.helpers_resolvers import create_collection, create_embedding_model, create_image
 
 _POSTGRES_URL = "postgresql://localhost/db"
 
@@ -145,7 +149,7 @@ def test_postgres_embedding_plot__upgrade_preserves_existing_cache(
                 )
             )
         db_migrations._run_alembic_command(
-            engine=engine, config=config, fn=command.upgrade, revision="head"
+            engine=engine, config=config, fn=command.upgrade, revision="a3e921f6d502"
         )
         assert db_migrations._get_inspector(engine=engine).has_table(table_name="embedding_plot")
         with engine.connect() as connection:
@@ -155,6 +159,74 @@ def test_postgres_embedding_plot__upgrade_preserves_existing_cache(
                 [2.0],
             )
             assert connection.execute(text("SELECT count(*) FROM embedding_plot")).scalar_one() == 0
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
+def test_postgres_unused_embedding_cache__upgrade_and_downgrade(
+    postgres_url: str | None,
+) -> None:
+    """Remove only the obsolete cache and restore an empty table on downgrade."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+    _reset_postgres_database(engine_url=postgres_url)
+    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="a3e921f6d502"
+        )
+        with Session(engine) as session:
+            collection = create_collection(session=session)
+            model = create_embedding_model(
+                session=session, collection_id=collection.collection_id, embedding_dimension=2
+            )
+            image = create_image(session=session, collection_id=collection.collection_id)
+            sample_id, model_id = image.sample_id, model.embedding_model_id
+            session.add(
+                SampleEmbeddingTable(
+                    sample_id=sample_id,
+                    embedding_model_id=model_id,
+                    embedding=np.array([1.0, 2.0], dtype=np.float32),
+                )
+            )
+            session.commit()
+        with engine.begin() as connection:
+            connection.execute(
+                text("INSERT INTO two_dim_embeddings VALUES ('old', ARRAY[1.0], ARRAY[2.0])")
+            )
+            connection.execute(
+                text(
+                    "INSERT INTO embedding_plot VALUES (:collection, :model, false, :token, :data)"
+                ),
+                {"collection": uuid4(), "model": uuid4(), "token": uuid4(), "data": b"saved"},
+            )
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        assert not db_migrations._get_inspector(engine=engine).has_table("two_dim_embeddings")
+        with Session(engine) as session:
+            embedding = session.get(SampleEmbeddingTable, (sample_id, model_id))
+            assert embedding is not None
+            assert list(embedding.embedding) == [1.0, 2.0]
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT data FROM embedding_plot")).scalar_one() == b"saved"
+            )
+        config.attributes.pop("connection", None)
+        command.check(config)
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.downgrade, revision="a3e921f6d502"
+        )
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT count(*) FROM two_dim_embeddings")).scalar_one()
+                == 0
+            )
+            assert (
+                connection.execute(text("SELECT data FROM embedding_plot")).scalar_one() == b"saved"
+            )
     finally:
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()

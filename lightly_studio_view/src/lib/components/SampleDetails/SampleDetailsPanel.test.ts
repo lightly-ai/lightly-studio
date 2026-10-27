@@ -40,10 +40,6 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
     })
 }));
 
-vi.mock('$lib/hooks/useSettings', () => ({
-    useSettings: () => ({ settingsStore: writable({ key_go_back: 'Escape' }) })
-}));
-
 vi.mock('$lib/hooks/useHideAnnotations', () => ({
     useHideAnnotations: () => ({ handleKeyEvent: vi.fn() })
 }));

@@ -19,7 +19,7 @@ from lightly_studio.models.sample_embedding import (
     SampleEmbeddingCreate,
     SampleEmbeddingTable,
 )
-from lightly_studio.resolvers import embedding_model_resolver
+from lightly_studio.resolvers import embedding_model_resolver, embedding_plot_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.utils import batching
 
@@ -46,6 +46,11 @@ class SampleProjectionRow(NamedTuple):
 def create(session: Session, sample_embedding: SampleEmbeddingCreate) -> SampleEmbeddingTable:
     """Create a new SampleEmbedding in the database."""
     db_sample_embedding = SampleEmbeddingTable.model_validate(sample_embedding)
+    embedding_plot_resolver.mark_dirty(
+        session=session,
+        sample_ids=[sample_embedding.sample_id],
+        embedding_model_id=sample_embedding.embedding_model_id,
+    )
     session.add(db_sample_embedding)
     session.commit()
     session.refresh(db_sample_embedding)
@@ -67,6 +72,13 @@ def create_many(
             transaction that the caller commits, so multiple calls stay atomic.
     """
     rows = [SampleEmbeddingTable.model_validate(e).model_dump() for e in sample_embeddings]
+    sample_ids_by_model: dict[UUID, list[UUID]] = {}
+    for embedding in sample_embeddings:
+        sample_ids_by_model.setdefault(embedding.embedding_model_id, []).append(embedding.sample_id)
+    for model_id, sample_ids in sample_ids_by_model.items():
+        embedding_plot_resolver.mark_dirty(
+            session=session, sample_ids=sample_ids, embedding_model_id=model_id
+        )
     db_insert.insert_ignoring_conflicts(session=session, table=SampleEmbeddingTable, rows=rows)
     if commit:
         session.commit()
