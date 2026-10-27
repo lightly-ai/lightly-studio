@@ -45,6 +45,9 @@ from lightly_studio.resolvers.annotation_resolver.get_by_id import get_by_id, ge
 from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import (
     get_by_id_with_payload,
 )
+from lightly_studio.resolvers.annotation_resolver.get_ids_by_label_id import (
+    get_ids_by_label_id,
+)
 from lightly_studio.resolvers.annotation_resolver.get_label_ids_by_sample_ids import (
     get_label_ids_by_sample_ids,
 )
@@ -93,6 +96,7 @@ __all__ = [
     "get_by_id",
     "get_by_id_with_payload",
     "get_by_ids",
+    "get_ids_by_label_id",
     "get_label_ids_by_sample_ids",
     "get_sample_ids",
     "get_unembedded_annotation_ids",
