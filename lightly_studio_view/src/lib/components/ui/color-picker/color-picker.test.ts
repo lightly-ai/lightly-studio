@@ -66,6 +66,48 @@ describe('ColorPicker', () => {
         expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
     });
 
+    it('opens inside a transformed modal dialog and positions relative to it', async () => {
+        const modal = document.createElement('div');
+        modal.setAttribute('role', 'dialog');
+        modal.style.transform = 'translate(-50%, -50%)';
+        document.body.appendChild(modal);
+        vi.spyOn(modal, 'getBoundingClientRect').mockReturnValue({
+            left: 100,
+            top: 50
+        } as DOMRect);
+
+        render(ColorPicker, { props: defaultProps, target: modal });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+
+        const panel = screen.getByRole('dialog', { name: 'Color picker' });
+        expect(modal).toContainElement(panel);
+        // The trigger is at (0, 0), so the viewport position is clamped to (10, 10).
+        await waitFor(() => {
+            expect(panel.style.left).toBe('-90px');
+            expect(panel.style.top).toBe('-40px');
+        });
+
+        modal.remove();
+    });
+
+    it('positions relative to the viewport outside a modal dialog', async () => {
+        // jsdom computes an empty transform instead of the browser default 'none'.
+        document.documentElement.style.transform = 'none';
+        document.body.style.transform = 'none';
+        render(ColorPicker, { props: defaultProps });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+
+        const panel = screen.getByRole('dialog', { name: 'Color picker' });
+        expect(panel.parentElement).toBe(document.body);
+        await waitFor(() => {
+            expect(panel.style.left).toBe('10px');
+            expect(panel.style.top).toBe('10px');
+        });
+
+        document.documentElement.style.transform = '';
+        document.body.style.transform = '';
+    });
+
     it.each(['Saturation and lightness picker', 'Hue picker'])(
         'registers one mousemove listener for a drag on %s',
         async (pickerName) => {
