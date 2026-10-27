@@ -28,10 +28,17 @@ from tests.helpers_resolvers import cuboid_create
 def index_recording(
     tmp_path: Path,
     base_link_poses: tuple[tuple[int, tuple[float, float, float]], ...] = (),
+    dataset_name: str = "perception",
+    metadata_records: tuple[tuple[str, dict[str, str]], ...] = (),
 ) -> tuple[McapDataset, McapSequence, list[UUID]]:
-    """Indexes a test recording and returns its dataset, sequence and tick group sample IDs."""
-    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap", base_link_poses=base_link_poses)
-    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    """Indexes `tmp_path / "recording.mcap"` and returns its dataset, sequence and group IDs."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    mcap_path = helpers.write_mcap(
+        tmp_path / "recording.mcap",
+        base_link_poses=base_link_poses,
+        metadata_records=metadata_records,
+    )
+    dataset = McapDataset.create(components=COMPONENTS, name=dataset_name)
     add_mcaps.index_recording(
         dataset=dataset,
         mcap_path=str(mcap_path),
