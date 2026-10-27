@@ -38,6 +38,16 @@ vi.mock('$lib/hooks/useSettings', () => {
     };
 });
 
+// The annotation classes tab needs a query client, which these tests do not provide.
+vi.mock('./AnnotationClassesTab/useAnnotationClasses', () => ({
+    useAnnotationClasses: () => ({
+        query: { data: [], isLoading: false },
+        addClass: async () => ({}),
+        renameClass: async () => {},
+        deleteClass: async () => {}
+    })
+}));
+
 // Get reference to the mocked function
 import { useSettings } from '$lib/hooks/useSettings';
 const { openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
@@ -263,6 +273,21 @@ describe('SettingsDialog', () => {
 
         await fireEvent.click(toggle);
         expect(saveButton).toBeDisabled();
+    });
+
+    it('should save a Display change after visiting the Annotation classes tab', async () => {
+        render(SettingsDialog);
+        await openDialog();
+        await openTab('Display');
+        await fireEvent.click(screen.getByRole('switch', { name: 'Image interpolation' }));
+        await openTab('Annotation classes');
+
+        await fireEvent.click(screen.getByText('Save changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({ image_interpolation: false })
+        );
     });
 
     it('should show saving state while submitting', async () => {
