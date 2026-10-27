@@ -48,6 +48,26 @@ describe('DeleteAnnotationClassDialog', () => {
         expect(onConfirm).toHaveBeenCalledTimes(1);
     });
 
+    it('cannot be closed while the deletion runs', async () => {
+        let resolveDelete = () => {};
+        renderDialog(
+            0,
+            vi.fn(() => new Promise<void>((resolve) => (resolveDelete = resolve)))
+        );
+
+        await fireEvent.click(
+            await screen.findByRole('button', { name: 'Delete annotation class' })
+        );
+
+        await waitFor(() => expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled());
+        await fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+        await fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+        resolveDelete();
+        await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    });
+
     it('stays open when onConfirm rejects', async () => {
         const onConfirm = renderDialog(0, vi.fn().mockRejectedValue(new Error('failed')));
 
