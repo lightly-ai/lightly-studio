@@ -1,14 +1,9 @@
 import { render } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import type { ComponentProps } from 'svelte';
-import { writable } from 'svelte/store';
 import AssistedLabelingOverlays from './AssistedLabelingOverlays.svelte';
 
 type AssistedLabeling = ComponentProps<typeof AssistedLabelingOverlays>['assistedLabeling'];
-
-vi.mock('$lib/hooks/useSettings', () => ({
-    useSettings: () => ({ settingsStore: writable({ key_go_back: 'Escape' }) })
-}));
 
 const setup = (activeTool: string | null) =>
     render(AssistedLabelingOverlays, {
