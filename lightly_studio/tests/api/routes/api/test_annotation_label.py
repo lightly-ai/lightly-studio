@@ -4,12 +4,18 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
 from lightly_studio.resolvers import annotation_label_resolver
-from tests.helpers_resolvers import create_annotation_label, create_collection
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_image,
+)
 
 
 def test_create_annotation_label(db_session: Session, test_client: TestClient) -> None:
@@ -79,6 +85,48 @@ def test_update_annotation_label(db_session: Session, test_client: TestClient) -
 
     label = label_result.json()
     assert label["annotation_label_name"] == "dog"
+
+
+def test_update_annotation_label__duplicate_name(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    dog_id = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="dog"
+    ).annotation_label_id
+
+    result = test_client.put(
+        f"/api/annotation_labels/{dog_id!s}",
+        json={"annotation_label_name": "cat", "dataset_id": str(collection.dataset_id)},
+    )
+
+    assert result.status_code == HTTP_STATUS_CONFLICT
+    # The test client shares the session, which the failed update left in a failed state.
+    db_session.rollback()
+
+
+def test_read_annotation_labels_with_counts(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_id = create_image(session=db_session, collection_id=collection_id).sample_id
+    cat_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="dog")
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=image_id,
+        annotation_label_id=cat_id,
+    )
+
+    result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels_with_counts")
+
+    assert result.status_code == HTTP_STATUS_OK
+    counts = {row["annotation_label_name"]: row["annotation_count"] for row in result.json()}
+    assert counts == {"cat": 1, "dog": 0}
 
 
 def test_delete_annotation_label(db_session: Session, test_client: TestClient) -> None:
