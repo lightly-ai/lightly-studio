@@ -17,6 +17,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
+    AnnotationLabelWithCountView,
 )
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_label_resolver
@@ -65,6 +66,31 @@ def read_annotation_labels(
 ) -> list[AnnotationLabelTable]:
     """Retrieve a list of annotation labels from the database."""
     return annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
+
+
+@annotations_label_router.get("/collections/{collection_id}/annotation_labels_with_counts")
+def read_annotation_labels_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationLabelWithCountView]:
+    """Retrieve the annotation labels of a dataset with their numbers of annotations."""
+    labels = annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
+    counts = annotation_label_resolver.get_annotation_counts(
+        session=session, dataset_id=collection.dataset_id
+    )
+    return [
+        AnnotationLabelWithCountView(
+            dataset_id=label.dataset_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_label_name=label.annotation_label_name,
+            annotation_count=counts.get(label.annotation_label_id, 0),
+        )
+        for label in labels
+    ]
 
 
 @annotations_label_router.get("/annotation_labels/{label_id}")
