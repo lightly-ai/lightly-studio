@@ -75,7 +75,7 @@ export const useAnnotationClasses = (
             body: { dataset_id: getParams().datasetId, annotation_label_name: name }
         });
         const customColor = getCustomColor(oldName);
-        if (customColor) {
+        if (customColor && oldName !== name) {
             setCustomColor(name, customColor.color, customColor.alpha);
             deleteCustomColor(oldName);
         }

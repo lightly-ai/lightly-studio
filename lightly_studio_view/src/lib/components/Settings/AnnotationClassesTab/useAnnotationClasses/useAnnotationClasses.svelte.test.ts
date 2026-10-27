@@ -70,6 +70,16 @@ describe('useAnnotationClasses', () => {
         expect(mocks.deleteCustomColor).toHaveBeenCalledWith('cat');
     });
 
+    it('renameClass keeps the custom color when the name is unchanged', async () => {
+        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
+        const classes = setup();
+
+        await classes.renameClass('label-1', 'cat', 'cat');
+
+        expect(mocks.setCustomColor).not.toHaveBeenCalled();
+        expect(mocks.deleteCustomColor).not.toHaveBeenCalled();
+    });
+
     it('renameClass keeps colors when the rename fails', async () => {
         mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
         mocks.mutateAsync.mockRejectedValue(new Error('boom'));
