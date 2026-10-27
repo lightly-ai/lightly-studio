@@ -133,12 +133,7 @@ def delete_annotation_label(
     session: SessionDep,
 ) -> dict[str, str]:
     """Delete an annotation label and all annotations that use it."""
-    if annotation_label_resolver.get_by_id(session=session, label_id=label_id) is None:
-        raise NotFoundError("Annotation label not found")
     annotation_resolver.delete_annotations(session=session, annotation_label_ids=[label_id])
     if not annotation_label_resolver.delete(session=session, label_id=label_id):
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail="Annotation label not found",
-        )
+        raise NotFoundError("Annotation label not found")
     return {"status": "deleted"}
