@@ -262,20 +262,12 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
     });
 
-    it('keeps smart select inactive and shows why while it is unavailable', async () => {
+    it('hides the assisted labeling tools while they are unavailable', () => {
         assistedLabelingStatus.disabledReason = 'Set the FAL_KEY environment variable.';
         const view = render(SampleDetailsToolbar);
 
-        const button = view.getByLabelText('Smart select');
-        await fireEvent.pointerEnter(button.parentElement!);
-        await fireEvent.click(button);
-
-        expect(view.getByRole('tooltip')).toHaveTextContent(
-            'Set the FAL_KEY environment variable.'
-        );
-        expect(view.getByRole('tooltip')).not.toHaveTextContent('fal.ai');
-        expect(button).toBeDisabled();
-        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+        expect(view.queryByLabelText('Smart select')).not.toBeInTheDocument();
+        expect(view.queryByLabelText('Find all instances')).not.toBeInTheDocument();
     });
 
     it('activates drag tool', async () => {
