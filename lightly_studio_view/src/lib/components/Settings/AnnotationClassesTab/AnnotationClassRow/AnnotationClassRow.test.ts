@@ -2,11 +2,17 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AnnotationClassRow from './AnnotationClassRow.svelte';
 
+interface RenderRowOptions {
+    annotationCount?: number;
+    onRename?: (name: string) => Promise<unknown>;
+    onDelete?: () => Promise<unknown>;
+}
+
 function renderRow({
     annotationCount = 2,
     onRename = vi.fn().mockResolvedValue(undefined),
     onDelete = vi.fn().mockResolvedValue(undefined)
-} = {}) {
+}: RenderRowOptions = {}) {
     render(AnnotationClassRow, { props: { name: 'cat', annotationCount, onRename, onDelete } });
     return { onRename, onDelete };
 }
