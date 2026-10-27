@@ -15,6 +15,7 @@ from lightly_studio.assisted_labeling.provider import (
     ProviderNotCalledError,
     ProviderUnavailableError,
 )
+from lightly_studio.errors import NotFoundError
 from lightly_studio.services.assisted_labeling_service import run_provider
 from lightly_studio.usage import usage_reporter
 from tests.assisted_labeling import helpers
@@ -89,7 +90,11 @@ def test_segment__provider_error(mocker: MockerFixture) -> None:
 
 @pytest.mark.parametrize(
     "error",
-    [ProviderNotCalledError("Upload failed."), ProviderUnavailableError("No key.")],
+    [
+        ProviderNotCalledError("Upload failed."),
+        ProviderUnavailableError("No key."),
+        NotFoundError("The image file 'a.jpg' could not be read."),
+    ],
 )
 def test_segment__vendor_not_called(error: Exception, mocker: MockerFixture) -> None:
     reported = _capture_reports(mocker=mocker)

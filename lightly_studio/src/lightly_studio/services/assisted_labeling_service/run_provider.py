@@ -15,6 +15,7 @@ from lightly_studio.assisted_labeling.provider import (
     ProviderUnavailableError,
     SegmentationPrompt,
 )
+from lightly_studio.errors import NotFoundError
 from lightly_studio.usage import usage_reporter
 
 logger = logging.getLogger(__name__)
@@ -46,6 +47,7 @@ def segment(  # noqa: PLR0913
 
     Raises:
         ProviderUnavailableError: If the provider is not configured.
+        NotFoundError: If the image file cannot be read.
         ProviderError: If the provider fails.
     """
     occurred_at = datetime.now(timezone.utc)
@@ -54,7 +56,8 @@ def segment(  # noqa: PLR0913
     error: Exception | None = None
     try:
         predictions = provider.segment(image=image, prompt=prompt)
-    except (ProviderNotCalledError, ProviderUnavailableError):
+    except (ProviderNotCalledError, ProviderUnavailableError, NotFoundError):
+        # The vendor was not called, for example because the image file cannot be read
         raise
     except Exception as e:
         error = e

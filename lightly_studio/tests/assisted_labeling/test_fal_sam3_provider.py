@@ -23,6 +23,7 @@ from lightly_studio.assisted_labeling.provider import (
     ProviderNotCalledError,
     ProviderUnavailableError,
 )
+from lightly_studio.errors import NotFoundError
 from tests.assisted_labeling import helpers
 
 IMAGE_URL = "https://v3.fal.media/files/image.jpg"
@@ -318,26 +319,22 @@ class TestFalSam3Provider:
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
 
     def test_segment__unreadable_image_file(
-        self,
-        monkeypatch: pytest.MonkeyPatch,
-        mocker: MockerFixture,
-        caplog: pytest.LogCaptureFixture,
+        self, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
     ) -> None:
         monkeypatch.setenv("FAL_KEY", "secret")
         client = FakeFalClient()
         provider = _make_provider(mocker=mocker, client=client)
 
         def read_bytes() -> bytes:
-            raise FileNotFoundError("/data/secret/a.jpg")
+            raise NotFoundError("The image file 'a.jpg' could not be read.")
 
         image = ProviderImage(
             sample_id=UUID(int=1), width=4, height=2, file_name="a.jpg", read_bytes=read_bytes
         )
 
-        with pytest.raises(ProviderNotCalledError, match=r"^The image file cannot be read\.$"):
+        with pytest.raises(NotFoundError, match="could not be read"):
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
 
-        assert "/data/secret/a.jpg" in caplog.text
         assert client.uploads == []
         assert client.runs == []
 
