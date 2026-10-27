@@ -22,7 +22,6 @@ from lightly_studio.models.annotation_label import (
 )
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
-from lightly_studio.services import annotations_service
 
 annotations_label_router = APIRouter()
 
@@ -136,10 +135,7 @@ def delete_annotation_label(
     """Delete an annotation label and all annotations that use it."""
     if annotation_label_resolver.get_by_id(session=session, label_id=label_id) is None:
         raise NotFoundError("Annotation label not found")
-    annotations_service.delete_annotations_by_ids(
-        session=session,
-        annotation_ids=annotation_resolver.get_ids_by_label_id(session=session, label_id=label_id),
-    )
+    annotation_resolver.delete_annotations(session=session, annotation_label_ids=[label_id])
     if not annotation_label_resolver.delete(session=session, label_id=label_id):
         raise HTTPException(
             status_code=HTTP_STATUS_NOT_FOUND,
