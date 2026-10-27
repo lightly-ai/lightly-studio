@@ -64,6 +64,9 @@ from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
 from lightly_studio.resolvers.annotation_resolver.update_cuboid_3d import (
     update_cuboid_3d,
 )
+from lightly_studio.resolvers.annotation_resolver.update_label_by_object_track_id import (
+    update_label_by_object_track_id,
+)
 from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask import (
     update_segmentation_mask,
 )
@@ -99,6 +102,7 @@ __all__ = [
     "update_annotation_label",
     "update_bounding_box",
     "update_cuboid_3d",
+    "update_label_by_object_track_id",
     "update_segmentation_mask",
     "update_temporal_span",
 ]

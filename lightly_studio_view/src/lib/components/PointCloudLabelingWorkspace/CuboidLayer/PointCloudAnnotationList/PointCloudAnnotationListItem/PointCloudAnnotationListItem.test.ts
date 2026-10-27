@@ -3,6 +3,10 @@ import { describe, expect, it, vi, type Mock } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 import PointCloudAnnotationListItem from './PointCloudAnnotationListItem.svelte';
 
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: vi.fn(() => ({ data: [] }))
+}));
+
 const cuboid = createAnnotationFixture();
 
 const defaultProps = {
@@ -18,14 +22,14 @@ describe('PointCloudAnnotationListItem', () => {
         render(PointCloudAnnotationListItem, { props: defaultProps });
 
         expect(screen.getByText('Vehicle')).toBeInTheDocument();
-        expect(screen.getByRole('button')).toBeInTheDocument();
+        expect(screen.getByTestId('point-cloud-annotation-list-row')).toBeInTheDocument();
     });
 
     it('calls onToggle with the cuboid id when the row is clicked', () => {
         const onToggle = vi.fn();
         render(PointCloudAnnotationListItem, { props: { ...defaultProps, onToggle } });
 
-        fireEvent.click(screen.getByRole('button'));
+        fireEvent.click(screen.getByTestId('point-cloud-annotation-list-row'));
 
         expect(onToggle).toHaveBeenCalledWith(cuboid.id);
     });

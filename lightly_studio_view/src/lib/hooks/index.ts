@@ -101,6 +101,7 @@ export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
 export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+export { getTickDetailsSequenceQueryKey } from '$lib/hooks/useTickDetails/getTickDetailsOptions';
 export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
 export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';

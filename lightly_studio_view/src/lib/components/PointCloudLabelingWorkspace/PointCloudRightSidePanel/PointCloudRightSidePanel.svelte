@@ -31,6 +31,8 @@
         editable?: boolean;
         /** Called when the user commits a geometry change in the detail panel. */
         onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
+        /** Called when the user selects a new annotation class for a cuboid. */
+        onLabelChange?: (annotationId: string, labelName: string) => void;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
     }
@@ -44,6 +46,7 @@
         onTagsChange,
         editable = false,
         onCuboidTransform,
+        onLabelChange,
         onDeleteCuboid
     }: Props = $props();
 </script>
@@ -74,6 +77,7 @@
                 bind:selectedCuboidId
                 {editable}
                 {onCuboidTransform}
+                {onLabelChange}
                 {onDeleteCuboid}
             />
         </Segment>

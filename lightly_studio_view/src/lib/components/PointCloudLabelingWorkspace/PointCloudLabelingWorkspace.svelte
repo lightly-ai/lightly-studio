@@ -28,6 +28,7 @@
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
     import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
+    import { useUpdateCuboidClass } from './useUpdateCuboidClass';
     import { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
     import type { Vector3, WorkspaceTool } from './domain';
 
@@ -321,6 +322,13 @@
         onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
     });
 
+    const { handleLabelChange } = useUpdateCuboidClass({
+        getCollectionId: () => annotationSourceCollectionId,
+        getDatasetId: () => datasetId,
+        getSequenceId: () => sequenceId,
+        onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
+    });
+
     const transforms = createCuboidTransformState({
         onTransform: (payload) => handleCuboidTransform(payload)
     });
@@ -503,6 +511,7 @@
                         onTagsChange={() => void workspace.tickDetails.refetch()}
                         editable={$isEditingMode}
                         onCuboidTransform={panelCuboidTransform}
+                        onLabelChange={handleLabelChange}
                         onDeleteCuboid={$isEditingMode ? handleDeleteCuboid : undefined}
                     />
                 </Pane>
