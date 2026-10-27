@@ -4,11 +4,11 @@
 
     interface Props {
         selectedCount: number;
-        isDeleting: boolean;
+        disabled: boolean;
         onDelete: () => Promise<void> | void;
     }
 
-    let { selectedCount, isDeleting, onDelete }: Props = $props();
+    let { selectedCount, disabled, onDelete }: Props = $props();
 
     let open = $state(false);
     const countLabel = $derived(
@@ -16,7 +16,7 @@
     );
 
     async function handleConfirm() {
-        if (isDeleting) return;
+        if (disabled) return;
         try {
             await onDelete();
         } finally {
@@ -32,7 +32,7 @@
                 {...props}
                 variant="destructive"
                 class="w-full"
-                disabled={selectedCount === 0 || isDeleting}
+                disabled={selectedCount === 0 || disabled}
             >
                 Delete {countLabel}
             </Button>
@@ -46,12 +46,10 @@
         <Dialog.Footer>
             <Dialog.Close>
                 {#snippet child({ props })}
-                    <Button {...props} variant="outline" disabled={isDeleting}>Cancel</Button>
+                    <Button {...props} variant="outline" {disabled}>Cancel</Button>
                 {/snippet}
             </Dialog.Close>
-            <Button variant="destructive" disabled={isDeleting} onclick={handleConfirm}>
-                Delete
-            </Button>
+            <Button variant="destructive" {disabled} onclick={handleConfirm}>Delete</Button>
         </Dialog.Footer>
     </Dialog.Content>
 </Dialog.Root>

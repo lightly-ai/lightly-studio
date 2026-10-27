@@ -1,7 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { useBulkDeleteAnnotations } from '$lib/hooks';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useBulkDeleteAnnotations, useGlobalStorage } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { get } from 'svelte/store';
@@ -10,9 +9,10 @@
 
     interface Props {
         collectionId: string;
+        disabled?: boolean;
     }
 
-    let { collectionId }: Props = $props();
+    let { collectionId, disabled = false }: Props = $props();
 
     const { user } = useAuth();
     const {
@@ -51,7 +51,7 @@
 {#if canDelete}
     <DeleteAnnotationsDialog
         selectedCount={selectedIds.size}
-        isDeleting={$isPending}
+        disabled={disabled || $isPending}
         onDelete={handleDelete}
     />
 {/if}

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import DeleteAnnotationsDialog from './DeleteAnnotationsDialog.svelte';
 
-const defaultProps = { selectedCount: 3, isDeleting: false, onDelete: vi.fn() };
+const defaultProps = { selectedCount: 3, disabled: false, onDelete: vi.fn() };
 
 describe('DeleteAnnotationsDialog', () => {
     it('deletes only after confirming', async () => {
@@ -38,13 +38,13 @@ describe('DeleteAnnotationsDialog', () => {
         expect(screen.getByRole('button', { name: 'Delete 1 annotation' })).toBeInTheDocument();
     });
 
-    it('disables the trigger while deleting or without a selection', () => {
+    it('disables the trigger when disabled or without a selection', async () => {
         const { rerender } = render(DeleteAnnotationsDialog, {
-            props: { ...defaultProps, isDeleting: true }
+            props: { ...defaultProps, disabled: true }
         });
         expect(screen.getByRole('button', { name: 'Delete 3 annotations' })).toBeDisabled();
 
-        rerender({ ...defaultProps, selectedCount: 0 });
+        await rerender({ ...defaultProps, selectedCount: 0 });
         expect(screen.getByRole('button', { name: 'Delete 0 annotations' })).toBeDisabled();
     });
 });

@@ -21,10 +21,7 @@ vi.mock('$lib/hooks', () => ({
     useBulkDeleteAnnotations: () => ({
         deleteAnnotations: mocks.deleteAnnotations,
         isPending: readable(false)
-    })
-}));
-
-vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    }),
     useGlobalStorage: () => ({
         isEditingMode: mocks.isEditingMode,
         selectedSampleAnnotationCropIds: readable({ 'col-1': new Set(['a', 'b']) }),
@@ -59,6 +56,12 @@ describe('DeleteAnnotations', () => {
 
         expect(screen.getByRole('button', { name: 'Delete 2 annotations' })).toBeInTheDocument();
         expect(mocks.hasMinimumRole).toHaveBeenCalledWith('labeler', 'labeler');
+    });
+
+    it('disables the button while another update is pending', () => {
+        render(DeleteAnnotations, { props: { collectionId: 'col-1', disabled: true } });
+
+        expect(screen.getByRole('button', { name: 'Delete 2 annotations' })).toBeDisabled();
     });
 
     it('hides the button below the labeler role', () => {

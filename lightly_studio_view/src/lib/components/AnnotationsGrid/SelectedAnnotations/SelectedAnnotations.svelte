@@ -46,7 +46,7 @@
                             <LabelNotFound label={inputValue} />
                         {/snippet}
                     </SelectList>
-                    <DeleteAnnotations {collectionId} />
+                    <DeleteAnnotations {collectionId} disabled={isLoading} />
                 </div>
             </Segment>
         </div>
