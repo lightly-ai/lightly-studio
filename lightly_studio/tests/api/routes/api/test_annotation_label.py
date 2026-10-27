@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 from fastapi.testclient import TestClient
 from sqlmodel import Session, select
@@ -229,6 +229,6 @@ def test_delete_annotation_label__marks_evaluation_runs_stale(
 
 
 def test_delete_annotation_label__not_found(test_client: TestClient) -> None:
-    result = test_client.delete(f"/api/annotation_labels/{uuid4()!s}")
+    result = test_client.delete(f"/api/annotation_labels/{uuid.uuid4()!s}")
 
     assert result.status_code == HTTP_STATUS_NOT_FOUND

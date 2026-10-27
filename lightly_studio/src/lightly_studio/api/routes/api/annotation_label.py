@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
@@ -134,10 +135,7 @@ def delete_annotation_label(
 ) -> dict[str, str]:
     """Delete an annotation label and all annotations that use it."""
     if annotation_label_resolver.get_by_id(session=session, label_id=label_id) is None:
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail="Annotation label not found",
-        )
+        raise NotFoundError("Annotation label not found")
     annotations_service.delete_annotations_by_ids(
         session=session,
         annotation_ids=annotation_resolver.get_ids_by_label_id(session=session, label_id=label_id),
