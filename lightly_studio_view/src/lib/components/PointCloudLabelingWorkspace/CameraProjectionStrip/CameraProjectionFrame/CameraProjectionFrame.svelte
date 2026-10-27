@@ -2,8 +2,30 @@
     import { Camera } from '@lucide/svelte';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
     import CameraProjectionDialog from './CameraProjectionDialog.svelte';
-    import type { CameraProjectionFrameProps } from './cameraProjectionFrameProps';
+    import type {
+        AnnotationView,
+        CameraProjectionView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer';
+    import type { ProjectionSettings } from '../projectionSettings';
+    import type { AnnotationClassColor } from '../projectionOverlay';
     import { useCameraFrame } from './useCameraFrame/useCameraFrame.svelte';
+    interface Props {
+        datasetId: string;
+        recordingId?: string;
+        channelId: number;
+        keyframeTimestampNs?: string;
+        logTimeNs?: string;
+        blob?: Blob;
+        label: string;
+        batch?: PointBatch;
+        annotations?: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
+        projection?: CameraProjectionView;
+        onPlaybackToggle?: () => void;
+        projectionSettings?: ProjectionSettings;
+        onProjectionSettingsChange?: (settings: ProjectionSettings) => void;
+    }
     let {
         datasetId,
         recordingId,
@@ -19,7 +41,7 @@
         onPlaybackToggle,
         projectionSettings,
         onProjectionSettingsChange
-    }: CameraProjectionFrameProps = $props();
+    }: Props = $props();
 
     let isEnlarged = $state(false);
     const frame = useCameraFrame(() => ({

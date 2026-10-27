@@ -79,7 +79,7 @@ describe('fitCameraToBounds', () => {
 
         fitCameraToBounds(camera, undefined, bounds, 'top');
 
-        expect(camera.position.toArray()).toEqual([10, 5, 42]);
+        expect(camera.position.toArray()).toEqual([10, 5, 44]);
         expect(camera.zoom).toBeCloseTo(0.09);
     });
 
@@ -90,7 +90,7 @@ describe('fitCameraToBounds', () => {
 
         fitCameraToBounds(camera, controls as never, bounds, 'front');
 
-        expect(camera.position.toArray()).toEqual([2, -10, 5]);
+        expect(camera.position.toArray()).toEqual([2, -20, 5]);
         expect(controls.target.toArray()).toEqual([2, 10, 5]);
         expect(camera.zoom).toBeCloseTo(0.18);
     });

@@ -60,7 +60,8 @@ function fitOrthographicCameraToBounds(
     const projectedHeight = mode === 'top' ? size.y : size.z;
     const aspect = Number.isFinite(viewportAspect) && viewportAspect > 0 ? viewportAspect : 1;
     const projectedExtent = Math.max(projectedHeight, projectedWidth / aspect, 1);
-    const distance = projectedExtent * 2;
+    const depthExtent = mode === 'top' ? size.z : mode === 'side' ? size.x : size.y;
+    const distance = depthExtent / 2 + projectedExtent * 2;
     const direction = {
         top: [0, 0, 1],
         side: [1, 0, 0],

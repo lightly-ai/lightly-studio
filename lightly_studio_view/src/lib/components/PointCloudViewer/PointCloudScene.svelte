@@ -4,8 +4,28 @@
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
     import SceneCamera from './SceneCamera/SceneCamera.svelte';
-    import type { PointCloudSceneProps } from './pointCloudSceneProps';
+    import type { ColorMode } from './pointCloudUtils';
+    import type { PointBatch } from './types';
+    import type {
+        CameraMode,
+        WorkspaceTool
+    } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { SceneViewState } from './sceneViewState';
     import { useSceneCameraNavigation } from './useSceneCameraNavigation/useSceneCameraNavigation.svelte';
+    interface Props {
+        batch: PointBatch;
+        colorMode?: ColorMode;
+        pointSize?: number;
+        intensityRange?: [number, number];
+        fitKey?: string;
+        activeTool?: WorkspaceTool;
+        cameraMode?: CameraMode;
+        isScaleSource?: boolean;
+        isActive?: () => boolean;
+        navigationId?: symbol;
+        viewState?: SceneViewState | null;
+        onViewStateChange?: (viewState: SceneViewState) => void;
+    }
     let {
         batch,
         colorMode = 'none',
@@ -19,7 +39,7 @@
         navigationId,
         viewState = null,
         onViewStateChange
-    }: PointCloudSceneProps = $props();
+    }: Props = $props();
 
     let activeCamera = $state<PerspectiveCamera | OrthographicCamera>();
     let controlsRef = $state<OrbitControls>();

@@ -2,13 +2,31 @@
     import { untrack } from 'svelte';
     import { useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
-    import type { CuboidLayerProps } from './cuboidLayerProps';
+    import type * as Domain from '../domain';
+    import type { createCuboidTransformState } from './cuboidTransformState';
     import { GroundPlaneClickTarget } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
     import CuboidItem from './CuboidItem/CuboidItem.svelte';
     import { provideCuboidLayerContext } from './cuboidLayerContext';
     import { createCuboidHoverTracker } from './cuboidHoverTracker';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners } from './cuboidSelection';
+
+    interface Props {
+        cuboids: readonly Domain.CuboidAnnotation[];
+        annotationClasses: readonly Domain.AnnotationClass[];
+        transforms: ReturnType<typeof createCuboidTransformState>;
+        selectedAnnotationId?: string | null;
+        hoveredAnnotationId?: string | null;
+        activeTool?: Domain.WorkspaceTool;
+        cameraMode?: Domain.CameraMode;
+        groundPlaneBounds: Domain.Bounds3;
+        onselect?: (annotationId: string | null) => void;
+        onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
+        onCreateCuboid?: (position: Domain.Vector3) => void;
+        onCuboidTransform?: (
+            payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
+        ) => void;
+    }
 
     interactivity();
 
@@ -25,7 +43,7 @@
         onhover,
         onCreateCuboid,
         onCuboidTransform
-    }: CuboidLayerProps = $props();
+    }: Props = $props();
 
     const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);

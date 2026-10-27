@@ -2,8 +2,26 @@
     import { T, useThrelte } from '@threlte/core';
     import { onDestroy, untrack } from 'svelte';
     import { createPointCloudBuffer } from '../pointCloudBuffer';
-    import type { PointCloudPointsProps } from './pointCloudPointsProps';
+    import type { OrthographicCamera, PerspectiveCamera } from 'three';
+    import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    import type { ColorMode } from '../pointCloudUtils';
+    import type { PointBatch } from '../types';
+    import type { CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { SceneViewState } from '../sceneViewState';
     import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
+    interface Props {
+        batch: PointBatch;
+        colorMode: ColorMode;
+        pointSize: number;
+        intensityRange?: [number, number];
+        fitKey?: string;
+        camera?: PerspectiveCamera | OrthographicCamera;
+        controls?: OrbitControls;
+        cameraMode?: CameraMode;
+        isScaleSource?: boolean;
+        viewState?: SceneViewState | null;
+        onViewStateChange?: (viewState: SceneViewState) => void;
+    }
     let {
         batch,
         colorMode,
@@ -16,7 +34,7 @@
         isScaleSource = false,
         viewState = null,
         onViewStateChange
-    }: PointCloudPointsProps = $props();
+    }: Props = $props();
 
     const { invalidate } = useThrelte();
     const pointCloudBuffer = createPointCloudBuffer();

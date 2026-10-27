@@ -1,5 +1,5 @@
 <script lang="ts">
-    import PointCloudWorkspaceScene from './PointCloudWorkspaceScene.svelte';
+    import PointCloudWorkspaceScene from './PointCloudWorkspaceScene/PointCloudWorkspaceScene.svelte';
     import { providePointCloudWorkspaceLayoutContext } from './pointCloudWorkspaceLayoutContext.svelte';
     import type { PointCloudWorkspaceLayoutState } from './pointCloudWorkspaceLayoutContext.svelte';
 

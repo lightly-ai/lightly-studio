@@ -1,11 +1,11 @@
 <script lang="ts">
-    import WorkspaceStatusPanel from './WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
-    import WorkspaceSceneHeader from './WorkspaceSceneHeader/WorkspaceSceneHeader.svelte';
-    import WorkspaceViewport from './WorkspaceViewport/WorkspaceViewport.svelte';
-    import OrthographicProjectionStrip from './OrthographicProjectionStrip/OrthographicProjectionStrip.svelte';
-    import { usePointCloudWorkspaceLayoutContext } from './pointCloudWorkspaceLayoutContext.svelte';
-    import { provideWorkspaceSceneLayout } from './workspaceSceneLayoutContext.svelte';
-    import { provideActiveViewportContext } from './SceneViewport/activeViewportContext';
+    import WorkspaceStatusPanel from '../WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
+    import WorkspaceSceneHeader from '../WorkspaceSceneHeader/WorkspaceSceneHeader.svelte';
+    import WorkspaceViewport from '../WorkspaceViewport/WorkspaceViewport.svelte';
+    import OrthographicProjectionStrip from '../OrthographicProjectionStrip/OrthographicProjectionStrip.svelte';
+    import { usePointCloudWorkspaceLayoutContext } from '../pointCloudWorkspaceLayoutContext.svelte';
+    import { provideWorkspaceSceneLayout } from '../workspaceSceneLayoutContext.svelte';
+    import { provideActiveViewportContext } from '../SceneViewport/activeViewportContext';
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
     const scene = provideWorkspaceSceneLayout(getLayout);

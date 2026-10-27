@@ -1,5 +1,10 @@
 <script lang="ts">
-    import type { CameraProjectionStripProps } from './cameraProjectionStripProps';
+    import type {
+        ChannelSummaryView,
+        AnnotationView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer';
+    import type { AnnotationClassColor } from './projectionOverlay';
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import ProjectionControls from './ProjectionControls.svelte';
@@ -7,6 +12,22 @@
     import { Button } from '$lib/components';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
     import WorkspacePanelHeader from '../WorkspacePanelHeader/WorkspacePanelHeader.svelte';
+
+    interface Props {
+        datasetId: string;
+        sequenceId: string;
+        seqNumber: number;
+        displayFrameId?: string;
+        cameraChannels: ChannelSummaryView[];
+        selectedChannelIds: number[];
+        batch?: PointBatch;
+        annotations?: readonly AnnotationView[];
+        annotationClasses?: readonly AnnotationClassColor[];
+        canProject?: boolean;
+        onPlaybackToggle?: () => void;
+        collapsed?: boolean;
+        onToggleCollapsed?: () => void;
+    }
 
     let {
         datasetId,
@@ -22,7 +43,7 @@
         onPlaybackToggle,
         collapsed = false,
         onToggleCollapsed
-    }: CameraProjectionStripProps = $props();
+    }: Props = $props();
     const projectionSettings = useProjectionSettings();
 
     const { tickDetails } = useTickDetails({

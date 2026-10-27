@@ -5,7 +5,17 @@
     import { Slider } from '$lib/components/ui/slider';
     import * as Popover from '$lib/components/ui/popover';
 
-    import type { SceneViewSettingsProps } from './sceneViewSettingsProps';
+    interface Props {
+        showOrthographicViews: boolean;
+        pointSize: number;
+        showNavigationHelpers: boolean;
+        showAnnotationTooltips: boolean;
+        disabled?: boolean;
+        onToggle: (showOrthographicViews: boolean) => void;
+        onPointSizeChange: (pointSize: number) => void;
+        onToggleNavigationHelpers: (show: boolean) => void;
+        onToggleAnnotationTooltips: (show: boolean) => void;
+    }
 
     let {
         showOrthographicViews,
@@ -17,7 +27,7 @@
         onPointSizeChange,
         onToggleNavigationHelpers,
         onToggleAnnotationTooltips
-    }: SceneViewSettingsProps = $props();
+    }: Props = $props();
     let open = $state(false);
 </script>
 

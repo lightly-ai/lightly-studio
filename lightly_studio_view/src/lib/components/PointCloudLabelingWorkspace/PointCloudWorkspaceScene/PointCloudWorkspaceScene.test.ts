@@ -1,11 +1,11 @@
 import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import { expect, it, vi } from 'vitest';
-import type { PointCloudWorkspaceLayoutState } from './pointCloudWorkspaceLayoutContext.svelte';
-import WorkspaceSceneProviderHarness from './WorkspaceSceneProviderHarness.svelte';
-import { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
+import type { PointCloudWorkspaceLayoutState } from '../pointCloudWorkspaceLayoutContext.svelte';
+import WorkspaceSceneProviderHarness from '../WorkspaceSceneProviderHarness.svelte';
+import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 
-vi.mock('./SceneViewport/SceneViewport.svelte', async () => ({
-    default: (await import('./SceneViewport/SceneViewportContentHarness.svelte')).default
+vi.mock('../SceneViewport/SceneViewport.svelte', async () => ({
+    default: (await import('../SceneViewport/SceneViewportContentHarness.svelte')).default
 }));
 
 type Props = PointCloudWorkspaceLayoutState;

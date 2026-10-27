@@ -2,7 +2,7 @@
     import { Pane, PaneGroup, PaneResizer } from 'paneforge';
     import CameraProjectionStrip from './CameraProjectionStrip/CameraProjectionStrip.svelte';
     import FrameTimeline from './FrameTimeline/FrameTimeline.svelte';
-    import PointCloudWorkspaceScene from './PointCloudWorkspaceScene.svelte';
+    import PointCloudWorkspaceScene from './PointCloudWorkspaceScene/PointCloudWorkspaceScene.svelte';
     import {
         usePointCloudWorkspaceLayoutContext,
         useWorkspaceControllerContext
