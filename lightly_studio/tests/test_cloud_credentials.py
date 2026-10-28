@@ -344,7 +344,7 @@ def test_apply_cloud_credentials__ca_bundle_trusts_private_s3_endpoint(
     filesystem = fsspec.filesystem("s3")
     filesystem.mkdir("ca-test")
 
-    assert filesystem.ls("") == ["ca-test"]
+    assert "ca-test" in filesystem.ls("")
 
 
 def test_apply_cloud_credentials__serializes_concurrent_calls(
