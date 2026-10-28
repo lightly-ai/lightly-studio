@@ -79,7 +79,7 @@
             cameraMode === 'perspective'
                 ? $annotations
                 : $annotations.filter(({ id }) => id === selectedAnnotationId);
-        const next = createCuboidRenderItems(visibleAnnotations);
+        const next = createCuboidRenderItems(visibleAnnotations, cameraMode);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);
     });

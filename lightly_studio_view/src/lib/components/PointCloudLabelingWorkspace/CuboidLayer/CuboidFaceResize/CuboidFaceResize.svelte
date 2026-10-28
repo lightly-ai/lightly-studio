@@ -39,25 +39,32 @@
     {@const { position, planeSize } = getCuboidFaceLayout({ face, size: annotation.size })}
 
     <!-- Invisible hit-test plane: always raycasted, owns all pointer events -->
-    <T.Mesh
-        {position}
-        rotation={[...face.euler]}
-        onpointerenter={(event: IntersectionEvent<PointerEvent>) => {
-            event.stopPropagation();
-            onFaceHoverEnter(face);
-        }}
-        onpointerleave={onFaceHoverLeave}
-        onpointerdown={(event: IntersectionEvent<PointerEvent>) => {
-            event.stopPropagation();
-            onFacePointerDown({ event, face });
-        }}
-    >
-        <T.PlaneGeometry args={planeSize} />
-        <T.MeshBasicMaterial opacity={0} transparent={true} depthWrite={false} side={DoubleSide} />
-    </T.Mesh>
+    {#if cameraMode === 'perspective'}
+        <T.Mesh
+            {position}
+            rotation={[...face.euler]}
+            onpointerenter={(event: IntersectionEvent<PointerEvent>) => {
+                event.stopPropagation();
+                onFaceHoverEnter(face);
+            }}
+            onpointerleave={onFaceHoverLeave}
+            onpointerdown={(event: IntersectionEvent<PointerEvent>) => {
+                event.stopPropagation();
+                onFacePointerDown({ event, face });
+            }}
+        >
+            <T.PlaneGeometry args={planeSize} />
+            <T.MeshBasicMaterial
+                opacity={0}
+                transparent={true}
+                depthWrite={false}
+                side={DoubleSide}
+            />
+        </T.Mesh>
+    {/if}
 
     <!-- Visible highlight: raycast disabled so it never steals events from adjacent faces -->
-    {#if $hoveredFace === face}
+    {#if cameraMode === 'perspective' && $hoveredFace === face}
         <T.Mesh {position} rotation={[...face.euler]} raycast={() => {}}>
             <T.PlaneGeometry args={planeSize} />
             <T.MeshBasicMaterial

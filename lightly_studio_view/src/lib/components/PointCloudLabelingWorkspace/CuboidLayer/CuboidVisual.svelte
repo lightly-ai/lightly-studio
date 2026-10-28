@@ -46,6 +46,12 @@
     const volume = $derived(
         item.annotation.size[0] * item.annotation.size[1] * item.annotation.size[2]
     );
+    // Orthographic views fill only the flattened rectangle, so the depth extent collapses.
+    const fillSize = $derived.by(() => {
+        const size: [number, number, number] = [...item.annotation.size];
+        if (item.depthAxis !== null) size[item.depthAxis] = 0.001;
+        return size;
+    });
     const showFill = $derived(isHovered || isSelected);
 
     function onClick(): void {
@@ -61,7 +67,7 @@
     </T>
     {#if showFill}
         <T.Mesh>
-            <T.BoxGeometry args={[...item.annotation.size]} />
+            <T.BoxGeometry args={fillSize} />
             <T.MeshBasicMaterial
                 color={baseColor}
                 opacity={0.25}

@@ -24,10 +24,10 @@ describe('computeHandleScale', () => {
             orthographicSpan: 8
         };
         const scale = computeHandleScale({ ...params, cameraDistance: 10 });
-        expect(scale).toEqual([1, 1, 1]);
+        expect(scale).toEqual([2, 2, 2]);
         expect(computeHandleScale({ ...params, cameraDistance: 1000 })).toEqual(scale);
         expect(computeHandleScale({ ...params, cameraDistance: 10, orthographicSpan: 4 })).toEqual([
-            0.5, 0.5, 0.5
+            1, 1, 1
         ]);
     });
     // fov=60°, tan(30°) ≈ 0.57735

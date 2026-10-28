@@ -1,6 +1,9 @@
 /** Overall size factor — same meaning as TransformControls `size`. */
 export const HANDLE_SIZE = 0.5;
 
+/** Size factor for orthographic views, where handles need to be larger to grab. */
+export const ORTHOGRAPHIC_HANDLE_SIZE = 1;
+
 /**
  * Maps handle-local X and Y axes to the parent-space scale component that stretches them.
  * Derived from the euler rotations in FACE_DEFINITIONS:
@@ -47,7 +50,8 @@ export function computeHandleScale({
         orthographicSpan === undefined
             ? Math.min(cameraDistance * Math.tan((Math.PI / 180) * (fov / 2)), 7)
             : orthographicSpan / 4;
-    const base = eyeDistance * HANDLE_SIZE;
+    const base =
+        eyeDistance * (orthographicSpan === undefined ? HANDLE_SIZE : ORTHOGRAPHIC_HANDLE_SIZE);
     const [xIdx, yIdx] = PERP_SCALE_INDICES[axisIndex];
     const sz = base / (parentScale[axisIndex] > 0 ? parentScale[axisIndex] : 1);
     const sx = base / (parentScale[xIdx] > 0 ? parentScale[xIdx] : 1);

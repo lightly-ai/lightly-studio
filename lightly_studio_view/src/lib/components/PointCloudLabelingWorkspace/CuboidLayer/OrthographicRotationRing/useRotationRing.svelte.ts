@@ -73,7 +73,8 @@ export function useRotationRing(params: Params) {
 
     function onPointerUp(event: PointerEvent): void {
         if (event.pointerId !== drag?.pointerId) return;
-        event.stopImmediatePropagation();
+        // Let the event reach the orbit controls' document listener so they drop the
+        // pointer they started tracking on pointerdown.
         update(event);
         finish(false);
     }
