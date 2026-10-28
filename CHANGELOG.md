@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Databases created on Python 3.15 retain a storage format readable on earlier supported Python versions.
+
 - On Python 3.11 and later, few-shot classifiers now use scikit-learn 1.9.1. Retrain classifiers exported with older scikit-learn versions before importing them. Python 3.10 keeps scikit-learn 1.7.2.
 
 - Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.

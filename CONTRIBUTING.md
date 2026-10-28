@@ -230,6 +230,18 @@ uv run --no-group cpu --group gpu python src/lightly_studio/examples/example.py
 Pass both flags to each `uv sync` or `uv run` command. Otherwise uv selects the default
 CPU group again. The pinned uv version does not support a `UV_GROUP` environment variable.
 
+For Make workflows, select the same group with `TORCH_GROUP=gpu`:
+
+```shell
+make TORCH_GROUP=gpu install-optional-deps
+make TORCH_GROUP=gpu start
+make TORCH_GROUP=gpu test
+```
+
+Pass this option to each Make invocation, or export `TORCH_GROUP=gpu` in your shell.
+It forwards both group flags to the application's `uv sync` and `uv run` commands,
+including shared static checks and the schema/version exports used during builds.
+
 On Python 3.15, this selects CUDA 13.0 wheels. CUDA support is experimental and
 requires a compatible NVIDIA driver.
 
