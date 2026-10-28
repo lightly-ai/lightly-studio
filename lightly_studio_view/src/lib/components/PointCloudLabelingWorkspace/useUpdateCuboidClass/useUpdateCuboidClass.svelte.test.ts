@@ -42,7 +42,8 @@ describe('useUpdateCuboidClass', () => {
 
         const pending = useUpdateCuboidClass(defaultParams).handleLabelChange(
             'annotation-1',
-            'car'
+            'car',
+            'annotation-collection-1'
         );
 
         expect(updateAnnotations).toHaveBeenCalledWith([
@@ -73,7 +74,11 @@ describe('useUpdateCuboidClass', () => {
             queryClient.setQueryData(key, { annotations: [] });
         }
 
-        await useUpdateCuboidClass(defaultParams).handleLabelChange('annotation-1', 'car');
+        await useUpdateCuboidClass(defaultParams).handleLabelChange(
+            'annotation-1',
+            'car',
+            'annotation-collection-1'
+        );
 
         for (const key of affectedKeys) {
             expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
@@ -101,7 +106,7 @@ describe('useUpdateCuboidClass', () => {
         });
         queryClient.setQueryData(key, { annotations: [] });
 
-        await handleLabelChange('annotation-2', 'pedestrian');
+        await handleLabelChange('annotation-2', 'pedestrian', 'annotation-collection-2');
 
         expect(updateAnnotations).toHaveBeenCalledWith([
             {
@@ -113,15 +118,24 @@ describe('useUpdateCuboidClass', () => {
         expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
     });
 
-    it('invalidates the annotation labels for the affected collection', async () => {
-        const key = readAnnotationLabelsOptions({
+    it('invalidates annotation labels for the cuboid annotation collection, not the group collection', async () => {
+        const annotationCollectionKey = readAnnotationLabelsOptions({
+            path: { collection_id: 'annotation-collection-1' }
+        }).queryKey;
+        const groupCollectionKey = readAnnotationLabelsOptions({
             path: { collection_id: 'collection-1' }
         }).queryKey;
-        queryClient.setQueryData(key, []);
+        queryClient.setQueryData(annotationCollectionKey, []);
+        queryClient.setQueryData(groupCollectionKey, []);
 
-        await useUpdateCuboidClass(defaultParams).handleLabelChange('annotation-1', 'car');
+        await useUpdateCuboidClass(defaultParams).handleLabelChange(
+            'annotation-1',
+            'car',
+            'annotation-collection-1'
+        );
 
-        expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+        expect(queryClient.getQueryState(annotationCollectionKey)?.isInvalidated).toBe(true);
+        expect(queryClient.getQueryState(groupCollectionKey)?.isInvalidated).toBe(false);
     });
 
     it('reports a failed save without invalidating cached ticks or refreshing', async () => {
@@ -129,7 +143,11 @@ describe('useUpdateCuboidClass', () => {
         const key = getTickDetailsQueryKey({ path });
         queryClient.setQueryData(key, { annotations: [] });
 
-        await useUpdateCuboidClass(defaultParams).handleLabelChange('annotation-1', 'car');
+        await useUpdateCuboidClass(defaultParams).handleLabelChange(
+            'annotation-1',
+            'car',
+            'annotation-collection-1'
+        );
 
         expect(toast.error).toHaveBeenCalledExactlyOnceWith(
             'Failed to update annotation class. Please try again.'
@@ -141,7 +159,11 @@ describe('useUpdateCuboidClass', () => {
     it('reports a failed refresh after saving the class', async () => {
         onUpdated.mockRejectedValue(new Error('refresh failed'));
 
-        await useUpdateCuboidClass(defaultParams).handleLabelChange('annotation-1', 'car');
+        await useUpdateCuboidClass(defaultParams).handleLabelChange(
+            'annotation-1',
+            'car',
+            'annotation-collection-1'
+        );
 
         expect(updateAnnotations).toHaveBeenCalledOnce();
         expect(toast.error).toHaveBeenCalledExactlyOnceWith(

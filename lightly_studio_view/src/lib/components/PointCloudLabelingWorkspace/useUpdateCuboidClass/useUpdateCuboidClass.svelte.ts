@@ -11,7 +11,11 @@ interface Params {
 }
 
 interface UseUpdateCuboidClassReturn {
-    handleLabelChange: (annotationId: string, className: string) => Promise<void>;
+    handleLabelChange: (
+        annotationId: string,
+        className: string,
+        annotationSourceId: string
+    ) => Promise<void>;
 }
 
 /** Saves an annotation class and refreshes all cached ticks for its object track. */
@@ -26,7 +30,11 @@ export function useUpdateCuboidClass({
     });
     const queryClient = useQueryClient();
 
-    async function handleLabelChange(annotationId: string, className: string): Promise<void> {
+    async function handleLabelChange(
+        annotationId: string,
+        className: string,
+        annotationSourceId: string
+    ): Promise<void> {
         try {
             await updateAnnotations([
                 {
@@ -47,7 +55,7 @@ export function useUpdateCuboidClass({
         });
         void queryClient.invalidateQueries({
             queryKey: readAnnotationLabelsOptions({
-                path: { collection_id: getCollectionId() ?? '' }
+                path: { collection_id: annotationSourceId }
             }).queryKey
         });
         try {

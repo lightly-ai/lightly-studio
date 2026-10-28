@@ -23,7 +23,11 @@
         /** Called when the user commits a geometry change in the detail panel. */
         onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
         /** Called when the user selects a new annotation class for this cuboid. */
-        onLabelChange?: (annotationId: string, labelName: string) => void;
+        onLabelChange?: (
+            annotationId: string,
+            labelName: string,
+            annotationSourceId: string
+        ) => void;
         /** Deletes this cuboid annotation. */
         onDelete?: (cuboidId: string) => void;
     }
@@ -67,7 +71,8 @@
         {isSelected}
         {editable}
         onToggle={() => onToggle(cuboid.id)}
-        onLabelChange={(className) => onLabelChange?.(cuboid.id, className)}
+        onLabelChange={(className) =>
+            onLabelChange?.(cuboid.id, className, cuboid.annotationSourceId)}
         onDelete={onDelete ? () => onDelete(cuboid.id) : undefined}
     />
     {#if isSelected}
