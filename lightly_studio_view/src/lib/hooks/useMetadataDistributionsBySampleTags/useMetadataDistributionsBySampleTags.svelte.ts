@@ -5,10 +5,16 @@ import type {
     MetadataValueCountsView
 } from '$lib/api/lightly_studio_local';
 import {
+    getImageHistogramsOptions,
     getMetadataHistogramsOptions,
     getMetadataValueCountsOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { selectCategoricalDistributions } from '$lib/hooks/useCategoricalMetadataDistribution';
+import {
+    getImageFieldHistogramRequestOptions,
+    selectImageFieldDistributions,
+    type ImageField
+} from '$lib/hooks/useImageFieldDistribution';
 import { selectDistributions } from '$lib/hooks/useNumericMetadataDistribution';
 
 interface SampleTagItem {
@@ -16,10 +22,10 @@ interface SampleTagItem {
     label: string;
 }
 
-interface MetadataComparisonField {
-    name: string;
-    type: 'numeric' | 'categorical';
-}
+/** A user metadata key, or an image field such as the width. */
+type MetadataComparisonField =
+    | { name: string; type: 'numeric' | 'categorical' }
+    | { name: ImageField; type: 'image' };
 
 /** An image or video filter, tagged with its `filter_type`. */
 type MetadataDistributionFilter = NonNullable<MetadataHistogramsRequest['filters']>;
@@ -92,6 +98,20 @@ const buildSampleTagQueries = ({
     if (!field) return [];
 
     return sampleTags.map(({ id }) => {
+        if (field.type === 'image') {
+            const tagFilter = withSampleTagFilter(filter, id);
+            return {
+                ...getImageHistogramsOptions(
+                    getImageFieldHistogramRequestOptions({
+                        collectionId,
+                        filter: tagFilter.filter_type === 'image' ? tagFilter : undefined,
+                        binCount,
+                        fields: [field.name]
+                    })
+                ),
+                enabled
+            };
+        }
         const body = {
             filters: withSampleTagFilter(filter, id),
             fields: [field.name]
@@ -109,6 +129,17 @@ const buildSampleTagQueries = ({
             enabled
         };
     });
+};
+
+/** Histograms keyed by distribution group ID. */
+const selectHistograms = (field: MetadataComparisonField, response: unknown) => {
+    if (field.type === 'image') {
+        return selectImageFieldDistributions(response as Record<string, HistogramView>);
+    }
+    if (field.type === 'numeric') {
+        return selectDistributions(response as Record<string, HistogramView>);
+    }
+    return {};
 };
 
 /**
@@ -132,10 +163,7 @@ const combineSampleTagResults = (
         return [
             {
                 ...tag,
-                histograms:
-                    field.type === 'numeric'
-                        ? selectDistributions(response as Record<string, HistogramView>)
-                        : {},
+                histograms: selectHistograms(field, response),
                 categorical:
                     field.type === 'categorical'
                         ? selectCategoricalDistributions(
