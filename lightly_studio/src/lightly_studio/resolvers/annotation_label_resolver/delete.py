@@ -15,6 +15,9 @@ def delete(session: Session, label_id: UUID) -> bool:
     """Delete an annotation label and its evaluation class metrics.
 
     The delete is not atomic. It commits twice: after the class metrics and after the label.
+    The label must have no annotations, so delete them first, for example with
+    ``annotation_resolver.delete_annotations``. Otherwise the label delete fails after its
+    class metrics are already deleted.
 
     Args:
         session (Session): The database session.
