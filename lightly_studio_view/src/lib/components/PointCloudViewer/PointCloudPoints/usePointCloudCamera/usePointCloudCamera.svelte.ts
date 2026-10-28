@@ -22,11 +22,9 @@ export function usePointCloudCamera(
     const fitKey = $derived(getOptions().fitKey ?? '');
     const cameraMode = $derived(getOptions().cameraMode ?? 'perspective');
     const cameraCuboid = $derived(getOptions().cameraCuboid);
-    // Resizing and translating the same annotation must not reset camera navigation.
+    // Keep the selection-time camera frame fixed throughout annotation edits.
     const cuboidFrameKey = $derived(
-        cameraCuboid
-            ? JSON.stringify([cameraCuboid.id, cameraCuboid.frameId, cameraCuboid.rotation])
-            : undefined
+        cameraCuboid ? JSON.stringify([cameraCuboid.id, cameraCuboid.frameId]) : undefined
     );
     const isScaleSource = $derived(getOptions().isScaleSource ?? false);
     const viewState = $derived(getOptions().viewState);

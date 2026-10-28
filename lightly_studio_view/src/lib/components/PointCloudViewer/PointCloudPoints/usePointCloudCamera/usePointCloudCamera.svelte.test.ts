@@ -1,6 +1,6 @@
 import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { Box3, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
+import { Box3, OrthographicCamera, PerspectiveCamera, Quaternion, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { usePointCloudCamera } from './usePointCloudCamera.svelte';
 import { getCameraWorldUnitsPerPixel } from '../../sceneViewState';
@@ -218,7 +218,69 @@ describe('independent object cameras', () => {
         }
     );
 
-    it('follows cuboid selection and rotation while keeping navigation local', () => {
+    it.each(['top', 'front', 'side'] as const)(
+        'preserves %s magnification when rotating after a resize and saving again',
+        (cameraMode) => {
+            const cuboid = createAnnotationFixture();
+            const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
+            const { options, controls, resize } = setup({
+                camera,
+                cameraMode,
+                cameraCuboid: cuboid,
+                isScaleSource: false
+            });
+            camera.zoom *= 1.7;
+            const zoom = camera.zoom;
+            const target = controls.target.clone();
+            const span = getCameraWorldUnitsPerPixel(camera, target, 240);
+            const direction = camera.getWorldDirection(new Vector3());
+            const rotation = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), 0.6);
+            const resized = { ...cuboid, center: [11, -2, 1] as const, size: [8, 3, 2] as const };
+            for (const annotation of [
+                resized,
+                { ...resized, rotation: rotation.toArray() },
+                {
+                    ...resized,
+                    rotation: rotation.toArray().map((value) => -value) as [
+                        number,
+                        number,
+                        number,
+                        number
+                    ]
+                }
+            ]) {
+                options.cameraCuboid = annotation;
+                flushSync();
+                resize();
+                controls.update();
+                expect(camera.zoom).toBeCloseTo(zoom);
+                expect(getCameraWorldUnitsPerPixel(camera, controls.target, 240)).toBeCloseTo(
+                    span!
+                );
+                expect(controls.target.distanceTo(target)).toBeCloseTo(0);
+            }
+            expect(camera.getWorldDirection(new Vector3()).distanceTo(direction)).toBeCloseTo(0);
+        }
+    );
+
+    it('keeps the rotated cuboid at the same screen coordinates when the drag is committed', () => {
+        const cuboid = createAnnotationFixture();
+        const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
+        const { options, controls } = setup({ camera, cameraMode: 'top', cameraCuboid: cuboid });
+        const rotation = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), 0.6);
+        const corner = new Vector3(2, 1, 1)
+            .applyQuaternion(rotation)
+            .add(new Vector3(...cuboid.center));
+        camera.updateMatrixWorld();
+        const preview = corner.clone().project(camera);
+        options.cameraCuboid = { ...cuboid, rotation: rotation.toArray() };
+        flushSync();
+        controls.update();
+        camera.updateMatrixWorld();
+        expect(corner.clone().project(camera).distanceTo(preview)).toBeCloseTo(0);
+    });
+
+    it('aligns new selections while keeping navigation local', () => {
         const cuboid = createAnnotationFixture();
         const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
         const { options, controls, viewport, resize } = setup({
@@ -241,6 +303,7 @@ describe('independent object cameras', () => {
         viewport.width = 0;
         options.cameraCuboid = {
             ...cuboid,
+            id: 'another-cuboid',
             center: [20, 5, 3],
             rotation: [0, 0, Math.SQRT1_2, Math.SQRT1_2]
         };
