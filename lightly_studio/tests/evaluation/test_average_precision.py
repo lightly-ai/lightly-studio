@@ -9,10 +9,12 @@ import pytest
 from lightly_studio.evaluation import average_precision
 from lightly_studio.evaluation.average_precision import ClassAveragePrecision
 from lightly_studio.evaluation.object_detection_metric import BoundingBox
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricTable
 
 CAT = uuid4()
 DOG = uuid4()
 LABEL_NAMES = {CAT: "cat", DOG: "dog"}
+RUN_ID = uuid4()
 
 
 def test_compute__perfect_detection_has_ap_one() -> None:
@@ -175,6 +177,53 @@ def test_config_override(
     )
 
 
+def test_by_label_and_threshold() -> None:
+    rows = [
+        *(
+            _class_metric(label_id=label_id, iou_threshold=threshold, value=value)
+            for label_id, value in ((CAT, 0.8), (DOG, 0.2))
+            for threshold in (0.5, 0.75)
+        ),
+        EvaluationClassMetricTable(
+            evaluation_run_id=RUN_ID, annotation_label_id=CAT, metric_name="iou", value=0.3
+        ),
+    ]
+
+    grouped = average_precision.by_label_and_threshold(
+        class_metrics=rows, run_config={"iou_threshold": 0.5, "classwise": True}
+    )
+
+    # Rows of other metrics, such as "iou", are ignored.
+    assert grouped == {CAT: {0.5: 0.8, 0.75: 0.8}, DOG: {0.5: 0.2, 0.75: 0.2}}
+
+
+def test_by_label_and_threshold__row_without_override_has_the_run_threshold() -> None:
+    rows = [
+        EvaluationClassMetricTable(
+            evaluation_run_id=RUN_ID,
+            annotation_label_id=CAT,
+            metric_name=average_precision.METRIC_NAME,
+            config_override={},
+            value=0.7,
+        )
+    ]
+
+    grouped = average_precision.by_label_and_threshold(
+        class_metrics=rows, run_config={"iou_threshold": 0.75, "classwise": True}
+    )
+
+    assert grouped == {CAT: {0.75: 0.7}}
+
+
+def test_by_label_and_threshold__no_rows() -> None:
+    assert (
+        average_precision.by_label_and_threshold(
+            class_metrics=[], run_config={"iou_threshold": 0.5, "classwise": True}
+        )
+        == {}
+    )
+
+
 def test_coco_iou_thresholds() -> None:
     assert average_precision.COCO_IOU_THRESHOLDS == [
         0.5,
@@ -216,3 +265,15 @@ def _ap_by_label_and_threshold(
         (LABEL_NAMES[result.label_id], result.iou_threshold): result.average_precision
         for result in results
     }
+
+
+def _class_metric(label_id: UUID, iou_threshold: float, value: float) -> EvaluationClassMetricTable:
+    return EvaluationClassMetricTable(
+        evaluation_run_id=RUN_ID,
+        annotation_label_id=label_id,
+        metric_name=average_precision.METRIC_NAME,
+        config_override=average_precision.config_override(
+            iou_threshold=iou_threshold, run_iou_threshold=0.5, run_classwise=True
+        ),
+        value=value,
+    )

@@ -20,7 +20,10 @@ from sqlmodel import Session
 from lightly_studio.evaluation import object_detection_metric
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.evaluation.object_detection_metric import BoundingBox
-from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
+from lightly_studio.models.evaluation_class_metric import (
+    EvaluationClassMetricCreate,
+    EvaluationClassMetricTable,
+)
 from lightly_studio.resolvers import evaluation_class_metric_resolver
 
 # COCO averages average precision over IoU 0.50, 0.55, ..., 0.95.
@@ -114,6 +117,27 @@ def persist(
             for result in results
         ],
     )
+
+
+def by_label_and_threshold(
+    class_metrics: Sequence[EvaluationClassMetricTable], run_config: dict[str, Any]
+) -> dict[UUID, dict[float, float]]:
+    """Group the stored average precision by label ID and IoU threshold.
+
+    Args:
+        class_metrics: The class metrics of one run. Rows of other metrics are ignored.
+        run_config: The run's config. A row's IoU threshold is the one of the run's config
+            with the row's config override applied.
+
+    Returns:
+        The average precision per IoU threshold, for every label with stored values.
+    """
+    grouped: dict[UUID, dict[float, float]] = {}
+    for row in class_metrics:
+        if row.metric_name == METRIC_NAME:
+            threshold = float({**run_config, **row.config_override}["iou_threshold"])
+            grouped.setdefault(row.annotation_label_id, {})[threshold] = row.value
+    return grouped
 
 
 def config_override(
