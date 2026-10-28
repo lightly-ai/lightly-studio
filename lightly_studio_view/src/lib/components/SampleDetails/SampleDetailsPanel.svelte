@@ -245,11 +245,13 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            <ImageAdjustments
-                bind:brightness={$imageBrightness}
-                bind:contrast={$imageContrast}
-                bind:maskOpacity={$maskOpacity}
-            />
+            {#if $isEditingMode}
+                <ImageAdjustments
+                    bind:brightness={$imageBrightness}
+                    bind:contrast={$imageContrast}
+                    bind:maskOpacity={$maskOpacity}
+                />
+            {/if}
         </div>
         <Separator class="bg-border-hard" />
 

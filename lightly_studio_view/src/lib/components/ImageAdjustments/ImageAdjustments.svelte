@@ -30,7 +30,7 @@
 <div class="flex items-center gap-6">
     <AdjustmentSlider label="Brightness" min={0.2} max={2} bind:value={brightness} />
     <AdjustmentSlider label="Contrast" min={0.2} max={2} bind:value={contrast} />
-    <AdjustmentSlider label="Mask opacity" min={0} max={1} bind:value={maskOpacity} />
+    <AdjustmentSlider label="Mask opacity" min={0.1} max={1} bind:value={maskOpacity} />
     <Button
         variant="ghost"
         size="icon"
