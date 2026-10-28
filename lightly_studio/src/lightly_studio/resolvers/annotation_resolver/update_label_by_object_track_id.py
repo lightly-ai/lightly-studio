@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
+from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers.annotation_resolver.get_all_by_object_track_id import (
@@ -40,7 +41,13 @@ def update_label_by_object_track_id(
         session: Database session for executing the operation.
         object_track_id: UUID of the object track whose annotations to update.
         annotation_label_id: UUID of the label to assign to all track annotations.
+
+    Raises:
+        ValueError: If the annotation label does not exist.
     """
+    if session.get(AnnotationLabelTable, annotation_label_id) is None:
+        raise ValueError(f"Annotation label with ID {annotation_label_id} not found.")
+
     all_siblings = get_all_by_object_track_id(session=session, object_track_id=object_track_id)
     siblings = [s for s in all_siblings if s.annotation_label_id != annotation_label_id]
     if not siblings:
@@ -80,9 +87,7 @@ def update_label_by_object_track_id(
             col(Cuboid3DAnnotationTable.sample_id).in_(sibling_ids)
         )
     )
-    session.exec(
-        delete(TemporalSpanTable).where(col(TemporalSpanTable.sample_id).in_(sibling_ids))
-    )
+    session.exec(delete(TemporalSpanTable).where(col(TemporalSpanTable.sample_id).in_(sibling_ids)))
     session.commit()
 
     session.execute(
