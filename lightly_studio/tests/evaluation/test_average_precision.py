@@ -256,6 +256,21 @@ def test_compute__at_most_100_predictions_per_image_and_class() -> None:
     assert _ap_by_label_and_threshold(results=results) == {("cat", 0.5): pytest.approx(51 / 101)}
 
 
+def test_compute__keeps_the_predictions_with_the_highest_confidence() -> None:
+    # 100 low-confidence false positives come before one high-confidence true positive.
+    # Only the cap after sorting by confidence keeps the true positive, so AP is 1.0.
+    gt = [[_box(label_id=CAT, x=0, y=0)]]
+    false_positives = [
+        _box(label_id=CAT, x=30 * (index % 10), y=100 + 30 * (index // 10), confidence=0.1)
+        for index in range(100)
+    ]
+    pred = [[*false_positives, _box(label_id=CAT, x=0, y=0, confidence=0.9)]]
+
+    results = average_precision.compute(gt_per_image=gt, pred_per_image=pred, iou_thresholds=[0.5])
+
+    assert _ap_by_label_and_threshold(results=results) == {("cat", 0.5): pytest.approx(1.0)}
+
+
 def _box(  # noqa: PLR0913
     label_id: UUID,
     x: int,
