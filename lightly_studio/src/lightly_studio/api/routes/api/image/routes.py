@@ -27,7 +27,7 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
-from lightly_studio.resolvers.image_resolver import ImageDimension
+from lightly_studio.resolvers.image_resolver import ImageField
 from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
 )
@@ -119,7 +119,7 @@ def get_image_dimensions(
 
 
 class ReadImageHistogramsRequest(BaseModel):
-    """Request body for computing filtered image width and height histograms."""
+    """Request body for computing filtered histograms of the built-in image fields."""
 
     filters: ImageFilter | None = Field(None, description="Filter parameters for images")
     bin_count: int = Field(
@@ -128,7 +128,7 @@ class ReadImageHistogramsRequest(BaseModel):
         le=200,
         description="Number of equal-width bins per histogram",
     )
-    fields: list[ImageDimension] | None = Field(
+    fields: list[ImageField] | None = Field(
         None, description="Image fields to histogram; all fields are computed when absent"
     )
 
@@ -145,7 +145,7 @@ def get_image_histograms(
     ],
     body: ReadImageHistogramsRequest | None = None,
 ) -> dict[str, HistogramView]:
-    """Compute value-distribution histograms of the image width and height.
+    """Compute value-distribution histograms of the built-in image fields.
 
     Bin edges span the full (unfiltered) value range of each field, so the chart axis stays
     stable. The histogram of a field ignores the filter of that field (faceted-search behavior).
@@ -158,7 +158,7 @@ def get_image_histograms(
     Returns:
         Mapping of field name to its histogram.
     """
-    return image_resolver.get_dimension_histograms(
+    return image_resolver.get_field_histograms(
         session=session,
         collection_id=collection.collection_id,
         filters=body.filters if body else None,
