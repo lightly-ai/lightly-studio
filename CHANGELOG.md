@@ -10,12 +10,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Delete selected annotations in bulk from the annotation grid.
-- Add a "Mask opacity" slider next to Brightness and Contrast in the sample editing view, and a button that resets all three to their defaults.
+- Set the opacity of segmentation masks with the "Mask opacity" slider in the sample details view.
+- Reset brightness, contrast, and mask opacity to their defaults with one button in the sample details view.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 - Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
 
 ### Changed
 
+- The Brightness and Contrast sliders in the sample details view are now also shown outside edit mode.
 - Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
 - Reorganised the settings dialog into a tabbed layout.

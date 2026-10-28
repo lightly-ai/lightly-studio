@@ -85,9 +85,9 @@
         return color;
     });
 
-    const segmentationMaskOpacity = $derived.by(() => {
+    const maskImageOpacity = $derived.by(() => {
         if (highlight === 'disabled') {
-            return 0.15;
+            return 0.25 * maskOpacity;
         }
 
         const alpha = $customLabelColorsStore[colorLabel]?.alpha ?? 1.0;
@@ -156,7 +156,7 @@
             segmentation={segmentationMask}
             width={imageWidth}
             {colorFill}
-            opacity={segmentationMaskOpacity}
+            opacity={maskImageOpacity}
             {prerenderedDataUrl}
             {prerenderedHeight}
         />

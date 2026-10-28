@@ -99,7 +99,7 @@ const setIsEditingMode = (isEditing: boolean) => {
 
 const imageBrightness = writable<number>(IMAGE_ADJUSTMENT_DEFAULTS.brightness);
 const imageContrast = writable<number>(IMAGE_ADJUSTMENT_DEFAULTS.contrast);
-const segmentationMaskOpacity = writable<number>(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity);
+const maskOpacity = writable<number>(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity);
 
 const collections = writable<
     Record<
@@ -428,7 +428,7 @@ export const useGlobalStorage = () => {
 
         imageBrightness,
         imageContrast,
-        segmentationMaskOpacity,
+        maskOpacity,
 
         setCollection,
         retrieveParentCollection,

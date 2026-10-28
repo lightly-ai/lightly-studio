@@ -71,7 +71,7 @@
         lastAnnotationBrushSize,
         imageBrightness,
         imageContrast,
-        segmentationMaskOpacity,
+        maskOpacity,
         toggleSampleAnnotationCropSelection
     } = useGlobalStorage();
 
@@ -245,13 +245,11 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            {#if $isEditingMode}
-                <ImageAdjustments
-                    bind:brightness={$imageBrightness}
-                    bind:contrast={$imageContrast}
-                    bind:maskOpacity={$segmentationMaskOpacity}
-                />
-            {/if}
+            <ImageAdjustments
+                bind:brightness={$imageBrightness}
+                bind:contrast={$imageContrast}
+                bind:maskOpacity={$maskOpacity}
+            />
         </div>
         <Separator class="bg-border-hard" />
 

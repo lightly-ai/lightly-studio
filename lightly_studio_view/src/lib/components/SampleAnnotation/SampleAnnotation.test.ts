@@ -317,11 +317,17 @@ describe('SampleAnnotation', () => {
             expect(opacity).toBeCloseTo(0.8); // 0.8 * 1
         });
 
-        it('keeps a disabled mask dimmed regardless of the mask opacity setting', () => {
-            const { container } = renderMask({ maskOpacity: 1, highlight: 'disabled' });
+        it.each([
+            { maskOpacity: 1, expected: 0.25 },
+            { maskOpacity: 0, expected: 0 }
+        ])(
+            'dims a disabled mask relative to mask opacity $maskOpacity',
+            ({ maskOpacity, expected }) => {
+                const { container } = renderMask({ maskOpacity, highlight: 'disabled' });
 
-            const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
-            expect(opacity).toBeCloseTo(0.15);
-        });
+                const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
+                expect(opacity).toBeCloseTo(expected);
+            }
+        );
     });
 });

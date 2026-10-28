@@ -53,7 +53,7 @@ const defaultProps = {
 };
 
 describe('SampleDetailsAnnotation', () => {
-    const { segmentationMaskOpacity } = useGlobalStorage();
+    const { maskOpacity } = useGlobalStorage();
 
     beforeEach(() => {
         mockAnnotation.data = predictionAnnotation;
@@ -65,7 +65,7 @@ describe('SampleDetailsAnnotation', () => {
     });
     afterEach(() => {
         Reflect.deleteProperty(SVGElement.prototype, 'getBBox');
-        segmentationMaskOpacity.set(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity);
+        maskOpacity.set(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity);
     });
 
     it('keeps prediction text when class coloring is chosen', async () => {
@@ -78,7 +78,7 @@ describe('SampleDetailsAnnotation', () => {
 
     it('renders the mask with the stored mask opacity', () => {
         mockAnnotation.data = maskAnnotation;
-        segmentationMaskOpacity.set(0.3);
+        maskOpacity.set(0.3);
 
         const { container } = render(SampleDetailsAnnotation, {
             ...defaultProps,
