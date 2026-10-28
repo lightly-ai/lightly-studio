@@ -202,7 +202,8 @@ def send(
 
 def _is_serializable(event: UsageEvent) -> bool:
     try:
-        json.dumps(event.to_json())
+        # Requests rejects NaN and infinity when it encodes the request.
+        json.dumps(event.to_json(), allow_nan=False)
     except Exception:
         logger.warning("Dropped a usage event that cannot be serialized.", exc_info=True)
         return False
@@ -215,13 +216,19 @@ def _start_worker(url: str, token: str) -> None:
         if _worker is not None:
             return
         # A daemon thread does not delay the exit of the process.
-        _worker = threading.Thread(
+        worker = threading.Thread(
             target=_run_worker,
             kwargs={"url": url, "token": token},
             name="usage-report",
             daemon=True,
         )
-        _worker.start()
+        try:
+            worker.start()
+        except RuntimeError:
+            # The next report tries again and then sends the queued events.
+            logger.warning("Could not start the usage report thread.", exc_info=True)
+            return
+        _worker = worker
 
 
 def _run_worker(url: str, token: str) -> None:

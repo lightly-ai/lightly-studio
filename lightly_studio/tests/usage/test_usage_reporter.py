@@ -93,22 +93,48 @@ def test_report__drops_events_when_the_queue_is_full(mocker: MockerFixture) -> N
     assert event_queue.empty()
 
 
-def test_report__drops_only_events_that_cannot_be_serialized(mocker: MockerFixture) -> None:
+# These events convert to a dictionary, but requests cannot encode them as JSON.
+@pytest.mark.parametrize(
+    "invalid",
+    [
+        dataclasses.replace(
+            EVENT, details={"sample_id": UUID("00000000-0000-0000-0000-000000000002")}
+        ),
+        dataclasses.replace(EVENT, latency_ms=float("nan")),
+        dataclasses.replace(EVENT, details={"score": float("inf")}),
+    ],
+    ids=["uuid-in-details", "nan-latency", "infinity-in-details"],
+)
+def test_report__drops_only_events_that_cannot_be_serialized(
+    mocker: MockerFixture, invalid: usage_reporter.UsageEvent
+) -> None:
     event_queue = _patch_queue(mocker=mocker)
     mocker.patch.object(usage_reporter, "_start_worker")
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
     mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
-    # A UUID in the details converts to a dictionary but cannot be encoded as JSON.
-    invalid = dataclasses.replace(
-        EVENT,
-        event_id=UUID("00000000-0000-0000-0000-0000000000ab"),
-        details={"sample_id": UUID("00000000-0000-0000-0000-000000000002")},
-    )
 
     usage_reporter.report(events=[invalid, EVENT])
 
     assert event_queue.get_nowait() == EVENT
     assert event_queue.empty()
+
+
+def test_report__queues_events_when_the_worker_cannot_start(mocker: MockerFixture) -> None:
+    event_queue = _patch_queue(mocker=mocker)
+    mocker.patch.object(usage_reporter, "_worker", None)
+    start = mocker.patch.object(
+        threading.Thread, "start", side_effect=RuntimeError("can't start new thread")
+    )
+    mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
+    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+
+    usage_reporter.report(events=[EVENT])
+    usage_reporter.report(events=[EVENT])
+
+    assert event_queue.qsize() == 2
+    # The second report tries to start the worker again.
+    assert start.call_count == 2
+    assert usage_reporter._worker is None
 
 
 def test_send__posts_the_events_with_the_token(mocker: MockerFixture) -> None:
