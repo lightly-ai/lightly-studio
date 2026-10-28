@@ -29,29 +29,31 @@
     }: Props = $props();
 </script>
 
-{#snippet annotationClass()}
+{#snippet colorSwatch()}
     <span class="size-3 shrink-0 rounded-sm" style="background-color: {color}" aria-hidden="true"
     ></span>
-    {#if editable}
-        <div class="min-w-0 flex-1">
-            <PointCloudAnnotationLabel
-                {collectionId}
-                currentLabel={className}
-                onSelect={(className) => onLabelChange?.(className)}
-            />
-        </div>
-    {:else}
-        <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
-    {/if}
 {/snippet}
 
 <div class="flex w-full items-center">
     {#if editable}
-        <div
-            class="flex min-w-0 flex-1 items-center gap-2 px-4 py-2"
-            data-testid="point-cloud-annotation-list-row"
-        >
-            {@render annotationClass()}
+        <div class="relative flex min-w-0 flex-1 items-center gap-2 px-4 py-2">
+            <Button
+                type="button"
+                variant="ghost"
+                class="absolute inset-0 h-full w-full rounded-none p-0 hover:bg-transparent"
+                onclick={onToggle}
+                aria-expanded={isSelected}
+                aria-label="Toggle annotation details"
+                data-testid="point-cloud-annotation-list-row"
+            />
+            {@render colorSwatch()}
+            <div class="pointer-events-auto relative min-w-0 flex-1">
+                <PointCloudAnnotationLabel
+                    {collectionId}
+                    currentLabel={className}
+                    onSelect={(className) => onLabelChange?.(className)}
+                />
+            </div>
         </div>
     {:else}
         <button
@@ -61,7 +63,8 @@
             aria-expanded={isSelected}
             data-testid="point-cloud-annotation-list-row"
         >
-            {@render annotationClass()}
+            {@render colorSwatch()}
+            <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
         </button>
     {/if}
     {#if onDelete}

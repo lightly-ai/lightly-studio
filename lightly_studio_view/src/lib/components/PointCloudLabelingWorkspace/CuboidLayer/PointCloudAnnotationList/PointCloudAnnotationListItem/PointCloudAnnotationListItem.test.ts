@@ -34,6 +34,20 @@ describe('PointCloudAnnotationListItem', () => {
         expect(onToggle).toHaveBeenCalledWith(cuboid.id);
     });
 
+    it('calls onToggle with the cuboid id when the row is clicked in edit mode', () => {
+        const onToggle = vi.fn();
+        render(PointCloudAnnotationListItem, {
+            props: { ...defaultProps, editable: true, isSelected: true, onToggle }
+        });
+
+        const row = screen.getByTestId('point-cloud-annotation-list-row');
+        expect(row).toHaveAttribute('aria-expanded', 'true');
+
+        fireEvent.click(row);
+
+        expect(onToggle).toHaveBeenCalledWith(cuboid.id);
+    });
+
     it('does not show annotation details when not selected', () => {
         render(PointCloudAnnotationListItem, { props: defaultProps });
 
