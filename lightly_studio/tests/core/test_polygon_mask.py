@@ -87,6 +87,7 @@ def test_polygons_to_rle__polygon_outside_of_image() -> None:
 @pytest.mark.parametrize(
     "polygon",
     [
+        [],
         [(1.0, 1.0)],
         [(1.0, 1.0), (3.0, 2.0)],
     ],

@@ -29,7 +29,9 @@ def polygons_to_rle(
         Row-wise run-length encoding of the mask. The first count is the number of 0
         pixels at the start of the mask. It is 0 if the mask starts with a 1 pixel.
     """
-    crossings = [_column_crossings(polygon=p, width=width, height=height) for p in polygons]
+    crossings = [
+        _column_crossings(polygon=p, width=width, height=height) for p in polygons if len(p) > 0
+    ]
     crossings = [(columns, rows) for columns, rows in crossings if columns.size > 0]
     if not crossings:
         return [width * height]
@@ -118,8 +120,12 @@ def _fill(
         above it in its column.
     """
     num_columns, num_rows = shape
-    counts = np.bincount(columns * num_rows + rows, minlength=num_columns * num_rows)
-    filled: NDArray[np.bool_] = np.cumsum(counts.reshape(num_columns, num_rows), axis=1) % 2 == 1
+    # Only the parity of the crossings is necessary, so boolean arrays are sufficient.
+    toggles = np.zeros(num_columns * num_rows, dtype=bool)
+    np.logical_xor.at(toggles, columns * num_rows + rows, True)
+    filled: NDArray[np.bool_] = np.logical_xor.accumulate(
+        toggles.reshape(num_columns, num_rows), axis=1
+    )
     return filled
 
 
