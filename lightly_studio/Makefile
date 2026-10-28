@@ -1,7 +1,3 @@
-# Select the torch build for every uv sync/run command in this package.
-TORCH_GROUP ?= cpu
-UV_GROUP_FLAGS = $(if $(filter gpu,$(TORCH_GROUP)),--no-group cpu --group gpu,)
-
 SCHEMA_CACHE_FILE := .schema-cache
 
 # Postgres E2E test configuration
@@ -75,7 +71,7 @@ endif
 .PHONY: install-optional-deps
 install-optional-deps:
 	@echo "Installing with optional dependencies..."
-	uv sync $(UV_GROUP_FLAGS) --group docs --extra cloud-storage --extra fal
+	uv sync --group docs --extra cloud-storage --extra fal
 
 # `--out-dir dist` on every `uv build` below: in a uv workspace `uv build` defaults to the
 # workspace root, so without it the wheel would land in ../dist instead of lightly_studio/dist.
@@ -134,26 +130,26 @@ start: build
 .PHONY: start-e2e
 start-e2e: build
 	@echo "Starting server for e2e tests..."
-	uv run $(UV_GROUP_FLAGS) e2e-tests/index_general.py
+	uv run e2e-tests/index_general.py
 
 .PHONY: start-e2e-with-videos
 start-e2e-with-videos: build
 	@echo "Starting server for e2e tests with videos..."
-	uv run $(UV_GROUP_FLAGS) e2e-tests/index_video.py
+	uv run e2e-tests/index_video.py
 
 .PHONY: start-e2e-groups
 start-e2e-groups: build
-	uv run $(UV_GROUP_FLAGS) e2e-tests/index_groups.py
+	uv run e2e-tests/index_groups.py
 
 .PHONY: start-e2e-with-predictions
 start-e2e-with-predictions: build
 	@echo "Starting server for e2e tests with predictions..."
-	uv run $(UV_GROUP_FLAGS) e2e-tests/index_predictions.py
+	uv run e2e-tests/index_predictions.py
 
 .PHONY: start-e2e-evaluations
 start-e2e-evaluations: build
 	@echo "Starting server for e2e tests with evaluations..."
-	uv run $(UV_GROUP_FLAGS) e2e-tests/index_evaluations.py
+	uv run e2e-tests/index_evaluations.py
 
 # Content is controlled via env vars (all default to true), e.g.:
 #   ADD_METADATA=false make start-e2e-distribution
@@ -161,16 +157,16 @@ start-e2e-evaluations: build
 .PHONY: start-e2e-distribution
 start-e2e-distribution: build
 	@echo "Starting server for e2e distribution tests (toggles: ADD_CLASSIFICATIONS, ADD_OBJECT_DETECTIONS, ADD_SEGMENTATIONS, ADD_METADATA)..."
-	uv run $(UV_GROUP_FLAGS) e2e-tests/index_distribution.py
+	uv run e2e-tests/index_distribution.py
 
 .PHONY: start-e2e-video-groups
 start-e2e-video-groups: build
-	uv run $(UV_GROUP_FLAGS) e2e-tests/index_videos_groups.py
+	uv run e2e-tests/index_videos_groups.py
 
 # The script imports the test embedders from `tests`.
 .PHONY: start-e2e-remote-embedder
 start-e2e-remote-embedder: build
-	PYTHONPATH=. uv run $(UV_GROUP_FLAGS) e2e-tests/index_remote_embedder.py
+	PYTHONPATH=. uv run e2e-tests/index_remote_embedder.py
 
 .PHONY: start-postgres
 start-postgres: stop-postgres
@@ -286,20 +282,20 @@ stop-floci-gcp:
 .PHONY: start-e2e-postgres
 start-e2e-postgres: build
 	@echo "Starting server for e2e tests with PostgreSQL..."
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) e2e-tests/index_general.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_general.py
 
 .PHONY: start-e2e-postgres-with-videos
 start-e2e-postgres-with-videos: build
 	@echo "Starting server for e2e tests with videos on PostgreSQL..."
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) e2e-tests/index_video.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_video.py
 
 .PHONY: start-e2e-postgres-groups
 start-e2e-postgres-groups: build
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) e2e-tests/index_groups.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_groups.py
 
 .PHONY: start-e2e-postgres-video-groups
 start-e2e-postgres-video-groups: build
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) e2e-tests/index_videos_groups.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_videos_groups.py
 
 # Note: we just mock dist_lightly_studio_view_app folder to avoid failing exporting the schema
 # because we need to have schema before building the frontend app
@@ -313,7 +309,7 @@ ifeq ($(OS),Windows_NT)
 		if (-not (Test-Path 'src\lightly_studio\dist_lightly_studio_view_app')) { New-Item -ItemType Directory -Path 'src\lightly_studio\dist_lightly_studio_view_app' | Out-Null }; \
 		New-Item -ItemType File -Path 'src\lightly_studio\dist_lightly_studio_view_app\index.html' -Force | Out-Null; \
 		Write-Host 'Exporting schema for API...'; \
-		uv run $(UV_GROUP_FLAGS) src/lightly_studio/export_schema.py; \
+		uv run src/lightly_studio/export_schema.py; \
 		Remove-Item -Path 'src\lightly_studio\dist_lightly_studio_view_app' -Recurse -Force -ErrorAction SilentlyContinue; \
 		Set-Content -Path '$(SCHEMA_CACHE_FILE)' -Value $$currentHash \
 	}"
@@ -324,7 +320,7 @@ else
 		mkdir -p src/lightly_studio/dist_lightly_studio_view_app; \
 		touch src/lightly_studio/dist_lightly_studio_view_app/index.html; \
 		echo "Exporting schema for API..."; \
-		uv run $(UV_GROUP_FLAGS) src/lightly_studio/export_schema.py; \
+		uv run src/lightly_studio/export_schema.py; \
 		rm -rf src/lightly_studio/dist_lightly_studio_view_app; \
 		echo "$$CURRENT_HASH" > $(SCHEMA_CACHE_FILE); \
 	else \
@@ -335,12 +331,12 @@ endif
 .PHONY: export-version
 export-version:
 	@echo "Exporting version information for lightly_studio_view..."
-	uv run $(UV_GROUP_FLAGS) src/lightly_studio/export_version.py --output ../lightly_studio_view/src/lib/version.json
+	uv run src/lightly_studio/export_version.py --output ../lightly_studio_view/src/lib/version.json
 
 .PHONY: start-example
 start-example:
 	@echo "Starting server..."
-	uv run $(UV_GROUP_FLAGS) src/lightly_studio/examples/example.py
+	uv run src/lightly_studio/examples/example.py
 
 # Runs the MCAP sequence-indexing example from S3: uploads FLOCI_MCAP_FILES (see top of
 # this Makefile) to the local Floci S3 emulator, then points the example at the
@@ -354,7 +350,7 @@ start-example:
 start-example-mcap-s3: setup-floci build
 	@echo "Starting MCAP sequence example (from S3: $(FLOCI_MCAP_S3_URI))..."
 	$(FLOCI_ENV) EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_S3_URI) \
-		uv run $(UV_GROUP_FLAGS) --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Runs the MCAP sequence-indexing example against a real (remote) S3 URI without
 # starting the local Floci emulator.  AWS credentials must be available in the
@@ -367,13 +363,13 @@ start-example-mcap-s3: setup-floci build
 start-example-mcap-remote-s3: build
 	@echo "Starting MCAP sequence example (from remote S3: $(MCAP_REMOTE_S3_URI))..."
 	EXAMPLES_MCAP_PATH=$(MCAP_REMOTE_S3_URI) \
-		uv run $(UV_GROUP_FLAGS) --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 .PHONY: start-example-mcap-directory
 start-example-mcap-directory: build
 	@printf '%s\n' 'Starting MCAP sequence example (from directory: $(subst ','"'"',$(MCAP_DIRECTORY)))...'
 	LIGHTLY_STUDIO_POINT_CLOUD_ENABLED=true EXAMPLES_MCAP_PATH='$(subst ','"'"',$(MCAP_DIRECTORY))' \
-		uv run $(UV_GROUP_FLAGS) --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Runs the MCAP sequence-indexing example from S3 for a folder of recordings: syncs all
 # *.mcap files in FLOCI_MCAP_DIR to the local Floci S3 emulator, then points the example
@@ -398,7 +394,7 @@ setup-floci-dir: start-floci
 start-example-mcap-folder-s3: setup-floci-dir build
 	@echo "Starting MCAP folder example (from S3: $(FLOCI_MCAP_DIR_S3_URI))..."
 	$(FLOCI_ENV) EXAMPLES_MCAP_PATH=$(FLOCI_MCAP_DIR_S3_URI) \
-		uv run $(UV_GROUP_FLAGS) --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
+		uv run --extra cloud-storage python src/lightly_studio/examples/example_mcap.py
 
 # Demo targets for the camera-frame endpoint.
 # Uploads the MCAP to the local Floci S3 emulator and starts the API server so
@@ -416,10 +412,10 @@ DEMO_RECORDING_ID := bbbbbbbb-0000-0000-0000-000000000001
 .PHONY: demo-mcap-server
 demo-mcap-server: setup-floci mock-webapp-dist
 	@echo "Seeding database at $(DEMO_MCAP_DB) with $(FLOCI_MCAP_S3_URI)..."
-	@uv run $(UV_GROUP_FLAGS) python src/lightly_studio/scripts/demo_mcap_seed.py \
+	@uv run python src/lightly_studio/scripts/demo_mcap_seed.py \
 		"$(DEMO_MCAP_DB)" "$(FLOCI_MCAP_S3_URI)" "$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 	@echo "Starting server on http://$(DEMO_MCAP_HOST):$(DEMO_MCAP_PORT) — Ctrl-C to stop"
-	@$(FLOCI_ENV) uv run $(UV_GROUP_FLAGS) --extra cloud-storage python -c "\
+	@$(FLOCI_ENV) uv run --extra cloud-storage python -c "\
 import uvicorn; \
 from lightly_studio.database import db_manager; \
 db_manager.connect(db_file='$(DEMO_MCAP_DB)'); \
@@ -428,19 +424,19 @@ uvicorn.run(app, host='$(DEMO_MCAP_HOST)', port=$(DEMO_MCAP_PORT))"
 
 .PHONY: demo-mcap-urls
 demo-mcap-urls:
-	@uv run $(UV_GROUP_FLAGS) python src/lightly_studio/scripts/demo_mcap_urls.py \
+	@uv run python src/lightly_studio/scripts/demo_mcap_urls.py \
 		"$(firstword $(FLOCI_MCAP_FILES))" "$(DEMO_MCAP_HOST)" "$(DEMO_MCAP_PORT)" \
 		"$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 
 .PHONY: test
 test: build
 	@echo "Running tests..."
-	PYTHONPATH=$(PWD) uv run $(UV_GROUP_FLAGS) pytest -n auto
+	PYTHONPATH=$(PWD) uv run pytest -n auto
 
 .PHONY: test-ci
 test-ci:
 	@echo "Running tests..."
-	uv run $(UV_GROUP_FLAGS) pytest
+	uv run pytest
 
 # Full-suite line coverage for the Fast Track coverage guardrail, which reads
 # coverage.json rather than running tests itself. Deliberately has no `build`
@@ -448,14 +444,14 @@ test-ci:
 .PHONY: test-coverage
 test-coverage:
 	@echo "Running tests with coverage..."
-	uv run $(UV_GROUP_FLAGS) pytest -n auto --cov=src/lightly_studio \
+	uv run pytest -n auto --cov=src/lightly_studio \
 	  --cov-report=json:coverage.json \
 	  --cov-report=term-missing:skip-covered
 
 .PHONY: test-postgres
 test-postgres: build
 	@echo "Running tests against Postgres..."
-	uv run $(UV_GROUP_FLAGS) pytest --postgres -n 3
+	uv run pytest --postgres -n 3
 
 # Alembic loads lightly_studio package code that expects dist_lightly_studio_view_app.
 .PHONY: mock-webapp-dist
@@ -471,9 +467,9 @@ endif
 migration-upgrade-postgresql: start-postgres mock-webapp-dist
 	@echo "Applying Alembic migrations (upgrade head)..."
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini upgrade head"
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini upgrade head"
 else
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini upgrade head
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
 endif
 
 
@@ -481,9 +477,9 @@ endif
 migration-downgrade-postgresql: start-postgres mock-webapp-dist
 	@echo "Downgrading Alembic by one revision (dev only)..."
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini downgrade -1"
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini downgrade -1"
 else
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini downgrade -1
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini downgrade -1
 endif
 
 # Autogenerate requires the database schema to match the current Alembic head.
@@ -494,9 +490,9 @@ ifndef MSG
 endif
 	@echo "Autogenerating Alembic revision..."
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini revision --autogenerate -m '$(MSG)'"
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini revision --autogenerate -m '$(MSG)'"
 else
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini revision --autogenerate -m "$(MSG)"
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini revision --autogenerate -m "$(MSG)"
 endif
 
 .PHONY: migration-check-postgresql
@@ -504,12 +500,12 @@ migration-check-postgresql: start-postgres mock-webapp-dist
 	@echo "Checking Alembic migration chain on empty Postgres..."
 ifeq ($(OS),Windows_NT)
 	@powershell -Command "docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c \"DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO $(POSTGRES_USER); GRANT ALL ON SCHEMA public TO public;\""
-	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini upgrade head"
-	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini check"
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini upgrade head"
+	@powershell -Command "$$env:LIGHTLY_STUDIO_DATABASE_URL='$(POSTGRES_URL)'; uv run alembic -c alembic.ini check"
 else
 	docker exec $(POSTGRES_CONTAINER_NAME) psql -U $(POSTGRES_USER) -d $(POSTGRES_DB) -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO $(POSTGRES_USER); GRANT ALL ON SCHEMA public TO public;"
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini upgrade head
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run $(UV_GROUP_FLAGS) alembic -c alembic.ini check
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini upgrade head
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run alembic -c alembic.ini check
 endif
 
 .PHONY: clean
