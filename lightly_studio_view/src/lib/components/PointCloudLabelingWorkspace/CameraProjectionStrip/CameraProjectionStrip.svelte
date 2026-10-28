@@ -89,7 +89,8 @@
         {/snippet}
     </WorkspacePanelHeader>
     {#if !collapsed}
-        <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto px-2 pb-2">
+        <!-- Reserve scrollbar height so resizing the tiles cannot toggle overflow in a loop. -->
+        <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-scroll px-2 pb-2">
             {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
                 {@const channel =
                     tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
