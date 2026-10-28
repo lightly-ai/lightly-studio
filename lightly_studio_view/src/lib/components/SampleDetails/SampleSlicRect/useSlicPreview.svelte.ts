@@ -13,8 +13,8 @@ export function useSlicPreview(getProps: () => PreviewProps) {
     let strokeMaskDataUrl = $state('');
     let hoveredLabel: number | null = null;
 
-    const renderMask = (mask: Uint8Array) => {
-        const { width, height, color } = getProps();
+    const renderMask = (mask: Uint8Array, width: number, height: number) => {
+        const { color } = getProps();
         // Translucent previews keep the underlying image visible.
         return maskToDataUrl(mask, width, height, { ...parseColor(color), a: 85 });
     };
@@ -29,10 +29,11 @@ export function useSlicPreview(getProps: () => PreviewProps) {
             const label = editor.getLabelAtPoint(point);
             if (label === hoveredLabel) return;
             hoveredLabel = label;
-            hoverMaskDataUrl = renderMask(editor.getSegmentPreviewMask(label));
+            const { width, height } = getProps();
+            hoverMaskDataUrl = renderMask(editor.getSegmentPreviewMask(label), width, height);
         },
-        renderStroke(mask: Uint8Array) {
-            strokeMaskDataUrl = renderMask(mask);
+        renderStroke(mask: Uint8Array, width: number, height: number) {
+            strokeMaskDataUrl = renderMask(mask, width, height);
         },
         clearStroke() {
             strokeMaskDataUrl = '';

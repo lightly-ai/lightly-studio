@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Delete selected annotations in bulk from the annotation grid.
 - Explore and edit point-cloud annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
 - Collapse the camera strip in the point-cloud workspace to give the scene more space.
 - Adjust point size, navigation helpers, and annotation tooltips from the point-cloud scene settings.
@@ -26,8 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- BREAKING: Dropped Python 3.9 support. Upgrade to Python 3.10–3.14.
+
 ### Fixed
 
+- Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
 - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
 

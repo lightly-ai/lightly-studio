@@ -325,15 +325,9 @@ class Sample(ABC):
             annotation: The annotation to delete.
         """
         session = self.get_object_session()
-        annotation_id = annotation.annotation_base.sample_id
-        collection_id = annotation.annotation_base.annotation_collection_id
         annotation_resolver.delete_annotation(
             session=session,
-            annotation_id=annotation_id,
-        )
-        evaluation_run_resolver.mark_stale_by_collection_id(
-            session=session,
-            collection_id=collection_id,
+            annotation_id=annotation.annotation_base.sample_id,
         )
 
 
