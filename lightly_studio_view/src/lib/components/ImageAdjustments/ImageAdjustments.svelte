@@ -1,60 +1,45 @@
 <script lang="ts">
-    import { Slider } from '$lib/components/ui/slider';
+    import { RotateCcw } from '@lucide/svelte';
+    import { Button } from '$lib/components/ui/button';
+    import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/hooks';
+    import AdjustmentSlider from './AdjustmentSlider/AdjustmentSlider.svelte';
 
     let {
-        brightness = $bindable(1),
-        contrast = $bindable(1)
+        brightness = $bindable(IMAGE_ADJUSTMENT_DEFAULTS.brightness),
+        contrast = $bindable(IMAGE_ADJUSTMENT_DEFAULTS.contrast),
+        maskOpacity = $bindable(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity)
     }: {
         brightness: number;
         contrast: number;
+        maskOpacity: number;
     } = $props();
 
-    let brightnessValue = $state([brightness]);
-    let contrastValue = $state([contrast]);
+    const isDefault = $derived(
+        brightness === IMAGE_ADJUSTMENT_DEFAULTS.brightness &&
+            contrast === IMAGE_ADJUSTMENT_DEFAULTS.contrast &&
+            maskOpacity === IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity
+    );
 
-    $effect(() => {
-        brightness = brightnessValue[0];
-    });
-
-    $effect(() => {
-        contrast = contrastValue[0];
-    });
-
-    $effect(() => {
-        if (brightness !== brightnessValue[0]) {
-            brightnessValue = [brightness];
-        }
-    });
-
-    $effect(() => {
-        if (contrast !== contrastValue[0]) {
-            contrastValue = [contrast];
-        }
-    });
+    const reset = () => {
+        brightness = IMAGE_ADJUSTMENT_DEFAULTS.brightness;
+        contrast = IMAGE_ADJUSTMENT_DEFAULTS.contrast;
+        maskOpacity = IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity;
+    };
 </script>
 
 <div class="flex items-center gap-6">
-    <div class="flex items-center gap-2">
-        <span class="text-sm text-muted-foreground">Brightness</span>
-        <div class="slider-small w-28">
-            <Slider type="multiple" min={0.2} max={2} step={0.05} bind:value={brightnessValue} />
-        </div>
-    </div>
-    <div class="flex items-center gap-2">
-        <span class="text-sm text-muted-foreground">Contrast</span>
-        <div class="slider-small w-28">
-            <Slider type="multiple" min={0.2} max={2} step={0.05} bind:value={contrastValue} />
-        </div>
-    </div>
+    <AdjustmentSlider label="Brightness" min={0.2} max={2} bind:value={brightness} />
+    <AdjustmentSlider label="Contrast" min={0.2} max={2} bind:value={contrast} />
+    <AdjustmentSlider label="Mask opacity" min={0} max={1} bind:value={maskOpacity} />
+    <Button
+        variant="ghost"
+        size="icon"
+        class="h-7 w-7"
+        aria-label="Reset image adjustments"
+        title="Reset to defaults"
+        disabled={isDefault}
+        onclick={reset}
+    >
+        <RotateCcw class="size-4" />
+    </Button>
 </div>
-
-<style>
-    .slider-small :global([data-slider-thumb]) {
-        width: 14px !important;
-        height: 14px !important;
-    }
-
-    .slider-small :global(span[data-orientation]) {
-        height: 6px !important;
-    }
-</style>

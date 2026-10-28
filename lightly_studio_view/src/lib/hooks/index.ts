@@ -1,7 +1,7 @@
 export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
 export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
-export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+export { useGlobalStorage, IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/hooks/useGlobalStorage';
 export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
 export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
