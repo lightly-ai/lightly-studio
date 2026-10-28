@@ -3,29 +3,29 @@ revision = 3
 requires-python = ">=3.10, <3.15"
 resolution-markers = [
     "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version < '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 conflicts = [[
@@ -1102,7 +1102,7 @@ name = "cuda-bindings"
 version = "12.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "cuda-pathfinder" },
+    { name = "cuda-pathfinder", marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/37/31/bfcc870f69c6a017c4ad5c42316207fc7551940db6f3639aa4466ec5faf3/cuda_bindings-12.9.4-cp310-cp310-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:a022c96b8bd847e8dc0675523431149a4c3e872f440e3002213dbb9e08f0331a", size = 11800959, upload-time = "2025-10-21T14:51:26.458Z" },
@@ -2334,12 +2334,10 @@ dependencies = [
     { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "sqlalchemy-utils" },
     { name = "sqlmodel" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
-    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
-    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "tqdm" },
     { name = "typing-extensions" },
     { name = "uvicorn" },
@@ -2348,13 +2346,10 @@ dependencies = [
 
 [package.optional-dependencies]
 cloud-storage = [
-    { name = "adlfs", version = "2025.8.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "adlfs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "adlfs" },
     { name = "certifi" },
-    { name = "gcsfs", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "gcsfs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "s3fs", version = "2025.10.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "s3fs", version = "2026.2.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.10' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "gcsfs" },
+    { name = "s3fs" },
 ]
 fal = [
     { name = "fal-client" },
@@ -2362,10 +2357,10 @@ fal = [
 
 [package.dev-dependencies]
 cpu = [
-    { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "(sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 dev = [
     { name = "black" },
@@ -3328,24 +3323,24 @@ version = "3.6.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/6a/51/63fe664f3908c97be9d2e4f1158eb633317598cfa6e1fc14af5383f17512/networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509", size = 2517025, upload-time = "2025-12-08T17:02:39.908Z" }
@@ -3428,24 +3423,24 @@ version = "2.4.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/10/8b/c265f4823726ab832de836cdd184d0986dcf94480f81e8739692a7ac7af2/numpy-2.4.3.tar.gz", hash = "sha256:483a201202b73495f00dbc83796c6ae63137a9bdade074f7648b3e32613412dd", size = 20727743, upload-time = "2026-03-09T07:58:53.426Z" }
@@ -3568,7 +3563,7 @@ name = "nvidia-cudnn-cu12"
 version = "9.10.2.21"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12" },
+    { name = "nvidia-cublas-cu12", marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/fa/41/e79269ce215c857c935fd86bcfe91a451a584dfc27f1e068f568b9ad1ab7/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:c9132cc3f8958447b4910a1720036d9eff5928cc3179b0a51fb6d167c6cc87d8", size = 705026878, upload-time = "2025-06-06T21:52:51.348Z" },
@@ -3581,7 +3576,7 @@ name = "nvidia-cufft-cu12"
 version = "11.3.3.83"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-nvjitlink-cu12", marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/60/bc/7771846d3a0272026c416fbb7e5f4c1f146d6d80704534d0b187dd6f4800/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:848ef7224d6305cdb2a4df928759dca7b1201874787083b6e7550dd6765ce69a", size = 193109211, upload-time = "2025-03-07T01:44:56.873Z" },
@@ -3613,9 +3608,9 @@ name = "nvidia-cusolver-cu12"
 version = "11.7.3.90"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-cublas-cu12" },
-    { name = "nvidia-cusparse-cu12" },
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-cublas-cu12", marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
+    { name = "nvidia-cusparse-cu12", marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
+    { name = "nvidia-nvjitlink-cu12", marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/32/f7cd6ce8a7690544d084ea21c26e910a97e077c9b7f07bf5de623ee19981/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_aarch64.whl", hash = "sha256:db9ed69dbef9715071232caa9b69c52ac7de3a95773c2db65bdba85916e4e5c0", size = 267229841, upload-time = "2025-03-07T01:46:54.356Z" },
@@ -3628,7 +3623,7 @@ name = "nvidia-cusparse-cu12"
 version = "12.5.8.93"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "nvidia-nvjitlink-cu12" },
+    { name = "nvidia-nvjitlink-cu12", marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bc/f7/cd777c4109681367721b00a106f491e0d0d15cfa1fd59672ce580ce42a97/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_aarch64.manylinux_2_17_aarch64.whl", hash = "sha256:9b6c161cb130be1a07a27ea6923df8141f3c295852f4b260c65f18f3e0a091dc", size = 288117129, upload-time = "2025-03-07T01:47:40.407Z" },
@@ -3703,12 +3698,10 @@ dependencies = [
     { name = "regex" },
     { name = "safetensors" },
     { name = "timm" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
-    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
-    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "tqdm" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/4a/1f/2bc9795047fa2c1ad2567ef78ce6dfc9a7b763fa534acee09a94da2a5b8f/open_clip_torch-3.3.0.tar.gz", hash = "sha256:904b1a9f909df8281bb3de60ab95491cd2994a509177ea4f9d6292a84fe24d6d", size = 1503380, upload-time = "2026-02-27T00:32:46.74Z" }
@@ -5287,24 +5280,24 @@ version = "1.17.1"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
@@ -5562,12 +5555,10 @@ dependencies = [
     { name = "huggingface-hub" },
     { name = "pyyaml" },
     { name = "safetensors" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
-    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "extra == 'group-14-lightly-studio-gpu' or extra != 'group-14-lightly-studio-cpu'" },
-    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torchvision", version = "0.25.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d7/2c/593109822fe735e637382aca6640c1102c19797f7791f1fd1dab2d6c3cb1/timm-1.0.25.tar.gz", hash = "sha256:47f59fc2754725735cc81bb83bcbfce5bec4ebd5d4bb9e69da57daa92fcfa768", size = 2414743, upload-time = "2026-02-23T16:49:00.137Z" }
 wheels = [
@@ -5631,60 +5622,36 @@ wheels = [
 [[package]]
 name = "torch"
 version = "2.10.0"
-source = { registry = "https://download.pytorch.org/whl/cpu" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version == '3.13.*' and sys_platform == 'darwin'",
-    "python_full_version == '3.12.*' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and sys_platform == 'darwin'",
-]
-dependencies = [
-    { name = "filelock", marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "fsspec", marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "jinja2", marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version >= '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "setuptools", marker = "(python_full_version >= '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.12' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "sympy", marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "typing-extensions", marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-]
-wheels = [
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-1-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:4db72a4d257c45c3502f11764ee41460a87312fdc3dff47a8957812efe961725", upload-time = "2026-02-06T16:27:14Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-1-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:0826ac8e409551e12b2360ac18b4161a838cbd111933e694752f351191331d09", upload-time = "2026-02-06T16:27:14Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-1-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:7fbbf409143a4fe0812a40c0b46a436030a7e1d14fe8c5234dfbe44df47f617e", upload-time = "2026-02-06T16:27:14Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-1-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:b39cafff7229699f9d6e172cac74d85fd71b568268e439e08d9c540e54732a3e", upload-time = "2026-02-06T16:27:17Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:7417ef370d7c3969dd509dae8d5c7daeb945af335ab76dd38358ba30a91251c1", upload-time = "2026-02-10T19:55:42Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:90821a3194b8806d9fa9fdaa9308c1bc73df0c26808274b14129a97c99f35794", upload-time = "2026-02-10T19:55:42Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:358bd7125cbec6e692d60618a5eec7f55a51b29e3652a849fd42af021d818023", upload-time = "2026-02-10T19:55:42Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-2-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:470de4176007c2700735e003a830828a88d27129032a3add07291da07e2a94e8", upload-time = "2026-02-10T19:55:43Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:2d16abfce6c92584ceeb00c3b2665d5798424dd9ed235ea69b72e045cd53ae97", upload-time = "2026-01-23T15:09:55Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-cp311-none-macosx_11_0_arm64.whl", hash = "sha256:4584ab167995c0479f6821e3dceaf199c8166c811d3adbba5d8eedbbfa6764fd", upload-time = "2026-01-23T15:09:55Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-cp312-none-macosx_11_0_arm64.whl", hash = "sha256:45a1c5057629444aeb1c452c18298fa7f30f2f7aeadd4dc41f9d340980294407", upload-time = "2026-01-23T15:09:55Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-cp313-cp313t-macosx_14_0_arm64.whl", hash = "sha256:339e05502b6c839db40e88720cb700f5a3b50cda332284873e851772d41b2c1e", upload-time = "2026-01-23T15:09:57Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-cp313-none-macosx_11_0_arm64.whl", hash = "sha256:840351da59cedb7bcbc51981880050813c19ef6b898a7fecf73a3afc71aff3fe", upload-time = "2026-01-23T15:09:59Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:c88b1129fd4e14f0f882963c6728315caae35d2f47374d17edeed1edc7697497", upload-time = "2026-01-23T15:09:59Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0-cp314-cp314t-macosx_14_0_arm64.whl", hash = "sha256:f4bea7dc451267c028593751612ad559299589304e68df54ae7672427893ff2c", upload-time = "2026-01-23T15:10:01Z" },
-]
-
-[[package]]
-name = "torch"
-version = "2.10.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.14'",
-    "python_full_version == '3.13.*'",
-    "python_full_version == '3.12.*'",
-    "python_full_version == '3.11.*'",
-    "python_full_version < '3.11'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
     { name = "cuda-bindings", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "filelock" },
-    { name = "fsspec" },
-    { name = "jinja2" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "filelock", marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "fsspec", marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "jinja2", marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'linux') or (python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'linux') or (python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "nvidia-cublas-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "nvidia-cuda-cupti-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "nvidia-cuda-nvrtc-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
@@ -5700,10 +5667,10 @@ dependencies = [
     { name = "nvidia-nvjitlink-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "nvidia-nvshmem-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "nvidia-nvtx-cu12", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "setuptools", marker = "(python_full_version >= '3.12' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "sympy" },
+    { name = "setuptools", marker = "(python_full_version >= '3.12' and sys_platform != 'linux') or (python_full_version >= '3.12' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "sympy", marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "triton", marker = "(platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "typing-extensions" },
+    { name = "typing-extensions", marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/30/bfebdd8ec77db9a79775121789992d6b3b75ee5494971294d7b4b7c999bc/torch-2.10.0-2-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:2b980edd8d7c0a68c4e951ee1856334a43193f98730d97408fbd148c1a933313", size = 79411457, upload-time = "2026-02-10T21:44:59.189Z" },
@@ -5757,21 +5724,16 @@ resolution-markers = [
     "python_full_version == '3.12.*' and sys_platform == 'linux'",
     "python_full_version == '3.11.*' and sys_platform == 'linux'",
     "python_full_version < '3.11' and sys_platform == 'linux'",
-    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux'",
 ]
 dependencies = [
-    { name = "filelock", marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "fsspec", marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "jinja2", marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version >= '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "setuptools", marker = "(python_full_version >= '3.12' and sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.12' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "sympy", marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "typing-extensions", marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "filelock", marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "fsspec", marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "jinja2", marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (python_full_version >= '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "setuptools", marker = "(python_full_version >= '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.12' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "sympy", marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "typing-extensions", marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp310-cp310-linux_aarch64.whl", hash = "sha256:31ae44836c8b9bbd1a3943d29c7c7457709ddf7c6173aa34aefe9d2203e4c405", upload-time = "2026-01-23T15:10:02Z" },
@@ -5817,46 +5779,34 @@ wheels = [
 [[package]]
 name = "torchvision"
 version = "0.25.0"
-source = { registry = "https://download.pytorch.org/whl/cpu" }
-resolution-markers = [
-    "python_full_version >= '3.14' and sys_platform == 'darwin'",
-    "python_full_version == '3.13.*' and sys_platform == 'darwin'",
-    "python_full_version == '3.12.*' and sys_platform == 'darwin'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin'",
-    "python_full_version < '3.11' and sys_platform == 'darwin'",
-]
-dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version >= '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "pillow", marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-]
-wheels = [
-    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:7810841916a2a870cbfb581f4084b59479908fb9db6edfdf78139931392d8677", upload-time = "2026-01-20T18:32:30Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:a76ce7b8d4fce291a25721ee2f921c783acc6dbd4fc32dc741ed2a1d5a8dde2f", upload-time = "2026-01-20T18:32:30Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:724f212a58a0d0d758649ce288601056b5f46a01de545702f42bccc5b25cb0cc", upload-time = "2026-01-20T18:32:31Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0-cp313-cp313-macosx_12_0_arm64.whl", hash = "sha256:6c444119c6af8fa48b79c59f1529fc15a45a2bbf823cf85f851e7203d84f727f", upload-time = "2026-01-20T18:32:31Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:80895a40faa5783ce19ed5a692a54062c7888a385490e866324355f8d59b2eb3", upload-time = "2026-01-20T18:32:31Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:a64ae543fe0a057a93954af94c239629723db196ed65090e6775f136726b22f8", upload-time = "2026-01-20T18:32:31Z" },
-    { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:b7df71942e31b74a5161dea3452da35e5fb1d36c752aedf61f2dd3c7be35739a", upload-time = "2026-01-20T18:32:31Z" },
-]
-
-[[package]]
-name = "torchvision"
-version = "0.25.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version >= '3.14'",
-    "python_full_version == '3.13.*'",
-    "python_full_version == '3.12.*'",
-    "python_full_version == '3.11.*'",
-    "python_full_version < '3.11'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "pillow" },
-    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'linux') or (python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'linux') or (python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "pillow", marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' or extra != 'group-14-lightly-studio-cpu' or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/50/ae/cbf727421eb73f1cf907fbe5788326a08f111b3f6b6ddca15426b53fec9a/torchvision-0.25.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:a95c47abb817d4e90ea1a8e57bd0d728e3e6b533b3495ae77d84d883c4d11f56", size = 1874919, upload-time = "2026-01-21T16:27:47.617Z" },
@@ -5899,17 +5849,12 @@ resolution-markers = [
     "python_full_version == '3.12.*' and sys_platform == 'linux'",
     "python_full_version == '3.11.*' and sys_platform == 'linux'",
     "python_full_version < '3.11' and sys_platform == 'linux'",
-    "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux'",
-    "python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux'",
 ]
 dependencies = [
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version >= '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "pillow", marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform != 'darwin' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (python_full_version >= '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (python_full_version < '3.11' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu') or (sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "pillow", marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "torch", version = "2.10.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torchvision-0.25.0%2Bcpu-cp310-cp310-manylinux_2_28_aarch64.whl", hash = "sha256:73ce04dea64914ff1110008311204c366107d651d3b04faa0dbee77efb7133b7", upload-time = "2026-01-20T18:32:30Z" },
@@ -6280,24 +6225,24 @@ version = "17.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version >= '3.14' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.14' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.11.*' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/01/89/3f825ab71c242fffb62ea8fe638741c290f62f8d7aadf8125ff897747af3/websockets-17.2.tar.gz", hash = "sha256:36c2fb94c990cc2545143b12690e2de6c16300f9dbe5b4f33fa300cf57dc8792", size = 188355, upload-time = "2026-10-03T14:56:53.5Z" }
