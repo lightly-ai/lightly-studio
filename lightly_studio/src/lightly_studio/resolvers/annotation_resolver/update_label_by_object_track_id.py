@@ -45,7 +45,9 @@ def update_label_by_object_track_id(
     if session.get(AnnotationLabelTable, annotation_label_id) is None:
         raise ValueError(f"Annotation label with ID {annotation_label_id} not found.")
 
-    all_siblings = annotation_resolver.get_all_by_object_track_id(session=session, object_track_id=object_track_id)
+    all_siblings = annotation_resolver.get_all_by_object_track_id(
+        session=session, object_track_id=object_track_id
+    )
     siblings = [s for s in all_siblings if s.annotation_label_id != annotation_label_id]
     if not siblings:
         return
