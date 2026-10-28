@@ -4,6 +4,7 @@ import { Box3, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { usePointCloudCamera } from './usePointCloudCamera.svelte';
 import { getCameraWorldUnitsPerPixel } from '../../sceneViewState';
+import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 
 const threlte = vi.hoisted(() => ({
     renderer: { domElement: undefined as unknown as HTMLCanvasElement },
@@ -178,5 +179,76 @@ describe('camera synchronization lifecycle', () => {
         controls.dispatchEvent({ type: 'change' });
         expect(options.onViewStateChange).not.toHaveBeenCalled();
         expect(disconnect).toHaveBeenCalledOnce();
+    });
+});
+
+describe('independent object cameras', () => {
+    it.each(['top', 'front', 'side'] as const)(
+        'keeps the %s camera fixed through resize snapshots and commits',
+        (cameraMode) => {
+            const cuboid = createAnnotationFixture();
+            const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
+            const { options, controls, resize } = setup({
+                camera,
+                cameraMode,
+                cameraCuboid: cuboid,
+                isScaleSource: false
+            });
+            camera.zoom *= 2;
+            const pan = new Vector3(0.25, 0.5, 0.75);
+            camera.position.add(pan);
+            controls.target.add(pan);
+            controls.update();
+            const position = camera.position.clone();
+            const orientation = camera.quaternion.clone();
+            const target = controls.target.clone();
+            const zoom = camera.zoom;
+            for (const annotation of [
+                { ...cuboid },
+                { ...cuboid, center: [11, -2, 1] as const, size: [6, 2, 2] as const }
+            ]) {
+                options.cameraCuboid = annotation;
+                flushSync();
+                resize();
+                expect(camera.position.distanceTo(position)).toBeCloseTo(0);
+                expect(camera.quaternion.angleTo(orientation)).toBeCloseTo(0);
+                expect(controls.target.distanceTo(target)).toBeCloseTo(0);
+                expect(camera.zoom).toBeCloseTo(zoom);
+            }
+        }
+    );
+
+    it('follows cuboid selection and rotation while keeping navigation local', () => {
+        const cuboid = createAnnotationFixture();
+        const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
+        const { options, controls, viewport, resize } = setup({
+            camera,
+            cameraMode: 'front',
+            cameraCuboid: cuboid,
+            isScaleSource: false
+        });
+        expect(controls.target.distanceTo(new Vector3(...cuboid.center))).toBeCloseTo(0);
+        expect(camera.getWorldDirection(new Vector3()).x).toBeCloseTo(-1);
+        camera.zoom *= 2;
+        controls.target.add(new Vector3(0, 1, 0));
+        controls.update();
+        expect(options.onViewStateChange).not.toHaveBeenCalled();
+        const zoom = camera.zoom;
+        viewport.width *= 2;
+        resize();
+        expect(camera.zoom).toBeCloseTo(zoom);
+        expect(camera.right).toBeCloseTo(viewport.width / viewport.height);
+        viewport.width = 0;
+        options.cameraCuboid = {
+            ...cuboid,
+            center: [20, 5, 3],
+            rotation: [0, 0, Math.SQRT1_2, Math.SQRT1_2]
+        };
+        flushSync();
+        viewport.width = 600;
+        resize();
+        expect(controls.target.distanceTo(new Vector3(20, 5, 3))).toBeCloseTo(0);
+        expect(camera.getWorldDirection(new Vector3()).y).toBeCloseTo(-1);
+        expect(options.onViewStateChange).not.toHaveBeenCalled();
     });
 });

@@ -2,7 +2,10 @@ import type { OrthographicCamera, PerspectiveCamera } from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import type { ColorMode } from '../pointCloudUtils';
 import type { PointBatch } from '../types';
-import type { CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
+import type {
+    CuboidAnnotation,
+    CameraMode
+} from '$lib/components/PointCloudLabelingWorkspace/domain';
 import type { SceneViewState } from '../sceneViewState';
 /** Point buffer appearance and camera synchronization inputs for the renderer. */
 export interface PointCloudPointsProps {
@@ -22,6 +25,8 @@ export interface PointCloudPointsProps {
     controls?: OrbitControls;
     /** Projection orientation used for rendering and editing. */
     cameraMode?: CameraMode;
+    /** Selected cuboid defining the local object-view frame. */
+    cameraCuboid?: CuboidAnnotation;
     /** Publishes the initial shared camera scale before other views synchronize. */
     isScaleSource?: boolean;
     /** Shared camera target and world-units-per-pixel scale. */

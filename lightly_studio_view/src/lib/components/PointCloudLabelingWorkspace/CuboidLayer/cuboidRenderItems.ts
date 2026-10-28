@@ -1,11 +1,10 @@
 import { Vector3 } from 'three';
 import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 import type { CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
-import { findLocalDepthAxis } from './CuboidFaceResize/cuboidFaceResize';
 import { createCuboidRectangleGeometry, createCuboidWireframeGeometry } from './cuboidGeometry';
 
-/** World axis pointing along the view direction of each orthographic view. */
-const DEPTH_AXIS = { top: 2, side: 0, front: 1 } as const;
+/** Local cuboid axis pointing along each object-view direction. */
+const DEPTH_AXIS = { top: 2, side: 1, front: 0 } as const;
 
 interface CuboidRenderItem {
     annotation: CuboidAnnotation;
@@ -28,10 +27,7 @@ export function createCuboidRenderItems(
     cameraMode: CameraMode = 'perspective'
 ): CuboidRenderItem[] {
     return cuboids.map((annotation) => {
-        const depthAxis =
-            cameraMode === 'perspective'
-                ? null
-                : findLocalDepthAxis(annotation.rotation, DEPTH_AXIS[cameraMode]);
+        const depthAxis = cameraMode === 'perspective' ? null : DEPTH_AXIS[cameraMode];
         return {
             annotation,
             depthAxis,

@@ -6,7 +6,10 @@
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type { ColorMode } from '../pointCloudUtils';
     import type { PointBatch } from '../types';
-    import type { CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type {
+        CuboidAnnotation,
+        CameraMode
+    } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { SceneViewState } from '../sceneViewState';
     import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
     interface Props {
@@ -19,6 +22,7 @@
         camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
         cameraMode?: CameraMode;
+        cameraCuboid?: CuboidAnnotation;
         isScaleSource?: boolean;
         viewState?: SceneViewState | null;
         onViewStateChange?: (viewState: SceneViewState) => void;
@@ -33,6 +37,7 @@
         camera,
         controls,
         cameraMode = 'perspective',
+        cameraCuboid,
         isScaleSource = false,
         viewState = null,
         onViewStateChange
@@ -47,6 +52,7 @@
         controls,
         fitKey,
         cameraMode,
+        cameraCuboid,
         isScaleSource,
         viewState,
         onViewStateChange

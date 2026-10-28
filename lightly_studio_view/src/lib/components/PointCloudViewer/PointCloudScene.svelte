@@ -7,6 +7,7 @@
     import type { ColorMode } from './pointCloudUtils';
     import type { PointBatch } from './types';
     import type {
+        CuboidAnnotation,
         CameraMode,
         WorkspaceTool
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
@@ -21,6 +22,7 @@
         fitKey?: string;
         activeTool?: WorkspaceTool;
         cameraMode?: CameraMode;
+        cameraCuboid?: CuboidAnnotation;
         isScaleSource?: boolean;
         isActive?: () => boolean;
         navigationId?: symbol;
@@ -36,6 +38,7 @@
         fitKey = '',
         activeTool = 'select',
         cameraMode = 'perspective',
+        cameraCuboid,
         isScaleSource = false,
         isActive,
         navigationId,
@@ -66,6 +69,7 @@
     camera={activeCamera}
     controls={controlsRef}
     {cameraMode}
+    {cameraCuboid}
     {isScaleSource}
     {viewState}
     {onViewStateChange}

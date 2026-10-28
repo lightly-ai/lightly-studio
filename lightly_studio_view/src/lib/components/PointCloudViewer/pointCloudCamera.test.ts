@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Box3, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
-import { fitCameraToBounds } from './pointCloudCamera';
+import { Box3, Euler, OrthographicCamera, PerspectiveCamera, Quaternion, Vector3 } from 'three';
+import { fitCameraToBounds, fitCameraToCuboid } from './pointCloudCamera';
+import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 
 describe('fitCameraToBounds', () => {
     it('does nothing when camera is undefined', () => {
@@ -105,4 +106,41 @@ describe('fitCameraToBounds', () => {
         expect(camera.right).toBe(2);
         expect(camera.zoom).toBeCloseTo(0.18);
     });
+});
+
+describe('cuboid object views', () => {
+    it.each([
+        ['top', [0, 0, -1], [0, 1, 0], 4, 2],
+        ['front', [-1, 0, 0], [0, 0, 1], 2, 1],
+        ['side', [0, 1, 0], [0, 0, 1], 4, 1]
+    ] as const)(
+        'aligns the %s camera and fits the rotated cuboid',
+        (mode, direction, up, width, height) => {
+            const rotation = new Quaternion().setFromEuler(new Euler(0.3, -0.4, 1.2));
+            const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+            const controls = {
+                enableDamping: true,
+                target: new Vector3(),
+                update: () => camera.lookAt(controls.target)
+            };
+            const cuboid = {
+                ...createAnnotationFixture(),
+                center: [10, 20, 30] as const,
+                size: [4, 2, 1] as const,
+                rotation: rotation.toArray()
+            };
+            fitCameraToCuboid(camera, controls as never, cuboid, mode, 2);
+            expect(
+                camera
+                    .getWorldDirection(new Vector3())
+                    .distanceTo(new Vector3(...direction).applyQuaternion(rotation))
+            ).toBeCloseTo(0);
+            expect(camera.up.distanceTo(new Vector3(...up).applyQuaternion(rotation))).toBeCloseTo(
+                0
+            );
+            expect(controls.target.toArray()).toEqual(cuboid.center);
+            expect(camera.zoom).toBeCloseTo(1.8 / Math.max(height, width / 2, 1));
+            expect(controls.enableDamping).toBe(true);
+        }
+    );
 });

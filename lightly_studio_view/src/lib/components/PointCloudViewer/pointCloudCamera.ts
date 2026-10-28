@@ -1,6 +1,14 @@
-import { Sphere, Vector3, type Box3, type OrthographicCamera, type PerspectiveCamera } from 'three';
+import {
+    Box3,
+    Quaternion,
+    Sphere,
+    Vector3,
+    type OrthographicCamera,
+    type PerspectiveCamera
+} from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { computeCameraPlacement } from './pointCloudUtils';
+import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 export function fitCameraToBounds(
     camera: PerspectiveCamera | OrthographicCamera | undefined,
@@ -86,4 +94,33 @@ function fitOrthographicCameraToBounds(
 
     controls.target.copy(center);
     controls.update();
+}
+
+/** Fits an object view in the selected cuboid's local coordinate frame. */
+export function fitCameraToCuboid(
+    camera: OrthographicCamera,
+    controls: OrbitControls,
+    cuboid: CuboidAnnotation,
+    mode: 'top' | 'side' | 'front',
+    aspect: number
+): void {
+    const halfSize = new Vector3(...cuboid.size).multiplyScalar(0.5);
+    // The heading points along local +X: front looks along -X, side along +Y.
+    const localMode = mode === 'front' ? 'side' : mode === 'side' ? 'front' : 'top';
+    camera.up.set(0, mode === 'top' ? 1 : 0, mode === 'top' ? 0 : 1);
+    fitCameraToBounds(
+        camera,
+        undefined,
+        new Box3(halfSize.clone().negate(), halfSize),
+        localMode,
+        aspect
+    );
+    const rotation = new Quaternion(...cuboid.rotation);
+    camera.position.applyQuaternion(rotation).add(new Vector3(...cuboid.center));
+    camera.up.applyQuaternion(rotation);
+    const wasDamping = controls.enableDamping;
+    controls.enableDamping = false;
+    controls.target.set(...cuboid.center);
+    controls.update();
+    controls.enableDamping = wasDamping;
 }

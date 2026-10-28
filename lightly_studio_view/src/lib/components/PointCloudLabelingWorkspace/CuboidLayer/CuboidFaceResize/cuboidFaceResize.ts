@@ -27,21 +27,10 @@ export const FACE_DEFINITIONS: readonly FaceDefinition[] = [
     { axis: 2, sign: -1, euler: [PI, 0, 0] } // -Z
 ] as const;
 
-/** Picks the local cuboid axis best aligned with the world view axis of an orthographic view. */
-export function findLocalDepthAxis(rotation: Quaternion, worldAxis: 0 | 1 | 2): 0 | 1 | 2 {
-    const alignment = ([0, 1, 2] as const).map((axis) =>
-        Math.abs(computeFaceNormalWorld({ axis, sign: 1, rotation })[worldAxis])
-    );
-    return alignment.indexOf(Math.max(...alignment)) as 0 | 1 | 2;
-}
-
 /** Orthographic views expose exactly the four faces of the shown rectangle. */
-export function getEditableCuboidFaces(rotation: Quaternion, cameraMode: CameraMode) {
+export function getEditableCuboidFaces(cameraMode: CameraMode) {
     if (cameraMode === 'perspective') return FACE_DEFINITIONS;
-    const depthAxis = findLocalDepthAxis(
-        rotation,
-        ({ top: 2, side: 0, front: 1 } as const)[cameraMode]
-    );
+    const depthAxis = ({ top: 2, side: 1, front: 0 } as const)[cameraMode];
     return FACE_DEFINITIONS.filter((face) => face.axis !== depthAxis);
 }
 

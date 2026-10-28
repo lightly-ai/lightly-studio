@@ -74,17 +74,16 @@ it('keeps the toolbar in the main viewport and restores all views without remoun
     }
 });
 
-it('shares navigation in both directions, preserves scale through expansion, and resets on a new fit key', async () => {
+it('keeps navigation independent, preserves views through expansion, and resets on a new fit key', async () => {
     const { rerender } = render(WorkspaceSceneProviderHarness, {
         props: { state: { ...defaultProps, fitKey: 'sequence/map' } }
     });
-    for (const [cameraMode, scale] of [
-        ['perspective', '0.05'],
-        ['top', '0.025']
-    ]) {
+    const scales = { perspective: 'unset', top: 'unset', side: 'unset', front: 'unset' };
+    for (const cameraMode of ['perspective', 'top', 'side', 'front'] as const) {
         await fireEvent.click(screen.getByRole('button', { name: `Navigate ${cameraMode}` }));
-        for (const mode of ['perspective', 'top', 'side', 'front']) {
-            expect(screen.getByLabelText(`${mode} scale`)).toHaveTextContent(scale);
+        scales[cameraMode] = cameraMode === 'perspective' ? '0.05' : '0.025';
+        for (const mode of ['perspective', 'top', 'side', 'front'] as const) {
+            expect(screen.getByLabelText(`${mode} scale`)).toHaveTextContent(scales[mode]);
         }
     }
     await fireEvent.click(screen.getByRole('button', { name: 'Expand Front view' }));
@@ -109,6 +108,7 @@ it('isolates camera state between separate workspace providers', async () => {
     const first = render(WorkspaceSceneProviderHarness, { props: { state: defaultProps } });
     const second = render(WorkspaceSceneProviderHarness, { props: { state: defaultProps } });
     await fireEvent.click(within(first.container).getByRole('button', { name: 'Navigate top' }));
-    expect(within(first.container).getByLabelText('perspective scale')).toHaveTextContent('0.025');
+    expect(within(first.container).getByLabelText('top scale')).toHaveTextContent('0.025');
+    expect(within(first.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
     expect(within(second.container).getByLabelText('perspective scale')).toHaveTextContent('unset');
 });

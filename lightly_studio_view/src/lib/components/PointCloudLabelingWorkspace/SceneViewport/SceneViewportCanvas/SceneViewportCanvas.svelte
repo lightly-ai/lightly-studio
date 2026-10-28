@@ -2,23 +2,21 @@
     import { Canvas } from '@threlte/core';
     import { PointCloudScene } from '$lib/components/PointCloudViewer';
     import CuboidLayer from '../../CuboidLayer/CuboidLayer.svelte';
-    import { GroundPlane } from '../../GroundPlane';
     import OriginAxes from '../../OriginAxes/OriginAxes.svelte';
     import { useSceneViewportContext } from '../sceneViewportContext';
     import { getAnnotationPointClipping } from '../annotationPointClipping';
     const { getProps, interaction } = useSceneViewportContext();
     const props = $derived(getProps());
-    const clippingPlanes = $derived(
-        getAnnotationPointClipping(
-            props.cameraMode,
-            props.cuboids.find((annotation) => annotation.id === props.selectedAnnotationId)
-        )
+    const selectedCuboid = $derived(
+        props.cuboids.find((annotation) => annotation.id === props.selectedAnnotationId)
     );
+    const clippingPlanes = $derived(getAnnotationPointClipping(props.cameraMode, selectedCuboid));
 </script>
 
 <Canvas>
     <PointCloudScene
         batch={props.batch}
+        cameraCuboid={props.cameraMode === 'perspective' ? undefined : selectedCuboid}
         {clippingPlanes}
         colorMode={props.colorMode}
         pointSize={props.pointSize}
@@ -32,7 +30,6 @@
         viewState={props.viewState}
         onViewStateChange={props.onViewStateChange}
     />
-    <GroundPlane pointCloudBounds={interaction.groundPlaneBounds} />
     <OriginAxes />
     <CuboidLayer
         cameraMode={props.cameraMode}

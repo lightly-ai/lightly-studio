@@ -1,7 +1,8 @@
 import { useThrelte } from '@threlte/core';
-import type { Box3 } from 'three';
+import { untrack } from 'svelte';
+import { OrthographicCamera, type Box3 } from 'three';
 import type { PointCloudPointsProps } from '../pointCloudPointsProps';
-import { fitCameraToBounds } from '../../pointCloudCamera';
+import { fitCameraToBounds, fitCameraToCuboid } from '../../pointCloudCamera';
 import {
     applyCameraViewState,
     getCameraWorldUnitsPerPixel,
@@ -20,10 +21,18 @@ export function usePointCloudCamera(
     const controls = $derived(getOptions().controls);
     const fitKey = $derived(getOptions().fitKey ?? '');
     const cameraMode = $derived(getOptions().cameraMode ?? 'perspective');
+    const cameraCuboid = $derived(getOptions().cameraCuboid);
+    // Resizing and translating the same annotation must not reset camera navigation.
+    const cuboidFrameKey = $derived(
+        cameraCuboid
+            ? JSON.stringify([cameraCuboid.id, cameraCuboid.frameId, cameraCuboid.rotation])
+            : undefined
+    );
     const isScaleSource = $derived(getOptions().isScaleSource ?? false);
     const viewState = $derived(getOptions().viewState);
     const onViewStateChange = $derived(getOptions().onViewStateChange);
     let fittedKey: string | undefined;
+    let fittedCuboidFrameKey: string | undefined;
     let latestBounds: Box3 | undefined;
     let applyingViewState = false;
     const getViewportAspect = (): number => {
@@ -37,8 +46,17 @@ export function usePointCloudCamera(
             return false;
         applyingViewState = true;
         try {
-            fitCameraToBounds(camera, controls, latestBounds, cameraMode, getViewportAspect());
+            if (
+                cameraCuboid &&
+                cameraMode !== 'perspective' &&
+                camera instanceof OrthographicCamera
+            ) {
+                fitCameraToCuboid(camera, controls, cameraCuboid, cameraMode, getViewportAspect());
+            } else {
+                fitCameraToBounds(camera, controls, latestBounds, cameraMode, getViewportAspect());
+            }
             fittedKey = fitKey;
+            fittedCuboidFrameKey = cuboidFrameKey;
         } finally {
             applyingViewState = false;
         }
@@ -49,9 +67,15 @@ export function usePointCloudCamera(
         if (!latestBounds || !camera || !controls) return;
         const { clientWidth, clientHeight } = renderer.domElement;
         if (clientWidth <= 0 || clientHeight <= 0) return;
-        if (fittedKey !== fitKey && !fitCamera()) return;
+        if ((fittedKey !== fitKey || fittedCuboidFrameKey !== cuboidFrameKey) && !fitCamera())
+            return;
         if (viewState) applyViewState(viewState);
-        else if (isScaleSource) publishViewState();
+        else {
+            const scale = getCameraWorldUnitsPerPixel(camera, controls.target, clientHeight);
+            if (scale)
+                applyViewState({ target: controls.target.toArray(), worldUnitsPerPixel: scale });
+            if (isScaleSource) publishViewState();
+        }
         invalidate();
     };
 
@@ -100,6 +124,14 @@ export function usePointCloudCamera(
         };
         currentControls.addEventListener('change', handleControlChange);
         return () => currentControls.removeEventListener('change', handleControlChange);
+    });
+
+    $effect(() => {
+        if (!cuboidFrameKey || cameraMode === 'perspective' || !camera || !controls) return;
+        void fitKey;
+        untrack(() => {
+            if (fitCamera()) invalidate();
+        });
     });
 
     $effect(() => {

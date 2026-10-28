@@ -37,8 +37,6 @@
     activeTool={layout.effectiveTool}
     {cameraMode}
     isScaleSource={cameraMode === 'perspective' || scene.expandedProjection === cameraMode}
-    viewState={scene.viewState}
-    onViewStateChange={scene.onViewStateChange}
     onselect={layout.onSelect}
     onhover={(id) => layout.onHover(id)}
     onCreateCuboid={layout.onCreateCuboid}

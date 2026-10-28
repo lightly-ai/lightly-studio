@@ -24,7 +24,7 @@
         onResizeCancel,
         onResizeEnd
     }: Props = $props();
-    const faces = $derived(getEditableCuboidFaces(annotation.rotation, cameraMode));
+    const faces = $derived(getEditableCuboidFaces(cameraMode));
     const { hoveredFace, onFaceHoverEnter, onFaceHoverLeave, onFacePointerDown } =
         useCuboidFaceResize({
             getAnnotation: () => annotation,
