@@ -1,4 +1,5 @@
 import { readCollection } from '$lib/api/lightly_studio_local/sdk.gen';
+import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
 import type { GridType } from '$lib/types';
 import { derived, get, writable } from 'svelte/store';
 import type { TagView as Tag } from '$lib/services/types';
@@ -95,12 +96,6 @@ const isEditingMode = writable<boolean>(false);
 const setIsEditingMode = (isEditing: boolean) => {
     isEditingMode.set(isEditing);
 };
-
-export const IMAGE_ADJUSTMENT_DEFAULTS = {
-    brightness: 1,
-    contrast: 1,
-    maskOpacity: 0.6
-} as const;
 
 const imageBrightness = writable<number>(IMAGE_ADJUSTMENT_DEFAULTS.brightness);
 const imageContrast = writable<number>(IMAGE_ADJUSTMENT_DEFAULTS.contrast);

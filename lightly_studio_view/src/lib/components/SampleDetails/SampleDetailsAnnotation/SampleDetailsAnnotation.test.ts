@@ -1,7 +1,8 @@
 import { render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
-import { IMAGE_ADJUSTMENT_DEFAULTS, useGlobalStorage } from '$lib/hooks';
+import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
+import { useGlobalStorage } from '$lib/hooks';
 import SampleDetailsAnnotation from './SampleDetailsAnnotation.svelte';
 
 const predictionAnnotation = {
