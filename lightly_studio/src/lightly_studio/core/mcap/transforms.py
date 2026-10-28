@@ -89,7 +89,7 @@ class TransformTree:
 
         matrix = to_matrix(transform)
         self._matrix_by_edge[(parent, child)] = matrix
-        self._matrix_by_edge[(child, parent)] = np.linalg.inv(matrix)
+        self._matrix_by_edge[(child, parent)] = np.linalg.inv(matrix).astype(np.float64, copy=False)
         self._neighbor_frame_ids.setdefault(parent, set()).add(child)
         self._neighbor_frame_ids.setdefault(child, set()).add(parent)
         self._parent_frame_id_by_child[child] = parent

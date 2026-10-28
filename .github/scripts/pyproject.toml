@@ -8,9 +8,11 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py310"
 
 [tool.ruff.lint]
+# Preserve existing zip behavior when raising the minimum Python version.
+ignore = ["B905"]
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T10", "PIE", "PT", "RET", "SLF", "SIM", "TID", "ARG", "PL", "RUF"]
 

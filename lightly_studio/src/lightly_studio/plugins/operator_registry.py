@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import logging
-import sys
 import uuid
 from dataclasses import dataclass, field
 from importlib.metadata import entry_points
@@ -100,10 +99,7 @@ class OperatorRegistry:
             bbox_auto_propagation_nano_tracker =
             "lightly_plugins_bbox_auto_propagation_nano_tracker.operator:AutoPropagateOperator"
         """
-        if sys.version_info >= (3, 10):
-            eps = entry_points(group=ENTRY_POINT_GROUP)
-        else:
-            eps = entry_points().get(ENTRY_POINT_GROUP, [])
+        eps = entry_points(group=ENTRY_POINT_GROUP)
 
         for ep in eps:
             try:

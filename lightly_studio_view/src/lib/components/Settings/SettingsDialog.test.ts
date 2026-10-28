@@ -49,6 +49,10 @@ async function openDialog() {
     );
 }
 
+async function openTab(name: string) {
+    await fireEvent.click(screen.getByRole('tab', { name }));
+}
+
 describe('SettingsDialog', () => {
     beforeEach(() => {
         vi.resetAllMocks();
@@ -85,15 +89,15 @@ describe('SettingsDialog', () => {
         await openDialog();
 
         // Use getByLabelText to find the shortcut button via its <Label for="hide-annotations">
-        const shortcutButton = screen.getByLabelText('Hide Annotations');
+        const shortcutButton = screen.getByLabelText('Hide annotations');
         await fireEvent.click(shortcutButton);
 
         expect(screen.getByText('Press a key...')).toBeInTheDocument();
 
-        await fireEvent.keyDown(window, { key: 'z' });
+        await fireEvent.keyDown(document, { key: 'z' });
         expect(shortcutButton).toHaveTextContent('z');
 
-        await fireEvent.click(screen.getByText('Save Changes'));
+        await fireEvent.click(screen.getByText('Save changes'));
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
@@ -103,15 +107,101 @@ describe('SettingsDialog', () => {
         );
     });
 
-    it('should toggle a switch and save the updated value', async () => {
+    it('should not pass key presses to app shortcuts while open', async () => {
+        const appShortcutHandler = vi.fn();
+        window.addEventListener('keydown', appShortcutHandler);
         render(SettingsDialog);
         await openDialog();
 
-        const toggle = screen.getByRole('switch', { name: 'Show Annotation Class Names' });
+        await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'e' });
+
+        expect(appShortcutHandler).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', appShortcutHandler);
+    });
+
+    it('should close on Escape', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        await fireEvent.keyDown(screen.getByRole('dialog'), { key: 'Escape' });
+
+        await waitFor(() =>
+            expect(
+                screen.queryByText('Configure your application preferences.')
+            ).not.toBeInTheDocument()
+        );
+    });
+
+    it('should show Go back as a fixed Escape shortcut', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const goBack = screen.getByLabelText('Go back');
+        expect(goBack).toHaveTextContent('Escape');
+        expect(goBack).toBeDisabled();
+    });
+
+    it('should cancel recording on Escape and keep the dialog open', async () => {
+        const appShortcutHandler = vi.fn();
+        window.addEventListener('keydown', appShortcutHandler);
+        render(SettingsDialog);
+        await openDialog();
+
+        const shortcutButton = screen.getByLabelText('Hide annotations');
+        await fireEvent.click(shortcutButton);
+        await fireEvent.keyDown(document, { key: 'Escape' });
+
+        expect(screen.queryByText('Press a key...')).not.toBeInTheDocument();
+        expect(shortcutButton).toHaveTextContent('v');
+        expect(screen.getByText('Settings')).toBeInTheDocument();
+        expect(appShortcutHandler).not.toHaveBeenCalled();
+        window.removeEventListener('keydown', appShortcutHandler);
+    });
+
+    it('should open on the Shortcuts tab', async () => {
+        render(SettingsDialog);
+        await openDialog();
+        await openTab('Annotations');
+        await fireEvent.click(screen.getByText('Cancel'));
+        await openDialog();
+
+        expect(screen.getByRole('tab', { name: 'Shortcuts' })).toHaveAttribute(
+            'aria-selected',
+            'true'
+        );
+        expect(screen.queryByRole('switch')).not.toBeInTheDocument();
+    });
+
+    it('should keep unsaved changes across tabs and stop recording on tab switch', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        await fireEvent.click(screen.getByLabelText('Hide annotations'));
+        await openTab('Annotations');
+        await fireEvent.click(screen.getByRole('switch', { name: 'Always color by class' }));
+        await fireEvent.keyDown(document, { key: 'z' });
+        await openTab('Shortcuts');
+
+        expect(screen.queryByText('Press a key...')).not.toBeInTheDocument();
+
+        await fireEvent.click(screen.getByText('Save changes'));
+
+        const { saveSettings } = useSettings();
+        expect(saveSettings).toHaveBeenCalledWith(
+            expect.objectContaining({ key_hide_annotations: 'v', enforce_coloring_by_class: true })
+        );
+    });
+
+    it('should toggle a switch and save the updated value', async () => {
+        render(SettingsDialog);
+        await openDialog();
+        await openTab('Annotations');
+
+        const toggle = screen.getByRole('switch', { name: 'Show annotation class names' });
         expect(toggle).toHaveAttribute('aria-checked', 'false');
 
         await fireEvent.click(toggle);
-        await fireEvent.click(screen.getByText('Save Changes'));
+        await fireEvent.click(screen.getByText('Save changes'));
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
@@ -124,12 +214,13 @@ describe('SettingsDialog', () => {
     it('should show and save the enforce coloring by class switch', async () => {
         render(SettingsDialog);
         await openDialog();
+        await openTab('Annotations');
 
-        const toggle = screen.getByRole('switch', { name: 'Enforce Coloring by Class' });
+        const toggle = screen.getByRole('switch', { name: 'Always color by class' });
         expect(toggle).toHaveAttribute('aria-checked', 'false');
 
         await fireEvent.click(toggle);
-        await fireEvent.click(screen.getByText('Save Changes'));
+        await fireEvent.click(screen.getByText('Save changes'));
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
@@ -142,12 +233,13 @@ describe('SettingsDialog', () => {
     it('should disable image interpolation and save the setting', async () => {
         render(SettingsDialog);
         await openDialog();
+        await openTab('Display');
 
-        const toggle = screen.getByRole('switch', { name: 'Image Interpolation' });
+        const toggle = screen.getByRole('switch', { name: 'Image interpolation' });
         expect(toggle).toHaveAttribute('aria-checked', 'true');
 
         await fireEvent.click(toggle);
-        await fireEvent.click(screen.getByText('Save Changes'));
+        await fireEvent.click(screen.getByText('Save changes'));
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
@@ -155,32 +247,22 @@ describe('SettingsDialog', () => {
         );
     });
 
-    it('should save all initial settings unchanged when no edits are made', async () => {
+    it('should enable Save changes only while there are unsaved changes', async () => {
         render(SettingsDialog);
         await openDialog();
+        await openTab('Display');
 
-        await fireEvent.click(screen.getByText('Save Changes'));
+        const saveButton = screen.getByRole('button', { name: 'Save changes' });
+        expect(saveButton).toBeDisabled();
+        await fireEvent.mouseEnter(saveButton.parentElement!);
+        expect(screen.getByText('No changes to save')).toBeInTheDocument();
 
-        const { saveSettings } = useSettings();
-        expect(saveSettings).toHaveBeenCalledWith({
-            key_hide_annotations: 'v',
-            key_go_back: 'Escape',
-            key_toggle_edit_mode: 'e',
-            grid_view_sample_rendering: 'contain',
-            grid_view_thumbnail_quality: 'raw',
-            image_interpolation: true,
-            show_annotation_text_labels: false,
-            show_sample_filenames: true,
-            show_bounding_boxes_for_segmentation: true,
-            enforce_coloring_by_class: false,
-            key_toolbar_selection: 's',
-            key_toolbar_drag: 'd',
-            key_toolbar_bounding_box: 'b',
-            key_toolbar_segmentation_mask: 'm',
-            key_toolbar_slic: 'a',
-            key_toolbar_brush: 'r',
-            key_toolbar_eraser: 'x'
-        });
+        const toggle = screen.getByRole('switch', { name: 'Image interpolation' });
+        await fireEvent.click(toggle);
+        expect(saveButton).toBeEnabled();
+
+        await fireEvent.click(toggle);
+        expect(saveButton).toBeDisabled();
     });
 
     it('should show saving state while submitting', async () => {
@@ -195,8 +277,10 @@ describe('SettingsDialog', () => {
 
         render(SettingsDialog);
         await openDialog();
+        await openTab('Display');
+        await fireEvent.click(screen.getByRole('switch', { name: 'Image interpolation' }));
 
-        await fireEvent.click(screen.getByText('Save Changes'));
+        await fireEvent.click(screen.getByText('Save changes'));
         expect(screen.getByText('Saving...')).toBeInTheDocument();
 
         resolvePromise!();
@@ -213,9 +297,9 @@ describe('SettingsDialog', () => {
         await openDialog();
 
         // Make a change first
-        const shortcutButton = screen.getByLabelText('Hide Annotations');
+        const shortcutButton = screen.getByLabelText('Hide annotations');
         await fireEvent.click(shortcutButton);
-        await fireEvent.keyDown(window, { key: 'z' });
+        await fireEvent.keyDown(document, { key: 'z' });
 
         await fireEvent.click(screen.getByText('Cancel'));
 

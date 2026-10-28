@@ -9,55 +9,100 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Disabled buttons now show a tooltip explaining why they cannot be clicked.
-- Added a filter panel to the captions tab, with tag and metadata filters. The footer now counts the number of active captions.
-- Delete an evaluation from the evaluation panel. Grid filters and sorting that use the deleted evaluation are removed.
-- API: Delete an evaluation and its results while keeping annotations unchanged.
-- Edit saved evaluation parameters and rerun from the evaluation panel.
-- API: Change evaluation parameters and rerun an existing evaluation.
-- Create a new annotation source while duplicating an annotation in the details view.
-- Copy annotations to another annotation source from the details view.
-- Buffer upcoming MCAP point-cloud ticks in the GUI, show buffered ticks on the timeline, and optionally buffer the entire sequence. Playback waits for unbuffered ticks, and the grid preloads the first 50 ticks of the first 10 sequences.
-- Added an image interpolation setting to show sharp pixel edges when zooming in.
-- The text axes layout of the embedding plot shows the lines x = 0 and y = 0. They split the plot into four parts, one for each pair of axis texts.
-- Added a "Clear all filters" button to the filter sidebar.
-- Python SDK: Embed video frames on a remote embedding server that `register_default_embedder` registered, if the server embeds image bytes.
-- Python SDK: Filter samples by metadata with equality and ordering comparisons, including nested fields and array indices, e.g. `ImageSampleField.metadata["odometry.speed"] < 15`.
-- Python SDK: Report anonymous usage data on how data is loaded: the dataset format and whether it comes from the example dataset, a local folder or remote storage.
+- Delete selected annotations in bulk from the annotation grid.
+- The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
+- Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
 - Python SDK: `connect()` trusts the custom CA certificates of an S3-compatible storage when the enterprise instance provides them.
+
 
 ### Changed
 
-- Make confusion matrix filters easier to read.
-- Improved filter consistency between the images and captions views.
-- Group image-grid evaluation sorts by metric, show highest counts first, and mark missing results.
-- Clarify evaluation settings and annotation sources in the evaluation panel.
-- Keep annotation cards aligned and confidence visible when switching between viewing and editing.
-- Python SDK: `start_gui()` now opens the browser by default (`open_browser=True`). Pass `open_browser=False` to suppress. The `lightly-studio gui` CLI command accepts `--no-browser` to opt out.
-- Make embedding plot points excluded by filters or without a category easier to see on dark backgrounds.
-- Python SDK: Image search in the GUI needs an embedder that implements `ImageBytesEmbedder`. An embedder with only `ImagePathEmbedder` or `ImagePILEmbedder` no longer serves image search.
-- BREAKING: A tag now holds only samples of its own collection. For example, an image tag holds only images. Tags no longer have a `kind` field. The API returns 400 when a request adds a sample of another collection, or a sample that does not exist, to a tag. The PostgreSQL migration is automatic. It moves each sample that has a tag of another collection to a tag with the same name in the collection of the sample. DuckDB users must re-index their data before they can create tags.
-- Speed up adding many samples to a tag.
-- Python SDK: Crops and frames get embedded with a remote embedder automatically when a compatible remote embedder was used previously.
-- The text axes layout of the embedding plot scales each text embedding to norm 1, so x = 0 is exactly where a sample is as similar to X− as to X+. The same is true for y. Before, with an embedding model such as MobileCLIP, the text with the larger norm got a larger part of the plot.
-- The text axes layout of the embedding plot starts on a fixed range of -0.2 to 0.2 on both axes and no longer fits the view to the data. Axes along which the images vary strongly now look wide, and axes from texts that do not match the images look small.
-- The embedding plot has a "Define axes" button instead of the PaCMAP/Text select, with a popover for the four axis texts. The plot edges show the applied texts, and "Reset axes" goes back to the PaCMAP layout.
-- Python SDK: New video datasets embed their video frames with Perception Encoder (`PE-Core-T16-384`), the model of the videos, instead of MobileCLIP. Existing datasets keep the model of their frames.
+- Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
+- The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
+- Reorganised the settings dialog into a tabbed layout.
+- In the settings dialog, "Save changes" is enabled only when there are changes to save.
 
 ### Deprecated
 
 ### Removed
 
+- BREAKING: Dropped Python 3.9 support. Upgrade to Python 3.10–3.14.
+
 ### Fixed
 
-- Keep source colors stable when hiding annotations in the details view, and show confidence while editing.
-- Preserve existing evaluation results when recomputation fails.
-- Python SDK: `start_gui()` stops without a `KeyboardInterrupt` traceback when you press Ctrl+C.
-- The GUI footer no longer shows a dev commit hash for released versions.
-- The sample, video, frame and annotation grids now return to the same scroll position when you go back from the details view. Before, the grid could stop up to a row above the item you opened.
-- Python SDK: Speed up `dataset.evaluate()` and evaluation recompute on large datasets. The metrics are now written in larger batches, so the annotations are no longer loaded again for each sample.
+- Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
+- In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
+- In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
 
 ### Security
+
+## \[1.2.0\] - 2026-10-23
+
+### Added
+
+- Point clouds
+    - Explore MCAP point-cloud sequences in the GUI, now available to all users.
+    - Label 3D cuboids directly in the scene: create, move, rotate, resize by dragging a face, and delete.
+    - Search sequences by text, filter them by tag, see them in the embedding plot, and create selections of them.
+    - Play sequences smoothly: upcoming ticks are buffered and shown on the timeline, and you can buffer the whole sequence.
+
+- Evaluation
+    - Edit the settings of an evaluation and rerun it, in the evaluation panel or the API.
+    - Delete an evaluation in the evaluation panel or the API. Annotations stay unchanged, and filters that use the evaluation are removed.
+
+- Filtering
+    - Filter by metadata in the query editor, e.g. `metadata["score"] >= 0.8`.
+    - Python SDK: Filter images and videos by metadata, including nested fields, e.g. `ImageSampleField.metadata["odometry.speed"] < 15`.
+    - Filter captions by tag and metadata in the captions tab.
+    - Reset all filters with one click with the new "Clear all filters" button.
+
+- Annotations
+    - Copy an annotation to another annotation source in the details view, or create a new source while you copy.
+    - Set your own keyboard shortcut for AI-assisted labeling in the settings.
+
+- Other
+    - Get started quickly with a short onboarding tour on image datasets.
+    - See why a button is disabled in its tooltip.
+    - Show sharp pixel edges when you zoom into images with the new image interpolation setting.
+    - Python SDK: Embed video frames on a remote embedding server registered with `register_default_embedder`.
+    - Python SDK: Report anonymous usage data on how data is loaded (format and source). Set `LIGHTLY_STUDIO_ANALYTICS_ENABLED=false` to opt out.
+
+### Changed
+
+- Tags
+    - BREAKING: A tag now holds only samples of its own collection, and tags no longer have a `kind` field. PostgreSQL migrates automatically. DuckDB users must re-index their data before they create tags.
+    - Adding many samples to a tag is faster.
+
+- Embeddings
+    - BREAKING: Python SDK: Image search in the GUI now needs an embedder that implements `ImageBytesEmbedder`. Implement it in your custom embedder to keep image search.
+    - Python SDK: New video datasets embed frames with Perception Encoder (`PE-Core-T16-384`) instead of MobileCLIP. Existing datasets are not changed.
+    - Python SDK: Crops and frames are embedded automatically with a previously used compatible remote embedder.
+
+- Embedding plot
+    - Set the text axes with the new "Define axes" button. The applied texts show at the plot edges, and "Reset axes" returns to PaCMAP.
+    - Text axes are now balanced and comparable. Lines at x = 0 and y = 0 split the plot into four parts, and axes with weak text matches now look small.
+    - Points that are filtered out or have no category are easier to see on dark backgrounds.
+
+- Evaluation
+    - The evaluation panel has clearer settings and confusion matrix filters. Sorts are grouped by metric, show the highest counts first, and mark missing results.
+    - Python SDK: `dataset.evaluate()` and evaluation recompute are faster on large datasets.
+
+- Other
+    - Python SDK: `start_gui()` opens the browser. Pass `open_browser=False`, or use `lightly-studio gui --no-browser`, to turn this off.
+
+### Fixed
+
+- Annotations
+    - Annotation cards stay aligned, source colors stay stable, and confidence stays visible when you hide annotations or switch to editing.
+    - Deleting annotations now also deletes their captions.
+
+- Evaluation
+    - Evaluation results are kept when a recompute fails.
+
+- Other
+    - The grids return to the exact scroll position when you go back from the details view.
+    - Python SDK: `start_gui()` stops cleanly on Ctrl+C, without a traceback.
+    - The GUI footer no longer shows a dev commit hash for released versions.
 
 ## \[1.1.3\] - 2026-10-07
 

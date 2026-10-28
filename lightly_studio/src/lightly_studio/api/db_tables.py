@@ -28,6 +28,9 @@ from lightly_studio.models.collection_embedding_model import (
 from lightly_studio.models.embedding_model import (
     EmbeddingModelTable,  # noqa: F401, required for SQLModel to work properly
 )
+from lightly_studio.models.embedding_plot import (
+    EmbeddingPlotTable,  # noqa: F401, required for SQLModel to work properly
+)
 from lightly_studio.models.group_component_definition import (
     GroupComponentDefinitionTable,  # noqa: F401, required for SQLModel to work properly
 )
@@ -71,9 +74,6 @@ from lightly_studio.models.static_transform import (
 from lightly_studio.models.tag import (
     TagTable,  # noqa: F401, required for SQLModel to work properly
 )
-from lightly_studio.models.two_dim_embedding import (
-    TwoDimEmbeddingTable,  # noqa: F401, required for SQLModel to work properly
-)
 from lightly_studio.models.evaluation_run import (
     EvaluationRunTable,  # noqa: F401, required for SQLModel to work properly
 )
@@ -82,6 +82,9 @@ from lightly_studio.models.evaluation_annotation_metric import (
 )
 from lightly_studio.models.evaluation_sample_metric import (
     EvaluationSampleMetricTable,  # noqa: F401, required for SQLModel to work properly
+)
+from lightly_studio.models.evaluation_class_metric import (
+    EvaluationClassMetricTable,  # noqa: F401, required for SQLModel to work properly
 )
 from lightly_studio.models.temporal_span import (
     TemporalSpanTable,  # noqa: F401, required for SQLModel to work properly
