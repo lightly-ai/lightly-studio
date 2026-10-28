@@ -170,6 +170,7 @@ describe('PointCloudLabelingWorkspace', () => {
         summaryState.isLoading = false;
         schedulerParams.current = undefined;
         sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
+        sessionStorage.removeItem('lightlyStudio_pointCloudShowAnnotationTooltips');
     });
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
@@ -183,7 +184,7 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-header')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-filter-bar')).toBeInTheDocument();
-        expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
+        expect(screen.queryByTestId('workspace-tool-rail')).not.toBeInTheDocument();
         expect(screen.getByTestId('workspace-projection-strip')).toBeInTheDocument();
         expect(screen.getByTestId('workspace-frame-timeline')).toBeInTheDocument();
         expect(screen.getByText('Frame 1 / 2')).toBeInTheDocument();
@@ -206,6 +207,26 @@ describe('PointCloudLabelingWorkspace', () => {
 
         await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
         expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
+    });
+
+    it('persists annotation tooltip visibility from scene settings across workspace mounts', async () => {
+        const user = userEvent.setup();
+        const view = render(PointCloudLabelingWorkspace, { props: defaultProps });
+        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
+        const checkbox = screen.getByRole('checkbox', { name: 'Show annotation tooltips' });
+        expect(checkbox).toBeChecked();
+        await user.click(checkbox);
+        expect(checkbox).not.toBeChecked();
+        expect(sessionStorage.getItem('lightlyStudio_pointCloudShowAnnotationTooltips')).toBe(
+            'false'
+        );
+
+        view.unmount();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
+        expect(
+            screen.getByRole('checkbox', { name: 'Show annotation tooltips' })
+        ).not.toBeChecked();
     });
 
     it('does not use the Space shortcut from form controls', async () => {
@@ -262,6 +283,7 @@ describe('PointCloudLabelingWorkspace', () => {
         render(PointCloudLabelingWorkspace, { props: defaultProps });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Transform cuboid' }));
+        expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
 
         await waitFor(() => expect(tickDetails.refetch).toHaveBeenCalledOnce());
         expect(updateAnnotations).toHaveBeenCalledWith([
