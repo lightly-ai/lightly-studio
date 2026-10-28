@@ -1,4 +1,4 @@
-"""Implementation of get_dimension_histograms function for images."""
+"""Implementation of get_field_histograms function for images."""
 
 from __future__ import annotations
 
@@ -16,28 +16,28 @@ from lightly_studio.resolvers import histogram_bins
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.type_definitions import QueryType
 
-ImageDimension = Literal["width", "height"]
-"""An image field with a histogram."""
+ImageField = Literal["width", "height"]
+"""A built-in image field with a histogram."""
 
-IMAGE_DIMENSIONS: tuple[ImageDimension, ...] = ("width", "height")
+IMAGE_FIELDS: tuple[ImageField, ...] = ("width", "height")
 
-# Number of bins used for image dimension histograms.
+# Number of bins used for image field histograms.
 _HISTOGRAM_BIN_COUNT = 20
 
-_COLUMNS: dict[ImageDimension, Mapped[int]] = {
+_COLUMNS: dict[ImageField, Mapped[int]] = {
     "width": col(ImageTable.width),
     "height": col(ImageTable.height),
 }
 
 
-def get_dimension_histograms(
+def get_field_histograms(
     session: Session,
     collection_id: UUID,
     filters: ImageFilter | None = None,
     bin_count: int = _HISTOGRAM_BIN_COUNT,
-    fields: Sequence[ImageDimension] | None = None,
+    fields: Sequence[ImageField] | None = None,
 ) -> dict[str, HistogramView]:
-    """Compute value-distribution histograms of the image width and height.
+    """Compute value-distribution histograms of the built-in image fields.
 
     The bin edges span the unfiltered value range of each field, so the chart axis stays stable
     while the filters change. The histogram of a field ignores the filter of that field and
@@ -54,7 +54,7 @@ def get_dimension_histograms(
         Mapping of field name to its histogram. Empty when the collection has no images.
     """
     histograms: dict[str, HistogramView] = {}
-    for field in IMAGE_DIMENSIONS:
+    for field in IMAGE_FIELDS:
         if fields is not None and field not in fields:
             continue
         column = _COLUMNS[field]

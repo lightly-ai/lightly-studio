@@ -8,7 +8,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_tag
 
 
-def test_get_dimension_histograms(db_session: Session) -> None:
+def test_get_field_histograms(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     create_images(
         db_session=db_session,
@@ -20,7 +20,7 @@ def test_get_dimension_histograms(db_session: Session) -> None:
         ],
     )
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session, collection_id=collection_id, bin_count=2
     )
 
@@ -30,7 +30,7 @@ def test_get_dimension_histograms(db_session: Session) -> None:
     }
 
 
-def test_get_dimension_histograms__fields(db_session: Session) -> None:
+def test_get_field_histograms__fields(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     create_images(
         db_session=db_session,
@@ -38,14 +38,14 @@ def test_get_dimension_histograms__fields(db_session: Session) -> None:
         images=[ImageStub(path="a.jpg", width=100, height=10)],
     )
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session, collection_id=collection_id, fields=["height"]
     )
 
     assert list(histograms) == ["height"]
 
 
-def test_get_dimension_histograms__single_value(db_session: Session) -> None:
+def test_get_field_histograms__single_value(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     create_images(
         db_session=db_session,
@@ -56,24 +56,24 @@ def test_get_dimension_histograms__single_value(db_session: Session) -> None:
         ],
     )
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session, collection_id=collection_id, fields=["width"]
     )
 
     assert histograms == {"width": HistogramView(bin_edges=[100.0, 100.0], counts=[2])}
 
 
-def test_get_dimension_histograms__no_images(db_session: Session) -> None:
+def test_get_field_histograms__no_images(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session, collection_id=collection_id
     )
 
     assert histograms == {}
 
 
-def test_get_dimension_histograms__other_collection_is_ignored(db_session: Session) -> None:
+def test_get_field_histograms__other_collection_is_ignored(db_session: Session) -> None:
     collection_id = create_collection(session=db_session, collection_name="a").collection_id
     other_collection_id = create_collection(session=db_session, collection_name="b").collection_id
     create_images(
@@ -87,14 +87,14 @@ def test_get_dimension_histograms__other_collection_is_ignored(db_session: Sessi
         images=[ImageStub(path="b.jpg", width=900, height=90)],
     )
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session, collection_id=collection_id, fields=["width"]
     )
 
     assert histograms == {"width": HistogramView(bin_edges=[100.0, 100.0], counts=[1])}
 
 
-def test_get_dimension_histograms__filters_are_faceted(db_session: Session) -> None:
+def test_get_field_histograms__filters_are_faceted(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     create_images(
         db_session=db_session,
@@ -110,7 +110,7 @@ def test_get_dimension_histograms__filters_are_faceted(db_session: Session) -> N
         height=FilterDimensions(min=20, max=30),
     )
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session, collection_id=collection_id, filters=filters, bin_count=2
     )
 
@@ -122,7 +122,7 @@ def test_get_dimension_histograms__filters_are_faceted(db_session: Session) -> N
     }
 
 
-def test_get_dimension_histograms__single_value_with_filter(db_session: Session) -> None:
+def test_get_field_histograms__single_value_with_filter(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     create_images(
         db_session=db_session,
@@ -133,7 +133,7 @@ def test_get_dimension_histograms__single_value_with_filter(db_session: Session)
         ],
     )
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(height=FilterDimensions(min=20, max=20)),
@@ -143,7 +143,7 @@ def test_get_dimension_histograms__single_value_with_filter(db_session: Session)
     assert histograms == {"width": HistogramView(bin_edges=[100.0, 100.0], counts=[1])}
 
 
-def test_get_dimension_histograms__tag_filter(db_session: Session) -> None:
+def test_get_field_histograms__tag_filter(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     images = create_images(
         db_session=db_session,
@@ -158,7 +158,7 @@ def test_get_dimension_histograms__tag_filter(db_session: Session) -> None:
         session=db_session, tag_id=tag.tag_id, sample_ids=[images[1].sample_id]
     )
 
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(sample_filter=SampleFilter(tag_ids=[tag.tag_id])),
@@ -171,7 +171,7 @@ def test_get_dimension_histograms__tag_filter(db_session: Session) -> None:
     }
 
 
-def test_get_dimension_histograms__metadata_key_named_width(db_session: Session) -> None:
+def test_get_field_histograms__metadata_key_named_width(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
     images = create_images(
         db_session=db_session,
@@ -185,7 +185,7 @@ def test_get_dimension_histograms__metadata_key_named_width(db_session: Session)
     images[1].sample["width"] = 7
 
     # A metadata filter on the "width" key is not the image width filter, so it still applies.
-    histograms = image_resolver.get_dimension_histograms(
+    histograms = image_resolver.get_field_histograms(
         session=db_session,
         collection_id=collection_id,
         filters=ImageFilter(
