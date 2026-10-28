@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Experimental Python 3.15 support. LightlyStudio requires CPU PyTorch wheels from the PyTorch index on this Python version.
+- Experimental Python 3.15 support with PyTorch CPU wheels or CUDA 13.0 wheels on Linux. GPU inference still needs hardware validation.
 
 - Delete selected annotations in bulk from the annotation grid.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.

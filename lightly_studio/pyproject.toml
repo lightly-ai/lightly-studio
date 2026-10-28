@@ -85,8 +85,14 @@ default-groups = ["dev", "cpu"]
 lightly-studio-serve = { workspace = true }
 # The CPU build of torch is much smaller than the CUDA build from PyPI. The sources are
 # local to this repo: they are not in the wheel metadata.
-torch = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux' or python_version >= '3.15'" }]
-torchvision = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux' or python_version >= '3.15'" }]
+torch = [
+    { index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux' or python_version >= '3.15'" },
+    { index = "pytorch-cuda", group = "gpu", marker = "sys_platform == 'linux' and python_version >= '3.15'" },
+]
+torchvision = [
+    { index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux' or python_version >= '3.15'" },
+    { index = "pytorch-cuda", group = "gpu", marker = "sys_platform == 'linux' and python_version >= '3.15'" },
+]
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"
@@ -120,8 +126,8 @@ dev = [
     "testcontainers[postgres]>=4.0.0",
 ]
 
-# Select the torch build. `cpu` is the default. `gpu` adds no packages: it only makes uv
-# lock a second resolution with the CUDA build from PyPI. See CONTRIBUTING.md.
+# Select the torch build. `cpu` is the default. On Linux, `gpu` uses the CUDA 13.0
+# index on Python 3.15 and PyPI on older Python versions. See CONTRIBUTING.md.
 cpu = ["torch", "torchvision"]
 gpu = ["torch", "torchvision"]
 

@@ -76,14 +76,14 @@ pip install lightly-studio
 LightlyStudio works on Windows, Linux, and macOS with **Python 3.10 to 3.14**. We recommend
 **Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
 
-Python 3.15 has experimental CPU support. Install the matching PyTorch wheels first, then install LightlyStudio:
+Python 3.15 has experimental CPU support and a CUDA 13.0 installation option on Linux. Install the matching PyTorch wheels first, then install LightlyStudio:
 
 ```shell
 python -m pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu
 python -m pip install lightly-studio
 ```
 
-GPU support on Python 3.15 is not yet validated.
+For NVIDIA GPUs on Linux, replace the index URL above with `https://download.pytorch.org/whl/cu130`. GPU inference on Python 3.15 still needs hardware validation; use a driver compatible with CUDA 13.0.
 
 ??? tip "Recommended: install into a virtual environment"
     A virtual environment keeps LightlyStudio and its dependencies separate from other
