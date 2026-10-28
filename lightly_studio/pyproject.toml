@@ -3,7 +3,7 @@ name = "lightly-studio"
 version = "1.2.0"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -11,6 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -19,11 +20,16 @@ classifiers = [
 dependencies = [
     "alembic>=1.14.0,<2.0",
     "duckdb-engine>=0.15.0,<0.17",
-    "duckdb>=1.2.2,<1.6",
-    # Pandas 3.0 requires Python 3.11 and higher, we have to stay at 2.2 or 2.3.
-    "pandas>=2.2.3,<3.0",
-    "psycopg[binary]>=3.2.4",
+    "duckdb>=1.2.2,<1.6; python_version < '3.15'",
+    "duckdb>=2.0.0,<3.0; python_version >= '3.15'",
+    "pandas>=2.2.3,<3.0; python_version < '3.15'",
+    "pandas>=3.1.0,<4.0; python_version >= '3.15'",
+    "psycopg[binary]>=3.2.4; python_version < '3.15'",
+    "psycopg[binary]>=3.3.6; python_version >= '3.15'",
     "pgvector>=0.4.0,<0.5.0",
+    "pydantic>=2.14.1; python_version >= '3.15'",
+    "numpy>=2.5.4; python_version >= '3.15'",
+    "pillow>=13.0.0; python_version >= '3.15'",
     "fastapi>=0.115.5",
     "fsspec>=2023.1.0",
     "sqlalchemy-utils>=0.41.0",
@@ -37,19 +43,24 @@ dependencies = [
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
-    "scikit-learn==1.7.2",
+    "scikit-learn==1.7.2; python_version < '3.11'",
+    "scikit-learn==1.9.1; python_version >= '3.11'",
     "scipy>=1.13.1",
     "python-multipart>=0.0.20",
     "environs<12.0.0",
     "open-clip-torch>=2.20.0",
-    "torch>=2.6.0",
-    "torchvision>=0.20.0",
+    "torch>=2.6.0; python_version < '3.15'",
+    "torch>=2.14.1; python_version >= '3.15'",
+    "torchvision>=0.20.0; python_version < '3.15'",
+    "torchvision>=0.29.1; python_version >= '3.15'",
     # Mundig releases are published to PyPI: https://pypi.org/project/lightly-mundig/
     # To update, bump the pin below and relock:
     # uv lock --upgrade-package lightly-mundig==$version
     "lightly-mundig==0.1.16",
-    "pyarrow>=17.0.0",
-    "av>=10.0.0",
+    "pyarrow>=17.0.0; python_version < '3.15'",
+    "pyarrow>=26.0.0; python_version >= '3.15'",
+    "av>=10.0.0; python_version < '3.15'",
+    "av>=19.0.2; python_version >= '3.15'",
     "requests>=2.32.3",
     "einops>=0.6.0",
     "opencv-python-headless>=4.11.0.86",
@@ -74,8 +85,8 @@ default-groups = ["dev", "cpu"]
 lightly-studio-serve = { workspace = true }
 # The CPU build of torch is much smaller than the CUDA build from PyPI. The sources are
 # local to this repo: they are not in the wheel metadata.
-torch = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux'" }]
-torchvision = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux'" }]
+torch = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux' or python_version >= '3.15'" }]
+torchvision = [{ index = "pytorch-cpu", group = "cpu", marker = "sys_platform == 'linux' or python_version >= '3.15'" }]
 
 [project.scripts]
 lightly-studio = "lightly_studio.cli:main"

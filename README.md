@@ -51,6 +51,16 @@ lightly-studio quickstart
 - **A guided walkthrough:** read the [Tutorials](#-tutorials) below. [Curate a Traffic CCTV Dataset for YOLO Training](https://docs.lightly.ai/studio/tutorials/yolo-traffic-cctv-object-detection/) goes from raw images to a trained model.
 - Runs on **Python 3.10 to 3.14** on Windows, Linux, and macOS. Use Python 3.10 for plugin compatibility, for example [SAM autolabeling](https://docs.lightly.ai/studio/ecosystem/plugins/#example-lightlystudio-sam3-plugin).
 
+Python 3.15 has experimental CPU support. Install the matching PyTorch wheels first, then install LightlyStudio:
+
+```shell
+python -m pip install torch==2.14.1 torchvision==0.29.1 --index-url https://download.pytorch.org/whl/cpu
+python -m pip install lightly-studio
+```
+
+GPU support on Python 3.15 is not yet validated.
+
+
 ## Workflows
 
 <table>

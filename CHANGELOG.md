@@ -9,11 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Experimental Python 3.15 support. LightlyStudio requires CPU PyTorch wheels from the PyTorch index on this Python version.
+
 - Delete selected annotations in bulk from the annotation grid.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 - Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
 
 ### Changed
+
+- On Python 3.11 and later, few-shot classifiers now use scikit-learn 1.9.1. Retrain classifiers exported with older scikit-learn versions before importing them. Python 3.10 keeps scikit-learn 1.7.2.
 
 - Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
 - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.

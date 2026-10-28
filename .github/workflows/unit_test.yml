@@ -186,6 +186,9 @@ jobs:
           - python: "3.14"
             database: DuckDB
             make_target: test
+          - python: "3.15"
+            database: DuckDB
+            make_target: test
           - python: "3.14"
             database: Postgres
             make_target: test-postgres
@@ -395,7 +398,7 @@ jobs:
       matrix:
         # The lowest Python that CI runs and the ceiling of `requires-python`; nothing in the
         # package is version specific.
-        python: ["3.10", "3.14"]
+        python: ["3.10", "3.14", "3.15"]
     # This job runs Makefile targets the pull request itself supplies. The repository default is
     # a write-scoped token, so it is pinned to read-only and kept out of .git/config, the same
     # way check-release-tooling is.

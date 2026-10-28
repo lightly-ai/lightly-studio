@@ -70,7 +70,7 @@ You can also run LightlyStudio in a hosted notebook such as Google Colab. See
 ### What operating systems and Python versions are supported?
 
 LightlyStudio runs on Windows, Linux, and macOS. It runs on both x86 and ARM processors. It supports
-Python 3.10 to 3.14. Python 3.10 gives the best compatibility with plugins such as SAM autolabeling.
+Python 3.10 to 3.14. Python 3.15 has experimental CPU support; see the [installation instructions](index.md#quickstart). Python 3.10 gives the best compatibility with plugins such as SAM autolabeling.
 
 ### How large a dataset can LightlyStudio handle?
 
