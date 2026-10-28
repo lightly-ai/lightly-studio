@@ -62,7 +62,7 @@
     } = useAnnotationLabelContext();
 
     const { trackEvent } = usePostHog();
-    const { segmentationMaskOpacity } = useGlobalStorage();
+    const { maskOpacity } = useGlobalStorage();
     let drawStartFired = false;
 
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
@@ -287,7 +287,7 @@
     y="0"
     width={sample.width}
     height={sample.height}
-    opacity={$segmentationMaskOpacity}
+    opacity={$maskOpacity}
     class:previewHidden={!isPreviewVisible}
 >
     <canvas

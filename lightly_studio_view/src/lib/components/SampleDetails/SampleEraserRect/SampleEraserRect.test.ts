@@ -43,17 +43,17 @@ vi.mock('$lib/hooks/useSegmentationMaskEraser', () => ({
 }));
 
 describe('SampleEraserRect', () => {
-    const { segmentationMaskOpacity } = useGlobalStorage();
+    const { maskOpacity } = useGlobalStorage();
 
     afterEach(() => {
-        segmentationMaskOpacity.set(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity);
+        maskOpacity.set(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity);
         vi.restoreAllMocks();
     });
 
     it('draws the eraser preview with the stored mask opacity', () => {
         // jsdom has no 2D canvas; the preview renderer skips drawing without one.
         vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null);
-        segmentationMaskOpacity.set(0.3);
+        maskOpacity.set(0.3);
 
         const { container } = render(SampleEraserRect, {
             props: {
