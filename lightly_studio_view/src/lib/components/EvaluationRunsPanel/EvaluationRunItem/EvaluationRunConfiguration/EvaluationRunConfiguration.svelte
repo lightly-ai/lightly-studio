@@ -10,11 +10,15 @@
     const entries = $derived(Object.entries(configuration ?? {}));
     const labels: Record<string, string> = {
         iou_threshold: 'Minimum overlap (IoU)',
-        classwise: 'Class matching'
+        classwise: 'Class matching',
+        compute_average_precision: 'Average precision'
     };
     const formatValue = (key: string, value: unknown): string => {
         if (key === 'classwise' && typeof value === 'boolean') {
             return value ? 'Same class only' : 'Any class';
+        }
+        if (key === 'compute_average_precision' && typeof value === 'boolean') {
+            return value ? 'Computed' : 'Not computed';
         }
         if (key === 'iou_threshold' && typeof value === 'number') return value.toFixed(2);
         if (value === null || value === undefined) return '—';

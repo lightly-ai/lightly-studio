@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from pytest_mock import MockerFixture
@@ -21,9 +22,12 @@ from lightly_studio.evaluation.image_dataset_evaluate import (
     ObjectDetectionEvaluationConfig,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
@@ -128,6 +132,93 @@ def test_recompute_evaluation_run__produces_fresh_metrics(db_session: Session) -
     )
     assert len(new_sample_metrics) == len(old_sample_metrics)
     assert len(new_annotation_metrics) == len(old_annotation_metrics)
+
+
+def test_recompute_evaluation_run__refreshes_average_precision(db_session: Session) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(compute_average_precision=True),
+        name="run-1",
+    )
+    run_id = result.evaluation_run_id
+    fresh_rows = _class_metric_rows(session=db_session, evaluation_run_id=run_id)
+    assert len(fresh_rows) > 0
+    _add_stale_class_metric(
+        session=db_session, evaluation_run_id=run_id, dataset_id=root.dataset_id
+    )
+
+    run = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id)
+    assert run is not None
+    evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+
+    # The stale row is gone and the average precision is written again.
+    assert _class_metric_rows(session=db_session, evaluation_run_id=run_id) == fresh_rows
+
+
+def test_recompute_evaluation_run__no_average_precision_when_disabled(
+    db_session: Session,
+) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(),
+        name="run-1",
+    )
+    run_id = result.evaluation_run_id
+    _add_stale_class_metric(
+        session=db_session, evaluation_run_id=run_id, dataset_id=root.dataset_id
+    )
+
+    run = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run_id)
+    assert run is not None
+    evaluation_service.recompute_evaluation_run(session=db_session, run=run)
+
+    assert _class_metric_rows(session=db_session, evaluation_run_id=run_id) == []
+
+
+def test_recompute_evaluation_run__new_config_rewrites_average_precision(
+    db_session: Session,
+) -> None:
+    root = helpers.create_dataset_with_annotations(db_session)
+    result = evaluation_service.run_evaluation(
+        session=db_session,
+        collection=root,
+        task_type=EvaluationTaskType.OBJECT_DETECTION,
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(compute_average_precision=True),
+        name="run-1",
+    )
+    run = evaluation_run_resolver.get_by_id(
+        session=db_session, evaluation_id=result.evaluation_run_id
+    )
+    assert run is not None
+
+    evaluation_service.recompute_evaluation_run(
+        session=db_session,
+        run=run,
+        config_json={"iou_threshold": 0.75, "classwise": True, "compute_average_precision": True},
+    )
+
+    # The overrides are relative to the new config, so the 0.75 rows have none.
+    overrides = {
+        json.dumps(metric.config_override, sort_keys=True)
+        for metric in evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+            session=db_session, evaluation_run_id=run.id
+        )
+    }
+    assert "{}" in overrides
+    assert '{"iou_threshold": 0.5}' in overrides
+    assert '{"iou_threshold": 0.75}' not in overrides
 
 
 def test_recompute_evaluation_run__idempotent_on_non_stale_run(db_session: Session) -> None:
@@ -244,7 +335,7 @@ def test_recompute_evaluation_run__failure_restores_results(
         task_type=EvaluationTaskType.OBJECT_DETECTION,
         gt_annotation_source="gt",
         pred_annotation_source="pred",
-        config=ObjectDetectionEvaluationConfig(),
+        config=ObjectDetectionEvaluationConfig(compute_average_precision=True),
         name="original",
     )
     run = evaluation_run_resolver.get_by_id(
@@ -256,7 +347,11 @@ def test_recompute_evaluation_run__failure_restores_results(
     db_session.commit()
     db_session.refresh(run)
     before = run.model_dump()
-    resolvers = (evaluation_sample_metric_resolver, evaluation_annotation_metric_resolver)
+    resolvers = (
+        evaluation_sample_metric_resolver,
+        evaluation_annotation_metric_resolver,
+        evaluation_class_metric_resolver,
+    )
     old_metrics = [
         [
             row.model_dump()
@@ -388,3 +483,34 @@ with engine.session() as session:
                 ] == expected
     finally:
         engine.close()
+
+
+def _class_metric_rows(
+    session: Session, evaluation_run_id: UUID
+) -> list[tuple[str, str, str, float]]:
+    return sorted(
+        (
+            str(metric.annotation_label_id),
+            metric.metric_name,
+            json.dumps(metric.config_override, sort_keys=True),
+            metric.value,
+        )
+        for metric in evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+            session=session, evaluation_run_id=evaluation_run_id
+        )
+    )
+
+
+def _add_stale_class_metric(session: Session, evaluation_run_id: UUID, dataset_id: UUID) -> None:
+    label = annotation_label_resolver.get_all(session=session, dataset_id=dataset_id)[0]
+    evaluation_class_metric_resolver.create_many(
+        session=session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=evaluation_run_id,
+                annotation_label_id=label.annotation_label_id,
+                metric_name="stale",
+                value=0.123,
+            )
+        ],
+    )
