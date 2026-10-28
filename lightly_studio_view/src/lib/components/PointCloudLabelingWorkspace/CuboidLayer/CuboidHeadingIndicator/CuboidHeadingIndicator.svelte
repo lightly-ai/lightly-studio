@@ -1,5 +1,6 @@
 <script lang="ts">
     import { T, useParentObject3D, useTask, useThrelte } from '@threlte/core';
+    import { onDestroy } from 'svelte';
     import { ArrowHelper, OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
     /** Screen-sized heading indicator anchored to the cuboid's forward face. */
     interface Props {
@@ -11,9 +12,24 @@
     let { origin, color }: Props = $props();
     const { camera, invalidate, renderer } = useThrelte();
     const parentObject3D = useParentObject3D();
-    const direction = new Vector3(1, 0, 0);
-    let arrow: ArrowHelper | undefined = $state();
+    // One long-lived arrow, so hover re-renders cannot recreate it at zero length.
+    const arrow = new ArrowHelper(new Vector3(1, 0, 0), new Vector3(), 0);
+    arrow.raycast = () => {};
+    arrow.traverse((child) => {
+        child.renderOrder = 999;
+        if ('material' in child && child.material && !Array.isArray(child.material)) {
+            // Draw over points and the translucent hover fill instead of depth-fighting them.
+            Object.assign(child.material, { depthTest: false, depthWrite: false });
+        }
+    });
     let arrowLength = 0;
+    onDestroy(() => arrow.dispose());
+
+    $effect(() => {
+        arrow.position.copy(origin);
+        arrow.setColor(color);
+        invalidate();
+    });
 
     useTask(
         () => {
@@ -32,14 +48,14 @@
                           Math.tan(((activeCamera as PerspectiveCamera).fov * Math.PI) / 360)) /
                       viewportHeight;
             const nextArrowLength = Math.max(worldUnitsPerPixel * 32, 0.01);
-            if (!arrow || Math.abs(nextArrowLength - arrowLength) < 1e-6) return;
+            if (Math.abs(nextArrowLength - arrowLength) < 1e-6) return;
 
             arrowLength = nextArrowLength;
-            arrow.setLength(nextArrowLength, 0.35, 0.2);
+            arrow.setLength(nextArrowLength, nextArrowLength * 0.35, nextArrowLength * 0.2);
             invalidate();
         },
         { autoInvalidate: false }
     );
 </script>
 
-<T.ArrowHelper bind:ref={arrow} args={[direction, origin, 0, color, 0.35, 0.2]} />
+<T is={arrow} />

@@ -2,7 +2,11 @@ import { useThrelte } from '@threlte/core';
 import { untrack } from 'svelte';
 import { OrthographicCamera, type Box3 } from 'three';
 import type { PointCloudPointsProps } from '../pointCloudPointsProps';
-import { fitCameraToBounds, fitCameraToCuboid } from '../../pointCloudCamera';
+import {
+    fitCameraToBounds,
+    fitCameraToCuboid,
+    followCuboidWithCamera
+} from '../../pointCloudCamera';
 import {
     applyCameraViewState,
     getCameraWorldUnitsPerPixel,
@@ -22,7 +26,7 @@ export function usePointCloudCamera(
     const fitKey = $derived(getOptions().fitKey ?? '');
     const cameraMode = $derived(getOptions().cameraMode ?? 'perspective');
     const cameraCuboid = $derived(getOptions().cameraCuboid);
-    // Keep the selection-time camera frame fixed throughout annotation edits.
+    // Refit only for a new selection; edits move inactive views along with the cuboid.
     const cuboidFrameKey = $derived(
         cameraCuboid ? JSON.stringify([cameraCuboid.id, cameraCuboid.frameId]) : undefined
     );
@@ -31,6 +35,7 @@ export function usePointCloudCamera(
     const onViewStateChange = $derived(getOptions().onViewStateChange);
     let fittedKey: string | undefined;
     let fittedCuboidFrameKey: string | undefined;
+    let followedCuboid: typeof cameraCuboid;
     let latestBounds: Box3 | undefined;
     let applyingViewState = false;
     const getViewportAspect = (): number => {
@@ -50,6 +55,7 @@ export function usePointCloudCamera(
                 camera instanceof OrthographicCamera
             ) {
                 fitCameraToCuboid(camera, controls, cameraCuboid, cameraMode, getViewportAspect());
+                followedCuboid = cameraCuboid;
             } else {
                 fitCameraToBounds(camera, controls, latestBounds, cameraMode, getViewportAspect());
             }
@@ -129,6 +135,22 @@ export function usePointCloudCamera(
         void fitKey;
         untrack(() => {
             if (fitCamera()) invalidate();
+        });
+    });
+
+    // The edited view stays put under the pointer; sibling views follow the saved pose.
+    $effect(() => {
+        const cuboid = cameraCuboid;
+        if (!cuboid || cameraMode === 'perspective') return;
+        untrack(() => {
+            const previous = followedCuboid;
+            if (!previous || previous.id !== cuboid.id || cuboidFrameKey !== fittedCuboidFrameKey)
+                return;
+            followedCuboid = cuboid;
+            if (getOptions().isActive?.() || !(camera instanceof OrthographicCamera) || !controls)
+                return;
+            followCuboidWithCamera(camera, controls, previous, cuboid);
+            invalidate();
         });
     });
 

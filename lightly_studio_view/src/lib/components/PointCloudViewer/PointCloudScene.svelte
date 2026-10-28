@@ -70,6 +70,7 @@
     controls={controlsRef}
     {cameraMode}
     {cameraCuboid}
+    {isActive}
     {isScaleSource}
     {viewState}
     {onViewStateChange}

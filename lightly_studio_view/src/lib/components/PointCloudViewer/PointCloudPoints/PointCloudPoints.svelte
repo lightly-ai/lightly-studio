@@ -23,6 +23,7 @@
         controls?: OrbitControls;
         cameraMode?: CameraMode;
         cameraCuboid?: CuboidAnnotation;
+        isActive?: () => boolean;
         isScaleSource?: boolean;
         viewState?: SceneViewState | null;
         onViewStateChange?: (viewState: SceneViewState) => void;
@@ -38,6 +39,7 @@
         controls,
         cameraMode = 'perspective',
         cameraCuboid,
+        isActive,
         isScaleSource = false,
         viewState = null,
         onViewStateChange
@@ -53,6 +55,7 @@
         fitKey,
         cameraMode,
         cameraCuboid,
+        isActive,
         isScaleSource,
         viewState,
         onViewStateChange

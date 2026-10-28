@@ -124,3 +124,26 @@ export function fitCameraToCuboid(
     controls.update();
     controls.enableDamping = wasDamping;
 }
+
+/** Moves an object view rigidly with its edited cuboid, keeping zoom and pan offset. */
+export function followCuboidWithCamera(
+    camera: OrthographicCamera,
+    controls: OrbitControls,
+    previous: CuboidAnnotation,
+    next: CuboidAnnotation
+): void {
+    const previousCenter = new Vector3(...previous.center);
+    const nextCenter = new Vector3(...next.center);
+    const delta = new Quaternion(...next.rotation).multiply(
+        new Quaternion(...previous.rotation).invert()
+    );
+    const follow = (point: Vector3) =>
+        point.sub(previousCenter).applyQuaternion(delta).add(nextCenter);
+    follow(camera.position);
+    follow(controls.target);
+    camera.up.applyQuaternion(delta);
+    const wasDamping = controls.enableDamping;
+    controls.enableDamping = false;
+    controls.update();
+    controls.enableDamping = wasDamping;
+}

@@ -52,7 +52,7 @@
         onpointerleave={() => interaction.setHovered(false)}
         onpointerdown={interaction.onPointerDown}
     >
-        <T.RingGeometry args={[radius - 8 * unit, radius + 8 * unit, 128]} />
+        <T.RingGeometry args={[radius - 12 * unit, radius + 12 * unit, 128]} />
         <T.MeshBasicMaterial transparent opacity={0} depthWrite={false} side={DoubleSide} />
     </T.Mesh>
     <T.Mesh renderOrder={1001} raycast={() => {}}>
@@ -67,7 +67,7 @@
         />
     </T.Mesh>
     <T.Mesh position={[0, radius, 0]} renderOrder={1002} raycast={() => {}}>
-        <T.CircleGeometry args={[5 * unit, 24]} />
+        <T.CircleGeometry args={[8 * unit, 24]} />
         <T.MeshBasicMaterial
             color="#fbbf24"
             depthTest={false}

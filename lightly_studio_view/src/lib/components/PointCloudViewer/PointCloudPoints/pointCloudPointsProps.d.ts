@@ -27,6 +27,8 @@ export interface PointCloudPointsProps {
     cameraMode?: CameraMode;
     /** Selected cuboid defining the local object-view frame. */
     cameraCuboid?: CuboidAnnotation;
+    /** Whether this viewport receives the user's edits; inactive object views follow them. */
+    isActive?: () => boolean;
     /** Publishes the initial shared camera scale before other views synchronize. */
     isScaleSource?: boolean;
     /** Shared camera target and world-units-per-pixel scale. */

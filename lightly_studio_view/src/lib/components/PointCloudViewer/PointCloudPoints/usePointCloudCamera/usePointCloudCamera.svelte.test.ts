@@ -184,7 +184,7 @@ describe('camera synchronization lifecycle', () => {
 
 describe('independent object cameras', () => {
     it.each(['top', 'front', 'side'] as const)(
-        'keeps the %s camera fixed through resize snapshots and commits',
+        'keeps the edited %s camera fixed through resize snapshots and commits',
         (cameraMode) => {
             const cuboid = createAnnotationFixture();
             const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
@@ -192,6 +192,7 @@ describe('independent object cameras', () => {
                 camera,
                 cameraMode,
                 cameraCuboid: cuboid,
+                isActive: () => true,
                 isScaleSource: false
             });
             camera.zoom *= 2;
@@ -219,7 +220,7 @@ describe('independent object cameras', () => {
     );
 
     it.each(['top', 'front', 'side'] as const)(
-        'preserves %s magnification when rotating after a resize and saving again',
+        'preserves edited %s magnification when rotating after a resize and saving again',
         (cameraMode) => {
             const cuboid = createAnnotationFixture();
             const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
@@ -227,6 +228,7 @@ describe('independent object cameras', () => {
                 camera,
                 cameraMode,
                 cameraCuboid: cuboid,
+                isActive: () => true,
                 isScaleSource: false
             });
             camera.zoom *= 1.7;
@@ -266,7 +268,12 @@ describe('independent object cameras', () => {
     it('keeps the rotated cuboid at the same screen coordinates when the drag is committed', () => {
         const cuboid = createAnnotationFixture();
         const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
-        const { options, controls } = setup({ camera, cameraMode: 'top', cameraCuboid: cuboid });
+        const { options, controls } = setup({
+            camera,
+            cameraMode: 'top',
+            cameraCuboid: cuboid,
+            isActive: () => true
+        });
         const rotation = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), 0.6);
         const corner = new Vector3(2, 1, 1)
             .applyQuaternion(rotation)
@@ -279,6 +286,39 @@ describe('independent object cameras', () => {
         camera.updateMatrixWorld();
         expect(corner.clone().project(camera).distanceTo(preview)).toBeCloseTo(0);
     });
+
+    it.each(['top', 'front', 'side'] as const)(
+        'moves the inactive %s camera with a cuboid edited in another view',
+        (cameraMode) => {
+            const cuboid = createAnnotationFixture();
+            const camera = new OrthographicCamera(-1, 1, 1, -1, 0.1, 10000);
+            const { options, controls } = setup({
+                camera,
+                cameraMode,
+                cameraCuboid: cuboid,
+                isActive: () => false,
+                isScaleSource: false
+            });
+            camera.zoom *= 1.5;
+            const zoom = camera.zoom;
+            const corner = new Vector3(2, 1, 1).add(new Vector3(...cuboid.center));
+            camera.updateMatrixWorld();
+            const before = corner.clone().project(camera);
+            const rotation = new Quaternion().setFromAxisAngle(new Vector3(0, 0, 1), 0.6);
+            const center = new Vector3(11, -2, 1);
+            options.cameraCuboid = {
+                ...cuboid,
+                center: center.toArray(),
+                rotation: rotation.toArray()
+            };
+            flushSync();
+            camera.updateMatrixWorld();
+            const movedCorner = new Vector3(2, 1, 1).applyQuaternion(rotation).add(center);
+            expect(movedCorner.project(camera).distanceTo(before)).toBeCloseTo(0);
+            expect(controls.target.distanceTo(center)).toBeCloseTo(0);
+            expect(camera.zoom).toBeCloseTo(zoom);
+        }
+    );
 
     it('aligns new selections while keeping navigation local', () => {
         const cuboid = createAnnotationFixture();
