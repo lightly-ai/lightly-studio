@@ -52,7 +52,7 @@
         onpointerleave={() => interaction.setHovered(false)}
         onpointerdown={interaction.onPointerDown}
     >
-        <T.RingGeometry args={[radius - 12 * unit, radius + 12 * unit, 128]} />
+        <T.RingGeometry args={[radius - 14 * unit, radius + 14 * unit, 128]} />
         <T.MeshBasicMaterial transparent opacity={0} depthWrite={false} side={DoubleSide} />
     </T.Mesh>
     <T.Mesh renderOrder={1001} raycast={() => {}}>
@@ -66,8 +66,20 @@
             side={DoubleSide}
         />
     </T.Mesh>
-    <T.Mesh position={[0, radius, 0]} renderOrder={1002} raycast={() => {}}>
-        <T.CircleGeometry args={[8 * unit, 24]} />
+    {#if $hovered}
+        <!-- An outline and larger dot show that the handle can be grabbed. -->
+        <T.Mesh position={[0, radius, 0]} renderOrder={1002} raycast={() => {}}>
+            <T.CircleGeometry args={[13 * unit, 32]} />
+            <T.MeshBasicMaterial
+                color="#ffffff"
+                depthTest={false}
+                depthWrite={false}
+                side={DoubleSide}
+            />
+        </T.Mesh>
+    {/if}
+    <T.Mesh position={[0, radius, 0]} renderOrder={1003} raycast={() => {}}>
+        <T.CircleGeometry args={[($hovered ? 11 : 8) * unit, 32]} />
         <T.MeshBasicMaterial
             color="#fbbf24"
             depthTest={false}
