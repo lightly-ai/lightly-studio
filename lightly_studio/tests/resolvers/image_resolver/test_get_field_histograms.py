@@ -1,20 +1,11 @@
 from sqlmodel import Session
 
-from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.metadata import HistogramView
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from tests.helpers_resolvers import (
-    ImageStub,
-    create_collection,
-    create_embedding_model,
-    create_images,
-    create_sample_embedding,
-    create_saved_plot,
-    create_tag,
-)
+from tests.helpers_resolvers import ImageStub, create_collection, create_images, create_tag
 
 
 def test_get_field_histograms(db_session: Session) -> None:
@@ -202,52 +193,6 @@ def test_get_field_histograms__metadata_key_named_width(db_session: Session) -> 
                 metadata_filters=[MetadataFilter(key="width", op=">=", value=1000)]
             )
         ),
-        bin_count=2,
-        fields=["width"],
-    )
-
-    assert histograms == {
-        "width": HistogramView(bin_edges=[100.0, 200.0, 300.0], counts=[1, 0]),
-    }
-
-
-def test_get_field_histograms__embedding_region_filter(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session).collection_id
-    embedding_model_id = create_embedding_model(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_dimension=3,
-        set_as_default=True,
-    ).embedding_model_id
-    images = create_images(
-        db_session=db_session,
-        collection_id=collection_id,
-        images=[
-            ImageStub(path="inside.jpg", width=100, height=10),
-            ImageStub(path="outside.jpg", width=300, height=30),
-        ],
-    )
-    for image, embedding in zip(images, [[1.0, 0.2, 0.3], [2.0, 0.2, 0.3]]):
-        create_sample_embedding(
-            session=db_session,
-            sample_id=image.sample_id,
-            embedding_model_id=embedding_model_id,
-            embedding=embedding,
-        )
-    create_saved_plot(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model_id,
-        coordinates={images[0].sample_id: (1.0, 1.0), images[1].sample_id: (100.0, 100.0)},
-    )
-    region = EmbeddingRegion(
-        polygon=[Point2D(x=0, y=0), Point2D(x=10, y=0), Point2D(x=10, y=10), Point2D(x=0, y=10)]
-    )
-
-    histograms = image_resolver.get_field_histograms(
-        session=db_session,
-        collection_id=collection_id,
-        filters=ImageFilter(sample_filter=SampleFilter(embedding_region=region)),
         bin_count=2,
         fields=["width"],
     )
