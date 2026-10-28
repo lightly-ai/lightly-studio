@@ -12,8 +12,13 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
-from lightly_studio.resolvers import annotation_label_resolver, evaluation_run_resolver
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    evaluation_class_metric_resolver,
+    evaluation_run_resolver,
+)
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation,
@@ -21,6 +26,9 @@ from tests.helpers_resolvers import (
     create_annotations,
     create_collection,
     create_image,
+)
+from tests.resolvers.evaluation_sample_metric_resolver import (
+    helpers as evaluation_sample_metric_helpers,
 )
 
 
@@ -173,6 +181,38 @@ def test_delete_annotation_label__deletes_its_annotations(
 
     remaining_label_ids = db_session.exec(select(AnnotationBaseTable.annotation_label_id)).all()
     assert remaining_label_ids == [dog_id]
+
+
+def test_delete_annotation_label__deletes_its_class_metrics(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    run = evaluation_sample_metric_helpers.create_run(
+        session=db_session, collection_id=collection_id
+    )
+    run_id = run.id
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    evaluation_class_metric_resolver.create_many(
+        session=db_session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run_id,
+                annotation_label_id=label_id,
+                metric_name="average_precision",
+                value=0.5,
+            )
+        ],
+    )
+
+    result = test_client.delete(f"/api/annotation_labels/{label_id!s}")
+
+    assert result.status_code == HTTP_STATUS_OK
+    metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=db_session, evaluation_run_id=run_id
+    )
+    assert metrics == []
 
 
 def test_delete_annotation_label__marks_evaluation_runs_stale(

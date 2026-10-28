@@ -6,11 +6,15 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.resolvers import evaluation_class_metric_resolver
+
 from .get_by_id import get_by_id
 
 
 def delete(session: Session, label_id: UUID) -> bool:
-    """Delete an annotation label.
+    """Delete an annotation label and its evaluation class metrics.
+
+    The delete is not atomic. It commits twice: after the class metrics and after the label.
 
     Args:
         session (Session): The database session.
@@ -23,6 +27,11 @@ def delete(session: Session, label_id: UUID) -> bool:
     if not label:
         return False
 
+    evaluation_class_metric_resolver.delete_by_annotation_label_id(
+        session=session, annotation_label_id=label_id
+    )
+    # DuckDB rejects the delete of the label in the transaction that deleted its class metrics.
+    session.commit()
     session.delete(label)
     session.commit()
     return True
