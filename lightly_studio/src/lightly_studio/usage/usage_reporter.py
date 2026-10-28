@@ -158,7 +158,8 @@ def send(
 ) -> None:
     """Posts the events to the URL with the token as bearer token. Never raises.
 
-    Retries twice after a connection error, a timeout, status 429 or a 5xx status.
+    Retries twice after a connection error, a timeout, status 429 or a 5xx status. Does
+    not follow redirects.
 
     Args:
         events: The events to send, at most 500.
@@ -179,6 +180,8 @@ def send(
                 json=payload,
                 headers={"Authorization": f"Bearer {token}"},
                 timeout=REPORT_TIMEOUT_S,
+                # A redirect would send the events to a host the URL does not name.
+                allow_redirects=False,
             )
         except requests.RequestException as error:
             failure = str(error)
@@ -187,7 +190,7 @@ def send(
             logger.warning("Could not report usage of %d events.", len(events), exc_info=True)
             return
         else:
-            if response.status_code < HTTPStatus.BAD_REQUEST:
+            if response.status_code < HTTPStatus.MULTIPLE_CHOICES:
                 return
             failure = f"status {response.status_code}"
             transient = (

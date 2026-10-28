@@ -170,6 +170,7 @@ def test_send__posts_the_events_with_the_token(mocker: MockerFixture) -> None:
         },
         headers={"Authorization": "Bearer t0k"},
         timeout=2.0,
+        allow_redirects=False,
     )
 
 
@@ -220,7 +221,7 @@ def test_send__gives_up_after_three_attempts(mocker: MockerFixture) -> None:
     assert session.post.call_count == 3
 
 
-@pytest.mark.parametrize("status_code", [401, 422])
+@pytest.mark.parametrize("status_code", [307, 401, 422])
 def test_send__does_not_retry_a_rejected_report(mocker: MockerFixture, status_code: int) -> None:
     session = _session_answering(mocker=mocker, status_codes=[status_code, 204])
     sleep = mocker.Mock()
@@ -252,13 +253,13 @@ def test_send__never_raises_for_an_invalid_event(mocker: MockerFixture) -> None:
 
 def test_take_events__returns_at_most_one_batch() -> None:
     event_queue: queue.Queue[usage_reporter.UsageEvent] = queue.Queue()
-    for _ in range(usage_reporter.MAX_EVENTS_PER_REPORT + 1):
+    for _ in range(501):
         event_queue.put(EVENT)
 
     first = usage_reporter._take_events(event_queue=event_queue)
     second = usage_reporter._take_events(event_queue=event_queue)
 
-    assert len(first) == usage_reporter.MAX_EVENTS_PER_REPORT
+    assert len(first) == 500
     assert len(second) == 1
 
 
