@@ -30,7 +30,9 @@
         viewState={props.viewState}
         onViewStateChange={props.onViewStateChange}
     />
-    <OriginAxes />
+    {#if props.cameraMode === 'perspective'}
+        <OriginAxes />
+    {/if}
     <CuboidLayer
         cameraMode={props.cameraMode}
         cuboids={props.cuboids}
