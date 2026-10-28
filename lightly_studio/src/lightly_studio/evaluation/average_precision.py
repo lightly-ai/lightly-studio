@@ -29,6 +29,10 @@ COCO_IOU_THRESHOLDS = [round(0.5 + 0.05 * step, 2) for step in range(10)]
 # COCO uses a 101-point recall grid for the precision-recall integral.
 _RECALL_GRID = np.linspace(0.0, 1.0, 101)
 
+# COCO scores at most this many predictions per image and class, the ones with the highest
+# confidence.
+_MAX_PREDICTIONS_PER_IMAGE_AND_CLASS = 100
+
 # Class metric name of the average precision. The IoU threshold is in the config override.
 METRIC_NAME = "average_precision"
 
@@ -147,7 +151,8 @@ def compute(
     """Compute the average precision of each class at each IoU threshold.
 
     Only classes present in the ground truth are scored. Predictions are matched
-    only within their own class, as in COCO.
+    only within their own class, and only the 100 predictions with the highest
+    confidence per image and class are scored, as in COCO.
 
     Args:
         gt_per_image: Ground-truth boxes per image.
@@ -164,7 +169,11 @@ def compute(
     for predictions, ground_truths in zip(pred_per_image, gt_per_image):
         labels = {box.label_id for box in predictions} | {box.label_id for box in ground_truths}
         for label in labels:
-            class_predictions = [box for box in predictions if box.label_id == label]
+            class_predictions = sorted(
+                (box for box in predictions if box.label_id == label),
+                key=lambda box: box.confidence or 0.0,
+                reverse=True,
+            )[:_MAX_PREDICTIONS_PER_IMAGE_AND_CLASS]
             class_ground_truths = [box for box in ground_truths if box.label_id == label]
             ground_truth_count[label] = ground_truth_count.get(label, 0) + len(class_ground_truths)
             iou_matrix = object_detection_metric.compute_iou_matrix(

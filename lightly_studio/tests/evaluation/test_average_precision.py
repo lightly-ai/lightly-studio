@@ -190,6 +190,23 @@ def test_coco_iou_thresholds() -> None:
     ]
 
 
+def test_compute__at_most_100_predictions_per_image_and_class() -> None:
+    # 200 separate ground truths, each with an exact prediction. Only the 100 predictions
+    # with the highest confidence are scored, so recall stops at 0.5: AP is 51/101.
+    positions = [(30 * (index % 20), 30 * (index // 20)) for index in range(200)]
+    gt = [[_box(label_id=CAT, x=x, y=y) for x, y in positions]]
+    pred = [
+        [
+            _box(label_id=CAT, x=x, y=y, confidence=1.0 - 0.001 * index)
+            for index, (x, y) in enumerate(positions)
+        ]
+    ]
+
+    results = average_precision.compute(gt_per_image=gt, pred_per_image=pred, iou_thresholds=[0.5])
+
+    assert _ap_by_label_and_threshold(results=results) == {("cat", 0.5): pytest.approx(51 / 101)}
+
+
 def _box(  # noqa: PLR0913
     label_id: UUID,
     x: int,
