@@ -34,15 +34,22 @@ export function useUpdateCuboidClass({
                     label_name: className
                 }
             ]);
-            void queryClient.invalidateQueries({
-                queryKey: getTickDetailsSequenceQueryKey({
-                    datasetId: getDatasetId(),
-                    sequenceId: getSequenceId()
-                })
-            });
-            await onUpdated();
         } catch {
             toast.error('Failed to update annotation class. Please try again.');
+            return;
+        }
+        void queryClient.invalidateQueries({
+            queryKey: getTickDetailsSequenceQueryKey({
+                datasetId: getDatasetId(),
+                sequenceId: getSequenceId()
+            })
+        });
+        try {
+            await onUpdated();
+        } catch {
+            toast.error(
+                'Annotation class updated, but the workspace could not refresh. Please try again.'
+            );
         }
     }
 

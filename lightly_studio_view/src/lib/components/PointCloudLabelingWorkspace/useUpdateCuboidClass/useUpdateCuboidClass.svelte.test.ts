@@ -131,7 +131,7 @@ describe('useUpdateCuboidClass', () => {
 
         expect(updateAnnotations).toHaveBeenCalledOnce();
         expect(toast.error).toHaveBeenCalledExactlyOnceWith(
-            'Failed to update annotation class. Please try again.'
+            'Annotation class updated, but the workspace could not refresh. Please try again.'
         );
     });
 });
