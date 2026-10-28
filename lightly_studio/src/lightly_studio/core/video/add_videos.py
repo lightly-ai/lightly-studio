@@ -795,6 +795,8 @@ def _process_video_annotations_segmentation_mask(
                     parent_sample_id=frame_id,
                     annotation_label_id=label_map[obj.category.id],
                     segmentation=segmentation,
+                    image_width=video_annotation.video.width,
+                    image_height=video_annotation.video.height,
                     object_track_id=object_track_map.get(obj_idx),
                 )
                 annotations.append(annotation)

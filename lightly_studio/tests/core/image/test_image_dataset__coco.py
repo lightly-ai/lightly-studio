@@ -12,6 +12,7 @@ from pytest_mock import MockerFixture
 
 from lightly_studio import ImageDataset
 from lightly_studio.analytics import tracking
+from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_images
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -171,6 +172,45 @@ class TestDataset:
             annotation_type=AnnotationType.SEGMENTATION_MASK,
         )
         assert len(list(dataset)) == 2
+
+    def test_add_samples_from_coco__insseg_polygon_mask(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        images_path = tmp_path / "images"
+        images_path.mkdir()
+        Image.new("RGB", (5, 4)).save(images_path / "image.png")
+        annotations_path = tmp_path / "annotations.json"
+        coco = {
+            "images": [{"id": 1, "file_name": "image.png", "width": 5, "height": 4}],
+            "annotations": [
+                {
+                    "id": 1,
+                    "image_id": 1,
+                    "category_id": 1,
+                    "bbox": [1, 1, 2, 2],
+                    "area": 4,
+                    "iscrowd": 0,
+                    "segmentation": [[1, 1, 3, 1, 3, 3, 1, 3]],
+                }
+            ],
+            "categories": [{"id": 1, "name": "cat"}],
+        }
+        annotations_path.write_text(json.dumps(coco))
+
+        dataset = ImageDataset.create(name="test_dataset")
+        dataset.add_samples_from_coco(
+            annotations_json=annotations_path,
+            images_path=images_path,
+            annotation_type=AnnotationType.SEGMENTATION_MASK,
+            embed=False,
+        )
+
+        annotation = next(iter(dataset)).annotations[0]
+        assert isinstance(annotation, SegmentationMaskAnnotation)
+        # The polygon covers the pixels in rows 1 to 2 and columns 1 to 2.
+        assert annotation.segmentation_mask == [6, 2, 3, 2, 7]
 
     def test_add_samples_from_coco__limit(
         self,
