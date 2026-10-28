@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { QueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
-import { getTickDetailsQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import {
+    getTickDetailsQueryKey,
+    readAnnotationLabelsOptions
+} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { useUpdateCuboidClass } from './useUpdateCuboidClass.svelte';
 
 const { updateAnnotations } = vi.hoisted(() => ({ updateAnnotations: vi.fn() }));
@@ -107,6 +110,17 @@ describe('useUpdateCuboidClass', () => {
                 label_name: 'pedestrian'
             }
         ]);
+        expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
+    });
+
+    it('invalidates the annotation labels for the affected collection', async () => {
+        const key = readAnnotationLabelsOptions({
+            path: { collection_id: 'collection-1' }
+        }).queryKey;
+        queryClient.setQueryData(key, []);
+
+        await useUpdateCuboidClass(defaultParams).handleLabelChange('annotation-1', 'car');
+
         expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
     });
 

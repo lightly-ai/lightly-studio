@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
 import { getTickDetailsSequenceQueryKey, useUpdateAnnotationsMutation } from '$lib/hooks';
+import { readAnnotationLabelsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 
 interface Params {
     getCollectionId: () => string | undefined;
@@ -43,6 +44,11 @@ export function useUpdateCuboidClass({
                 datasetId: getDatasetId(),
                 sequenceId: getSequenceId()
             })
+        });
+        void queryClient.invalidateQueries({
+            queryKey: readAnnotationLabelsOptions({
+                path: { collection_id: getCollectionId() ?? '' }
+            }).queryKey
         });
         try {
             await onUpdated();
