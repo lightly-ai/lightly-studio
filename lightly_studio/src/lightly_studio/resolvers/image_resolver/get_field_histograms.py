@@ -14,6 +14,7 @@ from lightly_studio.models.metadata import HistogramView
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import histogram_bins
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.type_definitions import QueryType
 
 ImageField = Literal["width", "height"]
@@ -53,6 +54,9 @@ def get_field_histograms(
     Returns:
         Mapping of field name to its histogram. Empty when the collection has no images.
     """
+    annotation_count_helpers.resolve_embedding_region(
+        session=session, collection_id=collection_id, image_filter=filters
+    )
     histograms: dict[str, HistogramView] = {}
     for field in IMAGE_FIELDS:
         if fields is not None and field not in fields:
