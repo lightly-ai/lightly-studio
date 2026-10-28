@@ -15,9 +15,7 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
-from lightly_studio.resolvers.annotation_resolver.get_all_by_object_track_id import (
-    get_all_by_object_track_id,
-)
+from lightly_studio.resolvers import annotation_resolver
 
 
 def update_label_by_object_track_id(
@@ -47,7 +45,7 @@ def update_label_by_object_track_id(
     if session.get(AnnotationLabelTable, annotation_label_id) is None:
         raise ValueError(f"Annotation label with ID {annotation_label_id} not found.")
 
-    all_siblings = get_all_by_object_track_id(session=session, object_track_id=object_track_id)
+    all_siblings = annotation_resolver.get_all_by_object_track_id(session=session, object_track_id=object_track_id)
     siblings = [s for s in all_siblings if s.annotation_label_id != annotation_label_id]
     if not siblings:
         return
