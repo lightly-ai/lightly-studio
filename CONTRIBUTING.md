@@ -220,20 +220,18 @@ index. It is much smaller than the CUDA build. On Python 3.15, the `gpu` group u
 PyTorch CUDA 13.0 index; older Python versions use PyPI. The `cpu` and `gpu` dependency groups
 select the build, and `cpu` is a default group. The Python 3.15 CUDA index selection is Linux-only.
 
-To use the CUDA build, exclude the `cpu` group in your shell profile and sync again:
+Select the GPU group explicitly when syncing or running commands:
 
 ```shell
-export UV_NO_GROUP=cpu   # fish: set -Ux UV_NO_GROUP cpu
-export UV_GROUP=gpu      # fish: set -Ux UV_GROUP gpu
-uv sync
+uv sync --no-group cpu --group gpu
+uv run --no-group cpu --group gpu python src/lightly_studio/examples/example.py
 ```
 
-Set both variables permanently. A one-time `uv sync --no-group cpu` is not sufficient, because the
-next `uv run` syncs the default groups again and installs the CPU build. With both variables set,
-`make install-optional-deps` also installs the CUDA build.
+Pass both flags to each `uv sync` or `uv run` command. Otherwise uv selects the default
+CPU group again. The pinned uv version does not support a `UV_GROUP` environment variable.
 
-On Python 3.15, this selects CUDA 13.0 wheels. GPU inference still needs hardware
-validation and requires a compatible NVIDIA driver.
+On Python 3.15, this selects CUDA 13.0 wheels. CUDA support is experimental and
+requires a compatible NVIDIA driver.
 
 ### Test with a Private Mundig Development Wheel
 

@@ -83,7 +83,7 @@ python -m pip install torch==2.14.1 torchvision==0.29.1 --index-url https://down
 python -m pip install lightly-studio
 ```
 
-For NVIDIA GPUs on Linux, replace the index URL above with `https://download.pytorch.org/whl/cu130`. GPU inference on Python 3.15 still needs hardware validation; use a driver compatible with CUDA 13.0.
+For NVIDIA GPUs on Linux, replace the index URL above with `https://download.pytorch.org/whl/cu130`. CUDA support on Python 3.15 is experimental; use a driver compatible with CUDA 13.0.
 
 ??? tip "Recommended: install into a virtual environment"
     A virtual environment keeps LightlyStudio and its dependencies separate from other
