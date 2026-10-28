@@ -4,12 +4,11 @@ import dataclasses
 import queue
 import threading
 from datetime import datetime, timezone
-from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
 import requests
-from pytest_mock import MockerFixture
+from pytest_mock import MockerFixture, MockType
 
 from lightly_studio.dataset import env
 from lightly_studio.usage import usage_reporter
@@ -59,7 +58,7 @@ def test_report__does_nothing_without_config(
 
 def test_report__sends_from_a_worker_thread(mocker: MockerFixture) -> None:
     _patch_queue(mocker=mocker)
-    mocker.patch.object(usage_reporter, "_worker_started", threading.Event())
+    mocker.patch.object(usage_reporter, "_worker", None)
     sent = threading.Event()
     sending_threads: list[threading.Thread] = []
 
@@ -89,6 +88,24 @@ def test_report__drops_events_when_the_queue_is_full(mocker: MockerFixture) -> N
     second = dataclasses.replace(EVENT, event_id=UUID("00000000-0000-0000-0000-0000000000ab"))
 
     usage_reporter.report(events=[EVENT, second])
+
+    assert event_queue.get_nowait() == EVENT
+    assert event_queue.empty()
+
+
+def test_report__drops_only_events_that_cannot_be_serialized(mocker: MockerFixture) -> None:
+    event_queue = _patch_queue(mocker=mocker)
+    mocker.patch.object(usage_reporter, "_start_worker")
+    mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
+    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+    # A UUID in the details converts to a dictionary but cannot be encoded as JSON.
+    invalid = dataclasses.replace(
+        EVENT,
+        event_id=UUID("00000000-0000-0000-0000-0000000000ab"),
+        details={"sample_id": UUID("00000000-0000-0000-0000-000000000002")},
+    )
+
+    usage_reporter.report(events=[invalid, EVENT])
 
     assert event_queue.get_nowait() == EVENT
     assert event_queue.empty()
@@ -225,7 +242,7 @@ def _patch_queue(mocker: MockerFixture, maxsize: int = 0) -> queue.Queue[usage_r
     return event_queue
 
 
-def _session_answering(mocker: MockerFixture, status_codes: list[int]) -> Mock:
-    session: Mock = mocker.Mock()
+def _session_answering(mocker: MockerFixture, status_codes: list[int]) -> MockType:
+    session: MockType = mocker.Mock()
     session.post.side_effect = [mocker.Mock(status_code=code) for code in status_codes]
     return session

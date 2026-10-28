@@ -17,6 +17,7 @@ the process exits before they are sent.
 
 from __future__ import annotations
 
+import json
 import logging
 import queue
 import threading
@@ -42,10 +43,8 @@ RETRY_DELAYS_S = (1.0, 5.0)
 """Pauses before the second and the third attempt to send a batch."""
 
 _queue: queue.Queue[UsageEvent] = queue.Queue(maxsize=MAX_QUEUED_EVENTS)
-_worker_started = threading.Event()
+_worker: threading.Thread | None = None
 _worker_lock = threading.Lock()
-# Only the worker thread uses the session.
-_session = requests.Session()
 
 
 class UsageService(str, Enum):
@@ -138,6 +137,9 @@ def report(events: Sequence[UsageEvent]) -> None:
         return
     _start_worker(url=url, token=token)
     for index, event in enumerate(events):
+        # Checked here so that one invalid event cannot drop the whole batch it is sent in.
+        if not _is_serializable(event=event):
+            continue
         try:
             _queue.put_nowait(event)
         except queue.Full:
@@ -198,24 +200,35 @@ def send(
         sleep(retry_delay_s)
 
 
+def _is_serializable(event: UsageEvent) -> bool:
+    try:
+        json.dumps(event.to_json())
+    except Exception:
+        logger.warning("Dropped a usage event that cannot be serialized.", exc_info=True)
+        return False
+    return True
+
+
 def _start_worker(url: str, token: str) -> None:
+    global _worker  # noqa: PLW0603
     with _worker_lock:
-        if _worker_started.is_set():
+        if _worker is not None:
             return
         # A daemon thread does not delay the exit of the process.
-        threading.Thread(
+        _worker = threading.Thread(
             target=_run_worker,
             kwargs={"url": url, "token": token},
             name="usage-report",
             daemon=True,
-        ).start()
-        _worker_started.set()
+        )
+        _worker.start()
 
 
 def _run_worker(url: str, token: str) -> None:
+    session = requests.Session()
     while True:
         events = _take_events(event_queue=_queue)
-        send(events=events, url=url, token=token, session=_session)
+        send(events=events, url=url, token=token, session=session)
 
 
 def _take_events(event_queue: queue.Queue[UsageEvent]) -> list[UsageEvent]:
