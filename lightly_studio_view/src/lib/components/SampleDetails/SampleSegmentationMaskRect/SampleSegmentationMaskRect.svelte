@@ -16,8 +16,7 @@
         useAnnotationLabels,
         useAnnotation,
         useAnnotationLabelContext,
-        useDeleteAnnotation,
-        useGlobalStorage
+        useDeleteAnnotation
     } from '$lib/hooks';
     import { page } from '$app/state';
     import { usePostHog } from '$lib/hooks';
@@ -37,6 +36,7 @@
         collectionId: string;
         brushRadius: number;
         drawerStrokeColor: string;
+        previewOpacity: number;
         annotationLabel?: string | null | undefined;
         annotationType?: string | null | undefined;
         refetch: () => void;
@@ -50,6 +50,7 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
+        previewOpacity,
         mousePosition,
         refetch,
         onFinishBrushPendingChange
@@ -62,7 +63,6 @@
     } = useAnnotationLabelContext();
 
     const { trackEvent } = usePostHog();
-    const { maskOpacity } = useGlobalStorage();
     let drawStartFired = false;
 
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
@@ -287,7 +287,7 @@
     y="0"
     width={sample.width}
     height={sample.height}
-    opacity={$maskOpacity}
+    opacity={previewOpacity}
     class:previewHidden={!isPreviewVisible}
 >
     <canvas

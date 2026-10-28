@@ -34,6 +34,7 @@
         collectionId: string;
         brushRadius: number;
         drawerStrokeColor: string;
+        previewOpacity: number;
         refetch: () => void;
         onFinishErasePendingChange?: (pendingChange: PendingChange) => void;
     };
@@ -45,6 +46,7 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
+        previewOpacity,
         refetch,
         onFinishErasePendingChange
     }: Props = $props();
@@ -59,7 +61,7 @@
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
-    const { addReversibleAction, maskOpacity } = useGlobalStorage();
+    const { addReversibleAction } = useGlobalStorage();
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const eraserApi = $derived.by(() =>
         useSegmentationMaskEraser({
@@ -255,7 +257,7 @@
     y="0"
     width={sample.width}
     height={sample.height}
-    opacity={$maskOpacity}
+    opacity={previewOpacity}
     class:previewHidden={!isPreviewVisible}
 >
     <canvas

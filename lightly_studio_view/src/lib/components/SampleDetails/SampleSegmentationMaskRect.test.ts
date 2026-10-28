@@ -2,7 +2,6 @@ import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
 import SampleSegmentationMaskRect from './SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
 
 const {
@@ -121,6 +120,7 @@ const baseProps = {
     collectionId: 'collection-1',
     brushRadius: 5,
     drawerStrokeColor: 'rgb(0, 0, 255)',
+    previewOpacity: 0.4,
     mousePosition: null,
     refetch: vi.fn()
 };
@@ -296,9 +296,7 @@ describe('SampleSegmentationMaskRect', () => {
 
         expect(mockCanvasContext.drawImage).toHaveBeenCalledTimes(1);
         expect(getPreviewLayer(container).classList.contains('previewHidden')).toBe(false);
-        expect(getPreviewLayer(container).getAttribute('opacity')).toBe(
-            String(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity)
-        );
+        expect(getPreviewLayer(container).getAttribute('opacity')).toBe('0.4');
     });
 
     it('replaces a queued preview animation frame with the latest update', async () => {
