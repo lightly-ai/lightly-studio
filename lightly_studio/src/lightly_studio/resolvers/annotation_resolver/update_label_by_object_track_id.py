@@ -15,7 +15,6 @@ from lightly_studio.models.annotation.object_detection import ObjectDetectionAnn
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
-from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers.annotation_resolver.get_all_by_object_track_id import (
     get_all_by_object_track_id,
 )
@@ -59,7 +58,6 @@ def update_label_by_object_track_id(
     od_data = _capture_object_detection(session=session, sample_ids=sibling_ids)
     seg_data = _capture_segmentation(session=session, sample_ids=sibling_ids)
     cuboid_data = _capture_cuboid_3d(session=session, sample_ids=sibling_ids)
-    temporal_data = _capture_temporal_span(session=session, sample_ids=sibling_ids)
 
     # Remove all rows that hold FK references to annotation_base.sample_id so the
     # UPDATE below does not trigger DuckDB's over-eager constraint check.
@@ -87,7 +85,6 @@ def update_label_by_object_track_id(
             col(Cuboid3DAnnotationTable.sample_id).in_(sibling_ids)
         )
     )
-    session.exec(delete(TemporalSpanTable).where(col(TemporalSpanTable.sample_id).in_(sibling_ids)))
     session.commit()
 
     session.execute(
@@ -103,8 +100,6 @@ def update_label_by_object_track_id(
         session.add(SegmentationAnnotationTable(**d))
     for d in cuboid_data:
         session.add(Cuboid3DAnnotationTable(**d))
-    for d in temporal_data:
-        session.add(TemporalSpanTable(**d))
     session.commit()
 
 
@@ -160,20 +155,6 @@ def _capture_cuboid_3d(session: Session, sample_ids: list[UUID]) -> list[dict[st
             "sy": r.sy,
             "sz": r.sz,
             "interpolated": r.interpolated,
-        }
-        for r in rows
-    ]
-
-
-def _capture_temporal_span(session: Session, sample_ids: list[UUID]) -> list[dict[str, Any]]:
-    rows = session.exec(
-        select(TemporalSpanTable).where(col(TemporalSpanTable.sample_id).in_(sample_ids))
-    ).all()
-    return [
-        {
-            "sample_id": r.sample_id,
-            "start_time_s": r.start_time_s,
-            "end_time_s": r.end_time_s,
         }
         for r in rows
     ]
