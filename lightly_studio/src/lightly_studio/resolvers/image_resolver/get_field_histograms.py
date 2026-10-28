@@ -12,9 +12,8 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import HistogramView
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import histogram_bins
+from lightly_studio.resolvers import embedding_region_resolver, histogram_bins
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.type_definitions import QueryType
 
 ImageField = Literal["width", "height"]
@@ -54,8 +53,8 @@ def get_field_histograms(
     Returns:
         Mapping of field name to its histogram. Empty when the collection has no images.
     """
-    annotation_count_helpers.resolve_embedding_region(
-        session=session, collection_id=collection_id, image_filter=filters
+    filters = _resolve_embedding_region(
+        session=session, collection_id=collection_id, filters=filters
     )
     histograms: dict[str, HistogramView] = {}
     for field in IMAGE_FIELDS:
@@ -131,3 +130,24 @@ def _restrict(query: QueryType, collection_id: UUID, filters: ImageFilter | None
     return query.where(
         col(ImageTable.sample_id).in_(filters.build_sample_ids_query(collection_id=collection_id))
     )
+
+
+def _resolve_embedding_region(
+    session: Session, collection_id: UUID, filters: ImageFilter | None
+) -> ImageFilter | None:
+    """Return a copy of ``filters`` with the embedding region resolved to sample IDs."""
+    if (
+        filters is None
+        or filters.sample_filter is None
+        or filters.sample_filter.embedding_region is None
+    ):
+        return filters
+    region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+        session=session,
+        collection_id=collection_id,
+        region=filters.sample_filter.embedding_region,
+    )
+    sample_filter = filters.sample_filter.model_copy(
+        update={"region_sample_ids": region_sample_ids}
+    )
+    return filters.model_copy(update={"sample_filter": sample_filter})
