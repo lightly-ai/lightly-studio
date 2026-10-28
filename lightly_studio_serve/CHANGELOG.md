@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- BREAKING: Dropped Python 3.9 support. Upgrade to Python 3.10 or later.
+
 ### Fixed
 
 ### Security

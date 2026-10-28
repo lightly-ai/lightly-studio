@@ -39,10 +39,13 @@ line-length = 100
 indent-width = 4
 
 
-# Assume Python 3.9
-target-version = "py39"
+# Assume Python 3.10
+target-version = "py310"
 
 [lint]
+# Preserve existing syntax allowances when raising the minimum Python version.
+# Modernizing annotations and iterator usage is a separate change.
+ignore = ["UP007", "UP035", "UP036", "UP045", "B905", "RUF007"]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
