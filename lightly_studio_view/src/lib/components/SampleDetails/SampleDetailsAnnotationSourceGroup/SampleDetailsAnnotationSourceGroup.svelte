@@ -22,6 +22,8 @@
          * are not drawn on the canvas and so cannot be toggled). */
         allHidden?: boolean;
         onToggleVisibility?: (e: MouseEvent) => void;
+        /** Called when the user expands or collapses the group. */
+        onOpenChange?: (open: boolean) => void;
         children: Snippet;
     }
 
@@ -33,6 +35,7 @@
         showColorMarker,
         allHidden = false,
         onToggleVisibility,
+        onOpenChange,
         children
     }: Props = $props();
 
@@ -52,7 +55,7 @@
     const duration = 168;
 </script>
 
-<Collapsible bind:open>
+<Collapsible bind:open {onOpenChange}>
     <div class="flex items-center gap-2" data-testid="annotation-source-group-header" title={name}>
         {#if showColorMarker}
             <ColorMarker

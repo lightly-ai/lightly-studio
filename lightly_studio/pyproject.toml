@@ -1,12 +1,11 @@
 [project]
 name = "lightly-studio"
-version = "1.1.3"
+version = "1.2.0"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
-requires-python = ">=3.9,<3.15"
+requires-python = ">=3.10,<3.15"
 classifiers = [
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -38,9 +37,7 @@ dependencies = [
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
-    "scikit-learn==1.3.2; python_version < '3.10'",
-    "scikit-learn==1.7.2; python_version >= '3.10'",
-    # 1.13 is the last SciPy that supports Python 3.9
+    "scikit-learn==1.7.2",
     "scipy>=1.13.1",
     "python-multipart>=0.0.20",
     "environs<12.0.0",
@@ -60,8 +57,7 @@ dependencies = [
     "brotli-asgi>=1.4.0",
     "jinja2>=3.1.0",
     "alembic-postgresql-enum>=1.10.0",
-    # Pinned below 7.0, which dropped Python 3.9. 6.9 covers every Python this package supports,
-    # so one major runs everywhere rather than two that have to stay behaviourally identical.
+    # Keep the analytics client on the tested major version.
     "posthog>=6.9,<7.0",
     "lightly-studio-serve>=0.1.0,<0.2.0",
     "httpx>=0.27.2",
@@ -164,7 +160,7 @@ ignore_missing_imports = true
 module = "pyarrow.*"
 ignore_missing_imports = true
 
-# scipy-stubs requires Python 3.10 or newer. Static checks run on Python 3.9.
+# SciPy type stubs are not installed.
 [[tool.mypy.overrides]]
 module = "scipy.*"
 ignore_missing_imports = true

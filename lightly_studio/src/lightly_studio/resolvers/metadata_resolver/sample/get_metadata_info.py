@@ -7,7 +7,7 @@ from typing import NamedTuple
 from uuid import UUID
 
 import sqlalchemy
-from sqlalchemy import Integer, cast, func
+from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_json
@@ -18,6 +18,7 @@ from lightly_studio.models.metadata import (
     SampleMetadataTable,
 )
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers import histogram_bins
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import metadata_helpers
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
@@ -227,8 +228,6 @@ def _compute_histogram(  # noqa: PLR0913
         )
         return HistogramView(bin_edges=[min_value, max_value], counts=[count])
 
-    width = (max_value - min_value) / bin_count
-
     value_expr = db_json.json_extract_key_as_float(
         column=SampleMetadataTable.data, key=metadata_key
     )
@@ -236,9 +235,9 @@ def _compute_histogram(  # noqa: PLR0913
         column=SampleMetadataTable.data, key=metadata_key
     ).isnot(None)
 
-    # Bucket index in [0, bin_count - 1]; values equal to max map to the last bin.
-    raw_bucket = cast(func.floor((value_expr - min_value) / width), Integer)
-    bucket_expr = func.least(func.greatest(raw_bucket, 0), bin_count - 1)
+    bucket_expr = histogram_bins.bucket_expression(
+        value=value_expr, min_value=min_value, max_value=max_value, bin_count=bin_count
+    )
 
     query = (
         select(bucket_expr.label("bucket"), func.count())
@@ -260,11 +259,12 @@ def _compute_histogram(  # noqa: PLR0913
     counts_by_bucket = {int(bucket): int(count) for bucket, count in session.exec(query).all()}
     counts = [counts_by_bucket.get(i, 0) for i in range(bin_count)]
 
-    bin_edges = [min_value + (max_value - min_value) * i / bin_count for i in range(bin_count + 1)]
-    # Guard against float drift so the last edge is exactly the max value.
-    bin_edges[-1] = max_value
-
-    return HistogramView(bin_edges=bin_edges, counts=counts)
+    return HistogramView(
+        bin_edges=histogram_bins.bin_edges(
+            min_value=min_value, max_value=max_value, bin_count=bin_count
+        ),
+        counts=counts,
+    )
 
 
 def _count_metadata_values(

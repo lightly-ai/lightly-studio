@@ -1,0 +1,492 @@
+import type {
+    AnnotationView,
+    CameraProjectionView,
+    Cuboid3dAnnotationView
+} from '$lib/api/lightly_studio_local/types.gen';
+import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+import {
+    DEFAULT_PROJECTION_SETTINGS,
+    type ProjectionColorMode,
+    type ProjectionSettings
+} from './projectionSettings';
+
+export interface ProjectedPoint {
+    x: number;
+    y: number;
+}
+
+export interface ProjectedPointData extends ProjectedPoint {
+    depth: number;
+    height: number;
+    intensity: number;
+    distance: number;
+    density: number;
+    rgb?: readonly [number, number, number];
+}
+
+export interface ProjectedSegment {
+    start: ProjectedPoint;
+    end: ProjectedPoint;
+}
+
+export interface AnnotationClassColor {
+    id: string;
+    color: string;
+}
+
+const CUBOID_FACES = [
+    [0, 1, 3, 2],
+    [4, 6, 7, 5],
+    [0, 4, 5, 1],
+    [2, 3, 7, 6],
+    [0, 2, 6, 4],
+    [1, 5, 7, 3]
+] as const;
+
+type CameraPoint = readonly [x: number, y: number, z: number];
+type ColorMetric = 'depth' | 'height' | 'intensity' | 'distance' | 'density';
+
+const NEAR_PLANE = 1e-6;
+
+const CUBOID_EDGES = [
+    [0, 1],
+    [1, 3],
+    [3, 2],
+    [2, 0],
+    [4, 5],
+    [5, 7],
+    [7, 6],
+    [6, 4],
+    [0, 4],
+    [1, 5],
+    [2, 6],
+    [3, 7]
+] as const;
+
+export function drawProjectionOverlay(
+    context: CanvasRenderingContext2D,
+    projection: CameraProjectionView,
+    batch: PointBatch | undefined,
+    annotations: readonly AnnotationView[],
+    settings: ProjectionSettings = DEFAULT_PROJECTION_SETTINGS,
+    annotationClasses: readonly AnnotationClassColor[] = []
+): void {
+    context.clearRect(0, 0, projection.width, projection.height);
+    if (batch && settings.showPoints) {
+        const size = settings.pointSize;
+        const halfSize = size / 2;
+        context.globalAlpha = settings.pointOpacity;
+        const isRgb = settings.colorMode === 'rgb';
+        const metrics = isRgb ? [] : getColorMetrics(settings.colorMode);
+        const points = projectPointCloudData(batch, projection, 5000, metrics.includes('density'));
+        const ranges = metrics.map((metric) => {
+            const values = points.map((point) => getMetricValue(point, metric));
+            return [Math.min(...values), Math.max(...values)] as const;
+        });
+        for (const point of points) {
+            context.fillStyle = 'rgba(0, 0, 0, 0.8)';
+            context.fillRect(point.x - halfSize - 1, point.y - halfSize - 1, size + 2, size + 2);
+            context.fillStyle = isRgb
+                ? getRgbPointColor(point.rgb)
+                : getPointColor(normalizePoint(point, metrics, ranges));
+            context.fillRect(point.x - halfSize, point.y - halfSize, size, size);
+        }
+    }
+    if (settings.showAnnotations) {
+        context.globalAlpha = 1;
+        for (const annotation of annotations) {
+            const cuboid = annotation.cuboid_3d_details;
+            if (!cuboid) continue;
+            const color =
+                annotationClasses.find(
+                    ({ id }) => id === annotation.annotation_label.annotation_label_name
+                )?.color ?? '#ff5c5c';
+
+            context.fillStyle = color;
+            context.globalAlpha = 0.2;
+            for (const face of projectCuboidFaces(cuboid, projection)) {
+                context.beginPath();
+                context.moveTo(face[0].x, face[0].y);
+                for (const point of face.slice(1)) context.lineTo(point.x, point.y);
+                context.closePath();
+                context.fill();
+            }
+
+            context.globalAlpha = 1;
+            context.strokeStyle = color;
+            context.lineWidth = 2;
+            context.beginPath();
+            for (const segment of projectCuboidWireframe(cuboid, projection)) {
+                context.moveTo(segment.start.x, segment.start.y);
+                context.lineTo(segment.end.x, segment.end.y);
+            }
+            context.stroke();
+        }
+    }
+}
+
+function getColorMetrics(mode: ProjectionColorMode): ColorMetric[] {
+    if (mode === 'height-distance') return ['height', 'distance'];
+    if (mode === 'height-density') return ['height', 'density'];
+    if (mode === 'height') return ['height'];
+    if (mode === 'intensity') return ['intensity'];
+    if (mode === 'distance') return ['distance'];
+    if (mode === 'density') return ['density'];
+    return ['depth'];
+}
+
+function getMetricValue(point: ProjectedPointData, metric: ColorMetric): number {
+    return point[metric];
+}
+
+function normalizePoint(
+    point: ProjectedPointData,
+    metrics: ColorMetric[],
+    ranges: readonly (readonly [number, number])[]
+): number {
+    return (
+        metrics.reduce(
+            (sum, metric, index) =>
+                sum + normalize(getMetricValue(point, metric), ...ranges[index]),
+            0
+        ) / metrics.length
+    );
+}
+
+function normalize(value: number, min: number, max: number): number {
+    return max === min ? 0.5 : Math.max(0, Math.min(1, (value - min) / (max - min)));
+}
+
+function getRgbPointColor(rgb: readonly [number, number, number] | undefined): string {
+    if (!rgb) return 'rgb(128,128,128)';
+    return `rgb(${Math.round(rgb[0] * 255)},${Math.round(rgb[1] * 255)},${Math.round(rgb[2] * 255)})`;
+}
+
+function getPointColor(normalizedValue: number): string {
+    const hue = 230 - normalizedValue * 230;
+    return `hsl(${hue} 90% 55%)`;
+}
+
+export function projectPoint(
+    point: readonly [number, number, number],
+    projection: CameraProjectionView
+): ProjectedPoint | null {
+    return projectScenePoint(point, projection)?.screenPoint ?? null;
+}
+
+interface ProjectedScenePoint {
+    cameraPoint: CameraPoint;
+    screenPoint: ProjectedPoint;
+}
+
+function projectScenePoint(
+    point: readonly [number, number, number],
+    projection: CameraProjectionView
+): ProjectedScenePoint | null {
+    const cameraPoint = toCameraPoint(point, projection);
+    const [cameraX, cameraY, cameraZ] = cameraPoint;
+    if (cameraZ < NEAR_PLANE) return null;
+
+    const k = projection.camera_matrix;
+    return {
+        cameraPoint,
+        screenPoint: {
+            x: (k[0] * cameraX + k[1] * cameraY + k[2] * cameraZ) / cameraZ,
+            y: (k[3] * cameraX + k[4] * cameraY + k[5] * cameraZ) / cameraZ
+        }
+    };
+}
+
+function toCameraPoint(
+    point: readonly [number, number, number],
+    projection: CameraProjectionView
+): CameraPoint {
+    const matrix = projection.scene_to_camera;
+    return [
+        matrix[0] * point[0] + matrix[1] * point[1] + matrix[2] * point[2] + matrix[3],
+        matrix[4] * point[0] + matrix[5] * point[1] + matrix[6] * point[2] + matrix[7],
+        matrix[8] * point[0] + matrix[9] * point[1] + matrix[10] * point[2] + matrix[11]
+    ];
+}
+
+function projectCameraPoint(
+    cameraPoint: CameraPoint,
+    projection: CameraProjectionView
+): ProjectedPoint | null {
+    const [cameraX, cameraY, cameraZ] = cameraPoint;
+    if (cameraZ < NEAR_PLANE) return null;
+
+    const k = projection.camera_matrix;
+    return {
+        x: (k[0] * cameraX + k[1] * cameraY + k[2] * cameraZ) / cameraZ,
+        y: (k[3] * cameraX + k[4] * cameraY + k[5] * cameraZ) / cameraZ
+    };
+}
+
+export function projectPointCloud(
+    batch: PointBatch,
+    projection: CameraProjectionView,
+    maxPoints = 5000
+): ProjectedPoint[] {
+    const step = Math.max(1, Math.ceil(batch.count / maxPoints));
+    const points: ProjectedPoint[] = [];
+    for (let index = 0; index < batch.count; index += step) {
+        const point = projectPoint(
+            [
+                batch.positions[index * 3],
+                batch.positions[index * 3 + 1],
+                batch.positions[index * 3 + 2]
+            ],
+            projection
+        );
+        if (
+            point &&
+            point.x >= 0 &&
+            point.x <= projection.width &&
+            point.y >= 0 &&
+            point.y <= projection.height
+        ) {
+            points.push(point);
+        }
+    }
+    return points;
+}
+
+/** Projects points and retains values used by camera-overlay color modes. */
+export function projectPointCloudData(
+    batch: PointBatch,
+    projection: CameraProjectionView,
+    maxPoints = 5000,
+    includeDensity = false
+): ProjectedPointData[] {
+    const densityByCell = includeDensity ? getDensityByCell(batch) : undefined;
+    const visiblePoints: Array<{
+        index: number;
+        position: readonly [number, number, number];
+        projected: ProjectedScenePoint;
+    }> = [];
+    for (let index = 0; index < batch.count; index++) {
+        const offset = index * 3;
+        const position: [number, number, number] = [
+            batch.positions[offset],
+            batch.positions[offset + 1],
+            batch.positions[offset + 2]
+        ];
+        const projected = projectScenePoint(position, projection);
+        if (
+            projected &&
+            projected.screenPoint.x >= 0 &&
+            projected.screenPoint.x <= projection.width &&
+            projected.screenPoint.y >= 0 &&
+            projected.screenPoint.y <= projection.height
+        ) {
+            visiblePoints.push({ index, position, projected });
+        }
+    }
+
+    const step = Math.max(1, Math.ceil(visiblePoints.length / maxPoints));
+    const points: ProjectedPointData[] = [];
+    for (let visibleIndex = 0; visibleIndex < visiblePoints.length; visibleIndex += step) {
+        const { index, position, projected } = visiblePoints[visibleIndex];
+        const offset = index * 3;
+        const { cameraPoint, screenPoint } = projected;
+        points.push({
+            ...screenPoint,
+            depth: cameraPoint[2],
+            height: position[2],
+            intensity: batch.intensities[index],
+            distance: Math.hypot(...position),
+            density: densityByCell ? Math.log1p(densityByCell.get(getCellKey(position)) ?? 1) : 0,
+            rgb: batch.colors
+                ? [batch.colors[offset], batch.colors[offset + 1], batch.colors[offset + 2]]
+                : undefined
+        });
+    }
+    return points;
+}
+
+function getDensityByCell(batch: PointBatch): Map<string, number> {
+    const counts = new Map<string, number>();
+    for (let index = 0; index < batch.count; index++) {
+        const offset = index * 3;
+        const position: [number, number, number] = [
+            batch.positions[offset],
+            batch.positions[offset + 1],
+            batch.positions[offset + 2]
+        ];
+        const key = getCellKey(position);
+        counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return counts;
+}
+
+function getCellKey(position: readonly [number, number, number]): string {
+    const cellSize = 0.5;
+    return position.map((coordinate) => Math.floor(coordinate / cellSize)).join(',');
+}
+
+export function projectCuboid(
+    cuboid: Cuboid3dAnnotationView,
+    projection: CameraProjectionView
+): ProjectedSegment[] {
+    const corners = cuboidCorners(cuboid).map((corner) => toCameraPoint(corner, projection));
+    return CUBOID_EDGES.flatMap(([startIndex, endIndex]) => {
+        const clipped3d = clipToNearPlane(corners[startIndex], corners[endIndex]);
+        if (!clipped3d) return [];
+        const start = projectCameraPoint(clipped3d[0], projection);
+        const end = projectCameraPoint(clipped3d[1], projection);
+        if (!start || !end) return [];
+        const clipped2d = clipToImage(start, end, projection);
+        return clipped2d ? [clipped2d] : [];
+    });
+}
+
+/** Projects the visible portions of all cuboid edges. */
+export function projectCuboidWireframe(
+    cuboid: Cuboid3dAnnotationView,
+    projection: CameraProjectionView
+): ProjectedSegment[] {
+    return projectCuboid(cuboid, projection);
+}
+
+export function projectCuboidFaces(
+    cuboid: Cuboid3dAnnotationView,
+    projection: CameraProjectionView
+): ProjectedPoint[][] {
+    const corners = cuboidCorners(cuboid).map((corner) => toCameraPoint(corner, projection));
+    return CUBOID_FACES.flatMap((face) => {
+        const clippedToNearPlane = clipPolygonToNearPlane(face.map((index) => corners[index]));
+        if (clippedToNearPlane.length < 3) return [];
+        const projected = clippedToNearPlane.map((point) => projectCameraPoint(point, projection));
+        const faceInImage = projected.filter((point): point is ProjectedPoint => point !== null);
+        // Keep every valid face that can intersect the image. The canvas clips the
+        // polygon at its own bounds; clipping it here can incorrectly drop a face
+        // when the projected polygon is partially outside the image.
+        return faceInImage.length >= 3 && polygonIntersectsImage(faceInImage, projection)
+            ? [faceInImage]
+            : [];
+    });
+}
+
+function clipPolygonToNearPlane(polygon: CameraPoint[]): CameraPoint[] {
+    const clipped: CameraPoint[] = [];
+    for (let index = 0; index < polygon.length; index += 1) {
+        const start = polygon[index];
+        const end = polygon[(index + 1) % polygon.length];
+        const startInside = start[2] >= NEAR_PLANE;
+        const endInside = end[2] >= NEAR_PLANE;
+        if (startInside !== endInside) {
+            const ratio = (NEAR_PLANE - start[2]) / (end[2] - start[2]);
+            clipped.push([
+                start[0] + ratio * (end[0] - start[0]),
+                start[1] + ratio * (end[1] - start[1]),
+                NEAR_PLANE
+            ]);
+        }
+        if (endInside) clipped.push(end);
+    }
+    return clipped;
+}
+
+function polygonIntersectsImage(
+    polygon: readonly ProjectedPoint[],
+    projection: CameraProjectionView
+): boolean {
+    const minX = Math.min(...polygon.map(({ x }) => x));
+    const maxX = Math.max(...polygon.map(({ x }) => x));
+    const minY = Math.min(...polygon.map(({ y }) => y));
+    const maxY = Math.max(...polygon.map(({ y }) => y));
+    return minX <= projection.width && maxX >= 0 && minY <= projection.height && maxY >= 0;
+}
+
+function clipToNearPlane(start: CameraPoint, end: CameraPoint): [CameraPoint, CameraPoint] | null {
+    const startInside = start[2] >= NEAR_PLANE;
+    const endInside = end[2] >= NEAR_PLANE;
+    if (!startInside && !endInside) return null;
+    if (startInside && endInside) return [start, end];
+
+    const t = (NEAR_PLANE - start[2]) / (end[2] - start[2]);
+    const intersection: CameraPoint = [
+        start[0] + t * (end[0] - start[0]),
+        start[1] + t * (end[1] - start[1]),
+        NEAR_PLANE + Number.EPSILON
+    ];
+    return startInside ? [start, intersection] : [intersection, end];
+}
+
+/** Clips a projected cuboid edge to the camera image rectangle. */
+function clipToImage(
+    start: ProjectedPoint,
+    end: ProjectedPoint,
+    projection: CameraProjectionView
+): ProjectedSegment | null {
+    let t0 = 0;
+    let t1 = 1;
+    const dx = end.x - start.x;
+    const dy = end.y - start.y;
+    const boundaries: Array<[number, number]> = [
+        [-dx, start.x],
+        [dx, projection.width - start.x],
+        [-dy, start.y],
+        [dy, projection.height - start.y]
+    ];
+
+    for (const [p, q] of boundaries) {
+        if (p === 0) {
+            if (q < 0) return null;
+            continue;
+        }
+        const ratio = q / p;
+        if (p < 0) t0 = Math.max(t0, ratio);
+        else t1 = Math.min(t1, ratio);
+        if (t0 > t1) return null;
+    }
+
+    return {
+        start: { x: start.x + t0 * dx, y: start.y + t0 * dy },
+        end: { x: start.x + t1 * dx, y: start.y + t1 * dy }
+    };
+}
+
+export function projectAnnotations(
+    annotations: readonly AnnotationView[],
+    projection: CameraProjectionView
+): ProjectedSegment[] {
+    return annotations.flatMap((annotation) =>
+        annotation.cuboid_3d_details ? projectCuboid(annotation.cuboid_3d_details, projection) : []
+    );
+}
+
+function cuboidCorners(cuboid: Cuboid3dAnnotationView): Array<[number, number, number]> {
+    const half = [cuboid.sx / 2, cuboid.sy / 2, cuboid.sz / 2] as const;
+    const quaternion = [cuboid.qx, cuboid.qy, cuboid.qz, cuboid.qw] as const;
+    return [
+        [-1, -1, -1],
+        [-1, -1, 1],
+        [-1, 1, -1],
+        [-1, 1, 1],
+        [1, -1, -1],
+        [1, -1, 1],
+        [1, 1, -1],
+        [1, 1, 1]
+    ].map(([x, y, z]) => {
+        const rotated = rotateVector([x * half[0], y * half[1], z * half[2]], quaternion);
+        return [rotated[0] + cuboid.px, rotated[1] + cuboid.py, rotated[2] + cuboid.pz];
+    });
+}
+
+function rotateVector(
+    vector: readonly [number, number, number],
+    quaternion: readonly [number, number, number, number]
+): [number, number, number] {
+    const [x, y, z, w] = quaternion;
+    const [vx, vy, vz] = vector;
+    const tx = 2 * (y * vz - z * vy);
+    const ty = 2 * (z * vx - x * vz);
+    const tz = 2 * (x * vy - y * vx);
+    return [
+        vx + w * tx + y * tz - z * ty,
+        vy + w * ty + z * tx - x * tz,
+        vz + w * tz + x * ty - y * tx
+    ];
+}

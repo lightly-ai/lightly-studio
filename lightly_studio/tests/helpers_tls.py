@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import datetime
 import ipaddress
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 
 from cryptography import x509
 from cryptography.hazmat.primitives import hashes, serialization
@@ -66,13 +66,13 @@ def _builder(
     common_name: str, key: ec.EllipticCurvePrivateKey, issuer: CertificateWithKey | None
 ) -> x509.CertificateBuilder:
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, common_name)])
-    now = datetime.datetime.now(tz=datetime.timezone.utc)
+    now = datetime.now(tz=timezone.utc)
     return (
         x509.CertificateBuilder()
         .subject_name(name)
         .issuer_name(name if issuer is None else issuer.certificate.subject)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
-        .not_valid_before(now - datetime.timedelta(days=1))
-        .not_valid_after(now + datetime.timedelta(days=30))
+        .not_valid_before(now - timedelta(days=1))
+        .not_valid_after(now + timedelta(days=30))
     )

@@ -28,6 +28,7 @@
     import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation';
     import { useDeleteCuboidAnnotation } from './useDeleteCuboidAnnotation';
     import { useUpdateCuboidAnnotation } from './useUpdateCuboidAnnotation';
+    import { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
     import type { Vector3, WorkspaceTool } from './domain';
 
     /**
@@ -162,6 +163,16 @@
     const handleWindowKeydown = (event: KeyboardEvent) => {
         if (event.code !== 'Space' || event.repeat) return;
         const target = event.target;
+        const isTextEntry =
+            target instanceof Element &&
+            ((target instanceof HTMLElement && target.isContentEditable) ||
+                target.closest('input, select, textarea'));
+        if (isTextEntry) return;
+        if (target instanceof Element && target.closest('[role="dialog"]')) {
+            event.preventDefault();
+            togglePlayback();
+            return;
+        }
         if (
             target instanceof Element &&
             ((target instanceof HTMLElement && target.isContentEditable) ||
@@ -243,9 +254,10 @@
     // show placeholder data from the previous tick), we keep the previous point cloud visible for
     // a smooth transition but immediately clear the annotations so they don't bleed into frames
     // where they do not belong.
-    const snapshotAnnotations = $derived(
-        sceneSnapshot?.tick === workspace.currentTick ? sceneSnapshot.annotations : []
+    const currentSnapshot = $derived(
+        sceneSnapshot?.tick === workspace.currentTick ? sceneSnapshot : undefined
     );
+    const snapshotAnnotations = $derived(currentSnapshot?.annotations ?? []);
 
     const cuboids = $derived(tickAnnotationsToCuboids(snapshotAnnotations));
 
@@ -308,6 +320,20 @@
         getCollectionId: () => annotationSourceCollectionId,
         onUpdated: () => workspace.tickDetails.refetch({ throwOnError: true })
     });
+
+    const transforms = createCuboidTransformState({
+        onTransform: (payload) => handleCuboidTransform(payload)
+    });
+    const { annotations } = transforms;
+
+    $effect(() => {
+        transforms.reconcile(sceneCuboids);
+    });
+
+    const panelCuboidTransform: typeof handleCuboidTransform = async (payload) => {
+        await transforms.commit(payload);
+        return true;
+    };
 
     const { handleDeleteCuboid: deleteCuboidAnnotation } = useDeleteCuboidAnnotation({
         getCollectionId: () => annotationSourceCollectionId,
@@ -386,16 +412,16 @@
                                     colorMode={displayedColorMode}
                                     pointCloudBounds={sceneSnapshot.frame.bounds ?? undefined}
                                     fitKey={sceneSnapshot.fitKey}
-                                    cuboids={sceneCuboids}
+                                    cuboids={$annotations}
                                     {annotationClasses}
                                     {annotationSources}
+                                    {transforms}
                                     selectedAnnotationId={selectedCuboidId}
                                     hoveredAnnotationId={hoveredCuboidId}
                                     activeTool={effectiveTool}
                                     onselect={(id) => (selectedCuboidId = id)}
                                     onhover={(id) => (hoveredCuboidId = id)}
                                     onCreateCuboid={handleCreateCuboid}
-                                    onCuboidTransform={handleCuboidTransform}
                                     onPreviousTick={goToPreviousFrame}
                                     onNextTick={goToNextFrame}
                                 />
@@ -425,6 +451,11 @@
                                 seqNumber={workspace.currentTick}
                                 displayFrameId={workspace.referenceFrameId}
                                 selectedChannelIds={cameraSelection.selectedChannelIds}
+                                batch={currentSnapshot?.frame.batch}
+                                annotations={snapshotAnnotations}
+                                {annotationClasses}
+                                canProject={!workspace.isShowingSensorFrames}
+                                onPlaybackToggle={togglePlayback}
                             />
                         </Pane>
                     </PaneGroup>
@@ -464,12 +495,14 @@
                 </PaneResizer>
                 <Pane defaultSize={22} minSize={16} maxSize={40}>
                     <PointCloudRightSidePanel
-                        {cuboids}
+                        cuboids={$annotations}
                         {annotationClasses}
                         {annotationSources}
                         bind:selectedCuboidId
                         {tick}
                         onTagsChange={() => void workspace.tickDetails.refetch()}
+                        editable={$isEditingMode}
+                        onCuboidTransform={panelCuboidTransform}
                         onDeleteCuboid={$isEditingMode ? handleDeleteCuboid : undefined}
                     />
                 </Pane>

@@ -9,16 +9,16 @@ endpoints thus stay trusted.
 from __future__ import annotations
 
 import atexit
-import contextlib
 import os
 import re
-import ssl
 import tempfile
+from contextlib import suppress
+from ssl import PROTOCOL_TLS_CLIENT, SSLContext, SSLError
 
 MAX_CA_BUNDLE_PEM_BYTES = 64 * 1024
 
 _CERTIFICATE_PATTERN = re.compile(
-    r"-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----", flags=re.DOTALL
+    r"-----BEGIN CERTIFICATE-----[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----"
 )
 
 # Paths of the CA bundle files written by this process.
@@ -43,9 +43,11 @@ def write_ca_bundle(pem: str) -> str:
     certificates = _validate_pem(pem=pem)
     content = f"{_read_default_ca_bundle().rstrip()}\n{certificates}"
     file_descriptor, path = tempfile.mkstemp(prefix="lightly-studio-ca-", suffix=".pem")
+    # Track the file before the write, so that delete_ca_bundles also removes it if the
+    # write fails.
+    _written_files.append(path)
     with os.fdopen(file_descriptor, "w", encoding="utf-8") as file:
         file.write(content)
-    _written_files.append(path)
     return path
 
 
@@ -56,7 +58,7 @@ def delete_ca_bundles(keep: str | None) -> None:
         keep: The path of the file to keep, or None to delete all files.
     """
     for path in [path for path in _written_files if path != keep]:
-        with contextlib.suppress(FileNotFoundError):
+        with suppress(FileNotFoundError):
             os.remove(path)
         _written_files.remove(path)
 
@@ -77,8 +79,8 @@ def _validate_pem(pem: str) -> str:
 
     joined = "\n".join(certificates) + "\n"
     try:
-        ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT).load_verify_locations(cadata=joined)
-    except ssl.SSLError as error:
+        SSLContext(PROTOCOL_TLS_CLIENT).load_verify_locations(cadata=joined)
+    except SSLError as error:
         raise ValueError("The CA bundle contains an invalid certificate.") from error
     return joined
 

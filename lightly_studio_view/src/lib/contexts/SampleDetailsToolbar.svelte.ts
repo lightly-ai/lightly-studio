@@ -3,10 +3,20 @@ import { getContext, setContext } from 'svelte';
 export type BrushMode = 'brush' | 'eraser';
 export type SlicLevel = 'coarse' | 'medium' | 'fine';
 export type SlicStatus = 'idle' | 'computing' | 'ready' | 'error';
-export type ToolbarStatus = 'bounding-box' | 'brush' | 'eraser' | 'drag' | 'cursor' | 'slic';
+export type AssistedLabelingStatus = 'smart-select' | 'find-instances';
+export type ToolbarStatus =
+    | 'bounding-box'
+    | 'brush'
+    | 'eraser'
+    | 'drag'
+    | 'cursor'
+    | 'slic'
+    | AssistedLabelingStatus;
 
 export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
+    // The status a Space pan interrupted, restored when the pan ends.
+    panFrom?: ToolbarStatus;
     brush: {
         mode: BrushMode;
         size: number;
@@ -79,3 +89,6 @@ export function useSampleDetailsToolbarContext(): {
         setStatus
     };
 }
+
+export const isAssistedLabelingStatus = (status: ToolbarStatus): status is AssistedLabelingStatus =>
+    status === 'smart-select' || status === 'find-instances';

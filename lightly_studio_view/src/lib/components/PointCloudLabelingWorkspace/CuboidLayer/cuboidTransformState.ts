@@ -12,6 +12,8 @@ interface Params {
 
 interface WorkingTransform {
     annotation: Domain.CuboidAnnotation;
+    /** Source snapshots and earlier transforms whose refetches may still arrive. */
+    staleAnnotations: readonly Domain.CuboidAnnotation[];
     active: boolean;
     status: 'unchanged' | 'saving' | 'saved' | 'failed';
 }
@@ -33,12 +35,18 @@ export function createCuboidTransformState({ onTransform }: Params): CuboidTrans
     function prune(): void {
         for (const [id, entry] of working) {
             const sourceAnnotation = source.find((annotation) => annotation.id === id);
+            if (!sourceAnnotation) {
+                working.delete(id);
+                continue;
+            }
             const settled = !entry.active && entry.status !== 'saving';
-            if (
-                !sourceAnnotation ||
-                (settled &&
-                    (entry.status !== 'saved' || sameTransform(sourceAnnotation, entry.annotation)))
-            ) {
+            const sourceConfirmsTransform = sameTransform(sourceAnnotation, entry.annotation);
+            const sourceIsStale = entry.staleAnnotations.some((annotation) =>
+                sameTransform(sourceAnnotation, annotation)
+            );
+            const overlayObsolete =
+                entry.status !== 'saved' || sourceConfirmsTransform || !sourceIsStale;
+            if (settled && overlayObsolete) {
                 working.delete(id);
             }
         }
@@ -77,6 +85,7 @@ export function createCuboidTransformState({ onTransform }: Params): CuboidTrans
             }
             working.set(annotation.id, {
                 annotation,
+                staleAnnotations: [annotation],
                 active: true,
                 status: 'unchanged'
             });
@@ -92,7 +101,7 @@ export function createCuboidTransformState({ onTransform }: Params): CuboidTrans
         async commit(transform) {
             const annotation = source.find(({ id }) => id === transform.annotationId);
             if (!annotation) return;
-            const entry = createPendingTransform(annotation, transform);
+            const entry = createPendingTransform(annotation, transform, working.get(annotation.id));
             working.set(annotation.id, entry);
             publish();
             try {
@@ -107,10 +116,14 @@ export function createCuboidTransformState({ onTransform }: Params): CuboidTrans
 
 function createPendingTransform(
     annotation: Domain.CuboidAnnotation,
-    { center, rotation, size }: Transform
+    { center, rotation, size }: Transform,
+    previous: WorkingTransform | undefined
 ): WorkingTransform {
     return {
         annotation: { ...annotation, center, rotation, size },
+        staleAnnotations: previous
+            ? [...previous.staleAnnotations, previous.annotation, annotation]
+            : [annotation],
         active: false,
         status: 'saving'
     };

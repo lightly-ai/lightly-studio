@@ -7,7 +7,7 @@ Python float in a list), which bounds memory when loading many of them.
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated, Any, TypeAlias
 
 import numpy as np
 from numpy.typing import NDArray
@@ -20,7 +20,6 @@ from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator, TypeEngine
 from sqlmodel import Session
-from typing_extensions import TypeAlias
 
 # A single embedding vector. Always 1-D float32 numpy; a batch is a Sequence[Embedding].
 Embedding: TypeAlias = NDArray[np.float32]

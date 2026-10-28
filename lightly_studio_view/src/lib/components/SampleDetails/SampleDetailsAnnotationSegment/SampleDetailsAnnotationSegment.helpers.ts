@@ -68,13 +68,15 @@ export const areAllAnnotationsHidden = (
  * its annotations visible, or when it holds the annotation the user just created. The latter
  * keeps a brand-new source (absent from the grid selection, so seeded hidden) from appearing
  * collapsed right after adding the first annotation to it.
+ * A collapse the user set on an earlier sample replaces the grid filter default.
  */
 export const isSourceGroupInitiallyOpen = (
     annotations: AnnotationView[],
     seededHiddenIds: Set<string>,
-    lastCreatedAnnotationId: string | null | undefined
+    lastCreatedAnnotationId: string | null | undefined,
+    storedOpen?: boolean
 ): boolean =>
-    !areAllAnnotationsHidden(annotations, seededHiddenIds) ||
+    (storedOpen ?? !areAllAnnotationsHidden(annotations, seededHiddenIds)) ||
     (lastCreatedAnnotationId != null &&
         annotations.some((annotation) => annotation.sample_id === lastCreatedAnnotationId));
 

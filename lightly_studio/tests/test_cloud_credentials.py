@@ -4,20 +4,21 @@ from __future__ import annotations
 
 import json
 import os
-import ssl
 import tempfile
 import threading
 from collections.abc import Generator
 from pathlib import Path
+from ssl import PROTOCOL_TLS_SERVER, SSLContext
 
 import fsspec
 import pytest
 from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
-from botocore.exceptions import EndpointConnectionError
+from botocore.exceptions import SSLError
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
-from moto.moto_server.werkzeug_app import DomainDispatcherApplication, create_backend_app
+from moto.moto_server import werkzeug_app
+from moto.moto_server.werkzeug_app import DomainDispatcherApplication
 from pytest_mock import MockerFixture
-from werkzeug.serving import make_server
+from werkzeug import serving
 
 from lightly_studio import ca_bundle, cloud_credentials
 from lightly_studio.cloud_credentials import apply_cloud_credentials
@@ -64,25 +65,27 @@ def private_s3_endpoint(
     """Run a moto S3 server over TLS that sends only its leaf certificate.
 
     The server does not send the issuing CA, so clients must have it in their CA bundle.
+    The server uses 127.0.0.1 instead of localhost. On some systems localhost resolves to
+    more addresses, and a refused connection on one of them can hide the TLS error.
     """
     leaf = helpers_tls.create_server_certificate(issuer=private_issuing_ca, host="localhost")
     certificate_path = tmp_path / "server.pem"
     key_path = tmp_path / "server.key"
     certificate_path.write_text(leaf.certificate_pem())
     key_path.write_text(leaf.key_pem())
-    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+    ssl_context = SSLContext(PROTOCOL_TLS_SERVER)
     ssl_context.load_cert_chain(certfile=certificate_path, keyfile=key_path)
 
-    server = make_server(
-        host="localhost",
+    server = serving.make_server(
+        host="127.0.0.1",
         port=0,
-        app=DomainDispatcherApplication(create_backend_app),
+        app=DomainDispatcherApplication(werkzeug_app.create_backend_app),
         threaded=True,
         ssl_context=ssl_context,
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    yield f"https://localhost:{server.port}"
+    yield f"https://127.0.0.1:{server.port}"
     server.shutdown()
     thread.join()
 
@@ -333,7 +336,7 @@ def test_apply_cloud_credentials__ca_bundle_trusts_private_s3_endpoint(
         "AWS_MAX_ATTEMPTS": "1",
     }
     apply_cloud_credentials(credentials=credentials)
-    with pytest.raises(EndpointConnectionError):
+    with pytest.raises(SSLError, match="certificate verify failed"):
         fsspec.filesystem("s3").ls("")
 
     ca_pem = private_issuing_ca.certificate_pem() + private_root_ca.certificate_pem()

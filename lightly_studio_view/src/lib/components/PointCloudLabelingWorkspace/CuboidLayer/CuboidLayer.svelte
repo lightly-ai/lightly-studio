@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte';
     import { T, useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
     import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
@@ -8,17 +9,17 @@
     import CuboidVisual from './CuboidVisual.svelte';
     import { highlightCuboidColor, resolveCuboidColor } from './cuboidColors';
     import { createCuboidHoverTracker } from './cuboidHoverTracker';
-    import { createCuboidTransformState } from './cuboidTransformState';
+    import type { createCuboidTransformState } from './cuboidTransformState';
     import { createCuboidRenderItems, disposeCuboidRenderItems } from './cuboidRenderItems';
     import { addCuboidSelectionListeners } from './cuboidSelection';
     import { GIZMO_MODES, buildCuboidTransformPayload } from './cuboidTransform';
-    import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
 
     interactivity();
 
     let {
         cuboids,
         annotationClasses,
+        transforms,
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
@@ -30,6 +31,7 @@
     }: {
         cuboids: readonly Domain.CuboidAnnotation[];
         annotationClasses: readonly Domain.AnnotationClass[];
+        transforms: ReturnType<typeof createCuboidTransformState>;
         selectedAnnotationId?: string | null;
         hoveredAnnotationId?: string | null;
         activeTool?: Domain.WorkspaceTool;
@@ -37,21 +39,21 @@
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         onCreateCuboid?: (position: Domain.Vector3) => void;
-        onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
+        onCuboidTransform?: (
+            payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
+        ) => void;
     } = $props();
 
     const { renderer } = useThrelte();
     let renderCuboids = $state<ReturnType<typeof createCuboidRenderItems>>([]);
-    const transforms = createCuboidTransformState({
-        onTransform: (payload) => onCuboidTransform?.(payload)
-    });
-    const { annotations } = transforms;
+    const annotations = $derived(transforms.annotations);
+    const cuboidIdsKey = $derived(JSON.stringify(cuboids.map(({ id }) => id)));
     const hoverTracker = createCuboidHoverTracker((id, handle) => onhover?.(id, handle));
 
     $effect(() => {
+        void cuboidIdsKey;
         hoverTracker.clear();
-        onhover?.(null, null);
-        transforms.reconcile(cuboids);
+        untrack(() => onhover?.(null, null));
     });
 
     $effect(() => {
@@ -107,8 +109,11 @@
             {#if gizmoMode}
                 <CuboidGizmo
                     mode={gizmoMode}
-                    onTransformEnd={(obj) =>
-                        void transforms.commit(buildCuboidTransformPayload(item.annotation, obj))}
+                    onTransformEnd={(obj) => {
+                        const payload = buildCuboidTransformPayload(item.annotation, obj);
+                        onCuboidTransform?.(payload);
+                        void transforms.commit(payload);
+                    }}
                     onInteractionStart={() => {
                         hoverTracker.markClicked();
                         transforms.begin(item.annotation);
