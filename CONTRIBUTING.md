@@ -10,7 +10,7 @@ We welcome contributions of all kinds, including:
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
 ## Requirements
-- Python **3.10–3.14** (3.10 recommended)
+- Python **3.10–3.14** (3.10 recommended); Python 3.15 has experimental CPU support via the default `cpu` group, plus a Linux CUDA 13.0 option via `gpu`.
 - Uv version **0.12.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 
@@ -216,19 +216,22 @@ there instead, otherwise nothing reads it.
 ### GPU Torch on Linux
 
 On Linux, the development environment installs the CPU build of `torch` from the PyTorch CPU
-index. It is much smaller than the CUDA build from PyPI. The `cpu` and `gpu` dependency groups
-select the build, and `cpu` is a default group. On macOS and Windows, both builds are the same.
+index. It is much smaller than the CUDA build. On Python 3.15, the `gpu` group uses the
+PyTorch CUDA 13.0 index; older Python versions use PyPI. The `cpu` and `gpu` dependency groups
+select the build, and `cpu` is a default group. The Python 3.15 CUDA index selection is Linux-only.
 
-To use the CUDA build, exclude the `cpu` group in your shell profile and sync again:
+Select the GPU group explicitly when syncing or running commands:
 
 ```shell
-export UV_NO_GROUP=cpu   # fish: set -Ux UV_NO_GROUP cpu
-uv sync
+uv sync --no-group cpu --group gpu
+uv run --no-group cpu --group gpu python src/lightly_studio/examples/example.py
 ```
 
-Set the variable permanently. A one-time `uv sync --no-group cpu` is not sufficient, because the
-next `uv run` syncs the default groups again and installs the CPU build. With the variable set,
-`make install-optional-deps` also installs the CUDA build.
+Pass both flags to each `uv sync` or `uv run` command. Otherwise uv selects the default
+CPU group again. The pinned uv version does not support a `UV_GROUP` environment variable.
+
+On Python 3.15, this selects CUDA 13.0 wheels. CUDA support is experimental and
+requires a compatible NVIDIA driver.
 
 ### Test with a Private Mundig Development Wheel
 

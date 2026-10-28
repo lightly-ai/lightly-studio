@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Experimental Python 3.15 support.
+
 ### Changed
 
 ### Deprecated

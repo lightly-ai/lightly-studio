@@ -36,7 +36,10 @@ reference.
 This tutorial uses the 320 px variant, where each image has a shortest side of 320 pixels.
 
 Install LightlyStudio in your Python environment. LightlyStudio works on Windows, Linux,
-and macOS with **Python 3.10 to 3.14**.
+and macOS with **Python 3.10 to 3.14** (stable support).
+
+For experimental Python 3.15 support, follow the additional
+[PyTorch installation instructions](../index.md#quickstart) first.
 
 ```bash
 pip install lightly-studio
