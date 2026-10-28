@@ -1,6 +1,7 @@
 import { render } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { IMAGE_ADJUSTMENT_DEFAULTS, useGlobalStorage } from '$lib/hooks';
+import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
+import { useGlobalStorage } from '$lib/hooks';
 import SampleEraserRect from './SampleEraserRect.svelte';
 
 vi.mock('$app/state', () => ({ page: { params: { dataset_id: 'dataset-1' } } }));

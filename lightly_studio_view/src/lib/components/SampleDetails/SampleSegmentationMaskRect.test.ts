@@ -2,7 +2,7 @@ import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/hooks';
+import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
 import SampleSegmentationMaskRect from './SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
 
 const {
