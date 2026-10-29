@@ -325,12 +325,14 @@
     }));
     const categoricalMetadataDistributions = $derived(categoricalMetadataQuery.data ?? {});
 
-    // Second categorical query with the full sidebar filter applied.  Its counts
+    // Second categorical query with the filter of the images grid applied. Its counts
     // are passed as `filteredBuckets` so each bar can show a grey background at
     // the unfiltered height with a coloured foreground at the filtered height.
+    // Not `filter`: it also carries the selected annotation sources, which would
+    // drop every image without annotations from the coloured bars.
     const categoricalMetadataFilteredQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
-        filter,
+        filter: $imageFilter ? { ...$imageFilter, filter_type: 'image' as const } : undefined,
         fields:
             activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined,
         enabled: activeMetadataField?.type === 'categorical'
