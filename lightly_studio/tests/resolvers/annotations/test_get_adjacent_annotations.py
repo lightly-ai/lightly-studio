@@ -11,6 +11,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluati
 from lightly_studio.models.annotation import annotation_base as annotation_base_module
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationSide
 from lightly_studio.resolvers import annotation_resolver, collection_resolver, tag_resolver
 from lightly_studio.resolvers.annotation_resolver import (
@@ -517,6 +518,79 @@ def test_get_adjacent_annotations__orders_annotations_sharing_a_parent_image(
     _assert_matches_expected_order(
         session=db_session, filters=filters, expected_order=expected_order
     )
+
+
+def test_get_adjacent_annotations__respects_embedding_region(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="label",
+    )
+    annotations = []
+    for path in ["/images/a.png", "/images/b.png", "/images/c.png"]:
+        image = helpers_resolvers.create_image(
+            session=db_session, collection_id=collection.collection_id, file_path_abs=path
+        )
+        annotations += helpers_resolvers.create_annotations(
+            session=db_session,
+            collection_id=collection.collection_id,
+            annotations=[
+                helpers_resolvers.AnnotationDetails(
+                    sample_id=image.sample_id,
+                    annotation_label_id=label.annotation_label_id,
+                )
+            ],
+        )
+    annotation_collection_id = annotations[0].sample.collection_id
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    for annotation in annotations:
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=annotation.sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=[1.0, 0.0],
+        )
+    # The annotation on b.png lies outside the region.
+    helpers_resolvers.create_saved_plot(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates={
+            annotations[0].sample_id: (1.0, 1.0),
+            annotations[1].sample_id: (100.0, 100.0),
+            annotations[2].sample_id: (5.0, 5.0),
+        },
+    )
+
+    result = annotation_resolver.get_adjacent_annotations(
+        session=db_session,
+        sample_id=annotations[0].sample_id,
+        filters=AnnotationsFilter(
+            collection_ids=[annotation_collection_id],
+            embedding_region=EmbeddingRegion(
+                polygon=[
+                    Point2D(x=0, y=0),
+                    Point2D(x=10, y=0),
+                    Point2D(x=10, y=10),
+                    Point2D(x=0, y=10),
+                ]
+            ),
+        ),
+    )
+
+    assert result is not None
+    assert result.previous_sample_id is None
+    assert result.next_sample_id == annotations[2].sample_id
+    assert result.current_sample_position == 1
+    assert result.total_count == 2
 
 
 @pytest.mark.parametrize(

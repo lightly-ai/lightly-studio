@@ -1,3 +1,7 @@
+from __future__ import annotations
+
+from uuid import UUID
+
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -6,12 +10,14 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
+from lightly_studio.models.image import ImageTable
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_resolvers
-from tests.helpers_resolvers import AnnotationDetails
+from tests.helpers_resolvers import AnnotationDetails, ImageStub
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     SampleMetricStub,
     create_run,
@@ -472,3 +478,145 @@ def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> 
     assert result.previous_sample_id == image_b.sample_id
     assert result.sample_id == image_c.sample_id
     assert result.next_sample_id == image_a.sample_id
+
+
+def test_get_adjacent_images__respects_embedding_region(db_session: Session) -> None:
+    collection_id, images = _setup_collection_with_2d_coordinates(
+        session=db_session,
+        paths_and_embeddings=[
+            ("/images/a.png", [1.0, 0.0]),
+            ("/images/b.png", [1.0, 0.0]),
+            ("/images/c.png", [1.0, 0.0]),
+        ],
+        coordinates=[(1.0, 1.0), (100.0, 100.0), (5.0, 5.0)],
+    )
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[0].sample_id,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                embedding_region=_square(x_min=0, y_min=0, x_max=10, y_max=10)
+            )
+        ),
+    )
+
+    # b.png is outside the region, so c.png follows a.png.
+    assert result is not None
+    assert result.previous_sample_id is None
+    assert result.next_sample_id == images[2].sample_id
+    assert result.current_sample_position == 1
+    assert result.total_count == 2
+
+
+def test_get_adjacent_images__with_similarity_and_embedding_region(db_session: Session) -> None:
+    collection_id, images = _setup_collection_with_2d_coordinates(
+        session=db_session,
+        paths_and_embeddings=[
+            ("/images/a.png", [0.0, 1.0]),
+            ("/images/b.png", [1.0, 1.0]),
+            ("/images/c.png", [1.0, 0.0]),
+        ],
+        coordinates=[(1.0, 1.0), (100.0, 100.0), (5.0, 5.0)],
+    )
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[2].sample_id,
+        collection_id=collection_id,
+        filters=ImageFilter(
+            sample_filter=SampleFilter(
+                embedding_region=_square(x_min=0, y_min=0, x_max=10, y_max=10)
+            )
+        ),
+        text_embedding=[1.0, 0.0],
+    )
+
+    # b.png is the second most similar image but is outside the region.
+    assert result is not None
+    assert result.previous_sample_id is None
+    assert result.next_sample_id == images[0].sample_id
+    assert result.current_sample_position == 1
+    assert result.total_count == 2
+
+
+def test_get_adjacent_images__with_similarity_follows_grid_order(db_session: Session) -> None:
+    collection_id, images = _setup_collection_with_2d_coordinates(
+        session=db_session,
+        paths_and_embeddings=[
+            ("/images/a.png", [0.0, 1.0]),
+            ("/images/b.png", [1.0, 0.0]),
+            ("/images/c.png", [1.0, 1.0]),
+            ("/images/d.png", [1.0, 0.0]),
+        ],
+        coordinates=[(1.0, 1.0), (2.0, 2.0), (3.0, 3.0), (4.0, 4.0)],
+    )
+    text_embedding = [1.0, 0.0]
+
+    grid = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        text_embedding=text_embedding,
+    )
+    grid_ids = [sample.sample_id for sample in grid.samples]
+    # b.png and d.png tie on similarity and keep the path order.
+    assert grid_ids == [
+        images[1].sample_id,
+        images[3].sample_id,
+        images[2].sample_id,
+        images[0].sample_id,
+    ]
+
+    next_ids = []
+    for sample_id in grid_ids:
+        result = image_resolver.get_adjacent_images(
+            session=db_session,
+            sample_id=sample_id,
+            collection_id=collection_id,
+            text_embedding=text_embedding,
+        )
+        assert result is not None
+        next_ids.append(result.next_sample_id)
+    assert next_ids == [*grid_ids[1:], None]
+
+
+def _square(x_min: float, y_min: float, x_max: float, y_max: float) -> EmbeddingRegion:
+    return EmbeddingRegion(
+        polygon=[
+            Point2D(x=x_min, y=y_min),
+            Point2D(x=x_max, y=y_min),
+            Point2D(x=x_max, y=y_max),
+            Point2D(x=x_min, y=y_max),
+        ]
+    )
+
+
+def _setup_collection_with_2d_coordinates(
+    session: Session,
+    paths_and_embeddings: list[tuple[str, list[float]]],
+    coordinates: list[tuple[float, float]],
+) -> tuple[UUID, list[ImageTable]]:
+    """Create images with embeddings and cached 2D plot coordinates, in input order."""
+    collection = helpers_resolvers.create_collection(session=session)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=session,
+        collection_id=collection.collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    images = helpers_resolvers.create_samples_with_embeddings(
+        session=session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path=path), embedding) for path, embedding in paths_and_embeddings
+        ],
+    )
+    helpers_resolvers.create_saved_plot(
+        session=session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates={image.sample_id: xy for image, xy in zip(images, coordinates)},
+    )
+    return collection.collection_id, images

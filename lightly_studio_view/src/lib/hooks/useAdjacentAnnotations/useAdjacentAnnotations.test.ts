@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
-import { SampleType, type AnnotationEvaluationMetricSortExpr } from '$lib/api/lightly_studio_local';
+import {
+    SampleType,
+    type AnnotationEvaluationMetricSortExpr,
+    type EmbeddingRegion
+} from '$lib/api/lightly_studio_local';
 import type { TextEmbedding } from '$lib/hooks/useGlobalStorage';
 
 const useAdjacentSamplesMock = vi.fn();
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const tagsSelected = writable<Set<string>>(new Set());
 const textEmbedding = writable<TextEmbedding | undefined>(undefined);
+const annotationPlotRegion = writable<EmbeddingRegion | null>(null);
 const getSortByMock = vi.fn<(collectionId: string) => AnnotationEvaluationMetricSortExpr | null>();
 
 vi.mock('../useAdjacentSamples/useAdjacentSamples', () => ({
@@ -26,6 +31,10 @@ vi.mock('../useTags/useTags', () => ({
     })
 }));
 
+vi.mock('../useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
+    useAnnotationPlotSelection: () => ({ annotationPlotRegion })
+}));
+
 vi.mock('$lib/hooks', () => ({
     useAnnotationSortBy: () => ({ getSortBy: getSortByMock })
 }));
@@ -39,6 +48,7 @@ describe('useAdjacentAnnotations', () => {
         selectedAnnotationFilterIds.set(new Set());
         tagsSelected.set(new Set());
         textEmbedding.set(undefined);
+        annotationPlotRegion.set(null);
         getSortByMock.mockReturnValue(null);
         useAdjacentSamplesMock.mockReturnValue({ query: 'query-result', refetch: vi.fn() });
     });
@@ -132,5 +142,27 @@ describe('useAdjacentAnnotations', () => {
             })
         );
         expect(result.sortBy).toBeUndefined();
+    });
+
+    it('sends the embedding plot region so next/previous stays inside the selection', () => {
+        const region: EmbeddingRegion = {
+            polygon: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 1, y: 1 }
+            ]
+        };
+        annotationPlotRegion.set(region);
+
+        useAdjacentAnnotations({ sampleId: 'ann-1', collectionId: 'col-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
+            params: {
+                sampleId: 'ann-1',
+                body: expect.objectContaining({
+                    filters: expect.objectContaining({ embedding_region: region })
+                })
+            }
+        });
     });
 });

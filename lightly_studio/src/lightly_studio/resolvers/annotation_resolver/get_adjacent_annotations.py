@@ -9,7 +9,7 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluationMetricField
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
 from lightly_studio.resolvers.annotation_resolver import (
     get_adjacent_annotations_keyset,
     get_adjacent_annotations_window,
@@ -47,6 +47,14 @@ def get_adjacent_annotations(
     """
     if not filters.collection_ids:
         raise ValueError("Collection IDs must be provided in filters.")
+
+    if filters.embedding_region is not None:
+        # Resolve the embedding-plot selection like the grid does.
+        filters.region_sample_ids = embedding_region_resolver.get_sample_ids_in_region(
+            session=session,
+            collection_id=filters.collection_ids[0],
+            region=filters.embedding_region,
+        )
 
     parent_sample_type = _keyset_parent_sample_type(
         session=session, filters=filters, order_by=order_by

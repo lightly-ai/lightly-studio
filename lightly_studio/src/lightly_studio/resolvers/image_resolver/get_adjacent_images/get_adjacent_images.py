@@ -10,6 +10,7 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.resolvers import similarity_utils
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.image_resolver.get_adjacent_images.get_adjacent_images_keyset import (
     get_adjacent_images_keyset,
 )
@@ -38,7 +39,8 @@ def get_adjacent_images(  # noqa: PLR0913
         session: Database session.
         sample_id: The anchor sample whose neighbours we want.
         collection_id: Collection the anchor and neighbours belong to.
-        filters: Optional image filters constraining the collection.
+        filters: Optional image filters constraining the collection. An embedding region
+            is resolved to sample ids, like in the grid.
         text_embedding: Text embedding for similarity search; forces the window path.
         order_by: Requested sort; ``None`` means the default ``file_path_abs`` sort.
 
@@ -46,6 +48,9 @@ def get_adjacent_images(  # noqa: PLR0913
         The adjacency result, or ``None`` if the anchor is not in the (filtered)
         collection.
     """
+    annotation_count_helpers.resolve_embedding_region(
+        session=session, collection_id=collection_id, image_filter=filters
+    )
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
         collection_id=collection_id,
