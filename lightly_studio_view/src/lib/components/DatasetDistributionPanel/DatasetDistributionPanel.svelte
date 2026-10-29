@@ -20,7 +20,8 @@
         HISTOGRAM_BIN_COUNT_ITEMS,
         type DistributionConfig,
         type DistributionSource,
-        type DistributionSourceGroup
+        type DistributionSourceGroup,
+        type DistributionViewSettings
     } from './types';
     import { AnnotationCountMode } from '$lib/api/lightly_studio_local/types.gen';
     import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
@@ -97,6 +98,8 @@
         onComparisonTagIdsChange?: (ids: string[]) => void;
         /** Called when the active distribution source or group changes. */
         onGroupChange?: (sourceId: string, groupId?: string) => void;
+        /** Sort, top N, orientation and value mode of the plots. Read at mount, written on change. */
+        viewSettings?: DistributionViewSettings;
     }
 
     let {
@@ -120,7 +123,8 @@
         comparisonTagItems = [],
         selectedComparisonTagIds = [],
         onComparisonTagIdsChange,
-        onGroupChange
+        onGroupChange,
+        viewSettings = $bindable()
     }: Props = $props();
 
     // Normalise to a source list so the rest of the panel has one code path.
@@ -275,15 +279,21 @@
     // Default to horizontal bars: categories stack down the left gutter and the
     // chart scrolls vertically, avoiding the initial horizontal scroll that
     // vertical bars produce once there are more than a handful of classes.
-    let config: DistributionConfig = $state({
-        mode: 'topN',
-        n: untrack(() => topN),
-        sortBy: 'count',
-        manualClasses: [],
-        orientation: 'horizontal',
-        countMode: untrack(() => initialCountMode),
-        valueMode: untrack(() => (selectedComparisonTagIds.length > 0 ? 'percentage' : 'number'))
-    });
+    // Settings given back by the host start the panel where the user left it.
+    const initialViewSettings = untrack(() => viewSettings);
+    let config: DistributionConfig = $state(
+        initialViewSettings?.config ?? {
+            mode: 'topN',
+            n: untrack(() => topN),
+            sortBy: 'count',
+            manualClasses: [],
+            orientation: 'horizontal',
+            countMode: untrack(() => initialCountMode),
+            valueMode: untrack(() =>
+                selectedComparisonTagIds.length > 0 ? 'percentage' : 'number'
+            )
+        }
+    );
     const defaultCategoricalConfig: DistributionConfig = {
         mode: 'topN',
         n: 20,
@@ -293,8 +303,12 @@
         countMode: AnnotationCountMode.SAMPLES,
         valueMode: 'number'
     };
-    let categoricalConfigs = $state<Record<string, DistributionConfig>>({});
-    let histogramValueModes = $state<Record<string, Record<string, ValueMode>>>({});
+    let categoricalConfigs = $state<Record<string, DistributionConfig>>(
+        initialViewSettings?.categoricalConfigs ?? {}
+    );
+    let histogramValueModes = $state<Record<string, Record<string, ValueMode>>>(
+        initialViewSettings?.histogramValueModes ?? {}
+    );
     const categoricalConfig = $derived<DistributionConfig>(
         activeGroup
             ? (categoricalConfigs[activeGroup.id] ?? defaultCategoricalConfig)
@@ -304,7 +318,16 @@
     const activeHistogramValueMode = $derived<ValueMode>(
         histogramValueModes[activeSource.id]?.[activeHistogramId] ?? 'number'
     );
-    let wasComparingTags = $state(false);
+    let wasComparingTags = $state(initialViewSettings?.wasComparingTags ?? false);
+    $effect(() => {
+        // A plain copy, so the host does not keep this component's state proxies.
+        viewSettings = $state.snapshot({
+            config,
+            categoricalConfigs,
+            histogramValueModes,
+            wasComparingTags
+        });
+    });
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
     let histogramExpandOpen = $state(false);

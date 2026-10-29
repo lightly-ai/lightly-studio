@@ -60,7 +60,7 @@
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds.js';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
-    import { AnnotationCountMode, SampleType } from '$lib/api/lightly_studio_local/types.gen';
+    import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
@@ -91,6 +91,7 @@
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
+    import { useDistributionSettings } from './useDistributionSettings/useDistributionSettings';
     import { useOnboarding } from '$lib/hooks';
     import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
     const { data, children } = $props();
@@ -560,13 +561,11 @@
         $activePanel === 'distribution' && supportsDistribution
     );
 
-    // The distribution settings live here, so they stay when the panel closes and opens again,
-    // and when a sample opens and the grid comes back.
-    let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
-    let distributionSampleTagIds = $state<string[]>([]);
-    let histogramBinCount = $state(20);
-    let distributionSourceId = $state<string | undefined>(undefined);
-    let distributionGroupId = $state<string | undefined>(undefined);
+    // The distribution settings live in a store per collection, so they stay when the panel
+    // closes and opens again, when a sample opens and when the user switches tabs.
+    const distributionSettings = $derived(useDistributionSettings(collectionId));
+    const updateDistributionSettings = (patch: Partial<typeof $distributionSettings>) =>
+        distributionSettings.update((settings) => ({ ...settings, ...patch }));
 
     const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
         const selected = $categoricalMetadataValues[metadataKey] ?? [];
@@ -848,9 +847,27 @@
                                             selectedClassNames={$selectedAnnotationFilterNames}
                                             onClassBarClick={handleClassBarClick}
                                             onClose={() => setActivePanel('none')}
-                                            bind:histogramBinCount
-                                            bind:selectedSourceId={distributionSourceId}
-                                            bind:selectedGroupId={distributionGroupId}
+                                            bind:histogramBinCount={
+                                                () => $distributionSettings.histogramBinCount,
+                                                (histogramBinCount) =>
+                                                    updateDistributionSettings({
+                                                        histogramBinCount
+                                                    })
+                                            }
+                                            bind:selectedSourceId={
+                                                () => $distributionSettings.sourceId,
+                                                (sourceId) =>
+                                                    updateDistributionSettings({ sourceId })
+                                            }
+                                            bind:selectedGroupId={
+                                                () => $distributionSettings.groupId,
+                                                (groupId) => updateDistributionSettings({ groupId })
+                                            }
+                                            bind:viewSettings={
+                                                () => $distributionSettings.viewSettings,
+                                                (viewSettings) =>
+                                                    updateDistributionSettings({ viewSettings })
+                                            }
                                         />
                                     {/key}
                                 {/await}
@@ -866,11 +883,37 @@
                                             selectedClassNames={$selectedAnnotationFilterNames}
                                             onClassBarClick={handleClassBarClick}
                                             onClose={() => setActivePanel('none')}
-                                            bind:countMode={distributionCountMode}
-                                            bind:histogramBinCount
-                                            bind:comparisonTagIds={distributionSampleTagIds}
-                                            bind:selectedSourceId={distributionSourceId}
-                                            bind:selectedGroupId={distributionGroupId}
+                                            bind:countMode={
+                                                () => $distributionSettings.countMode,
+                                                (countMode) =>
+                                                    updateDistributionSettings({ countMode })
+                                            }
+                                            bind:comparisonTagIds={
+                                                () => $distributionSettings.comparisonTagIds,
+                                                (comparisonTagIds) =>
+                                                    updateDistributionSettings({ comparisonTagIds })
+                                            }
+                                            bind:histogramBinCount={
+                                                () => $distributionSettings.histogramBinCount,
+                                                (histogramBinCount) =>
+                                                    updateDistributionSettings({
+                                                        histogramBinCount
+                                                    })
+                                            }
+                                            bind:selectedSourceId={
+                                                () => $distributionSettings.sourceId,
+                                                (sourceId) =>
+                                                    updateDistributionSettings({ sourceId })
+                                            }
+                                            bind:selectedGroupId={
+                                                () => $distributionSettings.groupId,
+                                                (groupId) => updateDistributionSettings({ groupId })
+                                            }
+                                            bind:viewSettings={
+                                                () => $distributionSettings.viewSettings,
+                                                (viewSettings) =>
+                                                    updateDistributionSettings({ viewSettings })
+                                            }
                                         />
                                     {/key}
                                 {/await}

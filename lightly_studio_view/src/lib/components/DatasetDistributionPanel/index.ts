@@ -4,4 +4,9 @@ export {
     buildCategoricalComparisonSeries
 } from './buildCategoricalComparisonSeries';
 export { buildTagHistogramSeries } from './buildTagHistogramSeries';
-export type { DistributionConfig, DistributionSource, DistributionSourceGroup } from './types';
+export type {
+    DistributionConfig,
+    DistributionSource,
+    DistributionSourceGroup,
+    DistributionViewSettings
+} from './types';

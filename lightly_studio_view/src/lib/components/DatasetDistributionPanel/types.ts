@@ -159,3 +159,16 @@ export interface DistributionConfig extends ClassSetSelection<DistributionSortOp
     /** Whether bars display raw counts or percentages (default 'number'). */
     valueMode?: BarChartValueMode;
 }
+
+/**
+ * How the distribution panel shows its plots: sort, top N, orientation and number or
+ * percentage, for the class plot, each categorical field and each histogram. A host that keeps
+ * it can give it back when the panel mounts again.
+ */
+export interface DistributionViewSettings {
+    config: DistributionConfig;
+    categoricalConfigs: Record<string, DistributionConfig>;
+    histogramValueModes: Record<string, Record<string, BarChartValueMode>>;
+    /** Whether tags were compared, so a remount does not reset the value mode. */
+    wasComparingTags: boolean;
+}

@@ -1542,4 +1542,32 @@ describe('DatasetDistributionPanel', () => {
 
         expect(onHistogramBinCountChange).toHaveBeenCalledWith(10);
     });
+
+    it('starts from the view settings the host kept from before it closed', () => {
+        render(DatasetDistributionPanel, {
+            props: {
+                ...defaultProps,
+                viewSettings: {
+                    config: {
+                        mode: 'topN',
+                        n: 20,
+                        sortBy: 'count',
+                        manualClasses: [],
+                        orientation: 'vertical',
+                        valueMode: 'percentage'
+                    },
+                    categoricalConfigs: {},
+                    histogramValueModes: {},
+                    wasComparingTags: false
+                }
+            }
+        });
+
+        expect(
+            screen.getByRole('button', { name: 'Switch to horizontal bars' })
+        ).toBeInTheDocument();
+        expect(screen.getByTestId('dataset-distribution-value-mode')).toHaveTextContent(
+            'Percentage'
+        );
+    });
 });

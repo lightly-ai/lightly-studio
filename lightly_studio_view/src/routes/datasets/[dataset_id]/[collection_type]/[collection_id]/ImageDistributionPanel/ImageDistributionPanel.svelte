@@ -1,6 +1,9 @@
 <script lang="ts">
     import DatasetDistributionPanel from '$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte';
-    import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
+    import type {
+        DistributionSource,
+        DistributionViewSettings
+    } from '$lib/components/DatasetDistributionPanel';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { AnnotationCountMode, AnnotationType } from '$lib/api/lightly_studio_local/types.gen';
     import {
@@ -54,6 +57,8 @@
         selectedSourceId: string | undefined;
         /** The group that the user picked, for example a metadata key. */
         selectedGroupId: string | undefined;
+        /** Sort, top N, orientation and value mode of the plots. */
+        viewSettings: DistributionViewSettings | undefined;
     }
 
     let {
@@ -69,7 +74,8 @@
         histogramBinCount = $bindable(),
         comparisonTagIds = $bindable(),
         selectedSourceId = $bindable(),
-        selectedGroupId = $bindable()
+        selectedGroupId = $bindable(),
+        viewSettings = $bindable()
     }: Props = $props();
 
     const {
@@ -443,6 +449,7 @@
     onComparisonTagIdsChange={(ids) => (comparisonTagIds = ids)}
     bind:selectedSourceId
     bind:selectedGroupId
+    bind:viewSettings
     onGroupChange={(sourceId, groupId) => {
         activeDistributionSourceId = sourceId;
         activeDistributionGroupId = groupId;
