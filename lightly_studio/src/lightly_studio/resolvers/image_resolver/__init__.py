@@ -21,6 +21,7 @@ from lightly_studio.resolvers.image_resolver.get_field_histograms import (
     ImageField,
     get_field_histograms,
 )
+from lightly_studio.resolvers.image_resolver.get_file_paths import get_file_paths
 from lightly_studio.resolvers.image_resolver.get_for_export import (
     ImageExportPreload,
     get_for_export,
@@ -52,6 +53,7 @@ __all__ = [
     "get_by_id",
     "get_dimension_bounds",
     "get_field_histograms",
+    "get_file_paths",
     "get_for_export",
     "get_many_by_id",
     "get_sample_ids",

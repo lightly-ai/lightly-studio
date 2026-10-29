@@ -21,10 +21,10 @@ from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import NotFoundError
-from lightly_studio.export import image_dataset_export, video_dataset_export
+from lightly_studio.export import image_dataset_export, size_estimate, video_dataset_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
-from lightly_studio.resolvers import collection_resolver, export_job_resolver
+from lightly_studio.resolvers import collection_resolver, export_job_resolver, image_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
@@ -69,6 +69,21 @@ class ExportAnnotationsPrepareBody(BaseModel):
     )
 
 
+class ExportImagesEstimateBody(BaseModel):
+    """Request body for the export size estimate."""
+
+    image_filter: ImageFilter | None = None
+
+
+class ExportImagesEstimateResponse(BaseModel):
+    """How many images an export with images holds, and roughly how many bytes."""
+
+    image_count: int
+    estimated_bytes: int | None = Field(
+        description="Estimated total size of the images, or None when no file could be read."
+    )
+
+
 class ExportCaptionsPrepareBody(BaseModel):
     """Request body for the captions prepare endpoint."""
 
@@ -92,6 +107,26 @@ def export_collection_stats(
         session=session,
         collection_id=collection.collection_id,
         collection_filter=body.collection_filter,
+    )
+
+
+@export_router.post("/export/images/estimate")
+def export_images_estimate(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    body: ExportImagesEstimateBody,
+) -> ExportImagesEstimateResponse:
+    """Estimate the download size of an export that includes the images."""
+    file_paths = image_resolver.get_file_paths(
+        session=session, collection_id=collection.collection_id, image_filter=body.image_filter
+    )
+    return ExportImagesEstimateResponse(
+        image_count=len(file_paths),
+        estimated_bytes=size_estimate.estimate_total_bytes(file_paths=file_paths),
     )
 
 

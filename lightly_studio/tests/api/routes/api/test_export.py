@@ -110,6 +110,29 @@ def test_export_collection_prepare__with_collection_filter(
     assert Path(export_job.export_path).read_text() == "path/a.png"
 
 
+def test_export_images_estimate(
+    db_session: Session,
+    test_client: TestClient,
+    tmp_path: Path,
+) -> None:
+    collection = create_collection(session=db_session)
+    for name, size in (("a.png", 100), ("b.png", 300)):
+        (tmp_path / name).write_bytes(b"x" * size)
+        create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=str(tmp_path / name),
+        )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/images/estimate",
+        json={"image_filter": None},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"image_count": 2, "estimated_bytes": 400}
+
+
 def test_export_download__not_found_returns_404(
     db_session: Session,
     test_client: TestClient,
