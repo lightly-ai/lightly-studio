@@ -30,6 +30,7 @@ from sqlmodel import Session
 from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_annotations, add_images
+from lightly_studio.dataset import remote_storage
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
 from tests import helpers_resolvers
@@ -307,6 +308,36 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     assert "already_present=2" in caplog.text
     assert "missing=3" in caplog.text
     assert "broken=0" in caplog.text
+
+
+def test_load_into_dataset_from_labelformat__checks_files_concurrently_for_remote_input(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Remote input gets more than one probe worker. Local files stand in for remote ones here.
+    collection = helpers_resolvers.create_collection(db_session)
+    mocker.patch.object(remote_storage, "image_probe_workers", return_value=4)
+    present_names = [f"present{i}.jpg" for i in range(6)]
+    for name in present_names:
+        PILImage.new("RGB", (100, 200)).save(str(tmp_path / name))
+    missing_names = ["missing0.jpg", "missing1.jpg"]
+    all_names = [present_names[0], *missing_names, *present_names[1:]]
+    label_input = _get_labelformat_input_obj_det_multi(filenames=all_names)
+
+    with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
+        sample_ids = add_images.load_into_dataset_from_labelformat(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            input_labels=label_input,
+            images_path=tmp_path,
+        )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(sample_ids) == 6
+    assert {sample.file_name for sample in samples} == set(present_names)
+    assert "added=6" in caplog.text
+    assert "missing=2" in caplog.text
 
 
 def test_load_into_dataset_from_labelformat__progress_bars_show_totals(

@@ -6,8 +6,9 @@ import itertools
 import json
 import logging
 import posixpath
+import threading
 from collections import defaultdict
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -76,6 +77,25 @@ class BrokenImageCollector:
             return
         self._recorded_paths.add(path_str)
         self.report.record(path=path_str, outcome=FileOutcome.BROKEN)
+
+
+class _SharedUrlToFs:
+    """``fsspec.core.url_to_fs`` that shares one filesystem instance across threads.
+
+    fsspec caches filesystem instances per thread, so without this every worker thread creates
+    its own client, which costs seconds for S3. All URLs must use the same filesystem.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._filesystem: fsspec.AbstractFileSystem | None = None
+
+    def __call__(self, url: str) -> tuple[fsspec.AbstractFileSystem, str]:
+        """Return the shared filesystem and the path of ``url`` in it."""
+        with self._lock:
+            if self._filesystem is None:
+                self._filesystem, _ = fsspec.core.url_to_fs(url)
+        return self._filesystem, self._filesystem._strip_protocol(url)  # noqa: SLF001
 
 
 def load_into_dataset_from_paths(
@@ -239,8 +259,13 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     if limit is not None:
         labels = itertools.islice(labels, limit)
         image_count_to_load = min(image_count_to_load, limit)
-    for image_data in tqdm(
-        labels, total=image_count_to_load, desc="Loading images", unit=" images"
+    labels_with_exists = _check_label_files_exist(
+        labels=labels,
+        images_root=images_root_abs,
+        skip_paths=frozenset(seen_or_existing_paths),
+    )
+    for image_data, file_exists in tqdm(
+        labels_with_exists, total=image_count_to_load, desc="Loading images", unit=" images"
     ):
         image: Image = image_data.image  # type: ignore[attr-defined]
 
@@ -259,7 +284,7 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             # Missing is the only failure classifiable here (see the docstring):
             # detect it proactively because FileNotFoundError is unreliable across
             # fsspec backends and is a subclass of OSError.
-            if not _file_exists(sample.file_path_abs):
+            if not file_exists:
                 raise MissingInputFileError()
 
             seen_or_existing_paths.add(sample.file_path_abs)
@@ -558,6 +583,37 @@ def _probe_image(
     return path, dimensions
 
 
+def _check_label_files_exist(
+    labels: Iterable[object], images_root: str, skip_paths: frozenset[str]
+) -> Iterable[tuple[object, bool]]:
+    """Pair each label with whether its image file exists, in input order.
+
+    Remote checks are network round trips, so they run concurrently, like the image probes of
+    ``load_into_dataset_from_paths``. Paths in ``skip_paths`` are not checked.
+
+    Args:
+        labels: Labelformat labels, each with an ``image`` attribute.
+        images_root: The images root that the label file names are relative to.
+        skip_paths: Absolute paths that are not checked and are reported as existing.
+
+    Returns:
+        Pairs of the label and whether its image file exists.
+    """
+    max_workers = remote_storage.image_probe_workers(paths=[images_root])
+    url_to_fs = fsspec.core.url_to_fs if max_workers == 1 else _SharedUrlToFs()
+
+    def check(label: object) -> tuple[object, bool]:
+        path = posixpath.join(images_root, str(label.image.filename))  # type: ignore[attr-defined]
+        return label, path in skip_paths or _file_exists(path=path, url_to_fs=url_to_fs)
+
+    if max_workers == 1:
+        return map(check, labels)
+    remote_storage.configure_connections(paths=[images_root])
+    return parallelize.thread_imap_lazy(
+        function=check, iterable=labels, max_workers=max_workers, buffer_size=max_workers
+    )
+
+
 def _raise_if_first_files_missing(file_paths_abs: Sequence[str], images_root: str) -> None:
     """Raise if the first files to add are all missing.
 
@@ -582,7 +638,10 @@ def _raise_if_first_files_missing(file_paths_abs: Sequence[str], images_root: st
     )
 
 
-def _file_exists(path: str) -> bool:
+def _file_exists(
+    path: str,
+    url_to_fs: Callable[[str], tuple[fsspec.AbstractFileSystem, str]] = fsspec.core.url_to_fs,
+) -> bool:
     """Return whether ``path`` resolves to an existing file on its fsspec backend.
 
     Shared by the ingest paths to classify a missing input file, so the
@@ -591,11 +650,12 @@ def _file_exists(path: str) -> bool:
 
     Args:
         path: The absolute file path to check.
+        url_to_fs: Resolves ``path`` to a filesystem and a path in it.
 
     Returns:
         ``True`` if the path exists, ``False`` otherwise.
     """
-    fs, fs_path = fsspec.core.url_to_fs(path)
+    fs, fs_path = url_to_fs(path)
     return bool(fs.exists(fs_path))
 
 
