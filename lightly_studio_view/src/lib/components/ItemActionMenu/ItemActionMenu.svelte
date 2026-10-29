@@ -4,7 +4,7 @@
     import { Button } from '$lib/components';
 
     const actionButtonClass =
-        'w-full justify-start gap-2 rounded-sm px-2 py-1.5 text-sm font-normal text-foreground';
+        'h-7 w-full justify-start gap-2 rounded-sm px-2 py-1 text-xs font-normal text-foreground';
     const defaultActionButtonClass = `${actionButtonClass} hover:bg-accent`;
     const destructiveActionButtonClass = `${actionButtonClass} hover:bg-destructive hover:text-destructive-foreground`;
 
@@ -50,7 +50,7 @@
         <MoreHorizontal />
     </Popover.Trigger>
     <Popover.Content
-        class="w-max min-w-40 p-1"
+        class="w-max min-w-24 p-1"
         align="end"
         {onCloseAutoFocus}
         onclick={(event: MouseEvent) => {
@@ -63,11 +63,12 @@
                 type: 'button',
                 class: defaultActionButtonClass,
                 'data-testid': `rename-${testIdKind}-${id}`,
+                'aria-label': `Rename ${kind} ${name}`,
                 disabled: busy,
                 onclick: onRename
             }}
         >
-            Rename {kind}
+            Rename
         </Button>
         <Button
             icon={Trash2}
@@ -76,11 +77,12 @@
                 type: 'button',
                 class: destructiveActionButtonClass,
                 'data-testid': `delete-${testIdKind}-${id}`,
+                'aria-label': `Delete ${kind} ${name}`,
                 disabled: busy,
                 onclick: onDelete
             }}
         >
-            {deletingId === id ? 'Deleting...' : `Delete ${kind}`}
+            {deletingId === id ? 'Deleting...' : 'Delete'}
         </Button>
     </Popover.Content>
 </Popover.Root>
