@@ -309,6 +309,7 @@
                                     dataSampleName={samples[index].file_name}
                                     dataIndex={index}
                                     dataTestId="sample-grid-item"
+                                    hoverSampleId={samples[index].sample_id}
                                     isSelected={$selectedSampleIds.has(samples[index].sample_id)}
                                     ariaLabel={`View image: ${samples[index].file_name}`}
                                     dragData={{

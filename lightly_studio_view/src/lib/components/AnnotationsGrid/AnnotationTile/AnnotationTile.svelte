@@ -92,6 +92,7 @@
         {height}
         {style}
         dataTestId="annotation-grid-item"
+        hoverSampleId={annotationId}
         tag={false}
         ariaLabel={`Edit annotation: ${annotationId}`}
         {dragData}

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
+import { get } from 'svelte/store';
 import GridItemTestWrapper from './GridItemTestWrapper.test.svelte';
+import { useHoveredSample } from '$lib/hooks/useHoveredSample/useHoveredSample';
 
 describe('GridItem', () => {
     const defaultProps = {
@@ -27,6 +29,17 @@ describe('GridItem', () => {
         const gridItem = screen.getByTestId('grid-item');
         expect(gridItem).toHaveStyle({ width: '300px', height: '300px' });
         expect(screen.getByText('Sample content')).toBeInTheDocument();
+    });
+
+    it('shares its sample while the mouse is over it', async () => {
+        const { hoveredSampleId } = useHoveredSample();
+        render(GridItemTestWrapper, { props: { ...defaultProps, hoverSampleId: 'sample-1' } });
+
+        await fireEvent.mouseEnter(screen.getByTestId('grid-item'));
+        expect(get(hoveredSampleId)).toBe('sample-1');
+
+        await fireEvent.mouseLeave(screen.getByTestId('grid-item'));
+        expect(get(hoveredSampleId)).toBeNull();
     });
 
     it('renders with custom dimensions', () => {

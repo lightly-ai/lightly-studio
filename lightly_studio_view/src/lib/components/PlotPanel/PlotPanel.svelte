@@ -5,6 +5,8 @@
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotPointSizeControl from './PlotPointSizeControl/PlotPointSizeControl.svelte';
     import PlotSelectedPoints from './PlotSelectedPoints/PlotSelectedPoints.svelte';
+    import PlotHoveredPoint from './PlotHoveredPoint/PlotHoveredPoint.svelte';
+    import { useHoveredSample } from '$lib/hooks/useHoveredSample/useHoveredSample';
     import {
         getSelectedPointIndices,
         getSelectedPointRadius
@@ -256,6 +258,15 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
+    // The sample hovered in the grid is marked with a ring on its point.
+    const { hoveredSampleId } = useHoveredSample();
+    const sampleIndexById = $derived.by(() => {
+        const sampleIds = ($arrowData?.sample_id as string[] | undefined) ?? [];
+        return new Map(sampleIds.map((sampleId, index) => [sampleId, index]));
+    });
+    const hoveredPointIndex = $derived(
+        $hoveredSampleId === null ? undefined : sampleIndexById.get($hoveredSampleId)
+    );
     const selectedPointIndices = $derived(
         getSelectedPointIndices(
             $plotData?.category as Uint8Array | undefined,
@@ -605,6 +616,14 @@
                             indices={selectedPointIndices}
                             {categoryColors}
                             radius={getSelectedPointRadius(pointSize)}
+                        />
+                    {/if}
+
+                    {#if overlayProxy && hoveredPointIndex !== undefined}
+                        <PlotHoveredPoint
+                            proxy={overlayProxy}
+                            x={($plotData.x as Float32Array)[hoveredPointIndex]}
+                            y={($plotData.y as Float32Array)[hoveredPointIndex]}
                         />
                     {/if}
 
