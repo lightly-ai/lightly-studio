@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Delete selected annotations in bulk from the annotation grid.
+- Explore and edit point-cloud annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
+- Collapse the camera strip in the point-cloud workspace to give the scene more space.
+- Adjust point size, navigation helpers, and annotation tooltips from the point-cloud scene settings.
 - Set the opacity of segmentation masks with the "Mask opacity" slider in the sample details view.
 - Reset brightness, contrast, and mask opacity to their defaults with one button in the sample details view.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
