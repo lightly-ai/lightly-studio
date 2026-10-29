@@ -57,32 +57,71 @@ def move_to_collection(
         collection_id: ID of the annotation collection to move the annotations to.
     """
     for batch in batching.batched(items=annotation_ids):
-        rows_by_model = {
+        original_rows: dict[type[SQLModel], list[dict[str, Any]]] = {
             model: _read_rows(session=session, model=model, column=column, ids=batch)
             for model, column in _ROWS_REFERENCING_SAMPLE
         }
-        rows_by_model[SampleTagLinkTable] = _retarget_tag_links(
-            session=session, rows=rows_by_model[SampleTagLinkTable], collection_id=collection_id
-        )
-        # DuckDB rejects the delete of a referenced row in the transaction that deleted the
-        # referencing rows, so each foreign key level is committed separately.
-        for model, column in _ROWS_REFERENCING_SAMPLE:
-            table = _table(model)
-            session.execute(delete(table).where(table.c[column].in_(batch)))
-            session.commit()
-        sample_table = _table(SampleTable)
-        session.execute(
-            update(sample_table)
-            .where(sample_table.c["sample_id"].in_(batch))
-            .values(collection_id=collection_id)
-        )
-        session.commit()
-        # Insert in reverse order, so that annotation_base rows come before their details.
-        for model, _ in reversed(_ROWS_REFERENCING_SAMPLE):
-            if rows_by_model[model]:
-                session.execute(insert(_table(model)), rows_by_model[model])
-        session.commit()
+        rows_by_model: dict[type[SQLModel], list[dict[str, Any]]] = {
+            **original_rows,
+            SampleTagLinkTable: _retarget_tag_links(
+                session=session,
+                rows=original_rows[SampleTagLinkTable],
+                collection_id=collection_id,
+            ),
+        }
+        try:
+            _move_batch(
+                session=session, batch=batch, collection_id=collection_id, rows=rows_by_model
+            )
+        except Exception:
+            # The referencing rows exist only in memory between their delete and re-insert,
+            # so put back whatever a failure left deleted before raising.
+            session.rollback()
+            _restore_rows(session=session, rows=original_rows)
+            raise
     session.expire_all()
+
+
+def _move_batch(
+    session: Session,
+    batch: Sequence[UUID],
+    collection_id: UUID,
+    rows: dict[type[SQLModel], list[dict[str, Any]]],
+) -> None:
+    # DuckDB rejects the delete of a referenced row in the transaction that deleted the
+    # referencing rows, so each foreign key level is committed separately.
+    for model, column in _ROWS_REFERENCING_SAMPLE:
+        table = _table(model)
+        session.execute(delete(table).where(table.c[column].in_(batch)))
+        session.commit()
+    sample_table = _table(SampleTable)
+    session.execute(
+        update(sample_table)
+        .where(sample_table.c["sample_id"].in_(batch))
+        .values(collection_id=collection_id)
+    )
+    session.commit()
+    _insert_rows(session=session, rows=rows)
+
+
+def _insert_rows(
+    session: Session,
+    rows: dict[type[SQLModel], list[dict[str, Any]]],
+    ignore_existing: bool = False,
+) -> None:
+    # Insert in reverse order, so that annotation_base rows come before their details.
+    for model, _ in reversed(_ROWS_REFERENCING_SAMPLE):
+        if rows[model]:
+            statement = insert(_table(model))
+            if ignore_existing:
+                statement = statement.prefix_with("OR IGNORE")
+            session.execute(statement, rows[model])
+    session.commit()
+
+
+def _restore_rows(session: Session, rows: dict[type[SQLModel], list[dict[str, Any]]]) -> None:
+    """Insert the read rows again, skipping the ones a failed move did not delete."""
+    _insert_rows(session=session, rows=rows, ignore_existing=True)
 
 
 def _table(model: type[SQLModel]) -> Table:
