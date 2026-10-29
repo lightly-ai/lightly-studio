@@ -129,7 +129,7 @@ def load_into_dataset_from_paths(
     for path, probe_result in tqdm(
         iterable=probe_results,
         total=len(paths_to_probe),
-        desc="Processing images",
+        desc="Loading images",
         unit=" images",
         disable=not show_progress,
     ):
@@ -235,9 +235,13 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
 
     # Phase 1: Sample creation
     labels: Iterable[object] = input_labels.get_labels()
+    image_count_to_load = len(file_paths_abs)
     if limit is not None:
         labels = itertools.islice(labels, limit)
-    for image_data in tqdm(labels, desc="Processing images", unit=" images"):
+        image_count_to_load = min(image_count_to_load, limit)
+    for image_data in tqdm(
+        labels, total=image_count_to_load, desc="Loading images", unit=" images"
+    ):
         image: Image = image_data.image  # type: ignore[attr-defined]
 
         sample = ImageCreate(
@@ -283,6 +287,8 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
             images_root=images_root_abs,
             collection_name=collection_name,
             restrict_to_sample_ids=set(created_sample_ids),
+            # The annotation pass reads all labels, also beyond the limit.
+            image_count=len(file_paths_abs),
         )
 
     report.log_summary()
@@ -351,7 +357,7 @@ def load_into_dataset_from_coco_captions(
     created_sample_ids: list[UUID] = []
     path_to_captions: dict[str, list[str]] = {}
 
-    for image_info in tqdm(images, desc="Processing images", unit=" images"):
+    for image_info in tqdm(images, desc="Loading images", unit=" images"):
         if isinstance(image_info["id"], int):
             image_id_raw = image_info["id"]
         else:

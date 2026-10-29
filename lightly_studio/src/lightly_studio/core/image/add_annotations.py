@@ -59,6 +59,7 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
     images_root: PathLike,
     collection_name: str | None = None,
     restrict_to_sample_ids: set[UUID] | None = None,
+    image_count: int | None = None,
 ) -> list[str]:
     """Add annotations from a labelformat input to images already in a collection.
 
@@ -76,6 +77,8 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
         restrict_to_sample_ids: When provided, only annotate images whose resolved sample ID
             is in this set. Used internally to restrict to newly-created images in the
             combined image+annotation path.
+        image_count: Optional number of images in ``input_labels``. If given, the progress
+            bar shows a total and an ETA.
 
     Returns:
         A list of file_path_abs values from input_labels that had no matching sample in
@@ -98,7 +101,7 @@ def add_annotations_from_labelformat(  # noqa: PLR0913
     missing_paths: list[str] = []
 
     for image_data in tqdm(
-        input_labels.get_labels(), desc="Processing annotations", unit=" images"
+        input_labels.get_labels(), total=image_count, desc="Loading annotations", unit=" images"
     ):
         annotation_data: ImageInstanceSegmentation | ImageObjectDetection = image_data  # type: ignore[assignment]
         file_path_abs = posixpath.join(images_root_abs, str(annotation_data.image.filename))

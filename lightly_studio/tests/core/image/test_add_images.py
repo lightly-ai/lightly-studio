@@ -309,6 +309,41 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     assert "broken=0" in caplog.text
 
 
+def test_load_into_dataset_from_labelformat__progress_bars_show_totals(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    label_input = _get_labelformat_input_obj_det_multi(
+        filenames=["image0.jpg", "image1.jpg", "image2.jpg"]
+    )
+    mocker.patch.object(add_images, "_file_exists", return_value=True)
+    images_tqdm = mocker.patch.object(
+        add_images, "tqdm", side_effect=lambda iterable, **_: iterable
+    )
+    annotations_tqdm = mocker.patch.object(
+        add_annotations, "tqdm", side_effect=lambda iterable, **_: iterable
+    )
+
+    add_images.load_into_dataset_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_path=tmp_path,
+        limit=2,
+    )
+
+    assert images_tqdm.call_args.kwargs == {
+        "total": 2,
+        "desc": "Loading images",
+        "unit": " images",
+    }
+    assert annotations_tqdm.call_args.kwargs == {
+        "total": 3,
+        "desc": "Loading annotations",
+        "unit": " images",
+    }
+
+
 def test_load_into_dataset_from_labelformat__first_files_missing_fails_early(
     db_session: Session, tmp_path: Path, mocker: MockerFixture
 ) -> None:

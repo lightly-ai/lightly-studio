@@ -116,7 +116,7 @@ class PerceptionEncoderEmbedder(
         return image_embedding.embed_image_files_batched(
             filepaths=paths,
             context=self._embedding_context(),
-            show_progress=True,
+            show_progress=False,
         )
 
     def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
@@ -131,7 +131,7 @@ class PerceptionEncoderEmbedder(
         return image_crop_embedding.embed_image_crops_batched(
             image_crops=crops,
             context=self._embedding_context(),
-            show_progress=True,
+            show_progress=False,
         )
 
     def embed_image_bytes(self, images: list[bytes]) -> EmbeddingResult:

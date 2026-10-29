@@ -189,7 +189,7 @@ Only images that have both ground truth and predictions are evaluated. See [Mode
 
     ```bash
     INFO: Using MobileCLIP embedding generator for images.
-    Generating embeddings: 100%|██████████| 128/128 [00:01<00:00, 68.15 images/s]
+    Embedding images: 100%|██████████| 128/128 [00:01<00:00, 68.15 images/s]
     Embedding annotations: 100%|██████████| 900/900 [00:06<00:00, 148.00 crops/s]
     ```
 
