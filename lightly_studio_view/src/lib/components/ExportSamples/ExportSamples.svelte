@@ -78,7 +78,7 @@
                 <ExportScope {collectionId} sampleType={page.data.collection?.sample_type} />
             </Dialog.Description>
 
-            <div class="grid flex-1 gap-4 overflow-y-auto px-1">
+            <div class="grid flex-1 grid-cols-1 gap-4 overflow-y-auto px-1">
                 <Tabs.Root bind:value={exportType} class="w-full">
                     <FormField label="Export Type">
                         <Select

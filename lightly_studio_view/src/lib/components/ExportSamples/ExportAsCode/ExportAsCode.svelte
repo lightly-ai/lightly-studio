@@ -67,7 +67,7 @@
     };
 </script>
 
-<div class="flex flex-col gap-2 pb-2 text-sm" data-testid="export-as-code">
+<div class="flex min-w-0 flex-col gap-2 pb-2 text-sm" data-testid="export-as-code">
     <Button variant="outline" size="sm" onclick={() => isOpen.update((open) => !open)}>
         {$isOpen ? 'Hide code' : 'Copy as code'}
     </Button>
