@@ -5,12 +5,14 @@
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useAdjacentImages } from '$lib/hooks/useAdjacentImages/useAdjacentImages';
+    import { getImageURLById } from '$lib/utils';
+    import { preloadAdjacentImages, preloadImageUrl } from './preloadAdjacentImages';
 
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id!);
 
-    const { query: sampleAdjacentQuery } = $derived(
+    const { query: sampleAdjacentQuery, ensureAdjacent } = $derived(
         useAdjacentImages({
             sampleId: page.params.sampleId!,
             collectionId
@@ -62,6 +64,25 @@
         if (prevURL) {
             preloadData(prevURL);
         }
+    });
+
+    // Full-size images of the next 3 and the previous sample, so stepping does not wait on them.
+    const PRELOAD_NEXT_COUNT = 3;
+    $effect(() => {
+        const data = sampleAdjacentQuery.data;
+        if (!data) return;
+        let cancelled = false;
+        preloadAdjacentImages({
+            nextSampleId: data.next_sample_id,
+            previousSampleId: data.previous_sample_id,
+            nextCount: PRELOAD_NEXT_COUNT,
+            getNextSampleId: async (sampleId) => (await ensureAdjacent(sampleId))?.next_sample_id,
+            preloadImage: (sampleId) => preloadImageUrl(getImageURLById(sampleId)),
+            isCancelled: () => cancelled
+        });
+        return () => {
+            cancelled = true;
+        };
     });
 </script>
 

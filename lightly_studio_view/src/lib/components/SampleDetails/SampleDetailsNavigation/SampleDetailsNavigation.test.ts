@@ -37,7 +37,8 @@ vi.mock('$lib/hooks/useAdjacentImages/useAdjacentImages', () => ({
                 previous_sample_id: 'sample-2',
                 next_sample_id: 'sample-4'
             }
-        }
+        },
+        ensureAdjacent: async () => ({ next_sample_id: null })
     })
 }));
 

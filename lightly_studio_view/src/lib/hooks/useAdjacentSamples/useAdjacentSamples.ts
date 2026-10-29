@@ -72,5 +72,11 @@ export const useAdjacentSamples = ({
         client.invalidateQueries({ queryKey: options.queryKey });
     };
 
-    return { query, refetch };
+    /** Loads the adjacency of another sample with the same body, from the cache if present. */
+    const ensureAdjacent = (sampleId: string) =>
+        client.ensureQueryData(
+            getAdjacentSamplesOptions({ path: { sample_id: sampleId }, body: params.body })
+        );
+
+    return { query, refetch, ensureAdjacent };
 };
