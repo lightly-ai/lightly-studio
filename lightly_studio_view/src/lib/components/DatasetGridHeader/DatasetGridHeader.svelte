@@ -8,7 +8,9 @@
     } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
     import TileFieldsMenu from '$lib/components/TileFieldsMenu/TileFieldsMenu.svelte';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import { useTags } from '$lib/hooks/useTags/useTags';
 
     type SearchImage = { name: string; previewUrl: string };
 
@@ -57,6 +59,14 @@
     // The collection layout loads the metadata info of the collection on screen.
     const { metadataInfo } = useMetadataFilters();
     const metadataKeys = $derived(($metadataInfo ?? []).map((info) => info.name));
+    // The tag filter loads the tags of the collection on screen; for the annotations grid these
+    // are the tags of the annotation source.
+    const { tags } = $derived(useTags({ collection_id: collectionId, autoLoad: false }));
+    // The annotation sources of the images grid, one option each, to compare them tile by tile.
+    const { collectionIdToName } = useAnnotationCollectionsFilter();
+    const sources = $derived(
+        isImages ? Object.entries($collectionIdToName).map(([id, name]) => ({ id, name })) : []
+    );
 </script>
 
 <GridHeader>
@@ -72,7 +82,14 @@
     {/snippet}
     {#snippet auxControls(compact)}
         {#if isImages || isAnnotations}
-            <TileFieldsMenu {collectionId} {isAnnotations} {metadataKeys} {compact} />
+            <TileFieldsMenu
+                {collectionId}
+                {isAnnotations}
+                {metadataKeys}
+                tags={$tags}
+                {sources}
+                {compact}
+            />
         {/if}
         {#if isImages}
             <ImageOrderBy {collectionId} datasetId={collectionDatasetId} />

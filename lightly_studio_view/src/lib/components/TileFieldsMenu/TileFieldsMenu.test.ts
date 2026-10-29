@@ -32,4 +32,36 @@ describe('TileFieldsMenu', () => {
         expect(screen.getByText('Annotation source')).toBeInTheDocument();
         expect(screen.queryByText('Metadata')).not.toBeInTheDocument();
     });
+
+    it('filters single tags and sources by the search and ticks one', async () => {
+        render(TileFieldsMenu, {
+            props: {
+                collectionId: 'images-2',
+                isAnnotations: false,
+                metadataKeys: ['location'],
+                tags: [
+                    { tag_id: 't1', name: 'train' },
+                    { tag_id: 't2', name: 'val' }
+                ],
+                sources: [{ id: 's1', name: 'model_v1' }]
+            }
+        });
+
+        await fireEvent.click(screen.getByTestId('tile-fields-trigger'));
+        await fireEvent.input(screen.getByLabelText('Search fields'), {
+            target: { value: 'TRA' }
+        });
+
+        expect(screen.getByText('train')).toBeInTheDocument();
+        expect(screen.queryByText('val')).not.toBeInTheDocument();
+        expect(screen.queryByText('model_v1')).not.toBeInTheDocument();
+        expect(screen.queryByText('Fields')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByText('train'));
+        expect(get(useTileFields().tileFields)['images-2']).toEqual(['tag:t1']);
+
+        await fireEvent.input(screen.getByLabelText('Search fields'), {
+            target: { value: 'zebra' }
+        });
+        expect(screen.getByText('No matching fields')).toBeInTheDocument();
+    });
 });

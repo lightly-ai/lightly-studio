@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { get } from 'svelte/store';
 import {
     getMetadataKey,
+    getSourceId,
+    getTagId,
     metadataTileField,
+    sourceTileField,
+    tagTileField,
     resolveTileFields,
     useTileFields
 } from './useTileFields';
@@ -47,9 +51,13 @@ describe('resolveTileFields', () => {
     });
 });
 
-describe('metadata field ids', () => {
-    it('round-trips the metadata key', () => {
+describe('field ids', () => {
+    it('round-trips the metadata key, tag id, and source id', () => {
         expect(getMetadataKey(metadataTileField('loc:a'))).toBe('loc:a');
         expect(getMetadataKey('tags')).toBeUndefined();
+        expect(getTagId(tagTileField('t1'))).toBe('t1');
+        expect(getTagId('tags')).toBeUndefined();
+        expect(getSourceId(sourceTileField('s1'))).toBe('s1');
+        expect(getSourceId('source')).toBeUndefined();
     });
 });

@@ -1,16 +1,33 @@
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 
-/** Field ids that a grid tile can show. Metadata fields use `metadata:<key>`. */
+/**
+ * Field ids that a grid tile can show. One tag uses `tag:<tag_id>`, one annotation source uses
+ * `source:<collection_id>`, and a metadata field uses `metadata:<key>`.
+ */
 export const TILE_FIELD_CLASSES = 'classes';
 export const TILE_FIELD_TAGS = 'tags';
 export const TILE_FIELD_SOURCE = 'source';
+const TAG_PREFIX = 'tag:';
+const SOURCE_PREFIX = 'source:';
 const METADATA_PREFIX = 'metadata:';
 
+export const tagTileField = (tagId: string): string => `${TAG_PREFIX}${tagId}`;
+export const sourceTileField = (sourceId: string): string => `${SOURCE_PREFIX}${sourceId}`;
 export const metadataTileField = (key: string): string => `${METADATA_PREFIX}${key}`;
+
+const stripPrefix = (fieldId: string, prefix: string): string | undefined =>
+    fieldId.startsWith(prefix) ? fieldId.slice(prefix.length) : undefined;
+
+/** Returns the tag id of a field id, or undefined when the field is not one tag. */
+export const getTagId = (fieldId: string): string | undefined => stripPrefix(fieldId, TAG_PREFIX);
+
+/** Returns the annotation source id of a field id, or undefined when the field is not one source. */
+export const getSourceId = (fieldId: string): string | undefined =>
+    stripPrefix(fieldId, SOURCE_PREFIX);
 
 /** Returns the metadata key of a field id, or undefined when the field is not metadata. */
 export const getMetadataKey = (fieldId: string): string | undefined =>
-    fieldId.startsWith(METADATA_PREFIX) ? fieldId.slice(METADATA_PREFIX.length) : undefined;
+    stripPrefix(fieldId, METADATA_PREFIX);
 
 /**
  * The fields shown on a grid's tiles. Until the user picks fields, annotation tiles show their

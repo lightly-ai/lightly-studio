@@ -8,7 +8,8 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
         useGlobalStorage: () => ({
             activePanel: writable('none'),
             sampleSize: writable({ width: 4, height: 4 }),
-            updateSampleSize: vi.fn()
+            updateSampleSize: vi.fn(),
+            tags: writable({})
         })
     };
 });

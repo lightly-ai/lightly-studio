@@ -37,9 +37,14 @@
             sample.similarity_score == null
     );
 
-    const { isSourceVisible } = useAnnotationCollectionsFilter();
+    const { isSourceVisible, collectionIdToName } = useAnnotationCollectionsFilter();
     const tileChips = $derived(
-        getImageTileChips({ fields: tileFields, sample, isSourceVisible: $isSourceVisible })
+        getImageTileChips({
+            fields: tileFields,
+            sample,
+            isSourceVisible: $isSourceVisible,
+            sourceNames: $collectionIdToName
+        })
     );
 </script>
 

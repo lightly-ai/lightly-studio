@@ -1,6 +1,8 @@
 import type { AnnotationWithPayloadView, ImageView } from '$lib/api/lightly_studio_local';
 import {
     getMetadataKey,
+    getSourceId,
+    getTagId,
     TILE_FIELD_CLASSES,
     TILE_FIELD_SOURCE,
     TILE_FIELD_TAGS
@@ -28,11 +30,14 @@ type MetadataDict = ImageView['metadata_dict'];
 export const getImageTileChips = ({
     fields,
     sample,
-    isSourceVisible
+    isSourceVisible,
+    sourceNames
 }: {
     fields: string[];
     sample: Pick<ImageView, 'annotations' | 'tags' | 'metadata_dict'>;
     isSourceVisible: (sourceId: string) => boolean;
+    /** Annotation source names by id, for the chips of single sources. */
+    sourceNames: Record<string, string>;
 }): TileChip[] =>
     buildChips(fields, (fieldId) => {
         if (fieldId === TILE_FIELD_CLASSES) {
@@ -44,7 +49,19 @@ export const getImageTileChips = ({
         if (fieldId === TILE_FIELD_TAGS) {
             return { label: 'Tags', value: sample.tags.map((tag) => tag.name).join(', ') };
         }
-        return getMetadataValue(fieldId, sample.metadata_dict);
+        const sourceId = getSourceId(fieldId);
+        if (sourceId !== undefined) {
+            // A ticked source shows even while the source filter hides it: the user asked for it.
+            const names = sample.annotations
+                .filter((annotation) => annotation.annotation_collection_id === sourceId)
+                .map((annotation) => annotation.annotation_label.annotation_label_name);
+            return {
+                label: sourceNames[sourceId] ?? 'Annotation source',
+                value: formatClassCounts(names),
+                showLabel: true
+            };
+        }
+        return getTagValue(fieldId, sample.tags) ?? getMetadataValue(fieldId, sample.metadata_dict);
     });
 
 /** Chips for an annotation tile, in the order the fields were ticked. */
@@ -71,7 +88,10 @@ export const getAnnotationTileChips = ({
         if (fieldId === TILE_FIELD_SOURCE) {
             return { label: 'Annotation source', value: sourceName };
         }
-        return getMetadataValue(fieldId, annotation.metadata_dict);
+        return (
+            getTagValue(fieldId, annotation.annotation.tags ?? []) ??
+            getMetadataValue(fieldId, annotation.metadata_dict)
+        );
     });
 
 /** Formats class names as "2 deer, 1 cat", most frequent first. */
@@ -102,6 +122,16 @@ const buildChips = (
             }
         ];
     });
+
+/** A single-tag field shows the tag name, only on tiles that carry the tag. */
+const getTagValue = (
+    fieldId: string,
+    tags: { tag_id: string; name: string }[]
+): FieldValue | undefined => {
+    const tagId = getTagId(fieldId);
+    const tag = tagId === undefined ? undefined : tags.find((t) => t.tag_id === tagId);
+    return tag && { label: 'Tag', value: tag.name };
+};
 
 const getMetadataValue = (fieldId: string, metadata: MetadataDict): FieldValue | undefined => {
     const key = getMetadataKey(fieldId);
