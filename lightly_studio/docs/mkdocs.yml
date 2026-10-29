@@ -169,6 +169,7 @@ nav:
       - Model Evaluation: workflows/evaluation.md
     - Export and Train:
       - Export: workflows/export.md
+      - Train a Detector with LightlyTrain: workflows/train_with_lightlytrain.md
   - Ecosystem:
     - Plugins: ecosystem/plugins.md
     - Cloud Storage: ecosystem/cloud_storage.md
@@ -279,6 +280,7 @@ plugins:
           - workflows/captions.md
           - workflows/evaluation.md
           - workflows/export.md
+          - workflows/train_with_lightlytrain.md
         Ecosystem:
           - ecosystem/plugins.md
           - ecosystem/cloud_storage.md

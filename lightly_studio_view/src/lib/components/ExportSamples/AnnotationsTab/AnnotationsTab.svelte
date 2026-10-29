@@ -7,6 +7,7 @@
     import { PUBLIC_LIGHTLY_STUDIO_API_URL } from '$env/static/public';
     import { useExportDownload, triggerDownload } from '../useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
+    import TrainWithLightlyTrain from '../TrainWithLightlyTrain/TrainWithLightlyTrain.svelte';
 
     type ExportFormat = NonNullable<
         Parameters<typeof exportCollectionAnnotationsPrepare>[0]['body']['export_format']
@@ -43,12 +44,15 @@
     }: Props = $props();
 
     let includeImages = $state(false);
+    let exportedWithImages = $state(false);
 
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
     const { videoFilter } = useVideoFilters();
 
     const { isLoading, errorMessage, handleDownload } = useExportDownload(async () => {
+        exportedWithImages = false;
+        const withImages = canIncludeImages && includeImages;
         const activeFilter =
             sampleType === 'video'
                 ? { video_filter: $videoFilter }
@@ -60,7 +64,7 @@
                 annotation_collection_id:
                     selectedAnnotationCollectionId ?? annotationSources[0]?.id,
                 ...activeFilter,
-                ...(canIncludeImages && includeImages ? { include_images: true } : {})
+                ...(withImages ? { include_images: true } : {})
             }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
@@ -69,6 +73,7 @@
         triggerDownload(
             `${PUBLIC_LIGHTLY_STUDIO_API_URL}api/collections/${collectionId}/export/download/${exportKey}`
         );
+        exportedWithImages = withImages;
     });
 </script>
 
@@ -109,3 +114,7 @@
         {testId}
     />
 </div>
+
+{#if exportedWithImages}
+    <TrainWithLightlyTrain />
+{/if}

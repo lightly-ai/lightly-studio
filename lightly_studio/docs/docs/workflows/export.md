@@ -42,7 +42,8 @@ To export one tag, filter by that tag before you open the dialog.
 For `Image Object Detections (COCO)`, select `Include images` to download the images together with
 the annotations. The zip file contains `annotations.json` and an `images` folder. Each `file_name`
 in `annotations.json` is relative to the `images` folder, so the export is ready to train on, also
-when the images are in cloud storage.
+when the images are in cloud storage. To train a detector on the export, see
+[Train a Detector with LightlyTrain](train_with_lightlytrain.md).
 
 ### Exporting sample filenames
 

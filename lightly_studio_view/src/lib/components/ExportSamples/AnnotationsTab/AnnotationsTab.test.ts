@@ -134,6 +134,26 @@ describe('AnnotationsTab', () => {
         });
     });
 
+    it('shows the LightlyTrain snippet after an export with images', async () => {
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        render(AnnotationsTab, { props: { ...defaultProps, canIncludeImages: true } });
+        expect(screen.queryByTestId('train-with-lightlytrain')).not.toBeInTheDocument();
+
+        await fireEvent.click(screen.getByRole('checkbox'));
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+
+        await waitFor(() => {
+            expect(screen.getByTestId('train-with-lightlytrain')).toHaveTextContent(
+                'lightly_train.train_object_detection'
+            );
+        });
+        expect(
+            screen.getByRole('link', { name: 'Train a detector with LightlyTrain' })
+        ).toBeInTheDocument();
+    });
+
     it('passes the active video filter and annotation source for video classifications', async () => {
         mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
             data: { export_key: 'key123' }
