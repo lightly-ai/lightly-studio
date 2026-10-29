@@ -22,12 +22,11 @@ import logging
 import queue
 import threading
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from http import HTTPStatus
-from typing import Callable
 from uuid import UUID
 
 import requests
