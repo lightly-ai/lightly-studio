@@ -9,6 +9,7 @@ import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFiltersClearedSignal } from '$lib/hooks';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
 import MetadataFilterChips from './MetadataFilterChips.svelte';
 
 const storage = useGlobalStorage();
@@ -188,17 +189,24 @@ describe('useMetadataFilterChips', () => {
         expect(trackEvent).not.toHaveBeenCalled();
     });
 
-    it('leaves categorical selections to the sidebar instead of rendering chips', () => {
+    it('renders categorical selections as chips like numeric filters', () => {
         storage.updateCategoricalMetadataValues({ location_type: ['city', 'rural'] });
-        render(MetadataFilterChips, {
-            props: {
-                collectionId: 'col-1',
-                isImageCollection: true,
-                categoricalKeys: ['location_type']
-            }
-        });
+        render(MetadataFilterChips, { props: { collectionId: 'col-1' } });
 
-        expect(screen.queryByTestId('metadata-filter-chip-location_type')).not.toBeInTheDocument();
-        expect(get(storage.categoricalMetadataValues).location_type).toEqual(['city', 'rural']);
+        expect(screen.getByTestId('metadata-filter-chip-location_type')).toHaveTextContent(
+            'city, rural'
+        );
+    });
+
+    it('renders width and height chips when dimensions are shown', () => {
+        const { updateDimensionsBounds, updateDimensionsValues } = useDimensions();
+        updateDimensionsBounds({ min_width: 10, max_width: 100, min_height: 20, max_height: 200 });
+        updateDimensionsValues({ min_width: 50, max_width: 100, min_height: 20, max_height: 200 });
+        render(MetadataFilterChips, { props: { showDimensions: true } });
+
+        expect(screen.getByTestId('metadata-filter-chip-image-width')).toHaveTextContent(
+            '50 – 100px'
+        );
+        expect(screen.queryByTestId('metadata-filter-chip-image-height')).not.toBeInTheDocument();
     });
 });

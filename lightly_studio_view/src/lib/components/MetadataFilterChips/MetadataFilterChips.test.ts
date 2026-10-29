@@ -26,6 +26,6 @@ describe('MetadataFilterChips', () => {
         storage.updateMetadataBounds({ confidence: { min: 0, max: 1 } });
         storage.updateMetadataValues({ confidence: { min: 0, max: 1 } });
         render(MetadataFilterChips);
-        expect(screen.queryByText('Metadata filters')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('metadata-filter-chips')).not.toBeInTheDocument();
     });
 });

@@ -23,7 +23,7 @@ const defaultProps = {
 };
 
 describe('MetadataCategoricalFilter', () => {
-    it('keeps field values collapsed until the values dropdown is opened', async () => {
+    it('shows the values of a list field inline, under its heading', async () => {
         const onToggle = vi.fn();
         render(MetadataCategoricalFilter, {
             props: {
@@ -40,16 +40,10 @@ describe('MetadataCategoricalFilter', () => {
 
         const field = screen.getByTestId('metadata-categorical-filter');
         expect(within(field).getByRole('heading', { name: 'location' })).toBeVisible();
-        const trigger = within(field).getByTestId('metadata-categorical-filter-trigger');
-        expect(trigger).toBeVisible();
-        expect(within(field).queryByRole('checkbox')).toBeNull();
-
-        await fireEvent.click(trigger);
-        expect(screen.getByText('city')).toBeVisible();
-        expect(screen.getByText('rural')).toBeVisible();
+        expect(within(field).queryByTestId('metadata-categorical-filter-trigger')).toBeNull();
 
         await fireEvent.click(
-            screen.getByRole('checkbox', { name: 'Select value city, 3 samples' })
+            within(field).getByRole('checkbox', { name: 'Select value city, 3 samples' })
         );
         expect(onToggle).toHaveBeenCalledWith('city');
     });
@@ -70,9 +64,6 @@ describe('MetadataCategoricalFilter', () => {
         expect(screen.getByRole('alert')).toBeVisible();
         await fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
         expect(onRetry).toHaveBeenCalledOnce();
-
-        await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
-        expect(screen.getAllByText(/Could not load metadata distribution/)).toHaveLength(2);
     });
 
     it('keeps the summary and the chevron as direct children of the trigger', () => {

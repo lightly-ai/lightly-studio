@@ -35,9 +35,10 @@
             };
         })
     );
+    // In list mode the status line below the field already reports a load error.
     const emptyText = $derived(
         listMode && error
-            ? 'Could not load metadata distribution.'
+            ? undefined
             : listMode && loading
               ? 'Loading…'
               : listMode
