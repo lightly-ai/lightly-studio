@@ -6,10 +6,10 @@ from . import setup_logging  # noqa: F401 I001
 from lightly_studio.analytics import tracking  # noqa: F401
 
 # Import db_manager for SQLModel to discover db models.
-from lightly_studio.database import db_manager  # noqa: F401
+from lightly_studio.database import db_manager
 
 # Import utils to expose utility functions at the package level.
-from lightly_studio import utils  # noqa: F401
+from lightly_studio import utils
 
 from lightly_studio.core.image.image_dataset import ImageDataset
 from lightly_studio.core.video.video_dataset import VideoDataset
@@ -37,6 +37,8 @@ from lightly_studio.core.lightly_train_helpers.generate_train_script import lt_t
 # TODO (Jonas 08/25): This will be removed as soon as the new interface is used in the examples
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 
+# Modules are listed too, so type checkers accept documented calls such as
+# `ls.utils.download_example_dataset(...)` and `ls.db_manager.connect(...)`.
 __all__ = [
     "AnnotationType",
     "CreateImage",
@@ -55,10 +57,12 @@ __all__ = [
     "VideoFrameDataset",
     "VideoFrameSample",
     "connect",
+    "db_manager",
     "lt_train_script",
     "register_default_embedder",
     "register_remote_embedder",
     "start_gui",
     "start_gui_background",
     "stop_gui_background",
+    "utils",
 ]
