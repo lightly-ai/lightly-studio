@@ -3,6 +3,12 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import PlotPointSizeControl from './PlotPointSizeControl/PlotPointSizeControl.svelte';
+    import PlotSelectedPoints from './PlotSelectedPoints/PlotSelectedPoints.svelte';
+    import {
+        getSelectedPointIndices,
+        getSelectedPointRadius
+    } from './PlotSelectedPoints/selectedPoints';
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
@@ -227,8 +233,10 @@
     // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
     // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
     // canvas. The legend keeps showing the user's real toggle state.
+    const hasSelectionHighlight = $derived(
+        $rangeSelection !== null || committedHighlightRegion !== null
+    );
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight = $rangeSelection !== null || committedHighlightRegion !== null;
         if (!hasSelectionHighlight || !hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return hiddenCategories;
         }
@@ -248,6 +256,12 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
+    const selectedPointIndices = $derived(
+        getSelectedPointIndices(
+            $plotData?.category as Uint8Array | undefined,
+            hasSelectionHighlight || activeSampleIds.length > 0
+        )
+    );
     const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>
         getCategoryColors($colorLegend, useLabelColors, $colorBy !== null, $colorGradient)
@@ -318,10 +332,13 @@
 
     // Require at least 50px in each dimension to avoid unstable first-frame canvas rendering.
     const MIN_RENDER_SIZE = 50;
-    const embeddingConfig = {
+    // Lives here so the size survives the plot reloading on a filter change. Null is automatic.
+    let pointSize = $state<number | null>(null);
+    const embeddingConfig = $derived({
         colorScheme: 'dark',
-        autoLabelEnabled: false
-    } as const;
+        autoLabelEnabled: false,
+        pointSize
+    } as const);
     const embeddingTheme = {
         brandingLink: null
     } as const;
@@ -579,6 +596,18 @@
 
                     <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
                          as close to X− as to X+. -->
+                    {#if overlayProxy && selectedPointIndices.length > 0}
+                        <PlotSelectedPoints
+                            proxy={overlayProxy}
+                            x={$plotData.x as Float32Array}
+                            y={$plotData.y as Float32Array}
+                            category={$plotData.category as Uint8Array}
+                            indices={selectedPointIndices}
+                            {categoryColors}
+                            radius={getSelectedPointRadius(pointSize)}
+                        />
+                    {/if}
+
                     {#if $plotAxes && overlayProxy}
                         <PlotAxisLines proxy={overlayProxy} />
                     {/if}
@@ -618,7 +647,10 @@
                             }}
                         />
 
-                        <PlotToolPill {plotContainer} bind:activeTool />
+                        <div class="flex shrink-0 items-center gap-2">
+                            <PlotPointSizeControl bind:pointSize />
+                            <PlotToolPill {plotContainer} bind:activeTool />
+                        </div>
                     </div>
                 {/if}
             </div>
