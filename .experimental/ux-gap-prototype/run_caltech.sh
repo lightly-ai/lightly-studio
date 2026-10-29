@@ -22,8 +22,9 @@ mkdir -p "$db_dir"
 
 cd "$checkout/lightly_studio"
 uv sync -q
+# Tests leave a mock dist (index.html only), so check for the real build output.
 dist="src/lightly_studio/dist_lightly_studio_view_app"
-if [[ ! -f "$dist/index.html" || "$flags" == *--rebuild* ]]; then
+if [[ ! -d "$dist/_app" || "$flags" == *--rebuild* ]]; then
     echo "Building the GUI for $checkout ..."
     make export-schema >/dev/null
     (cd ../lightly_studio_view && npm ci --silent && npm run generate-api-client >/dev/null         && npm run generate-language >/dev/null)
