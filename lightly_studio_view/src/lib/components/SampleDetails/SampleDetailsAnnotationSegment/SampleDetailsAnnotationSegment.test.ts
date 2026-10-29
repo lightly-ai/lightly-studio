@@ -1,5 +1,5 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
@@ -11,7 +11,8 @@ const mocks = vi.hoisted(() => ({
     lastCreatedAnnotationId: null as string | null,
     enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
-    userRole: 'labeler' as string | undefined
+    userRole: 'labeler' as string | undefined,
+    moveToSource: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -36,6 +37,16 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
             isSourceVisible: readable((sourceId: string) =>
                 mocks.selectedCollectionIds.includes(sourceId)
             )
+        }))
+    };
+});
+
+vi.mock('$lib/hooks/useMoveAnnotationsToSource/useMoveAnnotationsToSource', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        useMoveAnnotationsToSource: vi.fn(() => ({
+            moveToSource: mocks.moveToSource,
+            isPending: readable(false)
         }))
     };
 });
@@ -139,6 +150,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
+        mocks.moveToSource.mockResolvedValue(true);
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
 
@@ -588,6 +600,88 @@ describe('SampleDetailsAnnotationSegment', () => {
             render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent('No annotations.');
+        });
+    });
+    describe('dragging an annotation to another source', () => {
+        const reviewSource = { collection_id: 'source-review', name: 'Review' };
+
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource, reviewSource];
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+        });
+
+        const annotations = [
+            createAnnotation('a1', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('a2', predictionsSource.collection_id, 'zebra')
+        ];
+
+        const getDropZone = (sourceName: string) =>
+            screen.getByRole('region', { name: `Annotation source ${sourceName}` });
+
+        const startDrag = (annotationId: string) =>
+            fireEvent.dragStart(
+                within(getRow(annotationId)).getByTestId('mock-annotation-row-drag')
+            );
+
+        it('moves the annotation to the source group it is dropped on', async () => {
+            const refetch = vi.fn();
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations, refetch }
+            });
+
+            await startDrag('a1');
+            const target = getDropZone(predictionsSource.name);
+            await fireEvent.dragOver(target);
+            expect(target).toHaveAttribute('data-drop-highlighted', 'true');
+            await fireEvent.drop(target);
+
+            expect(mocks.moveToSource).toHaveBeenCalledWith({
+                collectionId: defaultProps.collectionId,
+                annotationIds: ['a1'],
+                sourceName: predictionsSource.name
+            });
+            await waitFor(() => expect(refetch).toHaveBeenCalled());
+        });
+
+        it('ignores a drop on the annotation own source', async () => {
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await startDrag('a1');
+            const ownSource = getDropZone(groundTruthSource.name);
+            await fireEvent.dragOver(ownSource);
+            expect(ownSource).toHaveAttribute('data-drop-highlighted', 'false');
+            await fireEvent.drop(ownSource);
+
+            expect(mocks.moveToSource).not.toHaveBeenCalled();
+        });
+
+        it('shows sources without annotations as drop zones only while dragging', async () => {
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+            expect(
+                screen.queryByRole('region', { name: `Annotation source ${reviewSource.name}` })
+            ).not.toBeInTheDocument();
+
+            await startDrag('a2');
+            await fireEvent.drop(getDropZone(reviewSource.name));
+
+            expect(mocks.moveToSource).toHaveBeenCalledWith(
+                expect.objectContaining({ annotationIds: ['a2'], sourceName: reviewSource.name })
+            );
+            expect(
+                screen.queryByRole('region', { name: `Annotation source ${reviewSource.name}` })
+            ).not.toBeInTheDocument();
+        });
+
+        it('offers no drag when there is a single source', () => {
+            mocks.collections = [groundTruthSource];
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: [annotations[0]] }
+            });
+
+            expect(screen.queryByTestId('mock-annotation-row-drag')).not.toBeInTheDocument();
         });
     });
 });

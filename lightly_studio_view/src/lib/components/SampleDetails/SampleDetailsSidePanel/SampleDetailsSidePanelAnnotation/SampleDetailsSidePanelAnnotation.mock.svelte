@@ -6,9 +6,18 @@
         isHidden?: boolean;
         colorBySource?: boolean;
         onToggleShowAnnotation: (e: MouseEvent) => void;
+        onDragStart?: () => void;
+        onDragEnd?: () => void;
     }
 
-    let { annotation, isHidden = false, colorBySource, onToggleShowAnnotation }: Props = $props();
+    let {
+        annotation,
+        isHidden = false,
+        colorBySource,
+        onToggleShowAnnotation,
+        onDragStart,
+        onDragEnd
+    }: Props = $props();
 </script>
 
 <div
@@ -21,4 +30,14 @@
     <button type="button" data-testid="mock-annotation-row-toggle" onclick={onToggleShowAnnotation}>
         {isHidden ? 'hidden' : 'visible'}
     </button>
+    {#if onDragStart}
+        <!-- No role, so that the row keeps a single button for the tests. -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <div
+            draggable="true"
+            data-testid="mock-annotation-row-drag"
+            ondragstart={onDragStart}
+            ondragend={onDragEnd}
+        ></div>
+    {/if}
 </div>

@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import { page } from '$app/state';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
@@ -67,5 +67,26 @@ describe('SampleDetailsSidePanelAnnotation', () => {
         expect(screen.getByText('Confidence: 0')).toBeInTheDocument();
         await rerender({ ...props, annotation: { ...annotation, confidence: null } });
         expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
+    });
+
+    it('offers a drag handle in edit mode that carries the annotation ID', async () => {
+        page.data.globalStorage.isEditingMode.set(true);
+        const onDragStart = vi.fn();
+        render(SampleDetailsSidePanelAnnotation, { ...defaultProps, onDragStart });
+
+        const dataTransfer = { setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' };
+        await fireEvent.dragStart(screen.getByTestId('annotation-drag-handle'), { dataTransfer });
+
+        expect(dataTransfer.setData).toHaveBeenCalledWith(
+            'application/x-lightly-annotation-id',
+            annotation.sample_id
+        );
+        expect(onDragStart).toHaveBeenCalled();
+    });
+
+    it('hides the drag handle outside edit mode', () => {
+        page.data.globalStorage.isEditingMode.set(false);
+        render(SampleDetailsSidePanelAnnotation, { ...defaultProps, onDragStart: vi.fn() });
+        expect(screen.queryByTestId('annotation-drag-handle')).not.toBeInTheDocument();
     });
 });
