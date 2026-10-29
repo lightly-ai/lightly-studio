@@ -20,6 +20,8 @@ interface GetMenuItemParams {
     sampleType: SampleType;
     groupComponentName?: string | null;
     rootSampleType?: SampleType;
+    /** Details view of the sample last open on this tab, opened instead of the grid. */
+    openSampleHref?: string;
 }
 
 type SampleTypeConfig = {
@@ -79,17 +81,24 @@ export function getMenuItem({
     collectionId,
     sampleType,
     groupComponentName,
-    rootSampleType
+    rootSampleType,
+    openSampleHref
 }: GetMenuItemParams): NavigationMenuItem | null {
     const config = SAMPLE_TYPE_CONFIGS[sampleType];
     if (!config || config.isHidden?.(rootSampleType)) return null;
 
     const collectionType = sampleType.toLowerCase();
+    const isSelected = collectionId === currentCollectionId;
+    // The current tab always links to its grid, so the user can get back to it.
+    const href =
+        !isSelected && openSampleHref
+            ? openSampleHref
+            : config.toHref(datasetId, collectionType, collectionId);
     return {
         title: config.title(groupComponentName),
         id: `${collectionType}-${collectionId}`,
-        href: config.toHref(datasetId, collectionType, collectionId),
-        isSelected: collectionId === currentCollectionId,
+        href,
+        isSelected,
         icon: config.icon
     };
 }
@@ -143,7 +152,8 @@ export function buildBreadcrumbLevels(
     ancestorPath: CollectionView[] | null,
     rootCollection: CollectionView,
     currentCollectionId: string | undefined,
-    datasetId: string
+    datasetId: string,
+    openSampleHrefs: Record<string, string> = {}
 ): BreadcrumbLevel[] {
     if (!ancestorPath) return [];
 
@@ -161,7 +171,8 @@ export function buildBreadcrumbLevels(
                 c.sample_type === SampleType.ANNOTATION && hasSeveralAnnotationCollections
                     ? c.name
                     : c.group_component_definition?.group_component_name,
-            rootSampleType: rootCollection.sample_type
+            rootSampleType: rootCollection.sample_type,
+            openSampleHref: openSampleHrefs[c.collection_id]
         });
     const isNavigationMenuItem = (item: NavigationMenuItem | null): item is NavigationMenuItem =>
         item !== null;

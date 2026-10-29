@@ -7,6 +7,7 @@
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { useOpenSample } from '$lib/hooks/useOpenSample/useOpenSample';
     const {
         collection
     }: {
@@ -37,8 +38,16 @@
         currentCollectionId ? findNavigationPath(collection, currentCollectionId) : null
     );
 
+    const { openSampleHrefs } = useOpenSample();
+
     const breadcrumbLevels: BreadcrumbLevel[] = $derived(
-        buildBreadcrumbLevels(navigationPath, collection, currentCollectionId, datasetId)
+        buildBreadcrumbLevels(
+            navigationPath,
+            collection,
+            currentCollectionId,
+            datasetId,
+            $openSampleHrefs
+        )
     );
 
     const { user } = useAuth();

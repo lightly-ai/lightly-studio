@@ -5,7 +5,10 @@
     import GroupsComponentsMenu from '$lib/components/GroupsComponentsMenu/GroupsComponentsMenu.svelte';
     import LayoutCard from '$lib/components/LayoutCard/LayoutCard.svelte';
     import { useTrackSampleInspected } from '$lib/hooks';
-    import { isImagesRoute } from '$lib/routes';
+    import { isImagesRoute, routeHelpers } from '$lib/routes';
+    import { useImage } from '$lib/hooks/useImage/useImage';
+    import { useOpenSample } from '$lib/hooks/useOpenSample/useOpenSample';
+    import { goto } from '$app/navigation';
 
     const { children } = $props();
 
@@ -18,6 +21,21 @@
     const collectionId = $derived(page.params.collection_id!);
 
     useTrackSampleInspected(() => collectionId, 'image', isImagesRoute);
+
+    // Reopen this sample when the user comes back to the tab.
+    const { rememberOpenSample, forgetOpenSample } = useOpenSample();
+    const { image } = useImage(() => ({ sampleId }));
+    $effect(() => {
+        rememberOpenSample(collectionId, page.url.pathname + page.url.search);
+    });
+    // The remembered sample can be gone by then, so fall back to the grid.
+    $effect(() => {
+        if (!image.isError) return;
+        forgetOpenSample(collectionId);
+        goto(routeHelpers.toImages(datasetId, collectionType!, collectionId), {
+            replaceState: true
+        });
+    });
 
     const groupId = $derived.by(() => {
         return page.url.searchParams.get('group_id') ?? undefined;

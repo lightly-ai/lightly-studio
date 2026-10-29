@@ -124,6 +124,21 @@ describe('getMenuItem', () => {
         if (!item) throw new Error('expected a menu item');
         expect(item.href).toBe('/datasets/dataset-id/image/col-id/images');
     });
+
+    it('links to the sample last open on another tab, and to the grid of the current tab', () => {
+        const params = {
+            datasetId: 'dataset-id',
+            collectionId: 'col-id',
+            sampleType: SampleType.IMAGE,
+            openSampleHref: '/datasets/dataset-id/image/col-id/images/sample-1'
+        };
+
+        const otherTab = getMenuItem({ ...params, currentCollectionId: 'other-col-id' });
+        const currentTab = getMenuItem({ ...params, currentCollectionId: 'col-id' });
+
+        expect(otherTab?.href).toBe('/datasets/dataset-id/image/col-id/images/sample-1');
+        expect(currentTab?.href).toBe('/datasets/dataset-id/image/col-id/images');
+    });
 });
 
 describe('findNavigationPath', () => {
@@ -205,6 +220,18 @@ describe('buildBreadcrumbLevels', () => {
             'video-child-1',
             'annotation-child-2'
         ]);
+    });
+
+    it('links each tab to the sample last open on it', () => {
+        const child = makeCollection('child', SampleType.ANNOTATION);
+        const root = makeCollection('root', SampleType.IMAGE, [child]);
+
+        const levels = buildBreadcrumbLevels([root, child], root, 'child', 'dataset-id', {
+            root: '/datasets/dataset-id/image/root/images/sample-1'
+        });
+
+        expect(levels[0].selected.href).toBe('/datasets/dataset-id/image/root/images/sample-1');
+        expect(levels[1].selected.href).toBe('/datasets/dataset-id/annotation/child/annotations');
     });
 
     it('returns three levels for deeply nested path', () => {

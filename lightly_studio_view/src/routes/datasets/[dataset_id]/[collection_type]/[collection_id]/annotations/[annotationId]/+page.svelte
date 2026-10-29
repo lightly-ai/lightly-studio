@@ -6,6 +6,9 @@
     import { useAnnotationDetails } from '$lib/hooks/useAnnotationDetails/useAnnotationsDetails.js';
 
     import { page } from '$app/state';
+    import { goto } from '$app/navigation';
+    import { routeHelpers } from '$lib/routes';
+    import { useOpenSample } from '$lib/hooks/useOpenSample/useOpenSample';
 
     const { data }: { data: PageData } = $props();
     const { collection } = $derived(data);
@@ -24,6 +27,25 @@
             annotationId
         })
     );
+
+    // Reopen this annotation when the user comes back to the tab.
+    const { rememberOpenSample, forgetOpenSample } = useOpenSample();
+    $effect(() => {
+        rememberOpenSample(collectionId, page.url.pathname + page.url.search);
+    });
+    // The remembered annotation can be deleted by then, so fall back to the grid.
+    $effect(() => {
+        if (!annotationDetailsResponse.isError) return;
+        forgetOpenSample(collectionId);
+        goto(
+            routeHelpers.toAnnotations(
+                page.params.dataset_id!,
+                page.params.collection_type!,
+                collectionId
+            ),
+            { replaceState: true }
+        );
+    });
 </script>
 
 <div class="flex h-full w-full space-x-4 px-4 pb-4" data-testid="annotation-details">
