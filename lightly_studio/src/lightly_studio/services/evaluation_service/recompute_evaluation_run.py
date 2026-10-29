@@ -10,8 +10,8 @@ from sqlmodel import Session
 
 from lightly_studio.evaluation import (
     classification_metric,
+    image_dataset_evaluate,
     instance_segmentation_metric,
-    object_detection_metric,
     semantic_segmentation_metric,
     validators,
 )
@@ -29,6 +29,7 @@ from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
@@ -44,10 +45,11 @@ def recompute_evaluation_run(
 ) -> EvaluationResult:
     """Re-run an evaluation in-place, replacing its metrics.
 
-    Deletes the run's existing ``EvaluationAnnotationMetric`` and
-    ``EvaluationSampleMetric`` rows, re-runs evaluation using the run's stored
-    ``task_type``, ``config_json``, ``gt_annotation_collection_id``, and
-    ``pred_annotation_collection_id``, persists fresh metrics, and resets
+    Deletes the run's existing ``EvaluationAnnotationMetric``,
+    ``EvaluationSampleMetric``, and ``EvaluationClassMetric`` rows, re-runs
+    evaluation using the run's stored ``task_type``, ``config_json``,
+    ``gt_annotation_collection_id``, and ``pred_annotation_collection_id``,
+    persists fresh metrics, and resets
     ``stale_since`` to ``None``. The run ID and ``created_at`` are preserved.
 
     Args:
@@ -86,6 +88,9 @@ def _recompute_evaluation_run(session: Session, run: EvaluationRunTable) -> Eval
         session=session, evaluation_run_id=run.id
     )
     evaluation_sample_metric_resolver.delete_by_evaluation_run_id(
+        session=session, evaluation_run_id=run.id
+    )
+    evaluation_class_metric_resolver.delete_by_evaluation_run_id(
         session=session, evaluation_run_id=run.id
     )
     _persist_metrics(session=session, run=run, data=data)
@@ -137,11 +142,8 @@ def _persist_metrics(session: Session, run: EvaluationRunTable, data: Evaluation
     """Compute and persist fresh metrics for the run's task type."""
     if run.task_type == EvaluationTaskType.OBJECT_DETECTION:
         config = ObjectDetectionEvaluationConfig.model_validate(run.config_json)
-        object_detection_metric.create_and_persist_object_detection_metrics_per_sample(
-            session=session,
-            data=data,
-            iou_threshold=config.iou_threshold,
-            classwise=config.classwise,
+        image_dataset_evaluate.create_and_persist_object_detection_metrics(
+            session=session, data=data, config=config
         )
     elif run.task_type == EvaluationTaskType.CLASSIFICATION:
         ClassificationEvaluationConfig.model_validate(run.config_json)
