@@ -11,9 +11,9 @@ import {
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { selectCategoricalDistributions } from '$lib/hooks/useCategoricalMetadataDistribution';
 import {
+    IMAGE_FIELDS,
     getImageFieldHistogramRequestOptions,
-    selectImageFieldDistributions,
-    type ImageField
+    selectImageFieldDistributions
 } from '$lib/hooks/useImageFieldDistribution';
 import { selectDistributions } from '$lib/hooks/useNumericMetadataDistribution';
 
@@ -25,7 +25,7 @@ interface SampleTagItem {
 /** A user metadata key, or an image field such as the width. */
 type MetadataComparisonField =
     | { name: string; type: 'numeric' | 'categorical' }
-    | { name: ImageField; type: 'image' };
+    | { name: (typeof IMAGE_FIELDS)[number]; type: 'image' };
 
 /** An image or video filter, tagged with its `filter_type`. */
 type MetadataDistributionFilter = NonNullable<MetadataHistogramsRequest['filters']>;
