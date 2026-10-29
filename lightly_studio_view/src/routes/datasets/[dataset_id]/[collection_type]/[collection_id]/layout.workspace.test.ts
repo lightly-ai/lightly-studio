@@ -557,6 +557,17 @@ describe('filter sidebar collapse/expand', () => {
         expect(screen.getByTestId('filter-panel-body')).toHaveAttribute('aria-hidden', 'false');
     });
 
+    it('pins the filter panel header, with the hide button, while the panel scrolls', async () => {
+        setPageRoute(APP_ROUTES.images);
+        mockFilterPanelCollapsed.set(false);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        // jsdom does not scroll, so the sticky position is the observable contract.
+        expect(screen.getByTestId('filter-panel-header')).toHaveClass('sticky', 'top-0');
+    });
+
     it('filter panel is collapsed when filterPanelCollapsed is true', async () => {
         setPageRoute(APP_ROUTES.images);
         mockFilterPanelCollapsed.set(true);

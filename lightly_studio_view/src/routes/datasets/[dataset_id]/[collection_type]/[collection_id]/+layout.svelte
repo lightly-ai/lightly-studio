@@ -646,8 +646,10 @@
                         <div
                             class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
+                            <!-- Sticky, so "Hide filters" stays reachable while the panel is scrolled. -->
                             <h2
-                                class="flex items-center justify-between py-2 text-lg font-semibold"
+                                class="sticky top-0 z-10 flex items-center justify-between bg-card py-2 text-lg font-semibold"
+                                data-testid="filter-panel-header"
                             >
                                 <span class="flex items-center space-x-2">
                                     <Filter class="size-5" />
