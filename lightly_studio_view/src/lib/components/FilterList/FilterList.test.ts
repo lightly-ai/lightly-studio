@@ -14,6 +14,32 @@ const items = [
 const defaultProps = { items, onToggle: vi.fn(), onSelectionChange: vi.fn() };
 
 describe('FilterList', () => {
+    it('renders the first 50 rows of a long list and shows more on request', async () => {
+        const manyItems = Array.from({ length: 120 }, (_, index) => ({
+            id: `value-${index}`,
+            label: `value-${index}`,
+            selected: false
+        }));
+        render(FilterList, { props: { ...defaultProps, items: manyItems } });
+
+        expect(screen.getAllByRole('checkbox')).toHaveLength(50);
+        await fireEvent.click(screen.getByRole('button', { name: 'Show 50 more of 70' }));
+        expect(screen.getAllByRole('checkbox')).toHaveLength(100);
+    });
+
+    it('searches all rows of a long list, not only the rendered ones', async () => {
+        const manyItems = Array.from({ length: 120 }, (_, index) => ({
+            id: `value-${index}`,
+            label: `value-${index}`,
+            selected: false
+        }));
+        render(FilterList, { props: { ...defaultProps, items: manyItems } });
+
+        await fireEvent.input(screen.getByLabelText('Search'), { target: { value: 'value-119' } });
+
+        expect(screen.getByText('value-119')).toBeInTheDocument();
+    });
+
     it('renders a checkbox and the count of each item', () => {
         render(FilterList, { props: defaultProps });
 

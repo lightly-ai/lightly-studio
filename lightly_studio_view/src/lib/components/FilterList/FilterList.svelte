@@ -48,10 +48,17 @@
         customRowId = null
     }: Props = $props();
 
+    // Rendering thousands of rows (e.g. a metadata field with a unique value per image) blocks
+    // the page for seconds, so long lists render in pages. Search still covers every item.
+    const PAGE_SIZE = 50;
+
     let search = $state('');
+    let shownCount = $state(PAGE_SIZE);
 
     const searchVisible = $derived(showSearch ?? items.length > 5);
     const visible = $derived(items.filter((item) => matchesSearch(item, search)));
+    const shown = $derived(visible.slice(0, shownCount));
+    const hiddenCount = $derived(visible.length - shown.length);
 </script>
 
 <div class="w-full space-y-2 overflow-hidden" data-testid={testId}>
@@ -79,7 +86,7 @@
             emphasized
         />
     {/if}
-    {#each visible as item (item.id)}
+    {#each shown as item (item.id)}
         {#if customRow && item.id === customRowId}
             {@render customRow(item)}
         {:else}
@@ -93,6 +100,15 @@
             />
         {/if}
     {/each}
+    {#if hiddenCount > 0}
+        <button
+            type="button"
+            class="text-xs text-diffuse-foreground hover:text-foreground hover:underline"
+            onclick={() => (shownCount += PAGE_SIZE)}
+        >
+            Show {Math.min(PAGE_SIZE, hiddenCount)} more of {hiddenCount}
+        </button>
+    {/if}
     {#if items.length === 0 && emptyText}
         <p class="text-sm text-diffuse-foreground">{emptyText}</p>
     {:else if items.length > 0 && visible.length === 0}
