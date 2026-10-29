@@ -225,6 +225,7 @@
             onSelectionChange={handleSelectionChange}
             testId="tags-menu"
             searchPlaceholder="Search tags…"
+            showSearch={tagItems.length > 0}
             emptyText="No tags yet"
             customRowId={editingTagId}
         >

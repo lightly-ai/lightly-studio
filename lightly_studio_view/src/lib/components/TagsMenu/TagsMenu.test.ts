@@ -146,6 +146,12 @@ describe('TagsMenu', () => {
         await fireEvent.click(screen.getByRole('button', { name: optionLabel }));
     }
 
+    it('shows the tag search even for a short tag list', () => {
+        render(TagsMenu, { props: { collection_id: 'collection-1', gridType: 'images' } });
+
+        expect(screen.getByPlaceholderText('Search tags…')).toBeInTheDocument();
+    });
+
     it('assigns an existing tag to the selected samples', async () => {
         mocks.selectedSampleIdsByCollection = {
             'collection-1': new Set(['sample-1', 'sample-2'])
