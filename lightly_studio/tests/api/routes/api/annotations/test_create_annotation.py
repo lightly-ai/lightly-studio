@@ -336,3 +336,29 @@ def test_create_annotation_cuboid_3d(
         ),
         tags=[],
     )
+
+
+def test_create_annotation__schedules_crop_embedding(
+    mocker: MockerFixture,
+    collection: CollectionTable,
+    test_client: TestClient,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    mock_embed = mocker.patch.object(annotations_service, "embed_annotation_crops_in_background")
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id!s}/annotations",
+        json={
+            "annotation_label_id": str(annotation_labels[0].annotation_label_id),
+            "annotation_type": AnnotationType.OBJECT_DETECTION,
+            "parent_sample_id": str(samples[0].sample_id),
+            "x": 10,
+            "y": 20,
+            "width": 30,
+            "height": 40,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    mock_embed.assert_called_once_with(annotation_ids=[UUID(response.json()["sample_id"])])

@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Body, Depends, HTTPException, Path
+from fastapi import APIRouter, BackgroundTasks, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
 from sqlmodel import col
@@ -258,8 +258,19 @@ def update_annotations(
         Path(title="collection Id"),
     ],
     annotation_update_inputs: Annotated[list[AnnotationUpdateInput], Body()],
+    background_tasks: BackgroundTasks,
 ) -> list[AnnotationBaseTable]:
-    """Update multiple annotations in the database."""
+    """Update multiple annotations and embed changed boxes after the response."""
+    moved_annotation_ids = [
+        update_input.annotation_id
+        for update_input in annotation_update_inputs
+        if update_input.bounding_box is not None
+    ]
+    if moved_annotation_ids:
+        background_tasks.add_task(
+            annotations_service.embed_annotation_crops_in_background,
+            annotation_ids=moved_annotation_ids,
+        )
     return annotations_service.update_annotations(
         session=session,
         annotation_updates=[

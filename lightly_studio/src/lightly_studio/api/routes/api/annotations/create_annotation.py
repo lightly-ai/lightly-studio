@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Path
+from fastapi import APIRouter, BackgroundTasks, Path
 from fastapi.params import Body
 from pydantic import BaseModel
 
@@ -52,11 +52,17 @@ def create_annotation(
     ],
     session: SessionDep,
     create_annotation_input: Annotated[AnnotationCreateInput, Body()],
+    background_tasks: BackgroundTasks,
 ) -> AnnotationBaseTable:
-    """Create a new annotation."""
-    return annotations_service.create_annotation(
+    """Create a new annotation and embed its crop after the response."""
+    annotation = annotations_service.create_annotation(
         session=session,
         annotation=AnnotationCreateParams(
             collection_id=collection_id, **create_annotation_input.model_dump()
         ),
     )
+    background_tasks.add_task(
+        annotations_service.embed_annotation_crops_in_background,
+        annotation_ids=[annotation.sample_id],
+    )
+    return annotation

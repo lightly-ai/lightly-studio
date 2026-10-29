@@ -8,7 +8,7 @@ from typing import Any, NamedTuple
 from uuid import UUID
 
 from sqlalchemy import ARRAY, BindParameter, Float, bindparam, func
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, delete, select
 from sqlmodel.sql.expression import Select
 
 from lightly_studio.database import db_insert, db_vector
@@ -315,6 +315,29 @@ def get_embedding_count(session: Session, collection_id: UUID, embedding_model_i
         .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
     )
     return session.exec(query).one()
+
+
+def delete_by_sample_ids(
+    session: Session, sample_ids: Sequence[UUID], embedding_model_id: UUID
+) -> None:
+    """Delete the embeddings of a model for the given samples, without committing.
+
+    Marks the plots of the affected collections as dirty.
+
+    Args:
+        session: The database session.
+        sample_ids: The samples whose embeddings are deleted.
+        embedding_model_id: The model whose embeddings are deleted.
+    """
+    embedding_plot_resolver.mark_dirty(
+        session=session, sample_ids=sample_ids, embedding_model_id=embedding_model_id
+    )
+    for batch in batching.batched(items=sample_ids):
+        session.exec(
+            delete(SampleEmbeddingTable)
+            .where(col(SampleEmbeddingTable.sample_id).in_(batch))
+            .where(col(SampleEmbeddingTable.embedding_model_id) == embedding_model_id)
+        )
 
 
 def _read_embedding_rows_binary(

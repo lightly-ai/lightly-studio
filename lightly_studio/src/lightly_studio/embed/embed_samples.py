@@ -28,7 +28,10 @@ from tqdm import tqdm
 from lightly_studio.embed import default_embedder, embedding_storage
 from lightly_studio.resolvers import (
     annotation_resolver,
+    collection_embedding_model_resolver,
+    collection_resolver,
     image_resolver,
+    sample_embedding_resolver,
     video_resolver,
 )
 from lightly_studio.utils import batching
@@ -222,6 +225,47 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
                 annotation_sample_ids=sample_id_chunk,
             )
             progress.update(embedded_count)
+
+
+def embed_annotations(
+    session: Session, annotation_collection_id: UUID, annotation_sample_ids: list[UUID]
+) -> None:
+    """Embed the crops of some annotations and replace their old embeddings.
+
+    The annotations are embedded only when the annotation collection or its parent has a
+    default embedding model. Thus a dataset loaded without embeddings does not load an
+    embedder for a single edit. The embedder is then resolved as in
+    ``embed_annotation_collection``.
+
+    The old embeddings of all given annotations are deleted, also when a crop is not valid
+    any more, so that no annotation keeps the embedding of an old box.
+
+    Args:
+        session: Database session for resolver operations.
+        annotation_collection_id: The annotation collection that holds the annotations.
+        annotation_sample_ids: The annotation ids to embed.
+    """
+    if not _has_default_model_in_tree(session=session, collection_id=annotation_collection_id):
+        return
+    default_embedder_and_model_id = default_embedder.resolve_default_embedder(
+        session=session,
+        collection_id=annotation_collection_id,
+        embedder_type=ImageCropPathEmbedder,
+    )
+    if default_embedder_and_model_id is None:
+        return
+    embedder, model_id = default_embedder_and_model_id
+
+    sample_embedding_resolver.delete_by_sample_ids(
+        session=session, sample_ids=annotation_sample_ids, embedding_model_id=model_id
+    )
+    session.commit()
+    _embed_annotation_chunk(
+        session=session,
+        embedder=embedder,
+        model_id=model_id,
+        annotation_sample_ids=annotation_sample_ids,
+    )
 
 
 def embed_video_samples(session: Session, collection_id: UUID, sample_ids: list[UUID]) -> None:
@@ -503,3 +547,23 @@ def _embed_annotation_chunk(
         show_progress=False,
     )
     return len(annotation_crops)
+
+
+def _has_default_model_in_tree(session: Session, collection_id: UUID) -> bool:
+    """Report whether a collection or its parent has a default embedding model."""
+    if (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=session, collection_id=collection_id
+        )
+        is not None
+    ):
+        return True
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None or collection.parent_collection_id is None:
+        return False
+    return (
+        collection_embedding_model_resolver.get_default_by_collection_id(
+            session=session, collection_id=collection.parent_collection_id
+        )
+        is not None
+    )

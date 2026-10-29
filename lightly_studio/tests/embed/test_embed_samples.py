@@ -27,8 +27,9 @@ from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.errors import MissingCapabilityError
 from lightly_studio.embed.random_embedder import RandomEmbedder
 from lightly_studio.models.collection import SampleType
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingCreate, SampleEmbeddingTable
 from lightly_studio.resolvers import (
+    annotation_resolver,
     collection_embedding_model_resolver,
     collection_resolver,
     sample_embedding_resolver,
@@ -670,6 +671,124 @@ def test_embed_annotation_collection__stores_only_kept_crops(
         annotation_sample_ids[0]: [box_xs[0]] * 3,
         annotation_sample_ids[1]: [box_xs[1]] * 3,
     }
+
+
+def test_embed_annotations__replaces_old_embeddings(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """Old embeddings are replaced, and a crop the embedder drops keeps no old embedding."""
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    box_xs = [100, 200]
+    annotation_sample_ids = []
+    for index, box_x in enumerate(box_xs):
+        image = create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/path/to/sample_{index}.png",
+        )
+        annotation = create_annotation(
+            session=db_session,
+            collection_id=collection.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_data={"x": box_x, "y": 0, "width": 20, "height": 20},
+        )
+        annotation_sample_ids.append(annotation.sample_id)
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    model_id = _register_default_random_model(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=sample_id,
+                embedding_model_id=model_id,
+                embedding=np.array([9.0, 9.0, 9.0], dtype=np.float32),
+            )
+            for sample_id in annotation_sample_ids
+        ],
+    )
+    registry = EmbedderRegistry()
+    registry.register(embedder=_BoxXImageCropEmbedder())
+    mocker.patch.object(embedder_registry, "get_registry", return_value=registry)
+
+    embed_samples.embed_annotations(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        annotation_sample_ids=annotation_sample_ids,
+    )
+
+    # The embedder drops the last crop, so its old embedding is deleted and not replaced.
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=db_session, sample_ids=annotation_sample_ids, embedding_model_id=model_id
+    )
+    stored = {row.sample_id: list(row.embedding) for row in rows}
+    assert stored == {annotation_sample_ids[0]: [100.0, 100.0, 100.0]}
+
+
+@pytest.mark.usefixtures("patched_registry")
+def test_embed_annotations__uses_parent_default_model(
+    db_session: Session,
+) -> None:
+    """With a default model only on the parent, the crop is embedded in the parent's space."""
+    annotation_collection_id = _create_annotation_collection(session=db_session)
+    annotation_collection = collection_resolver.get_by_id(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    assert annotation_collection is not None
+    assert annotation_collection.parent_collection_id is not None
+    parent_model_id = _register_default_random_model(
+        session=db_session, collection_id=annotation_collection.parent_collection_id
+    )
+    annotation_sample_ids = annotation_resolver.get_unembedded_annotation_ids(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        embedding_model_id=parent_model_id,
+    )
+
+    embed_samples.embed_annotations(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        annotation_sample_ids=annotation_sample_ids,
+    )
+
+    count = sample_embedding_resolver.get_embedding_count(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=parent_model_id,
+    )
+    assert count == 1
+
+
+@pytest.mark.usefixtures("patched_registry")
+def test_embed_annotations__no_default_model_skips(
+    db_session: Session,
+) -> None:
+    """Without a default model on the collection or its parent, nothing is embedded."""
+    annotation_collection_id = _create_annotation_collection(session=db_session)
+    annotation_sample_ids = [
+        annotation.sample_id
+        for annotation in annotation_resolver.get_all(session=db_session).annotations
+    ]
+
+    embed_samples.embed_annotations(
+        session=db_session,
+        annotation_collection_id=annotation_collection_id,
+        annotation_sample_ids=annotation_sample_ids,
+    )
+
+    assert _stored_embeddings(session=db_session) == []
+    default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=db_session, collection_id=annotation_collection_id
+    )
+    assert default_model_id is None
 
 
 def test_embed_video_samples(
