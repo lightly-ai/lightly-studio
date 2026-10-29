@@ -57,7 +57,11 @@ def serialize_point_cloud(  # noqa: PLR0913
     layout, data, fields = read_point_cloud_layout.read_point_cloud_layout(message=message)
     xyz = read_point_cloud_xyz.read_point_cloud_xyz(data=data, fields=fields, layout=layout)
     if transform is not None:
-        xyz = (xyz.astype(np.float64) @ transform[:3, :3].T + transform[:3, 3]).astype(np.float32)
+        xyz_64 = xyz.astype(np.float64)
+        # Non-finite xyz or transform values are silenced here; the valid filter below drops them.
+        with np.errstate(divide="ignore", over="ignore", invalid="ignore"):
+            xyz_64 = xyz_64 @ transform[:3, :3].T + transform[:3, 3]
+        xyz = xyz_64.astype(np.float32)
     valid = np.all(np.isfinite(xyz), axis=1)
     columns = build_point_cloud_columns.build_point_cloud_columns(
         data=data, fields=fields, layout=layout, xyz=xyz, valid=valid
