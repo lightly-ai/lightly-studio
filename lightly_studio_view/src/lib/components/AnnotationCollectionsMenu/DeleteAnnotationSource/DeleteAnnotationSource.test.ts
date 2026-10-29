@@ -4,6 +4,7 @@ import DeleteAnnotationSource from './DeleteAnnotationSource.svelte';
 
 const mocks = vi.hoisted(() => ({
     remove: vi.fn(),
+    onClose: vi.fn(),
     count: undefined as number | undefined
 }));
 
@@ -16,7 +17,11 @@ vi.mock('./useDeleteAnnotationSource.svelte', () => ({
 }));
 
 describe('DeleteAnnotationSource', () => {
-    const defaultProps = { collectionId: 'col-1', source: { id: 's1', name: 'predictions' } };
+    const defaultProps = {
+        collectionId: 'col-1',
+        source: { id: 's1', name: 'predictions' },
+        onClose: mocks.onClose
+    };
 
     beforeEach(() => {
         vi.clearAllMocks();
@@ -26,10 +31,6 @@ describe('DeleteAnnotationSource', () => {
     it('asks for confirmation with the annotation count and deletes on confirm', async () => {
         mocks.count = 12;
         render(DeleteAnnotationSource, defaultProps);
-
-        await fireEvent.click(
-            screen.getByRole('button', { name: 'Delete annotation source predictions' })
-        );
 
         expect(
             screen.getByText(
@@ -47,10 +48,15 @@ describe('DeleteAnnotationSource', () => {
         mocks.count = 1;
         render(DeleteAnnotationSource, defaultProps);
 
-        await fireEvent.click(
-            screen.getByRole('button', { name: 'Delete annotation source predictions' })
-        );
-
         expect(screen.getByText(/and its 1 annotation\?/)).toBeInTheDocument();
+    });
+
+    it('closes on cancel without deleting', async () => {
+        render(DeleteAnnotationSource, defaultProps);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+        expect(mocks.onClose).toHaveBeenCalled();
+        expect(mocks.remove).not.toHaveBeenCalled();
     });
 });

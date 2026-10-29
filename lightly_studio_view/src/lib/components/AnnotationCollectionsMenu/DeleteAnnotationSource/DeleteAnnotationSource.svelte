@@ -1,20 +1,19 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { Trash2 } from '@lucide/svelte';
     import { useDeleteAnnotationSource } from './useDeleteAnnotationSource.svelte';
 
     interface Props {
         collectionId: string;
         source: { id: string; name: string };
+        /** Called when the dialog closes, after a delete or a cancel. */
+        onClose: () => void;
     }
-    const { collectionId, source }: Props = $props();
-    let open = $state(false);
+    const { collectionId, source, onClose }: Props = $props();
     const { mutation, remove, annotationCount } = useDeleteAnnotationSource(() => ({
         collectionId,
         source,
-        open,
-        onDeleted: () => (open = false)
+        onDeleted: onClose
     }));
     const count = $derived(annotationCount());
     const countText = $derived(
@@ -24,20 +23,11 @@
     );
 </script>
 
-<button
-    type="button"
-    class="inline-flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-    aria-label={`Delete annotation source ${source.name}`}
-    title="Delete annotation source"
-    onclick={() => (open = true)}
->
-    <Trash2 class="size-3.5" />
-</button>
 <Dialog.Root
     bind:open={
-        () => open,
+        () => true,
         (value) => {
-            if (!mutation.isPending) open = value;
+            if (!value && !mutation.isPending) onClose();
         }
     }
 >
@@ -51,8 +41,7 @@
         <Dialog.Footer>
             <Button
                 variant="outline"
-                buttonProps={{ disabled: mutation.isPending, onclick: () => (open = false) }}
-                >Cancel</Button
+                buttonProps={{ disabled: mutation.isPending, onclick: onClose }}>Cancel</Button
             >
             <Button
                 variant="destructive"

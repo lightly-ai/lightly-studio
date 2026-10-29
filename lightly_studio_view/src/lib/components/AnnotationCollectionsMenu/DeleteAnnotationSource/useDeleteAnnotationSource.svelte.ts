@@ -8,22 +8,17 @@ import { toast } from 'svelte-sonner';
 interface Params {
     collectionId: string;
     source: { id: string; name: string };
-    /** The annotation count loads only while the dialog is open. */
-    open: boolean;
     onDeleted: () => void;
 }
 
 export const useDeleteAnnotationSource = (getParams: () => Params) => {
     const client = useQueryClient();
     const annotations = createQuery(() => {
-        const { source, open } = getParams();
-        return {
-            ...readAnnotationsOptions({
-                path: { collection_id: source.id },
-                query: { cursor: 0, limit: 1 }
-            }),
-            enabled: open
-        };
+        const { source } = getParams();
+        return readAnnotationsOptions({
+            path: { collection_id: source.id },
+            query: { cursor: 0, limit: 1 }
+        });
     });
     const mutation = createMutation(() => ({
         ...deleteAnnotationSourceMutation(),

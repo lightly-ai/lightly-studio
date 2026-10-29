@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
@@ -127,6 +128,46 @@ def test_move_annotations__empty_ids(db_session: Session, test_client: TestClien
     )
 
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_rename_annotation_source(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    pred = _create_annotations(
+        session=db_session, collection=collection, source_name="predictions", count=1
+    )[0]
+
+    response = test_client.put(
+        f"/api/collections/{collection.collection_id}/annotation_collections/"
+        f"{pred.annotation_collection_id}",
+        json={"name": " model_v2 "},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    renamed_id = collection_resolver.get_by_name(
+        session=db_session, name="model_v2", parent_collection_id=collection.collection_id
+    )
+    assert response.json() == {"annotation_collection_id": str(renamed_id)}
+
+
+def test_rename_annotation_source__name_of_other_source(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection = create_collection(session=db_session)
+    _create_annotations(
+        session=db_session, collection=collection, source_name="ground_truth", count=1
+    )
+    pred = _create_annotations(
+        session=db_session, collection=collection, source_name="predictions", count=1
+    )[0]
+
+    response = test_client.put(
+        f"/api/collections/{collection.collection_id}/annotation_collections/"
+        f"{pred.annotation_collection_id}",
+        json={"name": "ground_truth"},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": "An annotation source named 'ground_truth' already exists."}
 
 
 def _create_annotations(

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session, col, delete, or_, select
+from sqlmodel import Session, col, delete, select
 
 from lightly_studio.errors import AnnotationSourceInUseError
 from lightly_studio.models.annotation_collection_coverage import (
@@ -12,7 +12,6 @@ from lightly_studio.models.annotation_collection_coverage import (
 )
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
-from lightly_studio.models.evaluation_run import EvaluationRunTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_resolver, collection_resolver
@@ -43,7 +42,7 @@ def delete_annotation_source(
         dataset_collection_id=dataset_collection_id,
         annotation_source_id=annotation_source_id,
     )
-    evaluation_run_names = _get_evaluation_run_names(
+    evaluation_run_names = get_annotation_source.get_evaluation_run_names(
         session=session, annotation_source_id=annotation_source_id
     )
     if evaluation_run_names:
@@ -78,18 +77,3 @@ def delete_annotation_source(
     session.commit()
     collection_resolver.delete(session=session, collection_id=annotation_source_id)
     return deleted_count
-
-
-def _get_evaluation_run_names(session: Session, annotation_source_id: UUID) -> list[str]:
-    return list(
-        session.exec(
-            select(EvaluationRunTable.name)
-            .where(
-                or_(
-                    col(EvaluationRunTable.gt_annotation_collection_id) == annotation_source_id,
-                    col(EvaluationRunTable.pred_annotation_collection_id) == annotation_source_id,
-                )
-            )
-            .order_by(col(EvaluationRunTable.name))
-        ).all()
-    )

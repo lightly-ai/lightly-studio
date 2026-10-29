@@ -19,6 +19,9 @@
         enableColorPicker?: boolean;
         /** Renders controls at the end of each item row, e.g. a delete button. */
         itemActions?: Snippet<[MenuItemType]>;
+        /** The item whose row shows `itemEditor` instead of its label, e.g. while renaming. */
+        editingItemId?: string | null;
+        itemEditor?: Snippet<[MenuItemType, { checked: boolean; onCheckedChange: () => void }]>;
     }
 
     let {
@@ -29,7 +32,9 @@
         containerProps,
         showColorMarker,
         enableColorPicker,
-        itemActions
+        itemActions,
+        editingItemId = null,
+        itemEditor
     }: SideMenuProps = $props();
 
     let internalSelectedItemsIds = $state(untrack(() => initialSelectedItemsIds ?? []));
@@ -49,16 +54,23 @@
 
 <div {...containerProps} class={cn('w-full space-y-2 overflow-hidden', containerProps?.class)}>
     {#each items as item (item.id)}
-        <MenuItem
-            name={item.name}
-            {showColorMarker}
-            {enableColorPicker}
-            checked={selected.includes(item.id)}
-            onCheckedChange={() => handleCheckedChange(item.id)}
-        >
-            {#snippet actions()}
-                {@render itemActions?.(item)}
-            {/snippet}
-        </MenuItem>
+        {#if item.id === editingItemId && itemEditor}
+            {@render itemEditor(item, {
+                checked: selected.includes(item.id),
+                onCheckedChange: () => handleCheckedChange(item.id)
+            })}
+        {:else}
+            <MenuItem
+                name={item.name}
+                {showColorMarker}
+                {enableColorPicker}
+                checked={selected.includes(item.id)}
+                onCheckedChange={() => handleCheckedChange(item.id)}
+            >
+                {#snippet actions()}
+                    {@render itemActions?.(item)}
+                {/snippet}
+            </MenuItem>
+        {/if}
     {/each}
 </div>

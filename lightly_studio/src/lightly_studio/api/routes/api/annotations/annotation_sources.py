@@ -45,6 +45,45 @@ def delete_annotation_source(
     return DeleteAnnotationSourceResult(deleted_annotation_count=deleted_count)
 
 
+class RenameAnnotationSourceInput(BaseModel):
+    """API input for renaming an annotation source."""
+
+    name: str = Field(min_length=1)
+
+
+class RenameAnnotationSourceResult(BaseModel):
+    """Result of an annotation source rename. The renamed source has a new ID."""
+
+    annotation_collection_id: UUID
+
+
+@annotation_sources_router.put(
+    "/annotation_collections/{annotation_collection_id}",
+    response_model=RenameAnnotationSourceResult,
+)
+def rename_annotation_source(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The collection that owns the source")
+    ],
+    annotation_collection_id: Annotated[
+        UUID, Path(title="annotation collection Id", description="The source to rename")
+    ],
+    body: Annotated[RenameAnnotationSourceInput, Body()],
+) -> RenameAnnotationSourceResult:
+    """Rename an annotation source.
+
+    Responds with 400 if another source has the name and 409 if evaluation runs use the source.
+    """
+    renamed_id = annotation_source_service.rename_annotation_source(
+        session=session,
+        dataset_collection_id=collection_id,
+        annotation_source_id=annotation_collection_id,
+        name=body.name.strip(),
+    )
+    return RenameAnnotationSourceResult(annotation_collection_id=renamed_id)
+
+
 class MoveAnnotationsInput(BaseModel):
     """API input for moving annotations to another annotation source."""
 

@@ -1,7 +1,6 @@
 <script lang="ts">
     import * as Popover from '$lib/components/ui/popover';
     import { MoreHorizontal, Pencil, Trash2 } from '@lucide/svelte';
-    import type { TagView } from '$lib/services/types';
     import { Button } from '$lib/components';
 
     const actionButtonClass =
@@ -10,32 +9,40 @@
     const destructiveActionButtonClass = `${actionButtonClass} hover:bg-destructive hover:text-destructive-foreground`;
 
     let {
-        tag,
+        id,
+        name,
+        kind,
         open,
-        deletingTagId,
-        renamingTagId,
+        deletingId,
+        renamingId,
         onOpenChange,
         onCloseAutoFocus,
         onRename,
         onDelete
     }: {
-        tag: TagView;
+        id: string;
+        name: string;
+        /** What the item is, as users read it, e.g. "tag" or "annotation source". */
+        kind: string;
         open: boolean;
-        deletingTagId: string | null;
-        renamingTagId: string | null;
+        deletingId: string | null;
+        renamingId: string | null;
         onOpenChange: (open: boolean) => void;
-        onCloseAutoFocus: (event: Event) => void;
-        onRename: (tag: TagView, event: MouseEvent) => void;
-        onDelete: (tag: TagView, event: MouseEvent) => void;
+        onCloseAutoFocus?: (event: Event) => void;
+        onRename: (event: MouseEvent) => void;
+        onDelete: (event: MouseEvent) => void;
     } = $props();
+
+    const testIdKind = $derived(kind.replaceAll(' ', '-'));
+    const busy = $derived(deletingId !== null || renamingId !== null);
 </script>
 
 <Popover.Root {open} onOpenChange={(o) => onOpenChange(o)}>
     <Popover.Trigger
         class="inline-flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50"
-        aria-label={`Open actions for tag ${tag.name}`}
-        data-testid={`tag-actions-trigger-${tag.tag_id}`}
-        disabled={deletingTagId === tag.tag_id || renamingTagId === tag.tag_id}
+        aria-label={`Open actions for ${kind} ${name}`}
+        data-testid={`${testIdKind}-actions-trigger-${id}`}
+        disabled={deletingId === id || renamingId === id}
         onclick={(event: MouseEvent) => {
             event.stopPropagation();
         }}
@@ -43,7 +50,7 @@
         <MoreHorizontal />
     </Popover.Trigger>
     <Popover.Content
-        class="w-40 p-1"
+        class="w-max min-w-40 p-1"
         align="end"
         {onCloseAutoFocus}
         onclick={(event: MouseEvent) => {
@@ -55,29 +62,25 @@
             buttonProps={{
                 type: 'button',
                 class: defaultActionButtonClass,
-                'data-testid': `rename-tag-${tag.tag_id}`,
-                disabled: deletingTagId !== null || renamingTagId !== null,
-                onclick: (event: MouseEvent) => {
-                    onRename(tag, event);
-                }
+                'data-testid': `rename-${testIdKind}-${id}`,
+                disabled: busy,
+                onclick: onRename
             }}
         >
-            Rename tag
+            Rename {kind}
         </Button>
         <Button
             icon={Trash2}
-            isPending={deletingTagId === tag.tag_id}
+            isPending={deletingId === id}
             buttonProps={{
                 type: 'button',
                 class: destructiveActionButtonClass,
-                'data-testid': `delete-tag-${tag.tag_id}`,
-                disabled: deletingTagId !== null || renamingTagId !== null,
-                onclick: (event: MouseEvent) => {
-                    void onDelete(tag, event);
-                }
+                'data-testid': `delete-${testIdKind}-${id}`,
+                disabled: busy,
+                onclick: onDelete
             }}
         >
-            {deletingTagId === tag.tag_id ? 'Deleting...' : 'Delete tag'}
+            {deletingId === id ? 'Deleting...' : `Delete ${kind}`}
         </Button>
     </Popover.Content>
 </Popover.Root>

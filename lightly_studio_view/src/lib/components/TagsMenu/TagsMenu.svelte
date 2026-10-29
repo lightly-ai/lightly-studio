@@ -13,8 +13,8 @@
         renameTag
     } from '$lib/api/lightly_studio_local';
     import TagAssignInput from './TagAssignInput.svelte';
-    import TagRenameInput from './TagRenameInput.svelte';
-    import TagActionMenu from './TagActionMenu.svelte';
+    import { ItemRenameInput } from '$lib/components/ItemRenameInput';
+    import { ItemActionMenu } from '$lib/components/ItemActionMenu';
     import { toast } from 'svelte-sonner';
     import { get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
@@ -230,23 +230,27 @@
         >
             {#snippet customRow(item)}
                 {@const tag = tagById.get(item.id)!}
-                <TagRenameInput
-                    {tag}
-                    {renamingTagId}
-                    tagsSelected={$tagsSelected}
-                    onTagSelectionToggle={tagSelectionToggle}
-                    onSave={handleRename}
+                <ItemRenameInput
+                    id={tag.tag_id}
+                    name={tag.name}
+                    kind="tag"
+                    renamingId={renamingTagId}
+                    checked={$tagsSelected.has(tag.tag_id)}
+                    onCheckedChange={() => tagSelectionToggle(tag.tag_id)}
+                    onSave={(newName) => handleRename(tag, newName)}
                     onCancel={cancelRename}
                 />
             {/snippet}
             {#snippet trailing(item)}
                 {@const tag = tagById.get(item.id)!}
                 {#if canManageTags}
-                    <TagActionMenu
-                        {tag}
+                    <ItemActionMenu
+                        id={tag.tag_id}
+                        name={tag.name}
+                        kind="tag"
                         open={openActionsTagId === tag.tag_id}
-                        {deletingTagId}
-                        {renamingTagId}
+                        deletingId={deletingTagId}
+                        renamingId={renamingTagId}
                         onOpenChange={(open) => {
                             openActionsTagId = open ? tag.tag_id : null;
                         }}
@@ -256,8 +260,8 @@
                                 suppressCloseAutoFocusTagId = null;
                             }
                         }}
-                        onRename={openRename}
-                        onDelete={handleDeleteTag}
+                        onRename={(event) => openRename(tag, event)}
+                        onDelete={(event) => handleDeleteTag(tag, event)}
                     />
                 {/if}
             {/snippet}

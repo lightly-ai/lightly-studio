@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnnotationCollectionsMenu from './AnnotationCollectionsMenu.svelte';
@@ -13,6 +13,7 @@ vi.mock('$lib/hooks', async (importOriginal) => {
 });
 
 const mocks = vi.hoisted(() => ({
+    rename: vi.fn(),
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: null as unknown as Writable<string[]>,
     setSelectedCollectionIds: vi.fn(),
@@ -47,6 +48,13 @@ vi.mock('./DeleteAnnotationSource/useDeleteAnnotationSource.svelte', () => ({
     })
 }));
 
+vi.mock('./useRenameAnnotationSource/useRenameAnnotationSource', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        useRenameAnnotationSource: () => ({ rename: mocks.rename, renamingId: readable(null) })
+    };
+});
+
 vi.mock('$lib/hooks/useSettings', async () => {
     const { writable } = await import('svelte/store');
     mocks.enforceColoringByClassStore = writable<boolean>(false);
@@ -75,14 +83,37 @@ describe('AnnotationCollectionsMenu', () => {
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
-    it('renders a lone source with a delete button', () => {
+    it('renders a lone source with an actions menu', () => {
         mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
         render(AnnotationCollectionsMenu, defaultProps);
         expect(screen.getByText('Annotation Sources')).toBeInTheDocument();
         expect(screen.getAllByRole('checkbox')).toHaveLength(1);
         expect(
-            screen.getByRole('button', { name: 'Delete annotation source Ground Truth' })
+            screen.getByRole('button', { name: 'Open actions for annotation source Ground Truth' })
         ).toBeInTheDocument();
+    });
+
+    it('renames a source inline from the actions menu', async () => {
+        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
+        render(AnnotationCollectionsMenu, defaultProps);
+
+        await fireEvent.click(screen.getByTestId('annotation-source-actions-trigger-c1'));
+        await fireEvent.click(await screen.findByTestId('rename-annotation-source-c1'));
+        const input = await screen.findByTestId('rename-annotation-source-input-c1');
+        await fireEvent.input(input, { target: { value: ' Reviewed ' } });
+        await fireEvent.click(screen.getByTestId('save-annotation-source-rename-c1'));
+
+        expect(mocks.rename).toHaveBeenCalledWith({ id: 'c1', name: 'Ground Truth' }, 'Reviewed');
+    });
+
+    it('asks for confirmation before deleting a source', async () => {
+        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
+        render(AnnotationCollectionsMenu, defaultProps);
+
+        await fireEvent.click(screen.getByTestId('annotation-source-actions-trigger-c1'));
+        await fireEvent.click(await screen.findByTestId('delete-annotation-source-c1'));
+
+        expect(await screen.findByText('Delete annotation source?')).toBeInTheDocument();
     });
 
     it('renders a menu item for each collection when there are two or more', () => {
