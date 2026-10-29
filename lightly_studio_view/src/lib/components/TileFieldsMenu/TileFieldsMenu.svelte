@@ -3,7 +3,7 @@
     import { Button } from '$lib/components';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import * as Popover from '$lib/components/ui/popover';
-    import { useTileFields } from '$lib/hooks/useTileFields/useTileFields';
+    import { resolveTileFields, useTileFields } from '$lib/hooks/useTileFields/useTileFields';
     import { getTileFieldOptions } from './getTileFieldOptions';
 
     interface Props {
@@ -16,7 +16,7 @@
     const { collectionId, isAnnotations, metadataKeys, compact = false }: Props = $props();
 
     const { tileFields, toggleTileField, clearTileFields } = useTileFields();
-    const ticked = $derived($tileFields[collectionId] ?? []);
+    const ticked = $derived(resolveTileFields($tileFields[collectionId], isAnnotations));
     const options = $derived(getTileFieldOptions({ isAnnotations, metadataKeys }));
 </script>
 
@@ -26,7 +26,7 @@
     >
         <Checkbox
             checked={ticked.includes(option.id)}
-            onCheckedChange={() => toggleTileField(collectionId, option.id)}
+            onCheckedChange={() => toggleTileField(collectionId, option.id, isAnnotations)}
         />
         <span class="truncate" title={option.label}>{option.label}</span>
     </label>

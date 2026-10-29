@@ -24,7 +24,7 @@
     import { useAnnotationCropPreview } from './useAnnotationCropPreview/useAnnotationCropPreview.svelte';
     import { useAnnotationTileSelection } from './useAnnotationTileSelection/useAnnotationTileSelection';
     import AnnotationTile from './AnnotationTile/AnnotationTile.svelte';
-    import { useTileFields } from '$lib/hooks/useTileFields/useTileFields';
+    import { resolveTileFields, useTileFields } from '$lib/hooks/useTileFields/useTileFields';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -280,7 +280,7 @@
                                 onDragStart={handleAnnotationDragStart}
                                 onSelect={handleGridItemSelect}
                                 onDoubleClick={handleOnDoubleClick}
-                                tileFields={$tileFields[collection_id]}
+                                tileFields={resolveTileFields($tileFields[collection_id], true)}
                                 {sourceName}
                             />
                         {/if}
