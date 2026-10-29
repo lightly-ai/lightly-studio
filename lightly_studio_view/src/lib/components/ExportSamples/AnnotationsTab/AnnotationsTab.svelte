@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { Checkbox, FormField, AnnotationSourceSelect } from '$lib/components';
+    import { FormField, AnnotationSourceSelect } from '$lib/components';
     import { exportCollectionAnnotationsPrepare } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks';
     import { useVideoFilters } from '$lib/hooks';
@@ -8,6 +8,7 @@
     import { useExportDownload, triggerDownload } from '../useExportDownload';
     import ExportDownloadButton from '../ExportDownloadButton/ExportDownloadButton.svelte';
     import TrainWithLightlyTrain from '../TrainWithLightlyTrain/TrainWithLightlyTrain.svelte';
+    import IncludeImagesOption from '../IncludeImagesGate/IncludeImagesOption.svelte';
 
     type ExportFormat = NonNullable<
         Parameters<typeof exportCollectionAnnotationsPrepare>[0]['body']['export_format']
@@ -84,13 +85,7 @@
 
     {#if canIncludeImages}
         <div class="mt-4">
-            <Checkbox
-                name="export-include-images"
-                label="Include images"
-                helperText="Download the images and the annotations in one zip file, ready to train on."
-                isChecked={includeImages}
-                onCheckedChange={(checked) => (includeImages = checked === true)}
-            />
+            <IncludeImagesOption {collectionId} imageFilter={$imageFilter} bind:includeImages />
         </div>
     {/if}
 

@@ -13,6 +13,10 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('$lib/api/lightly_studio_local', () => ({
     exportCollectionAnnotationsPrepare: mocks.exportCollectionAnnotationsPrepare,
+    // A small export: "Include images" stays available.
+    exportImagesEstimate: vi.fn().mockResolvedValue({
+        data: { image_count: 2, estimated_bytes: 1024 }
+    }),
     SortDirection: { ASC: 'ASC', DESC: 'DESC' },
     SampleType: {
         VIDEO: 'video',
