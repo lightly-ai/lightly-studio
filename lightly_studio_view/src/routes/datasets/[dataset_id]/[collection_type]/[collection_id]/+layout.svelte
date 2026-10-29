@@ -522,10 +522,13 @@
         $activePanel === 'distribution' && supportsDistribution
     );
 
-    // The distribution settings live here, so they stay when the panel closes and opens again.
+    // The distribution settings live here, so they stay when the panel closes and opens again,
+    // and when a sample opens and the grid comes back.
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
     let distributionSampleTagIds = $state<string[]>([]);
     let histogramBinCount = $state(20);
+    let distributionSourceId = $state<string | undefined>(undefined);
+    let distributionGroupId = $state<string | undefined>(undefined);
 
     const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
         const selected = $categoricalMetadataValues[metadataKey] ?? [];
@@ -802,6 +805,8 @@
                                             onClassBarClick={handleClassBarClick}
                                             onClose={() => setActivePanel('none')}
                                             bind:histogramBinCount
+                                            bind:sourceId={distributionSourceId}
+                                            bind:groupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}
@@ -820,6 +825,8 @@
                                             bind:countMode={distributionCountMode}
                                             bind:histogramBinCount
                                             bind:comparisonTagIds={distributionSampleTagIds}
+                                            bind:sourceId={distributionSourceId}
+                                            bind:groupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}

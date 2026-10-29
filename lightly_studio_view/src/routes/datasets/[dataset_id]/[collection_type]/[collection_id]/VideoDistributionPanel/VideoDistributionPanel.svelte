@@ -17,8 +17,12 @@
         selectedClassNames: string[];
         onClassBarClick: (item: CategoryCount) => void;
         onClose: () => void;
-        // The host keeps the bin count so that it stays when the panel closes and opens again.
+        // The host keeps these settings so that they stay when the panel closes and opens again.
         histogramBinCount: number;
+        /** The plotted source, for example `classes` or `metadata`. */
+        sourceId: string | undefined;
+        /** The plotted group of the source, for example a metadata key. */
+        groupId: string | undefined;
     }
 
     let {
@@ -27,30 +31,29 @@
         selectedClassNames,
         onClassBarClick,
         onClose,
-        histogramBinCount = $bindable()
+        histogramBinCount = $bindable(),
+        sourceId = $bindable(),
+        groupId = $bindable()
     }: Props = $props();
 
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
     const { filterParams } = useVideoFilters();
     const filters = $derived(buildVideoDistributionFilters($filterParams));
 
-    let activeDistributionSourceId = $state<string | undefined>(undefined);
-    let activeDistributionGroupId = $state<string | undefined>(undefined);
-
     const classDistribution = useVideoClassDistributionSource(() => ({
         collectionId,
         filter: filters.filter,
         selectedClassNames,
         allSourcesHidden: $allSourcesHidden,
-        active: activeDistributionSourceId !== 'metadata'
+        active: sourceId !== 'metadata'
     }));
     const metadataDistribution = useVideoMetadataDistributionSource(() => ({
         collectionId,
         filter: filters.filter,
         baseFilter: filters.baseFilter,
         histogramBinCount,
-        activeSourceId: activeDistributionSourceId,
-        activeGroupId: activeDistributionGroupId
+        activeSourceId: sourceId,
+        activeGroupId: groupId
     }));
 
     const distributionSources = $derived<DistributionSource[]>(
@@ -75,8 +78,10 @@
     onCategoricalRetry={metadataDistribution.onCategoricalRetry}
     {histogramBinCount}
     onHistogramBinCountChange={(binCount) => (histogramBinCount = binCount)}
-    onGroupChange={(sourceId, groupId) => {
-        activeDistributionSourceId = sourceId;
-        activeDistributionGroupId = groupId;
+    initialSourceId={sourceId}
+    initialGroupId={groupId}
+    onGroupChange={(nextSourceId, nextGroupId) => {
+        sourceId = nextSourceId;
+        groupId = nextGroupId;
     }}
 />

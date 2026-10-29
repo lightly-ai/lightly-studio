@@ -50,6 +50,10 @@
         countMode: AnnotationCountMode;
         histogramBinCount: number;
         comparisonTagIds: string[];
+        /** The plotted source, for example `classes` or `metadata`. */
+        sourceId: string | undefined;
+        /** The plotted group of the source, for example a metadata key. */
+        groupId: string | undefined;
     }
 
     let {
@@ -63,7 +67,9 @@
         onClose,
         countMode = $bindable(),
         histogramBinCount = $bindable(),
-        comparisonTagIds = $bindable()
+        comparisonTagIds = $bindable(),
+        sourceId = $bindable(),
+        groupId = $bindable()
     }: Props = $props();
 
     const {
@@ -134,9 +140,6 @@
         enabled: distributionCountsEnabled
     }));
 
-    let activeDistributionSourceId = $state<string | undefined>(undefined);
-    let activeDistributionGroupId = $state<string | undefined>(undefined);
-
     const distributionClassificationQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         annotationType: AnnotationType.CLASSIFICATION,
@@ -168,11 +171,11 @@
         countMode,
         annotationType,
         enabled:
-            activeDistributionSourceId === 'classes' &&
+            sourceId === 'classes' &&
             comparisonTagIds.length > 0 &&
             (annotationType === undefined
-                ? activeDistributionGroupId === undefined || activeDistributionGroupId === 'all'
-                : activeDistributionGroupId === annotationType)
+                ? groupId === undefined || groupId === 'all'
+                : groupId === annotationType)
     });
     const distributionAllTagQuery = useImageAnnotationCountsBySampleTags(() =>
         groupedCountsParams()
@@ -197,9 +200,7 @@
         [AnnotationType.SEGMENTATION_MASK]: distributionSegmentationTagQuery
     };
     const activeClassComparisonQuery = $derived(
-        activeDistributionSourceId === 'classes'
-            ? classComparisonQueries[activeDistributionGroupId ?? 'all']
-            : undefined
+        sourceId === 'classes' ? classComparisonQueries[groupId ?? 'all'] : undefined
     );
 
     // The panel's sources are the distribution *types* (class labels,
@@ -293,14 +294,14 @@
     const activeMetadataField = $derived.by<
         { name: string; type: 'numeric' | 'categorical' } | undefined
     >(() => {
-        if (activeDistributionSourceId !== 'metadata' || activeDistributionGroupId === undefined) {
+        if (sourceId !== 'metadata' || groupId === undefined) {
             return undefined;
         }
-        if (categoricalMetadataKeys.includes(activeDistributionGroupId)) {
-            return { name: activeDistributionGroupId, type: 'categorical' };
+        if (categoricalMetadataKeys.includes(groupId)) {
+            return { name: groupId, type: 'categorical' };
         }
-        if (numericMetadataKeys.includes(activeDistributionGroupId)) {
-            return { name: activeDistributionGroupId, type: 'numeric' };
+        if (numericMetadataKeys.includes(groupId)) {
+            return { name: groupId, type: 'numeric' };
         }
         return undefined;
     });
@@ -435,8 +436,10 @@
     comparisonTagItems={distributionSampleTagItems}
     selectedComparisonTagIds={comparisonTagIds}
     onComparisonTagIdsChange={(ids) => (comparisonTagIds = ids)}
-    onGroupChange={(sourceId, groupId) => {
-        activeDistributionSourceId = sourceId;
-        activeDistributionGroupId = groupId;
+    initialSourceId={sourceId}
+    initialGroupId={groupId}
+    onGroupChange={(nextSourceId, nextGroupId) => {
+        sourceId = nextSourceId;
+        groupId = nextGroupId;
     }}
 />

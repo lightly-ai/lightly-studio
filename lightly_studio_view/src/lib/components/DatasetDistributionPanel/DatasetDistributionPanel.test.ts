@@ -832,6 +832,57 @@ describe('DatasetDistributionPanel', () => {
         expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
     });
 
+    describe('initial source and group', () => {
+        const categorical = (label: string) => ({
+            selectedValues: [],
+            buckets: [{ id: label, kind: 'value' as const, value: label, label, count: 1 }]
+        });
+        const sources: DistributionSource[] = [
+            { id: 'classes', label: 'Classes', data: balanced },
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groupLabel: 'Metadata key',
+                groups: [
+                    { id: 'city', label: 'city', categorical: categorical('Zurich') },
+                    { id: 'weather', label: 'weather', categorical: categorical('rainy') }
+                ]
+            }
+        ];
+
+        it('opens on the given source and group', () => {
+            const onGroupChange = vi.fn();
+            render(DatasetDistributionPanel, {
+                props: {
+                    sources,
+                    initialSourceId: 'metadata',
+                    initialGroupId: 'weather',
+                    onGroupChange
+                }
+            });
+
+            expect(screen.getByTestId('dataset-distribution-source-select')).toHaveTextContent(
+                'Metadata'
+            );
+            expect(screen.getByTestId('dataset-distribution-group-select')).toHaveTextContent(
+                'weather'
+            );
+            expect(onGroupChange).toHaveBeenLastCalledWith('metadata', 'weather');
+        });
+
+        it('falls back to the default source for an unknown ID', () => {
+            const onGroupChange = vi.fn();
+            render(DatasetDistributionPanel, {
+                props: { sources, initialSourceId: 'removed', onGroupChange }
+            });
+
+            expect(screen.getByTestId('dataset-distribution-source-select')).toHaveTextContent(
+                'Classes'
+            );
+            expect(onGroupChange).toHaveBeenLastCalledWith('classes', undefined);
+        });
+    });
+
     it('configures, reorients, and expands categorical values', async () => {
         const sources: DistributionSource[] = [
             {

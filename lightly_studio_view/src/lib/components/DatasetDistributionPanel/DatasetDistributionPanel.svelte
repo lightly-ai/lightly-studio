@@ -58,6 +58,13 @@
          */
         initialCountMode?: AnnotationCountMode;
         /**
+         * Source and group to show when the panel first mounts. Lets the parent
+         * keep the plotted field when the panel unmounts, for example while a
+         * sample is open. Unknown IDs fall back to the default source and group.
+         */
+        initialSourceId?: string;
+        initialGroupId?: string;
+        /**
          * Shows the count mode select in the config and expand dialogs. Set to
          * false when the host supports only one count mode, and pass that mode
          * as `initialCountMode`. For example, a host that counts only samples
@@ -100,6 +107,8 @@
         onBarClick,
         onCountModeChange,
         initialCountMode = AnnotationCountMode.OBJECTS,
+        initialSourceId,
+        initialGroupId,
         showCountMode = true,
         onHistogramRangeSelect,
         histogramBinCount = 20,
@@ -119,8 +128,8 @@
     );
     const hasSourceSelector = $derived(resolvedSources.length > 1);
 
-    let selectedSourceId = $state<string | undefined>(undefined);
-    let selectedGroupId = $state<string | undefined>(undefined);
+    let selectedSourceId = $state<string | undefined>(untrack(() => initialSourceId));
+    let selectedGroupId = $state<string | undefined>(untrack(() => initialGroupId));
 
     const groupHasContent = (group: DistributionSourceGroup): boolean =>
         (group.data?.length ?? 0) > 0 || group.histogram != null || group.categorical != null;
