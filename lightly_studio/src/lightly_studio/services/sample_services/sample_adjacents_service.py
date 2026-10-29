@@ -195,6 +195,7 @@ def get_adjacent_samples(
                 filters=request.filters,
                 annotation_sort_by=request.annotation_sort_by,
             ),
+            text_embedding=request.text_embedding,
         )
     if request.sample_type == SampleType.SEQUENCE:
         return _get_adjacent_sequences(session=session, sample_id=sample_id, request=request)

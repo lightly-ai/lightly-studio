@@ -36,6 +36,8 @@ export const useAdjacentAnnotations = ({
                     tag_ids: get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined,
                     embedding_region: get(annotationPlotRegion) ?? undefined
                 },
+                // Similarity search orders next/previous like the Annotations grid.
+                text_embedding: embedding?.embedding,
                 annotation_sort_by: sortBy
             }
         }

@@ -810,6 +810,7 @@ def _assert_matches_expected_order(
     session: Session,
     filters: AnnotationsFilter,
     expected_order: Sequence[AnnotationBaseTable],
+    text_embedding: list[float] | None = None,
 ) -> None:
     """Assert get_adjacent_annotations agrees with expected_order at every position.
 
@@ -818,10 +819,14 @@ def _assert_matches_expected_order(
         filters: Filters to query with.
         expected_order: Annotations in the exact order `get_adjacent_annotations` should place
             them, e.g. sorted by `(created_at, sample_id)`.
+        text_embedding: Optional similarity search embedding to query with.
     """
     for position, annotation in enumerate(expected_order, start=1):
         result = annotation_resolver.get_adjacent_annotations(
-            session=session, sample_id=annotation.sample_id, filters=filters
+            session=session,
+            sample_id=annotation.sample_id,
+            filters=filters,
+            text_embedding=text_embedding,
         )
         previous_annotation = expected_order[position - 2] if position > 1 else None
         next_annotation = expected_order[position] if position < len(expected_order) else None
@@ -912,3 +917,153 @@ def test_get_adjacent_annotations__sort_by_annotation_evaluation_metric(
     assert result.next_sample_id == uncovered.sample_id
     assert result.current_sample_position == 2
     assert result.total_count == 3
+
+
+@pytest.mark.parametrize(
+    ("text_embedding", "expected_paths"),
+    [
+        # Most similar first: c (1.0), a (0.6), b (-1.0). The annotation on d has no
+        # embedding, so the similarity search leaves it out, like the grid does.
+        ([1.0, 0.0], ["/c.png", "/a.png", "/b.png"]),
+        # Without a search the default path order stays.
+        (None, ["/a.png", "/b.png", "/c.png", "/d.png"]),
+    ],
+    ids=["similarity_search", "no_search"],
+)
+def test_get_adjacent_annotations__orders_by_text_embedding_like_the_grid(
+    db_session: Session,
+    text_embedding: list[float] | None,
+    expected_paths: list[str],
+) -> None:
+    collection = helpers_resolvers.create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    )
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id
+    )
+    paths = ["/a.png", "/b.png", "/c.png", "/d.png"]
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session, collection_id=collection.collection_id, file_path_abs=path
+        )
+        for path in paths
+    ]
+    annotations = helpers_resolvers.create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            helpers_resolvers.AnnotationDetails(
+                sample_id=image.sample_id, annotation_label_id=label.annotation_label_id
+            )
+            for image in images
+        ],
+    )
+    annotation_by_path = dict(zip(paths, annotations))
+    annotation_collection_id = annotations[0].sample.collection_id
+
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    for path, embedding in [
+        ("/a.png", [0.6, 0.8]),
+        ("/b.png", [-1.0, 0.0]),
+        ("/c.png", [1.0, 0.0]),
+    ]:
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=annotation_by_path[path].sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+    filters = AnnotationsFilter(collection_ids=[annotation_collection_id])
+
+    # The grid's order and the detail view's next/previous must agree.
+    grid_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        filters=filters,
+        ordering=annotation_resolver.AnnotationOrdering(text_embedding=text_embedding),
+    )
+    grid_order = [view.annotation.sample_id for view in grid_page.annotations]
+    expected_order = [annotation_by_path[path] for path in expected_paths]
+    assert grid_order == [annotation.sample_id for annotation in expected_order]
+
+    _assert_matches_expected_order(
+        session=db_session,
+        filters=filters,
+        expected_order=expected_order,
+        text_embedding=text_embedding,
+    )
+
+
+def test_get_adjacent_annotations__text_embedding_takes_precedence_over_order_by(
+    db_session: Session,
+) -> None:
+    root = helpers_resolvers.create_collection(session=db_session)
+    label = helpers_resolvers.create_annotation_label(
+        session=db_session, root_collection_id=root.collection_id
+    )
+    run = create_run(session=db_session, collection_id=root.collection_id)
+    image_matched = helpers_resolvers.create_image(
+        session=db_session, collection_id=root.collection_id, file_path_abs="/a.png"
+    )
+    image_unmatched = helpers_resolvers.create_image(
+        session=db_session, collection_id=root.collection_id, file_path_abs="/b.png"
+    )
+    matched_stub, unmatched_stub = create_annotation_metrics(
+        session=db_session,
+        run_id=run.id,
+        pair_metric_stubs=[
+            TruePositiveMetricStub(
+                sample_id=image_matched.sample_id,
+                metrics={"iou": 0.75},
+                gt_annotation_label_id=label.annotation_label_id,
+            ),
+            FalseNegativeMetricStub(
+                sample_id=image_unmatched.sample_id,
+                gt_annotation_label_id=label.annotation_label_id,
+            ),
+        ],
+    )
+    assert matched_stub.gt_annotation_id is not None
+    assert unmatched_stub.gt_annotation_id is not None
+
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=run.gt_annotation_collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    # The metric sort puts unmatched (0.0) first; the similarity search puts matched first.
+    for annotation_id, embedding in [
+        (matched_stub.gt_annotation_id, [1.0, 0.0]),
+        (unmatched_stub.gt_annotation_id, [-1.0, 0.0]),
+    ]:
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=annotation_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=embedding,
+        )
+
+    result = annotation_resolver.get_adjacent_annotations(
+        session=db_session,
+        sample_id=matched_stub.gt_annotation_id,
+        filters=AnnotationsFilter(collection_ids=[run.gt_annotation_collection_id]),
+        order_by=OrderByAnnotationEvaluationMetricField(
+            evaluation_run_id=run.id,
+            metric_name="iou",
+            side=EvaluationAnnotationSide.GROUND_TRUTH,
+            annotation_id_column=col(AnnotationBaseTable.sample_id),
+        ),
+        text_embedding=[1.0, 0.0],
+    )
+
+    assert result is not None
+    assert result.previous_sample_id is None
+    assert result.next_sample_id == unmatched_stub.gt_annotation_id
+    assert result.current_sample_position == 1
+    assert result.total_count == 2

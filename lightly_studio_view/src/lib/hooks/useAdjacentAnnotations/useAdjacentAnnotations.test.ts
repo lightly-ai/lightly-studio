@@ -144,6 +144,26 @@ describe('useAdjacentAnnotations', () => {
         expect(result.sortBy).toBeUndefined();
     });
 
+    it('sends the text embedding so next/previous follows the similarity order', () => {
+        textEmbedding.set({ queryText: 'a lizard', embedding: [0.1, 0.2] });
+
+        useAdjacentAnnotations({ sampleId: 'ann-1', collectionId: 'col-1' });
+
+        expect(useAdjacentSamplesMock).toHaveBeenCalledWith({
+            params: {
+                sampleId: 'ann-1',
+                body: expect.objectContaining({ text_embedding: [0.1, 0.2] })
+            }
+        });
+    });
+
+    it('sends no text embedding without a similarity search', () => {
+        useAdjacentAnnotations({ sampleId: 'ann-1', collectionId: 'col-1' });
+
+        const [{ params }] = useAdjacentSamplesMock.mock.calls[0];
+        expect(params.body.text_embedding).toBeUndefined();
+    });
+
     it('sends the embedding plot region so next/previous stays inside the selection', () => {
         const region: EmbeddingRegion = {
             polygon: [

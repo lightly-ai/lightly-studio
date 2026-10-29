@@ -254,6 +254,7 @@ def test_get_adjacent_samples__delegates_to_annotation_resolver(
         sample_type=SampleType.ANNOTATION,
         collection_id=uuid4(),
         filters=filters,
+        text_embedding=[0.1, 0.2],
     )
 
     result = get_adjacent_samples(
@@ -268,6 +269,7 @@ def test_get_adjacent_samples__delegates_to_annotation_resolver(
         filters=filters,
         sample_id=sample_id,
         order_by=None,
+        text_embedding=[0.1, 0.2],
     )
 
 
@@ -320,6 +322,7 @@ def test_get_adjacent_samples__translates_annotation_sort_by_before_delegating(
         filters=filters,
         sample_id=sample_id,
         order_by=fake_order_by,
+        text_embedding=None,
     )
 
 

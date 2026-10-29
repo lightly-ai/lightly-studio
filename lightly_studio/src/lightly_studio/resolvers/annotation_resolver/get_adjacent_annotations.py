@@ -9,7 +9,11 @@ from sqlmodel import Session
 from lightly_studio.core.dataset_query.order_by import OrderByAnnotationEvaluationMetricField
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    embedding_region_resolver,
+    similarity_utils,
+)
 from lightly_studio.resolvers.annotation_resolver import (
     get_adjacent_annotations_keyset,
     get_adjacent_annotations_window,
@@ -26,6 +30,7 @@ def get_adjacent_annotations(
     sample_id: UUID,
     filters: AnnotationsFilter,
     order_by: OrderByAnnotationEvaluationMetricField | None = None,
+    text_embedding: list[float] | None = None,
 ) -> AdjacentResultView | None:
     """Get the adjacent annotations for a given annotation ID.
 
@@ -33,11 +38,16 @@ def get_adjacent_annotations(
     ordering applies, so prev/next and the position/total counts avoid sorting and windowing
     the whole collection. Everything else falls back to the window-function implementation.
 
+    Similarity search dominates like in the annotations grid: while ``text_embedding`` is
+    set and the collection has a default embedding model, ``order_by`` is ignored.
+
     Args:
         session: Database session.
         sample_id: The anchor annotation whose neighbours we want.
         filters: Annotation filters constraining the set; must scope the collection.
         order_by: Optional leading sort key applied before the tiebreaker chain.
+        text_embedding: Optional embedding; when given, annotations are ordered by cosine
+            distance of their embedding to it, and annotations without one are left out.
 
     Returns:
         The adjacency result, or ``None`` if the anchor is not in the filtered set.
@@ -54,6 +64,22 @@ def get_adjacent_annotations(
             session=session,
             collection_id=filters.collection_ids[0],
             region=filters.embedding_region,
+        )
+
+    embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
+        session=session,
+        collection_id=filters.collection_ids[0],
+        text_embedding=text_embedding,
+    )
+    if embedding_model_id is not None and distance_expr is not None:
+        return get_adjacent_annotations_window.get_adjacent_annotations_window(
+            session=session,
+            sample_id=sample_id,
+            filters=filters,
+            similarity=get_adjacent_annotations_window.SimilarityOrdering(
+                embedding_model_id=embedding_model_id,
+                distance_expr=distance_expr,
+            ),
         )
 
     parent_sample_type = _keyset_parent_sample_type(
