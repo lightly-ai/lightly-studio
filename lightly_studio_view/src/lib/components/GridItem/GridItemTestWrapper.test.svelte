@@ -14,7 +14,6 @@
         dataSampleName,
         dataIndex,
         dragData,
-        hoverSampleId,
         onSelect,
         ondblclick
     }: {
@@ -33,7 +32,6 @@
             url: string;
             fileName: string;
         };
-        hoverSampleId?: string;
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
         ondblclick?: (event: MouseEvent) => void;
     } = $props();
@@ -51,7 +49,6 @@
     {dataSampleName}
     {dataIndex}
     {dragData}
-    {hoverSampleId}
     {onSelect}
     {ondblclick}
 >

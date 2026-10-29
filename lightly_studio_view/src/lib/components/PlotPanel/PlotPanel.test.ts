@@ -167,7 +167,9 @@ vi.mock('$lib/hooks/useGlobalStorage', () => {
         useGlobalStorage: () => ({
             setShowEmbeddingPlot: mockSetShowEmbeddingPlot,
             getRangeSelection: vi.fn(() => rangeSelectionStore),
-            setRangeSelectionForCollection: mockSetRangeSelectionForCollection
+            setRangeSelectionForCollection: mockSetRangeSelectionForCollection,
+            getSelectedSampleIds: vi.fn(() => writable(new Set<string>())),
+            selectedSampleAnnotationCropIds: writable({})
         })
     };
 });

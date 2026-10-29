@@ -3,7 +3,6 @@
     import GridItemTag from './GridItemTag.svelte';
     import { DRAG_PREVIEW_OFFSET_PX, type GridItemDragData } from './GridItem.constants';
     import { useGridItemDrag } from '$lib/hooks/useGridItemDrag/useGridItemDrag.svelte';
-    import { useHoveredSample } from '$lib/hooks/useHoveredSample/useHoveredSample';
 
     let {
         children,
@@ -18,7 +17,6 @@
         dataSampleName,
         dataIndex,
         dragData,
-        hoverSampleId,
         onDragStart,
         onSelect,
         ondblclick
@@ -35,8 +33,6 @@
         dataSampleName?: string;
         dataIndex?: number;
         dragData?: GridItemDragData;
-        /** Sample shared while the mouse is over the item, e.g. to highlight it in the plot. */
-        hoverSampleId?: string;
         /** Fires once when a drag actually begins (past the movement threshold). */
         onDragStart?: () => void;
         onSelect?: (event: MouseEvent | KeyboardEvent) => void;
@@ -47,15 +43,6 @@
         () => dragData,
         () => onDragStart?.()
     );
-
-    const { setHoveredSampleId, clearHoveredSampleId } = useHoveredSample();
-    // A virtualized grid unmounts items under the mouse while scrolling; clear their hover.
-    $effect(() => {
-        const sampleId = hoverSampleId;
-        return () => {
-            if (sampleId) clearHoveredSampleId(sampleId);
-        };
-    });
 
     function formatSize(value: string | number): string {
         return typeof value === 'number' ? `${value}px` : value;
@@ -108,8 +95,6 @@
         onlostpointercapture={drag.handleLostPointerCapture}
         ondragstart={handleDragStart}
         onkeydown={handleKeyDown}
-        onmouseenter={() => hoverSampleId && setHoveredSampleId(hoverSampleId)}
-        onmouseleave={() => hoverSampleId && clearHoveredSampleId(hoverSampleId)}
         aria-label={ariaLabel}
         role="button"
         tabindex="0"

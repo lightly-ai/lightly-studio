@@ -4,8 +4,8 @@
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotSelectedPoints from './PlotSelectedPoints/PlotSelectedPoints.svelte';
-    import PlotHoveredPoint from './PlotHoveredPoint/PlotHoveredPoint.svelte';
-    import { useHoveredSample } from '$lib/hooks/useHoveredSample/useHoveredSample';
+    import PlotGridSelectionRings from './PlotGridSelectionRings/PlotGridSelectionRings.svelte';
+    import { getGridSelectionPointIndices } from './PlotGridSelectionRings/gridSelectionRings';
     import { usePlotSelectedPointSize } from '$lib/hooks/usePlotSelectedPointSize/usePlotSelectedPointSize';
     import {
         getSelectedPointIndices,
@@ -68,8 +68,13 @@
 
     let { collectionId }: { collectionId: string } = $props();
     const { trackEvent } = usePostHog();
-    const { setShowEmbeddingPlot, getRangeSelection, setRangeSelectionForCollection } =
-        useGlobalStorage();
+    const {
+        setShowEmbeddingPlot,
+        getRangeSelection,
+        setRangeSelectionForCollection,
+        getSelectedSampleIds,
+        selectedSampleAnnotationCropIds
+    } = useGlobalStorage();
     const rangeSelection = $derived(getRangeSelection(collectionId));
     const setRangeSelection = (selection: Point[] | null) => {
         setRangeSelectionForCollection(collectionId, selection);
@@ -258,14 +263,24 @@
         })
     );
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
-    // The sample hovered in the grid is marked with a ring on its point.
-    const { hoveredSampleId } = useHoveredSample();
+    // The samples selected in the grid are marked with a ring on their points. The annotations
+    // grid keeps its own selection, keyed by annotation ID like the plot's points.
+    const gridSelectedSampleIds = $derived(getSelectedSampleIds(collectionId));
+    const gridSelectedIds = $derived(
+        isAnnotations
+            ? ($selectedSampleAnnotationCropIds[collectionId] ?? new Set<string>())
+            : $gridSelectedSampleIds
+    );
     const sampleIndexById = $derived.by(() => {
         const sampleIds = ($arrowData?.sample_id as string[] | undefined) ?? [];
         return new Map(sampleIds.map((sampleId, index) => [sampleId, index]));
     });
-    const hoveredPointIndex = $derived(
-        $hoveredSampleId === null ? undefined : sampleIndexById.get($hoveredSampleId)
+    const gridSelectionPointIndices = $derived(
+        getGridSelectionPointIndices(
+            gridSelectedIds,
+            sampleIndexById,
+            $plotData?.category as Uint8Array | undefined
+        )
     );
     const selectedPointIndices = $derived(
         getSelectedPointIndices(
@@ -618,11 +633,12 @@
                         />
                     {/if}
 
-                    {#if overlayProxy && hoveredPointIndex !== undefined}
-                        <PlotHoveredPoint
+                    {#if overlayProxy && gridSelectionPointIndices.length > 0}
+                        <PlotGridSelectionRings
                             proxy={overlayProxy}
-                            x={($plotData.x as Float32Array)[hoveredPointIndex]}
-                            y={($plotData.y as Float32Array)[hoveredPointIndex]}
+                            x={$plotData.x as Float32Array}
+                            y={$plotData.y as Float32Array}
+                            indices={gridSelectionPointIndices}
                         />
                     {/if}
 
