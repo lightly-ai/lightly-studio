@@ -69,7 +69,7 @@
     <Dialog.Portal>
         <Dialog.Overlay />
         <Dialog.Content
-            class="flex max-h-[75vh] flex-col border-border bg-background sm:max-w-[550px]"
+            class="flex max-h-[75vh] flex-col border-border bg-background sm:max-w-[800px]"
         >
             <Dialog.Header>
                 <Dialog.Title class="text-foreground">Collection Export</Dialog.Title>
