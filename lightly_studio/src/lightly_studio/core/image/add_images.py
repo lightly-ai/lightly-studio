@@ -49,7 +49,9 @@ from lightly_studio.utils import parallelize
 logger = logging.getLogger(__name__)
 
 # Constants
-SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+# Number of samples to insert in a single batch. Each batch costs a few SQL statements, and each
+# statement is a network round trip on a remote database, so batches are large.
+SAMPLE_BATCH_SIZE = 1024
 # Cloud backends read ahead 5-50 MiB by default. Use 256 KiB chunks for image probes.
 _IMAGE_PROBE_BLOCK_SIZE = 256 * 1024
 # Number of files to check before the loading loop, so a wrong images root fails fast.
