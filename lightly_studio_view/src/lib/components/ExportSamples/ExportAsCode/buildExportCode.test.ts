@@ -18,7 +18,8 @@ const defaultParams: Params = {
     exportType: 'object_detections_coco',
     includeImages: false,
     annotationSources: [{ id: 'source-gt', name: 'ground_truth' }],
-    selectedAnnotationSourceId: undefined
+    selectedAnnotationSourceId: undefined,
+    dimensionBounds: { min_width: 800, max_width: 2560, min_height: 584, max_height: 1920 }
 };
 
 const tagFilter = (tagIds: string[]): ImageFilter => ({
@@ -135,10 +136,25 @@ describe('buildExportCode', () => {
         expect(result).toEqual({ code: undefined, reason: SCOPE_NOT_SUPPORTED_REASON });
     });
 
+    it('treats width and height at the full dataset range as no filter', () => {
+        // The filter panel always sends the size range, at the dataset's bounds by default.
+        const { code, reason } = buildExportCode({
+            ...defaultParams,
+            imageFilter: {
+                filter_type: 'image',
+                width: { min: 800, max: 2560 },
+                height: { min: 584, max: 1920 }
+            }
+        });
+
+        expect(reason).toBeUndefined();
+        expect(code).toContain('query = dataset.query()');
+    });
+
     it('gives no code for a width or height filter', () => {
         const result = buildExportCode({
             ...defaultParams,
-            imageFilter: { filter_type: 'image', width: { min: 100 } }
+            imageFilter: { filter_type: 'image', width: { min: 1000 } }
         });
 
         expect(result.reason).toBe(SCOPE_NOT_SUPPORTED_REASON);

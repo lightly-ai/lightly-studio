@@ -1,4 +1,5 @@
 import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local';
+import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import type { ExportType } from '../exportOptions';
 
 interface BuildExportCodeParams {
@@ -16,6 +17,8 @@ interface BuildExportCodeParams {
     annotationSources: { id: string; name: string }[];
     /** The annotation source selected in the dialog. Undefined means the first source. */
     selectedAnnotationSourceId: string | undefined;
+    /** Smallest and largest image sizes of the collection. Null while they load. */
+    dimensionBounds: DimensionBounds | null;
 }
 
 interface BuildExportCodeReturn {
@@ -95,7 +98,8 @@ export function buildExportCode(params: BuildExportCodeParams): BuildExportCodeR
     const tagName = getSimpleTagScope(
         params.imageFilter,
         params.tags,
-        params.annotationSources.map((source) => source.id)
+        params.annotationSources.map((source) => source.id),
+        params.dimensionBounds
     );
     if (tagName === null) return { code: undefined, reason: SCOPE_NOT_SUPPORTED_REASON };
 
@@ -122,10 +126,11 @@ export function buildExportCode(params: BuildExportCodeParams): BuildExportCodeR
 function getSimpleTagScope(
     imageFilter: ImageFilter | null,
     tags: { tag_id: string; name: string }[],
-    annotationSourceIds: string[]
+    annotationSourceIds: string[],
+    dimensionBounds: DimensionBounds | null
 ): string | undefined | null {
     if (!imageFilter) return undefined;
-    if (imageFilter.width || imageFilter.height) return null;
+    if (!sizeRangesCoverDataset(imageFilter, dimensionBounds)) return null;
     const {
         tag_ids: tagIds,
         annotations_filter: annotationsFilter,
@@ -141,6 +146,23 @@ function getSimpleTagScope(
     if (hasOtherFilters || (tagIds?.length ?? 0) > 1) return null;
     if (!tagIds || tagIds.length === 0) return undefined;
     return tags.find((tag) => tag.tag_id === tagIds[0])?.name ?? null;
+}
+
+type SizeRange = { min?: number | null; max?: number | null } | null | undefined;
+
+/**
+ * Whether the width and height ranges keep every image. The filter panel always sends them,
+ * at the collection's smallest and largest size unless the user narrowed them.
+ */
+function sizeRangesCoverDataset(imageFilter: ImageFilter, bounds: DimensionBounds | null): boolean {
+    const covers = (range: SizeRange, smallest: number, largest: number) =>
+        !range || ((range.min ?? smallest) <= smallest && (range.max ?? largest) >= largest);
+    if (!imageFilter.width && !imageFilter.height) return true;
+    if (!bounds) return false;
+    return (
+        covers(imageFilter.width, bounds.min_width, bounds.max_width) &&
+        covers(imageFilter.height, bounds.min_height, bounds.max_height)
+    );
 }
 
 /**

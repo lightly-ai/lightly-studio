@@ -2,6 +2,7 @@
     import { writable } from 'svelte/store';
     import { Button } from '$lib/components/ui/button';
     import { useGlobalStorage, useImageFilters } from '$lib/hooks';
+    import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import type { ExportType } from '../exportOptions';
     import { buildExportCode } from './buildExportCode';
 
@@ -31,6 +32,8 @@
 
     const { tags } = useGlobalStorage();
     const { imageFilter } = useImageFilters();
+    // The filter panel has loaded the bounds of the open collection already.
+    const { dimensionsBounds } = useDimensions();
     const isOpen = writable(false);
     const isCopied = writable(false);
 
@@ -42,7 +45,8 @@
             exportType,
             includeImages,
             annotationSources,
-            selectedAnnotationSourceId
+            selectedAnnotationSourceId,
+            dimensionBounds: $dimensionsBounds
         })
     );
 
