@@ -124,6 +124,7 @@
                             bind:selectedAnnotationCollectionId
                             testId="submit-button-annotations-coco"
                             sampleType="image"
+                            canIncludeImages
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
                         />

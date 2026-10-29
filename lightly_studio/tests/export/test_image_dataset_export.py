@@ -47,6 +47,41 @@ class TestImageDatasetExport:
             {"id": 0, "file_name": "/abs/dir/image0.jpg", "width": 100, "height": 100},
         ]
 
+    def test_to_coco_object_detections__include_images(
+        self,
+        tmp_path: Path,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        """Images are copied next to the JSON and keep their folders to avoid collisions."""
+        source_dir = tmp_path / "source"
+        (source_dir / "cam_a").mkdir(parents=True)
+        (source_dir / "cam_b").mkdir()
+        (source_dir / "cam_a" / "img.jpg").write_bytes(b"image a")
+        (source_dir / "cam_b" / "img.jpg").write_bytes(b"image b")
+        dataset = ImageDataset.create(name="test_dataset")
+        create_images(
+            db_session=dataset.session,
+            collection_id=dataset.collection_id,
+            images=[
+                ImageStub(path=str(source_dir / "cam_a" / "img.jpg"), width=100, height=100),
+                ImageStub(path=str(source_dir / "cam_b" / "img.jpg"), width=200, height=200),
+            ],
+        )
+
+        output_json = tmp_path / "export" / "annotations.json"
+        output_json.parent.mkdir()
+        dataset.export().to_coco_object_detections(output_json=output_json, include_images=True)
+
+        with open(output_json) as f:
+            coco_data = json.load(f)
+        assert sorted(image["file_name"] for image in coco_data["images"]) == [
+            "cam_a/img.jpg",
+            "cam_b/img.jpg",
+        ]
+        images_folder = tmp_path / "export" / "images"
+        assert (images_folder / "cam_a" / "img.jpg").read_bytes() == b"image a"
+        assert (images_folder / "cam_b" / "img.jpg").read_bytes() == b"image b"
+
 
 def test_image_sample_to_image__coco_uses_absolute_path(
     patch_collection: None,  # noqa: ARG001

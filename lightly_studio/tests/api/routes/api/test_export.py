@@ -327,6 +327,52 @@ def test_export_collection_annotations_prepare__coco(
     }
 
 
+def test_export_collection_annotations_prepare__coco_include_images(
+    tmp_path: Path,
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    image_path = tmp_path / "images" / "cam_a" / "img1.jpg"
+    image_path.parent.mkdir(parents=True)
+    image_path.write_bytes(b"image bytes")
+    collection = create_collection(session=db_session)
+    create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs=str(image_path),
+        width=100,
+        height=100,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={"export_format": "object_detection_coco", "include_images": True},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    export_job = db_session.get(ExportJobTable, UUID(response.json()["export_key"]))
+    assert export_job is not None
+    export_dir = Path(export_job.export_path)
+    assert export_dir.name == "coco_export"
+    content = json.loads((export_dir / "annotations.json").read_text())
+    assert content["images"] == [{"id": 0, "file_name": "img1.jpg", "width": 100, "height": 100}]
+    assert (export_dir / "images" / "img1.jpg").read_bytes() == b"image bytes"
+
+
+def test_export_collection_annotations_prepare__include_images_unsupported_format(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = create_collection(session=db_session)
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/export/annotations/prepare",
+        json={"export_format": "object_detection_yolo", "include_images": True},
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+
+
 def test_export_collection_annotations_prepare__classification_csv(
     db_session: Session,
     test_client: TestClient,

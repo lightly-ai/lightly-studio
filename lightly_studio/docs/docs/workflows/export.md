@@ -10,7 +10,7 @@ The following export formats are supported:
 |---|---|---|
 | Sample Filenames | Absolute file paths of selected samples | TXT |
 | Classification CSV | Image and whole-video classification annotations and confidence scores | CSV |
-| COCO Object Detection | Bounding box annotations | JSON |
+| COCO Object Detection | Bounding box annotations, optionally with the images | JSON, or JSON + images (zipped) |
 | YOLO Object Detection | Bounding box annotations | TXT labels + `data.yaml` (zipped) |
 | COCO Segmentation Mask | Segmentation masks with bounding boxes | JSON |
 | COCO Captions | Image captions | JSON |
@@ -37,6 +37,13 @@ To export one tag, filter by that tag before you open the dialog.
 
 ![Export object detections](https://storage.googleapis.com/lightly-public/studio/export_dialog_object_detections.png){width=60%}
 
+### Exporting images with the annotations
+
+For `Image Object Detections (COCO)`, select `Include images` to download the images together with
+the annotations. The zip file contains `annotations.json` and an `images` folder. Each `file_name`
+in `annotations.json` is relative to the `images` folder, so the export is ready to train on, also
+when the images are in cloud storage.
+
 ### Exporting sample filenames
 
 The `Image Filenames` option exports the filenames of all samples that match the active collection
@@ -61,6 +68,8 @@ import lightly_studio as ls
 dataset = ls.ImageDataset.load()
 dataset.export().to_csv_classifications("classifications.csv")
 dataset.export().to_coco_object_detections("detections.json")
+# Copy the images to "export/images" and reference them relative to that folder
+dataset.export().to_coco_object_detections("export/annotations.json", include_images=True)
 dataset.export().to_yolo_object_detections("yolo_output_dir/")
 dataset.export().to_coco_segmentation_masks("segmentations.json")
 dataset.export().to_coco_captions("captions.json")

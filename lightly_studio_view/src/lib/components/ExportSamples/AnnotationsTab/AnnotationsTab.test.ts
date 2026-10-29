@@ -107,6 +107,33 @@ describe('AnnotationsTab', () => {
         });
     });
 
+    it('hides the include images option unless the format supports it', () => {
+        render(AnnotationsTab, { props: defaultProps });
+        expect(screen.queryByText('Include images')).not.toBeInTheDocument();
+    });
+
+    it('requests the images when include images is checked', async () => {
+        mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
+            data: { export_key: 'key123' }
+        });
+        render(AnnotationsTab, { props: { ...defaultProps, canIncludeImages: true } });
+
+        await fireEvent.click(screen.getByRole('checkbox'));
+        await fireEvent.click(screen.getByTestId('submit-button-annotations'));
+
+        await waitFor(() => {
+            expect(mocks.exportCollectionAnnotationsPrepare).toHaveBeenCalledWith({
+                path: { collection_id: 'test-collection' },
+                body: {
+                    export_format: 'object_detection_coco',
+                    annotation_collection_id: 'source-1',
+                    image_filter: null,
+                    include_images: true
+                }
+            });
+        });
+    });
+
     it('passes the active video filter and annotation source for video classifications', async () => {
         mocks.exportCollectionAnnotationsPrepare.mockResolvedValue({
             data: { export_key: 'key123' }

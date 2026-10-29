@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import Iterable
 from pathlib import Path
 from typing import cast
@@ -12,11 +13,12 @@ from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
-from lightly_studio.export import classification_csv
-from lightly_studio.export.dataset_export import DatasetExport
+from lightly_studio.export import classification_csv, image_files
+from lightly_studio.export.dataset_export import DEFAULT_EXPORT_FILENAME, DatasetExport
 from lightly_studio.type_definitions import PathLike
 
 DEFAULT_CLASSIFICATION_EXPORT_FILENAME = "classification_export.csv"
+IMAGES_FOLDER_NAME = "images"
 
 
 class ImageDatasetExport(DatasetExport):
@@ -46,6 +48,62 @@ class ImageDatasetExport(DatasetExport):
             dataset_id=dataset_id,
             samples=samples,
             sample_to_image=image_sample_to_image,
+        )
+
+    def to_coco_object_detections(
+        self,
+        output_json: PathLike | None = None,
+        annotation_collection_id: UUID | None = None,
+        include_images: bool = False,
+    ) -> None:
+        """Exports object detection annotations to a COCO format JSON file.
+
+        Args:
+            output_json: The path to the output COCO JSON file. If not provided,
+                defaults to "coco_export.json" in the current working directory.
+            annotation_collection_id: If provided, only annotations from this collection
+                are exported. If None, all annotations are exported.
+            include_images: If True, the images are copied into an ``images`` folder next
+                to ``output_json``, and each COCO ``file_name`` is the image path relative
+                to that folder. Images are read from local or remote storage. If False,
+                each ``file_name`` is the absolute image path.
+        """
+        if not include_images:
+            super().to_coco_object_detections(
+                output_json=output_json, annotation_collection_id=annotation_collection_id
+            )
+            return
+
+        output_json = Path(output_json if output_json is not None else DEFAULT_EXPORT_FILENAME)
+        samples = list(self.samples)
+        source_paths = [sample.file_path_abs for sample in samples]
+        relative_paths = image_files.relative_image_paths(paths=source_paths)
+        images_folder = output_json.parent / IMAGES_FOLDER_NAME
+        images_folder.mkdir(parents=True, exist_ok=True)
+        image_files.copy_images(
+            sources=source_paths,
+            destinations=[images_folder / path for path in relative_paths],
+        )
+
+        relative_path_by_sample_id = {
+            sample.sample_id: path for sample, path in zip(samples, relative_paths)
+        }
+
+        def sample_to_bundled_image(
+            sample: Sample, image_id: int, use_relative_filename: bool
+        ) -> Image:
+            image = image_sample_to_image(
+                sample=sample, image_id=image_id, use_relative_filename=use_relative_filename
+            )
+            return dataclasses.replace(image, filename=relative_path_by_sample_id[sample.sample_id])
+
+        DatasetExport(
+            session=self.session,
+            dataset_id=self._dataset_id,
+            samples=samples,
+            sample_to_image=sample_to_bundled_image,
+        ).to_coco_object_detections(
+            output_json=output_json, annotation_collection_id=annotation_collection_id
         )
 
     def to_csv_classifications(

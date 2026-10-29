@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { FormField, AnnotationSourceSelect } from '$lib/components';
+    import { Checkbox, FormField, AnnotationSourceSelect } from '$lib/components';
     import { exportCollectionAnnotationsPrepare } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks';
     import { useVideoFilters } from '$lib/hooks';
@@ -27,6 +27,8 @@
         sampleType: 'image' | 'video';
         /** Optional callback invoked when the download button is clicked. */
         onDownloadClick?: () => void;
+        /** Whether to offer bundling the images with the annotations. */
+        canIncludeImages?: boolean;
     }
 
     let {
@@ -36,8 +38,11 @@
         selectedAnnotationCollectionId = $bindable(),
         testId,
         sampleType,
-        onDownloadClick
+        onDownloadClick,
+        canIncludeImages = false
     }: Props = $props();
+
+    let includeImages = $state(false);
 
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
@@ -54,7 +59,8 @@
                 export_format: exportFormat,
                 annotation_collection_id:
                     selectedAnnotationCollectionId ?? annotationSources[0]?.id,
-                ...activeFilter
+                ...activeFilter,
+                ...(canIncludeImages && includeImages ? { include_images: true } : {})
             }
         });
         if (response.error) throw new Error(JSON.stringify(response.error));
@@ -68,6 +74,18 @@
 
 <div class="pt-2">
     <p class="text-sm text-muted-foreground">{description}</p>
+
+    {#if canIncludeImages}
+        <div class="mt-4">
+            <Checkbox
+                name="export-include-images"
+                label="Include images"
+                helperText="Download the images and the annotations in one zip file, ready to train on."
+                isChecked={includeImages}
+                onCheckedChange={(checked) => (includeImages = checked === true)}
+            />
+        </div>
+    {/if}
 
     {#if annotationSources.length > 1}
         <div class="mt-6">

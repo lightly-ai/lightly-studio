@@ -60,6 +60,13 @@ class ExportAnnotationsPrepareBody(BaseModel):
     annotation_collection_id: UUID | None = None
     image_filter: ImageFilter | None = None
     video_filter: VideoFilter | None = None
+    include_images: bool = Field(
+        False,
+        description=(
+            "Bundle the images with the annotations in a zip file. "
+            "Only supported for the COCO object detection format."
+        ),
+    )
 
 
 class ExportCaptionsPrepareBody(BaseModel):
@@ -191,6 +198,7 @@ def export_collection_annotations_prepare(
             exporter=exporter,
             export_format=body.export_format,
             annotation_collection_id=body.annotation_collection_id,
+            include_images=body.include_images,
             temp_dir=temp_dir,
         )
         export = export_job_resolver.create(
@@ -279,9 +287,14 @@ def _generate_annotations_export(
     exporter: image_dataset_export.ImageDatasetExport | video_dataset_export.VideoDatasetExport,
     export_format: ExportFormat,
     annotation_collection_id: UUID | None,
+    include_images: bool,
     temp_dir: PathlibPath,
 ) -> PathlibPath:
     """Run the annotations export and return the output path."""
+    if include_images and export_format != ExportFormat.OBJECT_DETECTION_COCO:
+        raise ValueError(
+            f"Including images is not supported for export format '{export_format.value}'."
+        )
     if export_format == ExportFormat.CLASSIFICATION_CSV:
         output_path = temp_dir / "classification_export.csv"
         exporter.to_csv_classifications(
@@ -291,6 +304,16 @@ def _generate_annotations_export(
         return output_path
     if not isinstance(exporter, image_dataset_export.ImageDatasetExport):
         raise ValueError(f"Export format '{export_format.value}' is only supported for images.")
+    if export_format == ExportFormat.OBJECT_DETECTION_COCO and include_images:
+        # The download endpoint zips a folder, so the images and the JSON ship together.
+        output_folder = temp_dir / "coco_export"
+        output_folder.mkdir()
+        exporter.to_coco_object_detections(
+            output_json=output_folder / "annotations.json",
+            annotation_collection_id=annotation_collection_id,
+            include_images=True,
+        )
+        return output_folder
     if export_format == ExportFormat.OBJECT_DETECTION_COCO:
         output_path = temp_dir / "coco_export.json"
         exporter.to_coco_object_detections(
