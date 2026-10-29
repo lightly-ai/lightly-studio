@@ -5,8 +5,9 @@
     import * as Tabs from '$lib/components/ui/tabs/index.js';
     import * as Dialog from '$lib/components/ui/dialog';
     import { ExportFormat } from '$lib/api/lightly_studio_local';
-    import { useAnnotationCollections, useExportDialog, useGlobalStorage } from '$lib/hooks';
+    import { useAnnotationCollections, useExportDialog } from '$lib/hooks';
     import { useExportTracking } from './useExportTracking/useExportTracking';
+    import ExportScope from './ExportScope/ExportScope.svelte';
     import SamplesTab from './SamplesTab/SamplesTab.svelte';
     import AnnotationsTab from './AnnotationsTab/AnnotationsTab.svelte';
     import CaptionsTab from './CaptionsTab/CaptionsTab.svelte';
@@ -14,10 +15,6 @@
     import { getDefaultExportType, getExportOptions, type ExportType } from './exportOptions';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
-    const { filteredSampleCount } = useGlobalStorage();
-    const sampleCountLabel = $derived(
-        `${$filteredSampleCount} ${$filteredSampleCount === 1 ? 'sample' : 'samples'}`
-    );
 
     const isVideoCollection = $derived(
         page.data.collection?.sample_type === 'video' ||
@@ -71,8 +68,7 @@
                 <Dialog.Title class="text-foreground">Collection Export</Dialog.Title>
             </Dialog.Header>
             <Dialog.Description class="text-foreground">
-                Export <strong class="font-semibold text-primary">{sampleCountLabel}</strong> currently
-                matching your filters.
+                <ExportScope {collectionId} sampleType={page.data.collection?.sample_type} />
             </Dialog.Description>
 
             <div class="grid flex-1 gap-4 overflow-y-auto px-1">

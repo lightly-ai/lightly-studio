@@ -1,6 +1,9 @@
 import { get } from 'svelte/store';
+import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { triggerDownload, useExportDownload } from './useExportDownload';
+
+vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn() } }));
 
 describe('triggerDownload', () => {
     it('creates a temporary anchor, sets href, and clicks it', () => {
@@ -45,11 +48,21 @@ describe('useExportDownload', () => {
         expect(get(isLoading)).toBe(false);
     });
 
-    it('sets errorMessage when prepare throws', async () => {
+    it('marks success and shows a success toast when prepare resolves', async () => {
+        const prepare = vi.fn().mockResolvedValue(undefined);
+        const { isSuccess, handleDownload } = useExportDownload(prepare);
+        await handleDownload();
+        expect(get(isSuccess)).toBe(true);
+        expect(toast.success).toHaveBeenCalledWith('Export completed successfully.');
+    });
+
+    it('sets errorMessage and shows no success toast when prepare throws', async () => {
         const prepare = vi.fn().mockRejectedValue(new Error('API error'));
-        const { errorMessage, handleDownload } = useExportDownload(prepare);
+        const { errorMessage, isSuccess, handleDownload } = useExportDownload(prepare);
         await handleDownload();
         expect(get(errorMessage)).toBe('Export failed: Error: API error');
+        expect(get(isSuccess)).toBe(false);
+        expect(toast.success).not.toHaveBeenCalled();
     });
 
     it('clears errorMessage at the start of the next download attempt', async () => {

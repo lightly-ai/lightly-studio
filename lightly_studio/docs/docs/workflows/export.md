@@ -32,7 +32,8 @@ For annotation formats (`Image Classifications (CSV)`, `Video Classifications (C
 `Image Segmentation Mask (COCO)`, `Image Segmentation Mask (PASCAL VOC)`, `Image Captions`,
 `YouTube-VIS Video Segmentation Masks`),
 select the format and click `Download`. A zip file is created if the export includes multiple files.
-The export includes all samples in the dataset.
+The export includes the samples that match your current filters, and the dialog states how many.
+To export one tag, filter by that tag before you open the dialog.
 
 ![Export object detections](https://storage.googleapis.com/lightly-public/studio/export_dialog_object_detections.png){width=60%}
 

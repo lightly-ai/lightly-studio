@@ -1,3 +1,4 @@
+import { toast } from 'svelte-sonner';
 import { writable, type Readable } from 'svelte/store';
 
 interface UseExportDownloadReturn {
@@ -5,6 +6,8 @@ interface UseExportDownloadReturn {
     isLoading: Readable<boolean>;
     /** Error message to display if the download preparation fails, or empty string on success. */
     errorMessage: Readable<string>;
+    /** Whether the last download preparation finished successfully. */
+    isSuccess: Readable<boolean>;
     /** Triggers the download by calling the provided `prepare` function. */
     handleDownload: () => Promise<void>;
 }
@@ -31,12 +34,16 @@ export function triggerDownload(url: string): void {
 export function useExportDownload(prepare: () => Promise<void>): UseExportDownloadReturn {
     const isLoading = writable(false);
     const errorMessage = writable('');
+    const isSuccess = writable(false);
 
     const handleDownload = async () => {
         isLoading.set(true);
         errorMessage.set('');
+        isSuccess.set(false);
         try {
             await prepare();
+            isSuccess.set(true);
+            toast.success('Export completed successfully.');
         } catch (e) {
             errorMessage.set(`Export failed: ${String(e)}`);
         } finally {
@@ -44,5 +51,5 @@ export function useExportDownload(prepare: () => Promise<void>): UseExportDownlo
         }
     };
 
-    return { isLoading, errorMessage, handleDownload };
+    return { isLoading, errorMessage, isSuccess, handleDownload };
 }
