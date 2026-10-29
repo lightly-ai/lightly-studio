@@ -14,6 +14,7 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -169,6 +170,25 @@ def test_delete_annotations_by_ids__deletes_tag_links_and_embeddings(
     assert plot.is_dirty is True
     assert _get_embedding_sample_ids(session=db_session) == [to_keep_id]
     assert db_session.get(SampleTable, to_delete_id) is None
+
+
+def test_delete_annotations_by_ids__deletes_metadata(db_session: Session) -> None:
+    image = _create_image_in_new_collection(session=db_session)
+    (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
+    annotation_id = annotation.sample_id
+    db_session.add(
+        SampleMetadataTable(
+            sample_id=annotation_id, data={"score": 0.9}, metadata_schema={"score": "float"}
+        )
+    )
+    db_session.commit()
+
+    annotation_resolver.delete_annotations_by_ids(
+        session=db_session, annotation_ids=[annotation_id]
+    )
+
+    assert db_session.get(SampleTable, annotation_id) is None
+    assert db_session.exec(select(SampleMetadataTable)).all() == []
 
 
 def test_delete_annotations_by_ids__deletes_captions(db_session: Session) -> None:
