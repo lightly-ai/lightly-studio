@@ -31,6 +31,11 @@ def update_label_by_object_track_id(
     workaround is to delete all child FK references first, run the bulk UPDATE, then
     reinsert the child rows.
 
+    DuckDB checks FK constraints against committed state, so the child-row deletes
+    must be committed before the UPDATE. The UPDATE and child-row reinserts run in
+    a single follow-up transaction; if that transaction fails, the child rows are
+    restored from the captured data.
+
     Evaluation metrics that reference the updated annotations are not reinserted because
     a label change invalidates them.
 
@@ -85,22 +90,47 @@ def update_label_by_object_track_id(
             col(Cuboid3DAnnotationTable.sample_id).in_(sibling_ids)
         )
     )
+    # DuckDB checks FK constraints against committed state, so the deletes must be
+    # committed before the UPDATE can run without FK violations.
     session.commit()
 
-    session.execute(
-        update(AnnotationBaseTable)
-        .where(col(AnnotationBaseTable.sample_id).in_(sibling_ids))
-        .values(annotation_label_id=annotation_label_id)
-    )
-    session.commit()
+    try:
+        session.execute(
+            update(AnnotationBaseTable)
+            .where(col(AnnotationBaseTable.sample_id).in_(sibling_ids))
+            .values(annotation_label_id=annotation_label_id)
+        )
+        _reinsert_child_rows(
+            session=session,
+            od_data=od_data,
+            seg_data=seg_data,
+            cuboid_data=cuboid_data,
+        )
+        session.commit()
+    except Exception:
+        session.rollback()
+        _reinsert_child_rows(
+            session=session,
+            od_data=od_data,
+            seg_data=seg_data,
+            cuboid_data=cuboid_data,
+        )
+        session.commit()
+        raise
 
+
+def _reinsert_child_rows(
+    session: Session,
+    od_data: list[dict[str, Any]],
+    seg_data: list[dict[str, Any]],
+    cuboid_data: list[dict[str, Any]],
+) -> None:
     for d in od_data:
         session.add(ObjectDetectionAnnotationTable(**d))
     for d in seg_data:
         session.add(SegmentationAnnotationTable(**d))
     for d in cuboid_data:
         session.add(Cuboid3DAnnotationTable(**d))
-    session.commit()
 
 
 def _capture_object_detection(session: Session, sample_ids: list[UUID]) -> list[dict[str, Any]]:

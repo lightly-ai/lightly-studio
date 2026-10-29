@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from typing import Any
 from uuid import uuid4
 
 import pytest
+from pytest_mock import MockerFixture
+from sqlalchemy.sql.dml import Update
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -278,3 +281,71 @@ def test_update_label_by_object_track_id__skips_annotations_already_on_new_label
     assert updated_2.annotation_label_id == new_label.annotation_label_id
     assert updated_2.object_detection_details is not None
     assert updated_2.object_detection_details.x == 50
+
+
+def test_update_label_by_object_track_id__restores_child_rows_on_update_failure(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Child rows are restored when the bulk UPDATE fails after the delete commit."""
+    collection = create_collection(session=db_session)
+    root_collection_id = collection.collection_id
+    old_label = create_annotation_label(
+        session=db_session, root_collection_id=root_collection_id, label_name="cat"
+    )
+    new_label = create_annotation_label(
+        session=db_session, root_collection_id=root_collection_id, label_name="dog"
+    )
+
+    img = create_image(
+        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/1.png"
+    )
+
+    track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )[0]
+
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=root_collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=img.sample_id,
+                annotation_label_id=old_label.annotation_label_id,
+                object_track_id=track_id,
+                x=10,
+                y=20,
+                width=30,
+                height=40,
+            ),
+        ],
+    )
+
+    original_execute = db_session.execute
+
+    def execute_that_fails_on_update(statement: Any, *args: Any, **kwargs: Any) -> Any:
+        if isinstance(statement, Update):
+            raise RuntimeError("simulated update failure")
+        return original_execute(statement, *args, **kwargs)
+
+    mocker.patch.object(db_session, "execute", side_effect=execute_that_fails_on_update)
+
+    with pytest.raises(RuntimeError, match="simulated update failure"):
+        annotation_resolver.update_label_by_object_track_id(
+            session=db_session,
+            object_track_id=track_id,
+            annotation_label_id=new_label.annotation_label_id,
+        )
+
+    mocker.stopall()
+
+    unchanged = annotation_resolver.get_by_id(
+        session=db_session, annotation_id=annotations[0].sample_id
+    )
+    assert unchanged is not None
+    assert unchanged.annotation_label_id == old_label.annotation_label_id
+    assert unchanged.object_detection_details is not None
+    assert unchanged.object_detection_details.x == 10
+    assert unchanged.object_detection_details.y == 20
+    assert unchanged.object_detection_details.width == 30
+    assert unchanged.object_detection_details.height == 40
