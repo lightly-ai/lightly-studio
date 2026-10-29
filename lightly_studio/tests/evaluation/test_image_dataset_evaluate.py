@@ -6,21 +6,26 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_dataset import ImageDataset
+from lightly_studio.evaluation import average_precision
 from lightly_studio.evaluation.image_dataset_evaluate import (
     ClassificationEvaluationConfig,
     InstanceSegmentationEvaluationConfig,
     ObjectDetectionEvaluationConfig,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
 from lightly_studio.models.evaluation_confusion_matrix import (
     NO_GROUND_TRUTH_ROW_LABEL,
     NO_PREDICTION_COL_LABEL,
 )
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
+    annotation_label_resolver,
     collection_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
@@ -95,7 +100,11 @@ def test_object_detection_evaluation(
     assert len(evaluation_runs) == 1
     assert evaluation_runs[0].name == "run-1"
     assert evaluation_runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
-    assert evaluation_runs[0].config_json == {"iou_threshold": 0.5, "classwise": True}
+    assert evaluation_runs[0].config_json == {
+        "iou_threshold": 0.5,
+        "classwise": True,
+        "compute_average_precision": False,
+    }
 
     sample_metrics = evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
         session=dataset.session,
@@ -215,6 +224,129 @@ def test_object_detection_evaluation__filters_to_samples_covered_by_both_collect
     )
     assert len(sample_metrics) == 3
     assert {metric.sample_id for metric in sample_metrics} == {image_covered_by_both.sample_id}
+
+
+def test_object_detection_evaluation__stores_average_precision_when_enabled(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Stores one average precision row per class and COCO IoU threshold."""
+    dataset = ImageDataset.create(name="test_dataset")
+    cat = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    dog = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id, label_name="dog"
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    # The cat prediction matches its ground truth exactly, so its AP is 1.0 at every threshold.
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=cat.annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+    # The dog ground truth has no prediction, so its AP is 0.0 at every threshold.
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=dog.annotation_label_id,
+        annotation_data={"x": 200, "y": 200, "width": 20, "height": 20},
+        annotation_collection_name="gt",
+    )
+
+    dataset.evaluate().object_detection(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(compute_average_precision=True),
+    )
+
+    run_id = dataset.evaluate().list_runs()[0].id
+    class_metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session, evaluation_run_id=run_id
+    )
+    # The run's IoU threshold is 0.5, so only the other thresholds have an override.
+    assert {
+        (m.annotation_label_id, m.metric_name, m.config_override.get("iou_threshold", 0.5)): m.value
+        for m in class_metrics
+    } == {
+        (label.annotation_label_id, "average_precision", threshold): pytest.approx(value)
+        for label, value in ((cat, 1.0), (dog, 0.0))
+        for threshold in average_precision.COCO_IOU_THRESHOLDS
+    }
+    assert [
+        m.config_override for m in class_metrics if m.config_override.get("iou_threshold") is None
+    ] == [{}, {}]
+
+
+def test_object_detection_evaluation__average_precision_of_run_without_class_matching(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Records the class matching of average precision when the run matches across classes."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+
+    dataset.evaluate().object_detection(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(classwise=False, compute_average_precision=True),
+    )
+
+    run_id = dataset.evaluate().list_runs()[0].id
+    class_metrics = evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+        session=dataset.session, evaluation_run_id=run_id
+    )
+    assert len(class_metrics) == len(average_precision.COCO_IOU_THRESHOLDS)
+    assert all(m.config_override["classwise"] is True for m in class_metrics)
+
+
+def test_object_detection_evaluation__no_average_precision_by_default(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Stores no average precision unless it is enabled in the config."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+
+    dataset.evaluate().object_detection(
+        name="run-1", gt_annotation_source="gt", pred_annotation_source="pred"
+    )
+
+    run_id = dataset.evaluate().list_runs()[0].id
+    assert (
+        evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+            session=dataset.session, evaluation_run_id=run_id
+        )
+        == []
+    )
 
 
 @pytest.mark.parametrize(
@@ -569,7 +701,11 @@ def test_list_runs(
     view = next(view for view in views if view.name == "run-a")
     assert view.gt_annotation_source == "gt"
     assert view.pred_annotation_source == "pred"
-    assert set(view.evaluation_run_configuration) == {"iou_threshold", "classwise"}
+    assert set(view.evaluation_run_configuration) == {
+        "iou_threshold",
+        "classwise",
+        "compute_average_precision",
+    }
 
 
 def test_list_runs__no_runs_returns_empty(
@@ -870,6 +1006,110 @@ def test_metrics__object_detection(
     assert metrics.accuracy is None
 
 
+def test_metrics__object_detection_average_precision(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Reads the stored average precision per class and averages it over the classes."""
+    dataset = ImageDataset.create(name="test_dataset")
+    run_id = _create_run_with_average_precision(dataset=dataset)
+
+    metrics = dataset.evaluate().metrics(run_id=run_id)
+
+    by_label = {entry.label: entry for entry in metrics.per_class}
+    thresholds = average_precision.COCO_IOU_THRESHOLDS
+    assert by_label["cat"].average_precision == pytest.approx(1.0)
+    assert by_label["cat"].average_precision_by_iou_threshold == pytest.approx(
+        dict.fromkeys(thresholds, 1.0)
+    )
+    assert by_label["dog"].average_precision == pytest.approx(0.0)
+    # The bird is only predicted, so it has no average precision and is not in the means.
+    assert by_label["bird"].average_precision is None
+    assert by_label["bird"].average_precision_by_iou_threshold is None
+    assert metrics.mean_average_precision == pytest.approx(0.5)
+    assert metrics.mean_average_precision_by_iou_threshold == pytest.approx(
+        dict.fromkeys(thresholds, 0.5)
+    )
+
+
+@pytest.mark.postgres_only  # DuckDB rejects renaming a label that annotations reference.
+def test_metrics__object_detection_average_precision_after_label_rename(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Keeps the average precision of a class when its label is renamed."""
+    dataset = ImageDataset.create(name="test_dataset")
+    run_id = _create_run_with_average_precision(dataset=dataset)
+    cat = annotation_label_resolver.get_by_label_name(
+        session=dataset.session, dataset_id=dataset.dataset_id, label_name="cat"
+    )
+    assert cat is not None
+    annotation_label_resolver.update(
+        session=dataset.session,
+        label_id=cat.annotation_label_id,
+        label_data=AnnotationLabelCreate(
+            dataset_id=dataset.dataset_id, annotation_label_name="kitten"
+        ),
+    )
+
+    metrics = dataset.evaluate().metrics(run_id=run_id)
+
+    by_label = {entry.label: entry for entry in metrics.per_class}
+    assert by_label["kitten"].average_precision == pytest.approx(1.0)
+    assert metrics.mean_average_precision == pytest.approx(0.5)
+
+
+def test_metrics__object_detection_average_precision_skips_unknown_labels(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Ignores stored values whose label no longer exists."""
+    dataset = ImageDataset.create(name="test_dataset")
+    run_id = _create_run_with_average_precision(dataset=dataset)
+    evaluation_class_metric_resolver.create_many(
+        session=dataset.session,
+        records=[
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run_id,
+                annotation_label_id=uuid4(),
+                metric_name=average_precision.METRIC_NAME,
+                value=0.9,
+            )
+        ],
+    )
+
+    metrics = dataset.evaluate().metrics(run_id=run_id)
+
+    assert metrics.mean_average_precision == pytest.approx(0.5)
+
+
+def test_metrics__object_detection_without_average_precision(
+    patch_collection: None,  # noqa: ARG001
+) -> None:
+    """Leaves the average precision fields unset if the run did not compute them."""
+    dataset = ImageDataset.create(name="test_dataset")
+    label = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id
+    )
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+    dataset.evaluate().object_detection(
+        name="run-1", gt_annotation_source="gt", pred_annotation_source="pred"
+    )
+    run_id = dataset.evaluate().list_runs()[0].id
+
+    metrics = dataset.evaluate().metrics(run_id=run_id)
+
+    assert metrics.per_class[0].average_precision is None
+    assert metrics.mean_average_precision is None
+    assert metrics.mean_average_precision_by_iou_threshold is None
+
+
 def test_metrics__run_not_found_raises(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
@@ -1091,3 +1331,46 @@ def test_instance_segmentation_evaluation__raises_on_wrong_annotation_type(
             gt_annotation_source="gt",
             pred_annotation_source="pred",
         )
+
+
+def _create_run_with_average_precision(dataset: ImageDataset) -> UUID:
+    """Create a detection run with average precision: an exact cat, a missed dog, a bird FP."""
+    labels = {
+        name: create_annotation_label(
+            session=dataset.session, root_collection_id=dataset.collection_id, label_name=name
+        )
+        for name in ("bird", "cat", "dog")
+    }
+    image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+    _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
+    for source_name in ("gt", "pred"):
+        create_annotation(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=labels["cat"].annotation_label_id,
+            annotation_collection_name=source_name,
+        )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=labels["dog"].annotation_label_id,
+        annotation_data={"x": 200, "y": 200, "width": 20, "height": 20},
+        annotation_collection_name="gt",
+    )
+    create_annotation(
+        session=dataset.session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=labels["bird"].annotation_label_id,
+        annotation_data={"x": 400, "y": 400, "width": 20, "height": 20},
+        annotation_collection_name="pred",
+    )
+    dataset.evaluate().object_detection(
+        name="run-1",
+        gt_annotation_source="gt",
+        pred_annotation_source="pred",
+        config=ObjectDetectionEvaluationConfig(compute_average_precision=True),
+    )
+    return dataset.evaluate().list_runs()[0].id

@@ -7,11 +7,13 @@ from functools import cached_property
 from typing import Any
 from uuid import UUID
 
+import numpy as np
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
     aggregate_metrics,
+    average_precision,
     classification_metric,
     instance_segmentation_metric,
     object_detection_metric,
@@ -21,7 +23,7 @@ from lightly_studio.evaluation import (
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
-from lightly_studio.models.evaluation_metrics import EvaluationMetrics
+from lightly_studio.models.evaluation_metrics import ClassMetrics, EvaluationMetrics
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
@@ -30,9 +32,11 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
 )
 
@@ -45,10 +49,15 @@ class ObjectDetectionEvaluationConfig(BaseModel):
             Stored in the run config for reproducibility.
         classwise: If True, match predictions and ground truths only within the
             same annotation class. If False, match globally across all annotation classes.
+        compute_average_precision: If True, also store the per-class average
+            precision at the COCO IoU thresholds. Off by default, because it matches
+            the annotations once per threshold. Average precision always matches
+            predictions within their own class, even if ``classwise`` is False.
     """
 
     iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     classwise: bool = True
+    compute_average_precision: bool = False
 
 
 class EvaluationResult(BaseModel):
@@ -164,12 +173,7 @@ class ImageDatasetEvaluate:
             task_type=EvaluationTaskType.OBJECT_DETECTION,
             config_json=config.model_dump(),
         )
-        object_detection_metric.create_and_persist_object_detection_metrics_per_sample(
-            session=self.session,
-            data=data,
-            iou_threshold=config.iou_threshold,
-            classwise=config.classwise,
-        )
+        create_and_persist_object_detection_metrics(session=self.session, data=data, config=config)
         return EvaluationResult.from_evaluation_data(data)
 
     def classification(
@@ -311,9 +315,11 @@ class ImageDatasetEvaluate:
         """Return aggregate metrics for an evaluation run.
 
         Derives per-class and micro-averaged precision, recall, and F1 from the
-        run's confusion matrix, plus accuracy for classification runs. Object
-        detection and classification are supported; segmentation tasks have no
-        confusion matrix and so no confusion-derived metrics.
+        run's confusion matrix, plus accuracy for classification runs. For
+        object-detection runs created with ``compute_average_precision=True`` it also
+        includes the per-class and mean average precision. Object detection and
+        classification are supported; segmentation tasks have no confusion matrix and
+        so no confusion-derived metrics.
 
         Args:
             run_id: ID of the evaluation run.
@@ -326,9 +332,26 @@ class ImageDatasetEvaluate:
             NotImplementedError: If the run's task type has no confusion matrix.
         """
         run, matrix = self._confusion_matrix_with_run(run_id)
-        return aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
+        metrics = aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
             matrix=matrix,
             task_type=run.task_type,
+        )
+        if run.task_type != EvaluationTaskType.OBJECT_DETECTION:
+            return metrics
+        by_label = average_precision.by_label_and_threshold(
+            class_metrics=evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+                session=self.session, evaluation_run_id=run.id
+            ),
+            run_config=run.config_json,
+        )
+        # Resolve names at read time, so renamed labels keep their values and deleted
+        # labels are skipped.
+        labels = annotation_label_resolver.get_by_ids(session=self.session, ids=list(by_label))
+        return _with_average_precision(
+            metrics=metrics,
+            by_class={
+                label.annotation_label_name: by_label[label.annotation_label_id] for label in labels
+            },
         )
 
     def _confusion_matrix_with_run(
@@ -485,3 +508,84 @@ class ImageDatasetEvaluate:
         for annotation in annotations:
             grouped.setdefault(annotation.parent_sample_id, []).append(annotation)
         return grouped
+
+
+def create_and_persist_object_detection_metrics(
+    session: Session, data: EvaluationData, config: ObjectDetectionEvaluationConfig
+) -> None:
+    """Create and persist the metrics of an object-detection run.
+
+    Writes the per-sample and per-annotation metrics, and the per-class average
+    precision if ``config.compute_average_precision`` is True.
+
+    Args:
+        session: Database session.
+        data: The run's selected samples and grouped annotations.
+        config: The run's config.
+    """
+    # Computed before the per-sample commits expire the loaded annotations, persisted after.
+    class_average_precision = (
+        average_precision.compute_for_run(data=data) if config.compute_average_precision else []
+    )
+    object_detection_metric.create_and_persist_object_detection_metrics_per_sample(
+        session=session,
+        data=data,
+        iou_threshold=config.iou_threshold,
+        classwise=config.classwise,
+    )
+    average_precision.persist(
+        session=session,
+        evaluation_run_id=data.evaluation_run_id,
+        results=class_average_precision,
+        iou_threshold=config.iou_threshold,
+        classwise=config.classwise,
+    )
+
+
+def _with_average_precision(
+    metrics: EvaluationMetrics, by_class: dict[str, dict[float, float]]
+) -> EvaluationMetrics:
+    """Return the metrics with the average precision of each class and their means.
+
+    Args:
+        metrics: The confusion-matrix metrics of the run.
+        by_class: The average precision per IoU threshold, by class name.
+
+    Returns:
+        The metrics with the average precision fields set. Classes without values, such as
+        classes without ground truth, keep ``None``. The metrics are returned unchanged
+        if the run has no stored average precision.
+    """
+    if not by_class:
+        return metrics
+    class_average = {
+        label: float(np.mean(list(values.values()))) for label, values in by_class.items()
+    }
+    per_class: list[ClassMetrics] = []
+    for entry in metrics.per_class:
+        values = by_class.get(entry.label)
+        per_class.append(
+            entry
+            if values is None
+            else entry.model_copy(
+                update={
+                    "average_precision": class_average[entry.label],
+                    "average_precision_by_iou_threshold": dict(sorted(values.items())),
+                }
+            )
+        )
+    thresholds = sorted({threshold for values in by_class.values() for threshold in values})
+    return metrics.model_copy(
+        update={
+            "per_class": per_class,
+            "mean_average_precision": float(np.mean(list(class_average.values()))),
+            "mean_average_precision_by_iou_threshold": {
+                threshold: float(
+                    np.mean(
+                        [values[threshold] for values in by_class.values() if threshold in values]
+                    )
+                )
+                for threshold in thresholds
+            },
+        }
+    )
