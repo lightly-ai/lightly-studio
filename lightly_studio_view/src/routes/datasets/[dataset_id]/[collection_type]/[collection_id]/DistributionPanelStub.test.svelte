@@ -3,9 +3,17 @@
         sources: { id: string; label: string }[];
         onComparisonTagIdsChange?: (ids: string[]) => void;
         onGroupChange?: (sourceId: string, groupId: string | undefined) => void;
+        initialSourceId?: string;
+        initialGroupId?: string;
     }
 
-    let { sources, onComparisonTagIdsChange, onGroupChange }: Props = $props();
+    let {
+        sources,
+        onComparisonTagIdsChange,
+        onGroupChange,
+        initialSourceId,
+        initialGroupId
+    }: Props = $props();
     const selections: [string, string | undefined][] = [
         ['classes', 'all'],
         ['metadata', 'city'],
@@ -25,6 +33,8 @@
         {sourceId}/{groupId}
     </button>
 {/each}
+
+<span data-testid="distribution-initial">{initialSourceId}/{initialGroupId}</span>
 
 {#each sources as source}
     <span>{source.label}</span>

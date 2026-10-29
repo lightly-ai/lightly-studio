@@ -333,6 +333,28 @@ describe('video distribution panel', () => {
     });
 });
 
+describe('distribution plot selection', () => {
+    // Opening a sample unmounts the panel like closing it does, so a reopen covers both.
+    it.each([APP_ROUTES.images, APP_ROUTES.videos])(
+        'keeps the selected plot when the panel opens again on %s',
+        async (route) => {
+            setPageRoute(route);
+            mockActivePanel.set('distribution');
+            render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+
+            (await screen.findByTestId('distribution-select-metadata-city')).click();
+            await tick();
+            mockActivePanel.set('none');
+            await tick();
+            mockActivePanel.set('distribution');
+
+            expect(await screen.findByTestId('distribution-initial')).toHaveTextContent(
+                'metadata/city'
+            );
+        }
+    );
+});
+
 describe('annotation label pruning', () => {
     it('waits for the counts refetch before pruning selected labels', async () => {
         vi.mocked(useImageAnnotationCounts).mockReturnValue({
