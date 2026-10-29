@@ -45,22 +45,21 @@ For the baseline, run the same command from the main worktree's `lightly_studio`
 | Row | Do | Prototype should |
 |---|---|---|
 | 15 | Select a source, filter metadata `split` = labeled | Dropdown count equals the footer (1,502) |
-| 17 | Open the Metadata filters | One section, one style; no "Add categorical metadata field" button |
-| 16 | Find a tag in the tag filter | Search box in the tag list |
+| 17 | Open the Metadata filters, expand `sequence_id` | One section, one style; no "Add categorical metadata field" button; 50 values, then "Show 50 more" |
+| 16 | Find a tag in the tag filter | Search box in the tag list, even with 1 tag |
 | 36 | Filter all classes except car | "Select all", then untick car |
 | 30 | Scroll the filter panel down, then hide it | Header stays pinned |
-| 12 | Grid header, "Show on tiles": tick classes, tags, `camera` | Chips on tiles; Annotations grid has its own choice |
-| 13 | Color the plot by class; text search "dog" on Annotations | 16 distinct colors that match the boxes; class name in each score chip |
-| 18 | Color the plot by `metadata.hour` | Gradient bar 0 to 23 |
+| 12 | Grid header, "Show on tiles": search, tick one tag, the `model_v1` source, `camera` | Chips on tiles ("model_v1: 2 deer"); annotation tiles show their class by default |
+| 13 | Color the plot by class; text search "dog" on Annotations | 16 distinct colors that match the boxes; class chip on each tile, once |
+| 18 | Color the plot by `metadata.hour` | Inferno gradient bar 0 to 23 |
 | 31 | Hide one class in the legend, then lasso | It stays hidden |
-| 33 | Lasso some points | Selected points bigger; -/Auto/+ size control |
-| 32 | Hover a grid tile | White ring on its plot point |
+| 32 | Tick a few grid tiles | White rings on their plot points |
 | 34 | Annotations tab plot | Header says "N of M annotations have embeddings" when N < M; "Has embedding" filter |
 | 26 | Annotations tab: text search, open result 2, press right arrow | Goes to result 3. Same on Images with a lasso selection |
-| 27 | Set a class filter on Annotations, go to Images and back | Each tab keeps its own filters |
+| 27 | Set a class filter on Annotations, go to Images and back; type a query, close and reopen Query; pick Percentage in Distr, open a sample | Each tab keeps its own filters; query text, plot color-by, eval run and Distr settings stay |
 | 28 | Open an image, switch to Annotations, open an annotation, switch back | The same image is open |
 | 19 | Annotations tab, no evaluation, open "Sort by" | Message: "Run an evaluation to sort by its metrics." |
-| 20, 22 | Source list: "..." menu, Rename, then Delete | Source renamed; delete says how many annotations go, then the source is gone |
+| 20, 22 | Source list: "..." menu, Rename, then Delete | Compact menu; source renamed; delete says how many annotations go, then the source is gone |
 
 ### Step b: curate
 
@@ -85,7 +84,7 @@ Then tag about 100 of them `to_label`, as in the original step.
 |---|---|---|
 | 37 | Filter by tag `to_label`, open Export | "Exports the N images ... in tag to_label"; success toast |
 | 38 | COCO, tick "Include images", download | Zip with `images/` and `annotations.json`, relative `file_name`s |
-| 39 | After the download | LightlyTrain snippet with "Copy code" and a docs link |
+| 39 | After the download; then "Copy as code" with one tag filtered | LightlyTrain snippet with "Copy code" and a docs link; an SDK script for the same export (edit its `.db` path) |
 
 Training itself stays on compute-03 and is not timed here.
 
@@ -98,7 +97,7 @@ the Annotations plot counts the new boxes.
 
 | Row | Do | Prototype should |
 |---|---|---|
-| 23 | Sample view: folder icon next to copy, on a `model_v1` box | Box moves to `labels`, keeps its embedding |
+| 23 | Sample view, edit mode: drag a `model_v1` row's grip onto the `labels` group (or use the folder icon) | Box moves to `labels`, keeps its embedding |
 | 22, 23 | Annotations grid, edit mode, select `model_v1` tiles, "Move to annotation source" | Tiles leave the grid; they show under `labels` |
 
 Time 4 images fixed from predictions against 4 labeled from scratch, as in the original step.
@@ -109,7 +108,8 @@ Time 4 images fixed from predictions against 4 labeled from scratch, as in the o
 |---|---|---|
 | 6 | `add_samples_from_coco` with `annotations_json` ending in `//labels_noisy.json` | Error names the path and the cause |
 | 7 | Same with a wrong `images_path` | Fails in seconds, names one full path it tried |
-| 9, 8 | A correct load | One bar per step with a total: Loading images, Loading annotations, Embedding images, Embedding annotations |
+| 9, 8 | A correct load | One bar per step with a total; images load at ~150/s from S3, not 8 |
+| 40 | `add_annotations_from_coco` with the model_v1 predictions | Seconds, not 5 minutes |
 | 10, 1 | `dataset.get_sample_by_file_name("<name>.jpg")`; metadata docs page | Works; docs lead with `update_metadata` |
 | 4 | `ls.utils.download_example_dataset` in VS Code | No Pylance error |
 
@@ -128,5 +128,7 @@ Time 4 images fixed from predictions against 4 labeled from scratch, as in the o
 ## Not in the prototype
 
 14, 41 (few-shot classifier and evaluation on annotations), 35 (query editor on annotations),
-24 (metadata editing, already on track), 2, 3, 5 (hosted onboarding card, separate branch in
-lightly-studio-self-hosted), 8, 40 (loader speed, later).
+24 (metadata editing, already on track), 33 (larger selected points: built, then removed after
+trying it). Rows 2, 3, 5 (hosted onboarding card) are on branch `ux-gap/onboarding-card` in
+lightly-studio-self-hosted, worktree `../lightly-studio-self-hosted-worktrees/ux-gap-onboarding`,
+not in this local build.
