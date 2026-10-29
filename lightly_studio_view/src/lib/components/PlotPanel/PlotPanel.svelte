@@ -283,10 +283,7 @@
         )
     );
     const selectedPointIndices = $derived(
-        getSelectedPointIndices(
-            $plotData?.category as Uint8Array | undefined,
-            hasSelectionHighlight || activeSampleIds.length > 0
-        )
+        getSelectedPointIndices($plotData?.category as Uint8Array | undefined)
     );
     const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>

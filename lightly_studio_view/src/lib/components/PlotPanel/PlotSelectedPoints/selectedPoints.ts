@@ -12,25 +12,26 @@ const SELECTED_POINT_RADII: Record<PlotSelectedPointSize, number> = {
 };
 
 /**
- * Returns the indices of the points inside the current plot selection. Points outside the
- * selection are demoted to the Excluded category (or Hidden), so every point at or above the
- * Included category is selected. Returns no indices while there is no selection.
+ * Returns the indices of the points that the filters or the plot selection include, so they can
+ * be drawn larger. Points left out are demoted to the Excluded category (or Hidden), so every
+ * point at or above the Included category is included. Returns no indices while every point is
+ * included, since enlarging all of them would only make the plot denser.
  */
-export function getSelectedPointIndices(
-    category: ArrayLike<number> | undefined,
-    hasSelection: boolean
-): number[] {
-    if (!category || !hasSelection) {
+export function getSelectedPointIndices(category: ArrayLike<number> | undefined): number[] {
+    if (!category) {
         return [];
     }
     const indices: number[] = [];
+    let someExcluded = false;
     for (let index = 0; index < category.length; index++) {
         if (category[index] >= INCLUDED_BY_FILTERS_CATEGORY) {
             indices.push(index);
             if (indices.length > MAX_DRAWN_SELECTED_POINTS) return [];
+        } else {
+            someExcluded = true;
         }
     }
-    return indices;
+    return someExcluded ? indices : [];
 }
 
 /** Radius in CSS pixels of a selected point for the "Selected point size" setting. */
