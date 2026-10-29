@@ -83,7 +83,7 @@ Then tag about 100 of them `to_label`, as in the original step.
 | Row | Do | Prototype should |
 |---|---|---|
 | 37 | Filter by tag `to_label`, open Export | "Exports the N images ... in tag to_label"; success toast |
-| 38 | COCO, tick "Include images", download | Zip with `images/` and `annotations.json`, relative `file_name`s |
+| 38 | COCO, tick "Include images", download | Size shown under the option ("5,000 images, about 2 GB"); zip with `images/` and `annotations.json`, relative `file_name`s. Above 2 GB the option turns off and points to Copy as code |
 | 39 | After the download; then "Copy as code" with one tag filtered | LightlyTrain snippet with "Copy code" and a docs link; an SDK script for the same export (edit its `.db` path) |
 
 Training itself stays on compute-03 and is not timed here.
