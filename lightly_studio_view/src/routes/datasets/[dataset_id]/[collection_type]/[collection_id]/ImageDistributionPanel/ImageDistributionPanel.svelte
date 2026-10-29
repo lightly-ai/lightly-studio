@@ -335,7 +335,7 @@
         filter: $imageFilter ? { ...$imageFilter, filter_type: 'image' as const } : undefined,
         fields:
             activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined,
-        enabled: activeMetadataField?.type === 'categorical'
+        enabled: activeMetadataField?.type === 'categorical' && $imageFilter !== null
     }));
     // Keep undefined (not {}) while loading so DatasetDistributionPanel defers
     // rendering the background bars until the filtered data is ready.
