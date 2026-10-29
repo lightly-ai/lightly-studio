@@ -26,8 +26,6 @@
         canvas.height = Math.round(proxy.height * pixelRatio);
         context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
         context.clearRect(0, 0, proxy.width, proxy.height);
-        context.lineWidth = 1;
-        context.strokeStyle = 'rgba(0, 0, 0, 0.8)';
         for (const index of indices) {
             const { x: left, y: top } = proxy.location(x[index], y[index]);
             if (left < -radius || top < -radius) continue;
@@ -36,7 +34,6 @@
             context.arc(left, top, radius, 0, 2 * Math.PI);
             context.fillStyle = categoryColors[category[index]];
             context.fill();
-            context.stroke();
         }
     });
 </script>
