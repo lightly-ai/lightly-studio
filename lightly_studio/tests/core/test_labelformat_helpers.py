@@ -1,6 +1,7 @@
 from collections.abc import Iterable
 from uuid import uuid4
 
+import numpy as np
 from labelformat.model.binary_mask_segmentation import BinaryMaskSegmentation
 from labelformat.model.bounding_box import BoundingBox, BoundingBoxFormat
 from labelformat.model.category import Category
@@ -23,6 +24,8 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=multipolygon,
+        image_width=40,
+        image_height=50,
     )
 
     object_track_id = uuid4()
@@ -30,6 +33,8 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=multipolygon,
+        image_width=40,
+        image_height=50,
         object_track_id=object_track_id,
     )
 
@@ -40,7 +45,13 @@ def test_get_segmentation_annotation_create__with_multipolygon() -> None:
     assert annotation.y == 20
     assert annotation.width == 20
     assert annotation.height == 20
-    assert annotation.segmentation_mask is None  # MultiPolygon doesn't have RLE
+    assert annotation.segmentation_mask is not None
+    mask = BinaryMaskSegmentation.from_rle(
+        rle_row_wise=annotation.segmentation_mask, width=40, height=50
+    ).get_binary_mask()
+    expected_mask = np.zeros((50, 40), dtype=int)
+    expected_mask[20:40, 10:30] = 1
+    np.testing.assert_array_equal(mask, expected_mask)
     assert annotation.object_track_id is None
 
     assert annotation_with_track.object_track_id == object_track_id
@@ -65,6 +76,8 @@ def test_get_segmentation_annotation_create__with_binary_mask() -> None:
         parent_sample_id=parent_sample_id,
         annotation_label_id=annotation_label_id,
         segmentation=binary_mask,
+        image_width=4,
+        image_height=4,
     )
 
     assert annotation.parent_sample_id == parent_sample_id

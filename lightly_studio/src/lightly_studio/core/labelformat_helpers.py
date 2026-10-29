@@ -12,6 +12,7 @@ from labelformat.model.category import Category
 from labelformat.model.multipolygon import MultiPolygon
 from sqlmodel import Session
 
+from lightly_studio.core import polygon_mask
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
@@ -31,10 +32,12 @@ class _LabelsWithCategories(Protocol):
         ...
 
 
-def get_segmentation_annotation_create(
+def get_segmentation_annotation_create(  # noqa: PLR0913
     parent_sample_id: UUID,
     annotation_label_id: UUID,
     segmentation: MultiPolygon | BinaryMaskSegmentation,
+    image_width: int,
+    image_height: int,
     object_track_id: UUID | None = None,
 ) -> AnnotationCreate:
     """Get a AnnotationCreate instance for the provided labelformat segmentation mask.
@@ -43,14 +46,18 @@ def get_segmentation_annotation_create(
         parent_sample_id: ID of the parent sample of the annotation.
         annotation_label_id: ID of the label for the annotation.
         segmentation: Instance segmentation in labelformat.
+        image_width: Width of the image in pixels. Polygons are rasterized to this width.
+        image_height: Height of the image in pixels. Polygons are rasterized to this height.
         object_track_id: The track ID of the object (indicating that it is part of a track).
 
     Returns:
         The AnnotationCreate instance for the provided details.
     """
-    segmentation_rle: None | list[int] = None
     if isinstance(segmentation, MultiPolygon):
         box = segmentation.bounding_box().to_format(BoundingBoxFormat.XYWH)
+        segmentation_rle = polygon_mask.polygons_to_rle(
+            polygons=segmentation.polygons, width=image_width, height=image_height
+        )
     elif isinstance(segmentation, BinaryMaskSegmentation):
         box = segmentation.bounding_box.to_format(BoundingBoxFormat.XYWH)
         segmentation_rle = segmentation.get_rle()

@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Python SDK: Polygon segmentations from COCO and YouTube-VIS files are now added as segmentation masks. Before, only their bounding boxes were kept, so the export and the evaluation skipped them.
 - Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
 - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.

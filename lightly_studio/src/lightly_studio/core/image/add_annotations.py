@@ -197,6 +197,8 @@ def _process_annotation_batch(  # noqa: PLR0913
                     parent_sample_id=sample_id,
                     annotation_label_id=label_map[obj.category.id],
                     segmentation=obj.segmentation,
+                    image_width=anno_data.image.width,
+                    image_height=anno_data.image.height,
                 )
                 for obj in anno_data.objects
             ]
