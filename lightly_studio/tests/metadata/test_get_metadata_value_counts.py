@@ -12,7 +12,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.metadata import SampleMetadataTable
-from lightly_studio.resolvers import video_resolver
+from lightly_studio.resolvers import image_resolver, video_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import FilterDimensions, ImageFilter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
@@ -254,6 +254,71 @@ def test_get_metadata_value_counts__filters_and_own_key_exclusion(
         ("B", 1),
     ]
     assert [(entry.value, entry.count) for entry in counts["group"].value_counts] == [("x", 1)]
+
+
+def test_get_metadata_value_counts__grid_filter_counts_images_without_annotations(
+    db_session: Session,
+) -> None:
+    """With the grid filter the count matches the grid total; a source filter drops images.
+
+    Two of the three labeled images have an annotation. The sidebar used to count with the
+    selected annotation sources in the filter, which shows "labeled 2" next to a grid of 3.
+    """
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="cat"
+    )
+    images = [
+        create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/path/to/{name}.png",
+        )
+        for name in ["a", "b", "c", "d"]
+    ]
+    for image, split in zip(images, ["labeled", "labeled", "labeled", "unlabeled"]):
+        image.sample["split"] = split
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id, annotation_label_id=label.annotation_label_id
+            )
+            for image in images[:2]
+        ],
+    )
+    grid_filter = ImageFilter(
+        sample_filter=SampleFilter(
+            metadata_filters=[MetadataFilter(key="split", op="==", value="labeled")]
+        )
+    )
+    source_filter = ImageFilter(
+        sample_filter=SampleFilter(
+            metadata_filters=[MetadataFilter(key="split", op="==", value="labeled")],
+            annotations_filter=AnnotationsFilter(
+                collection_ids=[annotations[0].sample.collection_id]
+            ),
+        )
+    )
+
+    grid = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id, filters=grid_filter
+    )
+    grid_counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session, collection_id=collection.collection_id, filters=grid_filter
+    )
+    source_counts = categorical_value_counts.get_metadata_value_counts(
+        session=db_session, collection_id=collection.collection_id, filters=source_filter
+    )
+
+    assert grid.total_count == 3
+    assert ("labeled", 3) in [
+        (entry.value, entry.count) for entry in grid_counts["split"].value_counts
+    ]
+    assert ("labeled", 2) in [
+        (entry.value, entry.count) for entry in source_counts["split"].value_counts
+    ]
 
 
 def test_get_metadata_value_counts__video_width_filter(db_session: Session) -> None:

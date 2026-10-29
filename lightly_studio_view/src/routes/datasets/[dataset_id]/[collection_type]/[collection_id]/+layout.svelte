@@ -419,6 +419,11 @@
         })
     );
 
+    // Categorical value counts use the images-grid filter, so they match the grid footer.
+    // Not `imageAnnotationCountsFilter`: it also carries the selected annotation sources,
+    // which would drop every image without annotations from the counts.
+    const categoricalCountsFilter = $derived($imageFilterFromHook ?? undefined);
+
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
     const isVideoFrameAnnotations = $derived(
@@ -696,7 +701,7 @@
                                         isImageCollection={isImages || isCaptions}
                                         categoricalFilter={isCaptions
                                             ? undefined
-                                            : imageAnnotationCountsFilter}
+                                            : categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}
