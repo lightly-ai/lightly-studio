@@ -15,6 +15,8 @@
         disabled?: boolean;
         allowDeselect?: boolean;
         isEvaluationSort?: boolean;
+        /** Text shown in the open dropdown when there are no sort fields. */
+        emptyMessage?: string;
         onValueChange: (value: string) => void;
         onOpen: () => void;
         onToggleDirection: () => void;
@@ -28,6 +30,7 @@
         disabled = false,
         allowDeselect = false,
         isEvaluationSort = false,
+        emptyMessage,
         onValueChange,
         onOpen,
         onToggleDirection
@@ -50,6 +53,7 @@
         value={selectedValue}
         {triggerLabel}
         {allowDeselect}
+        {emptyMessage}
         {onValueChange}
         onOpenChange={(open) => {
             if (open) onOpen();

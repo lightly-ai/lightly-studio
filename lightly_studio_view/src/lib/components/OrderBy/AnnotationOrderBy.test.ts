@@ -113,6 +113,9 @@ describe('AnnotationOrderBy', () => {
         await user.click(screen.getByTestId('sort-by-trigger'));
 
         expect(screen.queryByTestId('sort-field-run-1-iou')).not.toBeInTheDocument();
+        expect(
+            await screen.findByText('Run an evaluation to sort by its metrics.')
+        ).toBeInTheDocument();
     });
 
     it('produces the annotation sort expression for the picked option', async () => {

@@ -33,6 +33,8 @@
         value?: string;
         /** Placeholder text shown when nothing is selected. */
         placeholder?: string;
+        /** Text shown in the open dropdown when `items` is empty. */
+        emptyMessage?: string;
         /** Fixed label shown in the trigger instead of the selected value's label. */
         triggerLabel?: string;
         /** Icon rendered in the trigger, irrespective of the current selection. */
@@ -72,6 +74,7 @@
         items,
         value = $bindable(undefined),
         placeholder = 'Select…',
+        emptyMessage,
         triggerLabel,
         icon: TriggerIconProp,
         allowDeselect = false,
@@ -164,6 +167,10 @@
     <SelectPrimitive.Content>
         {#if children}
             {@render children()}
+        {:else if items?.length === 0 && emptyMessage}
+            <div class={cn('px-2 text-muted-foreground', itemSizeClass[size])}>
+                {emptyMessage}
+            </div>
         {:else if items}
             {#each itemGroups as group (group.label)}
                 <SelectPrimitive.Group>

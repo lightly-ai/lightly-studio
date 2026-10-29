@@ -91,6 +91,7 @@
         direction={$selectedDirection}
         disabled={isSimilaritySearchActive}
         allowDeselect
+        emptyMessage="Run an evaluation to sort by its metrics."
         onValueChange={handleValueChange}
         onOpen={() => trackEvent('sort_by_opened', { collection_id: collectionId })}
         onToggleDirection={toggleDirection}
