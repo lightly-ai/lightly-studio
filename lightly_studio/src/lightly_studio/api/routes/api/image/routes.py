@@ -19,6 +19,7 @@ from lightly_studio.models import sort
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageView, ImageViewsWithCount
+from lightly_studio.models.metadata import HistogramView
 from lightly_studio.models.sort import ImageSortExpr
 from lightly_studio.resolvers import (
     image_resolver,
@@ -26,9 +27,13 @@ from lightly_studio.resolvers import (
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
+from lightly_studio.resolvers.image_resolver import ImageField
 from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
 )
+
+# Default number of equal-width bins per image histogram.
+_DEFAULT_HISTOGRAM_BIN_COUNT = 20
 
 image_router = APIRouter(tags=["image"])
 image_router.include_router(
@@ -110,6 +115,55 @@ def get_image_dimensions(
         session=session,
         collection_id=collection.collection_id,
         annotation_label_ids=annotation_label_ids,
+    )
+
+
+class ReadImageHistogramsRequest(BaseModel):
+    """Request body for computing filtered histograms of the built-in image fields."""
+
+    filters: ImageFilter | None = Field(None, description="Filter parameters for images")
+    bin_count: int = Field(
+        _DEFAULT_HISTOGRAM_BIN_COUNT,
+        ge=1,
+        le=200,
+        description="Number of equal-width bins per histogram",
+    )
+    fields: list[ImageField] | None = Field(
+        None, description="Image fields to histogram; all fields are computed when absent"
+    )
+
+
+@image_router.post(
+    "/collections/{collection_id}/images/histograms", response_model=dict[str, HistogramView]
+)
+def get_image_histograms(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    body: ReadImageHistogramsRequest | None = None,
+) -> dict[str, HistogramView]:
+    """Compute value-distribution histograms of the built-in image fields.
+
+    Bin edges span the full (unfiltered) value range of each field, so the chart axis stays
+    stable. The histogram of a field ignores the filter of that field (faceted-search behavior).
+
+    Args:
+        session: The database session.
+        collection: The collection whose images are binned.
+        body: Optional request body with the active image filters, bin count and fields.
+
+    Returns:
+        Mapping of field name to its histogram.
+    """
+    return image_resolver.get_field_histograms(
+        session=session,
+        collection_id=collection.collection_id,
+        filters=body.filters if body else None,
+        bin_count=body.bin_count if body else _DEFAULT_HISTOGRAM_BIN_COUNT,
+        fields=body.fields if body else None,
     )
 
 
