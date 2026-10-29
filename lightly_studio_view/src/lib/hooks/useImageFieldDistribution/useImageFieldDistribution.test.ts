@@ -4,7 +4,7 @@ import {
     getImageFieldHistogramRequestOptions,
     selectImageFieldDistributions,
     toImageFieldId
-} from './useImageFieldDistribution';
+} from './useImageFieldDistribution.svelte';
 
 describe('toImageFieldId and fromImageFieldId', () => {
     it('maps an image field to its group ID and back', () => {

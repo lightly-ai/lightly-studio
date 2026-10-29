@@ -33,17 +33,20 @@ export const selectImageFieldDistributions = (
         ])
     );
 
+export interface ImageFieldDistributionOptions {
+    collectionId: string;
+    filter?: ImageFilter;
+    /** Number of equal-width bins per histogram (server default: 20). */
+    binCount?: number;
+    fields?: ImageField[];
+}
+
 export const getImageFieldHistogramRequestOptions = ({
     collectionId,
     filter,
     binCount,
     fields
-}: {
-    collectionId: string;
-    filter?: ImageFilter;
-    binCount?: number;
-    fields?: ImageField[];
-}) => ({
+}: ImageFieldDistributionOptions) => ({
     path: { collection_id: collectionId },
     body: {
         ...(filter ? { filters: filter } : {}),
@@ -60,14 +63,7 @@ export const getImageFieldHistogramRequestOptions = ({
  * collection, and the counts follow the given filter.
  */
 export const useImageFieldDistribution = (
-    getOptions: () => {
-        collectionId: string;
-        filter?: ImageFilter;
-        /** Number of equal-width bins per histogram (server default: 20). */
-        binCount?: number;
-        fields?: ImageField[];
-        enabled?: boolean;
-    }
+    getOptions: () => ImageFieldDistributionOptions & { enabled?: boolean }
 ) =>
     createQuery(() => {
         const { enabled = true, ...options } = getOptions();

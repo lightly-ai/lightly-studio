@@ -5,5 +5,6 @@ export {
     selectImageFieldDistributions,
     toImageFieldId,
     useImageFieldDistribution,
-    type ImageField
-} from './useImageFieldDistribution';
+    type ImageField,
+    type ImageFieldDistributionOptions
+} from './useImageFieldDistribution.svelte';
