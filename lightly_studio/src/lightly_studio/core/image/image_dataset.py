@@ -29,6 +29,7 @@ from lightly_studio.analytics.ingest_tracking import IngestFormat
 from lightly_studio.core import path_utils
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.core.image.add_images import BrokenImageCollector
 from lightly_studio.core.image.image_sample import ImageSample
@@ -130,6 +131,37 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         if sample is None:
             raise IndexError(f"No sample found for sample_id: {sample_id}")
         return ImageSample(inner=sample)
+
+    def get_sample_by_file_name(self, file_name: str) -> ImageSample:
+        """Get a single sample from the dataset by its file name.
+
+        The file name must match `sample.file_name` exactly. For images added with
+        `add_images_from_path`, this is the file name without the folder, e.g. `"img_001.jpg"`.
+        For images added from an annotation file, this is the image path in that file, e.g.
+        `"train/img_001.jpg"`.
+
+        To look up many samples, for example to add metadata to all of them, build a
+        `{sample.file_name: sample.sample_id for sample in dataset}` mapping once instead.
+
+        Args:
+            file_name: The file name of the sample to retrieve.
+
+        Returns:
+            A single ImageSample object.
+
+        Raises:
+            IndexError: If no sample has the given file name.
+            ValueError: If more than one sample has the given file name.
+        """
+        samples = self.match(ImageSampleField.file_name == file_name).slice(limit=2).to_list()
+        if not samples:
+            raise IndexError(f"No sample found for file_name: '{file_name}'")
+        if len(samples) > 1:
+            raise ValueError(
+                f"More than one sample has file_name '{file_name}'. To get all of them, use "
+                f"dataset.match(ImageSampleField.file_name == '{file_name}')."
+            )
+        return samples[0]
 
     def add_images_from_path(
         self,

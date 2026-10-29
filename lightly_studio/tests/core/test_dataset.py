@@ -228,6 +228,59 @@ class TestDataset:
         with pytest.raises(IndexError, match=f"No sample found for sample_id: {sample_id_mod}"):
             _ = dataset.get_sample(sample_id=sample_id_mod)
 
+    def test_get_sample_by_file_name(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_image(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/image1.jpg",
+        )
+        image2 = create_image(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/image2.jpg",
+        )
+
+        sample = dataset.get_sample_by_file_name(file_name="image2.jpg")
+
+        assert sample.sample_id == image2.sample_id
+
+    def test_get_sample_by_file_name__not_found(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_image(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/to/image1.jpg",
+        )
+
+        with pytest.raises(IndexError, match=r"No sample found for file_name: 'image2\.jpg'"):
+            dataset.get_sample_by_file_name(file_name="image2.jpg")
+
+    def test_get_sample_by_file_name__more_than_one_match(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        create_image(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/a/image1.jpg",
+        )
+        create_image(
+            session=dataset.session,
+            collection_id=dataset.collection_id,
+            file_path_abs="/path/b/image1.jpg",
+        )
+
+        with pytest.raises(ValueError, match=r"More than one sample has file_name 'image1\.jpg'"):
+            dataset.get_sample_by_file_name(file_name="image1.jpg")
+
     def test_query(
         self,
         patch_collection: None,  # noqa: ARG002
