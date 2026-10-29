@@ -26,6 +26,7 @@ from sqlmodel import Session
 
 from lightly_studio.analytics import ingest_tracking
 from lightly_studio.analytics.ingest_tracking import IngestFormat
+from lightly_studio.core import path_utils
 from lightly_studio.core.dataset import BaseSampleDataset
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.image import add_annotations, add_images
@@ -256,6 +257,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             annotation_type: ``OBJECT_DETECTION`` or ``SEGMENTATION_MASK``.
             embed_annotations: If True, generate embeddings for the annotation crops.
         """
+        path_utils.check_input_file(
+            path=annotations_json, description="COCO annotations json file", suffix=".json"
+        )
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
         if annotation_type == AnnotationType.OBJECT_DETECTION:
             label_input = COCOObjectDetectionInput(input_file=annotations_json)
@@ -437,9 +441,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         if tag_depth < 0:
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         data_yaml = Path(data_yaml).absolute()
-
-        if not data_yaml.is_file() or data_yaml.suffix != ".yaml":
-            raise FileNotFoundError(f"YOLO data yaml file not found: '{data_yaml}'")
+        path_utils.check_input_file(
+            path=data_yaml, description="YOLO data yaml file", suffix=".yaml"
+        )
 
         # Determine which splits to process
         splits_to_process = add_annotations.resolve_yolo_splits(
@@ -542,17 +546,20 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
                 These tags are added on top of the `split` tag.
 
         Raises:
-            ValueError: If tag_depth is negative, or if limit is not None and not greater
-                than 0.
+            ValueError: If tag_depth is negative, if limit is not None and not greater
+                than 0, or if annotations_json does not end with ".json".
+            FileNotFoundError: If annotations_json does not exist.
+            OSError: If annotations_json cannot be accessed, for example because of missing
+                cloud credentials.
         """
         source = ingest_tracking.get_source(path=images_path)
         fsspec_lister.validate_limit(limit)
         if tag_depth < 0:
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         images_path = _normalize_input_path(path=images_path)
-        fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
-        if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
-            raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
+        path_utils.check_input_file(
+            path=annotations_json, description="COCO annotations json file", suffix=".json"
+        )
 
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
 
@@ -763,8 +770,9 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         annotations_json = Path(annotations_json).absolute()
         images_path = Path(images_path).absolute()
 
-        if not annotations_json.is_file() or annotations_json.suffix != ".json":
-            raise FileNotFoundError(f"COCO caption json file not found: '{annotations_json}'")
+        path_utils.check_input_file(
+            path=annotations_json, description="COCO caption json file", suffix=".json"
+        )
 
         created_sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=self.session,

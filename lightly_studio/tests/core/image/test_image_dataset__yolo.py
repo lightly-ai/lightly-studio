@@ -424,9 +424,7 @@ class TestDataset:
         yaml_path.write_text(yaml.dump(get_yolo_yaml_dict_valid()))
 
         dataset = ImageDataset.create(name="test_dataset")
-        with pytest.raises(
-            FileNotFoundError, match=f"YOLO data yaml file not found: '{yaml_path}'"
-        ):
+        with pytest.raises(ValueError, match=r"The YOLO data yaml file must end with '\.yaml'"):
             dataset.add_samples_from_yolo(data_yaml=yaml_path, input_split="train")
 
     def test_add_samples_from_yolo__dont_embed(

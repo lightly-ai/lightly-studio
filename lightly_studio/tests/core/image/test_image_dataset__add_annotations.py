@@ -189,6 +189,21 @@ class TestDataset:
         )
         assert len(result.annotations) == 1
 
+    def test_add_annotations_from_coco__annotations_json_no_file(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        dataset, images_path = _setup_dataset_with_images(tmp_path, ["image1.jpg"])
+        annotations_path = tmp_path / "missing.json"
+
+        with pytest.raises(
+            FileNotFoundError, match=f"COCO annotations json file not found: '{annotations_path}'"
+        ):
+            dataset.add_annotations_from_coco(
+                annotations_json=annotations_path, images_root=images_path, annotation_source="gt"
+            )
+
     def test_add_annotations_from_coco__no_matching_images_creates_no_annotation_source(
         self,
         patch_collection: None,  # noqa: ARG002

@@ -465,7 +465,7 @@ class TestDataset:
 
         dataset = ImageDataset.create(name="test_dataset")
         with pytest.raises(
-            FileNotFoundError, match=f"COCO annotations json file not found: '{annotations_path}'"
+            ValueError, match=r"The COCO annotations json file must end with '\.json'"
         ):
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,

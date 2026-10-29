@@ -89,9 +89,7 @@ class TestDataset:
         images_path = tmp_path / "images"
 
         dataset = ImageDataset.create(name="test_dataset")
-        with pytest.raises(
-            FileNotFoundError, match=f"COCO caption json file not found: '{annotations_path}'"
-        ):
+        with pytest.raises(ValueError, match=r"The COCO caption json file must end with '\.json'"):
             dataset.add_samples_from_coco_caption(
                 annotations_json=annotations_path,
                 images_path=images_path,
