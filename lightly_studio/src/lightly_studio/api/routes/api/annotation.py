@@ -101,6 +101,7 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
     # Embedding-plot lasso/rectangle selection sent as geometry (a few KB) instead of the full
     # list of selected annotation sample ids; resolved to sample ids server-side (LIG-9903).
     embedding_region: EmbeddingRegion | None = None
+    has_embedding: bool | None = None
     text_embedding: list[float] | None = None
     sort_by: AnnotationEvaluationMetricSortExpr | None = None
 
@@ -155,6 +156,30 @@ def get_annotation_sample_ids(
     )
 
 
+class AnnotationEmbeddingCoverageView(BaseModel):
+    """The number of annotations with an embedding, of all annotations matching a filter."""
+
+    embedded_count: int
+    total_count: int
+
+
+@annotations_router.post(
+    "/annotations/embedding_coverage", response_model=AnnotationEmbeddingCoverageView
+)
+def read_annotation_embedding_coverage(
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    session: SessionDep,
+    body: ReadAnnotationSampleIdsRequest,
+) -> AnnotationEmbeddingCoverageView:
+    """Count the annotations matching the filters, and those of them with an embedding."""
+    coverage = annotation_resolver.count_embedding_coverage(
+        session=session, collection_id=collection_id, filters=body.filters
+    )
+    return AnnotationEmbeddingCoverageView(
+        embedded_count=coverage.embedded_count, total_count=coverage.total_count
+    )
+
+
 @annotations_router.post("/annotations/payload")
 def read_annotations_with_payload(
     collection_id: Annotated[
@@ -186,6 +211,7 @@ def read_annotations_with_payload(
             tag_ids=body.tag_ids,
             sample_ids=body.sample_ids,
             embedding_region=body.embedding_region,
+            has_embedding=body.has_embedding,
         ),
         collection_id=collection_id,
         ordering=AnnotationOrdering(

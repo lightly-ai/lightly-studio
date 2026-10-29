@@ -41,6 +41,7 @@ vi.mock('../useTags/useTags', () => ({
 }));
 
 import { useSelectedAnnotationsFilter, useAnnotationsFilter } from './useAnnotationsFilter';
+import { useAnnotationHasEmbeddingFilter } from '../useAnnotationHasEmbeddingFilter/useAnnotationHasEmbeddingFilter';
 
 describe('useSelectedAnnotationsFilter', () => {
     beforeEach(() => {
@@ -62,6 +63,15 @@ describe('useSelectedAnnotationsFilter', () => {
             filter_type: 'annotations',
             annotation_label_ids: expect.arrayContaining(['label-1', 'label-2'])
         });
+    });
+
+    it('adds has_embedding to annotationFilter when the has embedding filter is set', () => {
+        const { setHasEmbedding } = useAnnotationHasEmbeddingFilter();
+        setHasEmbedding(false);
+        const { annotationFilter } = useSelectedAnnotationsFilter();
+
+        expect(get(annotationFilter)).toEqual({ filter_type: 'annotations', has_embedding: false });
+        setHasEmbedding(undefined);
     });
 
     it('returns undefined annotationLabelIds when no labels selected', () => {

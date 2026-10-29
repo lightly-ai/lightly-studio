@@ -4,6 +4,10 @@ from lightly_studio.resolvers.annotation_resolver.bulk_create_classifications im
     BulkCreateClassificationsResult,
     bulk_create_classifications,
 )
+from lightly_studio.resolvers.annotation_resolver.count_embedding_coverage import (
+    EmbeddingCoverage,
+    count_embedding_coverage,
+)
 from lightly_studio.resolvers.annotation_resolver.create_many import create_many
 from lightly_studio.resolvers.annotation_resolver.delete_annotation import (
     delete_annotation,
@@ -75,8 +79,10 @@ __all__ = [
     "AnnotationCrop",
     "AnnotationOrdering",
     "BulkCreateClassificationsResult",
+    "EmbeddingCoverage",
     "build_sample_ids_query",
     "bulk_create_classifications",
+    "count_embedding_coverage",
     "create_many",
     "delete_annotation",
     "delete_annotations",

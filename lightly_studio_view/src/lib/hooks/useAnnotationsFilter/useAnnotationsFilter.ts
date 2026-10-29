@@ -5,6 +5,7 @@ import type { AnnotationLabel } from '$lib/services/types';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
 import { usePostHog } from '$lib/hooks';
+import { useAnnotationHasEmbeddingFilter } from '../useAnnotationHasEmbeddingFilter/useAnnotationHasEmbeddingFilter';
 
 /**
  * Low-level hook: manages selected annotation label IDs and produces an AnnotationsFilter.
@@ -34,13 +35,18 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
         ($set) => ($set.size > 0 ? Array.from($set) : undefined)
     );
 
+    const { hasEmbedding } = useAnnotationHasEmbeddingFilter();
+
     const annotationFilter: Readable<AnnotationsFilter | undefined> = derived(
-        tagsSelected ? [selectedAnnotationFilterIds, tagsSelected] : [selectedAnnotationFilterIds],
+        tagsSelected
+            ? [selectedAnnotationFilterIds, hasEmbedding, tagsSelected]
+            : [selectedAnnotationFilterIds, hasEmbedding],
         (stores) => {
             const $set = stores[0] as Set<string>;
-            const $tags = stores[1] as Set<string> | undefined;
+            const $hasEmbedding = stores[1] as boolean | undefined;
+            const $tags = stores[2] as Set<string> | undefined;
 
-            if ($set.size === 0 && (!$tags || $tags.size === 0)) {
+            if ($set.size === 0 && (!$tags || $tags.size === 0) && $hasEmbedding === undefined) {
                 return undefined;
             }
 
@@ -53,6 +59,10 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
 
             if ($tags && $tags.size > 0) {
                 filter.tag_ids = Array.from($tags);
+            }
+
+            if ($hasEmbedding !== undefined) {
+                filter.has_embedding = $hasEmbedding;
             }
 
             return filter;

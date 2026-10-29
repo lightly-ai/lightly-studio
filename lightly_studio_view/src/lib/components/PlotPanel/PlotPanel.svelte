@@ -19,6 +19,7 @@
         type ViewportState
     } from 'embedding-atlas/svelte';
     import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
+    import PlotEmbeddingCoverage from './PlotEmbeddingCoverage/PlotEmbeddingCoverage.svelte';
     import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
     import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
@@ -523,6 +524,9 @@
                 onCommit={commitPlotAxes}
                 onReset={() => selectPlotLayout('pacmap')}
             />
+            {#if isAnnotations}
+                <PlotEmbeddingCoverage {collectionId} filter={$selectedAnnotationsFilter} />
+            {/if}
         </div>
         <Button
             variant="ghost"

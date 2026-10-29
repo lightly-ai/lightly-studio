@@ -13,6 +13,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
@@ -34,6 +35,10 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
     sample_ids: list[UUID] | None = Field(
         default=None, description="List of annotation sample UUIDs to restrict to"
+    )
+    has_embedding: bool | None = Field(
+        default=None,
+        description="Keep only annotations with (True) or without (False) an embedding",
     )
 
     def apply(
@@ -93,6 +98,7 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
             or self.annotation_types
             or self.sample_ids
             or self.region_sample_ids is not None
+            or self.has_embedding is not None
         )
 
     def _apply_annotation_filters(
@@ -148,6 +154,16 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
         # Filter by annotation type
         if self.annotation_types:
             query = query.where(col(AnnotationBaseTable.annotation_type).in_(self.annotation_types))
+
+        # Filter by whether an embedding of any model exists
+        if self.has_embedding is not None:
+            embedded_sample_ids = select(SampleEmbeddingTable.sample_id)
+            sample_id = col(annotation_sample.sample_id)
+            query = query.where(
+                sample_id.in_(embedded_sample_ids)
+                if self.has_embedding
+                else sample_id.notin_(embedded_sample_ids)
+            )
 
         return query
 

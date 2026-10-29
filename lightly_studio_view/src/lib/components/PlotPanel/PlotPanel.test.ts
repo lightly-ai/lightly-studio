@@ -80,6 +80,9 @@ vi.mock('embedding-atlas/svelte', async () => ({
     EmbeddingView: (await import('./EmbeddingViewStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useEmbeddings/useEmbeddings');
+vi.mock('$lib/hooks/useAnnotationEmbeddingCoverage/useAnnotationEmbeddingCoverage.svelte', () => ({
+    useAnnotationEmbeddingCoverage: () => ({ data: { embedded_count: 1, total_count: 100 } })
+}));
 const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
 vi.mock('./PlotTextAxesInputs/embedTextAxes', () => ({ embedTextAxes: mockEmbedTextAxes }));
 vi.mock('./useArrowData/useArrowData', () => ({
@@ -542,6 +545,18 @@ describe('PlotPanel.svelte', () => {
         // The image filter path must stay untouched on the annotations route.
         expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
+    });
+
+    it('shows the embedding coverage on the annotations route', async () => {
+        routeState.id = ANNOTATIONS_ROUTE;
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        expect(screen.getByTestId('plot-embedding-coverage')).toHaveTextContent(
+            '1 of 100 annotations have embeddings'
+        );
+        expect(screen.getByTestId('plot-has-embedding-select')).toBeInTheDocument();
     });
 
     it('highlights the committed annotation region after the live selection clears', async () => {

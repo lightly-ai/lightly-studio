@@ -3,6 +3,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { useAnnotationHasEmbeddingFilter } from '$lib/hooks/useAnnotationHasEmbeddingFilter/useAnnotationHasEmbeddingFilter';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
@@ -63,6 +64,7 @@
     // to the backend instead of a resolved sample-id list (see LIG-9903).
     const { annotationPlotRegion } = useAnnotationPlotSelection();
     const plotSelectedRegion = $derived($annotationPlotRegion);
+    const { hasEmbedding } = useAnnotationHasEmbeddingFilter();
 
     // The text embedding search is shared with the images tab and persists across the tab switch.
     // Only apply it when this annotation collection actually has embeddings.
@@ -101,6 +103,7 @@
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         // Embedding plot lasso selection narrows the grid to annotations inside the region.
         embedding_region: plotSelectedRegion ?? undefined,
+        has_embedding: $hasEmbedding,
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: searchEmbedding?.embedding ?? undefined,
         // Similarity ordering keeps precedence, so the two are never sent together.
@@ -121,6 +124,7 @@
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
+            ($hasEmbedding !== undefined ? `embedded:${$hasEmbedding}` : '') +
             (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +
             (queryParams.sort_by ? `sort:${JSON.stringify(queryParams.sort_by)}` : '')
     );
