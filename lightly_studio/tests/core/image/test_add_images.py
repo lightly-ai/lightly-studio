@@ -387,7 +387,7 @@ def test_load_into_dataset_from_labelformat__first_files_missing_fails_early(
     with pytest.raises(
         AllInputFilesFailedError,
         match=(
-            f"The first 5 image files do not exist, for example: "
+            f"None of 7 sampled image files exist, for example: "
             f"'{posixpath.join(tmp_path.as_posix(), 'missing0.jpg')}'. "
             f"Check that the images path '{tmp_path.as_posix()}' is the folder"
         ),
@@ -399,8 +399,32 @@ def test_load_into_dataset_from_labelformat__first_files_missing_fails_early(
             images_path=tmp_path,
         )
 
-    # Only the early check ran, not the per-file loop over all 7 files.
-    assert file_exists_spy.call_count == 5
+    # Only the early check ran, not the per-file loop as well.
+    assert file_exists_spy.call_count == 7
+
+
+def test_load_into_dataset_from_labelformat__only_first_files_missing_still_loads(
+    db_session: Session, tmp_path: Path
+) -> None:
+    # A downloaded subset of a large annotation file: the first entries are missing, the rest
+    # exist. The early check must not abort the load.
+    collection = helpers_resolvers.create_collection(db_session)
+    filenames = [f"missing{i}.jpg" for i in range(10)] + [f"present{i}.jpg" for i in range(10)]
+    for name in filenames[10:]:
+        (tmp_path / name).write_bytes(b"")
+    label_input = _get_labelformat_input_obj_det_multi(filenames=filenames)
+
+    add_images.load_into_dataset_from_labelformat(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        input_labels=label_input,
+        images_path=tmp_path,
+    )
+
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection.collection_id
+    ).samples
+    assert len(samples) == 10
 
 
 def test_load_into_dataset_from_labelformat__first_files_missing_names_double_slash(
@@ -742,7 +766,7 @@ def test_load_into_dataset_from_coco_captions__first_files_missing_fails_early(
 
     with pytest.raises(
         AllInputFilesFailedError,
-        match=f"The first 5 image files do not exist, for example: '{images_path}/missing0.jpg'",
+        match=f"None of 7 sampled image files exist, for example: '{images_path}/missing0.jpg'",
     ):
         add_images.load_into_dataset_from_coco_captions(
             session=db_session,

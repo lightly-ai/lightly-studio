@@ -55,7 +55,7 @@ SAMPLE_BATCH_SIZE = 1024
 # Cloud backends read ahead 5-50 MiB by default. Use 256 KiB chunks for image probes.
 _IMAGE_PROBE_BLOCK_SIZE = 256 * 1024
 # Number of files to check before the loading loop, so a wrong images root fails fast.
-_EARLY_CHECK_FILE_COUNT = 5
+_EARLY_CHECK_FILE_COUNT = 50
 
 
 class BrokenImageCollector:
@@ -617,26 +617,29 @@ def _check_label_files_exist(
 
 
 def _raise_if_first_files_missing(file_paths_abs: Sequence[str], images_root: str) -> None:
-    """Raise if the first files to add are all missing.
+    """Raise if a sample of the files to add is all missing.
 
     A wrong images root makes every file missing. This check fails in seconds, before the
-    loader checks all files one by one.
+    loader checks all files one by one. The sample is spread over the whole list, so a
+    downloaded subset of a large annotation file, whose first entries are missing, still loads.
 
     Args:
         file_paths_abs: The absolute paths of the files to add, in loading order.
         images_root: The images root that the paths were built from, for the error message.
 
     Raises:
-        AllInputFilesFailedError: If the first `_EARLY_CHECK_FILE_COUNT` paths are all missing.
+        AllInputFilesFailedError: If all of up to `_EARLY_CHECK_FILE_COUNT` evenly spaced paths
+            are missing.
     """
-    first_paths = file_paths_abs[:_EARLY_CHECK_FILE_COUNT]
-    if not first_paths or any(_file_exists(path) for path in first_paths):
+    step = max(1, len(file_paths_abs) // _EARLY_CHECK_FILE_COUNT)
+    sampled_paths = file_paths_abs[::step][:_EARLY_CHECK_FILE_COUNT]
+    if not sampled_paths or any(_file_exists(path) for path in sampled_paths):
         return
     raise AllInputFilesFailedError(
-        f"The first {len(first_paths)} image files do not exist, for example: "
-        f"'{first_paths[0]}'. Check that the images path '{images_root}' is the folder that "
+        f"None of {len(sampled_paths)} sampled image files exist, for example: "
+        f"'{sampled_paths[0]}'. Check that the images path '{images_root}' is the folder that "
         f"the image file names in the annotations are relative to."
-        f"{path_utils.double_slash_hint(path=first_paths[0])}"
+        f"{path_utils.double_slash_hint(path=sampled_paths[0])}"
     )
 
 
