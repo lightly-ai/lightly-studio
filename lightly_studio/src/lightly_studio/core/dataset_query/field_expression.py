@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Callable, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar, Union
 
 from sqlalchemy import ColumnElement
 from sqlalchemy.orm import Mapped

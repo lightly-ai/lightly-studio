@@ -14,12 +14,14 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
 )
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
+    AnnotationLabelWithCountView,
 )
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import annotation_label_resolver
+from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
 
 annotations_label_router = APIRouter()
 
@@ -67,6 +69,31 @@ def read_annotation_labels(
     return annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
 
 
+@annotations_label_router.get("/collections/{collection_id}/annotation_labels_with_counts")
+def read_annotation_labels_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationLabelWithCountView]:
+    """Retrieve the annotation labels of a dataset with their numbers of annotations."""
+    labels = annotation_label_resolver.get_all(session=session, dataset_id=collection.dataset_id)
+    counts = annotation_label_resolver.get_annotation_counts(
+        session=session, dataset_id=collection.dataset_id
+    )
+    return [
+        AnnotationLabelWithCountView(
+            dataset_id=label.dataset_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_label_name=label.annotation_label_name,
+            annotation_count=counts.get(label.annotation_label_id, 0),
+        )
+        for label in labels
+    ]
+
+
 @annotations_label_router.get("/annotation_labels/{label_id}")
 def read_annotation_label(
     label_id: UUID,
@@ -105,10 +132,8 @@ def delete_annotation_label(
     label_id: UUID,
     session: SessionDep,
 ) -> dict[str, str]:
-    """Delete an annotation label from the database."""
+    """Delete an annotation label and all annotations that use it."""
+    annotation_resolver.delete_annotations(session=session, annotation_label_ids=[label_id])
     if not annotation_label_resolver.delete(session=session, label_id=label_id):
-        raise HTTPException(
-            status_code=HTTP_STATUS_NOT_FOUND,
-            detail="Annotation label not found",
-        )
+        raise NotFoundError("Annotation label not found")
     return {"status": "deleted"}

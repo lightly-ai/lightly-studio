@@ -37,7 +37,7 @@ class BulkRelabelAnnotationsByFilterInput(BaseModel):
 
 
 class PreviousAnnotationLabel(BaseModel):
-    """Label of an annotation before a bulk relabel."""
+    """Annotation class of an annotation before a bulk relabel."""
 
     annotation_id: UUID
     label_name: str
@@ -61,7 +61,7 @@ def bulk_relabel_annotations(
     session: SessionDep,
     body: Annotated[BulkRelabelAnnotationsInput, Body()],
 ) -> BulkRelabelAnnotationsResult:
-    """Assign a label to the given annotations.
+    """Assign an annotation class to the given annotations.
 
     IDs that do not exist are ignored.
     """
@@ -86,7 +86,7 @@ def bulk_relabel_annotations_by_filter(
     session: SessionDep,
     body: Annotated[BulkRelabelAnnotationsByFilterInput, Body()],
 ) -> BulkRelabelAnnotationsResult:
-    """Assign a label to the annotations of an annotation collection that match a filter."""
+    """Assign an annotation class to the annotations of an annotation source that match a filter."""
     annotation_ids_query = grid_filter_sample_ids.build_sample_ids_query(
         session=session,
         collection_id=collection.collection_id,
@@ -103,7 +103,7 @@ def bulk_relabel_annotations_by_filter(
 def _relabel_annotations(
     session: Session, collection_id: UUID, annotation_ids: Sequence[UUID], label_name: str
 ) -> BulkRelabelAnnotationsResult:
-    """Relabel annotations and return their labels from before the change."""
+    """Relabel annotations and return their annotation classes from before the change."""
     annotations = annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids)
     previous_labels = [
         PreviousAnnotationLabel(

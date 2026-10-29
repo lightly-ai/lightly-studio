@@ -62,7 +62,9 @@
     const assistedLabelingStatus = useAssistedLabelingStatus();
     // Assisted labeling supports images only, not video frames.
     const showAssistedLabelingTools = $derived(
-        !annotationLabelContext.isOnAnnotationDetailsView && !isFrameDetailsRoute(page.route.id)
+        !annotationLabelContext.isOnAnnotationDetailsView &&
+            !isFrameDetailsRoute(page.route.id) &&
+            assistedLabelingStatus.disabledReason === null
     );
 
     const items = $derived<ToolbarItem[]>([
@@ -102,16 +104,14 @@
             label: 'Smart select',
             icon: WandSparkles,
             hint: 'Segments the object that you click or box. Sends the image to fal.ai.',
-            visible: showAssistedLabelingTools,
-            disabledReason: assistedLabelingStatus.disabledReason ?? undefined
+            visible: showAssistedLabelingTools
         },
         {
             id: 'find-instances',
             label: 'Find all instances',
             icon: Layers3,
             hint: 'Finds all objects that match a text prompt. Sends the image to fal.ai.',
-            visible: showAssistedLabelingTools,
-            disabledReason: assistedLabelingStatus.disabledReason ?? undefined
+            visible: showAssistedLabelingTools
         },
         {
             id: 'brush',
