@@ -55,10 +55,17 @@
 
 {#if annotationWithPayload.similarity_score !== undefined && annotationWithPayload.similarity_score !== null}
     <div
-        class="absolute bottom-1 right-1 z-10 box-border flex h-5 items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
+        class="absolute bottom-1 right-1 z-10 box-border flex h-5 max-w-[calc(100%-0.5rem)] items-center rounded bg-black/60 px-1.5 text-xs font-medium text-white backdrop-blur-sm"
     >
         <span
-            class="mr-1.5 block h-2 w-2 rounded-full"
+            class="mr-1.5 truncate"
+            data-testid="annotation-grid-item-class"
+            title={annotationWithPayload.annotation.annotation_label?.annotation_label_name}
+        >
+            {annotationWithPayload.annotation.annotation_label?.annotation_label_name}
+        </span>
+        <span
+            class="mr-1.5 block h-2 w-2 shrink-0 rounded-full"
             style="background-color: {getSimilarityColor(annotationWithPayload.similarity_score)}"
         ></span>
         {annotationWithPayload.similarity_score.toFixed(2)}

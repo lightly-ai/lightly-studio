@@ -26,6 +26,7 @@
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+    import { setLabelColorOrder } from '$lib/utils';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
@@ -341,6 +342,12 @@
     }));
     const annotationLabelsData = $derived(annotationLabelsQuery?.data);
     const annotationLabelsStore = toStore(() => annotationLabelsData);
+    // Give each annotation class its own palette color, shared by the plot and the boxes.
+    $effect(() => {
+        if (annotationLabelsData) {
+            setLabelColorOrder(annotationLabelsData.map((label) => label.annotation_label_name));
+        }
+    });
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
     const {

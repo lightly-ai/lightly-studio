@@ -1,8 +1,10 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { getColorByLabel } from './getColorByLabel';
+import { CATEGORICAL_PALETTE, getColorByLabel, setLabelColorOrder } from './getColorByLabel';
+import { hexToRgb } from './colorConvert';
 
 afterEach(() => {
     useCustomLabelColors().clearCustomColors();
+    setLabelColorOrder([]);
 });
 
 describe('getColorByLabel', () => {
@@ -47,6 +49,33 @@ describe('getColorByLabel', () => {
         // over 32 colors averages ~3 per color; allow generous headroom for variance).
         const maxPerColor = Math.max(...countsByColor.values());
         expect(maxPerColor).toBeLessThanOrEqual(7);
+    });
+
+    describe('with a label color order', () => {
+        test('gives each of 20 ordered labels its own palette color', () => {
+            const labels = Array.from({ length: 20 }, (_, i) => `class_${i}`);
+            setLabelColorOrder(labels);
+
+            const colors = new Set(labels.map((label) => getColorByLabel(label).color));
+            expect(colors.size).toBe(20);
+            const { r, g, b } = hexToRgb(CATEGORICAL_PALETTE[1]);
+            expect(getColorByLabel('class_1').color).toBe(`rgba(${r}, ${g}, ${b}, 1)`);
+        });
+
+        test('gives labels beyond the palette distinct hue wheel colors', () => {
+            const labels = Array.from({ length: 52 }, (_, i) => `class_${i}`);
+            setLabelColorOrder(labels);
+
+            const colors = new Set(labels.slice(20).map((label) => getColorByLabel(label).color));
+            expect(colors.size).toBe(32);
+        });
+
+        test('hashes labels outside the order', () => {
+            const hashed = getColorByLabel('cat');
+            setLabelColorOrder(['dog']);
+
+            expect(getColorByLabel('cat')).toEqual(hashed);
+        });
     });
 
     describe('with a custom color override', () => {

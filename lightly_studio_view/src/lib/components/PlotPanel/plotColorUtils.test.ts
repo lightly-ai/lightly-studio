@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getColorByLabel } from '$lib/utils';
+import { CATEGORICAL_PALETTE, getColorByLabel } from '$lib/utils';
 import {
     FILTERED_COLOR,
     getCategoryColors,
@@ -7,6 +7,7 @@ import {
     getLegendEntries,
     HIDDEN_COLOR,
     NOT_FILTERED_COLOR,
+    OTHER_COLOR,
     UNASSIGNED_COLOR
 } from './plotColorUtils';
 
@@ -80,9 +81,20 @@ describe('plotColorUtils', () => {
                 false
             )
         ).toEqual([
-            { cat: 3, label: 'Train', color: 'rgb(255, 0, 136)', hidden: false },
-            { cat: 4, label: 'Validation', color: 'rgb(0, 193, 150)', hidden: false }
+            { cat: 3, label: 'Train', color: CATEGORICAL_PALETTE[0], hidden: false },
+            { cat: 4, label: 'Validation', color: CATEGORICAL_PALETTE[1], hidden: false }
         ]);
+    });
+
+    it('gives 20 discrete categories distinct colors and the Other bucket a neutral one', () => {
+        const legend = new Map<number, string>(
+            Array.from({ length: 20 }, (_, i) => [i + 3, `value_${i}`] as [number, string])
+        );
+        legend.set(22, 'Other (a, b)');
+
+        const colors = getCategoryColors(legend, false, true).slice(3);
+        expect(new Set(colors.slice(0, 19)).size).toBe(19);
+        expect(colors[19]).toBe(OTHER_COLOR);
     });
 
     it('uses unassigned color for category 2 when colorBy is active', () => {

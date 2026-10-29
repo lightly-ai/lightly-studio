@@ -52,6 +52,13 @@ export const useCustomLabelColors = () => {
         colorVersion.update((v) => v + 1);
     };
 
+    // Re-emit the stores without a change, so components re-derive colors that depend on more
+    // than the custom colors (e.g. the label palette order).
+    const refreshColors = () => {
+        customLabelColorsStore.update((colors) => ({ ...colors }));
+        colorVersion.update((v) => v + 1);
+    };
+
     return {
         customLabelColorsStore,
         colorVersion,
@@ -59,6 +66,7 @@ export const useCustomLabelColors = () => {
         setCustomColor,
         hasCustomColor,
         deleteCustomColor,
-        clearCustomColors
+        clearCustomColors,
+        refreshColors
     };
 };

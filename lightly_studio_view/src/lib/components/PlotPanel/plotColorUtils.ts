@@ -1,4 +1,4 @@
-import { getColorByLabel, oklchHueWheelColor } from '$lib/utils';
+import { CATEGORICAL_PALETTE, getColorByLabel, oklchHueWheelColor } from '$lib/utils';
 import {
     EXCLUDED_BY_FILTERS_CATEGORY,
     HIDDEN_CATEGORY,
@@ -14,6 +14,9 @@ export const HIDDEN_COLOR = '#000000';
 export const NOT_FILTERED_COLOR = '#606060';
 export const FILTERED_COLOR = '#FF7220';
 export const UNASSIGNED_COLOR = '#B0B0B0';
+// The backend groups values beyond the palette size into one "Other (…)" category.
+export const OTHER_COLOR = '#9a8f80';
+const OTHER_LABEL_PREFIX = 'Other (';
 
 interface LegendEntry {
     cat: number;
@@ -41,6 +44,10 @@ function getDiscreteOklchColor(index: number, total: number): string {
 }
 
 function getDiscreteCategoryColor(category: number, categoryCount: number): string {
+    const paletteColor = CATEGORICAL_PALETTE[category - RESERVED_CATEGORY_COUNT];
+    if (paletteColor !== undefined) {
+        return paletteColor;
+    }
     const totalColoredCategories = Math.max(1, categoryCount - RESERVED_CATEGORY_COUNT);
     return getDiscreteOklchColor(category - RESERVED_CATEGORY_COUNT, totalColoredCategories);
 }
@@ -49,6 +56,7 @@ function getBaseCategoryColor(
     category: number,
     categoryCount: number,
     label: string,
+    useLabelColor: boolean,
     isColorByActive: boolean = false
 ): string {
     if (category === HIDDEN_CATEGORY) {
@@ -63,7 +71,11 @@ function getBaseCategoryColor(
         return isColorByActive ? UNASSIGNED_COLOR : FILTERED_COLOR;
     }
 
-    if (label) {
+    if (label.startsWith(OTHER_LABEL_PREFIX)) {
+        return OTHER_COLOR;
+    }
+
+    if (useLabelColor) {
         return getColorByLabel(label).color;
     }
 
@@ -81,8 +93,14 @@ export function getCategoryColors(
 ): string[] {
     const categoryCount = getCategoryCount(colorLegend);
     return Array.from({ length: categoryCount }, (_, category) => {
-        const label = useLabelColors ? (colorLegend?.get(category) ?? '') : '';
-        return getBaseCategoryColor(category, categoryCount, label, isColorByActive);
+        const label = colorLegend?.get(category) ?? '';
+        return getBaseCategoryColor(
+            category,
+            categoryCount,
+            label,
+            useLabelColors && label !== '',
+            isColorByActive
+        );
     });
 }
 
@@ -103,7 +121,7 @@ export function getLegendEntries(
         .map(([category, label]) => ({
             cat: category,
             label,
-            color: getBaseCategoryColor(category, categoryCount, useLabelColors ? label : ''),
+            color: getBaseCategoryColor(category, categoryCount, label, useLabelColors),
             hidden: hiddenCategories.has(category)
         }));
 }

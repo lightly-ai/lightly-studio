@@ -28,6 +28,52 @@ const COLOR_PALETTE: Array<[number, number, number]> = WHEELS.flatMap(
         })
 );
 
+// 20 categorical colors that stay distinct from each other on the dark plot and image
+// backgrounds. Labels with a known position (see `setLabelColorOrder`) take these in order, so a
+// collection with up to 20 classes never repeats a color.
+export const CATEGORICAL_PALETTE: readonly string[] = [
+    '#e6194b',
+    '#3cb44b',
+    '#ffe119',
+    '#4363d8',
+    '#f58231',
+    '#b04ee0',
+    '#42d4f4',
+    '#f032e6',
+    '#bfef45',
+    '#fabed4',
+    '#469990',
+    '#dcbeff',
+    '#b5762a',
+    '#fffac8',
+    '#a83232',
+    '#aaffc3',
+    '#9e9e1a',
+    '#ffd8b1',
+    '#7f8cff',
+    '#c47ab0'
+];
+
+// Position of each known label in the categorical palette.
+const labelColorIndex = new Map<string, number>();
+
+/**
+ * Assigns the categorical palette to labels in the given order (e.g. annotation classes in
+ * creation order). Plot legends, boxes and pills then share one color per class. Labels past the
+ * palette take the hue wheel in order; labels not in the list keep a hashed color.
+ */
+export const setLabelColorOrder = (labels: readonly string[]) => {
+    const unchanged =
+        labels.length === labelColorIndex.size &&
+        labels.every((label, index) => labelColorIndex.get(label) === index);
+    if (unchanged) return;
+    labelColorIndex.clear();
+    labels.forEach((label, index) => labelColorIndex.set(label, index));
+    // Components derive label colors from the custom color store, so a change there re-renders
+    // them with the new colors.
+    useCustomLabelColors().refreshColors();
+};
+
 // FNV-1a 32-bit hash. Mixes each byte into all 32 bits, so the result distributes
 // well even when reduced modulo a power-of-two table length.
 const fnv1aHash = (value: string) => {
@@ -50,6 +96,17 @@ export const getColorByLabel = (label: string, alpha: number = 1) => {
             // Apply the requested alpha, but respect the custom alpha.
             return getColorPair(hexToRgb(customColor.color), customColor.alpha * alpha);
         }
+    }
+
+    const paletteIndex = labelColorIndex.get(label);
+    if (paletteIndex !== undefined && paletteIndex < CATEGORICAL_PALETTE.length) {
+        return getColorPair(hexToRgb(CATEGORICAL_PALETTE[paletteIndex]), alpha);
+    }
+    if (paletteIndex !== undefined) {
+        // Later classes take the hue wheel in order, which repeats less than hashing.
+        const [r, g, b] =
+            COLOR_PALETTE[(paletteIndex - CATEGORICAL_PALETTE.length) % COLOR_PALETTE.length];
+        return getColorPair({ r, g, b }, alpha);
     }
 
     // Hash the label deterministically into the palette so a given label always maps

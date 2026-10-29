@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.api.routes.api.embedding_coloring import coloring_helpers
 from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import DiscreteColorScale
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.resolvers.tag_resolver import iter_sample_memberships
@@ -67,6 +68,7 @@ def build_tag_color_maps(
     scale = DiscreteColorScale.from_values(
         values=ordered_tag_ids,
         format_fn=lambda tid: names.get(tid, tid),
+        max_categories=coloring_helpers.MAX_DISTINCT_COLORS,
     )
     return _assign_categories(
         sample_ids=sample_ids,

@@ -129,6 +129,19 @@ describe('AnnotationsGridItem', () => {
         expect(dot).toHaveStyle({ backgroundColor: getSimilarityColor(0.956) });
     });
 
+    it('shows the class name next to the similarity score', () => {
+        renderItem(
+            buildAnnotation({
+                similarity_score: 0.5,
+                annotation: {
+                    annotation_label: { annotation_label_name: 'bobcat' }
+                } as AnnotationWithPayloadView['annotation']
+            })
+        );
+
+        expect(screen.getByTestId('annotation-grid-item-class')).toHaveTextContent('bobcat');
+    });
+
     it('shows the similarity badge for a zero score', () => {
         renderItem(buildAnnotation({ similarity_score: 0 }));
 

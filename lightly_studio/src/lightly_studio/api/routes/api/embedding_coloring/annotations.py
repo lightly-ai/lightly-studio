@@ -53,6 +53,7 @@ def build_annotation_color_maps(
     scale = DiscreteColorScale.from_values(
         values=ordered_label_ids,
         format_fn=lambda lid: names.get(str(lid), str(lid)),
+        max_categories=coloring_helpers.MAX_DISTINCT_COLORS,
     )
 
     return coloring_helpers.assign_color_categories(

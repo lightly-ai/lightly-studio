@@ -17,6 +17,9 @@ MAX_LEGEND_SLOTS = 256
 # First slot available for colored categories. Slots below it are reserved for the
 # frontend's non-colored categories (0 hidden, 1 filtered-out, 2 unassigned).
 FIRST_COLORED_CATEGORY = 3
+# Number of colored categories the frontend palette keeps visually distinct. Discrete scales
+# list at most this many categories, the last one being "Other" when the values overflow.
+MAX_DISTINCT_COLORS = 20
 # Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
 MAX_OTHER_NAMES = 5
 
@@ -59,6 +62,7 @@ class DiscreteColorScale(Generic[T]):
         values: Iterable[T],
         start_cat: int = FIRST_COLORED_CATEGORY,
         format_fn: Callable[[T], str] = str,
+        max_categories: int | None = None,
     ) -> DiscreteColorScale[T]:
         """Build a DiscreteColorScale by assigning a category to each value.
 
@@ -82,6 +86,8 @@ class DiscreteColorScale(Generic[T]):
                 unassigned samples.
             format_fn: Function to produce a legend label from a value.
                 Defaults to ``str``.
+            max_categories: Maximum number of categories, including the "Other"
+                category. ``None`` uses every available slot.
 
         Returns:
             A DiscreteColorScale with one category per value, or — when the
@@ -93,6 +99,8 @@ class DiscreteColorScale(Generic[T]):
 
         # Slots [start_cat, MAX_LEGEND_SLOTS) are available for categories.
         max_individual = MAX_LEGEND_SLOTS - start_cat
+        if max_categories is not None:
+            max_individual = min(max_individual, max_categories)
 
         lookup: dict[T, int] = {}
         legend: dict[int, str] = {}

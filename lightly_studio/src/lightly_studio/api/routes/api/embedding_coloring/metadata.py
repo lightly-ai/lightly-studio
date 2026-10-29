@@ -82,7 +82,11 @@ def _build_metadata_color_scale(
             matching_sample_ids=matching_sample_ids,
             format_fn=format_fn,
         )
-        return DiscreteColorScale.from_values(values=ordered_values, format_fn=format_fn)
+        return DiscreteColorScale.from_values(
+            values=ordered_values,
+            format_fn=format_fn,
+            max_categories=coloring_helpers.MAX_DISTINCT_COLORS,
+        )
     if metadata_type == "integer":
         return DiscreteColorScale.from_integers(values=(int(v) for v in sample_to_value.values()))
 

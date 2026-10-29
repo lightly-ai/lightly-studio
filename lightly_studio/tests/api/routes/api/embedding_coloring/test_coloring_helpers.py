@@ -81,6 +81,16 @@ class TestDiscreteColorScale:
         # More grouped values than MAX_OTHER_NAMES -> ellipsis appended.
         assert scale.legend[255] == "Other (v252, v253, v254, v255, v256, …)"
 
+    def test_from_values__max_categories(self) -> None:
+        # 4 values exceed max_categories=3: 2 are listed, the rest go to "Other".
+        scale = DiscreteColorScale.from_values(values=["a", "b", "c", "d"], max_categories=3)
+        assert scale.legend == {3: "a", 4: "b", 5: "Other (c, d)"}
+        assert scale.value_to_category("d") == 5
+
+    def test_from_values__max_categories_fits(self) -> None:
+        scale = DiscreteColorScale.from_values(values=["a", "b", "c"], max_categories=3)
+        assert scale.legend == {3: "a", 4: "b", 5: "c"}
+
     def test_from_integers__few_values(self) -> None:
         scale = DiscreteColorScale.from_integers(values=[3, 1, 2])
         assert scale.value_to_category(1) == 3
