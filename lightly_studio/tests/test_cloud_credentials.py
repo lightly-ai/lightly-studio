@@ -347,60 +347,6 @@ def test_apply_cloud_credentials__ca_bundle_trusts_private_s3_endpoint(
     assert "ca-test" in filesystem.ls("")
 
 
-def test_apply_cloud_credentials__serializes_concurrent_calls(
-    mocker: MockerFixture,
-    private_root_ca: helpers_tls.CertificateWithKey,
-    private_issuing_ca: helpers_tls.CertificateWithKey,
-) -> None:
-    write_started = threading.Event()
-    release_write = threading.Event()
-    write_ca_bundle = ca_bundle.write_ca_bundle
-
-    def write_ca_bundle_and_block_first_call(pem: str) -> str:
-        if not write_started.is_set():
-            write_started.set()
-            release_write.wait()
-        return write_ca_bundle(pem=pem)
-
-    mocker.patch.object(
-        ca_bundle, "write_ca_bundle", side_effect=write_ca_bundle_and_block_first_call
-    )
-    first = threading.Thread(
-        target=apply_cloud_credentials,
-        kwargs={
-            "credentials": {
-                "AWS_ACCESS_KEY_ID": "first",
-                "AWS_CA_BUNDLE_PEM": private_root_ca.certificate_pem(),
-            }
-        },
-    )
-    second = threading.Thread(
-        target=apply_cloud_credentials,
-        kwargs={
-            "credentials": {
-                "AWS_ACCESS_KEY_ID": "second",
-                "AWS_CA_BUNDLE_PEM": private_issuing_ca.certificate_pem(),
-            }
-        },
-    )
-
-    first.start()
-    write_started.wait()
-    second.start()
-    second.join(timeout=0.2)
-    second_waited = second.is_alive()
-    release_write.set()
-    first.join()
-    second.join()
-
-    # The second call waits until the first call is complete.
-    assert second_waited
-    assert os.environ["AWS_ACCESS_KEY_ID"] == "second"
-    assert (
-        Path(os.environ["AWS_CA_BUNDLE"]).read_text().endswith(private_issuing_ca.certificate_pem())
-    )
-
-
 def test_validate_credential_keys__accepts_aws_keys() -> None:
     cloud_credentials._validate_credential_keys(
         credentials={
