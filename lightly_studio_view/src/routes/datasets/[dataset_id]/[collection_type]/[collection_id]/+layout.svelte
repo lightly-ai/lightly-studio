@@ -681,6 +681,7 @@
 
                             {#if isImages}
                                 <QueryControl
+                                    {collectionId}
                                     onOpen={() => {
                                         setActivePanel(
                                             $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
@@ -831,7 +832,12 @@
                                 {/await}
                             {:else if $activePanel === 'queryEditor' && isImages}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                    {#key collectionId}
+                                        <QueryEditorPanel
+                                            {collectionId}
+                                            onClose={() => setActivePanel('none')}
+                                        />
+                                    {/key}
                                 {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}

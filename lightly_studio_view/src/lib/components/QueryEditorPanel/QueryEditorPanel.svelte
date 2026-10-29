@@ -1,21 +1,26 @@
 <script lang="ts">
-    import type { ComponentProps } from 'svelte';
+    import { untrack, type ComponentProps } from 'svelte';
     import { X } from '@lucide/svelte';
     import { useQueryClient } from '@tanstack/svelte-query';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useQueryPanelState } from '$lib/hooks/useQueryPanelState/useQueryPanelState';
 
     interface Props {
+        /** Collection whose query draft the editor shows. Read once, at mount. */
+        collectionId: string;
         /** Invoked when the user clicks the close button in the panel header. */
         onClose: () => void;
     }
 
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
-    const { onClose }: Props = $props();
+    const { collectionId, onClose }: Props = $props();
     const { imageQueryExpression, updateQueryExpr } = useImageFilters();
+    // The draft outlives the panel, so typed text is still there when the panel opens again.
+    const { draft, lastQueryExpression } = useQueryPanelState(untrack(() => collectionId));
     const queryClient = useQueryClient();
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
@@ -76,7 +81,9 @@
     </div>
     <QueryEditor
         height="100%"
-        value={$imageQueryExpression?.query_expr_str}
+        value={$imageQueryExpression?.query_expr_str ?? $lastQueryExpression?.query_expr_str}
+        draft={$draft ?? undefined}
+        onDraftChange={(value) => draft.set(value)}
         onSave={handleQueryEditorValueChange}
     />
 </div>

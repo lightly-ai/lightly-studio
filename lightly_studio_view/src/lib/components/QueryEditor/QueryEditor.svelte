@@ -13,7 +13,12 @@ AND object_detection(class_name = "person" AND x > 10)
 `;
 
     interface QueryEditorProps {
+        /** The applied query. The editor starts with it unless `draft` is set. */
         value?: string;
+        /** Unapplied text to start with, e.g. from before the editor closed. */
+        draft?: string;
+        /** Called on every edit, with the editor text. */
+        onDraftChange?: (value: string) => void;
         height?: string;
         readOnly?: boolean;
         onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
@@ -21,6 +26,8 @@ AND object_detection(class_name = "person" AND x > 10)
 
     let {
         value: valueProp,
+        draft,
+        onDraftChange,
         height = '320px',
         readOnly = false,
         onSave
@@ -54,15 +61,16 @@ AND object_detection(class_name = "person" AND x > 10)
         onSave?.(draftValue, translationResult);
     }
 
-    let draftValue = $state(untrack(() => initialValue));
+    let draftValue = $state(untrack(() => draft ?? initialValue));
 
     onMount(() => {
         if (!containerEl) return;
         return mount(containerEl, {
-            value: initialValue,
+            value: draftValue,
             readOnly,
             onChange: (next) => {
                 draftValue = next;
+                onDraftChange?.(next);
             }
         });
     });

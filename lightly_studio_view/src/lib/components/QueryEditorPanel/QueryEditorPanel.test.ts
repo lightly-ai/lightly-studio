@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { useQueryPanelState } from '$lib/hooks/useQueryPanelState/useQueryPanelState';
 import QueryEditorPanel from './QueryEditorPanel.svelte';
 
 const { updateQueryExpr, invalidateQueries, imageQueryExpression, queryExpr } = await vi.hoisted(
@@ -29,7 +30,7 @@ vi.mock('@tanstack/svelte-query', () => ({
 
 describe('QueryEditorPanel', () => {
     it('updates the query and invalidates all queries when re-applying the same query', async () => {
-        render(QueryEditorPanel, { props: { onClose: vi.fn() } });
+        render(QueryEditorPanel, { props: { collectionId: 'images', onClose: vi.fn() } });
 
         expect(screen.getByText('metadata["quality_score"] >= 0.8')).toBeInTheDocument();
 
@@ -40,5 +41,20 @@ describe('QueryEditorPanel', () => {
             query_expr_str: 'width < 500'
         });
         await waitFor(() => expect(invalidateQueries).toHaveBeenCalledExactlyOnceWith());
+    });
+
+    it('starts with the unapplied draft kept from before the panel closed', async () => {
+        useQueryPanelState('images-with-draft').draft.set('height < 300');
+        render(QueryEditorPanel, {
+            props: { collectionId: 'images-with-draft', onClose: vi.fn() }
+        });
+
+        // The draft differs from the applied query, so the button applies instead of re-applying.
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+        expect(updateQueryExpr).toHaveBeenLastCalledWith({
+            query_expr: queryExpr,
+            query_expr_str: 'height < 300'
+        });
     });
 });
