@@ -1,5 +1,5 @@
 import { get } from 'svelte/store';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const STORAGE_KEY = 'lightly-studio:plot-selected-point-size';
 
@@ -11,9 +11,16 @@ async function loadHook() {
 }
 
 describe('usePlotSelectedPointSize', () => {
+    // Node 25 ships its own localStorage, which shadows jsdom's, so stub it as useOnboarding does.
     beforeEach(() => {
-        localStorage.clear();
+        const values = new Map<string, string>();
+        vi.stubGlobal('localStorage', {
+            getItem: (key: string) => values.get(key) ?? null,
+            setItem: (key: string, value: string) => values.set(key, value)
+        });
     });
+
+    afterEach(() => vi.unstubAllGlobals());
 
     it('defaults to large', async () => {
         const { selectedPointSize } = await loadHook();
