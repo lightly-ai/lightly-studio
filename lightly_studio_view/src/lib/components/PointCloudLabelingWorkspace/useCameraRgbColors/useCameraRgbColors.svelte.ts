@@ -49,6 +49,12 @@ export function useCameraRgbColors(params: UseCameraRgbColorsParams) {
         const batch = params.getBatch();
         const cameraPairs = params.getCameraPairs();
 
+        console.warn('[rgb] hook effect', {
+            colorMode,
+            batchCount: batch?.count,
+            cameraPairs: cameraPairs.length
+        });
+
         if (colorMode !== 'camera-rgb' || !batch || cameraPairs.length === 0) {
             colors = null;
             return;
@@ -63,6 +69,8 @@ export function useCameraRgbColors(params: UseCameraRgbColorsParams) {
                     return {
                         sceneToCamera: new Float64Array(projection.scene_to_camera.slice(0, 12)),
                         cameraMatrix: new Float64Array(projection.camera_matrix),
+                        projWidth: projection.width,
+                        projHeight: projection.height,
                         width: imageData.width,
                         height: imageData.height,
                         pixels: imageData.data
@@ -76,7 +84,17 @@ export function useCameraRgbColors(params: UseCameraRgbColorsParams) {
 
             worker.onmessage = (event: MessageEvent<{ colors: Float32Array }>) => {
                 if (currentId !== requestId) return;
-                colors = event.data.colors;
+                const c = event.data.colors;
+                let colored = 0;
+                for (let i = 0; i < c.length; i += 3) {
+                    if (c[i] !== 0.5 || c[i + 1] !== 0.5 || c[i + 2] !== 0.5) colored++;
+                }
+                console.warn('[rgb] worker result', {
+                    length: c.length,
+                    coloredPoints: colored,
+                    sample: [c[0], c[1], c[2]]
+                });
+                colors = c;
             };
 
             worker.postMessage(

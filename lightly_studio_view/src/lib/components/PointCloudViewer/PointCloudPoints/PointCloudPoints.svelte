@@ -70,6 +70,14 @@
         const range = intensityRange;
         const cameraColors = mode === 'camera-rgb' ? (getCameraColors() ?? undefined) : undefined;
         if (!currentBatch.segments) void currentBatch.colors;
+        if (mode === 'camera-rgb') {
+            console.warn('[rgb] PointCloudPoints', {
+                batchCount: currentBatch.count,
+                segments: currentBatch.segments?.length ?? 1,
+                cameraColorsLength: cameraColors?.length ?? null,
+                usingFallback: cameraColors == null
+            });
+        }
         untrack(() => {
             prepared = frameBuffers.update(currentBatch, mode, range, cameraColors);
             invalidate();
