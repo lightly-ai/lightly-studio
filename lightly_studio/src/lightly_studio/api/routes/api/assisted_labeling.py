@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import functools
 from concurrent.futures import ThreadPoolExecutor
-from typing import Annotated, Optional
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Header
@@ -39,7 +39,7 @@ def get_assisted_labeling_status() -> AssistedLabelingStatusView:
 @assisted_labeling_router.post("/interactive")
 async def create_interactive_annotation_preview(
     request: InteractiveAnnotationRequest,
-    x_user_email: Annotated[Optional[str], Header()] = None,  # noqa: UP045
+    x_user_email: Annotated[str | None, Header()] = None,
 ) -> InteractiveAnnotationResponse:
     """Returns a single-object preview from points or boxes. Saves nothing.
 
@@ -59,7 +59,7 @@ async def create_interactive_annotation_preview(
 @assisted_labeling_router.post("/instances")
 async def create_instances_annotation_preview(
     request: InstancesAnnotationRequest,
-    x_user_email: Annotated[Optional[str], Header()] = None,  # noqa: UP045
+    x_user_email: Annotated[str | None, Header()] = None,
 ) -> InstancesAnnotationResponse:
     """Returns previews of all instances that match a text prompt. Saves nothing.
 
