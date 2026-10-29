@@ -121,6 +121,47 @@ describe('useMetadataDistributionsBySampleTags', () => {
         });
     });
 
+    it('creates and combines one image field query per selected tag', () => {
+        useMetadataDistributionsBySampleTags(() => ({
+            collectionId: 'collection-1',
+            field: { name: 'width', type: 'image' },
+            sampleTags: [{ id: 'tag-a', label: 'Reviewed' }],
+            binCount: 50
+        }));
+
+        expect(capturedOptions.queries).toHaveLength(1);
+        expect(capturedOptions.queries[0].queryKey).toContainEqual(
+            expect.objectContaining({
+                _id: 'getImageHistograms',
+                body: expect.objectContaining({
+                    bin_count: 50,
+                    fields: ['width'],
+                    filters: expect.objectContaining({
+                        sample_filter: expect.objectContaining({ tag_ids: ['tag-a'] })
+                    })
+                })
+            })
+        );
+
+        const result = capturedOptions.combine?.([
+            {
+                data: { width: { bin_edges: [100, 200], counts: [3] } },
+                isFetching: false,
+                error: null
+            }
+        ]);
+
+        expect(result).toMatchObject({
+            data: [
+                {
+                    id: 'tag-a',
+                    histograms: { 'image:width': { binEdges: [100, 200], counts: [3] } },
+                    categorical: {}
+                }
+            ]
+        });
+    });
+
     it('combines available categorical and numeric results without hiding partial data', () => {
         useMetadataDistributionsBySampleTags(() => ({
             collectionId: 'collection-1',
