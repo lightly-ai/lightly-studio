@@ -6,6 +6,7 @@
     import EvaluationRunItem from './EvaluationRunItem/EvaluationRunItem.svelte';
     import TriggerEvaluationDialog from './TriggerEvaluationDialog/TriggerEvaluationDialog.svelte';
     import { type EvaluationRunView } from '$lib/api/lightly_studio_local';
+    import { useExpandedEvaluationRun } from './useEvaluationPanelState/useEvaluationPanelState';
 
     interface Props {
         /** Invoked when the user clicks the close button in the panel header. */
@@ -36,22 +37,24 @@
     const canTrigger = $derived(!!datasetId && !!collectionId);
     let dialogOpen = $state(false);
 
-    let expandedRunId = $state<string | null>(null);
+    // Kept per collection outside the panel, so the open run is still open when the panel
+    // opens again.
+    const expandedRunId = $derived(useExpandedEvaluationRun(collectionId ?? ''));
     const expandedRun = $derived(
-        expandedRunId ? (evaluationRuns.find((run) => run.id === expandedRunId) ?? null) : null
+        $expandedRunId ? (evaluationRuns.find((run) => run.id === $expandedRunId) ?? null) : null
     );
     const visibleRuns = $derived(expandedRun ? [expandedRun] : evaluationRuns);
     const toggleExpand = (runId: string) => {
-        if (expandedRunId !== runId && collectionId) {
+        if ($expandedRunId !== runId && collectionId) {
             trackEvent('model_evaluation_opened', {
                 collection_id: collectionId,
                 evaluation_run_id: runId
             });
         }
-        expandedRunId = expandedRunId === runId ? null : runId;
+        expandedRunId.set($expandedRunId === runId ? null : runId);
     };
     const collapseExpanded = () => {
-        expandedRunId = null;
+        expandedRunId.set(null);
     };
 </script>
 
@@ -136,7 +139,7 @@
                     <EvaluationRunItem
                         {run}
                         {datasetId}
-                        expanded={expandedRunId === run.id}
+                        expanded={$expandedRunId === run.id}
                         onToggle={() => toggleExpand(run.id)}
                     />
                 {/each}

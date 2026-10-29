@@ -25,6 +25,10 @@
             sortBy: string;
             visibleClassCount: number;
         }) => void;
+        /** Class and color settings to start with, e.g. from before the panel closed. */
+        initialSettings?: { config: ClassSetConfig; color: ColorConfig };
+        /** Called with the class and color settings when the user applies them. */
+        onSettingsChange?: (settings: { config: ClassSetConfig; color: ColorConfig }) => void;
     }
 
     const {
@@ -33,16 +37,22 @@
         showLegend = false,
         onCellClick,
         onExpand,
-        onConfigApplied
+        onConfigApplied,
+        initialSettings,
+        onSettingsChange
     }: Props = $props();
 
-    let config: ClassSetConfig = $state({
-        mode: 'topN',
-        n: untrack(() => topN),
-        sortBy: 'most-confused',
-        manualClasses: []
-    });
-    let color: ColorConfig = $state({ intensity: 1, logScale: true });
+    let config: ClassSetConfig = $state(
+        untrack(() => initialSettings?.config) ?? {
+            mode: 'topN',
+            n: untrack(() => topN),
+            sortBy: 'most-confused',
+            manualClasses: []
+        }
+    );
+    let color: ColorConfig = $state(
+        untrack(() => initialSettings?.color) ?? { intensity: 1, logScale: true }
+    );
     let configDialogOpen = $state(false);
     let expandOpen = $state(false);
 
@@ -53,6 +63,7 @@
     const applyConfig = (nextConfig: ClassSetConfig, nextColor: ColorConfig) => {
         config = nextConfig;
         color = nextColor;
+        onSettingsChange?.({ config: nextConfig, color: nextColor });
         const newVisibleClasses = selectVisibleClasses(matrix, nextConfig);
         onConfigApplied?.({
             mode: nextConfig.mode,

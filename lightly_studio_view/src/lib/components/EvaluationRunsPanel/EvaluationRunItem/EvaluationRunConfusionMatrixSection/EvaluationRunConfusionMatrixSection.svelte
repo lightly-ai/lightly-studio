@@ -10,6 +10,7 @@
     } from '$lib/components/ConfusionMatrix';
     import { useEvaluationConfusionMatrix, usePostHog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useConfusionMatrixSettings } from '../../useEvaluationPanelState/useEvaluationPanelState';
 
     interface Props {
         datasetId: string;
@@ -21,6 +22,8 @@
     const collectionId = $derived(page.params.collection_id!);
 
     const { trackEvent } = usePostHog();
+    // Kept per run outside the panel, so the matrix keeps its classes and colors when it opens again.
+    const matrixSettings = $derived(useConfusionMatrixSettings(evaluationRunId));
 
     const query = useEvaluationConfusionMatrix(() => ({
         datasetId,
@@ -110,6 +113,8 @@
                 onCellClick={handleCellClick}
                 onExpand={handleMatrixExpand}
                 onConfigApplied={handleMatrixConfigApplied}
+                initialSettings={$matrixSettings ?? undefined}
+                onSettingsChange={(settings) => matrixSettings.set(settings)}
             />
         {/if}
     </section>

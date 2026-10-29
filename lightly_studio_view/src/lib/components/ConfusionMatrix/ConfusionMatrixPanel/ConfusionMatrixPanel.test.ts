@@ -42,4 +42,18 @@ describe('ConfusionMatrixPanel', () => {
 
         expect(screen.getByText(/Top 10 of 80 classes/)).toBeInTheDocument();
     });
+
+    it('starts with the settings kept from before the panel closed', () => {
+        render(ConfusionMatrixPanel, {
+            props: {
+                matrix: coco80Classes,
+                initialSettings: {
+                    config: { mode: 'topN', n: 8, sortBy: 'most-confused', manualClasses: [] },
+                    color: { intensity: 1, logScale: true }
+                }
+            }
+        });
+
+        expect(screen.getByText(/Top 8 of 80 classes/)).toBeInTheDocument();
+    });
 });
