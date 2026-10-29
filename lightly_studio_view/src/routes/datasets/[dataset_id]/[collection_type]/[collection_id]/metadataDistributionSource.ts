@@ -66,8 +66,13 @@ export const selectCategoricalFetchState = (
 };
 
 interface MetadataDistributionSourceParams {
-    /** Numeric distributions for the current view, keyed by metadata key. */
+    /** Numeric distributions for the current view, keyed by group ID. */
     histograms: Record<string, HistogramData>;
+    /**
+     * Built-in fields of the samples, such as the image width. They are listed in an "Image"
+     * section before the metadata keys, which are then listed in a "Custom" section.
+     */
+    imageFields?: { id: string; label: string }[];
     /** Numeric metadata keys remain selectable before their histogram loads. */
     numericKeys: string[];
     /** Metadata keys that hold categorical values, in the order to show them. */
@@ -80,7 +85,7 @@ interface MetadataDistributionSourceParams {
      * the panel then defers the background rather than drawing it at zero.
      */
     filteredCategorical?: Record<string, CategoricalMetadataBucket[]>;
-    /** Active numeric filter per key; bins outside it render dimmed. */
+    /** Active numeric filter per group ID; bins outside it render dimmed. */
     selectedRanges: Record<string, HistogramRange | undefined>;
     /** Active categorical filter per key. */
     selectedValues: Record<string, CategoricalMetadataValue[] | undefined>;
@@ -101,18 +106,22 @@ interface MetadataDistributionSourceParams {
 }
 
 /**
- * The distribution panel's "Metadata" source: one group per metadata key, each
- * rendering as a histogram (numeric) or a bar chart (categorical), with the
+ * The distribution panel's "Metadata" source: one group per image field and metadata key,
+ * each rendering as a histogram (numeric) or a bar chart (categorical), with the
  * selected sample tags layered on as comparison series.
  *
- * Returns null when the dataset has no metadata at all, so the panel's source
+ * Returns null when there is nothing to show, so the panel's source
  * picker does not offer a source that can never show anything.
  */
 export function buildMetadataDistributionSource(
     params: MetadataDistributionSourceParams
 ): DistributionSource | null {
+    const imageFields = params.imageFields ?? [];
     const numericKeys = params.numericKeys;
-    if (numericKeys.length === 0 && params.categoricalKeys.length === 0) return null;
+    if (imageFields.length === 0 && numericKeys.length === 0 && params.categoricalKeys.length === 0)
+        return null;
+
+    const metadataSection = imageFields.length > 0 ? 'Custom' : undefined;
 
     return {
         id: 'metadata',
@@ -122,8 +131,19 @@ export function buildMetadataDistributionSource(
         comparisonLoading: params.comparisonLoading,
         comparisonError: params.comparisonError,
         groups: [
-            ...numericKeys.map((key) => buildNumericGroup(params, key)),
-            ...params.categoricalKeys.map((key) => buildCategoricalGroup(params, key))
+            ...imageFields.map(({ id, label }) => ({
+                ...buildNumericGroup(params, id),
+                label,
+                section: 'Image'
+            })),
+            ...numericKeys.map((key) => ({
+                ...buildNumericGroup(params, key),
+                section: metadataSection
+            })),
+            ...params.categoricalKeys.map((key) => ({
+                ...buildCategoricalGroup(params, key),
+                section: metadataSection
+            }))
         ]
     };
 }
