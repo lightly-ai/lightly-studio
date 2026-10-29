@@ -1,4 +1,4 @@
-import type { ImageFilter } from '$lib/api/lightly_studio_local';
+import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local';
 import type { ExportType } from '../exportOptions';
 
 interface BuildExportCodeParams {
@@ -92,7 +92,11 @@ export function buildExportCode(params: BuildExportCodeParams): BuildExportCodeR
     const call = EXPORT_CALLS[params.exportType];
     if (!call) return { code: undefined, reason: FORMAT_NOT_SUPPORTED_REASON };
 
-    const tagName = getSimpleTagScope(params.imageFilter, params.tags);
+    const tagName = getSimpleTagScope(
+        params.imageFilter,
+        params.tags,
+        params.annotationSources.map((source) => source.id)
+    );
     if (tagName === null) return { code: undefined, reason: SCOPE_NOT_SUPPORTED_REASON };
 
     const source = call.usesAnnotationSource ? getExplicitSource(params) : undefined;
@@ -117,15 +121,42 @@ export function buildExportCode(params: BuildExportCodeParams): BuildExportCodeR
  */
 function getSimpleTagScope(
     imageFilter: ImageFilter | null,
-    tags: { tag_id: string; name: string }[]
+    tags: { tag_id: string; name: string }[],
+    annotationSourceIds: string[]
 ): string | undefined | null {
     if (!imageFilter) return undefined;
     if (imageFilter.width || imageFilter.height) return null;
-    const { tag_ids: tagIds, ...otherSampleFilters } = imageFilter.sample_filter ?? {};
+    const {
+        tag_ids: tagIds,
+        annotations_filter: annotationsFilter,
+        ...otherSampleFilters
+    } = imageFilter.sample_filter ?? {};
+    if (
+        annotationsFilter &&
+        !selectsEveryAnnotationSource(annotationsFilter, annotationSourceIds)
+    ) {
+        return null;
+    }
     const hasOtherFilters = Object.values(otherSampleFilters).some((v) => v != null);
     if (hasOtherFilters || (tagIds?.length ?? 0) > 1) return null;
     if (!tagIds || tagIds.length === 0) return undefined;
     return tags.find((tag) => tag.tag_id === tagIds[0])?.name ?? null;
+}
+
+/**
+ * Whether an annotation filter only carries the source list's default of every source ticked.
+ * That filter restricts no image here, so it maps to no filter in code.
+ */
+function selectsEveryAnnotationSource(
+    filter: AnnotationsFilter,
+    annotationSourceIds: string[]
+): boolean {
+    const hasOtherCriteria = Object.entries(filter).some(
+        ([key, value]) =>
+            key !== 'filter_type' && key !== 'collection_ids' && value != null && value !== false
+    );
+    const selected = filter.collection_ids ?? [];
+    return !hasOtherCriteria && annotationSourceIds.every((id) => selected.includes(id));
 }
 
 /** The dialog exports one source. With one source, the SDK default (all sources) matches it. */

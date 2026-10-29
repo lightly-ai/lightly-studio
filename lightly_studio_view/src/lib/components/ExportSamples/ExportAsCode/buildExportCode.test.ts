@@ -66,6 +66,51 @@ describe('buildExportCode', () => {
         );
     });
 
+    it('treats the default selection of every annotation source as no filter', () => {
+        // The source list ticks every source by default, and the image filter carries them.
+        const { code, reason } = buildExportCode({
+            ...defaultParams,
+            annotationSources: [
+                { id: 'source-gt', name: 'ground_truth' },
+                { id: 'source-v1', name: 'model_v1' }
+            ],
+            imageFilter: {
+                filter_type: 'image',
+                sample_filter: {
+                    tag_ids: ['tag-train'],
+                    annotations_filter: {
+                        filter_type: 'annotations',
+                        collection_ids: ['source-gt', 'source-v1']
+                    }
+                }
+            }
+        });
+
+        expect(reason).toBeUndefined();
+        expect(code).toContain('ImageSampleField.tags.contains("train")');
+    });
+
+    it('gives no code when only some annotation sources are selected', () => {
+        const { code } = buildExportCode({
+            ...defaultParams,
+            annotationSources: [
+                { id: 'source-gt', name: 'ground_truth' },
+                { id: 'source-v1', name: 'model_v1' }
+            ],
+            imageFilter: {
+                filter_type: 'image',
+                sample_filter: {
+                    annotations_filter: {
+                        filter_type: 'annotations',
+                        collection_ids: ['source-v1']
+                    }
+                }
+            }
+        });
+
+        expect(code).toBeUndefined();
+    });
+
     it('gives no code for two tags', () => {
         const result = buildExportCode({
             ...defaultParams,
