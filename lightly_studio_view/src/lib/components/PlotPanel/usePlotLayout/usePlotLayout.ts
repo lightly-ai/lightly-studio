@@ -1,5 +1,6 @@
 import { derived, get, writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
+import type { ViewportState } from 'embedding-atlas/svelte';
 import type { ProjectionAxes } from '$lib/api/lightly_studio_local';
 import { embedTextAxes } from '../PlotTextAxesInputs/embedTextAxes';
 import { createEmptyTextAxesDraft } from '../PlotTextAxesInputs/textAxesDraft';
@@ -9,13 +10,15 @@ export type PlotLayout = 'pacmap' | 'text';
 // The plot shows the PaCMAP layout. In Text mode it shows the projection onto two text axes,
 // once all four texts are committed. The state lives at module scope, per collection: the plot
 // unmounts when it closes, but a saved region keeps its axes, so a reopened plot must show the
-// layout of that region.
+// layout of that region. The viewport after the user pans or zooms is kept the same way; null
+// means the default viewport.
 const createLayoutState = () => ({
     plotLayout: writable<PlotLayout>('pacmap'),
     textAxesDraft: writable(createEmptyTextAxesDraft()),
     committedAxes: writable<ProjectionAxes | null>(null),
     appliedTextAxes: writable<Parameters<typeof embedTextAxes>[1] | null>(null),
-    isEmbeddingAxes: writable(false)
+    isEmbeddingAxes: writable(false),
+    userViewport: writable<ViewportState | null>(null)
 });
 
 const layoutStateByCollection = new Map<string, ReturnType<typeof createLayoutState>>();
@@ -26,7 +29,14 @@ export function usePlotLayout(collectionId: string) {
         state = createLayoutState();
         layoutStateByCollection.set(collectionId, state);
     }
-    const { plotLayout, textAxesDraft, committedAxes, appliedTextAxes, isEmbeddingAxes } = state;
+    const {
+        plotLayout,
+        textAxesDraft,
+        committedAxes,
+        appliedTextAxes,
+        isEmbeddingAxes,
+        userViewport
+    } = state;
 
     const plotAxes = derived([plotLayout, committedAxes], ([$plotLayout, $committedAxes]) =>
         $plotLayout === 'text' ? $committedAxes : null
@@ -55,6 +65,7 @@ export function usePlotLayout(collectionId: string) {
         appliedTextAxes,
         isEmbeddingAxes,
         plotAxes,
+        userViewport,
         commitTextAxes
     };
 }

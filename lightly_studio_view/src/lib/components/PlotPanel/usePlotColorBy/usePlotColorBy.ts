@@ -1,4 +1,4 @@
-import { derived, readonly, writable, type Readable } from 'svelte/store';
+import { derived, readonly, writable, type Readable, type Writable } from 'svelte/store';
 import type { GetEmbeddings2dRequest } from '$lib/api/lightly_studio_local/types.gen';
 import type { PlotColorByType } from '../PlotColorByPopover/usePlotColorByType/usePlotColorByType';
 
@@ -8,6 +8,8 @@ interface UsePlotColorByParams {
     selectedColorByType: Readable<PlotColorByType | null>;
     tags: Readable<{ tag_id: string }[]>;
     annotationLabels: Readable<{ annotation_label_id: string }[]>;
+    /** Holds the metadata key. Pass a store that outlives the plot to keep the choice. */
+    selectedColorByKey?: Writable<string | null>;
 }
 
 interface UsePlotColorByReturn {
@@ -19,10 +21,9 @@ interface UsePlotColorByReturn {
 export function usePlotColorBy({
     selectedColorByType,
     tags,
-    annotationLabels
+    annotationLabels,
+    selectedColorByKey = writable<string | null>(null)
 }: UsePlotColorByParams): UsePlotColorByReturn {
-    const selectedColorByKey = writable<string | null>(null);
-
     const colorBy = derived(
         [selectedColorByType, selectedColorByKey, tags, annotationLabels],
         ([$selectedColorByType, $selectedColorByKey, $tags, $annotationLabels]): ColorBy => {

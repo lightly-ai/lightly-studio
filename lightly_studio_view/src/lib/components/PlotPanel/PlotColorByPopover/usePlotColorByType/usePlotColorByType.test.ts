@@ -45,4 +45,12 @@ describe('usePlotColorByType', () => {
 
         expect(get(colorByType.selectedColorByType)).toBeNull();
     });
+
+    it('keeps the metadata key of a collection for the next plot', () => {
+        usePlotColorByType('collection-key-a').selectedColorByKey.set('camera');
+
+        // A reopened plot calls the hook again.
+        expect(get(usePlotColorByType('collection-key-a').selectedColorByKey)).toBe('camera');
+        expect(get(usePlotColorByType('collection-key-b').selectedColorByKey)).toBeNull();
+    });
 });

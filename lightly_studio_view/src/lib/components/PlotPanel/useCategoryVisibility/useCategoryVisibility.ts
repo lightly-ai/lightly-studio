@@ -1,4 +1,4 @@
-import { writable, get, type Readable } from 'svelte/store';
+import { writable, get, type Readable, type Writable } from 'svelte/store';
 import { usePostHog } from '$lib/hooks';
 import type { PlotColorByType } from '../PlotColorByPopover/usePlotColorByType/usePlotColorByType';
 
@@ -26,7 +26,30 @@ interface UseCategoryVisibilityReturn {
     toggleCategoryVisibility: (category: number) => void;
     focusCategoryVisibility: (categories: number[], category: number) => void;
     resetCategoryVisibility: (preservedCategories?: number[]) => void;
+    syncColorByMode: (colorByMode: string, preservedCategories?: number[]) => void;
 }
+
+interface CollectionVisibility {
+    hiddenState: Writable<HiddenCategoryState>;
+    /** Color-by mode the hidden labels belong to. */
+    colorByMode: string | undefined;
+}
+
+// Per collection, so hidden categories survive the plot unmounting (closing the panel, opening
+// a sample, switching tabs). In memory only, so they last for the session.
+const visibilityByCollection = new Map<string, CollectionVisibility>();
+
+const getCollectionVisibility = (collectionId: string): CollectionVisibility => {
+    let visibility = visibilityByCollection.get(collectionId);
+    if (!visibility) {
+        visibility = {
+            hiddenState: writable({ reserved: new Set(), labels: new Set() }),
+            colorByMode: undefined
+        };
+        visibilityByCollection.set(collectionId, visibility);
+    }
+    return visibility;
+};
 
 const isReserved = (category: number) => category < RESERVED_CATEGORY_COUNT;
 
@@ -46,6 +69,7 @@ export const resolveHiddenCategories = (
 
 /**
  * Tracks hidden plot categories and exposes focused visibility helpers for the PlotPanel.
+ * The collection is read once, when the hook is created.
  */
 export const useCategoryVisibility = ({
     getCollectionId,
@@ -53,7 +77,8 @@ export const useCategoryVisibility = ({
     getColorLegend
 }: UseCategoryVisibilityParams): UseCategoryVisibilityReturn => {
     const { trackEvent } = usePostHog();
-    const hiddenState = writable<HiddenCategoryState>({ reserved: new Set(), labels: new Set() });
+    const visibility = getCollectionVisibility(getCollectionId());
+    const { hiddenState } = visibility;
 
     const getLabel = (category: number) => getColorLegend().get(category);
 
@@ -154,10 +179,19 @@ export const useCategoryVisibility = ({
         }));
     };
 
+    const syncColorByMode = (colorByMode: string, preservedCategories: number[] = []) => {
+        // A new color-by mode has other labels, so its change clears them. The same mode, e.g.
+        // after the plot mounts again, keeps them.
+        if (visibility.colorByMode === colorByMode) return;
+        visibility.colorByMode = colorByMode;
+        resetCategoryVisibility(preservedCategories);
+    };
+
     return {
         hiddenState,
         toggleCategoryVisibility,
         focusCategoryVisibility,
-        resetCategoryVisibility
+        resetCategoryVisibility,
+        syncColorByMode
     };
 };

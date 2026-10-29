@@ -140,7 +140,9 @@
         };
     });
 
-    const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
+    const { selectedColorByType, selectedColorByKey: storedColorByKey } = usePlotColorByType(
+        untrack(() => collectionId)
+    );
     // Captured once at mount, like collectionId above.
     const { tags } = useTags({
         collection_id: untrack(() => collectionId)
@@ -158,7 +160,8 @@
     const { colorBy, selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
         selectedColorByType,
         tags,
-        annotationLabels
+        annotationLabels,
+        selectedColorByKey: storedColorByKey
     });
 
     const {
@@ -167,6 +170,7 @@
         appliedTextAxes,
         isEmbeddingAxes,
         plotAxes,
+        userViewport,
         commitTextAxes
     } = usePlotLayout(untrack(() => collectionId));
 
@@ -187,27 +191,21 @@
     const includedLabel = $derived(
         $colorBy !== null ? NO_CATEGORY_LABEL : INCLUDED_BY_FILTERS_LABEL
     );
-    const {
-        hiddenState,
-        toggleCategoryVisibility,
-        focusCategoryVisibility,
-        resetCategoryVisibility
-    } = useCategoryVisibility({
-        getCollectionId: () => collectionId,
-        getColorByType: () => get(selectedColorByType),
-        getColorLegend: () => get(colorLegend)
-    });
+    const { hiddenState, toggleCategoryVisibility, focusCategoryVisibility, syncColorByMode } =
+        useCategoryVisibility({
+            getCollectionId: () => collectionId,
+            getColorByType: () => get(selectedColorByType),
+            getColorLegend: () => get(colorLegend)
+        });
     // Hidden colored categories are stored by label, so they survive the backend re-ranking the
-    // color slots (e.g. after a selection). A new color-by mode has other labels, so its change
-    // clears them. INCLUDED is relabeled with the color-by mode, so it is cleared too — else a
-    // hidden "No category" would empty the plot once all points collapse into it.
+    // color slots (e.g. after a selection), and per collection, so they survive the plot closing.
+    // A new color-by mode has other labels, so its change clears them. INCLUDED is relabeled with
+    // the color-by mode, so it is cleared too — else a hidden "No category" would empty the plot
+    // once all points collapse into it.
     const hiddenCategories = $derived(resolveHiddenCategories($hiddenState, $colorLegend));
-    let previousColorByKey: string | undefined = undefined;
     $effect(() => {
-        const colorByKey = JSON.stringify($colorBy);
-        if (colorByKey === previousColorByKey) return;
-        previousColorByKey = colorByKey;
-        untrack(() => resetCategoryVisibility([EXCLUDED_BY_FILTERS_CATEGORY]));
+        const colorByMode = `${$selectedColorByType}:${$selectedColorByKey}`;
+        untrack(() => syncColorByMode(colorByMode, [EXCLUDED_BY_FILTERS_CATEGORY]));
     });
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
@@ -388,7 +386,7 @@
     });
 
     const reset = () => {
-        userViewportState = null;
+        userViewport.set(null);
     };
 
     const isReady = true;
@@ -459,20 +457,20 @@
         setRangeSelection(normalizedSelection);
     };
 
-    // The viewport after the user pans or zooms. Until then, the default follows the plot size,
-    // because the size is 0 when the panel mounts and the default scale depends on it.
-    let userViewportState: ViewportState | null = $state(null);
+    // The viewport after the user pans or zooms, kept per collection. Until then, the default
+    // follows the plot size, because the size is 0 when the panel mounts and the default scale
+    // depends on it.
     const viewportState = $derived(
-        userViewportState ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
+        $userViewport ?? getDefaultViewport({ hasTextAxes: $plotAxes !== null, width, height })
     );
     const onViewportState = (state: ViewportState) => {
-        userViewportState = state;
+        userViewport.set(state);
     };
 
     // A new layout has other coordinates. Reset the zoom, and clear the selection, because a
     // region belongs to the layout it was drawn on.
     const resetForNewLayout = () => {
-        userViewportState = null;
+        userViewport.set(null);
         if (hasActiveSelection) clearSelection();
     };
     const selectPlotLayout = (layout: PlotLayout) => {

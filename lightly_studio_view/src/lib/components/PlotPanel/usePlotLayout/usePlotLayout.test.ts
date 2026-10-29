@@ -75,4 +75,15 @@ describe('usePlotLayout', () => {
         expect(get(layout.appliedTextAxes)).toEqual(TEXT_AXES);
         expect(get(layout.isEmbeddingAxes)).toBe(false);
     });
+
+    it('keeps the zoomed viewport of a collection until the layout is cleared', () => {
+        const viewport = { x: 1, y: 2, scale: 3 };
+        usePlotLayout('collection-a').userViewport.set(viewport);
+
+        expect(get(usePlotLayout('collection-a').userViewport)).toEqual(viewport);
+        expect(get(usePlotLayout('collection-b').userViewport)).toBeNull();
+
+        clearPlotLayout('collection-a');
+        expect(get(usePlotLayout('collection-a').userViewport)).toBeNull();
+    });
 });

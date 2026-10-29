@@ -2,10 +2,16 @@ import { get } from 'svelte/store';
 import { describe, expect, it } from 'vitest';
 import { resolveHiddenCategories, useCategoryVisibility } from './useCategoryVisibility';
 
-const setup = (initialLegend: [number, string][] = []) => {
+let collectionCount = 0;
+
+// Each call gets a new collection, because the hidden state is kept per collection.
+const setup = (
+    initialLegend: [number, string][] = [],
+    collectionId = `col_${++collectionCount}`
+) => {
     let legend = new Map<number, string>(initialLegend);
     const visibility = useCategoryVisibility({
-        getCollectionId: () => 'col_1',
+        getCollectionId: () => collectionId,
         getColorByType: () => null,
         getColorLegend: () => legend
     });
@@ -98,5 +104,24 @@ describe('useCategoryVisibility', () => {
 
         // Reserved row 1 survives; "dog" clears; row 2 was never hidden so it is not added.
         expect(hidden()).toEqual(new Set([1]));
+    });
+
+    it('keeps hidden categories for the next plot of the collection until the color-by mode changes', () => {
+        const legend: [number, string][] = [
+            [3, 'dog'],
+            [4, 'cat']
+        ];
+        const first = setup(legend, 'col_reopened');
+        first.syncColorByMode('annotation_label:null');
+        first.toggleCategoryVisibility(4);
+
+        // The plot closes and opens again: a new hook for the same collection and mode.
+        const reopened = setup(legend, 'col_reopened');
+        reopened.syncColorByMode('annotation_label:null');
+        expect(reopened.hidden()).toEqual(new Set([4]));
+        expect(setup(legend).hidden()).toEqual(new Set());
+
+        reopened.syncColorByMode('tags:null');
+        expect(reopened.hidden()).toEqual(new Set());
     });
 });

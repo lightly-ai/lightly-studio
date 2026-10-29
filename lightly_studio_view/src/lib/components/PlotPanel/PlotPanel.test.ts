@@ -35,7 +35,7 @@ let plotDataStore: Writable<{ x: Float32Array; y: Float32Array; category: Uint8A
 let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 
-const mockResetCategoryVisibility = vi.fn();
+const mockSyncColorByMode = vi.fn();
 
 const tagsStore = writable([
     { tag_id: 'tag-a', name: 'alpha' },
@@ -99,7 +99,8 @@ vi.mock('./useCategoryVisibility/useCategoryVisibility', async (importOriginal) 
         hiddenState: writable({ reserved: new Set<number>(), labels: new Set<string>() }),
         toggleCategoryVisibility: vi.fn(),
         focusCategoryVisibility: vi.fn(),
-        resetCategoryVisibility: mockResetCategoryVisibility
+        resetCategoryVisibility: vi.fn(),
+        syncColorByMode: mockSyncColorByMode
     })
 }));
 const usePlotDataSpy = vi.hoisted(() => vi.fn());
@@ -226,6 +227,7 @@ describe('PlotPanel.svelte', () => {
         clearAnnotationPlotSelection('test-collection-id');
         clearPlotLayout('test-collection-id');
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
+        usePlotColorByType('test-collection-id').selectedColorByKey.set(null);
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
@@ -801,13 +803,13 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        // Ignore the reset that fires on mount. Hidden colored categories are stored by label,
+        // Ignore the sync that fires on mount. Hidden colored categories are stored by label,
         // so a re-ranked legend (e.g. after a selection) must not reset them.
-        mockResetCategoryVisibility.mockClear();
+        mockSyncColorByMode.mockClear();
         colorLegendStore.set(new Map([[3, 'dog']]));
         await tick();
 
-        expect(mockResetCategoryVisibility).not.toHaveBeenCalled();
+        expect(mockSyncColorByMode).not.toHaveBeenCalled();
     });
 
     it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
@@ -815,15 +817,15 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        // Ignore the resets from mount; assert the one triggered by the color-by change.
-        mockResetCategoryVisibility.mockClear();
+        // Ignore the sync from mount; assert the one triggered by the color-by change.
+        mockSyncColorByMode.mockClear();
         await user.click(screen.getByTestId('plot-color-by-button'));
         await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
         await tick();
 
         // INCLUDED is relabeled when the color-by mode flips, so its hidden state must not carry
         // over (it would otherwise hide every point in the relabeled slot). Only EXCLUDED survives.
-        expect(mockResetCategoryVisibility).toHaveBeenLastCalledWith([
+        expect(mockSyncColorByMode).toHaveBeenLastCalledWith('metadata:split', [
             EXCLUDED_BY_FILTERS_CATEGORY
         ]);
     });
