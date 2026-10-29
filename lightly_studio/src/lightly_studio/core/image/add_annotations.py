@@ -36,7 +36,9 @@ from lightly_studio.type_definitions import PathLike
 logger = logging.getLogger(__name__)
 
 # Constants
-SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
+# Number of images to process in a single batch. Each batch costs about 15 SQL statements, and
+# each statement is a network round trip on a remote database, so batches are large.
+SAMPLE_BATCH_SIZE = 1024
 ALLOWED_YOLO_SPLITS = {"train", "val", "test", "minival"}
 
 
