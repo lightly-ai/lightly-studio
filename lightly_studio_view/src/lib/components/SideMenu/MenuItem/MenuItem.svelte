@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
-    import type { ComponentProps } from 'svelte';
+    import type { ComponentProps, Snippet } from 'svelte';
     import ColorMarker from '../ColorMarker/ColorMarker.svelte';
     import { Typography } from '$lib/components';
 
@@ -16,9 +16,12 @@
         enableColorPicker?: boolean;
         /** Callback fired when the checkbox is toggled. */
         onCheckedChange: ComponentProps<typeof Checkbox>['onCheckedChange'];
+        /** Controls rendered after the label, e.g. a delete button. */
+        actions?: Snippet;
     }
 
-    let { name, checked, showColorMarker, enableColorPicker, onCheckedChange }: Props = $props();
+    let { name, checked, showColorMarker, enableColorPicker, onCheckedChange, actions }: Props =
+        $props();
 
     // Stable unique ID for pairing the checkbox and its label
     const menuItemId = $props.id();
@@ -48,5 +51,6 @@
                 {name}
             </Typography>
         </Label>
+        {@render actions?.()}
     </div>
 </div>

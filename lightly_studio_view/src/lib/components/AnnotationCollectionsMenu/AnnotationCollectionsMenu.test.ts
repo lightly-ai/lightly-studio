@@ -39,6 +39,14 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
     };
 });
 
+vi.mock('./DeleteAnnotationSource/useDeleteAnnotationSource.svelte', () => ({
+    useDeleteAnnotationSource: () => ({
+        mutation: { isPending: false },
+        remove: vi.fn(),
+        annotationCount: () => undefined
+    })
+}));
+
 vi.mock('$lib/hooks/useSettings', async () => {
     const { writable } = await import('svelte/store');
     mocks.enforceColoringByClassStore = writable<boolean>(false);
@@ -67,11 +75,14 @@ describe('AnnotationCollectionsMenu', () => {
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
-    it('renders nothing when there is only one collection', () => {
+    it('renders a lone source with a delete button', () => {
         mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
         render(AnnotationCollectionsMenu, defaultProps);
-        expect(screen.queryByText('Annotation Sources')).not.toBeInTheDocument();
-        expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+        expect(screen.getByText('Annotation Sources')).toBeInTheDocument();
+        expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+        expect(
+            screen.getByRole('button', { name: 'Delete annotation source Ground Truth' })
+        ).toBeInTheDocument();
     });
 
     it('renders a menu item for each collection when there are two or more', () => {

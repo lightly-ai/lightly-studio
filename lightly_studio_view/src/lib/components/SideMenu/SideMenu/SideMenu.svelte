@@ -2,6 +2,7 @@
     import { untrack } from 'svelte';
     import MenuItem from '../MenuItem/MenuItem.svelte';
     import { type MenuItemType } from '../types';
+    import type { Snippet } from 'svelte';
     import type { HTMLAttributes } from 'svelte/elements';
     import { cn } from '$lib/utils/shadcn';
 
@@ -16,6 +17,8 @@
         showColorMarker?: boolean;
         /** When `true`, color swatches open a color picker on click. */
         enableColorPicker?: boolean;
+        /** Renders controls at the end of each item row, e.g. a delete button. */
+        itemActions?: Snippet<[MenuItemType]>;
     }
 
     let {
@@ -25,7 +28,8 @@
         onChangeSelectedItems,
         containerProps,
         showColorMarker,
-        enableColorPicker
+        enableColorPicker,
+        itemActions
     }: SideMenuProps = $props();
 
     let internalSelectedItemsIds = $state(untrack(() => initialSelectedItemsIds ?? []));
@@ -44,13 +48,17 @@
 </script>
 
 <div {...containerProps} class={cn('w-full space-y-2 overflow-hidden', containerProps?.class)}>
-    {#each items as { id, name } (id)}
+    {#each items as item (item.id)}
         <MenuItem
-            {name}
+            name={item.name}
             {showColorMarker}
             {enableColorPicker}
-            checked={selected.includes(id)}
-            onCheckedChange={() => handleCheckedChange(id)}
-        />
+            checked={selected.includes(item.id)}
+            onCheckedChange={() => handleCheckedChange(item.id)}
+        >
+            {#snippet actions()}
+                {@render itemActions?.(item)}
+            {/snippet}
+        </MenuItem>
     {/each}
 </div>

@@ -15,3 +15,7 @@ class QueryExprError(Exception):
 
 class UnknownImageSizeError(Exception):
     """Exception raised when a stored image has no known width or height."""
+
+
+class AnnotationSourceInUseError(Exception):
+    """Exception raised when an annotation source cannot change because other rows use it."""

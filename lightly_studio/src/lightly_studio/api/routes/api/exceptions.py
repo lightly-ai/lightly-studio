@@ -22,7 +22,12 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import NotFoundError, QueryExprError, UnknownImageSizeError
+from lightly_studio.errors import (
+    AnnotationSourceInUseError,
+    NotFoundError,
+    QueryExprError,
+    UnknownImageSizeError,
+)
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -38,7 +43,7 @@ def _report_error(
     tracking.track_exception(exc)
 
 
-def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
+def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
     """Register exception handlers for the FastAPI app."""
 
     @app.exception_handler(IntegrityError)
@@ -137,6 +142,14 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             status_code=HTTP_STATUS_NOT_FOUND,
             content={"error": str(_exc) or "Resource not found."},
         )
+
+    @app.exception_handler(AnnotationSourceInUseError)
+    async def _annotation_source_in_use_error_handler(
+        _request: Request, _exc: AnnotationSourceInUseError
+    ) -> JSONResponse:
+        """Handle an annotation source that other rows still use."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_CONFLICT)
+        return JSONResponse(status_code=HTTP_STATUS_CONFLICT, content={"error": str(_exc)})
 
     @app.exception_handler(UnknownImageSizeError)
     async def _unknown_image_size_error_handler(

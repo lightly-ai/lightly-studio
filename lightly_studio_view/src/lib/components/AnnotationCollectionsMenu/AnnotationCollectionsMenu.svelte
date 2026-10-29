@@ -9,6 +9,7 @@
     import { resolveEffectiveColorBySource } from '$lib/utils';
     import { get } from 'svelte/store';
     import { handleAnnotationSourceFilterChange } from './handleAnnotationSourceFilterChange';
+    import DeleteAnnotationSource from './DeleteAnnotationSource/DeleteAnnotationSource.svelte';
 
     interface Props {
         collectionId: string;
@@ -26,10 +27,9 @@
     const { enforceColoringByClassStore } = useSettings();
     const { trackEvent } = usePostHog();
 
-    // Checkboxes are only worth showing when there is a choice to make. The selection itself is
-    // filled by useSeedAnnotationSourceFilter in the collection layout, which runs for every
-    // collection including those with a single source.
-    const isEnabled = $derived(items.length > 1);
+    // A single source is listed too, so that it can be deleted. The selection itself is filled by
+    // useSeedAnnotationSourceFilter in the collection layout, which runs for every collection.
+    const isEnabled = $derived(items.length > 0);
 
     const showColorMarker = $derived(
         resolveEffectiveColorBySource({
@@ -80,6 +80,9 @@
                         markerProps={{ 'data-testid': `color-marker-${item.label}` }}
                     />
                 {/if}
+            {/snippet}
+            {#snippet trailing(item)}
+                <DeleteAnnotationSource {collectionId} source={{ id: item.id, name: item.label }} />
             {/snippet}
         </FilterList>
     </Segment>
