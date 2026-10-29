@@ -5,6 +5,7 @@
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import type { ExportType } from '../exportOptions';
     import { buildExportCode } from './buildExportCode';
+    import { highlightPython, type PythonTokenKind } from './highlightPython';
 
     interface Props {
         /** The collection whose samples are exported. */
@@ -50,6 +51,15 @@
         })
     );
 
+    const tokens = $derived(result.code ? highlightPython(result.code) : []);
+    const TOKEN_CLASSES: Record<PythonTokenKind, string> = {
+        keyword: 'text-purple-400',
+        string: 'text-emerald-400',
+        comment: 'italic text-muted-foreground',
+        number: 'text-amber-300',
+        plain: 'text-foreground'
+    };
+
     const copyCode = async () => {
         if (!result.code) return;
         await navigator.clipboard.writeText(result.code);
@@ -63,11 +73,23 @@
     </Button>
     {#if $isOpen && result.code}
         <p class="text-muted-foreground">Run the same export with the LightlyStudio Python SDK:</p>
-        <pre class="max-h-48 overflow-auto rounded bg-muted p-2 text-xs"><code>{result.code}</code
-            ></pre>
-        <Button variant="outline" size="sm" onclick={copyCode}>
-            {$isCopied ? 'Copied' : 'Copy code'}
-        </Button>
+        <!-- No height cap here: the dialog body scrolls, so the code does not scroll twice. -->
+        <div class="relative rounded border border-border bg-muted">
+            <Button
+                variant="outline"
+                size="sm"
+                class="absolute right-2 top-2 h-7 px-2 text-xs"
+                onclick={copyCode}
+            >
+                {$isCopied ? 'Copied' : 'Copy code'}
+            </Button>
+            <pre class="overflow-x-auto p-3 pr-24 font-mono text-xs leading-5"><code
+                    >{#each tokens as token, index (index)}<span
+                            class={TOKEN_CLASSES[token.kind]}
+                            data-token={token.kind}>{token.text}</span
+                        >{/each}</code
+                ></pre>
+        </div>
     {:else if $isOpen}
         <p class="text-muted-foreground">{result.reason}</p>
     {/if}

@@ -38,6 +38,17 @@ describe('ExportAsCode', () => {
         await waitFor(() => expect(screen.getByRole('button', { name: 'Copied' })).toBeVisible());
     });
 
+    it('colors the code by token', async () => {
+        imageFilter.set(null);
+        render(ExportAsCode, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Copy as code' }));
+
+        const keywords = document.querySelectorAll('[data-token="keyword"]');
+        expect([...keywords].map((node) => node.textContent)).toContain('import');
+        expect(document.querySelector('[data-token="comment"]')).not.toBeNull();
+    });
+
     it('explains why there is no code for other filters', async () => {
         imageFilter.set({ filter_type: 'image', width: { min: 100 } });
         render(ExportAsCode, { props: defaultProps });
