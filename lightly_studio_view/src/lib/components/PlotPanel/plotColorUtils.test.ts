@@ -118,11 +118,13 @@ describe('plotColorUtils', () => {
             HIDDEN_COLOR,
             NOT_FILTERED_COLOR,
             UNASSIGNED_COLOR,
-            'rgb(65, 68, 135)',
-            'rgb(34, 168, 132)',
-            'rgb(253, 231, 37)'
+            'rgb(70, 102, 236)',
+            'rgb(150, 250, 80)',
+            'rgb(197, 42, 11)'
         ]);
-        expect(getGradientColor(0.25)).toBe('rgb(42, 120, 142)');
+        expect(getGradientColor(0.25)).toBe('rgb(39, 215, 195)');
+        // Halfway between the blue and cyan stops.
+        expect(getGradientColor(0.125)).toBe('rgb(55, 159, 216)');
     });
 
     it('uses unassigned color for category 2 when colorBy is active', () => {

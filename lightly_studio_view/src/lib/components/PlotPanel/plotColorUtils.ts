@@ -19,8 +19,9 @@ export const UNASSIGNED_COLOR = '#B0B0B0';
 export const OTHER_COLOR = '#9a8f80';
 const OTHER_LABEL_PREFIX = 'Other (';
 
-// Viridis from 0.2 to 1: the darkest part is left out, so low values stay visible on black.
-export const GRADIENT_STOPS = ['#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'];
+// Bright samples of the turbo colormap, blue to red. Turbo's dark ends are left out, so every
+// value stays visible on the black plot background.
+export const GRADIENT_STOPS = ['#4666ec', '#27d7c3', '#96fa50', '#ffa323', '#c52a0b'];
 
 /** Returns the gradient color at a position in [0, 1]. */
 export function getGradientColor(position: number): string {
