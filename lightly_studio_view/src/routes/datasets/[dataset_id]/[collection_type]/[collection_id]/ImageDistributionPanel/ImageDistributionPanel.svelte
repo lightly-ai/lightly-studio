@@ -50,6 +50,10 @@
         countMode: AnnotationCountMode;
         histogramBinCount: number;
         comparisonTagIds: string[];
+        /** The source that the user picked, for example `classes` or `metadata`. */
+        selectedSourceId: string | undefined;
+        /** The group that the user picked, for example a metadata key. */
+        selectedGroupId: string | undefined;
     }
 
     let {
@@ -63,7 +67,9 @@
         onClose,
         countMode = $bindable(),
         histogramBinCount = $bindable(),
-        comparisonTagIds = $bindable()
+        comparisonTagIds = $bindable(),
+        selectedSourceId = $bindable(),
+        selectedGroupId = $bindable()
     }: Props = $props();
 
     const {
@@ -435,6 +441,8 @@
     comparisonTagItems={distributionSampleTagItems}
     selectedComparisonTagIds={comparisonTagIds}
     onComparisonTagIdsChange={(ids) => (comparisonTagIds = ids)}
+    bind:selectedSourceId
+    bind:selectedGroupId
     onGroupChange={(sourceId, groupId) => {
         activeDistributionSourceId = sourceId;
         activeDistributionGroupId = groupId;
