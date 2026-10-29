@@ -69,7 +69,7 @@ def delete_annotations_by_ids(
     # see delete_dataset.py.
     # TODO(Jonas, 06/2026): Replace eager deletion with explicit evaluation invalidation once
     # evaluation results can be recomputed or marked stale independently from annotation updates.
-    _delete_evaluation_metrics(
+    delete_evaluation_metrics(
         session=session,
         annotation_ids=existing_annotation_ids,
         parent_sample_ids=list(set(parent_sample_id_by_annotation_id.values())),
@@ -101,6 +101,62 @@ def delete_annotations_by_ids(
             session=session, collection_id=annotation_collection_id
         )
     return len(existing_annotation_ids)
+
+
+def delete_evaluation_metrics(
+    session: Session,
+    annotation_ids: list[UUID],
+    parent_sample_ids: list[UUID],
+) -> None:
+    """Delete evaluation data invalidated by annotation deletion or mutation.
+
+    Deletes the annotation metrics of the annotations and, for the evaluation runs that had
+    such metrics, the sample metrics of the parent samples. Does not commit.
+    """
+    if not annotation_ids and not parent_sample_ids:
+        return
+
+    affected_evaluation_run_ids: set[UUID] = set()
+    for annotation_id_batch in batching.batched(items=annotation_ids):
+        affected_evaluation_run_ids.update(
+            session.exec(
+                select(EvaluationAnnotationMetricTable.evaluation_run_id)
+                .where(
+                    sqlalchemy.or_(
+                        col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
+                            annotation_id_batch
+                        ),
+                        col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(
+                            annotation_id_batch
+                        ),
+                    )
+                )
+                .distinct()
+            ).all()
+        )
+
+    for annotation_id_batch in batching.batched(items=annotation_ids):
+        session.exec(
+            delete(EvaluationAnnotationMetricTable).where(
+                sqlalchemy.or_(
+                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
+                        annotation_id_batch
+                    ),
+                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_id_batch),
+                )
+            )
+        )
+    if parent_sample_ids and affected_evaluation_run_ids:
+        for parent_sample_id_batch in batching.batched(items=parent_sample_ids):
+            for evaluation_run_id_batch in batching.batched(items=affected_evaluation_run_ids):
+                session.exec(
+                    delete(EvaluationSampleMetricTable).where(
+                        col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_id_batch),
+                        col(EvaluationSampleMetricTable.evaluation_run_id).in_(
+                            evaluation_run_id_batch
+                        ),
+                    )
+                )
 
 
 def _get_parent_sample_ids(session: Session, annotation_ids: Sequence[UUID]) -> dict[UUID, UUID]:
@@ -147,55 +203,3 @@ def _delete_by_sample_ids(
         sample_id_column = col(table.sample_id)  # type: ignore[attr-defined]
         for batch in batching.batched(items=sample_ids):
             session.exec(delete(table).where(sample_id_column.in_(batch)))
-
-
-def _delete_evaluation_metrics(
-    session: Session,
-    annotation_ids: list[UUID],
-    parent_sample_ids: list[UUID],
-) -> None:
-    """Delete evaluation data invalidated by annotation deletion or mutation."""
-    if not annotation_ids and not parent_sample_ids:
-        return
-
-    affected_evaluation_run_ids: set[UUID] = set()
-    for annotation_id_batch in batching.batched(items=annotation_ids):
-        affected_evaluation_run_ids.update(
-            session.exec(
-                select(EvaluationAnnotationMetricTable.evaluation_run_id)
-                .where(
-                    sqlalchemy.or_(
-                        col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
-                            annotation_id_batch
-                        ),
-                        col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(
-                            annotation_id_batch
-                        ),
-                    )
-                )
-                .distinct()
-            ).all()
-        )
-
-    for annotation_id_batch in batching.batched(items=annotation_ids):
-        session.exec(
-            delete(EvaluationAnnotationMetricTable).where(
-                sqlalchemy.or_(
-                    col(EvaluationAnnotationMetricTable.pred_annotation_id).in_(
-                        annotation_id_batch
-                    ),
-                    col(EvaluationAnnotationMetricTable.gt_annotation_id).in_(annotation_id_batch),
-                )
-            )
-        )
-    if parent_sample_ids and affected_evaluation_run_ids:
-        for parent_sample_id_batch in batching.batched(items=parent_sample_ids):
-            for evaluation_run_id_batch in batching.batched(items=affected_evaluation_run_ids):
-                session.exec(
-                    delete(EvaluationSampleMetricTable).where(
-                        col(EvaluationSampleMetricTable.sample_id).in_(parent_sample_id_batch),
-                        col(EvaluationSampleMetricTable.evaluation_run_id).in_(
-                            evaluation_run_id_batch
-                        ),
-                    )
-                )

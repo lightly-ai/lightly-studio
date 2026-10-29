@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Path
-from pydantic import BaseModel
+from fastapi import APIRouter, Body, Path
+from pydantic import BaseModel, Field
 
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.services import annotation_source_service
@@ -43,3 +43,38 @@ def delete_annotation_source(
         annotation_source_id=annotation_collection_id,
     )
     return DeleteAnnotationSourceResult(deleted_annotation_count=deleted_count)
+
+
+class MoveAnnotationsInput(BaseModel):
+    """API input for moving annotations to another annotation source."""
+
+    annotation_ids: list[UUID] = Field(min_length=1)
+    target_annotation_collection_name: str = Field(min_length=1)
+
+
+class MoveAnnotationsResult(BaseModel):
+    """Result of an annotation move."""
+
+    annotation_collection_id: UUID
+    moved_count: int
+
+
+@annotation_sources_router.post(
+    "/annotations/move_to_source",
+    response_model=MoveAnnotationsResult,
+)
+def move_annotations(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID, Path(title="collection Id", description="The collection that owns the sources")
+    ],
+    body: Annotated[MoveAnnotationsInput, Body()],
+) -> MoveAnnotationsResult:
+    """Move annotations to an annotation source, creating the source if it does not exist."""
+    target_id, moved_count = annotation_source_service.move_annotations(
+        session=session,
+        dataset_collection_id=collection_id,
+        annotation_ids=body.annotation_ids,
+        target_annotation_source_name=body.target_annotation_collection_name.strip(),
+    )
+    return MoveAnnotationsResult(annotation_collection_id=target_id, moved_count=moved_count)

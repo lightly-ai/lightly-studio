@@ -7,6 +7,7 @@
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import DeleteAnnotations from './DeleteAnnotations/DeleteAnnotations.svelte';
+    import MoveAnnotations from './MoveAnnotations/MoveAnnotations.svelte';
 
     type Props = {
         selectedAnnotations: Array<AnnotationView>;
@@ -46,6 +47,7 @@
                             <LabelNotFound label={inputValue} />
                         {/snippet}
                     </SelectList>
+                    <MoveAnnotations {collectionId} disabled={isLoading} />
                     <DeleteAnnotations {collectionId} disabled={isLoading} />
                 </div>
             </Segment>

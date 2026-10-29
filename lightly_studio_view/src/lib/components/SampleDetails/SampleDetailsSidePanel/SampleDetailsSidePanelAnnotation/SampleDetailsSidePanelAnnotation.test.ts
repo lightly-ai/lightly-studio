@@ -29,6 +29,12 @@ vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
     useCreateAnnotation: () => ({ createAnnotation: vi.fn() })
 }));
+vi.mock('$lib/hooks/useMoveAnnotationsToSource/useMoveAnnotationsToSource', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        useMoveAnnotationsToSource: () => ({ moveToSource: vi.fn(), isPending: readable(false) })
+    };
+});
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
     useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() })
 }));

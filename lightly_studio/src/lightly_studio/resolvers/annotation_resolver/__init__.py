@@ -17,6 +17,7 @@ from lightly_studio.resolvers.annotation_resolver.delete_annotations import (
 )
 from lightly_studio.resolvers.annotation_resolver.delete_annotations_by_ids import (
     delete_annotations_by_ids,
+    delete_evaluation_metrics,
 )
 from lightly_studio.resolvers.annotation_resolver.get_adjacent_annotations import (
     get_adjacent_annotations,
@@ -59,6 +60,9 @@ from lightly_studio.resolvers.annotation_resolver.get_sample_ids import (
 from lightly_studio.resolvers.annotation_resolver.get_unembedded_annotation_ids import (
     get_unembedded_annotation_ids,
 )
+from lightly_studio.resolvers.annotation_resolver.move_to_collection import (
+    move_to_collection,
+)
 from lightly_studio.resolvers.annotation_resolver.update_annotation_label import (
     update_annotation_label,
 )
@@ -87,6 +91,7 @@ __all__ = [
     "delete_annotation",
     "delete_annotations",
     "delete_annotations_by_ids",
+    "delete_evaluation_metrics",
     "get_adjacent_annotations",
     "get_all",
     "get_all_by_collection_id_and_parent_sample_ids",
@@ -102,6 +107,7 @@ __all__ = [
     "get_label_ids_by_sample_ids",
     "get_sample_ids",
     "get_unembedded_annotation_ids",
+    "move_to_collection",
     "update_annotation_label",
     "update_bounding_box",
     "update_cuboid_3d",

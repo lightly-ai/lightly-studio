@@ -1,5 +1,6 @@
 <script lang="ts">
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
+    import { MoveAnnotationToSource } from '$lib/components/MoveAnnotationToSource';
     import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -253,6 +254,11 @@
                                 {collectionId}
                                 {annotation}
                                 onCopied={onUpdate}
+                            />
+                            <MoveAnnotationToSource
+                                {collectionId}
+                                {annotation}
+                                onMoved={onUpdate}
                             />
                             <Tooltip content="Delete annotation">
                                 <Trash2
