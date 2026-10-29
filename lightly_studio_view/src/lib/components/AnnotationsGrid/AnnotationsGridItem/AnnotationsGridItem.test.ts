@@ -129,7 +129,8 @@ describe('AnnotationsGridItem', () => {
         expect(dot).toHaveStyle({ backgroundColor: getSimilarityColor(0.956) });
     });
 
-    it('shows the class name next to the similarity score', () => {
+    it('leaves the class name out of the similarity badge', () => {
+        // The class chip from "Show on tiles" shows it; the badge would repeat it.
         renderItem(
             buildAnnotation({
                 similarity_score: 0.5,
@@ -139,7 +140,7 @@ describe('AnnotationsGridItem', () => {
             })
         );
 
-        expect(screen.getByTestId('annotation-grid-item-class')).toHaveTextContent('bobcat');
+        expect(screen.queryByTestId('annotation-grid-item-class')).not.toBeInTheDocument();
     });
 
     it('shows the similarity badge for a zero score', () => {
