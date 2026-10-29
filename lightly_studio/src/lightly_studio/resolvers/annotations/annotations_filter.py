@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import Field
 from sqlalchemy.orm import Mapped, aliased
-from sqlmodel import col, select
+from sqlmodel import col, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array
@@ -39,6 +39,13 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
     has_embedding: bool | None = Field(
         default=None,
         description="Keep only annotations with (True) or without (False) an embedding",
+    )
+    include_unannotated_samples: bool = Field(
+        default=False,
+        description=(
+            "Also match parent samples without annotations. When collection_ids is set, only "
+            "annotations in those collections count. Only used for parent-sample queries."
+        ),
     )
 
     def apply(
@@ -77,23 +84,56 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
         This is used when the base query returns samples, but the filter itself
         is defined on annotations. The sample query is constrained to the parent
         sample ids of annotations matching this filter.
+
+        With `include_unannotated_samples`, samples without annotations in the
+        selected collections also match. Combined with other predicates, a sample
+        matches if it has a matching annotation or has no annotation at all.
+        """
+        matching = sample_id_column.in_(
+            self._select_parent_sample_ids(apply_predicates=True).distinct()
+        )
+        if not self.include_unannotated_samples:
+            return query.where(matching)
+
+        # Samples with no annotation in the selected collections. Only the collection
+        # scope applies here, the other predicates describe annotations that exist.
+        unannotated = sample_id_column.not_in(
+            self._select_parent_sample_ids(apply_predicates=False).distinct()
+        )
+        if not self._has_match_predicates():
+            return query.where(unannotated)
+        return query.where(or_(matching, unannotated))
+
+    def _select_parent_sample_ids(self, apply_predicates: bool) -> SelectOfScalar[UUID]:
+        """Select parent sample ids of annotations in the selected collections.
+
+        Args:
+            apply_predicates: Also apply the label, tag, type and sample predicates.
         """
         annotation_sample = aliased(SampleTable)
-        sample_ids_subquery = select(AnnotationBaseTable.parent_sample_id).join(
+        query = select(AnnotationBaseTable.parent_sample_id).join(
             annotation_sample,
             AnnotationBaseTable.sample,
         )
-        sample_ids_subquery = self._apply_annotation_filters(
-            query=sample_ids_subquery,
-            annotation_sample=annotation_sample,
-        )
-        return query.where(sample_id_column.in_(sample_ids_subquery.distinct()))
+        if apply_predicates:
+            return self._apply_annotation_filters(query=query, annotation_sample=annotation_sample)
+        if self.collection_ids:
+            query = query.where(
+                db_array.in_array(
+                    column=col(annotation_sample.collection_id),
+                    values=self.collection_ids,
+                )
+            )
+        return query
 
     def _has_predicates(self) -> bool:
         """Whether any filtering predicate is set."""
+        return bool(self.collection_ids or self._has_match_predicates())
+
+    def _has_match_predicates(self) -> bool:
+        """Whether a predicate other than the collection scope is set."""
         return bool(
-            self.collection_ids
-            or self.annotation_label_ids
+            self.annotation_label_ids
             or self.tag_ids
             or self.annotation_types
             or self.sample_ids

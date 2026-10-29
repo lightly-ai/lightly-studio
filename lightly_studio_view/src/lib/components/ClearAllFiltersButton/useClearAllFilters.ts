@@ -8,6 +8,7 @@ import {
     useVideoFramesBounds
 } from '$lib/hooks';
 import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
 import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
@@ -95,14 +96,18 @@ function useTagAndLabelFilters(collectionId: string, includeLabels = true): Filt
         collection_id: collectionId,
         autoLoad: false
     });
+    const { includeUnannotated, clearIncludeUnannotated } = useUnannotatedImagesFilter();
     return {
         isActive: derived(
-            [tagsSelected, storage.selectedAnnotationFilterIds],
-            ([$tags, $labels]) => $tags.size > 0 || (includeLabels && $labels.size > 0)
+            [tagsSelected, storage.selectedAnnotationFilterIds, includeUnannotated],
+            ([$tags, $labels, $unannotated]) =>
+                $tags.size > 0 || (includeLabels && ($labels.size > 0 || $unannotated))
         ),
         clear: () => {
             clearTagsSelected();
-            if (includeLabels) storage.clearSelectedAnnotationFilterIds();
+            if (!includeLabels) return;
+            storage.clearSelectedAnnotationFilterIds();
+            clearIncludeUnannotated();
         }
     };
 }

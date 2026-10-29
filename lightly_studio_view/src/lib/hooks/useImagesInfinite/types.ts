@@ -14,7 +14,10 @@ export interface ClassifierSamples {
     negativeSampleIds: string[];
 }
 
-export type NormalModeFilters = Pick<AnnotationsFilter, 'annotation_label_ids' | 'collection_ids'> &
+export type NormalModeFilters = Pick<
+    AnnotationsFilter,
+    'annotation_label_ids' | 'collection_ids' | 'include_unannotated_samples'
+> &
     Pick<SampleFilter, 'tag_ids' | 'sample_ids' | 'confusion_cell' | 'embedding_region'> & {
         dimensions?: DimensionBounds;
     };

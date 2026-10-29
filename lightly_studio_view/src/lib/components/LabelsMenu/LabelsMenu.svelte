@@ -18,12 +18,20 @@
         onToggleAnnotationFilter: (label: string) => void;
         /** Whether to show the label visibility toggle */
         showVisibilityToggle?: boolean;
+        /** The "No annotations" row, pinned above the classes. Omit to hide it. */
+        unannotatedRow?: {
+            current_count: number;
+            total_count: number;
+            selected: boolean;
+            onToggle: () => void;
+        };
     }
 
     let {
         annotationFilterRows,
         onToggleAnnotationFilter,
-        showVisibilityToggle = false
+        showVisibilityToggle = false,
+        unannotatedRow
     }: Props = $props();
 
     const { multipleSourcesVisible, allSourcesHidden } = useAnnotationCollectionsFilter();
@@ -60,6 +68,27 @@
                 </a>
             </p>
         {:else}
+            {#if unannotatedRow}
+                <div class="width-full flex items-center space-x-2">
+                    <Checkbox
+                        id="labels-menu-no-annotations"
+                        checked={unannotatedRow.selected}
+                        onCheckedChange={unannotatedRow.onToggle}
+                    />
+                    <Label
+                        for="labels-menu-no-annotations"
+                        data-testid="labels-menu-no-annotations"
+                        class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap"
+                    >
+                        <p class="flex-1 truncate text-base font-normal italic">No annotations</p>
+                        <span class="text-sm text-diffuse-foreground"
+                            >{formatInteger(unannotatedRow.current_count)} of {formatInteger(
+                                unannotatedRow.total_count
+                            )}</span
+                        >
+                    </Label>
+                </div>
+            {/if}
             {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}
                 {@const isHidden = $hiddenClassNamesStore.includes(label_name)}
                 <div class="width-full group flex items-center space-x-2" title={label_name}>

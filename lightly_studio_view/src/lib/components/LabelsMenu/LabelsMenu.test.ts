@@ -129,6 +129,19 @@ describe('LabelsMenu', () => {
         expect(screen.getByTestId('label-menu-label-count')).toHaveTextContent('0 of 8');
     });
 
+    it('shows the "No annotations" row with its count and toggles it', async () => {
+        const onToggle = vi.fn();
+        render(LabelsMenu, {
+            ...defaultProps,
+            unannotatedRow: { current_count: 2, total_count: 5, selected: false, onToggle }
+        });
+
+        expect(screen.getByText('No annotations')).toBeInTheDocument();
+        expect(screen.getByText('2 of 5')).toBeInTheDocument();
+        await userEvent.click(screen.getByText('No annotations'));
+        expect(onToggle).toHaveBeenCalledOnce();
+    });
+
     it('explains the empty list when every annotation source is unchecked', () => {
         mocks.allSourcesHidden.set(true);
         render(LabelsMenu, { ...defaultProps, annotationFilterRows: writable<Annotation[]>([]) });

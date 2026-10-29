@@ -9,6 +9,9 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { getAnnotationSourceScope } from './annotationSourceScope';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
     import type { Readable } from 'svelte/store';
@@ -68,12 +71,24 @@
     const columnCount = $derived($sampleSize.width);
     const { tileFields } = useTileFields();
 
+    const { includeUnannotated } = useUnannotatedImagesFilter();
+    const { selectedCollectionIds: selectedSourceIds, collectionIdToName: sourceIdToName } =
+        useAnnotationCollectionsFilter();
+    const hasAnnotationFilter = $derived(
+        $selectedAnnotationFilterIds.length > 0 || $includeUnannotated
+    );
+
     const samplesParams = $derived({
         collection_id,
         mode: 'normal' as const,
         filters: {
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
+                : undefined,
+            include_unannotated_samples: $includeUnannotated || undefined,
+            // Look only at the selected annotation sources, like the class counts do.
+            collection_ids: hasAnnotationFilter
+                ? getAnnotationSourceScope($selectedSourceIds, Object.keys($sourceIdToName))
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined

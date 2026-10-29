@@ -139,6 +139,9 @@ vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters.js', () => ({
 vi.mock('$lib/hooks/useVideoFrameAnnotationsCount/useVideoFrameAnnotationsCount.js', () => ({
     useVideoFrameAnnotationCounts: vi.fn(() => ({ data: undefined }))
 }));
+vi.mock('$lib/hooks/useImagesWithoutAnnotationsCount/useImagesWithoutAnnotationsCount', () => ({
+    useImagesWithoutAnnotationsCount: vi.fn(() => ({ data: undefined }))
+}));
 vi.mock('$lib/hooks/useVideoFramesBounds/useVideoFramesBounds.js', () => ({
     useVideoFramesBounds: vi.fn(() => ({ videoFramesBoundsValues: writable({}) }))
 }));

@@ -253,3 +253,35 @@ def count_image_annotations_by_collection(
         }
         for label_name, current_count, total_count in counts
     ]
+
+
+class CountImagesWithoutAnnotationsRequest(BaseModel):
+    """Request body for counting the images without annotations."""
+
+    filter: ImageFilter | None = None
+
+
+class ImagesWithoutAnnotationsCountView(BaseModel):
+    """Number of images without annotations, with and without the other filters."""
+
+    current_count: int
+    total_count: int
+
+
+@image_router.post("/collections/{collection_id}/images/without_annotations/count")
+def count_images_without_annotations(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: CountImagesWithoutAnnotationsRequest | None = None,
+) -> ImagesWithoutAnnotationsCountView:
+    """Count the images that have no annotations in the selected annotation sources."""
+    current_count, total_count = image_resolver.count_images_without_annotations(
+        session=session,
+        collection_id=collection.collection_id,
+        image_filter=body.filter if body else None,
+    )
+    return ImagesWithoutAnnotationsCountView(current_count=current_count, total_count=total_count)

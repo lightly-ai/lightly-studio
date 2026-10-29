@@ -3,8 +3,8 @@ import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters'
 import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { SortDirection } from '$lib/api/lightly_studio_local';
+import { getAnnotationsFilter } from '../useImagesInfinite/getAnnotationsFilter';
 import type {
-    AnnotationsFilter,
     ConfusionCell,
     EmbeddingRegion,
     ImageFilter,
@@ -85,12 +85,9 @@ const imageFilter = derived(
             sampleFilter.embedding_region = embeddingRegion;
         }
 
-        const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
-        if (annotationLabelIds && annotationLabelIds.length > 0) {
-            sampleFilter.annotations_filter = {
-                filter_type: 'annotations',
-                annotation_label_ids: annotationLabelIds
-            } satisfies AnnotationsFilter;
+        const annotationsFilter = getAnnotationsFilter($filterParams.filters ?? {});
+        if (annotationsFilter) {
+            sampleFilter.annotations_filter = annotationsFilter;
         }
 
         const tagIds = $filterParams.filters?.tag_ids;

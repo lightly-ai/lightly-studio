@@ -16,13 +16,16 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, image_resolver
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    create_annotation,
     create_annotation_label,
     create_collection,
     create_image,
@@ -230,6 +233,107 @@ def test_filter_delegates_region_filtering_to_mixin(
     assert all(call.kwargs["sample_id_column"].key == "sample_id" for call in spy.call_args_list)
     assert len(filtered_annotations) == 1
     assert filtered_annotations[0].sample_id == annotation1.sample_id
+
+
+def test_apply_to_parent_sample_query__unannotated_samples(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    annotated = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a")
+    unannotated = create_image(session=db_session, collection_id=collection_id, file_path_abs="/b")
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=annotated.sample_id,
+        annotation_label_id=cat.annotation_label_id,
+    )
+
+    sample_ids = _get_image_sample_ids(
+        session=db_session,
+        collection_id=collection_id,
+        annotations_filter=AnnotationsFilter(include_unannotated_samples=True),
+    )
+
+    assert sample_ids == {unannotated.sample_id}
+
+
+def test_apply_to_parent_sample_query__unannotated_samples_or_label(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    dog = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="dog"
+    )
+    cat_image = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a")
+    dog_image = create_image(session=db_session, collection_id=collection_id, file_path_abs="/b")
+    unannotated = create_image(session=db_session, collection_id=collection_id, file_path_abs="/c")
+    for image, label in [(cat_image, cat), (dog_image, dog)]:
+        create_annotation(
+            session=db_session,
+            collection_id=collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+        )
+
+    sample_ids = _get_image_sample_ids(
+        session=db_session,
+        collection_id=collection_id,
+        annotations_filter=AnnotationsFilter(
+            annotation_label_ids=[cat.annotation_label_id], include_unannotated_samples=True
+        ),
+    )
+
+    assert sample_ids == {cat_image.sample_id, unannotated.sample_id}
+
+
+def test_apply_to_parent_sample_query__unannotated_samples_in_sources(
+    db_session: Session,
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    cat = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    in_source_a = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a")
+    in_source_b = create_image(session=db_session, collection_id=collection_id, file_path_abs="/b")
+    unannotated = create_image(session=db_session, collection_id=collection_id, file_path_abs="/c")
+    annotation_a = create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=in_source_a.sample_id,
+        annotation_label_id=cat.annotation_label_id,
+        annotation_collection_name="source_a",
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=collection_id,
+        sample_id=in_source_b.sample_id,
+        annotation_label_id=cat.annotation_label_id,
+        annotation_collection_name="source_b",
+    )
+
+    # The image annotated only in source B has no annotation in source A.
+    sample_ids = _get_image_sample_ids(
+        session=db_session,
+        collection_id=collection_id,
+        annotations_filter=AnnotationsFilter(
+            collection_ids=[annotation_a.annotation_collection_id],
+            include_unannotated_samples=True,
+        ),
+    )
+
+    assert sample_ids == {in_source_b.sample_id, unannotated.sample_id}
+
+
+def _get_image_sample_ids(
+    session: Session, collection_id: UUID, annotations_filter: AnnotationsFilter
+) -> set[UUID]:
+    return image_resolver.get_sample_ids(
+        session=session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(annotations_filter=annotations_filter)),
+    )
 
 
 def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:

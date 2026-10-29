@@ -30,6 +30,8 @@
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+    import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
+    import { useImagesWithoutAnnotationsCount } from '$lib/hooks/useImagesWithoutAnnotationsCount/useImagesWithoutAnnotationsCount';
     import {
         isAnnotationDetailsRoute,
         isAnnotationsRoute,
@@ -397,8 +399,16 @@
     // backend restricts the counted annotations by their own collection id.
     const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
         useAnnotationCollectionsFilter();
+    // The "No annotations" row exists on the images grid only.
+    const { includeUnannotated, toggleIncludeUnannotated } = useUnannotatedImagesFilter();
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
-        const base = $annotationFilterStore;
+        const base =
+            isImages && $includeUnannotated
+                ? {
+                      ...($annotationFilterStore ?? { filter_type: 'annotations' as const }),
+                      include_unannotated_samples: true
+                  }
+                : $annotationFilterStore;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         // An empty list cannot be sent: the backend skips collection_ids when it is falsy, so
@@ -444,6 +454,21 @@
         filter: imageAnnotationCountsFilter,
         enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
     }));
+
+    const imagesWithoutAnnotationsCountQuery = useImagesWithoutAnnotationsCount(() => ({
+        collectionId: datasetId,
+        filter: imageAnnotationCountsFilter,
+        enabled: isImages
+    }));
+    const unannotatedFilterRow = $derived(
+        isImages && imagesWithoutAnnotationsCountQuery.data
+            ? {
+                  ...imagesWithoutAnnotationsCountQuery.data,
+                  selected: $includeUnannotated,
+                  onToggle: toggleIncludeUnannotated
+              }
+            : undefined
+    );
 
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
         collectionId,
@@ -690,6 +715,7 @@
                                     onToggleAnnotationFilter={(label) =>
                                         toggleAnnotationFilterSelection(label, collectionId)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
+                                    unannotatedRow={unannotatedFilterRow}
                                 />
                             {/if}
 

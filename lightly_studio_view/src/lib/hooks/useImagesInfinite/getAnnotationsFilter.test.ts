@@ -24,6 +24,19 @@ describe('getAnnotationsFilter', () => {
         });
     });
 
+    it('returns include_unannotated_samples when set', () => {
+        const result = getAnnotationsFilter({ include_unannotated_samples: true });
+        expect(result).toEqual({ include_unannotated_samples: true, filter_type: 'annotations' });
+    });
+
+    it('omits include_unannotated_samples when false', () => {
+        const result = getAnnotationsFilter({
+            annotation_label_ids: ['a'],
+            include_unannotated_samples: false
+        });
+        expect(result).toEqual({ annotation_label_ids: ['a'], filter_type: 'annotations' });
+    });
+
     it('returns undefined when both are empty arrays', () => {
         const result = getAnnotationsFilter({ annotation_label_ids: [], collection_ids: [] });
         expect(result).toBeUndefined();
