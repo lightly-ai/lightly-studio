@@ -9,7 +9,11 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.embedding_coloring import coloring_helpers
-from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import DiscreteColorScale
+from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import (
+    ColorData,
+    DiscreteColorScale,
+)
+from lightly_studio.models.metadata import NUMERIC_TYPE_NAMES
 from lightly_studio.resolvers.metadata_resolver import sample as sample_metadata_resolver
 
 
@@ -19,7 +23,7 @@ def build_metadata_color_maps(
     key: str,
     sample_ids: list[UUID],
     matching_sample_ids: set[UUID] | None,
-) -> tuple[list[list[int]], dict[int, str]]:
+) -> ColorData:
     """Build color categories and a legend for metadata-based sample coloring.
 
     A metadata key holds a single value per sample, so each sample maps to a
@@ -36,10 +40,8 @@ def build_metadata_color_maps(
             so the legend reflects the filtered view. ``None`` counts all samples.
 
     Returns:
-        A tuple of `(color_categories, color_legend)` for the provided samples. The
-        length of `color_categories` is the number of samples; each entry is a
-        single-element list. The `color_legend` is a mapping from color ID to a
-        human-readable string.
+        The color data for the provided samples. Each entry of `color_categories`
+        is a single-element list. Numeric fields also get a `color_gradient`.
     """
     sample_to_value, metadata_type = sample_metadata_resolver.get_metadata_values_for_key(
         session=session,
@@ -52,10 +54,20 @@ def build_metadata_color_maps(
         metadata_type=metadata_type,
         matching_sample_ids=matching_sample_ids,
     )
-    return coloring_helpers.assign_color_categories(
+    color_categories, color_legend = coloring_helpers.assign_color_categories(
         sample_ids=sample_ids,
         sample_to_values={sid: (value,) for sid, value in sample_to_value.items()},
         scale=scale,
+    )
+    color_gradient = (
+        coloring_helpers.build_color_gradient(values=list(sample_to_value.values()), scale=scale)
+        if metadata_type in NUMERIC_TYPE_NAMES
+        else None
+    )
+    return ColorData(
+        color_categories=color_categories,
+        color_legend=color_legend,
+        color_gradient=color_gradient,
     )
 
 
@@ -70,8 +82,9 @@ def _build_metadata_color_scale(
     For string and boolean fields, when there are more values than fit in the
     legend, the values most common among the filter-matching samples each get a
     dedicated color category and the rest are merged into a single "Other"
-    category; values absent from the matching samples are omitted. Integer values
-    use fixed-range bucketing and stay filter-independent.
+    category; values absent from the matching samples are omitted. Integer and
+    float values use fixed-range bucketing, stay filter-independent and are
+    shown on a gradient.
     """
     if metadata_type in ("string", "boolean"):
         format_fn: Callable[[Any], str] = (
@@ -89,8 +102,10 @@ def _build_metadata_color_scale(
         )
     if metadata_type == "integer":
         return DiscreteColorScale.from_integers(values=(int(v) for v in sample_to_value.values()))
+    if metadata_type == "float":
+        return DiscreteColorScale.from_floats(values=(float(v) for v in sample_to_value.values()))
 
     raise ValueError(
         f"Metadata field '{key}' has unsupported type {metadata_type!r}. "
-        "Only 'string', 'boolean', and 'integer' fields can be used for coloring."
+        "Only 'string', 'boolean', 'integer', and 'float' fields can be used for coloring."
     )

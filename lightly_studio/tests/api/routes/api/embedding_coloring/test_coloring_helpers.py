@@ -140,6 +140,39 @@ class TestDiscreteColorScale:
         assert scale.value_to_category(2) == 5
         assert scale.legend == {3: "0", 4: "1", 5: "2"}
 
+    def test_from_floats__few_values(self) -> None:
+        scale = DiscreteColorScale.from_floats(values=[0.5, 0.25, 0.5])
+        assert scale.legend == {3: "0.25", 4: "0.5"}
+        assert scale.value_to_category(0.5) == 4
+
+    def test_from_floats__bucketing(self) -> None:
+        # The range [0, 1] is split into 2 buckets of width 0.5.
+        scale = DiscreteColorScale.from_floats(values=[0.0, 0.25, 0.75, 1.0], max_categories=2)
+        assert scale.legend == {3: "0-0.5", 4: "0.5-1"}
+        assert scale.value_to_category(0.25) == 3
+        assert scale.value_to_category(0.75) == 4
+        assert scale.value_to_category(1.0) == 4
+
+
+def test_build_color_gradient() -> None:
+    # Bucket 3 holds 0..1, bucket 4 holds 2..3, bucket 5 holds 4.
+    scale = DiscreteColorScale.from_integers(values=[0, 1, 2, 3, 4], max_categories=3)
+    gradient = coloring_helpers.build_color_gradient(values=[0, 1, 2, 3, 4], scale=scale)
+    assert gradient == coloring_helpers.ColorGradient(
+        min_value=0, max_value=4, positions={3: 0.0, 4: 0.5, 5: 1.0}
+    )
+
+
+def test_build_color_gradient__single_value() -> None:
+    scale = DiscreteColorScale.from_integers(values=[7])
+    gradient = coloring_helpers.build_color_gradient(values=[7], scale=scale)
+    assert gradient == coloring_helpers.ColorGradient(min_value=7, max_value=7, positions={3: 0.0})
+
+
+def test_build_color_gradient__empty() -> None:
+    scale = DiscreteColorScale.from_integers(values=[])
+    assert coloring_helpers.build_color_gradient(values=[], scale=scale) is None
+
 
 def test_assign_color_categories() -> None:
     ids = [uuid4(), uuid4()]

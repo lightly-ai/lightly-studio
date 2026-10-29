@@ -168,6 +168,7 @@
     const {
         data: arrowData,
         colorLegend,
+        colorGradient,
         error: arrowError
     } = $derived(
         useArrowData({
@@ -249,10 +250,11 @@
     const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
     const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>
-        getCategoryColors($colorLegend, useLabelColors, $colorBy !== null)
+        getCategoryColors($colorLegend, useLabelColors, $colorBy !== null, $colorGradient)
     );
+    // A numeric field is shown as a gradient bar, so its categories have no legend rows to hide.
     const legendEntries = $derived.by(() =>
-        getLegendEntries($colorLegend, hiddenCategories, useLabelColors)
+        $colorGradient ? [] : getLegendEntries($colorLegend, hiddenCategories, useLabelColors)
     );
     // Videos, images and annotations send the lasso as region geometry rather than a resolved
     // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
@@ -604,6 +606,7 @@
                             {categoryColors}
                             {includedLabel}
                             {legendEntries}
+                            gradient={$colorGradient}
                             excludedHidden={hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
                             includedHidden={hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
                             onToggleCategory={toggleCategoryVisibility}

@@ -16,20 +16,59 @@ const readListColumn = (column: Vector): number[][] => {
 
 export type ArrowData = Record<TableColumn, unknown>;
 
+/** Gradient of a numeric color-by field: its value range and the position of each category. */
+export interface ColorGradient {
+    min: number;
+    max: number;
+    positions: Map<number, number>;
+}
+
 type UseArrowDataReturn = {
     data: Writable<ArrowData>;
     colorLegend: Writable<Map<number, string>>;
+    colorGradient: Writable<ColorGradient | null>;
     error: Writable<string | undefined>;
 };
 
-const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined) => {
-    const rawLegend = metadata?.get('color_legend');
-    if (!rawLegend) {
+type ArrowMetadata = Map<string, string | Uint8Array> | undefined;
+
+const readMetadataText = (metadata: ArrowMetadata, key: string): string | null => {
+    const raw = metadata?.get(key);
+    if (!raw) {
+        return null;
+    }
+    return raw instanceof Uint8Array ? new TextDecoder().decode(raw) : raw;
+};
+
+const parseColorGradient = (metadata: ArrowMetadata): ColorGradient | null => {
+    const gradientText = readMetadataText(metadata, 'color_gradient');
+    if (!gradientText) {
+        return null;
+    }
+    try {
+        const parsed = JSON.parse(gradientText) as {
+            min: number;
+            max: number;
+            positions: Record<string, number>;
+        };
+        return {
+            min: parsed.min,
+            max: parsed.max,
+            positions: new Map(
+                Object.entries(parsed.positions).map(([key, value]) => [Number(key), value])
+            )
+        };
+    } catch (error) {
+        console.warn('Invalid color_gradient metadata in Arrow data.', error);
+        return null;
+    }
+};
+
+const parseColorLegend = (metadata: ArrowMetadata) => {
+    const legendText = readMetadataText(metadata, 'color_legend');
+    if (!legendText) {
         return new Map<number, string>();
     }
-
-    const legendText =
-        rawLegend instanceof Uint8Array ? new TextDecoder().decode(rawLegend) : rawLegend;
 
     let parsedLegend: Record<string, string> = {};
     try {
@@ -56,6 +95,7 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
 
     const data = writable<ArrowData>();
     const colorLegend = writable<Map<number, string>>(new Map());
+    const colorGradient = writable<ColorGradient | null>(null);
 
     const readData = async () => {
         try {
@@ -79,11 +119,12 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
             }
             data.set(Object.fromEntries(columnData) as Record<TableColumn, unknown>);
             colorLegend.set(parseColorLegend(table.schema?.metadata));
+            colorGradient.set(parseColorGradient(table.schema?.metadata));
         } catch (e) {
             error.set(`Error reading Arrow data: ${String(e)}`);
         }
     };
 
     readData();
-    return { data, colorLegend, error };
+    return { data, colorLegend, colorGradient, error };
 }

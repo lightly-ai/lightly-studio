@@ -20,6 +20,17 @@ describe('PlotPanelLegend', () => {
         expect(screen.getByRole('button', { name: 'metadata.split: train' })).toBeInTheDocument();
     });
 
+    it('shows a gradient bar with the min and max of a numeric field', () => {
+        render(PlotPanelLegend, {
+            categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR],
+            gradient: { min: 0, max: 23.456789 }
+        });
+
+        const gradient = screen.getByTestId('plot-legend-gradient');
+        expect(gradient).toHaveTextContent('0');
+        expect(gradient).toHaveTextContent('23.46');
+    });
+
     it('defaults to the "Included by filters" label when none is passed', () => {
         render(PlotPanelLegend, {
             categoryColors: [HIDDEN_COLOR, NOT_FILTERED_COLOR, FILTERED_COLOR]

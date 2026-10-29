@@ -1,5 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
+    import { GRADIENT_STOPS } from './plotColorUtils';
     import {
         EXCLUDED_BY_FILTERS_CATEGORY,
         EXCLUDED_BY_FILTERS_LABEL,
@@ -21,6 +22,8 @@
         excludedHidden?: boolean;
         includedHidden?: boolean;
         legendEntries?: LegendEntry[];
+        // A numeric color-by field: a gradient bar from min to max replaces the entries.
+        gradient?: { min: number; max: number } | null;
         onToggleCategory?: (cat: number) => void;
         onDoubleClickCategory?: (cat: number) => void;
     }
@@ -32,6 +35,7 @@
         excludedHidden = false,
         includedHidden = false,
         legendEntries = [],
+        gradient = null,
         onToggleCategory,
         onDoubleClickCategory
     }: Props = $props();
@@ -59,6 +63,8 @@
         resizeObserver.observe(scrollContainer);
         return () => resizeObserver.disconnect();
     });
+
+    const formatValue = (value: number) => String(Number(value.toPrecision(4)));
 
     // Reserved rows toggle on click but never isolate on double-click (a no-op for a binary row).
     const reservedRows = $derived([
@@ -109,7 +115,19 @@
                 <span class="min-w-0 truncate" title={entry.label}>{entry.label}</span>
             </button>
         {/each}
-        {#if legendEntries.length > 0}
+        {#if gradient}
+            <div class="flex w-full shrink-0 flex-col gap-0.5" data-testid="plot-legend-gradient">
+                <span
+                    class="h-2 w-full rounded-sm"
+                    style={`background: linear-gradient(to right, ${GRADIENT_STOPS.join(', ')})`}
+                ></span>
+                <div class="flex w-full justify-between gap-2 tabular-nums">
+                    <span>{formatValue(gradient.min)}</span>
+                    <span>{formatValue(gradient.max)}</span>
+                </div>
+            </div>
+        {/if}
+        {#if legendEntries.length > 0 || gradient}
             <span class="my-0.5 w-full shrink-0 border-t border-white/10"></span>
         {/if}
         {#each reservedRows as row (row.cat)}

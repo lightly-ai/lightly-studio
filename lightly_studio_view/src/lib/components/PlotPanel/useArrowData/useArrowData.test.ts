@@ -61,6 +61,41 @@ describe('useArrowData', () => {
         expect(get(error)).toBeUndefined();
     });
 
+    it('reads the gradient of a numeric color-by field', async () => {
+        const mockTable = {
+            schema: {
+                metadata: new Map([
+                    ['color_legend', '{"3":"0","4":"23"}'],
+                    ['color_gradient', '{"min":0,"max":23,"positions":{"3":0,"4":1}}']
+                ])
+            },
+            getChild: createGetChild({
+                x: [1],
+                y: [2],
+                fulfils_filter: [true],
+                color_categories: [[3]],
+                sample_id: ['a']
+            })
+        };
+        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+
+        const mockBlob = {
+            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
+        } as Blob;
+        const { colorGradient } = useArrowData({ blobData: mockBlob });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(get(colorGradient)).toEqual({
+            min: 0,
+            max: 23,
+            positions: new Map([
+                [3, 0],
+                [4, 1]
+            ])
+        });
+    });
+
     it('sets error when table is null', async () => {
         vi.mocked(tableFromIPC).mockResolvedValue(null as unknown as Table);
 

@@ -14,6 +14,7 @@ from pyarrow import ipc
 from pydantic import BaseModel, Field
 
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
+from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import ColorData
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
@@ -125,7 +126,7 @@ def get_2d_embeddings(
         fulfils_filter = [1 if sample_id in matching_sample_ids else 0 for sample_id in sample_ids]
 
     color_by = body.color_by if body else None
-    color_categories, color_legend = build_color_data(
+    color_data = build_color_data(
         session=session,
         collection_id=collection_id,
         color_by=color_by,
@@ -141,21 +142,36 @@ def get_2d_embeddings(
             pa.field("color_categories", pa.list_(pa.uint8())),
             pa.field("sample_id", pa.string()),
         ],
-        metadata={
-            "color_legend": json.dumps({str(k): v for k, v in color_legend.items()}),
-        },
+        metadata=_color_metadata(color_data=color_data),
     )
     table = pa.table(
         {
             "x": pa.array(x_array, type=pa.float32()),
             "y": pa.array(y_array, type=pa.float32()),
             "fulfils_filter": pa.array(fulfils_filter, type=pa.uint8()),
-            "color_categories": pa.array(color_categories, type=pa.list_(pa.uint8())),
+            "color_categories": pa.array(color_data.color_categories, type=pa.list_(pa.uint8())),
             "sample_id": pa.array([str(sample_id) for sample_id in sample_ids], type=pa.string()),
         },
         schema=schema,
     )
     return _arrow_response(table=table)
+
+
+def _color_metadata(color_data: ColorData) -> dict[str, str]:
+    """Serialize the legend, and the gradient of a numeric field, as Arrow schema metadata."""
+    metadata = {
+        "color_legend": json.dumps({str(k): v for k, v in color_data.color_legend.items()}),
+    }
+    gradient = color_data.color_gradient
+    if gradient is not None:
+        metadata["color_gradient"] = json.dumps(
+            {
+                "min": gradient.min_value,
+                "max": gradient.max_value,
+                "positions": {str(k): v for k, v in gradient.positions.items()},
+            }
+        )
+    return metadata
 
 
 def _arrow_response(table: pa.Table) -> Response:

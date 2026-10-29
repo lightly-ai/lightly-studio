@@ -6,7 +6,7 @@ import math
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Generic, Protocol, TypeVar
+from typing import Any, Generic, Protocol, TypeVar
 from uuid import UUID
 
 T = TypeVar("T")
@@ -22,6 +22,36 @@ FIRST_COLORED_CATEGORY = 3
 MAX_DISTINCT_COLORS = 20
 # Number of category names listed inside an "Other" bucket label before truncating with an ellipsis.
 MAX_OTHER_NAMES = 5
+
+
+@dataclass(frozen=True)
+class ColorGradient:
+    """Places color categories of a numeric field on a continuous color gradient.
+
+    Attributes:
+        min_value: Smallest value of the field.
+        max_value: Largest value of the field.
+        positions: Mapping from color category to its position in [0, 1] on the gradient.
+    """
+
+    min_value: float
+    max_value: float
+    positions: dict[int, float]
+
+
+@dataclass(frozen=True)
+class ColorData:
+    """Color categories of the samples and how to show them.
+
+    Attributes:
+        color_categories: Per-sample list of color categories, sorted ascending.
+        color_legend: Mapping from color category to a human-readable label.
+        color_gradient: Gradient positions for a numeric field, else None.
+    """
+
+    color_categories: list[list[int]]
+    color_legend: dict[int, str]
+    color_gradient: ColorGradient | None = None
 
 
 class ColorScale(Protocol[T_contra]):
@@ -179,6 +209,80 @@ class DiscreteColorScale(Generic[T]):
 
         return DiscreteColorScale[int](_lookup=lookup, legend=legend)
 
+    @classmethod
+    def from_floats(
+        cls,
+        values: Iterable[float],
+        start_cat: int = FIRST_COLORED_CATEGORY,
+        max_categories: int = 50,
+    ) -> DiscreteColorScale[float]:
+        """Build a color scale for float values.
+
+        When the number of unique values is at most ``max_categories``, each
+        unique value gets its own category. Otherwise the range [min, max] is
+        split into ``max_categories`` equal-width buckets. Categories are
+        ordered numerically (smallest value first).
+
+        Args:
+            values: Float values to build the scale from. Need not be unique.
+            start_cat: First category ID to assign.
+            max_categories: Maximum number of categories.
+
+        Returns:
+            A DiscreteColorScale mapping each float to a color category.
+        """
+        unique_values = sorted(set(values))
+        if len(unique_values) <= max_categories:
+            return DiscreteColorScale.from_values(
+                values=unique_values, start_cat=start_cat, format_fn=_format_float
+            )
+
+        min_val = unique_values[0]
+        width = (unique_values[-1] - min_val) / max_categories
+        legend = {
+            start_cat + i: (
+                f"{_format_float(min_val + i * width)}-{_format_float(min_val + (i + 1) * width)}"
+            )
+            for i in range(max_categories)
+        }
+        lookup = {
+            v: start_cat + min(int((v - min_val) / width), max_categories - 1)
+            for v in unique_values
+        }
+        return DiscreteColorScale[float](_lookup=lookup, legend=legend)
+
+
+def build_color_gradient(values: Sequence[float], scale: ColorScale[Any]) -> ColorGradient | None:
+    """Place the categories of a numeric scale on a gradient.
+
+    Each category sits at the position of its smallest value. Positions are
+    scaled to [0, 1], so the lowest category is at 0 and the highest at 1.
+
+    Args:
+        values: Numeric values of the samples.
+        scale: Color scale that maps the values to categories.
+
+    Returns:
+        The gradient, or None when there are no values.
+    """
+    if not values:
+        return None
+    category_min: dict[int, float] = {}
+    for value in values:
+        category = scale.value_to_category(value)
+        if category is not None:
+            category_min[category] = min(category_min.get(category, value), value)
+    lowest = min(category_min.values())
+    span = max(category_min.values()) - lowest
+    return ColorGradient(
+        min_value=min(values),
+        max_value=max(values),
+        positions={
+            category: (value - lowest) / span if span > 0 else 0.0
+            for category, value in category_min.items()
+        },
+    )
+
 
 def assign_color_categories(
     sample_ids: Sequence[UUID],
@@ -242,6 +346,10 @@ def order_values_by_frequency(
         counts.update(set(values))
 
     return sorted(counts, key=lambda value: (-counts[value], format_fn(value)))
+
+
+def _format_float(value: float) -> str:
+    return f"{value:.4g}"
 
 
 def _format_other_label(values: Sequence[T], format_fn: Callable[[T], str]) -> str:

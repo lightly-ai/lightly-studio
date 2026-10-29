@@ -53,7 +53,8 @@ describe('PlotColorByPopover', () => {
 
         expect(screen.getByRole('option', { name: 'metadata.split' })).toBeInTheDocument();
         expect(screen.getByRole('option', { name: 'metadata.is_train' })).toBeInTheDocument();
-        expect(screen.queryByRole('option', { name: 'metadata.score' })).not.toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'metadata.frame_index' })).toBeInTheDocument();
+        expect(screen.getByRole('option', { name: 'metadata.score' })).toBeInTheDocument();
         expect(screen.queryByRole('option', { name: 'metadata.object' })).not.toBeInTheDocument();
     });
 

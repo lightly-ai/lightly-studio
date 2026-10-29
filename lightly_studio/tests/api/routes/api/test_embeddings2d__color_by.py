@@ -214,6 +214,51 @@ def test_get_embeddings2d__with_integer_metadata_color_by(
     assert legend["4"] == "20"
     assert legend["5"] == "30"
 
+    # Numeric fields are shown on a gradient from the smallest to the largest value.
+    gradient = json.loads(table.schema.metadata[b"color_gradient"])
+    assert gradient == {"min": 10, "max": 30, "positions": {"3": 0.0, "4": 0.5, "5": 1.0}}
+
+
+def test_get_embeddings2d__with_float_metadata_color_by(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    n_samples = 3
+
+    collection_id = fill_db_with_samples_and_embeddings(
+        session=db_session,
+        n_samples=n_samples,
+        embedding_model_names=["model_a"],
+        embedding_dimension=EMBEDDING_DIMENSION,
+    )
+    samples = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+    ).samples
+    for sample, brightness in zip(samples, [0.5, 0.25, 1.5]):
+        sample.sample["brightness"] = brightness
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": {}, "color_by": {"type": "metadata_field", "key": "brightness"}},
+    )
+
+    assert response.status_code == 200
+    table = ipc.open_stream(pa.BufferReader(response.content)).read_all()
+    sample_id_to_colors = dict(
+        zip(table.column("sample_id").to_pylist(), table.column("color_categories").to_pylist())
+    )
+    assert sample_id_to_colors[str(samples[0].sample_id)] == [4]  # 0.5
+    assert sample_id_to_colors[str(samples[1].sample_id)] == [3]  # 0.25
+    assert sample_id_to_colors[str(samples[2].sample_id)] == [5]  # 1.5
+    assert json.loads(table.schema.metadata[b"color_legend"]) == {
+        "3": "0.25",
+        "4": "0.5",
+        "5": "1.5",
+    }
+    gradient = json.loads(table.schema.metadata[b"color_gradient"])
+    assert gradient == {"min": 0.25, "max": 1.5, "positions": {"3": 0.0, "4": 0.2, "5": 1.0}}
+
 
 def test_get_embeddings2d__with_integer_metadata_color_by__buckets_when_more_than_50_unique_values(
     test_client: TestClient,
@@ -392,7 +437,6 @@ def test_get_embeddings2d__filter_promotes_metadata_value_out_of_other(
     [
         {"a": 1},
         [1, 2, 3],
-        1.5,
     ],
 )
 def test_get_embeddings2d__with_unsupported_metadata_color_by(

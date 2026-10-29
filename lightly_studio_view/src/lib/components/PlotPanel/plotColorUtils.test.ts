@@ -4,6 +4,7 @@ import {
     FILTERED_COLOR,
     getCategoryColors,
     getCategoryCount,
+    getGradientColor,
     getLegendEntries,
     HIDDEN_COLOR,
     NOT_FILTERED_COLOR,
@@ -95,6 +96,33 @@ describe('plotColorUtils', () => {
         const colors = getCategoryColors(legend, false, true).slice(3);
         expect(new Set(colors.slice(0, 19)).size).toBe(19);
         expect(colors[19]).toBe(OTHER_COLOR);
+    });
+
+    it('colors the categories of a numeric field along the gradient', () => {
+        const legend = new Map([
+            [3, '0'],
+            [4, '12'],
+            [5, '23']
+        ]);
+        const gradient = {
+            min: 0,
+            max: 23,
+            positions: new Map([
+                [3, 0],
+                [4, 0.5],
+                [5, 1]
+            ])
+        };
+
+        expect(getCategoryColors(legend, false, true, gradient)).toEqual([
+            HIDDEN_COLOR,
+            NOT_FILTERED_COLOR,
+            UNASSIGNED_COLOR,
+            'rgb(65, 68, 135)',
+            'rgb(34, 168, 132)',
+            'rgb(253, 231, 37)'
+        ]);
+        expect(getGradientColor(0.25)).toBe('rgb(42, 120, 142)');
     });
 
     it('uses unassigned color for category 2 when colorBy is active', () => {

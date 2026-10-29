@@ -16,6 +16,7 @@ from lightly_studio.api.routes.api.embedding_coloring import (
     metadata,
     tags,
 )
+from lightly_studio.api.routes.api.embedding_coloring.coloring_helpers import ColorData
 
 
 class TagColorBy(BaseModel):
@@ -26,7 +27,10 @@ class TagColorBy(BaseModel):
 
 
 class MetadataFieldColorBy(BaseModel):
-    """Assign a distinct color to each unique value of the selected field."""
+    """Color samples by the value of a metadata field.
+
+    String and boolean values get a distinct color each, numeric values a gradient.
+    """
 
     type: Literal["metadata_field"] = "metadata_field"
     key: str
@@ -51,7 +55,7 @@ def build_color_data(
     color_by: ColorBy | None,
     sample_ids: list[UUID],
     matching_sample_ids: set[UUID] | None,
-) -> tuple[list[list[int]], dict[int, str]]:
+) -> ColorData:
     """Build color categories and a legend for embedding coloring.
 
     Args:
@@ -65,18 +69,19 @@ def build_color_data(
             samples are counted).
 
     Returns:
-        A tuple of `(color_categories, color_legend)` for the provided samples. The
-        length of `color_categories` is the number of samples; each entry is the
-        list of that sample's color categories, sorted ascending. The `color_legend`
-        is a mapping from color ID to a human-readable string.
+        The color data for the provided samples. The length of `color_categories`
+        is the number of samples; each entry is the list of that sample's color
+        categories, sorted ascending. The `color_legend` is a mapping from color ID
+        to a human-readable string. Numeric metadata fields also get a `color_gradient`.
     """
     if isinstance(color_by, TagColorBy):
-        return tags.build_tag_color_maps(
+        categories, legend = tags.build_tag_color_maps(
             session=session,
             tag_ids=color_by.tag_ids,
             sample_ids=sample_ids,
             matching_sample_ids=matching_sample_ids,
         )
+        return ColorData(color_categories=categories, color_legend=legend)
 
     if isinstance(color_by, MetadataFieldColorBy):
         return metadata.build_metadata_color_maps(
@@ -88,15 +93,16 @@ def build_color_data(
         )
 
     if isinstance(color_by, AnnotationColorBy):
-        return annotation_coloring.build_annotation_color_maps(
+        categories, legend = annotation_coloring.build_annotation_color_maps(
             session=session,
             annotation_label_ids=color_by.annotation_label_ids,
             sample_ids=sample_ids,
             matching_sample_ids=matching_sample_ids,
         )
+        return ColorData(color_categories=categories, color_legend=legend)
 
     # Static check that all ColorBy variants are handled above.
     if color_by is not None:
         assert_never(color_by)
 
-    return [[] for _ in sample_ids], {}
+    return ColorData(color_categories=[[] for _ in sample_ids], color_legend={})

@@ -1,4 +1,5 @@
-import { CATEGORICAL_PALETTE, getColorByLabel, oklchHueWheelColor } from '$lib/utils';
+import { CATEGORICAL_PALETTE, getColorByLabel, hexToRgb, oklchHueWheelColor } from '$lib/utils';
+import type { ColorGradient } from './useArrowData/useArrowData';
 import {
     EXCLUDED_BY_FILTERS_CATEGORY,
     HIDDEN_CATEGORY,
@@ -17,6 +18,20 @@ export const UNASSIGNED_COLOR = '#B0B0B0';
 // The backend groups values beyond the palette size into one "Other (…)" category.
 export const OTHER_COLOR = '#9a8f80';
 const OTHER_LABEL_PREFIX = 'Other (';
+
+// Viridis from 0.2 to 1: the darkest part is left out, so low values stay visible on black.
+export const GRADIENT_STOPS = ['#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'];
+
+/** Returns the gradient color at a position in [0, 1]. */
+export function getGradientColor(position: number): string {
+    const scaled = Math.max(0, Math.min(1, position)) * (GRADIENT_STOPS.length - 1);
+    const index = Math.min(Math.floor(scaled), GRADIENT_STOPS.length - 2);
+    const fraction = scaled - index;
+    const from = hexToRgb(GRADIENT_STOPS[index]);
+    const to = hexToRgb(GRADIENT_STOPS[index + 1]);
+    const mix = (a: number, b: number) => Math.round(a + (b - a) * fraction);
+    return `rgb(${mix(from.r, to.r)}, ${mix(from.g, to.g)}, ${mix(from.b, to.b)})`;
+}
 
 interface LegendEntry {
     cat: number;
@@ -89,10 +104,14 @@ export function getCategoryCount(colorLegend?: ReadonlyMap<number, string> | nul
 export function getCategoryColors(
     colorLegend?: ReadonlyMap<number, string> | null,
     useLabelColors: boolean = false,
-    isColorByActive: boolean = false
+    isColorByActive: boolean = false,
+    colorGradient: ColorGradient | null = null
 ): string[] {
     const categoryCount = getCategoryCount(colorLegend);
     return Array.from({ length: categoryCount }, (_, category) => {
+        if (colorGradient && category >= RESERVED_CATEGORY_COUNT) {
+            return getGradientColor(colorGradient.positions.get(category) ?? 0);
+        }
         const label = colorLegend?.get(category) ?? '';
         return getBaseCategoryColor(
             category,

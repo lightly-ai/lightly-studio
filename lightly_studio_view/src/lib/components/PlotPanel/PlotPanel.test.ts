@@ -89,6 +89,7 @@ vi.mock('./useArrowData/useArrowData', () => ({
     useArrowData: () => ({
         data: arrowDataStore,
         colorLegend: colorLegendStore,
+        colorGradient: writable(null),
         error: writable(null)
     })
 }));
