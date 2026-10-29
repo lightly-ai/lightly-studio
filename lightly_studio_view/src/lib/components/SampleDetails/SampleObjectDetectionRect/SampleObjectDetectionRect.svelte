@@ -22,6 +22,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
     import { usePostHog } from '$lib/hooks';
+    import { usePendingBbox } from './usePendingBbox';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -54,6 +55,8 @@
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
     let drawStartFired = false;
+    const pendingBbox = usePendingBbox();
+    const pendingBboxValue = pendingBbox.bbox;
     const { trackEvent } = usePostHog();
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
@@ -122,6 +125,7 @@
 
                 startPoint = { x, y };
                 temporaryBbox = { x, y, width: 0, height: 0 };
+                pendingBbox.clear();
             })
             .on('drag', (event: D3Event) => {
                 if (!temporaryBbox || !annotationLabelContext.isDrawing || !startPoint) return;
@@ -154,6 +158,7 @@
                     temporaryBbox.width > BOX_MIN_SIZE_PX &&
                     temporaryBbox.height > BOX_MIN_SIZE_PX
                 ) {
+                    pendingBbox.start(temporaryBbox);
                     createObjectDetectionAnnotation({
                         x: temporaryBbox.x,
                         y: temporaryBbox.y,
@@ -192,6 +197,7 @@
             if (!selectedLabelName) {
                 const result = await requestLabel();
                 if (!result?.label) {
+                    pendingBbox.clear();
                     toast.error('Please select a class before creating an annotation');
                     return;
                 }
@@ -227,6 +233,8 @@
                 refetchRootCollection();
             }
 
+            pendingBbox.created(newAnnotation.sample_id);
+
             addAnnotationCreateToUndoStack({
                 annotation: newAnnotation,
                 addReversibleAction,
@@ -247,6 +255,7 @@
             toast.success('Annotation created successfully');
             return newAnnotation;
         } catch (error) {
+            pendingBbox.clear();
             toast.error('Failed to create annotation. Please try again.');
             console.error('Error creating annotation:', error);
             return;
@@ -344,6 +353,16 @@
         detachSvgListeners?.();
     });
 
+    $effect(() => {
+        pendingBbox.sync(sample.annotations.map((annotation) => annotation.sample_id));
+    });
+
+    // A pending box belongs to one sample; drop it when the view moves to another.
+    $effect(() => {
+        void sampleId;
+        return () => pendingBbox.clear();
+    });
+
     // Setup drag behavior when rect becomes available or mode changes
     $effect(() => {
         setupDragBehavior();
@@ -355,6 +374,14 @@
 {#if temporaryBbox && annotationLabelContext.isDrawing}
     <ResizableRectangle
         bbox={temporaryBbox}
+        colorStroke={drawerStrokeColor}
+        colorFill="rgba(0, 123, 255, 0.1)"
+        opacity={0.8}
+        scale={1}
+    />
+{:else if $pendingBboxValue}
+    <ResizableRectangle
+        bbox={$pendingBboxValue}
         colorStroke={drawerStrokeColor}
         colorFill="rgba(0, 123, 255, 0.1)"
         opacity={0.8}
