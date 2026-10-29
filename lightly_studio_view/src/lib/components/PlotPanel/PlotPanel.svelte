@@ -36,7 +36,10 @@
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
-    import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
+    import {
+        resolveHiddenCategories,
+        useCategoryVisibility
+    } from './useCategoryVisibility/useCategoryVisibility';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
     import {
         EXCLUDED_BY_FILTERS_CATEGORY,
@@ -177,30 +180,26 @@
         $colorBy !== null ? NO_CATEGORY_LABEL : INCLUDED_BY_FILTERS_LABEL
     );
     const {
-        hiddenCategories,
+        hiddenState,
         toggleCategoryVisibility,
         focusCategoryVisibility,
         resetCategoryVisibility
     } = useCategoryVisibility({
         getCollectionId: () => collectionId,
-        getColorByType: () => get(selectedColorByType)
+        getColorByType: () => get(selectedColorByType),
+        getColorLegend: () => get(colorLegend)
     });
-
-    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
-    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
-    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
-    // change — else a hidden "No category" would empty the plot once all points collapse into it.
+    // Hidden colored categories are stored by label, so they survive the backend re-ranking the
+    // color slots (e.g. after a selection). A new color-by mode has other labels, so its change
+    // clears them. INCLUDED is relabeled with the color-by mode, so it is cleared too — else a
+    // hidden "No category" would empty the plot once all points collapse into it.
+    const hiddenCategories = $derived(resolveHiddenCategories($hiddenState, $colorLegend));
     let previousColorByKey: string | undefined = undefined;
     $effect(() => {
-        void $colorLegend;
         const colorByKey = JSON.stringify($colorBy);
-        const colorByChanged = colorByKey !== previousColorByKey;
+        if (colorByKey === previousColorByKey) return;
         previousColorByKey = colorByKey;
-        resetCategoryVisibility(
-            colorByChanged
-                ? [EXCLUDED_BY_FILTERS_CATEGORY]
-                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
-        );
+        untrack(() => resetCategoryVisibility([EXCLUDED_BY_FILTERS_CATEGORY]));
     });
 
     const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
@@ -229,10 +228,10 @@
     // canvas. The legend keeps showing the user's real toggle state.
     const effectiveHiddenCategories = $derived.by(() => {
         const hasSelectionHighlight = $rangeSelection !== null || committedHighlightRegion !== null;
-        if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
-            return $hiddenCategories;
+        if (!hasSelectionHighlight || !hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+            return hiddenCategories;
         }
-        const next = new Set($hiddenCategories);
+        const next = new Set(hiddenCategories);
         next.delete(EXCLUDED_BY_FILTERS_CATEGORY);
         return next;
     });
@@ -253,7 +252,7 @@
         getCategoryColors($colorLegend, useLabelColors, $colorBy !== null)
     );
     const legendEntries = $derived.by(() =>
-        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
+        getLegendEntries($colorLegend, hiddenCategories, useLabelColors)
     );
     // Videos, images and annotations send the lasso as region geometry rather than a resolved
     // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
@@ -605,8 +604,8 @@
                             {categoryColors}
                             {includedLabel}
                             {legendEntries}
-                            excludedHidden={$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
-                            includedHidden={$hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
+                            excludedHidden={hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)}
+                            includedHidden={hiddenCategories.has(INCLUDED_BY_FILTERS_CATEGORY)}
                             onToggleCategory={toggleCategoryVisibility}
                             onDoubleClickCategory={(category) => {
                                 focusCategoryVisibility(

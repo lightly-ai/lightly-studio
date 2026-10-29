@@ -15,7 +15,7 @@ import {
 } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
-import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
+import { EXCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
 import { clearPlotLayout } from './usePlotLayout/usePlotLayout';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
@@ -92,9 +92,10 @@ vi.mock('./useArrowData/useArrowData', () => ({
         error: writable(null)
     })
 }));
-vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
+vi.mock('./useCategoryVisibility/useCategoryVisibility', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
     useCategoryVisibility: () => ({
-        hiddenCategories: writable(new Set<number>()),
+        hiddenState: writable({ reserved: new Set<number>(), labels: new Set<string>() }),
         toggleCategoryVisibility: vi.fn(),
         focusCategoryVisibility: vi.fn(),
         resetCategoryVisibility: mockResetCategoryVisibility
@@ -793,20 +794,17 @@ describe('PlotPanel.svelte', () => {
         expect(screen.queryByText('young')).not.toBeInTheDocument();
     });
 
-    it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
+    it('keeps hidden categories when the legend changes', async () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        // Ignore the reset that fires on mount; assert the one triggered by the legend change.
+        // Ignore the reset that fires on mount. Hidden colored categories are stored by label,
+        // so a re-ranked legend (e.g. after a selection) must not reset them.
         mockResetCategoryVisibility.mockClear();
         colorLegendStore.set(new Map([[3, 'dog']]));
         await tick();
 
-        // Reserved rows are stable by index, so they must survive a legend refresh.
-        expect(mockResetCategoryVisibility).toHaveBeenCalledWith([
-            EXCLUDED_BY_FILTERS_CATEGORY,
-            INCLUDED_BY_FILTERS_CATEGORY
-        ]);
+        expect(mockResetCategoryVisibility).not.toHaveBeenCalled();
     });
 
     it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
