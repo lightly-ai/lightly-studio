@@ -143,11 +143,13 @@ describe('useUpdateCuboidClass', () => {
         const key = getTickDetailsQueryKey({ path });
         queryClient.setQueryData(key, { annotations: [] });
 
-        await useUpdateCuboidClass(defaultParams).handleLabelChange(
-            'annotation-1',
-            'car',
-            'annotation-collection-1'
-        );
+        await expect(
+            useUpdateCuboidClass(defaultParams).handleLabelChange(
+                'annotation-1',
+                'car',
+                'annotation-collection-1'
+            )
+        ).rejects.toThrow('save failed');
 
         expect(toast.error).toHaveBeenCalledExactlyOnceWith(
             'Failed to update annotation class. Please try again.'
