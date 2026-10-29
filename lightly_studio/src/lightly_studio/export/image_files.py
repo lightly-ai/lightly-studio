@@ -26,7 +26,7 @@ def relative_image_paths(paths: Sequence[str]) -> list[str]:
     """
     split_paths = [path.replace("\\", "/").split("/") for path in paths]
     common_folder = _common_folder(split_paths=split_paths)
-    return ["/".join(parts[len(common_folder) :]) for parts in split_paths]
+    return [_safe_relative_path(parts=parts[len(common_folder) :]) for parts in split_paths]
 
 
 def copy_images(sources: Sequence[str], destinations: Sequence[Path]) -> None:
@@ -69,6 +69,16 @@ def _common_folder(split_paths: Sequence[list[str]]) -> list[str]:
             length += 1
         common = common[:length]
     return common
+
+
+def _safe_relative_path(parts: Sequence[str]) -> str:
+    """Joins path parts without a root, protocol, drive letter or parent reference.
+
+    Paths with no common folder, such as local and remote paths mixed, keep their leading
+    parts. Joined to the export folder as is, an absolute path would point back at the source.
+    """
+    kept = [part for part in parts if part not in ("", ".", "..") and not part.endswith(":")]
+    return "/".join(kept)
 
 
 def _resolve_copy_input(

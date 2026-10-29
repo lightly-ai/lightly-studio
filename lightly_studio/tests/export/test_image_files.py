@@ -20,6 +20,13 @@ def test_relative_image_paths__same_folder() -> None:
     ]
 
 
+def test_relative_image_paths__mixed_storage_stays_relative() -> None:
+    # Local and remote paths share no folder; an absolute result would overwrite the source.
+    assert image_files.relative_image_paths(
+        paths=["/data/a/x.jpg", "s3://bucket/y.jpg", "C:\\imgs\\z.jpg"]
+    ) == ["data/a/x.jpg", "bucket/y.jpg", "imgs/z.jpg"]
+
+
 def test_relative_image_paths__nested_folder() -> None:
     assert image_files.relative_image_paths(paths=["/data/a.jpg", "/data/sub/b.jpg"]) == [
         "a.jpg",
