@@ -10,11 +10,7 @@ import {
     getMetadataValueCountsOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { selectCategoricalDistributions } from '$lib/hooks/useCategoricalMetadataDistribution';
-import {
-    IMAGE_FIELDS,
-    getImageFieldHistogramRequestOptions,
-    selectImageFieldDistributions
-} from '$lib/hooks/useImageFieldDistribution';
+import { IMAGE_FIELDS, selectImageFieldDistributions } from '$lib/hooks/useImageFieldDistribution';
 import { selectDistributions } from '$lib/hooks/useNumericMetadataDistribution';
 
 interface SampleTagItem {
@@ -98,24 +94,21 @@ const buildSampleTagQueries = ({
     if (!field) return [];
 
     return sampleTags.map(({ id }) => {
+        const filters = withSampleTagFilter(filter, id);
         if (field.type === 'image') {
-            const tagFilter = withSampleTagFilter(filter, id);
             return {
-                ...getImageHistogramsOptions(
-                    getImageFieldHistogramRequestOptions({
-                        collectionId,
-                        filter: tagFilter.filter_type === 'image' ? tagFilter : undefined,
-                        binCount,
-                        fields: [field.name]
-                    })
-                ),
+                ...getImageHistogramsOptions({
+                    path: { collection_id: collectionId },
+                    body: {
+                        filters: filters.filter_type === 'image' ? filters : null,
+                        fields: [field.name],
+                        ...(binCount ? { bin_count: binCount } : {})
+                    }
+                }),
                 enabled
             };
         }
-        const body = {
-            filters: withSampleTagFilter(filter, id),
-            fields: [field.name]
-        };
+        const body = { filters, fields: [field.name] };
         return {
             ...(field.type === 'numeric'
                 ? getMetadataHistogramsOptions({
