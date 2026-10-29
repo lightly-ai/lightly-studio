@@ -3,14 +3,8 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
-    import PlotSelectedPoints from './PlotSelectedPoints/PlotSelectedPoints.svelte';
     import PlotGridSelectionRings from './PlotGridSelectionRings/PlotGridSelectionRings.svelte';
     import { getGridSelectionPointIndices } from './PlotGridSelectionRings/gridSelectionRings';
-    import { usePlotSelectedPointSize } from '$lib/hooks/usePlotSelectedPointSize/usePlotSelectedPointSize';
-    import {
-        getSelectedPointIndices,
-        getSelectedPointRadius
-    } from './PlotSelectedPoints/selectedPoints';
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
@@ -282,9 +276,6 @@
             $plotData?.category as Uint8Array | undefined
         )
     );
-    const selectedPointIndices = $derived(
-        getSelectedPointIndices($plotData?.category as Uint8Array | undefined)
-    );
     const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>
         getCategoryColors($colorLegend, useLabelColors, $colorBy !== null, $colorGradient)
@@ -359,8 +350,6 @@
         colorScheme: 'dark',
         autoLabelEnabled: false
     } as const;
-    // Only the selected points take the size from the settings; the rest keep the automatic size.
-    const { selectedPointSize } = usePlotSelectedPointSize();
     const embeddingTheme = {
         brandingLink: null
     } as const;
@@ -616,20 +605,6 @@
                         />
                     </div>
 
-                    <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
-                         as close to X− as to X+. -->
-                    {#if overlayProxy && selectedPointIndices.length > 0}
-                        <PlotSelectedPoints
-                            proxy={overlayProxy}
-                            x={$plotData.x as Float32Array}
-                            y={$plotData.y as Float32Array}
-                            category={$plotData.category as Uint8Array}
-                            indices={selectedPointIndices}
-                            {categoryColors}
-                            radius={getSelectedPointRadius($selectedPointSize)}
-                        />
-                    {/if}
-
                     {#if overlayProxy && gridSelectionPointIndices.length > 0}
                         <PlotGridSelectionRings
                             proxy={overlayProxy}
@@ -639,6 +614,8 @@
                         />
                     {/if}
 
+                    <!-- Only the Text layout has a meaningful origin: x = 0 is where a sample is
+                         as close to X− as to X+. -->
                     {#if $plotAxes && overlayProxy}
                         <PlotAxisLines proxy={overlayProxy} />
                     {/if}
