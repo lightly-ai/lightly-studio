@@ -8,9 +8,16 @@ const intensityRanges = new WeakMap<PointBatch, [number, number]>();
 export function getPointCloudFrameColors(
     batch: PointBatch,
     mode: ColorMode,
-    intensityRange?: [number, number]
+    intensityRange?: [number, number],
+    cameraColors?: Float32Array
 ): Float32Array[] {
     const segments = batch.segments ?? [batch];
+    if (mode === 'camera-rgb') {
+        // Camera RGB colors are computed over the whole accumulation window; split per segment.
+        // Without colors yet (async), fall back to neutral so points stay visible.
+        if (!cameraColors) return segments.map((segment) => getPointCloudColors(segment, 'none'));
+        return splitColors(cameraColors, segments);
+    }
     if (mode === 'intensity') {
         const range = intensityRange ?? getWindowIntensityRange(segments);
         return segments.map((segment) => getPointCloudColors(segment, mode, range));
