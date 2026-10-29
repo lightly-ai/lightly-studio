@@ -272,13 +272,14 @@ describe('SampleAnnotation', () => {
         // The mask image is rendered by SampleAnnotationSegmentationRLE, which
         // takes the data URL as a prop; passing it here keeps these assertions
         // on the opacity alone and off the canvas-backed RLE rasterisation.
-        const renderMask = () =>
+        const renderMask = (props: Partial<ComponentProps<typeof SampleAnnotation>> = {}) =>
             render(SampleAnnotation, {
                 props: {
                     annotation: createSegmentationMaskAnnotationWithMask(),
                     imageWidth: 100,
                     prerenderedDataUrl: 'data:image/png;base64,iVBORw0KGgo=',
-                    prerenderedHeight: 12
+                    prerenderedHeight: 12,
+                    ...props
                 }
             });
 
@@ -306,5 +307,27 @@ describe('SampleAnnotation', () => {
             const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
             expect(opacity).toBe(0);
         });
+
+        it('scales the mask opacity setting by the custom alpha', () => {
+            setCustomColor('person', '#ff0000', 0.8);
+
+            const { container } = renderMask({ maskOpacity: 1 });
+
+            const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
+            expect(opacity).toBeCloseTo(0.8); // 0.8 * 1
+        });
+
+        it.each([
+            { maskOpacity: 1, expected: 0.25 },
+            { maskOpacity: 0, expected: 0 }
+        ])(
+            'dims a disabled mask relative to mask opacity $maskOpacity',
+            ({ maskOpacity, expected }) => {
+                const { container } = renderMask({ maskOpacity, highlight: 'disabled' });
+
+                const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
+                expect(opacity).toBeCloseTo(expected);
+            }
+        );
     });
 });

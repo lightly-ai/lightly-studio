@@ -326,7 +326,11 @@
         resolvedSources.map((source) => ({ value: source.id, label: source.label }))
     );
     const groupItems = $derived<SelectItem[]>(
-        (activeSource.groups ?? []).map((group) => ({ value: group.id, label: group.label }))
+        (activeSource.groups ?? []).map((group) => ({
+            value: group.id,
+            label: group.label,
+            group: group.section
+        }))
     );
 
     const activeViewConfig = $derived<DistributionConfig>(

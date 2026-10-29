@@ -13,6 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explore and edit point-cloud annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
 - Collapse the camera strip in the point-cloud workspace to give the scene more space.
 - Adjust point size, navigation helpers, and annotation tooltips from the point-cloud scene settings.
+- Set the opacity of segmentation masks with the "Mask opacity" slider in the sample details view.
+- Reset brightness, contrast, and mask opacity to their defaults with one button in the sample details view.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 - Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
 - Introduce point cloud accumulation for point cloud details.
@@ -33,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Brush, eraser, and box drawing previews now use the custom color of the label.
 - Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
 - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
 - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.

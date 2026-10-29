@@ -1324,6 +1324,30 @@ describe('DatasetDistributionPanel', () => {
         }
     ];
 
+    it('lists the groups of a source under their section headings', async () => {
+        const user = userEvent.setup();
+        const histogram = { binEdges: [0, 1], counts: [1] };
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        ...histogramSources[0],
+                        groups: [
+                            { id: 'image:width', label: 'width', section: 'Image', histogram },
+                            { id: 'width', label: 'width', section: 'Custom', histogram }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        await user.click(screen.getByTestId('dataset-distribution-group-select'));
+
+        expect(await screen.findByText('Image')).toBeInTheDocument();
+        expect(screen.getByText('Custom')).toBeInTheDocument();
+        expect(screen.getAllByRole('option', { name: 'width' })).toHaveLength(2);
+    });
+
     it('renders numerical metadata as comparable histogram tag series', () => {
         const sources: DistributionSource[] = [
             {
