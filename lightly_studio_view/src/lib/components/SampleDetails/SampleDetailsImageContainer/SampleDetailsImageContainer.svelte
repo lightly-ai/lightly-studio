@@ -33,6 +33,7 @@
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
+    import SelectedBoxPanel from '../SelectedBoxPanel/SelectedBoxPanel.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -200,6 +201,18 @@
     const annotationDetailsFocusKey = $derived(
         annotationLabelContext.isOnAnnotationDetailsView
             ? (annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id)
+            : undefined
+    );
+    // The selected box gets a floating panel for class, source and delete.
+    const selectedBox = $derived(
+        $isEditingMode &&
+            !annotationLabelContext.isDrawing &&
+            !annotationLabelContext.isOnAnnotationDetailsView
+            ? actualAnnotationsToShow.find(
+                  (annotation) =>
+                      annotation.sample_id === selectedAnnotationId &&
+                      annotation.annotation_type === AnnotationType.OBJECT_DETECTION
+              )
             : undefined
     );
     const isSegmentationType = (type: string | null | undefined) =>
@@ -418,6 +431,9 @@
         {/if}
     {/snippet}
 </ZoomableContainer>
+{#if selectedBox}
+    <SelectedBoxPanel {collectionId} annotation={selectedBox} {refetch} />
+{/if}
 
 <style>
     .hidden {
