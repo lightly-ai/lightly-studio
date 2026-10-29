@@ -19,9 +19,9 @@ export const UNASSIGNED_COLOR = '#B0B0B0';
 export const OTHER_COLOR = '#9a8f80';
 const OTHER_LABEL_PREFIX = 'Other (';
 
-// Bright samples of the turbo colormap, blue to red. Turbo's dark ends are left out, so every
-// value stays visible on the black plot background.
-export const GRADIENT_STOPS = ['#4666ec', '#27d7c3', '#96fa50', '#ffa323', '#c52a0b'];
+// Samples of the inferno colormap from 0.3 to 1, purple to light yellow. Inferno's near-black
+// start is left out, so the lowest values stay visible on the black plot background.
+export const GRADIENT_STOPS = ['#6a176e', '#bc3754', '#f37819', '#f6d746', '#fcffa4'];
 
 /** Returns the gradient color at a position in [0, 1]. */
 export function getGradientColor(position: number): string {
