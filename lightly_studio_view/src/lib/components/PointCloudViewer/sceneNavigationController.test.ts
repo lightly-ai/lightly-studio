@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { PerspectiveCamera, Vector3 } from 'three';
+import { OrthographicCamera, PerspectiveCamera, Vector3 } from 'three';
 import { createSceneNavigationController } from './sceneNavigationController';
 import { navigateScene, startSceneNavigation, stopSceneNavigation } from './sceneNavigation';
 
@@ -114,5 +114,45 @@ describe('scene navigation controller', () => {
         stopSceneNavigation('right');
         advance(20);
         expect(controls.enableDamping).toBe(false);
+    });
+
+    it('only responds to navigation addressed to its viewport', () => {
+        controller.dispose();
+        const navigationId = Symbol('top');
+        controller = createSceneNavigationController({
+            camera,
+            controls: controls as never,
+            invalidate: vi.fn(),
+            navigationId
+        });
+        navigateScene('right', Symbol('main'));
+        expect(frames.size).toBe(0);
+        navigateScene('right', navigationId);
+        advance(180);
+        expect(controls.target.length()).toBeGreaterThan(0);
+    });
+
+    it('moves a top projection along its screen axes and keeps its orientation', () => {
+        controller.dispose();
+        const topCamera = new OrthographicCamera(-2, 2, 1, -1);
+        topCamera.position.set(0, 0, 10);
+        topCamera.lookAt(controls.target);
+        topCamera.zoom = 2;
+        const rotation = topCamera.quaternion.clone();
+        controller = createSceneNavigationController({
+            camera: topCamera,
+            controls: controls as never,
+            invalidate: vi.fn()
+        });
+        navigateScene('forward');
+        advance(180);
+        expect(controls.target.y).toBeCloseTo(0.08);
+        expect(controls.target.z).toBeCloseTo(0);
+        navigateScene('right');
+        advance(180);
+        expect(controls.target.x).toBeCloseTo(0.08);
+        navigateScene('rotate-left');
+        expect(frames.size).toBe(0);
+        expect(topCamera.quaternion.equals(rotation)).toBe(true);
     });
 });

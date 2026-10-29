@@ -120,6 +120,7 @@ const baseProps = {
     collectionId: 'collection-1',
     brushRadius: 5,
     drawerStrokeColor: 'rgb(0, 0, 255)',
+    previewOpacity: 0.4,
     mousePosition: null,
     refetch: vi.fn()
 };
@@ -295,6 +296,7 @@ describe('SampleSegmentationMaskRect', () => {
 
         expect(mockCanvasContext.drawImage).toHaveBeenCalledTimes(1);
         expect(getPreviewLayer(container).classList.contains('previewHidden')).toBe(false);
+        expect(getPreviewLayer(container).getAttribute('opacity')).toBe('0.4');
     });
 
     it('replaces a queued preview animation frame with the latest update', async () => {

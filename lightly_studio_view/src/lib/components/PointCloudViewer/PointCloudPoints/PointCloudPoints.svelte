@@ -1,51 +1,72 @@
 <script lang="ts">
     import { T, useThrelte } from '@threlte/core';
     import { onDestroy, untrack } from 'svelte';
-    import type { PerspectiveCamera } from 'three';
-    import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-    import { fitCameraToBounds } from '../pointCloudCamera';
     import { createPointCloudBuffer } from '../pointCloudBuffer';
+    import type { OrthographicCamera, PerspectiveCamera, Plane } from 'three';
+    import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type { ColorMode } from '../pointCloudUtils';
     import type { PointBatch } from '../types';
-
+    import type {
+        CuboidAnnotation,
+        CameraMode
+    } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { SceneViewState } from '../sceneViewState';
+    import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
     interface Props {
         batch: PointBatch;
+        clippingPlanes?: Plane[];
         colorMode: ColorMode;
         pointSize: number;
         intensityRange?: [number, number];
-        /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
-        camera?: PerspectiveCamera;
+        camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
+        cameraMode?: CameraMode;
+        cameraCuboid?: CuboidAnnotation;
+        isActive?: () => boolean;
+        isScaleSource?: boolean;
+        viewState?: SceneViewState | null;
+        onViewStateChange?: (viewState: SceneViewState) => void;
     }
     let {
         batch,
+        clippingPlanes = [],
         colorMode,
         pointSize,
         intensityRange,
         fitKey = '',
         camera,
-        controls
+        controls,
+        cameraMode = 'perspective',
+        cameraCuboid,
+        isActive,
+        isScaleSource = false,
+        viewState = null,
+        onViewStateChange
     }: Props = $props();
-    const { invalidate } = useThrelte();
+
+    const { invalidate, renderer } = useThrelte();
+    renderer.localClippingEnabled = true;
     const pointCloudBuffer = createPointCloudBuffer();
-    let fittedKey: string | undefined;
     onDestroy(() => pointCloudBuffer.dispose());
-    // Position effect: copy batch into shared buffers, update draw range and bounds.
-    // camera and controls are read in the tracked section so the effect retries the fit
-    // once both refs are bound; fittedKey is only updated after the fit is performed.
-    // The camera is refitted when fitKey changes, e.g. when the coordinate frame changes.
+    const cameraSync = usePointCloudCamera(() => ({
+        camera,
+        controls,
+        fitKey,
+        cameraMode,
+        cameraCuboid,
+        isActive,
+        isScaleSource,
+        viewState,
+        onViewStateChange
+    }));
     $effect(() => {
         const currentBatch = batch;
-        const currentCamera = camera;
-        const currentControls = controls;
-        const currentFitKey = fitKey;
+        void camera;
+        void controls;
+        void fitKey;
         untrack(() => {
-            const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (fittedKey !== currentFitKey && bounds && currentCamera && currentControls) {
-                fitCameraToBounds(currentCamera, currentControls, bounds);
-                fittedKey = currentFitKey;
-            }
+            cameraSync.updateBounds(pointCloudBuffer.updatePositions(currentBatch));
             invalidate();
         });
     });
@@ -63,5 +84,5 @@
 </script>
 
 <T.Points geometry={pointCloudBuffer.geometry}>
-    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} />
+    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} {clippingPlanes} />
 </T.Points>

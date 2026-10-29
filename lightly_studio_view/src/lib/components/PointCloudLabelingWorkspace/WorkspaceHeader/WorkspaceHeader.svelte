@@ -1,69 +1,54 @@
 <script lang="ts">
-    import { Boxes, ComponentIcon, Database, Home, Maximize2, Minimize2 } from '@lucide/svelte';
+    import { ChevronDown, ChevronUp, Maximize2, Minimize2 } from '@lucide/svelte';
+    import WorkspaceBreadcrumb from './WorkspaceBreadcrumb.svelte';
     import { Button } from '$lib/components';
-    import {
-        Breadcrumb,
-        BreadcrumbItem,
-        BreadcrumbLink,
-        BreadcrumbList,
-        BreadcrumbPage,
-        BreadcrumbSeparator
-    } from '$lib/components/ui/breadcrumb/index.js';
     import type { WorkspaceCrumb } from '../types';
 
+    /** Inputs and callbacks for workspace header. */
     interface Props {
+        /** Sequence displayed by the labeling workspace. */
         sequenceId: string;
         /** Dataset -> collection -> sample path of the point cloud being labeled. */
         sourcePath?: readonly WorkspaceCrumb[];
+        /** Whether the workspace container is in browser fullscreen mode. */
         isFullscreen: boolean;
+        /** Enters or leaves browser fullscreen mode. */
         onToggleFullscreen: () => void;
+        /** Whether the camera strip is reduced to its header. */
+        cameraStripCollapsed?: boolean;
+        /** Expands or collapses the camera strip. */
+        onToggleCameraStrip?: () => void;
     }
 
-    let { sequenceId, sourcePath = [], isFullscreen, onToggleFullscreen }: Props = $props();
-
-    const iconFor = (index: number) => {
-        if (index === 0) return Home;
-        if (index === 1) return Database;
-        if (index === 2) return ComponentIcon;
-        return Boxes;
-    };
+    let {
+        sequenceId,
+        sourcePath = [],
+        isFullscreen,
+        onToggleFullscreen,
+        cameraStripCollapsed = false,
+        onToggleCameraStrip
+    }: Props = $props();
 </script>
 
 <header
     class="flex shrink-0 items-center justify-between border-b pb-2"
     data-testid="workspace-header"
 >
-    {#if sourcePath.length > 0}
-        <Breadcrumb data-testid="workspace-breadcrumb">
-            <BreadcrumbList>
-                {#each sourcePath as crumb, index (crumb.label + index)}
-                    {@const Icon = iconFor(index)}
-                    <BreadcrumbItem>
-                        {#if crumb.href}
-                            <BreadcrumbLink href={crumb.href} class="flex items-center gap-2">
-                                <Icon class="h-4 w-4" />
-                                <span class="max-w-[180px] truncate">{crumb.label}</span>
-                            </BreadcrumbLink>
-                        {:else}
-                            <BreadcrumbPage class="flex items-center gap-2">
-                                <Icon class="h-4 w-4" />
-                                <span>{crumb.label}</span>
-                            </BreadcrumbPage>
-                        {/if}
-                    </BreadcrumbItem>
-                    {#if index < sourcePath.length - 1}
-                        <BreadcrumbSeparator />
-                    {/if}
-                {/each}
-            </BreadcrumbList>
-        </Breadcrumb>
-    {:else}
-        <div class="flex items-center gap-2 truncate text-sm font-medium">
-            <span class="truncate">Point-cloud labeling</span>
-            <span class="truncate text-xs text-muted-foreground">· {sequenceId}</span>
-        </div>
-    {/if}
+    <WorkspaceBreadcrumb {sequenceId} {sourcePath} />
     <div class="flex shrink-0 items-center gap-1">
+        {#if onToggleCameraStrip}
+            <Button
+                variant="ghost"
+                icon={cameraStripCollapsed ? ChevronUp : ChevronDown}
+                ariaLabel={cameraStripCollapsed ? 'Show camera strip' : 'Hide camera strip'}
+                buttonProps={{
+                    type: 'button',
+                    size: 'sm',
+                    class: 'h-8 w-8 p-0',
+                    onclick: onToggleCameraStrip
+                }}
+            />
+        {/if}
         <Button
             variant="ghost"
             icon={isFullscreen ? Minimize2 : Maximize2}
