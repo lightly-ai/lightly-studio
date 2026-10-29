@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import FilterList from './FilterList.svelte';
+import FilterListTrailingTestWrapper from './FilterListTrailingTestWrapper.test.svelte';
 
 const items = [
     { id: 'car', label: 'car', selected: true, count: '3 of 8' },
@@ -14,6 +15,26 @@ const items = [
 const defaultProps = { items, onToggle: vi.fn(), onSelectionChange: vi.fn() };
 
 describe('FilterList', () => {
+    it('reserves the trailing space on the pinned row so counts line up', () => {
+        render(FilterListTrailingTestWrapper, {
+            props: {
+                items: [{ id: 'car', label: 'car', selected: false, count: '1 of 1' }],
+                pinnedItem: {
+                    id: 'none',
+                    label: 'No annotations',
+                    selected: false,
+                    count: '2 of 2',
+                    onToggle: vi.fn()
+                }
+            }
+        });
+
+        expect(screen.getByTestId('trailing-car')).toBeVisible();
+        const spacer = screen.getByTestId('trailing-none').parentElement;
+        expect(spacer).toHaveClass('invisible');
+        expect(spacer).toHaveAttribute('aria-hidden', 'true');
+    });
+
     it('renders the first 50 rows of a long list and shows more on request', async () => {
         const manyItems = Array.from({ length: 120 }, (_, index) => ({
             id: `value-${index}`,

@@ -84,6 +84,7 @@
             onToggle={pinnedItem.onToggle}
             testId="{testId}-pinned"
             emphasized
+            trailingSpacer={trailing}
         />
     {/if}
     {#each shown as item (item.id)}

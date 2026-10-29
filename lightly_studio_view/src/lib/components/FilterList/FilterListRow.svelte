@@ -14,6 +14,8 @@
         emphasized?: boolean;
         leading?: Snippet<[FilterListItem]>;
         trailing?: Snippet<[FilterListItem]>;
+        /** Takes the trailing snippet's space without showing it, so counts line up. */
+        trailingSpacer?: Snippet<[FilterListItem]>;
     }
 
     const {
@@ -23,7 +25,8 @@
         testId,
         emphasized = false,
         leading,
-        trailing
+        trailing,
+        trailingSpacer
     }: Props = $props();
 
     const rowId = $props.id();
@@ -52,4 +55,9 @@
         {/if}
     </Label>
     {@render trailing?.(item)}
+    {#if trailingSpacer}
+        <div class="pointer-events-none invisible" aria-hidden="true">
+            {@render trailingSpacer(item)}
+        </div>
+    {/if}
 </div>
