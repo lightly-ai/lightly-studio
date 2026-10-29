@@ -357,6 +357,7 @@
         annotationFilterRows,
         selectedAnnotationFilterNames,
         toggleAnnotationFilterSelection,
+        setAnnotationFilterSelection,
         setAnnotationCounts,
         pruneInvalidSelections
     } = useAnnotationsFilter({
@@ -714,6 +715,8 @@
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>
                                         toggleAnnotationFilterSelection(label, collectionId)}
+                                    onSetAnnotationFilter={(labels) =>
+                                        setAnnotationFilterSelection(labels, collectionId)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
                                     unannotatedRow={unannotatedFilterRow}
                                 />

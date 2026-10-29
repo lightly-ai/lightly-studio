@@ -126,7 +126,7 @@ describe('LabelsMenu', () => {
             ])
         });
 
-        expect(screen.getByTestId('label-menu-label-count')).toHaveTextContent('0 of 8');
+        expect(screen.getByTestId('labels-menu-count')).toHaveTextContent('0 of 8');
     });
 
     it('shows the "No annotations" row with its count and toggles it', async () => {

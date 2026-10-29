@@ -1,6 +1,7 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { SideMenu } from '$lib/components/SideMenu';
+    import { FilterList } from '$lib/components/FilterList';
+    import ColorMarker from '$lib/components/SideMenu/ColorMarker/ColorMarker.svelte';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -30,6 +31,26 @@
     // collection including those with a single source.
     const isEnabled = $derived(items.length > 1);
 
+    const showColorMarker = $derived(
+        resolveEffectiveColorBySource({
+            multipleSourcesVisible: $multipleSourcesVisible,
+            enforceColoringByClass: $enforceColoringByClassStore
+        })
+    );
+    const filterItems = $derived(
+        items.map(({ id, name }) => ({
+            id,
+            label: name,
+            selected: $selectedCollectionIds.includes(id)
+        }))
+    );
+    const toggleItem = (id: string) => {
+        const selected = get(selectedCollectionIds);
+        handleChangeSelectedItems(
+            selected.includes(id) ? selected.filter((other) => other !== id) : [...selected, id]
+        );
+    };
+
     const handleChangeSelectedItems = (newIds: string[]) => {
         handleAnnotationSourceFilterChange({
             newIds,
@@ -44,15 +65,22 @@
 
 {#if isEnabled}
     <Segment title="Annotation Sources">
-        <SideMenu
-            showColorMarker={resolveEffectiveColorBySource({
-                multipleSourcesVisible: $multipleSourcesVisible,
-                enforceColoringByClass: $enforceColoringByClassStore
-            })}
-            enableColorPicker
-            {items}
-            selectedItemsIds={$selectedCollectionIds}
-            onChangeSelectedItems={handleChangeSelectedItems}
-        />
+        <FilterList
+            items={filterItems}
+            onToggle={toggleItem}
+            onSelectionChange={handleChangeSelectedItems}
+            testId="annotation-sources-menu"
+            searchPlaceholder="Search annotation sources…"
+        >
+            {#snippet leading(item)}
+                {#if showColorMarker}
+                    <ColorMarker
+                        label={item.label}
+                        enableColorPicker
+                        markerProps={{ 'data-testid': `color-marker-${item.label}` }}
+                    />
+                {/if}
+            {/snippet}
+        </FilterList>
     </Segment>
 {/if}

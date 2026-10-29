@@ -195,12 +195,22 @@ export function useAnnotationsFilter({
         });
     };
 
+    // Set the selection to exactly these label names, e.g. for "Select all" and "Clear".
+    const setAnnotationFilterSelection = (labelNames: string[], collectionId?: string) => {
+        const selectedNames = get(selectedAnnotationFilterNames);
+        const changed = Object.keys(get(annotationFilterLabels)).filter(
+            (name) => labelNames.includes(name) !== selectedNames.includes(name)
+        );
+        changed.forEach((name) => toggleAnnotationFilterSelection(name, collectionId));
+    };
+
     return {
         selectedAnnotationFilterIds,
         selectedAnnotationFilterIdsArray,
         annotationLabelIds,
         annotationFilter,
         annotationFilterRows,
+        setAnnotationFilterSelection,
         annotationFilterLabels,
         selectedAnnotationFilterNames,
         setAnnotationCounts,

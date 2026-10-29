@@ -193,6 +193,16 @@ describe('useAnnotationsFilter', () => {
         expect(get(annotationFilter)).toBeUndefined();
     });
 
+    it('setAnnotationFilterSelection selects exactly the given label names', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1']));
+        const { setAnnotationFilterSelection, selectedAnnotationFilterNames } =
+            useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['dog']);
+
+        expect(get(selectedAnnotationFilterNames)).toEqual(['dog']);
+    });
+
     it('returns annotationFilterLabels mapping', () => {
         const { annotationFilterLabels } = useAnnotationsFilter({
             annotationLabels

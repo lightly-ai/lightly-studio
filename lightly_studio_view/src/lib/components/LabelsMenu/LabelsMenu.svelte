@@ -1,7 +1,6 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-    import { Label } from '$lib/components/ui/label/index.js';
+    import { FilterList } from '$lib/components/FilterList';
     import type { Annotation } from '$lib/types';
     import { formatInteger, resolveEffectiveColorBySource } from '$lib/utils';
     import { type Readable } from 'svelte/store';
@@ -16,6 +15,8 @@
         annotationFilterRows: Readable<Annotation[]>;
         /** Called when the user toggles an annotation class filter checkbox */
         onToggleAnnotationFilter: (label: string) => void;
+        /** Called with the full list of selected class names, e.g. after "Select all" */
+        onSetAnnotationFilter?: (labels: string[]) => void;
         /** Whether to show the label visibility toggle */
         showVisibilityToggle?: boolean;
         /** The "No annotations" row, pinned above the classes. Omit to hide it. */
@@ -30,6 +31,7 @@
     let {
         annotationFilterRows,
         onToggleAnnotationFilter,
+        onSetAnnotationFilter = () => {},
         showVisibilityToggle = false,
         unannotatedRow
     }: Props = $props();
@@ -44,101 +46,77 @@
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
+
+    const formatCount = (current: number | undefined, total: number) =>
+        current === undefined ? undefined : `${formatInteger(current)} of ${formatInteger(total)}`;
+
+    const items = $derived(
+        $annotationFilterRows.map(({ label_name, current_count, total_count, selected }) => ({
+            id: label_name,
+            label: label_name,
+            selected: !!selected,
+            count: formatCount(current_count, total_count)
+        }))
+    );
+    const pinnedItem = $derived(
+        unannotatedRow && {
+            id: 'no-annotations',
+            label: 'No annotations',
+            selected: unannotatedRow.selected,
+            count: formatCount(unannotatedRow.current_count, unannotatedRow.total_count),
+            onToggle: unannotatedRow.onToggle
+        }
+    );
 </script>
 
 <Segment title="Annotation Classes">
-    <div class="width-full space-y-2 overflow-hidden">
-        {#if $allSourcesHidden}
-            <!-- The rows are empty here because every source is unchecked, not because the
-                 dataset has no annotations. Say so, otherwise the message below sends the user
-                 off to add annotations they already have. -->
-            <p class="text-sm text-diffuse-foreground" data-testid="labels-menu-no-sources">
-                No annotation sources selected. Select one to see its annotation classes.
-            </p>
-        {:else if $annotationFilterRows.length === 0}
-            <p class="text-sm text-diffuse-foreground">
-                No annotations yet.
-                <a
-                    href="https://docs.lightly.ai/studio/workflows/annotations"
-                    target="_blank"
-                    rel="noreferrer"
-                    class="text-primary underline-offset-4 hover:underline"
-                >
-                    Label samples directly in LightlyStudio or add annotations from code.
-                </a>
-            </p>
-        {:else}
-            {#if unannotatedRow}
-                <div class="width-full flex items-center space-x-2">
-                    <Checkbox
-                        id="labels-menu-no-annotations"
-                        checked={unannotatedRow.selected}
-                        onCheckedChange={unannotatedRow.onToggle}
+    {#if $allSourcesHidden}
+        <!-- The rows are empty here because every source is unchecked, not because the
+             dataset has no annotations. Say so, otherwise the message below sends the user
+             off to add annotations they already have. -->
+        <p class="text-sm text-diffuse-foreground" data-testid="labels-menu-no-sources">
+            No annotation sources selected. Select one to see its annotation classes.
+        </p>
+    {:else if items.length === 0}
+        <p class="text-sm text-diffuse-foreground">
+            No annotations yet.
+            <a
+                href="https://docs.lightly.ai/studio/workflows/annotations"
+                target="_blank"
+                rel="noreferrer"
+                class="text-primary underline-offset-4 hover:underline"
+            >
+                Label samples directly in LightlyStudio or add annotations from code.
+            </a>
+        </p>
+    {:else}
+        <FilterList
+            {items}
+            {pinnedItem}
+            onToggle={onToggleAnnotationFilter}
+            onSelectionChange={onSetAnnotationFilter}
+            testId="labels-menu"
+            searchPlaceholder="Search classes…"
+        >
+            {#snippet leading(item)}
+                {#if showClassColorLegend}
+                    <AnnotationColorLegend
+                        labelName={item.id}
+                        className="h-3 w-3"
+                        selected={item.selected}
+                        testId="label-color-legend"
                     />
-                    <Label
-                        for="labels-menu-no-annotations"
-                        data-testid="labels-menu-no-annotations"
-                        class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap"
-                    >
-                        <p class="flex-1 truncate text-base font-normal italic">No annotations</p>
-                        <span class="text-sm text-diffuse-foreground"
-                            >{formatInteger(unannotatedRow.current_count)} of {formatInteger(
-                                unannotatedRow.total_count
-                            )}</span
-                        >
-                    </Label>
-                </div>
-            {/if}
-            {#each $annotationFilterRows as { label_name, current_count, total_count, selected } (label_name)}
-                {@const isHidden = $hiddenClassNamesStore.includes(label_name)}
-                <div class="width-full group flex items-center space-x-2" title={label_name}>
-                    <Checkbox
-                        id={label_name}
-                        checked={selected}
-                        aria-labelledby={`${label_name}-label`}
-                        onCheckedChange={() => onToggleAnnotationFilter(label_name)}
+                {/if}
+            {/snippet}
+            {#snippet trailing(item)}
+                {#if showVisibilityToggle}
+                    <LabelVisibilityToggle
+                        isHidden={$hiddenClassNamesStore.includes(item.id)}
+                        labelName={item.id}
+                        {toggleClassVisibility}
                     />
-
-                    <Label
-                        id={`${label_name}-label`}
-                        for={label_name}
-                        data-testid="labels-menu-item"
-                        class="flex min-w-0 flex-1 cursor-pointer items-center space-x-2 text-nowrap peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                        {#if showClassColorLegend}
-                            <AnnotationColorLegend
-                                labelName={label_name}
-                                className="h-3 w-3"
-                                {selected}
-                                testId="label-color-legend"
-                            />
-                        {/if}
-                        <p
-                            class="flex-1 truncate text-base font-normal"
-                            data-testid="label-menu-label-name"
-                        >
-                            {label_name}
-                        </p>
-                        {#if current_count !== undefined}
-                            <span
-                                class="text-sm text-diffuse-foreground"
-                                data-testid="label-menu-label-count"
-                                >{formatInteger(current_count)} of {formatInteger(
-                                    total_count
-                                )}</span
-                            >
-                        {/if}
-                    </Label>
-
-                    {#if showVisibilityToggle}
-                        <LabelVisibilityToggle
-                            {isHidden}
-                            labelName={label_name}
-                            {toggleClassVisibility}
-                        />
-                    {/if}
-                </div>
-            {/each}
-        {/if}
-    </div>
+                {/if}
+            {/snippet}
+        </FilterList>
+    {/if}
 </Segment>
