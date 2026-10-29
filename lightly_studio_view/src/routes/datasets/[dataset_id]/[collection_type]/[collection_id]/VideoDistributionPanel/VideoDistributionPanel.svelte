@@ -19,10 +19,10 @@
         onClose: () => void;
         // The host keeps these settings so that they stay when the panel closes and opens again.
         histogramBinCount: number;
-        /** The plotted source, for example `classes` or `metadata`. */
-        sourceId: string | undefined;
-        /** The plotted group of the source, for example a metadata key. */
-        groupId: string | undefined;
+        /** The source that the user picked, for example `classes` or `metadata`. */
+        selectedSourceId: string | undefined;
+        /** The group that the user picked, for example a metadata key. */
+        selectedGroupId: string | undefined;
     }
 
     let {
@@ -32,28 +32,31 @@
         onClassBarClick,
         onClose,
         histogramBinCount = $bindable(),
-        sourceId = $bindable(),
-        groupId = $bindable()
+        selectedSourceId = $bindable(),
+        selectedGroupId = $bindable()
     }: Props = $props();
 
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
     const { filterParams } = useVideoFilters();
     const filters = $derived(buildVideoDistributionFilters($filterParams));
 
+    let activeDistributionSourceId = $state<string | undefined>(undefined);
+    let activeDistributionGroupId = $state<string | undefined>(undefined);
+
     const classDistribution = useVideoClassDistributionSource(() => ({
         collectionId,
         filter: filters.filter,
         selectedClassNames,
         allSourcesHidden: $allSourcesHidden,
-        active: sourceId !== 'metadata'
+        active: activeDistributionSourceId !== 'metadata'
     }));
     const metadataDistribution = useVideoMetadataDistributionSource(() => ({
         collectionId,
         filter: filters.filter,
         baseFilter: filters.baseFilter,
         histogramBinCount,
-        activeSourceId: sourceId,
-        activeGroupId: groupId
+        activeSourceId: activeDistributionSourceId,
+        activeGroupId: activeDistributionGroupId
     }));
 
     const distributionSources = $derived<DistributionSource[]>(
@@ -78,10 +81,10 @@
     onCategoricalRetry={metadataDistribution.onCategoricalRetry}
     {histogramBinCount}
     onHistogramBinCountChange={(binCount) => (histogramBinCount = binCount)}
-    initialSourceId={sourceId}
-    initialGroupId={groupId}
-    onGroupChange={(nextSourceId, nextGroupId) => {
-        sourceId = nextSourceId;
-        groupId = nextGroupId;
+    bind:selectedSourceId
+    bind:selectedGroupId
+    onGroupChange={(sourceId, groupId) => {
+        activeDistributionSourceId = sourceId;
+        activeDistributionGroupId = groupId;
     }}
 />

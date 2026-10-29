@@ -805,8 +805,8 @@
                                             onClassBarClick={handleClassBarClick}
                                             onClose={() => setActivePanel('none')}
                                             bind:histogramBinCount
-                                            bind:sourceId={distributionSourceId}
-                                            bind:groupId={distributionGroupId}
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}
@@ -825,8 +825,8 @@
                                             bind:countMode={distributionCountMode}
                                             bind:histogramBinCount
                                             bind:comparisonTagIds={distributionSampleTagIds}
-                                            bind:sourceId={distributionSourceId}
-                                            bind:groupId={distributionGroupId}
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}

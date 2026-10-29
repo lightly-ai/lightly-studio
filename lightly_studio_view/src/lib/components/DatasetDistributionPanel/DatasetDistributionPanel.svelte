@@ -58,12 +58,13 @@
          */
         initialCountMode?: AnnotationCountMode;
         /**
-         * Source and group to show when the panel first mounts. Lets the parent
-         * keep the plotted field when the panel unmounts, for example while a
-         * sample is open. Unknown IDs fall back to the default source and group.
+         * Source and group that the user picked. Bind them so that the parent
+         * keeps the pick when the panel unmounts, for example while a sample is
+         * open. Unknown IDs fall back to the default source and group, and a
+         * fallback is never written back.
          */
-        initialSourceId?: string;
-        initialGroupId?: string;
+        selectedSourceId?: string;
+        selectedGroupId?: string;
         /**
          * Shows the count mode select in the config and expand dialogs. Set to
          * false when the host supports only one count mode, and pass that mode
@@ -98,7 +99,7 @@
         onGroupChange?: (sourceId: string, groupId?: string) => void;
     }
 
-    const {
+    let {
         data,
         sources,
         title = 'Distribution',
@@ -107,8 +108,8 @@
         onBarClick,
         onCountModeChange,
         initialCountMode = AnnotationCountMode.OBJECTS,
-        initialSourceId,
-        initialGroupId,
+        selectedSourceId = $bindable(),
+        selectedGroupId = $bindable(),
         showCountMode = true,
         onHistogramRangeSelect,
         histogramBinCount = 20,
@@ -127,9 +128,6 @@
         sources ?? [{ id: 'class', label: 'Annotation classes', data: data ?? [] }]
     );
     const hasSourceSelector = $derived(resolvedSources.length > 1);
-
-    let selectedSourceId = $state<string | undefined>(untrack(() => initialSourceId));
-    let selectedGroupId = $state<string | undefined>(untrack(() => initialGroupId));
 
     const groupHasContent = (group: DistributionSourceGroup): boolean =>
         (group.data?.length ?? 0) > 0 || group.histogram != null || group.categorical != null;

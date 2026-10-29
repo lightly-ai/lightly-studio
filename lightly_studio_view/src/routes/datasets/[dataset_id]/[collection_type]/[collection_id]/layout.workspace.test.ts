@@ -336,19 +336,22 @@ describe('video distribution panel', () => {
 describe('distribution plot selection', () => {
     // Opening a sample unmounts the panel like closing it does, so a reopen covers both.
     it.each([APP_ROUTES.images, APP_ROUTES.videos])(
-        'keeps the selected plot when the panel opens again on %s',
+        'keeps the picked plot, not a loading fallback, when the panel opens again on %s',
         async (route) => {
             setPageRoute(route);
             mockActivePanel.set('distribution');
             render(LayoutWorkspaceTestWrapper, { props: defaultProps });
 
-            (await screen.findByTestId('distribution-select-metadata-city')).click();
+            (await screen.findByTestId('distribution-pick-metadata-city')).click();
+            await tick();
+            // While its groups load, the panel reports a fallback group.
+            screen.getByTestId('distribution-select-metadata-undefined').click();
             await tick();
             mockActivePanel.set('none');
             await tick();
             mockActivePanel.set('distribution');
 
-            expect(await screen.findByTestId('distribution-initial')).toHaveTextContent(
+            expect(await screen.findByTestId('distribution-selected')).toHaveTextContent(
                 'metadata/city'
             );
         }

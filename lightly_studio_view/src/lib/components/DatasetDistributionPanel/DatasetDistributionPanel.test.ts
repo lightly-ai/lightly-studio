@@ -832,7 +832,7 @@ describe('DatasetDistributionPanel', () => {
         expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
     });
 
-    describe('initial source and group', () => {
+    describe('selected source and group', () => {
         const categorical = (label: string) => ({
             selectedValues: [],
             buckets: [{ id: label, kind: 'value' as const, value: label, label, count: 1 }]
@@ -855,8 +855,8 @@ describe('DatasetDistributionPanel', () => {
             render(DatasetDistributionPanel, {
                 props: {
                     sources,
-                    initialSourceId: 'metadata',
-                    initialGroupId: 'weather',
+                    selectedSourceId: 'metadata',
+                    selectedGroupId: 'weather',
                     onGroupChange
                 }
             });
@@ -873,13 +873,34 @@ describe('DatasetDistributionPanel', () => {
         it('falls back to the default source for an unknown ID', () => {
             const onGroupChange = vi.fn();
             render(DatasetDistributionPanel, {
-                props: { sources, initialSourceId: 'removed', onGroupChange }
+                props: { sources, selectedSourceId: 'removed', onGroupChange }
             });
 
             expect(screen.getByTestId('dataset-distribution-source-select')).toHaveTextContent(
                 'Classes'
             );
             expect(onGroupChange).toHaveBeenLastCalledWith('classes', undefined);
+        });
+
+        it('keeps a picked group that is missing while its groups load', async () => {
+            const onGroupChange = vi.fn();
+            const [loading] = sources;
+            const { rerender } = render(DatasetDistributionPanel, {
+                props: {
+                    sources: [{ ...sources[1], groups: [] }, loading],
+                    selectedSourceId: 'metadata',
+                    selectedGroupId: 'weather',
+                    onGroupChange
+                }
+            });
+            expect(onGroupChange).toHaveBeenLastCalledWith('metadata', undefined);
+
+            await rerender({ sources });
+
+            expect(screen.getByTestId('dataset-distribution-group-select')).toHaveTextContent(
+                'weather'
+            );
+            expect(onGroupChange).toHaveBeenLastCalledWith('metadata', 'weather');
         });
     });
 
