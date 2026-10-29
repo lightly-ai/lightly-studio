@@ -69,4 +69,21 @@ describe('SampleImageGridItem', () => {
             'cover'
         );
     });
+
+    it('shows the fields ticked in the "Show on tiles" menu', () => {
+        render(SampleImageGridItem, {
+            props: {
+                sample: {
+                    sample_id: 'image-1',
+                    annotations: [],
+                    tags: [{ name: 'reviewed' }]
+                } as unknown as ImageView,
+                tileWidth: 240,
+                tileHeight: 160,
+                tileFields: ['tags']
+            }
+        });
+
+        expect(screen.getByTitle('Tags: reviewed')).toHaveTextContent('reviewed');
+    });
 });

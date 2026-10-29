@@ -2,6 +2,9 @@
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import TileFieldChips from '$lib/components/TileFieldChips/TileFieldChips.svelte';
+    import { getImageTileChips } from '$lib/components/TileFieldChips/getTileChips';
+    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -13,13 +16,16 @@
         objectFit,
         tileWidth,
         tileHeight,
-        displayTextOnImage
+        displayTextOnImage,
+        tileFields = []
     }: {
         sample: ImageView;
         objectFit?: SampleImageObjectFit;
         tileWidth: number;
         tileHeight: number;
         displayTextOnImage?: string;
+        /** Fields picked in the "Show on tiles" menu. */
+        tileFields?: string[];
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
@@ -29,6 +35,11 @@
         $imageSortBy?.[0]?.source === 'evaluation_metric' &&
             sample.order_value == null &&
             sample.similarity_score == null
+    );
+
+    const { isSourceVisible } = useAnnotationCollectionsFilter();
+    const tileChips = $derived(
+        getImageTileChips({ fields: tileFields, sample, isSourceVisible: $isSourceVisible })
     );
 </script>
 
@@ -45,6 +56,7 @@
     hasRightOverlay={showMissingValue || hasValueBadge(sample.order_value, sample.similarity_score)}
 />
 <SampleAnnotations {sample} {objectFit} outputWidth={tileWidth} outputHeight={tileHeight} />
+<TileFieldChips chips={tileChips} />
 
 <SampleValueBadge
     {showMissingValue}

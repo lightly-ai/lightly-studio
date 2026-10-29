@@ -11,7 +11,7 @@ from lightly_studio.models.annotation.annotation_base import (
     VideoFrameAnnotationView,
 )
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from tests.helpers_resolvers import (
     create_annotation,
@@ -80,6 +80,44 @@ def test_get_all_with_payload__with_pagination(
         == airplane_label.annotation_label_name
     )
     assert annotations_page.annotations[0].parent_sample_data.sample_id == image_2.sample_id
+
+
+def test_get_all_with_payload__with_metadata(
+    db_session: Session,
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(session=db_session, collection_id=collection_id)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    with_metadata = create_annotation(
+        session=db_session,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    without_metadata = create_annotation(
+        session=db_session,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    metadata_resolver.set_value_for_sample(
+        session=db_session, sample_id=with_metadata.sample_id, key="occluded", value=True
+    )
+
+    annotations_page = annotation_resolver.get_all_with_payload(
+        session=db_session,
+        collection_id=with_metadata.sample.collection_id,
+    )
+
+    metadata_by_id = {
+        view.annotation.sample_id: view.metadata_dict for view in annotations_page.annotations
+    }
+    assert metadata_by_id[without_metadata.sample_id] is None
+    with_metadata_view = metadata_by_id[with_metadata.sample_id]
+    assert with_metadata_view is not None
+    assert with_metadata_view.data == {"occluded": True}
 
 
 def test_get_all_with_payload__with_image(

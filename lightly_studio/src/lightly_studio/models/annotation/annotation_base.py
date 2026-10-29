@@ -26,6 +26,7 @@ from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationView,
 )
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.temporal_span import TemporalSpanTable, TemporalSpanView
 from lightly_studio.models.video import VideoFrameTable
@@ -344,6 +345,8 @@ class AnnotationWithPayloadView(BaseModel):
     parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
     # Set when results are ordered by embedding similarity search.
     similarity_score: Optional[float] = None
+    # Metadata of the annotation sample, so grid tiles can show chosen fields.
+    metadata_dict: Optional[SampleMetadataView] = None
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):

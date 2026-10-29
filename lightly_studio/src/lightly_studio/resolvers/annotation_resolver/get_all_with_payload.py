@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import aliased, joinedload, load_only
+from sqlalchemy.orm import aliased, joinedload, load_only, selectinload
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -28,6 +28,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver, embedding_region_resolver
@@ -130,6 +131,12 @@ def get_all_with_payload(
     )
     if distance_expr is not None:
         annotations_query = annotations_query.add_columns(distance_expr)
+    # Grid tiles can show annotation metadata, so load it in one batch instead of per row.
+    annotations_query = annotations_query.options(
+        selectinload(AnnotationBaseTable.sample).selectinload(
+            SampleTable.metadata_dict  # type: ignore[arg-type]
+        )
+    )
 
     total_count_query = select(func.count()).select_from(base_query.subquery())
     total_count = session.exec(total_count_query).one()
@@ -178,6 +185,9 @@ def _build_annotation_views(
                 ),
                 parent_sample_data=_serialize_annotation_payload(payload=payload),
                 similarity_score=similarity_score,
+                metadata_dict=SampleMetadataView.model_validate(annotation.sample.metadata_dict)
+                if annotation.sample.metadata_dict
+                else None,
             )
         )
     return annotation_views

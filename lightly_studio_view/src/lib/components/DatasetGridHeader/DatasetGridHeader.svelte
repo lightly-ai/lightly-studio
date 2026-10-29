@@ -7,6 +7,8 @@
         VideoOrderBy
     } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
+    import TileFieldsMenu from '$lib/components/TileFieldsMenu/TileFieldsMenu.svelte';
+    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 
     type SearchImage = { name: string; previewUrl: string };
 
@@ -51,6 +53,10 @@
         onSearchError,
         collectionDatasetId
     }: Props = $props();
+
+    // The collection layout loads the metadata info of the collection on screen.
+    const { metadataInfo } = useMetadataFilters();
+    const metadataKeys = $derived(($metadataInfo ?? []).map((info) => info.name));
 </script>
 
 <GridHeader>
@@ -64,7 +70,10 @@
             />
         {/if}
     {/snippet}
-    {#snippet auxControls()}
+    {#snippet auxControls(compact)}
+        {#if isImages || isAnnotations}
+            <TileFieldsMenu {collectionId} {isAnnotations} {metadataKeys} {compact} />
+        {/if}
         {#if isImages}
             <ImageOrderBy {collectionId} datasetId={collectionDatasetId} />
         {:else if isVideos}

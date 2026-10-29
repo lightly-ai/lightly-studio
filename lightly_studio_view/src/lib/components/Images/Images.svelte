@@ -31,6 +31,7 @@
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
     import BulkClassificationPanelContainer from '../BulkClassificationPanel/BulkClassificationPanelContainer.svelte';
+    import { useTileFields } from '$lib/hooks/useTileFields/useTileFields';
 
     // Import the settings hook
     const { gridViewSampleRenderingStore, showSampleFilenamesStore } = useSettings();
@@ -65,6 +66,7 @@
         sampleSize
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
+    const { tileFields } = useTileFields();
 
     const samplesParams = $derived({
         collection_id,
@@ -330,6 +332,7 @@
                                         tileWidth={width}
                                         tileHeight={height}
                                         {displayTextOnImage}
+                                        tileFields={$tileFields[collection_id]}
                                     />
                                 </GridItem>
                             {/key}

@@ -23,6 +23,7 @@
     import { useAnnotationCropPreview } from './useAnnotationCropPreview/useAnnotationCropPreview.svelte';
     import { useAnnotationTileSelection } from './useAnnotationTileSelection/useAnnotationTileSelection';
     import AnnotationTile from './AnnotationTile/AnnotationTile.svelte';
+    import { useTileFields } from '$lib/hooks/useTileFields/useTileFields';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -164,6 +165,10 @@
         toggleSelection: toggleSampleAnnotationCropSelection
     });
 
+    // The grid browses one annotation source, so every tile shares its name.
+    const { tileFields } = useTileFields();
+    const sourceName = $derived(page.data.collection?.name ?? '');
+
     const canShowSelectionOverlay = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const datasetId = $derived(page.params.dataset_id!);
@@ -271,6 +276,8 @@
                                 onDragStart={handleAnnotationDragStart}
                                 onSelect={handleGridItemSelect}
                                 onDoubleClick={handleOnDoubleClick}
+                                tileFields={$tileFields[collection_id]}
+                                {sourceName}
                             />
                         {/if}
                     {/snippet}

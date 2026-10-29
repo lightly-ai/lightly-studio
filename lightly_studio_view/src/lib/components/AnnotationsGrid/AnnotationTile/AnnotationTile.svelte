@@ -2,6 +2,8 @@
     import { AnnotationsGridItem, SelectableBox } from '$lib/components';
     import { GridItem } from '$lib/components/GridItem';
     import { AnnotationType, type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
+    import TileFieldChips from '$lib/components/TileFieldChips/TileFieldChips.svelte';
+    import { getAnnotationTileChips } from '$lib/components/TileFieldChips/getTileChips';
     import AnnotationClassificationGridItem from '../AnnotationClassificationGridItem/AnnotationClassificationGridItem.svelte';
     import type { CropWindow } from '../AnnotationItem/renderCropObjectUrl';
     import {
@@ -40,6 +42,10 @@
         onSelect: (event: MouseEvent | KeyboardEvent, annotationId: string, index: number) => void;
         /** Fires on double-click, navigating to the sample detail view. */
         onDoubleClick: (annotationId: string) => void;
+        /** Fields picked in the "Show on tiles" menu. */
+        tileFields?: string[];
+        /** Name of the annotation source the grid shows. */
+        sourceName?: string;
     }
 
     let {
@@ -57,7 +63,9 @@
         onCropWindowChange,
         onDragStart,
         onSelect,
-        onDoubleClick
+        onDoubleClick,
+        tileFields = [],
+        sourceName = ''
     }: Props = $props();
 
     const annotationId = $derived(annotation.annotation.sample_id);
@@ -72,6 +80,9 @@
                   cropUrl
               })
             : buildAnnotationDragData({ annotation: annotation.annotation, cropWindow, cropUrl })
+    );
+    const tileChips = $derived(
+        getAnnotationTileChips({ fields: tileFields, annotation, sourceName })
     );
 </script>
 
@@ -122,6 +133,7 @@
                     {onCropWindowChange}
                 />
             {/if}
+            <TileFieldChips chips={tileChips} position="bottom" />
         </div>
     </GridItem>
 {/key}
