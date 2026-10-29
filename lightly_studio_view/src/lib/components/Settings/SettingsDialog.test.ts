@@ -1,8 +1,10 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { writable } from 'svelte/store';
+import userEvent from '@testing-library/user-event';
+import { get, writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialog from './SettingsDialog.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+import { usePlotSelectedPointSize } from '$lib/hooks/usePlotSelectedPointSize/usePlotSelectedPointSize';
 
 // Mock the useSettings hook
 vi.mock('$lib/hooks/useSettings', () => {
@@ -263,6 +265,25 @@ describe('SettingsDialog', () => {
 
         await fireEvent.click(toggle);
         expect(saveButton).toBeDisabled();
+    });
+
+    it('should apply the selected point size right away, outside of Save changes', async () => {
+        const { selectedPointSize } = usePlotSelectedPointSize();
+        selectedPointSize.set('large');
+        // jsdom lacks the pointer capture and scrolling APIs the select calls.
+        Element.prototype.scrollIntoView = vi.fn();
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.releasePointerCapture = vi.fn();
+        const user = userEvent.setup();
+        render(SettingsDialog);
+        await openDialog();
+        await openTab('Display');
+
+        await user.click(screen.getByLabelText('Selected point size'));
+        await user.click(await screen.findByRole('option', { name: 'Small' }));
+
+        expect(get(selectedPointSize)).toBe('small');
+        expect(screen.getByRole('button', { name: 'Save changes' })).toBeDisabled();
     });
 
     it('should show saving state while submitting', async () => {

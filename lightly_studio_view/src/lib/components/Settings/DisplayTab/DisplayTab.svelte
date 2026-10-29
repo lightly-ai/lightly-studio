@@ -1,5 +1,10 @@
 <script lang="ts">
     import { Select } from '$lib/components/Select';
+    import {
+        PLOT_SELECTED_POINT_SIZES,
+        usePlotSelectedPointSize,
+        type PlotSelectedPointSize
+    } from '$lib/hooks/usePlotSelectedPointSize/usePlotSelectedPointSize';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { SettingsFieldRow } from '../SettingsFieldRow';
     import { SettingsGroup } from '../SettingsGroup';
@@ -17,6 +22,8 @@
     }
 
     const { dialogState }: Props = $props();
+    // Kept in localStorage, not in the dialog state, so "Save changes" does not cover it.
+    const { selectedPointSize } = usePlotSelectedPointSize();
 </script>
 
 <div class="space-y-8">
@@ -74,5 +81,20 @@
             bind:checked={dialogState.imageInterpolation}
             disabled={dialogState.isSaving}
         />
+    </SettingsGroup>
+    <SettingsGroup title="Embedding plot">
+        <SettingsFieldRow
+            id="plot-selected-point-size"
+            label="Selected point size"
+            description="Size of the selected points in the plot. Applies right away."
+        >
+            <Select
+                class="w-36"
+                items={[...PLOT_SELECTED_POINT_SIZES]}
+                value={$selectedPointSize}
+                selectProps={{ id: 'plot-selected-point-size' }}
+                onValueChange={(v) => selectedPointSize.set(v as PlotSelectedPointSize)}
+            />
+        </SettingsFieldRow>
     </SettingsGroup>
 </div>

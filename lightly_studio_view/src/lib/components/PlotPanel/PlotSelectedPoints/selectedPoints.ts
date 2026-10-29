@@ -1,9 +1,15 @@
+import type { PlotSelectedPointSize } from '$lib/hooks/usePlotSelectedPointSize/usePlotSelectedPointSize';
 import { INCLUDED_BY_FILTERS_CATEGORY } from '../plotCategories';
 
 // Above this many selected points the overlay would slow down pan and zoom, so it is not drawn.
 export const MAX_DRAWN_SELECTED_POINTS = 50_000;
-// The plot library picks its own point size when none is set; this approximates it.
-const AUTO_POINT_SIZE = 4;
+// Radius in CSS pixels per setting. A regular point at the plot's automatic size is about 2.
+const SELECTED_POINT_RADII: Record<PlotSelectedPointSize, number> = {
+    small: 3,
+    medium: 4,
+    large: 5,
+    extra_large: 7
+};
 
 /**
  * Returns the indices of the points inside the current plot selection. Points outside the
@@ -27,7 +33,7 @@ export function getSelectedPointIndices(
     return indices;
 }
 
-/** Radius in CSS pixels of a selected point, larger than a regular point of `pointSize`. */
-export function getSelectedPointRadius(pointSize: number | null): number {
-    return (pointSize ?? AUTO_POINT_SIZE) / 2 + 1.5;
+/** Radius in CSS pixels of a selected point for the "Selected point size" setting. */
+export function getSelectedPointRadius(size: PlotSelectedPointSize): number {
+    return SELECTED_POINT_RADII[size];
 }

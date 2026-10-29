@@ -16,8 +16,11 @@ describe('getSelectedPointIndices', () => {
 });
 
 describe('getSelectedPointRadius', () => {
-    it('is larger than a regular point', () => {
-        expect(getSelectedPointRadius(6)).toBe(4.5);
-        expect(getSelectedPointRadius(null)).toBe(3.5);
+    it('grows with the setting', () => {
+        const radii = (['small', 'medium', 'large', 'extra_large'] as const).map(
+            getSelectedPointRadius
+        );
+
+        expect(radii).toEqual([3, 4, 5, 7]);
     });
 });

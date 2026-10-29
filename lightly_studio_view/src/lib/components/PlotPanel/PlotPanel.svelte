@@ -3,10 +3,10 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
-    import PlotPointSizeControl from './PlotPointSizeControl/PlotPointSizeControl.svelte';
     import PlotSelectedPoints from './PlotSelectedPoints/PlotSelectedPoints.svelte';
     import PlotHoveredPoint from './PlotHoveredPoint/PlotHoveredPoint.svelte';
     import { useHoveredSample } from '$lib/hooks/useHoveredSample/useHoveredSample';
+    import { usePlotSelectedPointSize } from '$lib/hooks/usePlotSelectedPointSize/usePlotSelectedPointSize';
     import {
         getSelectedPointIndices,
         getSelectedPointRadius
@@ -343,13 +343,12 @@
 
     // Require at least 50px in each dimension to avoid unstable first-frame canvas rendering.
     const MIN_RENDER_SIZE = 50;
-    // Lives here so the size survives the plot reloading on a filter change. Null is automatic.
-    let pointSize = $state<number | null>(null);
-    const embeddingConfig = $derived({
+    const embeddingConfig = {
         colorScheme: 'dark',
-        autoLabelEnabled: false,
-        pointSize
-    } as const);
+        autoLabelEnabled: false
+    } as const;
+    // Only the selected points take the size from the settings; the rest keep the automatic size.
+    const { selectedPointSize } = usePlotSelectedPointSize();
     const embeddingTheme = {
         brandingLink: null
     } as const;
@@ -615,7 +614,7 @@
                             category={$plotData.category as Uint8Array}
                             indices={selectedPointIndices}
                             {categoryColors}
-                            radius={getSelectedPointRadius(pointSize)}
+                            radius={getSelectedPointRadius($selectedPointSize)}
                         />
                     {/if}
 
@@ -666,10 +665,7 @@
                             }}
                         />
 
-                        <div class="flex shrink-0 items-center gap-2">
-                            <PlotPointSizeControl bind:pointSize />
-                            <PlotToolPill {plotContainer} bind:activeTool />
-                        </div>
+                        <PlotToolPill {plotContainer} bind:activeTool />
                     </div>
                 {/if}
             </div>
