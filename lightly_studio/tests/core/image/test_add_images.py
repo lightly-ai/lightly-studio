@@ -28,6 +28,7 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.image import add_annotations, add_images
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
@@ -306,6 +307,50 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     assert "already_present=2" in caplog.text
     assert "missing=3" in caplog.text
     assert "broken=0" in caplog.text
+
+
+def test_load_into_dataset_from_labelformat__first_files_missing_fails_early(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    label_input = _get_labelformat_input_obj_det_multi(
+        filenames=[f"missing{i}.jpg" for i in range(7)]
+    )
+    file_exists_spy = mocker.spy(add_images, "_file_exists")
+
+    with pytest.raises(
+        AllInputFilesFailedError,
+        match=(
+            f"The first 5 image files do not exist, for example: "
+            f"'{posixpath.join(tmp_path.as_posix(), 'missing0.jpg')}'. "
+            f"Check that the images path '{tmp_path.as_posix()}' is the folder"
+        ),
+    ):
+        add_images.load_into_dataset_from_labelformat(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            input_labels=label_input,
+            images_path=tmp_path,
+        )
+
+    # Only the early check ran, not the per-file loop over all 7 files.
+    assert file_exists_spy.call_count == 5
+
+
+def test_load_into_dataset_from_labelformat__first_files_missing_names_double_slash(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    label_input = _get_labelformat_input_obj_det_multi(filenames=["missing0.jpg"])
+    mocker.patch.object(add_images, "_file_exists", return_value=False)
+
+    with pytest.raises(AllInputFilesFailedError, match="The path contains '//'"):
+        add_images.load_into_dataset_from_labelformat(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            input_labels=label_input,
+            images_path="s3://bucket/run//images",
+        )
 
 
 def test_load_into_dataset_from_labelformat__reraises_non_image_dimension_error(
@@ -613,6 +658,32 @@ def test_load_into_dataset_from_coco_captions__records_missing_already_present_a
     assert "already_present=2" in caplog.text
     assert "missing=3" in caplog.text
     assert "broken=0" in caplog.text
+
+
+def test_load_into_dataset_from_coco_captions__first_files_missing_fails_early(
+    db_session: Session, tmp_path: Path
+) -> None:
+    collection = helpers_resolvers.create_collection(db_session)
+    coco_dict = {
+        "images": [
+            {"id": i, "file_name": f"missing{i}.jpg", "width": 640, "height": 480} for i in range(7)
+        ],
+        "annotations": [],
+    }
+    annotations_path = tmp_path / "annotations.json"
+    annotations_path.write_text(json.dumps(coco_dict))
+    images_path = tmp_path / "images"
+
+    with pytest.raises(
+        AllInputFilesFailedError,
+        match=f"The first 5 image files do not exist, for example: '{images_path}/missing0.jpg'",
+    ):
+        add_images.load_into_dataset_from_coco_captions(
+            session=db_session,
+            root_collection_id=collection.collection_id,
+            annotations_json=annotations_path,
+            images_path=images_path,
+        )
 
 
 def test_create_batch_samples(db_session: Session) -> None:

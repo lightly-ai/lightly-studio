@@ -183,9 +183,14 @@ class FileOutcomeReport:
         n_attempted = n_added + n_missing + n_broken
         n_succeeded = n_added + n_already_present
         if n_attempted >= 1 and n_succeeded == 0:
+            examples = "".join(
+                f" Example {self._label(outcome)} file: '{self._example_paths[outcome][0]}'."
+                for outcome in (FileOutcome.MISSING, FileOutcome.BROKEN)
+                if self._example_paths[outcome]
+            )
             raise AllInputFilesFailedError(
                 f"All {n_attempted} attempted input files failed "
-                f"({n_missing} missing, {n_broken} broken)."
+                f"({n_missing} missing, {n_broken} broken).{examples}"
             )
 
     def log_summary(self) -> None:

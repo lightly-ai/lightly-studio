@@ -25,6 +25,7 @@ from tqdm import tqdm
 from lightly_studio.core import path_utils
 from lightly_studio.core.file_outcome_report import (
     BROKEN_IMAGE_ERRORS,
+    AllInputFilesFailedError,
     AlreadyPresentInputFileError,
     FileOutcome,
     FileOutcomeReport,
@@ -50,6 +51,8 @@ logger = logging.getLogger(__name__)
 SAMPLE_BATCH_SIZE = 32  # Number of samples to process in a single batch
 # Cloud backends read ahead 5-50 MiB by default. Use 256 KiB chunks for image probes.
 _IMAGE_PROBE_BLOCK_SIZE = 256 * 1024
+# Number of files to check before the loading loop, so a wrong images root fails fast.
+_EARLY_CHECK_FILE_COUNT = 5
 
 
 class BrokenImageCollector:
@@ -212,15 +215,19 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     report = broken_image_collector.report
     input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
 
+    file_paths_abs = [
+        posixpath.join(images_root_abs, str(image.filename)) for image in input_labels.get_images()
+    ]
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
     seen_or_existing_paths = _get_existing_paths_set(
         session=session,
         collection_id=root_collection_id,
-        file_paths_abs=[
-            posixpath.join(images_root_abs, str(image.filename))
-            for image in input_labels.get_images()
-        ],
+        file_paths_abs=file_paths_abs,
+    )
+    _raise_if_first_files_missing(
+        file_paths_abs=[path for path in file_paths_abs if path not in seen_or_existing_paths],
+        images_root=images_root_abs,
     )
 
     samples_to_create: list[ImageCreate] = []
@@ -323,14 +330,19 @@ def load_into_dataset_from_coco_captions(
 
     # The set starts with paths already in the database and grows with paths seen in this
     # call, so both already-present and in-run duplicate paths are skipped before batching.
+    file_paths_abs = [
+        str(images_path / str(image_info["file_name"]))
+        for image_info in images
+        if isinstance(image_info["id"], int)
+    ]
     seen_or_existing_paths = _get_existing_paths_set(
         session=session,
         collection_id=root_collection_id,
-        file_paths_abs=[
-            str(images_path / str(image_info["file_name"]))
-            for image_info in images
-            if isinstance(image_info["id"], int)
-        ],
+        file_paths_abs=file_paths_abs,
+    )
+    _raise_if_first_files_missing(
+        file_paths_abs=[path for path in file_paths_abs if path not in seen_or_existing_paths],
+        images_root=str(images_path),
     )
 
     report = FileOutcomeReport()
@@ -538,6 +550,30 @@ def _probe_image(
     except BROKEN_IMAGE_ERRORS:
         return path, FileOutcome.BROKEN
     return path, dimensions
+
+
+def _raise_if_first_files_missing(file_paths_abs: Sequence[str], images_root: str) -> None:
+    """Raise if the first files to add are all missing.
+
+    A wrong images root makes every file missing. This check fails in seconds, before the
+    loader checks all files one by one.
+
+    Args:
+        file_paths_abs: The absolute paths of the files to add, in loading order.
+        images_root: The images root that the paths were built from, for the error message.
+
+    Raises:
+        AllInputFilesFailedError: If the first `_EARLY_CHECK_FILE_COUNT` paths are all missing.
+    """
+    first_paths = file_paths_abs[:_EARLY_CHECK_FILE_COUNT]
+    if not first_paths or any(_file_exists(path) for path in first_paths):
+        return
+    raise AllInputFilesFailedError(
+        f"The first {len(first_paths)} image files do not exist, for example: "
+        f"'{first_paths[0]}'. Check that the images path '{images_root}' is the folder that "
+        f"the image file names in the annotations are relative to."
+        f"{path_utils.double_slash_hint(path=first_paths[0])}"
+    )
 
 
 def _file_exists(path: str) -> bool:

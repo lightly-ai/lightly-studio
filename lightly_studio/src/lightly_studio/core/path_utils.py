@@ -58,7 +58,7 @@ def check_input_file(path: PathLike, description: str, suffix: str) -> None:
     except FileNotFoundError as error:
         raise FileNotFoundError(
             f"{description[0].upper()}{description[1:]} not found: '{path_str}'."
-            f"{_double_slash_hint(path=path_str)}"
+            f"{double_slash_hint(path=path_str)}"
         ) from error
     # Cloud filesystems raise their own error types, e.g. botocore's NoCredentialsError.
     except Exception as error:
@@ -69,7 +69,7 @@ def check_input_file(path: PathLike, description: str, suffix: str) -> None:
         raise IsADirectoryError(f"The {description} is a directory, not a file: '{path_str}'")
 
 
-def _double_slash_hint(path: str) -> str:
+def double_slash_hint(path: str) -> str:
     """Return a hint if the path has an empty segment, as in `bucket//file.json`."""
     _, path_without_protocol = fsspec.core.split_protocol(path)
     if "//" in path_without_protocol:

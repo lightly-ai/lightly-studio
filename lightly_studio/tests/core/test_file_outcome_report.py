@@ -95,7 +95,13 @@ class TestFileOutcomeReport:
         report.record(path="a.jpg", outcome=FileOutcome.MISSING)
         report.record(path="b.jpg", outcome=FileOutcome.BROKEN)
 
-        with pytest.raises(AllInputFilesFailedError):
+        with pytest.raises(
+            AllInputFilesFailedError,
+            match=(
+                r"All 2 attempted input files failed \(1 missing, 1 broken\)\. "
+                r"Example missing file: 'a\.jpg'\. Example broken file: 'b\.jpg'\.$"
+            ),
+        ):
             report.raise_if_all_failed()
 
     def test_raise_if_all_failed__no_raise_when_some_added(self) -> None:
