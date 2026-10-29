@@ -30,6 +30,8 @@
         onDownloadClick?: () => void;
         /** Whether to offer bundling the images with the annotations. */
         canIncludeImages?: boolean;
+        /** Whether the images are bundled with the annotations. Bindable. */
+        includeImages?: boolean;
     }
 
     let {
@@ -40,10 +42,10 @@
         testId,
         sampleType,
         onDownloadClick,
-        canIncludeImages = false
+        canIncludeImages = false,
+        includeImages = $bindable(false)
     }: Props = $props();
 
-    let includeImages = $state(false);
     let exportedWithImages = $state(false);
 
     const collectionId = page.params.collection_id!;

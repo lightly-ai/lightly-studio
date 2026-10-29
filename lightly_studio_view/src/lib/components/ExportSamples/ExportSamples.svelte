@@ -12,6 +12,7 @@
     import AnnotationsTab from './AnnotationsTab/AnnotationsTab.svelte';
     import CaptionsTab from './CaptionsTab/CaptionsTab.svelte';
     import YoutubeVisTab from './YoutubeVisTab/YoutubeVisTab.svelte';
+    import ExportAsCode from './ExportAsCode/ExportAsCode.svelte';
     import { getDefaultExportType, getExportOptions, type ExportType } from './exportOptions';
 
     const { isExportDialogOpen, openExportDialog, closeExportDialog } = useExportDialog();
@@ -50,6 +51,12 @@
         (annotationCollectionsQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
     let selectedAnnotationCollectionId = $state<string | undefined>(undefined);
+    let includeImages = $state(false);
+
+    // The SDK loads a dataset by name, so code export covers the root image collection only.
+    const canExportAsCode = $derived(
+        page.data.collection?.sample_type === 'image' && collectionId === page.params.dataset_id
+    );
 </script>
 
 <Dialog.Root
@@ -125,6 +132,7 @@
                             testId="submit-button-annotations-coco"
                             sampleType="image"
                             canIncludeImages
+                            bind:includeImages
                             onDownloadClick={() =>
                                 tracking.handleAnnotationDownloadClick(exportType)}
                         />
@@ -185,6 +193,16 @@
                         </Tabs.Content>
                     {/if}
                 </Tabs.Root>
+                {#if canExportAsCode}
+                    <ExportAsCode
+                        {collectionId}
+                        datasetName={page.data.collection?.name ?? ''}
+                        {exportType}
+                        {includeImages}
+                        {annotationSources}
+                        selectedAnnotationSourceId={selectedAnnotationCollectionId}
+                    />
+                {/if}
             </div>
         </Dialog.Content>
     </Dialog.Portal>
