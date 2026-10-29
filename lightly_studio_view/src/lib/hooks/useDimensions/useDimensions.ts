@@ -23,6 +23,10 @@ const updateDimensionsBounds = (bounds: DimensionBounds) => {
 };
 
 const lastCollectionId = writable<string | null>(null);
+// The collection whose filter dimensionsValues holds, set once its bounds have loaded.
+let loadedCollectionId: string | null = null;
+// Filters of the collections the user left, so each tab gets its own back for the session.
+const valuesByCollection = new Map<string, DimensionBounds>();
 type CollectionIdInput = string | Readable<string> | undefined;
 
 const loadInitialDimensionBounds = async (collection_id: string) => {
@@ -30,6 +34,10 @@ const loadInitialDimensionBounds = async (collection_id: string) => {
         return;
     }
 
+    const values = get(dimensionsValues);
+    if (loadedCollectionId && values) {
+        valuesByCollection.set(loadedCollectionId, values);
+    }
     lastCollectionId.set(collection_id);
     dimensionsBounds.set(null);
     dimensionsValues.set(null);
@@ -44,7 +52,8 @@ const loadInitialDimensionBounds = async (collection_id: string) => {
 
     if (dimensionBoundsData) {
         dimensionsBounds.set(dimensionBoundsData);
-        dimensionsValues.set(dimensionBoundsData);
+        dimensionsValues.set(valuesByCollection.get(collection_id) ?? dimensionBoundsData);
+        loadedCollectionId = collection_id;
     }
 };
 

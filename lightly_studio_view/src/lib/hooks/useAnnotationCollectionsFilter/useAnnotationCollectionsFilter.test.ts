@@ -102,6 +102,19 @@ describe('useAnnotationCollectionsFilter', () => {
         expect(get(selectedCollectionIds)).toEqual(['a', 'b']);
     });
 
+    it('gives a collection its selection back when the user returns to it', async () => {
+        const { selectedCollectionIds, setSelectedCollectionIds, seedSelectionIfNeeded } =
+            await importHook();
+
+        seedSelectionIfNeeded('images', sources);
+        setSelectedCollectionIds(['gt']);
+        seedSelectionIfNeeded('annotations', [{ id: 'a', name: 'A' }]);
+        // A source created while the user was away starts checked.
+        seedSelectionIfNeeded('images', [...sources, { id: 'new', name: 'Manual' }]);
+
+        expect(get(selectedCollectionIds)).toEqual(['gt', 'new']);
+    });
+
     describe('isSourceVisible', () => {
         it('shows only the selected sources', async () => {
             const { isSourceVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =

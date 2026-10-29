@@ -41,11 +41,17 @@ const multipleSourcesVisible: Readable<boolean> = derived(
 
 // Remembers which annotation collection the grid filter was last seeded for.
 // Module-level so it survives component remounts (e.g. grid <-> image details), which lets
-// the user's source selection persist within a dataset while still resetting to
-// "all selected" when switching to a different collection/dataset.
+// the user's source selection persist within a collection. Each collection keeps its own
+// selection, see selectionByCollection.
 // useSeedAnnotationSourceFilter calls the seeder for every collection the user opens, so the
 // selection always describes the collection on screen and never leaks across tabs.
 let seededCollectionId: string | undefined;
+// Source selections of the collections the user left, so each tab gets its own back for the
+// session.
+const selectionByCollection = new Map<
+    string,
+    { selectedIds: string[]; idToName: Record<string, string> }
+>();
 
 export const useAnnotationCollectionsFilter = () => {
     return {
@@ -62,8 +68,9 @@ export const useAnnotationCollectionsFilter = () => {
          * The first call for a collection selects every source. Later calls for the same
          * collection keep the user's selection and fold in sources that appeared since, because
          * an annotation can be written to a brand-new source and the filter can only hide what
-         * it knows about. Switching collection selects everything again, so a stale selection
-         * never leaks across datasets.
+         * it knows about. Switching to a collection selects everything the first time and gives
+         * back the selection the user left there afterwards, so a selection never leaks across
+         * collections.
          */
         seedSelectionIfNeeded: (
             collectionId: string,
@@ -72,9 +79,23 @@ export const useAnnotationCollectionsFilter = () => {
             const nextIdToName = Object.fromEntries(collections.map((c) => [c.id, c.name]));
 
             if (seededCollectionId !== collectionId) {
+                if (seededCollectionId) {
+                    selectionByCollection.set(seededCollectionId, {
+                        selectedIds: get(selectedCollectionIds),
+                        idToName: get(collectionIdToName)
+                    });
+                }
                 seededCollectionId = collectionId;
+                const saved = selectionByCollection.get(collectionId);
                 collectionIdToName.set(nextIdToName);
-                selectedCollectionIds.set(collections.map((c) => c.id));
+                selectedCollectionIds.set(
+                    collections
+                        .map((c) => c.id)
+                        .filter(
+                            (id) =>
+                                !saved || saved.selectedIds.includes(id) || !(id in saved.idToName)
+                        )
+                );
                 return;
             }
 

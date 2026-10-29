@@ -48,7 +48,7 @@ describe('images page tag filters', () => {
         tags.setTagSelected('tag-1', true);
     });
 
-    it.each(['images', 'captions'] as const)(
+    it.each(['images', 'captions', 'annotations'] as const)(
         'preserves selected tags when returning from %s',
         (gridType) => {
             storage.setLastGridType(gridType);
@@ -59,13 +59,4 @@ describe('images page tag filters', () => {
             expect(get(tags.tagsSelected)).toEqual(new Set(['tag-1']));
         }
     );
-
-    it('still clears tags when returning from annotations', () => {
-        storage.setLastGridType('annotations');
-        render(ImagesPage, {
-            props: defaultProps
-        });
-
-        expect(get(tags.tagsSelected).size).toBe(0);
-    });
 });

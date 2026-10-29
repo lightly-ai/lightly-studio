@@ -21,7 +21,7 @@ const tagIdByCollection: Record<string, string> = {
 };
 
 describe('annotations +page.svelte', () => {
-    it('clears the tag selection of the annotation collection when entered from another grid', async () => {
+    it('keeps the tag selection of each tab when entered from another grid', async () => {
         vi.spyOn(lightly_studio_local, 'readTags').mockImplementation(async ({ path }) => ({
             data: [
                 {
@@ -44,7 +44,9 @@ describe('annotations +page.svelte', () => {
 
         render(AnnotationsPage);
 
-        await waitFor(() => expect(get(annotationTags.tagsSelected)).toEqual(new Set()));
+        await waitFor(() =>
+            expect(get(annotationTags.tagsSelected)).toEqual(new Set(['annotation-tag']))
+        );
         expect(get(imageTags.tagsSelected)).toEqual(new Set(['image-tag']));
     });
 });

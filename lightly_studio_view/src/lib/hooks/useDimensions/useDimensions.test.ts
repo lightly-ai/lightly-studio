@@ -109,6 +109,23 @@ describe('useDimensions', () => {
         });
     });
 
+    it('gives a collection its own filter back when the user returns to it', async () => {
+        const { useDimensions } = await import('./useDimensions');
+        const { dimensionsValues, updateDimensionsValues } = useDimensions();
+        const bounds = { min_width: 10, max_width: 100, min_height: 20, max_height: 200 };
+        const narrowed = { ...bounds, min_width: 50 };
+
+        useDimensions('tab-images');
+        await waitFor(() => expect(get(dimensionsValues)).toEqual(bounds));
+        updateDimensionsValues(narrowed);
+
+        useDimensions('tab-annotations');
+        await waitFor(() => expect(get(dimensionsValues)).toEqual(bounds));
+
+        useDimensions('tab-images');
+        await waitFor(() => expect(get(dimensionsValues)).toEqual(narrowed));
+    });
+
     it('loads and refetches when collection_id readable store changes', async () => {
         const { useDimensions } = await import('./useDimensions');
         const collectionId = writable('collection-store-a');

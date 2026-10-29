@@ -85,7 +85,7 @@
     import { readAnnotationEmbedding } from '$lib/api/lightly_studio_local/sdk.gen';
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
-    import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { useTabFilters } from '$lib/hooks/useTabFilters/useTabFilters';
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
@@ -170,6 +170,7 @@
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
+    const { switchTabFilters } = useTabFilters();
 
     // Select-all hook
     let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
@@ -304,14 +305,14 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
-            clearAnnotationPlotSelection(lastCollectionId);
+            // Each tab keeps its own filters for the session.
+            switchTabFilters(lastCollectionId, collectionId);
         }
 
         gridType = nextGridType;
         lastCollectionId = collectionId;
 
         // Temporary hack to remember where the user was when navigating
-        // TODO: also remember state of tags, labels, metadata filters etc. Possible store it in pagestate
         setLastGridType(gridType);
     });
 

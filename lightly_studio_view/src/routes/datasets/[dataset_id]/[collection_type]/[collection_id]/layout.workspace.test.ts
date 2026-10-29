@@ -27,8 +27,8 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
 vi.mock('$lib/workers/maskRendererPool', () => ({
     shutdownMaskRendererPool: vi.fn()
 }));
-vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
-    clearAnnotationPlotSelection: vi.fn()
+vi.mock('$lib/hooks/useTabFilters/useTabFilters', () => ({
+    useTabFilters: () => ({ switchTabFilters: vi.fn() })
 }));
 vi.mock('$lib/utils/buildImageFilter', () => ({
     buildImageFilter: vi.fn(() => ({}))

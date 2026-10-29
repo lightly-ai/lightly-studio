@@ -7,7 +7,16 @@ import type { CategoricalMetadataValues } from '$lib/services/types';
 type MetadataBounds = Record<string, { min: number; max: number }>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
+type CollectionMetadataFilters = {
+    values: MetadataValues;
+    categoricalValues: CategoricalMetadataValues;
+};
+
 const lastCollectionId = writable<string | null>(null);
+// The collection whose filters the metadata stores hold, set once its info has loaded.
+let loadedCollectionId: string | null = null;
+// Filters of the collections the user left, so each tab gets its own back for the session.
+const filtersByCollection = new Map<string, CollectionMetadataFilters>();
 
 const loadInitialMetadataInfo = async (collection_id: string) => {
     if (get(lastCollectionId) === collection_id) {
@@ -18,6 +27,12 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
     }
     lastCollectionId.set(collection_id);
     const storage = useGlobalStorage();
+    if (loadedCollectionId) {
+        filtersByCollection.set(loadedCollectionId, {
+            values: get(storage.metadataValues),
+            categoricalValues: get(storage.categoricalMetadataValues)
+        });
+    }
 
     const { data: metadataInfoData } = await getMetadataInfo({
         path: {
@@ -25,10 +40,15 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
         }
     });
 
-    if (!metadataInfoData) {
+    if (!metadataInfoData || get(lastCollectionId) !== collection_id) {
         return;
     }
-    const { updateMetadataBounds, updateMetadataValues, updateMetadataInfo } = storage;
+    const {
+        updateMetadataBounds,
+        updateMetadataValues,
+        updateCategoricalMetadataValues,
+        updateMetadataInfo
+    } = storage;
 
     // Extract numerical metadata for bounds and values
     const bounds: MetadataBounds = {};
@@ -43,9 +63,15 @@ const loadInitialMetadataInfo = async (collection_id: string) => {
         }
     });
 
+    const saved = filtersByCollection.get(collection_id);
     updateMetadataBounds(bounds);
-    updateMetadataValues(values);
+    updateMetadataValues(saved?.values ?? values);
+    // On the first load, keep the categorical filters restored from session storage.
+    if (loadedCollectionId) {
+        updateCategoricalMetadataValues(saved?.categoricalValues ?? {});
+    }
     updateMetadataInfo(metadataInfoData);
+    loadedCollectionId = collection_id;
 };
 
 export const createMetadataFilters = (
