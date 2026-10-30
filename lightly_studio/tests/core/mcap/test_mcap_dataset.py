@@ -314,7 +314,7 @@ class TestMcapDataset:
         with pytest.raises(ValueError, match=f"Recording with id {recording_id} not found"):
             mcap_ds.create_sequence(recording_id=recording_id)
 
-    def test_export_scene_update_mcaps(
+    def test_export_annotations_to_folder(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -322,7 +322,7 @@ class TestMcapDataset:
         mcap_ds = _index_labeled_recording(tmp_path=tmp_path)
         output_dir = tmp_path / "out"
 
-        uris = mcap_ds.export_scene_update_mcaps(
+        uris = mcap_ds.export_annotations_to_folder(
             output_dir=str(output_dir),
             annotation_source="ground_truth",
             target_frame_id="odom",
@@ -333,7 +333,7 @@ class TestMcapDataset:
         messages = add_labels.read_scene_updates(uris[0], DEFAULT_SCENE_UPDATE_TOPIC)
         assert len(messages) == 2
 
-    def test_export_scene_update_mcaps__unknown_source(
+    def test_export_annotations_to_folder__unknown_source(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -341,11 +341,11 @@ class TestMcapDataset:
         mcap_ds = _index_labeled_recording(tmp_path=tmp_path)
 
         with pytest.raises(ValueError, match="ground_truth"):
-            mcap_ds.export_scene_update_mcaps(
+            mcap_ds.export_annotations_to_folder(
                 output_dir=str(tmp_path / "out"), annotation_source="nope"
             )
 
-    def test_export_scene_update_mcaps__default_target_frame(
+    def test_export_annotations_to_folder__default_target_frame(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -357,13 +357,13 @@ class TestMcapDataset:
         )
         _write_cuboid_labels(mcap_ds=mcap_ds, frame_id="odom")
 
-        uris = mcap_ds.export_scene_update_mcaps(output_dir=str(tmp_path / "out"))
+        uris = mcap_ds.export_annotations_to_folder(output_dir=str(tmp_path / "out"))
 
         messages = add_labels.read_scene_updates(uris[0], DEFAULT_SCENE_UPDATE_TOPIC)
         cuboid_frame_ids = [cuboid.frame_id for _, labels in messages for cuboid in labels.cuboids]
         assert cuboid_frame_ids == ["odom"]
 
-    def test_export_scene_update_mcaps__default_target_frame_ignores_other_source(
+    def test_export_annotations_to_folder__default_target_frame_ignores_other_source(
         self,
         patch_collection: None,  # noqa: ARG002
         tmp_path: Path,
@@ -397,13 +397,13 @@ class TestMcapDataset:
             annotation_source="predictions",
         )
 
-        uris = mcap_ds.export_scene_update_mcaps(output_dir=str(tmp_path / "out"))
+        uris = mcap_ds.export_annotations_to_folder(output_dir=str(tmp_path / "out"))
 
         messages = add_labels.read_scene_updates(uris[0], DEFAULT_SCENE_UPDATE_TOPIC)
         cuboid_frame_ids = [cuboid.frame_id for _, labels in messages for cuboid in labels.cuboids]
         assert cuboid_frame_ids == ["odom"]
 
-    def test_export_scene_update_mcaps__no_common_frame(
+    def test_export_annotations_to_folder__no_common_frame(
         self,
         patch_collection: None,  # noqa: ARG002
         mocker: MockerFixture,
@@ -414,7 +414,7 @@ class TestMcapDataset:
         output_dir = tmp_path / "out"
 
         with pytest.raises(ExportError, match="share no coordinate frame"):
-            mcap_ds.export_scene_update_mcaps(output_dir=str(output_dir))
+            mcap_ds.export_annotations_to_folder(output_dir=str(output_dir))
 
         assert not output_dir.exists()
 
