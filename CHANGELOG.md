@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed skipped cells and leftover pixels when labeling with superpixels.
 - Brush, eraser, and box drawing previews now use the custom color of the label.
 - Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
 - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
