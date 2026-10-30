@@ -1,3 +1,4 @@
+import { useTagExclusions } from '$lib/hooks/useTagExclusions';
 import { derived, get, readable, type Readable } from 'svelte/store';
 import {
     useAnnotationCollectionsFilter,
@@ -30,6 +31,7 @@ interface UseClearAllFiltersParams {
     isImages: boolean;
     isVideos: boolean;
     isVideoFrames: boolean;
+    isGroups: boolean;
 }
 
 interface UseClearAllFiltersReturn {
@@ -60,13 +62,16 @@ export function useClearAllFilters(params: UseClearAllFiltersParams): UseClearAl
     };
 }
 
-// Only the filters that the sidebar of the current grid shows.
+/** Collects only the filters shown in the current grid sidebar. */
 function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
-    const { collectionId, isCaptions, isImages, isVideos, isVideoFrames } = params;
+    const { collectionId, isCaptions, isImages, isVideos, isVideoFrames, isGroups } = params;
     if (isCaptions) {
-        return [useTagAndLabelFilters(collectionId, false), useMetadataFilterGroup()];
+        return [useTagAndLabelFilters(collectionId, false, false), useMetadataFilterGroup()];
     }
-    const groups = [useTagAndLabelFilters(collectionId), useEmbeddingPlotFilter(collectionId)];
+    const groups = [
+        useTagAndLabelFilters(collectionId, isGroups),
+        useEmbeddingPlotFilter(collectionId)
+    ];
     if (isImages || isVideos || isVideoFrames) groups.push(useMetadataFilterGroup());
     if (isImages) {
         groups.push(useDimensionsFilter(), useAnnotationSourcesFilter());
@@ -89,19 +94,29 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
     return groups;
 }
 
-function useTagAndLabelFilters(collectionId: string, includeLabels = true): FilterGroup {
+/** Tracks shared tag and label filters, with exclusions confined to the Groups grid. */
+function useTagAndLabelFilters(
+    collectionId: string,
+    isGroups: boolean,
+    includeLabels = true
+): FilterGroup {
     const storage = useGlobalStorage();
+    const { excludedTagIds, clearExclusions } = useTagExclusions(collectionId);
     const { tagsSelected, clearTagsSelected } = useTags({
         collection_id: collectionId,
         autoLoad: false
     });
     return {
         isActive: derived(
-            [tagsSelected, storage.selectedAnnotationFilterIds],
-            ([$tags, $labels]) => $tags.size > 0 || (includeLabels && $labels.size > 0)
+            [tagsSelected, excludedTagIds, storage.selectedAnnotationFilterIds],
+            ([$tags, $excluded, $labels]) =>
+                $tags.size > 0 ||
+                (isGroups && $excluded.size > 0) ||
+                (includeLabels && $labels.size > 0)
         ),
         clear: () => {
             clearTagsSelected();
+            if (isGroups) clearExclusions();
             if (includeLabels) storage.clearSelectedAnnotationFilterIds();
         }
     };
