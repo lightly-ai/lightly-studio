@@ -37,6 +37,7 @@ const ANNOTATION: CuboidAnnotation = {
     trackId: null,
     trackNumber: null,
     parentTrackNumber: null,
+    parentTrackClassName: null,
     keyframeId: null,
     center: [1, 2, 3],
     size: [2, 3, 4],

@@ -69,6 +69,12 @@ def get_all_by_parent_sample_ids(
                 ObjectTrackTable.parent_object_track
             )
         )
+        .options(
+            joinedload(AnnotationBaseTable.object_track)
+            .joinedload(ObjectTrackTable.parent_object_track)
+            .selectinload(ObjectTrackTable.annotations)
+            .joinedload(AnnotationBaseTable.annotation_label)
+        )
     )
     if annotation_types is not None:
         annotations_statement = annotations_statement.where(
