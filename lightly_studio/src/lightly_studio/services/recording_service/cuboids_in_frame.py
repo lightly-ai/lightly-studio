@@ -11,6 +11,8 @@ from sqlmodel import Session
 
 from lightly_studio.core.mcap import transforms
 from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.models.annotation.annotation_base import AnnotationView
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service import (
@@ -31,7 +33,7 @@ def cuboids_in_frame(
     """Maps the 3D cuboids of a tick to a target frame.
 
     Other annotations and cuboids that are already in the target frame stay unchanged.
-    The recording and its static transforms are only read if a cuboid must be mapped.
+    The recording and its transforms are only read if a cuboid must be mapped.
     The tick timestamp is a capture time, so the dynamic transforms are matched by
     their capture time too.
 
@@ -51,16 +53,12 @@ def cuboids_in_frame(
         McapAccessError: If a cuboid must be mapped but the tick has no timestamp or
             the recording does not exist, or no chain of transforms connects the frames.
     """
-    source_frame_ids = {
-        annotation.cuboid_3d_details.frame_id
-        for annotation in annotations
-        if annotation.cuboid_3d_details is not None
-    } - {target_frame_id}
-    if not source_frame_ids:
+    frame_ids = source_frame_ids(annotations=annotations, target_frame_id=target_frame_id)
+    if not frame_ids:
         return list(annotations)
     if timestamp_ns is None:
         raise McapAccessError(
-            f"The tick has no timestamp, so its cuboids in frames {sorted(source_frame_ids)} "
+            f"The tick has no timestamp, so its cuboids in frames {sorted(frame_ids)} "
             f"cannot be mapped to frame '{target_frame_id}'."
         )
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
@@ -73,17 +71,58 @@ def cuboids_in_frame(
         session=session, recording_id=recording_id, timestamp_ns=timestamp_ns
     )
     with reader_cache.borrow_reader(uri=recording.uri) as reader:
-        matrix_by_frame_id = {
-            frame_id: transform_to_target_frame.transform_to_target_frame(
-                reader=reader,
-                source_frame_id=frame_id,
-                target_frame_id=target_frame_id,
-                timestamp_ns=timestamp_ns,
-                static_transforms=static_transforms,
-                dynamic_transforms=dynamic_transforms,
-            )
-            for frame_id in source_frame_ids
-        }
+        return map_cuboids(
+            reader=reader,
+            annotations=annotations,
+            target_frame_id=target_frame_id,
+            timestamp_ns=timestamp_ns,
+            static_transforms=static_transforms,
+            dynamic_transforms=dynamic_transforms,
+        )
+
+
+def map_cuboids(  # noqa: PLR0913
+    reader: McapFileReader,
+    annotations: Sequence[AnnotationView],
+    target_frame_id: str,
+    timestamp_ns: int,
+    static_transforms: Sequence[StaticTransform],
+    dynamic_transforms: Sequence[StaticTransform] | None,
+) -> list[AnnotationView]:
+    """Maps the 3D cuboids of a tick to a target frame with given transforms.
+
+    Use it instead of `cuboids_in_frame` to load the transforms of many ticks once.
+    Other annotations and cuboids that are already in the target frame stay unchanged.
+
+    Args:
+        reader: The reader of the recording.
+        annotations: The annotations of the tick.
+        target_frame_id: The coordinate frame to map the cuboids to.
+        timestamp_ns: The capture time of the tick in nanoseconds.
+        static_transforms: The static edges stored for the recording.
+        dynamic_transforms: The dynamic edges stored near `timestamp_ns`. `None` reads
+            them from the file. An empty sequence means the recording has none in the
+            window.
+
+    Returns:
+        The annotations in the order of `annotations`, with each cuboid in
+        `target_frame_id`.
+
+    Raises:
+        TransformNotFoundError: If no chain of transforms connects the frames.
+        McapAccessError: If a message on the dynamic topic cannot be decoded.
+    """
+    matrix_by_frame_id = {
+        frame_id: transform_to_target_frame.transform_to_target_frame(
+            reader=reader,
+            source_frame_id=frame_id,
+            target_frame_id=target_frame_id,
+            timestamp_ns=timestamp_ns,
+            static_transforms=static_transforms,
+            dynamic_transforms=dynamic_transforms,
+        )
+        for frame_id in source_frame_ids(annotations=annotations, target_frame_id=target_frame_id)
+    }
     return [
         _cuboid_in_frame(
             annotation=annotation,
@@ -92,6 +131,24 @@ def cuboids_in_frame(
         )
         for annotation in annotations
     ]
+
+
+def source_frame_ids(annotations: Sequence[AnnotationView], target_frame_id: str) -> set[str]:
+    """Returns the frames of the cuboids that must be mapped to the target frame.
+
+    Args:
+        annotations: The annotations of a tick.
+        target_frame_id: The coordinate frame to map the cuboids to.
+
+    Returns:
+        The frames of the cuboids that are not in `target_frame_id`. Empty if no
+        cuboid must be mapped.
+    """
+    return {
+        annotation.cuboid_3d_details.frame_id
+        for annotation in annotations
+        if annotation.cuboid_3d_details is not None
+    } - {target_frame_id}
 
 
 def _cuboid_in_frame(

@@ -10,6 +10,8 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
+from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.models.annotation.annotation_base import AnnotationType, AnnotationView
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationView
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationView
@@ -161,6 +163,63 @@ def test_cuboids_in_frame__not_connected(db_session: Session, tmp_path: Path) ->
             annotations=[_annotation_view(cuboid=CUBOID_IN_ODOM)],
             target_frame_id=mcap_helpers.LIDAR_FRAME_ID,
             timestamp_ns=1_050_000_000,
+        )
+
+
+def test_map_cuboids(tmp_path: Path) -> None:
+    # The recording has no `/tf` topic, so the cuboid can only be mapped with the
+    # given dynamic edge.
+    mcap_path = mcap_helpers.write_mcap(path=tmp_path / "recording.mcap")
+    # The odom frame is 1 m ahead of the map frame.
+    odom_in_map = StaticTransform(
+        parent_frame_id=mcap_helpers.WORLD_FRAME_ID,
+        child_frame_id="odom",
+        translation=(1.0, 0.0, 0.0),
+        rotation=(0.0, 0.0, 0.0, 1.0),
+        timestamp_ns=0,
+    )
+    # The base frame is 10 m ahead of the map frame at 1.05 s.
+    base_in_map = StaticTransform(
+        parent_frame_id=mcap_helpers.WORLD_FRAME_ID,
+        child_frame_id=mcap_helpers.BASE_FRAME_ID,
+        translation=(10.0, 0.0, 0.0),
+        rotation=(0.0, 0.0, 0.0, 1.0),
+        timestamp_ns=1_050_000_000,
+    )
+    cuboid_in_odom = _annotation_view(cuboid=CUBOID_IN_ODOM)
+    bounding_box = _annotation_view(bounding_box=BOUNDING_BOX)
+
+    with McapFileReader(mcap_path) as reader:
+        result = cuboids_in_frame.map_cuboids(
+            reader=reader,
+            annotations=[cuboid_in_odom, bounding_box],
+            target_frame_id=mcap_helpers.BASE_FRAME_ID,
+            timestamp_ns=1_050_000_000,
+            static_transforms=[odom_in_map],
+            dynamic_transforms=[base_in_map],
+        )
+
+    assert len(result) == 2
+    cuboid = result[0].cuboid_3d_details
+    assert cuboid is not None
+    assert cuboid.frame_id == mcap_helpers.BASE_FRAME_ID
+    # The cuboid at (0, 0, 0.5) m in odom is at (1, 0, 0.5) m in the map, and at
+    # (-9, 0, 0.5) m from the base.
+    assert (cuboid.px, cuboid.py, cuboid.pz) == pytest.approx((-9.0, 0.0, 0.5))
+    assert result[1] == bounding_box
+
+
+def test_map_cuboids__not_connected(tmp_path: Path) -> None:
+    mcap_path = mcap_helpers.write_mcap(path=tmp_path / "recording.mcap")
+
+    with McapFileReader(mcap_path) as reader, pytest.raises(TransformNotFoundError):
+        cuboids_in_frame.map_cuboids(
+            reader=reader,
+            annotations=[_annotation_view(cuboid=CUBOID_IN_ODOM)],
+            target_frame_id=mcap_helpers.LIDAR_FRAME_ID,
+            timestamp_ns=1_050_000_000,
+            static_transforms=[],
+            dynamic_transforms=[],
         )
 
 
