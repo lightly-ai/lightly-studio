@@ -2417,8 +2417,8 @@ requires-dist = [
     { name = "labelformat", specifier = ">=0.1.17" },
     { name = "lightly-mundig", specifier = "==0.1.16" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
-    { name = "mcap", specifier = ">=1.2.0,<2.0" },
-    { name = "mcap-ros2-support", specifier = ">=0.5.0,<0.6" },
+    { name = "mcap", specifier = ">=1.6.0,<2.0" },
+    { name = "mcap-ros2-support", specifier = ">=0.6.0,<0.7" },
     { name = "open-clip-torch", specifier = ">=2.20.0" },
     { name = "opencv-python-headless", specifier = ">=4.11.0.86" },
     { name = "pandas", specifier = ">=2.2.3,<3.0" },
@@ -2727,27 +2727,27 @@ wheels = [
 
 [[package]]
 name = "mcap"
-version = "1.4.0"
+version = "1.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "lz4" },
     { name = "zstandard" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/d7/0f17e59733a71bd4d5b38afc8484531c2cd7648b08c79863ee95fc42b002/mcap-1.4.0.tar.gz", hash = "sha256:0528e2f86a61bfec73779e0628e6cf27af83d01d89e20b27d5ec9f0b556a63ac", size = 22155, upload-time = "2026-06-18T21:50:07.965Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/6a/5039c5204c30478a27c9bd28ef2b5d1e947cae35b2636fae786ff777c1c6/mcap-1.6.0.tar.gz", hash = "sha256:d9aa1d9706ada964740536c7598b735a5aab677493d52c2be59fbd7467ec5664", size = 25657, upload-time = "2026-10-19T17:48:51.008Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/48/14/7e0b2a74b67e16e5f40ab78cc3e5aa4e7bdd55e0aec963d573edc07a15cd/mcap-1.4.0-py3-none-any.whl", hash = "sha256:0b48b1cc951b8d5aabd2599e60d410bae4f1be1819094f54117b7cbf6b3ee2e9", size = 20826, upload-time = "2026-06-18T21:50:06.704Z" },
+    { url = "https://files.pythonhosted.org/packages/cd/15/fa7ff687a128ec51084a48fb1e039b247a9add47b974c125278d97f370be/mcap-1.6.0-py3-none-any.whl", hash = "sha256:7cd37fba2cf51d033f2139ca837d2ed3024dcec3cd9f8ecdf3d4d15930df6e17", size = 21955, upload-time = "2026-10-19T17:48:49.61Z" },
 ]
 
 [[package]]
 name = "mcap-ros2-support"
-version = "0.5.7"
+version = "0.6.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "mcap" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/84/0d/f6da01d8e4b73861dba17fd2ebd9a78d2fd4fa582ad348cf18d16a79a7e1/mcap_ros2_support-0.5.7.tar.gz", hash = "sha256:8ddb67e452a6e2963664e29bc8868e61d7011b72feb2b62832ed444e27ca3ab8", size = 23295, upload-time = "2025-12-24T21:25:37.614Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/49/40/2ffa9b837d3f243d889fa6a115db642033d9d3fd6a98abcfbf5eb66a943f/mcap_ros2_support-0.6.0.tar.gz", hash = "sha256:eb3058fa9dfba1c4e828fed1c02d133d2361db6446cf3f54b850de3b612fcb34", size = 24568, upload-time = "2026-10-19T17:50:49.816Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/92/c5/8e8636099c180031436a011908a22216c25e6cb7790ba748212e203317c4/mcap_ros2_support-0.5.7-py3-none-any.whl", hash = "sha256:349f0e0f7af8ebeb516003e801ea5c5de5b4b65359ce4a17a8d98b25a9cea260", size = 22086, upload-time = "2025-12-24T21:25:36.425Z" },
+    { url = "https://files.pythonhosted.org/packages/8a/19/0dfd9356fa4eac4efd68fbde35242f3f04fa500f53fc7149579611318f3b/mcap_ros2_support-0.6.0-py3-none-any.whl", hash = "sha256:0b5f86c88432a1370b6c8f0e8a26d1403dc02495d751052e3dd9f9a0679645ef", size = 22585, upload-time = "2026-10-19T17:50:48.551Z" },
 ]
 
 [[package]]

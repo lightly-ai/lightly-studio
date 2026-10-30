@@ -18,6 +18,10 @@ class ProviderError(Exception):
     """
 
 
+class ProviderNotCalledError(ProviderError):
+    """Raised when a provider fails before it calls the vendor, so the vendor bills nothing."""
+
+
 class ProviderUnavailableError(Exception):
     """Raised when the provider is not configured, for example without an API key."""
 
@@ -112,6 +116,16 @@ class Prediction:
 class AssistedLabelingProvider(Protocol):
     """A model backend that computes segmentation masks from prompts."""
 
+    @property
+    def vendor(self) -> str:
+        """Who bills the calls, for example `fal`. Used for usage reports."""
+        ...
+
+    @property
+    def model(self) -> str:
+        """The model or vendor endpoint, for example `fal-ai/sam-3/image-rle`."""
+        ...
+
     def unavailable_reason(self) -> str | None:
         """Returns None if the provider is usable, else a human-readable reason."""
         ...
@@ -128,6 +142,7 @@ class AssistedLabelingProvider(Protocol):
 
         Raises:
             ProviderUnavailableError: If the provider is not configured.
+            ProviderNotCalledError: If the segmentation fails before the vendor is called.
             ProviderError: If the segmentation fails.
         """
         ...
