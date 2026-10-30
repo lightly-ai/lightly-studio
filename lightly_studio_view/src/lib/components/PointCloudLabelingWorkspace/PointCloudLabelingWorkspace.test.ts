@@ -44,6 +44,10 @@ vi.mock('$lib/hooks/useTickData/useTickCameraFrames.svelte', () => ({
     useTickCameraFrames: () => ({ query: { data: undefined } })
 }));
 
+vi.mock('./FrameTimeline/useSequenceTracks.svelte', () => ({
+    useSequenceTracks: () => ({ data: { tracks: [] }, isError: false, refetch: vi.fn() })
+}));
+
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: () => ({ data: [] })
 }));

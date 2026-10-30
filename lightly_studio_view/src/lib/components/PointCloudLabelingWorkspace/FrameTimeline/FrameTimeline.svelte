@@ -1,7 +1,8 @@
 <script lang="ts">
-    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
     import TimelineTransport from './TimelineTransport/TimelineTransport.svelte';
     import TimelineTracks from './TimelineTracks/TimelineTracks.svelte';
+    import TrackTimelineRows from './TrackTimelineRows/TrackTimelineRows.svelte';
 
     interface BufferRange {
         /** Inclusive zero-based index of the first buffered tick. */
@@ -17,6 +18,7 @@
     interface Props {
         /** Sequence ticks (seq number + anchor timestamp). */
         ticks: TickView[];
+        tracks?: SequenceTrackView[];
         /** Seq number of the active tick; drives the frame counter and ruler highlight. */
         currentTick: number;
         /** Whether playback is currently running; toggles the play/pause icon. */
@@ -48,6 +50,7 @@
 
     let {
         ticks,
+        tracks = [],
         currentTick,
         isPlaying,
         playbackIntervalMs,
@@ -94,7 +97,7 @@
         {onPreviousSequence}
         {onNextSequence}
     />
-    <div class="relative flex-none">
+    <div class="relative flex-none {tracks.length > 0 ? 'pl-20' : ''}">
         <TimelineTracks
             {ticks}
             {currentTick}
@@ -104,4 +107,5 @@
             {onSeekEnd}
         />
     </div>
+    <TrackTimelineRows {ticks} {tracks} {currentTick} {onSelectTick} />
 </div>
