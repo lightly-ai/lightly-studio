@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from pytest_mock import MockerFixture
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
@@ -298,6 +301,70 @@ def test_delete_annotations_by_ids__deletes_evaluation_metrics(db_session: Sessi
         == []
     )
     assert db_session.get(AnnotationBaseTable, pred_annotation_id) is not None
+
+
+def test_delete_annotations_by_ids__retries_on_transient_integrity_error(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """The delete retries when DuckDB raises a spurious IntegrityError on annotation_base."""
+    image = _create_image_in_new_collection(session=db_session)
+    (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
+    annotation_id = annotation.sample_id
+    module = sys.modules["lightly_studio.resolvers.annotation_resolver.delete_annotations_by_ids"]
+    original_fn = module._delete_by_sample_ids
+    annotation_base_attempts = 0
+
+    def delete_with_transient_error(session: Session, tables: Any, sample_ids: Any) -> None:
+        nonlocal annotation_base_attempts
+        if tables == (AnnotationBaseTable,):
+            annotation_base_attempts += 1
+            if annotation_base_attempts == 1:
+                raise IntegrityError("FK constraint", "", Exception())
+        original_fn(session=session, tables=tables, sample_ids=sample_ids)
+
+    mocker.patch.object(module, "_delete_by_sample_ids", side_effect=delete_with_transient_error)
+    mocker.patch.object(module.time, "sleep")
+
+    deleted_count = annotation_resolver.delete_annotations_by_ids(
+        session=db_session, annotation_ids=[annotation_id]
+    )
+
+    assert deleted_count == 1
+    assert db_session.get(AnnotationBaseTable, annotation_id) is None
+    assert db_session.get(SampleTable, annotation_id) is None
+    assert annotation_base_attempts == 2
+
+
+def test_delete_annotations_by_ids__raises_after_exhausting_retry_attempts(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """The delete re-raises IntegrityError after all retry attempts are exhausted."""
+    image = _create_image_in_new_collection(session=db_session)
+    (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
+    annotation_id = annotation.sample_id
+    module = sys.modules["lightly_studio.resolvers.annotation_resolver.delete_annotations_by_ids"]
+    original_fn = module._delete_by_sample_ids
+
+    def delete_always_fails_on_annotation_base(
+        session: Session, tables: Any, sample_ids: Any
+    ) -> None:
+        if tables == (AnnotationBaseTable,):
+            raise IntegrityError("FK constraint", "", Exception())
+        original_fn(session=session, tables=tables, sample_ids=sample_ids)
+
+    mocker.patch.object(
+        module, "_delete_by_sample_ids", side_effect=delete_always_fails_on_annotation_base
+    )
+    mocker.patch.object(module.time, "sleep")
+
+    with pytest.raises(IntegrityError):
+        annotation_resolver.delete_annotations_by_ids(
+            session=db_session, annotation_ids=[annotation_id]
+        )
+
+    assert db_session.get(AnnotationBaseTable, annotation_id) is not None
 
 
 def _create_image_in_new_collection(session: Session) -> ImageTable:
