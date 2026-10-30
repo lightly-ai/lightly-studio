@@ -9,10 +9,15 @@
     } from './pointCloudWorkspaceLayoutContext.svelte';
     import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
     import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
+    import { useSequenceTracks } from './FrameTimeline/useSequenceTracks.svelte';
 
     const { cameraPane } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
+    const tracksQuery = useSequenceTracks(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId
+    }));
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => layout.datasetId,
@@ -94,8 +99,17 @@
 </PaneGroup>
 
 <div class="flex-none">
+    {#if tracksQuery.isError}
+        <div class="px-2 py-1 text-xs text-destructive">
+            Object tracks could not be loaded.
+            <button type="button" class="underline" onclick={() => tracksQuery.refetch()}
+                >Retry</button
+            >
+        </div>
+    {/if}
     <FrameTimeline
         ticks={layout.workspace.ticks}
+        tracks={tracksQuery.data?.tracks ?? []}
         currentTick={layout.workspace.currentTick}
         isPlaying={layout.workspace.isPlaying}
         playbackIntervalMs={layout.workspace.playbackIntervalMs}

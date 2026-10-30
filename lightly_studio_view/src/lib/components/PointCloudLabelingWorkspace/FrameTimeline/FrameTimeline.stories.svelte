@@ -44,6 +44,12 @@
     </div>
 {/snippet}
 
+{#snippet frameWithTracks(args)}
+    <div class="h-48 w-full">
+        <FrameTimeline {...args} />
+    </div>
+{/snippet}
+
 <Story
     name="Timestamped ruler"
     args={{ ticks, currentTick: 8 }}
@@ -68,4 +74,29 @@
             }
         }
     }}
+/>
+
+<Story
+    name="Object tracks with a gap"
+    args={{
+        ticks: [2, 5, 9, 12].map((seq_number) => ({ seq_number, timestamp_ns: null })),
+        currentTick: 5,
+        tracks: [
+            {
+                object_track_id: 'track-7',
+                object_track_number: 7,
+                annotations: [
+                    { annotation_id: 'a', seq_number: 2, interpolated: false },
+                    { annotation_id: 'b', seq_number: 5, interpolated: true },
+                    { annotation_id: 'c', seq_number: 12, interpolated: false }
+                ]
+            },
+            {
+                object_track_id: 'track-8',
+                object_track_number: 8,
+                annotations: [{ annotation_id: 'd', seq_number: 9, interpolated: false }]
+            }
+        ]
+    }}
+    template={frameWithTracks}
 />
