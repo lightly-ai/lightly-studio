@@ -6,6 +6,9 @@ from lightly_studio.resolvers.mcap_resolver.get_channel_ids_by_component import 
     get_channel_ids_by_component,
 )
 from lightly_studio.resolvers.mcap_resolver.get_many_by_id import get_many_by_id
+from lightly_studio.resolvers.mcap_resolver.get_point_cloud_mcaps_by_group_sample_ids import (
+    get_point_cloud_mcaps_by_group_sample_ids,
+)
 from lightly_studio.resolvers.mcap_resolver.get_start_log_time_ns import get_start_log_time_ns
 from lightly_studio.resolvers.mcap_resolver.get_tick_channels import get_tick_channels
 
@@ -14,6 +17,7 @@ __all__ = [
     "get_by_id",
     "get_channel_ids_by_component",
     "get_many_by_id",
+    "get_point_cloud_mcaps_by_group_sample_ids",
     "get_start_log_time_ns",
     "get_tick_channels",
 ]

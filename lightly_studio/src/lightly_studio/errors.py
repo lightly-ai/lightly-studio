@@ -15,3 +15,7 @@ class QueryExprError(Exception):
 
 class UnknownImageSizeError(Exception):
     """Exception raised when a stored image has no known width or height."""
+
+
+class ExportError(Exception):
+    """An export cannot be written. The message says why and is shown to the user."""
