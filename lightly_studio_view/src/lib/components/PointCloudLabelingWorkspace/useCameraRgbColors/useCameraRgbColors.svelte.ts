@@ -31,6 +31,23 @@ async function decodeBlob(blob: Blob): Promise<ImageData> {
     return imageData;
 }
 
+/** Stable per-Blob ids so a batch's cached colors can be matched to the camera images used. */
+const blobIds = new WeakMap<Blob, number>();
+let nextBlobId = 1;
+
+function cameraSignature(pairs: readonly CameraPair[]): string {
+    return pairs
+        .map(({ blob }) => {
+            let id = blobIds.get(blob);
+            if (id === undefined) {
+                id = nextBlobId++;
+                blobIds.set(blob, id);
+            }
+            return id;
+        })
+        .join('|');
+}
+
 /**
  * Computes per-point RGB colors by back-projecting camera images onto the point cloud.
  * Only active when colorMode is 'camera-rgb'. Uses a Web Worker for off-main-thread computation.
@@ -38,29 +55,58 @@ async function decodeBlob(blob: Blob): Promise<ImageData> {
  */
 export function useCameraRgbColors(params: UseCameraRgbColorsParams) {
     let colors = $state<Float32Array | null>(null);
-    let requestId = 0;
+
+    // Colors are cached per point batch, so a worker result is always matched to the batch it
+    // was computed for and never applied to whichever batch happens to be on screen when it
+    // returns. Without this, playback advances faster than the async pipeline and every result
+    // is for a stale batch, leaving the cloud on the neutral fallback (all gray).
+    const cache = new WeakMap<PointBatch, { signature: string; colors: Float32Array }>();
+    const pending = new Map<number, { batch: PointBatch; signature: string }>();
+    let latestBatch: PointBatch | undefined;
+    let nextRequestId = 1;
 
     const worker = new Worker(new URL('./cameraRgbWorker.ts', import.meta.url), {
         type: 'module'
     });
+
+    worker.onmessage = (event: MessageEvent<{ id: number; colors: Float32Array }>) => {
+        const request = pending.get(event.data.id);
+        if (!request) return;
+        pending.delete(event.data.id);
+        cache.set(request.batch, { signature: request.signature, colors: event.data.colors });
+        if (request.batch === latestBatch) colors = event.data.colors;
+    };
 
     $effect(() => {
         const colorMode = params.getColorMode();
         const batch = params.getBatch();
         const cameraPairs = params.getCameraPairs();
 
-        console.warn('[rgb] hook effect', {
-            colorMode,
-            batchCount: batch?.count,
-            cameraPairs: cameraPairs.length
-        });
-
         if (colorMode !== 'camera-rgb' || !batch || cameraPairs.length === 0) {
+            latestBatch = undefined;
             colors = null;
             return;
         }
 
-        const currentId = ++requestId;
+        latestBatch = batch;
+        const signature = cameraSignature(cameraPairs);
+
+        const cached = cache.get(batch);
+        if (cached?.signature === signature) {
+            colors = cached.colors;
+            return;
+        }
+
+        // Already computing this exact batch; keep the current state instead of duplicating work.
+        for (const request of pending.values()) {
+            if (request.batch === batch && request.signature === signature) return;
+        }
+
+        // New batch: show the neutral fallback until its own colors are ready, rather than
+        // mis-applying the previous batch's colors to a different set of points.
+        colors = null;
+        const requestId = nextRequestId++;
+        pending.set(requestId, { batch, signature });
 
         void (async () => {
             const decodedCameras = await Promise.all(
@@ -78,34 +124,24 @@ export function useCameraRgbColors(params: UseCameraRgbColorsParams) {
                 })
             );
 
-            if (currentId !== requestId) return;
+            // Playback moved on while decoding; drop the request to keep the worker queue short.
+            // The frame is recomputed if it becomes current again.
+            if (latestBatch !== batch) {
+                pending.delete(requestId);
+                return;
+            }
 
             const positionsCopy = batch.positions.slice(0, batch.count * 3);
-
-            worker.onmessage = (event: MessageEvent<{ colors: Float32Array }>) => {
-                if (currentId !== requestId) return;
-                const c = event.data.colors;
-                let colored = 0;
-                for (let i = 0; i < c.length; i += 3) {
-                    if (c[i] !== 0.5 || c[i + 1] !== 0.5 || c[i + 2] !== 0.5) colored++;
-                }
-                console.warn('[rgb] worker result', {
-                    length: c.length,
-                    coloredPoints: colored,
-                    sample: [c[0], c[1], c[2]]
-                });
-                colors = c;
-            };
-
             worker.postMessage(
-                { positions: positionsCopy, count: batch.count, cameras: decodedCameras },
+                {
+                    id: requestId,
+                    positions: positionsCopy,
+                    count: batch.count,
+                    cameras: decodedCameras
+                },
                 [positionsCopy.buffer]
             );
         })();
-
-        return () => {
-            requestId++;
-        };
     });
 
     $effect(() => {
