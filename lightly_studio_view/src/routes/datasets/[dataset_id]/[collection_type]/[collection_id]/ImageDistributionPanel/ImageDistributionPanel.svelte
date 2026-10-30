@@ -50,6 +50,10 @@
         countMode: AnnotationCountMode;
         histogramBinCount: number;
         comparisonTagIds: string[];
+        /** The source that the user picked, for example `classes` or `metadata`. */
+        selectedSourceId: string | undefined;
+        /** The group that the user picked, for example a metadata key. */
+        selectedGroupId: string | undefined;
     }
 
     let {
@@ -63,7 +67,9 @@
         onClose,
         countMode = $bindable(),
         histogramBinCount = $bindable(),
-        comparisonTagIds = $bindable()
+        comparisonTagIds = $bindable(),
+        selectedSourceId = $bindable(),
+        selectedGroupId = $bindable()
     }: Props = $props();
 
     const {
@@ -325,15 +331,17 @@
     }));
     const categoricalMetadataDistributions = $derived(categoricalMetadataQuery.data ?? {});
 
-    // Second categorical query with the full sidebar filter applied.  Its counts
+    // Second categorical query with the filter of the images grid applied. Its counts
     // are passed as `filteredBuckets` so each bar can show a grey background at
     // the unfiltered height with a coloured foreground at the filtered height.
+    // Not `filter`: it also carries the selected annotation sources, which would
+    // drop every image without annotations from the coloured bars.
     const categoricalMetadataFilteredQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
-        filter,
+        filter: $imageFilter ? { ...$imageFilter, filter_type: 'image' as const } : undefined,
         fields:
             activeMetadataField?.type === 'categorical' ? [activeMetadataField.name] : undefined,
-        enabled: activeMetadataField?.type === 'categorical'
+        enabled: activeMetadataField?.type === 'categorical' && $imageFilter !== null
     }));
     // Keep undefined (not {}) while loading so DatasetDistributionPanel defers
     // rendering the background bars until the filtered data is ready.
@@ -433,6 +441,8 @@
     comparisonTagItems={distributionSampleTagItems}
     selectedComparisonTagIds={comparisonTagIds}
     onComparisonTagIdsChange={(ids) => (comparisonTagIds = ids)}
+    bind:selectedSourceId
+    bind:selectedGroupId
     onGroupChange={(sourceId, groupId) => {
         activeDistributionSourceId = sourceId;
         activeDistributionGroupId = groupId;
