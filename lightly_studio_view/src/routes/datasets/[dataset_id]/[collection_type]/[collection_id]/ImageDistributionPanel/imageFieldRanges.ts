@@ -39,10 +39,12 @@ export const applyImageFieldRange = ({
     const keys = BOUND_KEYS[field];
     // The filter holds whole pixels, while bin edges can fall between them.
     const min = Math.ceil(range.min);
+    // Bins exclude their upper edge, except the last bin.
+    const max = range.max >= bounds[keys.max] ? Math.floor(range.max) : Math.ceil(range.max) - 1;
     const selected = selectHistogramRange({
         bound: { min: bounds[keys.min], max: bounds[keys.max] },
         current: { min: values[keys.min], max: values[keys.max] },
-        range: { min, max: Math.max(min, Math.floor(range.max)) }
+        range: { min, max: Math.max(min, max) }
     });
     return { ...values, [keys.min]: selected.min, [keys.max]: selected.max };
 };

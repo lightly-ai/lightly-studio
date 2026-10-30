@@ -33,15 +33,37 @@ describe('applyImageFieldRange', () => {
 
         expect(
             applyImageFieldRange({ field: 'height', bounds, values, range: { min: 20, max: 25 } })
-        ).toEqual({ ...values, min_height: 20, max_height: 25 });
+        ).toEqual({ ...values, min_height: 20, max_height: 24 });
     });
 
     it('resets the filter when the current range is selected again', () => {
-        const values = { ...bounds, min_height: 20, max_height: 25 };
+        const values = { ...bounds, min_height: 20, max_height: 24 };
 
         expect(
             applyImageFieldRange({ field: 'height', bounds, values, range: { min: 20, max: 25 } })
         ).toEqual(bounds);
+    });
+
+    it('excludes the upper edge of an inner bin', () => {
+        expect(
+            applyImageFieldRange({
+                field: 'width',
+                bounds,
+                values: bounds,
+                range: { min: 100, max: 200 }
+            })
+        ).toEqual({ ...bounds, max_width: 199 });
+    });
+
+    it('includes the upper edge of the last bin', () => {
+        expect(
+            applyImageFieldRange({
+                field: 'width',
+                bounds,
+                values: bounds,
+                range: { min: 200, max: 300 }
+            })
+        ).toEqual({ ...bounds, min_width: 200 });
     });
 
     it('keeps a range narrower than one pixel valid', () => {
