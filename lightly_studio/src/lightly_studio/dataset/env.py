@@ -45,9 +45,7 @@ LIGHTLY_STUDIO_USAGE_REPORT_URL: Optional[str] = env.str(
     "LIGHTLY_STUDIO_USAGE_REPORT_URL", default=None
 )
 # The token this installation presents to the central service, for every call it makes there.
-LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN: Optional[str] = env.str(
-    "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", default=None
-)
+LIGHTLY_STUDIO_SERVICE_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_SERVICE_TOKEN", default=None)
 
 LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)

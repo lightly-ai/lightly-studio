@@ -5,7 +5,7 @@ real-time call is one event. A background job reports one event per processed ch
 with the job ID and the chunk size as quantity.
 
 Reports are sent only when both `LIGHTLY_STUDIO_USAGE_REPORT_URL` and
-`LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN` are set. A background thread sends them in batches
+`LIGHTLY_STUDIO_SERVICE_TOKEN` are set. A background thread sends them in batches
 of up to 500 events, so a slow or unreachable receiver never delays the service that
 reports. A batch that fails for a reason that can be transient is retried twice; the
 receiver ignores repeated event IDs, so a retry cannot count an event twice.
@@ -131,7 +131,7 @@ class UsageEvent:
 def report(events: Sequence[UsageEvent]) -> None:
     """Queues the events for sending if reporting is configured. Never raises or blocks."""
     url = env.LIGHTLY_STUDIO_USAGE_REPORT_URL
-    token = env.LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN
+    token = env.LIGHTLY_STUDIO_SERVICE_TOKEN
     if not url or not token:
         return
     _start_worker(url=url, token=token)
