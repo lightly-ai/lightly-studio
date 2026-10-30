@@ -28,6 +28,7 @@ def test_create_interactive_preview__points() -> None:
     image = helpers.make_image(width=100, height=50)
 
     response = assisted_labeling_service.create_interactive_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(image=image, points=[AnnotationPoint(x=0.5, y=0.5, positive=True)]),
@@ -43,6 +44,7 @@ def test_create_interactive_preview__point_prompt() -> None:
     image = helpers.make_image(width=100, height=50)
 
     assisted_labeling_service.create_interactive_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(
@@ -69,6 +71,7 @@ def test_create_interactive_preview__box_prompt() -> None:
     image = helpers.make_image(width=100, height=50)
 
     assisted_labeling_service.create_interactive_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(image=image, boxes=[AnnotationBox(x=0.1, y=0.2, width=0.4, height=0.6)]),
@@ -84,6 +87,7 @@ def test_create_interactive_preview__no_mask() -> None:
     image = helpers.make_image(width=100, height=50)
 
     response = assisted_labeling_service.create_interactive_preview(
+        user_email=None,
         provider=StubProvider(predictions=[]),
         image=image,
         request=_request(image=image, points=[AnnotationPoint(x=0.5, y=0.5, positive=True)]),
@@ -106,6 +110,7 @@ def test_create_interactive_preview__highest_score() -> None:
     image = helpers.make_image(width=4, height=2)
 
     response = assisted_labeling_service.create_interactive_preview(
+        user_email=None,
         provider=provider,
         image=image,
         request=_request(image=image, points=[AnnotationPoint(x=0.5, y=0.5, positive=True)]),

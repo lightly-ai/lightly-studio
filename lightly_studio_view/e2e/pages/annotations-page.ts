@@ -97,11 +97,11 @@ export class AnnotationsPage {
     }
 
     async setLabel(label: string) {
-        // Wait for the PUT /annotations request to be completed after setting the label.
+        // Wait for the bulk relabel request to be completed after setting the label.
         const responsePromise = this.page.waitForResponse(
             (response) =>
-                response.request().method() === 'PUT' &&
-                response.url().includes('/annotations') &&
+                response.request().method() === 'POST' &&
+                response.url().includes('/annotations/bulk_relabel') &&
                 response.status() === 200
         );
 
