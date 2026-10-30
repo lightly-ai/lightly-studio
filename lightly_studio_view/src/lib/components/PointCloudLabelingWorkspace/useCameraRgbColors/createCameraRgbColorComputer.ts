@@ -1,7 +1,6 @@
 import type { CameraProjectionView } from '$lib/api/lightly_studio_local/types.gen';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
-import type { CameraData } from './cameraRgbProjection';
-import { decodeCameraImage } from './decodeCameraImage';
+import type { CameraInput } from './cameraRgbWorker';
 
 /** A camera's projection metadata paired with its (still encoded) image for one tick. */
 export interface CameraPair {
@@ -14,13 +13,13 @@ interface ComputerDeps {
     onColors: (colors: Float32Array | null) => void;
     /** Overridable for tests; defaults to the bundled projection worker. */
     createWorker?: () => Worker;
-    /** Overridable for tests; defaults to {@link decodeCameraImage}. */
-    decode?: (blob: Blob) => Promise<ImageData>;
 }
 
 interface WorkerResult {
     id: number;
-    colors: Float32Array;
+    colors?: Float32Array;
+    error?: string;
+    cancelled?: boolean;
 }
 
 /**
@@ -33,7 +32,6 @@ interface WorkerResult {
  */
 export function createCameraRgbColorComputer(deps: ComputerDeps) {
     const { onColors } = deps;
-    const decode = deps.decode ?? decodeCameraImage;
     const createWorker =
         deps.createWorker ??
         (() => new Worker(new URL('./cameraRgbWorker.ts', import.meta.url), { type: 'module' }));
@@ -46,7 +44,7 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
     let latestSignature: string | undefined;
     let nextRequestId = 1;
 
-    let worker = startWorker();
+    let worker: Worker | undefined;
 
     function startWorker(): Worker {
         const instance = createWorker();
@@ -54,6 +52,17 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
             const request = pending.get(event.data.id);
             if (!request) return;
             pending.delete(event.data.id);
+            if (event.data.cancelled) return;
+            if (event.data.error || !event.data.colors) {
+                if (request.batch === latestBatch && request.signature === latestSignature) {
+                    onColors(null);
+                }
+                console.error(
+                    'Failed to decode camera images for RGB projection',
+                    event.data.error
+                );
+                return;
+            }
             cache.set(request.batch, { signature: request.signature, colors: event.data.colors });
             // Only apply to the on-screen batch if both it and its cameras are still current:
             // a newer request may have changed the cameras while this batch stayed displayed.
@@ -71,7 +80,7 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
 
     function recoverFromWorkerFailure(): void {
         pending.clear();
-        worker.terminate();
+        worker?.terminate();
         worker = startWorker();
         onColors(null);
     }
@@ -128,56 +137,22 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
         const requestId = nextRequestId++;
         pending.set(requestId, { batch, signature });
 
-        void (async () => {
-            let cameras: CameraData[];
-            try {
-                cameras = await Promise.all(
-                    cameraPairs.map(({ projection, blob }) =>
-                        toCameraData(projection, blob, decode)
-                    )
-                );
-            } catch (error) {
-                // A failed decode (e.g. a corrupt image) must not strand the request in `pending`,
-                // or later requests for this batch would dedupe against it and never recompute.
-                pending.delete(requestId);
-                if (latestBatch === batch) onColors(null);
-                console.error('Failed to decode camera images for RGB projection', error);
-                return;
-            }
-
-            // Playback moved on while decoding; drop the request to keep the worker queue short.
-            // The frame is recomputed if it becomes current again.
-            if (latestBatch !== batch) {
-                pending.delete(requestId);
-                return;
-            }
-
-            const positions = batch.positions.slice(0, batch.count * 3);
-            worker.postMessage({ id: requestId, positions, count: batch.count, cameras }, [
-                positions.buffer
-            ]);
-        })();
+        const cameras: CameraInput[] = cameraPairs.map(({ projection, blob }) => ({
+            sceneToCamera: new Float64Array(projection.scene_to_camera.slice(0, 12)),
+            cameraMatrix: new Float64Array(projection.camera_matrix),
+            projWidth: projection.width,
+            projHeight: projection.height,
+            blob
+        }));
+        const positions = batch.positions.slice(0, batch.count * 3);
+        const activeWorker = worker ?? (worker = startWorker());
+        activeWorker.postMessage({ id: requestId, positions, count: batch.count, cameras }, [
+            positions.buffer
+        ]);
     }
 
     return {
         request,
-        dispose: () => worker.terminate()
-    };
-}
-
-async function toCameraData(
-    projection: CameraProjectionView,
-    blob: Blob,
-    decode: (blob: Blob) => Promise<ImageData>
-): Promise<CameraData> {
-    const imageData = await decode(blob);
-    return {
-        sceneToCamera: new Float64Array(projection.scene_to_camera.slice(0, 12)),
-        cameraMatrix: new Float64Array(projection.camera_matrix),
-        projWidth: projection.width,
-        projHeight: projection.height,
-        width: imageData.width,
-        height: imageData.height,
-        pixels: imageData.data
+        dispose: () => worker?.terminate()
     };
 }
