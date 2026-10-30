@@ -452,6 +452,57 @@ def test_get_projections_by_collection_id__unknown_model(db_session: Session) ->
         )
 
 
+def test_get_nearest_sample_ids(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    other_collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=2
+    ).embedding_model_id
+    image_near, image_middle, _ = create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="near.png"), [1.0, 0.1]),
+            (ImageStub(path="middle.png"), [1.0, 1.0]),
+            (ImageStub(path="far.png"), [0.0, 1.0]),
+        ],
+    )
+    # A sample in another collection with the same direction as the query.
+    create_samples_with_embeddings(
+        session=db_session,
+        collection_id=other_collection_id,
+        embedding_model_id=embedding_model_id,
+        images_and_embeddings=[(ImageStub(path="other.png"), [1.0, 0.0])],
+    )
+
+    nearest_sample_ids = sample_embedding_resolver.get_nearest_sample_ids(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        embedding=[2.0, 0.0],
+        limit=2,
+    )
+
+    assert nearest_sample_ids == [image_near.sample_id, image_middle.sample_id]
+
+
+def test_get_nearest_sample_ids__dimension_mismatch(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    embedding_model_id = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=3
+    ).embedding_model_id
+
+    with pytest.raises(ValueError, match="embedding dimension 3"):
+        sample_embedding_resolver.get_nearest_sample_ids(
+            session=db_session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            embedding=[1.0, 0.0],
+            limit=1,
+        )
+
+
 def test_get_embedding_count(db_session: Session) -> None:
     # Create collections
     col1_id = create_collection(session=db_session).collection_id

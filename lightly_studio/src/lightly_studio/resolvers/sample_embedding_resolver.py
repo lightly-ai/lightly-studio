@@ -254,6 +254,58 @@ def get_projections_by_collection_id(
     return _stream_projections(session=session, statement=statement)
 
 
+def get_nearest_sample_ids(
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    embedding: Sequence[float],
+    limit: int,
+) -> list[UUID]:
+    """Get the samples of a collection whose embeddings are nearest to an embedding.
+
+    D is the embedding dimension. The database computes the cosine distances, so the
+    embeddings are not loaded into Python.
+
+    Args:
+        session: The database session.
+        collection_id: The collection ID to filter by.
+        embedding_model_id: The embedding model ID to filter by.
+        embedding: The query embedding of shape (D,).
+        limit: The maximum number of sample IDs to return.
+
+    Returns:
+        The sample IDs, nearest first.
+
+    Raises:
+        ValueError: If the embedding model does not exist, or if the embedding does not have
+            the embedding dimension.
+    """
+    embedding_model = embedding_model_resolver.get_by_id(
+        session=session, embedding_model_id=embedding_model_id
+    )
+    if embedding_model is None:
+        raise ValueError(f"Embedding model {embedding_model_id} not found.")
+    dimension = embedding_model.embedding_dimension
+    if dimension != len(embedding):
+        raise ValueError(
+            f"The embedding must have the embedding dimension {dimension}, got {len(embedding)}."
+        )
+
+    distance = db_vector.cosine_distance(
+        col(SampleEmbeddingTable.embedding), [float(value) for value in embedding]
+    )
+    statement = (
+        select(SampleEmbeddingTable.sample_id)
+        .join(SampleTable, col(SampleEmbeddingTable.sample_id) == col(SampleTable.sample_id))
+        .where(SampleTable.collection_id == collection_id)
+        .where(SampleEmbeddingTable.embedding_model_id == embedding_model_id)
+        # The sample ID breaks ties, so equal distances give a stable order.
+        .order_by(distance, col(SampleEmbeddingTable.sample_id).asc())
+        .limit(limit)
+    )
+    return list(session.exec(statement).all())
+
+
 def get_hash_by_collection_id(
     session: Session,
     collection_id: UUID,
