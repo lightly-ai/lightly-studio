@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -28,16 +29,25 @@ from tests.helpers_resolvers import cuboid_create
 def index_recording(
     tmp_path: Path,
     base_link_poses: tuple[tuple[int, tuple[float, float, float]], ...] = (),
+    dataset_name: str = "perception",
+    metadata_records: tuple[tuple[str, dict[str, str]], ...] = (),
+    reference_frame_ids: Sequence[str] | None = None,
 ) -> tuple[McapDataset, McapSequence, list[UUID]]:
-    """Indexes a test recording and returns its dataset, sequence and tick group sample IDs."""
-    mcap_path = helpers.write_mcap(tmp_path / "recording.mcap", base_link_poses=base_link_poses)
-    dataset = McapDataset.create(components=COMPONENTS, name="perception")
+    """Indexes `tmp_path / "recording.mcap"` and returns its dataset, sequence and group IDs."""
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    mcap_path = helpers.write_mcap(
+        tmp_path / "recording.mcap",
+        base_link_poses=base_link_poses,
+        metadata_records=metadata_records,
+    )
+    dataset = McapDataset.create(components=COMPONENTS, name=dataset_name)
     add_mcaps.index_recording(
         dataset=dataset,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
         max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        reference_frame_ids=reference_frame_ids,
     )
     sequence = dataset.get_sequences()[0]
     group_ids = [entry.sample_id for entry in sequence.get_samples()]
