@@ -91,16 +91,6 @@
         parentTrackNumber: 2
     });
 
-    // Orphaned child: parent track number 99 does not exist
-    const orphan = createCuboidAnnotation({
-        ...base,
-        id: 'orphan',
-        annotationClassId: 'pedestrian',
-        annotationSourceId: 'ground-truth',
-        trackNumber: 5,
-        parentTrackNumber: 99
-    });
-
     // Absent parent group: children reference a parent not in frame, but have className
     const absentChild1 = createCuboidAnnotation({
         ...base,
@@ -119,16 +109,6 @@
         trackNumber: 11,
         parentTrackNumber: 99,
         parentTrackClassName: 'truck'
-    });
-
-    // Root with null trackNumber and children
-    const nullTrackRoot = createCuboidAnnotation({
-        ...base,
-        id: 'null-track-root',
-        annotationClassId: 'truck',
-        annotationSourceId: 'ground-truth',
-        trackNumber: null,
-        parentTrackNumber: null
     });
 
     const { Story } = defineMeta({
@@ -172,30 +152,6 @@
     name="Parent group — multi level"
     args={{
         cuboids: [truckMulti, cabinMulti, windowMulti],
-        annotationSources: [sources[0]]
-    }}
-/>
-
-<Story
-    name="Flat root — no children"
-    args={{
-        cuboids: [gtCuboid1],
-        annotationSources: [sources[0]]
-    }}
-/>
-
-<Story
-    name="Orphaned child"
-    args={{
-        cuboids: [orphan],
-        annotationSources: [sources[0]]
-    }}
-/>
-
-<Story
-    name="Root with null track number"
-    args={{
-        cuboids: [nullTrackRoot],
         annotationSources: [sources[0]]
     }}
 />
