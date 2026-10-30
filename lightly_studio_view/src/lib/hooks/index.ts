@@ -18,6 +18,7 @@ export {
     useMetadataFilters
 } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
+export { useImageFieldDistribution } from '$lib/hooks/useImageFieldDistribution';
 export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution';
 export { useMetadataDistributionsBySampleTags } from '$lib/hooks/useMetadataDistributionsBySampleTags';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
@@ -81,6 +82,7 @@ export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotat
 export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
 export { useBulkDeleteAnnotations } from '$lib/hooks/useBulkDeleteAnnotations/useBulkDeleteAnnotations';
+export { useBulkRelabelAnnotations } from '$lib/hooks/useBulkRelabelAnnotations/useBulkRelabelAnnotations';
 export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey

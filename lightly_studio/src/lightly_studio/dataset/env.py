@@ -39,6 +39,14 @@ LIGHTLY_STUDIO_POSTHOG_HOST: str = "https://eu.i.posthog.com"
 # which survives recreating the virtualenv.
 LIGHTLY_STUDIO_INTERNAL: bool = env.bool("LIGHTLY_STUDIO_INTERNAL", False)
 
+# Reporting of paid service usage (AI-assisted labeling, embedding) to a central service.
+# Reports are sent only when both are set. See lightly_studio/usage/usage_reporter.py.
+LIGHTLY_STUDIO_USAGE_REPORT_URL: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_USAGE_REPORT_URL", default=None
+)
+# The token this installation presents to the central service, for every call it makes there.
+LIGHTLY_STUDIO_SERVICE_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_SERVICE_TOKEN", default=None)
+
 LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)
 )

@@ -22,7 +22,8 @@ const SORT_BY: AnnotationEvaluationMetricSortExpr = {
 const mocks = vi.hoisted(() => ({
     annotationsData: [] as AnnotationWithPayloadView[],
     sortedAnnotationsData: [] as AnnotationWithPayloadView[],
-    updateAnnotations: vi.fn(),
+    relabelAnnotations: vi.fn(),
+    selectAllAnnotationSnapshot: null as unknown as Writable<unknown>,
     updateAnnotationsRaw: vi.fn(),
     refresh: vi.fn(),
     isPendingStore: null as unknown as Writable<boolean>,
@@ -88,6 +89,7 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     mocks.isPendingStore = writable(false);
     mocks.pickedAnnotationIds = writable({});
     mocks.textEmbeddingStore = writable(undefined);
+    mocks.selectAllAnnotationSnapshot = writable(null);
     return {
         useGlobalStorage: vi.fn(() => ({
             getCollectionVersion: mocks.getCollectionVersion,
@@ -97,7 +99,8 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
             textEmbedding: mocks.textEmbeddingStore,
             selectedSampleAnnotationCropIds: mocks.pickedAnnotationIds,
             toggleSampleAnnotationCropSelection: mocks.toggleSampleAnnotationCropSelection,
-            clearSelectedSampleAnnotationCrops: mocks.clearSelectedSampleAnnotationCrops
+            clearSelectedSampleAnnotationCrops: mocks.clearSelectedSampleAnnotationCrops,
+            getSelectAllAnnotationSnapshot: () => mocks.selectAllAnnotationSnapshot
         }))
     };
 });
@@ -144,8 +147,13 @@ vi.mock('$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite', () => ({
             isFetchingNextPage: false,
             fetchNextPage: vi.fn()
         },
-        updateAnnotations: mocks.updateAnnotations,
-        refresh: mocks.refresh,
+        refresh: mocks.refresh
+    }))
+}));
+
+vi.mock('$lib/hooks/useBulkRelabelAnnotations/useBulkRelabelAnnotations', () => ({
+    useBulkRelabelAnnotations: vi.fn(() => ({
+        relabelAnnotations: mocks.relabelAnnotations,
         isPending: mocks.isPendingStore
     }))
 }));
@@ -251,6 +259,10 @@ describe('AnnotationsGrid', () => {
         mocks.hasEmbeddings = false;
         mocks.textEmbeddingStore.set(undefined);
         mocks.sortBy = null;
+        mocks.selectAllAnnotationSnapshot.set(null);
+        mocks.relabelAnnotations.mockResolvedValue({
+            data: { previous_labels: [{ annotation_id: 'cls-1', label_name: 'cat' }] }
+        });
     });
 
     function renderWithSortSelection() {
@@ -309,36 +321,81 @@ describe('AnnotationsGrid', () => {
         expect(mocks.toggleSampleAnnotationCropSelection).toHaveBeenCalledWith('col-1', 'cls-1');
     });
 
-    it('calls updateAnnotations with the selected classification annotation on bulk relabel', async () => {
+    it('relabels every selected annotation, including ones not loaded', async () => {
         mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
-        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1']) });
+        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1', 'not-loaded']) });
         mocks.isEditingModeStore.set(true);
 
         renderGrid();
 
-        const button = screen.getByTestId('mock-select-label');
-        await fireEvent.click(button);
+        await fireEvent.click(screen.getByTestId('mock-select-label'));
 
-        expect(mocks.updateAnnotations).toHaveBeenCalledWith([
-            expect.objectContaining({ annotation_id: 'cls-1', label_name: 'new-label' })
-        ]);
+        expect(mocks.relabelAnnotations).toHaveBeenCalledWith({
+            collectionId: 'col-1',
+            selectedIds: new Set(['cls-1', 'not-loaded']),
+            selectAllSnapshot: null,
+            labelName: 'new-label'
+        });
+        expect(mocks.clearSelectedSampleAnnotationCrops).toHaveBeenCalledWith('col-1');
     });
 
-    it('populates the undo stack after bulk relabel on a classification selection', async () => {
+    it('passes the annotation select-all snapshot to the relabel', async () => {
+        const snapshot = { filter: { filter_type: 'annotations' }, size: 2 };
+        mocks.selectAllAnnotationSnapshot.set(snapshot);
         mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
-        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1']) });
+        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1', 'not-loaded']) });
         mocks.isEditingModeStore.set(true);
 
         renderGrid();
 
-        const button = screen.getByTestId('mock-select-label');
-        await fireEvent.click(button);
+        await fireEvent.click(screen.getByTestId('mock-select-label'));
+
+        expect(mocks.relabelAnnotations).toHaveBeenCalledWith(
+            expect.objectContaining({ selectAllSnapshot: snapshot })
+        );
+    });
+
+    it('undoes the relabel with the previous labels from the server', async () => {
+        mocks.relabelAnnotations.mockResolvedValue({
+            data: {
+                previous_labels: [
+                    { annotation_id: 'cls-1', label_name: 'cat' },
+                    { annotation_id: 'not-loaded', label_name: 'dog' }
+                ]
+            }
+        });
+        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
+        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1', 'not-loaded']) });
+        mocks.isEditingModeStore.set(true);
+
+        renderGrid();
+
+        await fireEvent.click(screen.getByTestId('mock-select-label'));
 
         expect(mocks.addReversibleAction).toHaveBeenCalledWith(
             expect.objectContaining({
-                description: 'Undo label change for 1 annotation',
+                description: 'Undo label change for 2 annotations',
                 groupId: 'annotation-label-change'
             })
         );
+        await mocks.addReversibleAction.mock.calls[0][0].execute();
+        expect(mocks.updateAnnotationsRaw).toHaveBeenCalledWith([
+            { annotation_id: 'cls-1', label_name: 'cat', collection_id: 'col-1' },
+            { annotation_id: 'not-loaded', label_name: 'dog', collection_id: 'col-1' }
+        ]);
+    });
+
+    it('keeps the selection and adds no undo when the relabel fails', async () => {
+        mocks.relabelAnnotations.mockResolvedValue({ error: { detail: 'Boom' } });
+        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
+        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1']) });
+        mocks.isEditingModeStore.set(true);
+
+        renderGrid();
+
+        await fireEvent.click(screen.getByTestId('mock-select-label'));
+
+        expect(mocks.addReversibleAction).not.toHaveBeenCalled();
+        expect(mocks.clearSelectedSampleAnnotationCrops).not.toHaveBeenCalled();
     });
 });

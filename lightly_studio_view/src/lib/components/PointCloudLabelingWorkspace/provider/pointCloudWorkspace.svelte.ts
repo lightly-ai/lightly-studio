@@ -14,6 +14,10 @@ export type GetInputs = () => {
     initialTick?: number;
     /** Selected LiDAR channel IDs; undefined means all channels are shown. */
     selectedLidarChannels?: number[];
+    /** Number of ticks to show on either side of the active tick. */
+    accumulationRadius?: number;
+    /** Ordered sequence tick numbers, used to clamp the accumulation window. */
+    accumulationTickNumbers?: number[];
     /** Overrides the summary-derived status; for tests/stories. */
     statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error';
 };
@@ -47,8 +51,22 @@ function createCloudPointFrameParamsGetter(
         sequenceId: getInputs().sequenceId,
         seqNumber: getCurrentTick(),
         displayFrameId: getDisplayFrameId() || undefined,
-        selectedChannelIds: getInputs().selectedLidarChannels
+        selectedChannelIds: getInputs().selectedLidarChannels,
+        accumulationTickNumbers: getAccumulationTickNumbers(getInputs, getCurrentTick)
     });
+}
+
+function getAccumulationTickNumbers(getInputs: GetInputs, getCurrentTick: () => number): number[] {
+    const { accumulationRadius = 0 } = getInputs();
+    if (accumulationRadius <= 0) return [getCurrentTick()];
+    const tickNumbers = getInputs().accumulationTickNumbers;
+    if (!tickNumbers?.length) return [getCurrentTick()];
+    const activeIndex = tickNumbers.indexOf(getCurrentTick());
+    if (activeIndex < 0) return [getCurrentTick()];
+    return tickNumbers.slice(
+        Math.max(0, activeIndex - accumulationRadius),
+        activeIndex + accumulationRadius + 1
+    );
 }
 
 function createRetryHandler(
