@@ -36,6 +36,21 @@ describe('sensor frame colors', () => {
         expect(new Float32Array(actual.flatMap((colors) => Array.from(colors)))).toEqual(expected);
     });
 
+    it('splits whole-window camera-rgb colors back into per-segment slices', () => {
+        const batch = createSegmentedPointBatch(segments);
+        // Float32-exact values so slicing is compared without rounding error.
+        const cameraColors = new Float32Array([1, 0, 0, 0.5, 0.5, 0.5, 0.25, 0.25, 0.25]);
+        const actual = getPointCloudFrameColors(batch, 'camera-rgb', undefined, cameraColors);
+        expect(Array.from(actual[0])).toEqual([1, 0, 0, 0.5, 0.5, 0.5]);
+        expect(Array.from(actual[1])).toEqual([0.25, 0.25, 0.25]);
+    });
+
+    it('falls back to neutral per segment when camera-rgb colors are not ready', () => {
+        const batch = createSegmentedPointBatch(segments);
+        const actual = getPointCloudFrameColors(batch, 'camera-rgb');
+        expect(actual.flatMap((colors) => Array.from(colors))).toEqual(Array(9).fill(0.5));
+    });
+
     it('uses the custom intensity range and preserves the mixed RGB fallback', () => {
         const batch = createSegmentedPointBatch(segments);
         expect(getPointCloudFrameColors(batch, 'intensity', [0, 40])[0]).toEqual(
