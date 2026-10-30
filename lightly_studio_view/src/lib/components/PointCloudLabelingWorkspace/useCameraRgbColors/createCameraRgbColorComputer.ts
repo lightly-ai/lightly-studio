@@ -1,5 +1,5 @@
 import type { CameraProjectionView } from '$lib/api/lightly_studio_local/types.gen';
-import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type { CameraData } from './cameraRgbProjection';
 import { decodeCameraImage } from './decodeCameraImage';
 
@@ -43,27 +43,57 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
     const blobIds = new WeakMap<Blob, number>();
     let nextBlobId = 1;
     let latestBatch: PointBatch | undefined;
+    let latestSignature: string | undefined;
     let nextRequestId = 1;
 
-    const worker = createWorker();
-    worker.onmessage = (event: MessageEvent<WorkerResult>) => {
-        const request = pending.get(event.data.id);
-        if (!request) return;
-        pending.delete(event.data.id);
-        cache.set(request.batch, { signature: request.signature, colors: event.data.colors });
-        if (request.batch === latestBatch) onColors(event.data.colors);
-    };
+    let worker = startWorker();
 
-    // Stable per-blob ids let a batch's cached colors be matched to the exact camera images used.
+    function startWorker(): Worker {
+        const instance = createWorker();
+        instance.onmessage = (event: MessageEvent<WorkerResult>) => {
+            const request = pending.get(event.data.id);
+            if (!request) return;
+            pending.delete(event.data.id);
+            cache.set(request.batch, { signature: request.signature, colors: event.data.colors });
+            // Only apply to the on-screen batch if both it and its cameras are still current:
+            // a newer request may have changed the cameras while this batch stayed displayed.
+            if (request.batch === latestBatch && request.signature === latestSignature) {
+                onColors(event.data.colors);
+            }
+        };
+        // A worker crash would otherwise strand its in-flight requests in `pending`, so later
+        // requests for the same batch dedupe against them and never recompute. Drop them and
+        // replace the worker so the next request can run on a fresh instance.
+        instance.onerror = recoverFromWorkerFailure;
+        instance.onmessageerror = recoverFromWorkerFailure;
+        return instance;
+    }
+
+    function recoverFromWorkerFailure(): void {
+        pending.clear();
+        worker.terminate();
+        worker = startWorker();
+        onColors(null);
+    }
+
+    // Stable per-blob ids plus the projection parameters let a batch's cached colors be matched to
+    // the exact camera images and projection used, so a cache hit never reuses colors computed for
+    // a different projection even when the same blob is reprojected.
     function cameraSignature(pairs: readonly CameraPair[]): string {
         return pairs
-            .map(({ blob }) => {
+            .map(({ projection, blob }) => {
                 let id = blobIds.get(blob);
                 if (id === undefined) {
                     id = nextBlobId++;
                     blobIds.set(blob, id);
                 }
-                return id;
+                return JSON.stringify([
+                    id,
+                    projection.scene_to_camera,
+                    projection.camera_matrix,
+                    projection.width,
+                    projection.height
+                ]);
             })
             .join('|');
     }
@@ -72,12 +102,14 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
     function request(batch: PointBatch | undefined, cameraPairs: readonly CameraPair[]): void {
         if (!batch || cameraPairs.length === 0) {
             latestBatch = undefined;
+            latestSignature = undefined;
             onColors(null);
             return;
         }
 
         latestBatch = batch;
         const signature = cameraSignature(cameraPairs);
+        latestSignature = signature;
 
         const cached = cache.get(batch);
         if (cached?.signature === signature) {
@@ -97,9 +129,21 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
         pending.set(requestId, { batch, signature });
 
         void (async () => {
-            const cameras = await Promise.all(
-                cameraPairs.map(({ projection, blob }) => toCameraData(projection, blob, decode))
-            );
+            let cameras: CameraData[];
+            try {
+                cameras = await Promise.all(
+                    cameraPairs.map(({ projection, blob }) =>
+                        toCameraData(projection, blob, decode)
+                    )
+                );
+            } catch (error) {
+                // A failed decode (e.g. a corrupt image) must not strand the request in `pending`,
+                // or later requests for this batch would dedupe against it and never recompute.
+                pending.delete(requestId);
+                if (latestBatch === batch) onColors(null);
+                console.error('Failed to decode camera images for RGB projection', error);
+                return;
+            }
 
             // Playback moved on while decoding; drop the request to keep the worker queue short.
             // The frame is recomputed if it becomes current again.

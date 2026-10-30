@@ -1,5 +1,4 @@
-import type { ColorMode } from '$lib/components/PointCloudViewer';
-import type { PointBatch } from '$lib/components/PointCloudViewer/types';
+import type { ColorMode, PointBatch } from '$lib/components/PointCloudViewer';
 import { createCameraRgbColorComputer, type CameraPair } from './createCameraRgbColorComputer';
 
 interface UseCameraRgbColorsParams {

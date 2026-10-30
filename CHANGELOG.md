@@ -18,7 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The distribution panel of image datasets shows histograms of the image width and height. Select a range on a histogram to filter the images by width or height.
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 - Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
-- Introduce point cloud accumulation for point cloud details.
+- Accumulate point clouds from neighboring ticks in the point-cloud 3D scene. Set how many ticks to include in the scene settings.
+- Color the point cloud from the camera images with the new "Camera RGB" color mode in the point-cloud workspace.
 
 
 ### Changed
