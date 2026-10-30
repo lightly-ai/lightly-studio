@@ -283,6 +283,7 @@ def test_update_label_by_object_track_id__skips_annotations_already_on_new_label
     assert updated_2.object_detection_details.x == 50
 
 
+
 def test_update_label_by_object_track_id__restores_child_rows_on_update_failure(
     db_session: Session, mocker: MockerFixture
 ) -> None:

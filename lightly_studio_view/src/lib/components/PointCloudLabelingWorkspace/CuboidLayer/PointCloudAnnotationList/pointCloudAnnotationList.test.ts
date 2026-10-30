@@ -3,6 +3,7 @@ import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorks
 import {
     groupAnnotationsBySource,
     resolveAnnotationClassName,
+    buildAnnotationForest,
     UNKNOWN_SOURCE_NAME
 } from './pointCloudAnnotationList';
 
@@ -226,6 +227,258 @@ describe('groupAnnotationsBySource — ordering', () => {
 
         expect(groups[0].cuboids.map((c) => c.trackNumber)).toEqual([1, 5]);
         expect(groups[1].cuboids.map((c) => c.trackNumber)).toEqual([2, 4]);
+    });
+});
+
+describe('buildAnnotationForest', () => {
+    it('wraps a childless root in the no-parent-track group', () => {
+        const root = {
+            ...createAnnotationFixture(),
+            id: 'root',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [root] });
+
+        expect(forest).toHaveLength(1);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[0].children[0].cuboid).toBe(root);
+    });
+
+    it('nests children under their parent root', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+        const trailer = {
+            ...createAnnotationFixture(),
+            id: 'trailer',
+            trackNumber: 3,
+            parentTrackNumber: 1
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, cabin, trailer] });
+
+        expect(forest).toHaveLength(1);
+        expect(forest[0].cuboid).toBe(truck);
+        expect(forest[0].children).toHaveLength(2);
+        expect(forest[0].children[0].cuboid).toBe(cabin);
+        expect(forest[0].children[1].cuboid).toBe(trailer);
+        expect(forest[0].subtreeSize).toBe(3);
+    });
+
+    it('counts subtree size recursively for multi-level nesting', () => {
+        const grandparent = {
+            ...createAnnotationFixture(),
+            id: 'gp',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const parent = {
+            ...createAnnotationFixture(),
+            id: 'p',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+        const grandchild = {
+            ...createAnnotationFixture(),
+            id: 'gc',
+            trackNumber: 3,
+            parentTrackNumber: 2
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [grandparent, parent, grandchild] });
+
+        expect(forest[0].subtreeSize).toBe(3);
+        expect(forest[0].children[0].subtreeSize).toBe(2);
+        expect(forest[0].children[0].children[0].subtreeSize).toBe(1);
+    });
+
+    it('wraps a root with null trackNumber in the no-parent-track group', () => {
+        const nullTrack = {
+            ...createAnnotationFixture(),
+            id: 'null-track',
+            trackNumber: null,
+            parentTrackNumber: null
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [nullTrack] });
+
+        expect(forest).toHaveLength(1);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[0].children[0].cuboid).toBe(nullTrack);
+    });
+
+    it('places parent root and childless root in separate groups', () => {
+        const root1 = {
+            ...createAnnotationFixture(),
+            id: 'root1',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const child1 = {
+            ...createAnnotationFixture(),
+            id: 'child1',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+        const root2 = {
+            ...createAnnotationFixture(),
+            id: 'root2',
+            trackNumber: 10,
+            parentTrackNumber: null
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [root1, child1, root2] });
+
+        expect(forest).toHaveLength(2);
+        expect(forest[0].cuboid).toBe(root1);
+        expect(forest[0].children[0].cuboid).toBe(child1);
+        expect(forest[1].cuboid).toBeNull();
+        expect(forest[1].children[0].cuboid).toBe(root2);
+    });
+
+    it('places absent-parent orphan and standalone root in separate groups', () => {
+        const root = {
+            ...createAnnotationFixture(),
+            id: 'root',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const orphan = {
+            ...createAnnotationFixture(),
+            id: 'orphan',
+            trackNumber: 5,
+            parentTrackNumber: 99,
+            parentTrackClassName: 'truck'
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [root, orphan] });
+
+        expect(forest).toHaveLength(2);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children[0].cuboid).toBe(orphan);
+        expect(forest[1].cuboid).toBeNull();
+        expect(forest[1].children[0].cuboid).toBe(root);
+    });
+
+    it('groups orphan with parentTrackClassName under absent parent node', () => {
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1,
+            parentTrackClassName: 'truck'
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [cabin] });
+
+        expect(forest).toHaveLength(1);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[0].children[0].cuboid).toBe(cabin);
+        expect(forest[0].subtreeSize).toBe(1);
+    });
+
+    it('groups multiple orphans sharing the same absent parent', () => {
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1,
+            parentTrackClassName: 'truck'
+        };
+        const bed = {
+            ...createAnnotationFixture(),
+            id: 'bed',
+            trackNumber: 3,
+            parentTrackNumber: 1,
+            parentTrackClassName: 'truck'
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [cabin, bed] });
+
+        expect(forest).toHaveLength(1);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children).toHaveLength(2);
+        expect(forest[0].subtreeSize).toBe(2);
+    });
+
+    it('handles multi-level nesting with absent intermediate', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const window = {
+            ...createAnnotationFixture(),
+            id: 'window',
+            trackNumber: 3,
+            parentTrackNumber: 2,
+            parentTrackClassName: 'cabin'
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, window] });
+
+        expect(forest).toHaveLength(2);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[0].children[0].cuboid).toBe(window);
+        expect(forest[1].cuboid).toBeNull();
+        expect(forest[1].children).toHaveLength(1);
+        expect(forest[1].children[0].cuboid).toBe(truck);
+    });
+
+    it('places absent parent groups after present parents, standalone roots in no-parent-track group', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const truckChild = {
+            ...createAnnotationFixture(),
+            id: 'truck-cabin',
+            trackNumber: 10,
+            parentTrackNumber: 1
+        };
+        const absentChild = {
+            ...createAnnotationFixture(),
+            id: 'absent-cabin',
+            trackNumber: 20,
+            parentTrackNumber: 99,
+            parentTrackClassName: 'bus'
+        };
+        const standalone = {
+            ...createAnnotationFixture(),
+            id: 'car',
+            trackNumber: 50,
+            parentTrackNumber: null
+        };
+
+        const forest = buildAnnotationForest({
+            cuboids: [truck, truckChild, absentChild, standalone]
+        });
+
+        expect(forest).toHaveLength(3);
+        expect(forest[0].cuboid).toBe(truck);
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[1].cuboid).toBeNull();
+        expect(forest[1].children[0].cuboid).toBe(absentChild);
+        expect(forest[2].cuboid).toBeNull();
+        expect(forest[2].children[0].cuboid).toBe(standalone);
     });
 });
 
