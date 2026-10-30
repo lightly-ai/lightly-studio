@@ -73,7 +73,7 @@ pip install lightly-studio
 
 ## Quickstart
 
-LightlyStudio works on Windows, Linux, and macOS with **Python 3.9 to 3.14**. We recommend
+LightlyStudio works on Windows, Linux, and macOS with **Python 3.10 to 3.14**. We recommend
 **Python 3.10** for the best compatibility with plugins such as SAM autolabeling.
 
 ??? tip "Recommended: install into a virtual environment"

@@ -115,6 +115,20 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
     });
 
+    it.each([
+        ['bounding-box', AnnotationType.OBJECT_DETECTION],
+        ['brush', AnnotationType.SEGMENTATION_MASK],
+        ['slic', AnnotationType.SEGMENTATION_MASK]
+    ] as const)('sets the annotation type of an active %s tool on mount', (status, type) => {
+        mockSampleDetailsToolbarContext.status = status;
+        mockAnnotationLabelContext.lastCreatedAnnotationId = 'id-2';
+
+        render(SampleDetailsToolbar);
+
+        expect(mockAnnotationLabelContext.annotationType).toBe(type);
+        expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
+    });
+
     it('activates bounding box tool and sets annotation type', async () => {
         mockAnnotationLabelContext.annotationLabel = 'car';
         const { getByLabelText } = render(SampleDetailsToolbar);
@@ -223,6 +237,22 @@ describe('SampleDetailsToolbar', () => {
         expect(view.getByRole('tooltip')).toHaveTextContent('Sends the image to fal.ai.');
     });
 
+    it('activates the find all instances tool', async () => {
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Find all instances'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('find-instances');
+    });
+
+    it('tells that find all instances sends the image to fal.ai', async () => {
+        const view = render(SampleDetailsToolbar);
+
+        await fireEvent.pointerEnter(view.getByLabelText('Find all instances').parentElement!);
+
+        expect(view.getByRole('tooltip')).toHaveTextContent('Sends the image to fal.ai.');
+    });
+
     it('resets the annotation type of the previous tool in smart select', () => {
         mockSampleDetailsToolbarContext.status = 'smart-select';
         mockAnnotationLabelContext.annotationType = AnnotationType.OBJECT_DETECTION;
@@ -232,20 +262,12 @@ describe('SampleDetailsToolbar', () => {
         expect(mockAnnotationLabelContext.annotationType).toBeNull();
     });
 
-    it('keeps smart select inactive and shows why while it is unavailable', async () => {
+    it('hides the assisted labeling tools while they are unavailable', () => {
         assistedLabelingStatus.disabledReason = 'Set the FAL_KEY environment variable.';
         const view = render(SampleDetailsToolbar);
 
-        const button = view.getByLabelText('Smart select');
-        await fireEvent.pointerEnter(button.parentElement!);
-        await fireEvent.click(button);
-
-        expect(view.getByRole('tooltip')).toHaveTextContent(
-            'Set the FAL_KEY environment variable.'
-        );
-        expect(view.getByRole('tooltip')).not.toHaveTextContent('fal.ai');
-        expect(button).toBeDisabled();
-        expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+        expect(view.queryByLabelText('Smart select')).not.toBeInTheDocument();
+        expect(view.queryByLabelText('Find all instances')).not.toBeInTheDocument();
     });
 
     it('activates drag tool', async () => {

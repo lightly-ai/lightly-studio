@@ -21,6 +21,7 @@ from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetri
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
+from lightly_studio.resolvers import embedding_plot_resolver, evaluation_run_resolver
 from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
@@ -38,6 +39,8 @@ def delete_annotations_by_ids(
     delete_samples: bool = True,
 ) -> int:
     """Delete annotations, their samples and dependent rows.
+
+    Also marks the evaluation runs of the annotation collections stale.
 
     The delete runs in three phases with a commit after each phase. It is not atomic:
     a failure can leave a partial delete. Callers must validate the IDs before the call.
@@ -66,6 +69,11 @@ def delete_annotations_by_ids(
             session=session, parent_sample_ids=existing_annotation_ids
         )
         sample_ids = existing_annotation_ids + caption_sample_ids
+    annotation_collection_ids = _get_collection_ids(
+        session=session, sample_ids=existing_annotation_ids
+    )
+
+    embedding_plot_resolver.mark_dirty(session=session, sample_ids=sample_ids)
 
     # DuckDB rejects the delete of a parent row in the transaction that deleted its child
     # rows, so each foreign key level is committed separately. PostgreSQL does not need this,
@@ -96,6 +104,10 @@ def delete_annotations_by_ids(
     _delete_annotation_base_with_retry(session=session, annotation_ids=existing_annotation_ids)
     _delete_by_sample_ids(session=session, tables=(SampleTable,), sample_ids=sample_ids)
     session.commit()
+    for annotation_collection_id in annotation_collection_ids:
+        evaluation_run_resolver.mark_stale_by_collection_id(
+            session=session, collection_id=annotation_collection_id
+        )
     return len(existing_annotation_ids)
 
 
@@ -110,6 +122,19 @@ def _get_parent_sample_ids(session: Session, annotation_ids: Sequence[UUID]) -> 
         ).all()
         parent_sample_id_by_annotation_id.update(dict(rows))
     return parent_sample_id_by_annotation_id
+
+
+def _get_collection_ids(session: Session, sample_ids: Sequence[UUID]) -> set[UUID]:
+    collection_ids: set[UUID] = set()
+    for batch in batching.batched(items=sample_ids):
+        collection_ids.update(
+            session.exec(
+                select(SampleTable.collection_id)
+                .where(col(SampleTable.sample_id).in_(batch))
+                .distinct()
+            ).all()
+        )
+    return collection_ids
 
 
 def _get_caption_sample_ids(session: Session, parent_sample_ids: Sequence[UUID]) -> list[UUID]:

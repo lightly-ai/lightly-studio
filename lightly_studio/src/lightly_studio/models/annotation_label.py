@@ -30,6 +30,12 @@ class AnnotationLabelView(AnnotationLabelBase):
     annotation_label_id: UUID
 
 
+class AnnotationLabelWithCountView(AnnotationLabelView):
+    """Model used when retrieving an annotation label with its number of annotations."""
+
+    annotation_count: int
+
+
 class AnnotationLabelTable(AnnotationLabelBase, table=True):
     """This class defines the AnnotationLabel model."""
 

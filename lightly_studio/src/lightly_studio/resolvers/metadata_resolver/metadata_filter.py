@@ -1,7 +1,8 @@
 """Generic metadata filtering utilities."""
 
 import operator
-from typing import Any, Callable, Literal, Protocol, TypeVar
+from collections.abc import Callable
+from typing import Any, Literal, Protocol, TypeVar
 
 import pydantic
 import sqlalchemy

@@ -225,4 +225,12 @@ describe('isSourceGroupInitiallyOpen', () => {
             false
         );
     });
+
+    it('follows a stored collapse, but stays open for the just-created annotation', () => {
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(), null, false)).toBe(false);
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(['a1', 'a2']), null, true)).toBe(
+            true
+        );
+        expect(isSourceGroupInitiallyOpen(annotations, new Set(), 'a2', false)).toBe(true);
+    });
 });

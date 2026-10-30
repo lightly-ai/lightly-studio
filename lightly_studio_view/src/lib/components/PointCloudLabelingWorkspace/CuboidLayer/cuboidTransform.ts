@@ -1,6 +1,7 @@
 import type { Object3D } from 'three';
 import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
 import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
+import { MIN_CUBOID_SIZE } from './CuboidFaceResize/cuboidFaceResize';
 
 export function captureTransformSnapshot(obj: Object3D) {
     return {
@@ -24,6 +25,20 @@ export const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'ro
         translate: 'translate',
         rotate: 'rotate'
     };
+
+export function getCuboidGizmoMode(tool: Domain.WorkspaceTool) {
+    return GIZMO_MODES[tool];
+}
+
+export function getCuboidGizmoOptions(mode: string, cameraMode: Domain.CameraMode) {
+    const constrained = mode === 'rotate' && cameraMode !== 'perspective';
+    return {
+        space: constrained ? ('world' as const) : ('local' as const),
+        showX: !constrained || cameraMode === 'side',
+        showY: !constrained || cameraMode === 'front',
+        showZ: !constrained || cameraMode === 'top'
+    };
+}
 
 type CuboidTransformPayload = Parameters<
     ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform']
@@ -50,9 +65,9 @@ export function buildCuboidTransformPayload(
     const rotation: Domain.Quaternion = [q.x, q.y, q.z, q.w];
     const baseSize = currentSize ?? annotation.size;
     const size: Domain.Vector3 = [
-        baseSize[0] * obj.scale.x,
-        baseSize[1] * obj.scale.y,
-        baseSize[2] * obj.scale.z
+        Math.max(baseSize[0] * obj.scale.x, MIN_CUBOID_SIZE),
+        Math.max(baseSize[1] * obj.scale.y, MIN_CUBOID_SIZE),
+        Math.max(baseSize[2] * obj.scale.z, MIN_CUBOID_SIZE)
     ];
     obj.scale.set(1, 1, 1);
     return { annotationId: annotation.id, frameId: annotation.frameId, center, rotation, size };

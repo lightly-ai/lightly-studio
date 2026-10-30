@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import logging
+import tempfile
 from collections.abc import Iterable, Sequence
 from itertools import islice
+from pathlib import Path
 from uuid import UUID
 
 from typing_extensions import Self
@@ -27,9 +29,15 @@ from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_mcap_sequences
+from lightly_studio.errors import ExportError
+from lightly_studio.export import mcap_scene_update_export
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.recording import RecordingFormat
-from lightly_studio.resolvers import mcap_group_sequence_resolver, recording_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    mcap_group_sequence_resolver,
+    recording_resolver,
+)
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -313,6 +321,66 @@ class McapDataset:
             dataset=self, path=path, topic=topic, suffix=suffix, annotation_source=annotation_source
         )
 
+    def export_scene_update_mcaps(  # noqa: PLR0913
+        self,
+        output_dir: str,
+        sequences: Sequence[McapSequence] | None = None,
+        annotation_source: str = add_labels.DEFAULT_ANNOTATION_SOURCE,
+        target_frame_id: str | None = None,
+        topic: str = annotation_mcap.DEFAULT_SCENE_UPDATE_TOPIC,
+        suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+    ) -> list[str]:
+        """Export cuboids as Foxglove SceneUpdate annotation MCAPs, one per sequence.
+
+        Each file is named after the sequence's recording, with `suffix` inserted before
+        `.mcap`. Existing files are never overwritten.
+
+        Args:
+            output_dir: Folder to write the files to, or an object-storage URI.
+            sequences: The sequences to export. The default is all sequences of the dataset.
+            annotation_source: Name of the annotation source to export the cuboids of.
+            target_frame_id: The coordinate frame to map every cuboid into. The default is
+                the frame that most of the exported cuboids are stored in. Without cuboids,
+                it is the first reference frame that all exported recordings share.
+            topic: The topic to write the SceneUpdate messages on.
+            suffix: Inserted before `.mcap`. The default is `_labeled`.
+
+        Returns:
+            The URIs of the written files, in the order of the exported sequences.
+
+        Raises:
+            ValueError: If the dataset has no annotation source of that name.
+            ExportError: If a destination file exists, two sequences map to the same file
+                name, or no `target_frame_id` is given and the recordings share no frame.
+
+        Example:
+            ```python
+            import lightly_studio as ls
+
+            dataset = ls.McapDataset.load(name="perception")
+            uris = dataset.export_scene_update_mcaps(output_dir="s3://bucket/labels")
+            ```
+        """
+        exported = self.get_sequences() if sequences is None else list(sequences)
+        sequence_ids = [sequence.sample_id for sequence in exported]
+        annotation_collection = self._annotation_collection(annotation_source=annotation_source)
+        if target_frame_id is None:
+            target_frame_id = self._default_target_frame_id(
+                sequence_ids=sequence_ids,
+                annotation_collection_id=annotation_collection.collection_id,
+            )
+        with tempfile.TemporaryDirectory() as local_dir:
+            local_paths = mcap_scene_update_export.write_annotation_files(
+                session=self._session,
+                sequence_ids=sequence_ids,
+                annotation_collection_id=annotation_collection.collection_id,
+                target_frame_id=target_frame_id,
+                local_dir=Path(local_dir),
+                topic=topic,
+                suffix=suffix,
+            )
+            return mcap_scene_update_export.upload(local_paths=local_paths, output_dir=output_dir)
+
     def get_sequences(self) -> list[McapSequence]:
         """Get the sequences of the dataset, one per recording that was indexed.
 
@@ -410,6 +478,46 @@ class McapDataset:
             f"Dataset '{self.name}' has no group collection. It was not created with "
             "`McapDataset.create`."
         )
+
+    def _annotation_collection(self, annotation_source: str) -> CollectionTable:
+        """Return the annotation set of that source name.
+
+        Raises:
+            ValueError: If the dataset has no annotation source of that name.
+        """
+        collections = collection_resolver.get_annotation_collections(
+            session=self._session, parent_collection_id=self.group_dataset.collection_id
+        )
+        for collection in collections:
+            if collection.name == annotation_source:
+                return collection
+        available = _format_names(names=sorted(collection.name for collection in collections))
+        raise ValueError(
+            f"Annotation source '{annotation_source}' not found. Available: {available}."
+        )
+
+    def _default_target_frame_id(
+        self, sequence_ids: Sequence[UUID], annotation_collection_id: UUID
+    ) -> str:
+        """Return the first frame of `export_frame_ids` for the sequences.
+
+        That is the frame most cuboids of the annotation source are stored in or,
+        without such cuboids, the first reference frame that the recordings of the
+        sequences share.
+
+        Raises:
+            ExportError: If the recordings share no coordinate frame.
+        """
+        frame_ids = mcap_scene_update_export.export_frame_ids(
+            session=self._session,
+            sequence_ids=sequence_ids,
+            annotation_collection_id=annotation_collection_id,
+        )
+        if not frame_ids:
+            raise ExportError(
+                "The recordings share no coordinate frame. Pass `target_frame_id` explicitly."
+            )
+        return frame_ids[0]
 
 
 def _recording_paths(discovered_paths: Iterable[str], limit: int | None) -> list[str]:

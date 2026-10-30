@@ -6,10 +6,8 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useSettings } from '$lib/hooks/useSettings';
     import { onMount, untrack, type Snippet } from 'svelte';
 
-    import { get } from 'svelte/store';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
@@ -73,11 +71,11 @@
         lastAnnotationBrushSize,
         imageBrightness,
         imageContrast,
+        maskOpacity,
         toggleSampleAnnotationCropSelection
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
-    const { settingsStore } = useSettings();
     const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations.
@@ -107,8 +105,7 @@
         if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
 
         switch (event.key) {
-            // Check for escape key
-            case get(settingsStore).key_go_back:
+            case 'Escape':
                 if ($isEditingMode) {
                     if (
                         annotationLabelContext.annotationType ||
@@ -252,6 +249,7 @@
                 <ImageAdjustments
                     bind:brightness={$imageBrightness}
                     bind:contrast={$imageContrast}
+                    bind:maskOpacity={$maskOpacity}
                 />
             {/if}
         </div>

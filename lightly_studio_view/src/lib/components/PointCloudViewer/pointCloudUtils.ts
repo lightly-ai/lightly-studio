@@ -48,8 +48,8 @@ export function buildColorBuffer(params: BuildColorBufferParams): void {
     const { colorMode, colors, count, pointColors } = params;
 
     if (colorMode === 'rgb' && pointColors) {
-        colors.fill(NEUTRAL_GRAY, 0, count * 3);
         colors.set(pointColors.subarray(0, count * 3), 0);
+        colors.fill(NEUTRAL_GRAY, Math.min(pointColors.length, count * 3), count * 3);
         return;
     }
 
@@ -74,17 +74,22 @@ function getGradientMetrics(mode: ColorMode): GradientMetric[] {
 /** Color points by one or more normalized spatial metrics. */
 function fillGradient(params: BuildColorBufferParams, metrics: GradientMetric[]): void {
     const { count, colors } = params;
-    const normalizedValues = metrics.map((metric) => {
+    const gradients = metrics.map((metric) => {
         const values = getMetricValues(params, metric);
         const [minVal, maxVal] =
             metric === 'intensity' && params.intensityRange
                 ? params.intensityRange
                 : computeRange((i) => values[i], count);
         const invRange = maxVal === minVal ? 0 : 1 / (maxVal - minVal);
-        return values.map((value) => Math.max(0, Math.min(1, (value - minVal) * invRange)));
+        return { values, minVal, invRange };
     });
     for (let i = 0; i < count; i++) {
-        const t = normalizedValues.reduce((sum, values) => sum + values[i], 0) / metrics.length;
+        let sum = 0;
+        for (let metric = 0; metric < gradients.length; metric++) {
+            const { values, minVal, invRange } = gradients[metric];
+            sum += Math.fround(Math.max(0, Math.min(1, (values[i] - minVal) * invRange)));
+        }
+        const t = sum / gradients.length;
         turboInto(metrics[0] === 'intensity' ? Math.sqrt(t) : t, colors, i * 3);
     }
 }
