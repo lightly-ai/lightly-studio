@@ -457,6 +457,25 @@ class TestDataset:
                 annotation_type=AnnotationType.OBJECT_DETECTION,
             )
 
+    def test_add_samples_from_coco__annotations_json_parent_is_file(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        (tmp_path / "file").write_text("")
+        annotations_path = tmp_path / "file" / "annotations.json"
+        images_path = tmp_path / "images"
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(
+            FileNotFoundError, match=f"COCO annotations json file not found: '{annotations_path}'"
+        ):
+            dataset.add_samples_from_coco(
+                annotations_json=annotations_path,
+                images_path=images_path,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            )
+
     def test_add_samples_from_coco__annotations_json_access_error(
         self,
         patch_collection: None,  # noqa: ARG002

@@ -920,7 +920,8 @@ def _is_file(fs: fsspec.AbstractFileSystem, path: str) -> bool:
     """Return True if the path is a file, False if it is missing or not a file."""
     try:
         return bool(fs.info(path)["type"] == "file")
-    except FileNotFoundError:
+    # `NotADirectoryError` is raised when a parent of the local path is a file
+    except (FileNotFoundError, NotADirectoryError):
         return False
 
 
