@@ -154,6 +154,7 @@ def write_mcap(  # noqa: PLR0913
     base_link_poses: Sequence[tuple[int, tuple[float, float, float]]] = (),
     tf_stamp_offset_ns: int = 0,
     video_access_units: Sequence[bytes] | None = None,
+    metadata_records: Sequence[tuple[str, dict[str, str]]] = (),
 ) -> Path:
     """Writes an indexed MCAP file with a camera, a lidar, and static transforms.
 
@@ -171,11 +172,14 @@ def write_mcap(  # noqa: PLR0913
         video_access_units: One decodable H.264 access unit per `VIDEO_LOG_TIMES_NS`
             entry, e.g. from `h264_access_units`. `None` writes H.265 placeholders
             that cannot be decoded.
+        metadata_records: `(name, data)` pairs to add as Metadata records, in order.
 
     Returns:
         The path of the written file.
     """
     writer = Writer(output=str(path))
+    for name, data in metadata_records:
+        writer.add_metadata(name=name, data=data)
     video_schema = writer.register_msgdef(
         datatype="foxglove_msgs/msg/CompressedVideo", msgdef_text=_COMPRESSED_VIDEO_MSGDEF
     )

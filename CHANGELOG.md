@@ -20,9 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
 - Accumulate point clouds from neighboring ticks in the point-cloud 3D scene. Set how many ticks to include in the scene settings.
 - Color the point cloud from the camera images with the new "Camera RGB" color mode in the point-cloud workspace.
-- Introduce rgb projection from cameras onto the point cloud.
-
-
+- Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files from the export dialog, as a download or to S3. In the point-cloud workspace, the export covers the open recording.
+- Python SDK: Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate `_labeled.mcap` files with `McapDataset.export_annotations_to_folder`.
 
 ### Changed
 
@@ -39,6 +38,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed skipped cells and leftover pixels when labeling with superpixels.
 - Brush, eraser, and box drawing previews now use the custom color of the label.
 - Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
 - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.

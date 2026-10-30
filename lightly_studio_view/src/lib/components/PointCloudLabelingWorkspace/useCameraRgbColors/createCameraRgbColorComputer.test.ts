@@ -20,12 +20,12 @@ function makePair(): CameraPair {
 }
 
 function makeMockWorker() {
-    const posted: { id: number }[] = [];
+    const posted: { id: number; cameras: { blob: Blob }[] }[] = [];
     const worker = {
         onmessage: null as ((event: MessageEvent) => void) | null,
         onerror: null as ((event: ErrorEvent) => void) | null,
         onmessageerror: null as ((event: MessageEvent) => void) | null,
-        postMessage: (message: { id: number }) => posted.push(message),
+        postMessage: (message: { id: number; cameras: { blob: Blob }[] }) => posted.push(message),
         terminate: vi.fn()
     };
     return {
@@ -33,6 +33,12 @@ function makeMockWorker() {
         posted,
         respond(id: number, colors: Float32Array) {
             worker.onmessage?.({ data: { id, colors } } as MessageEvent);
+        },
+        respondWithError(id: number) {
+            worker.onmessage?.({ data: { id, error: 'corrupt image' } } as MessageEvent);
+        },
+        cancel(id: number) {
+            worker.onmessage?.({ data: { id, cancelled: true } } as MessageEvent);
         },
         fail() {
             worker.onerror?.({} as ErrorEvent);
@@ -43,16 +49,12 @@ function makeMockWorker() {
     };
 }
 
-const decode = async (): Promise<ImageData> =>
-    ({ width: 2, height: 2, data: new Uint8ClampedArray(16) }) as ImageData;
-
-function setup(decodeOverride: (blob: Blob) => Promise<ImageData> = decode) {
+function setup() {
     const onColors = vi.fn<(colors: Float32Array | null) => void>();
     const mock = makeMockWorker();
     const computer = createCameraRgbColorComputer({
         onColors,
-        createWorker: () => mock.worker,
-        decode: decodeOverride
+        createWorker: () => mock.worker
     });
     return { onColors, computer, mock };
 }
@@ -66,29 +68,43 @@ describe('createCameraRgbColorComputer', () => {
         expect(onColors).toHaveBeenNthCalledWith(2, null);
     });
 
-    it('shows the neutral fallback, then applies the worker result for the current batch', async () => {
+    it('stops in-flight camera work when camera colors are disabled', () => {
         const { onColors, computer, mock } = setup();
         const batch = makeBatch(1);
-        computer.request(batch, [makePair()]);
+        const pair = makePair();
+        computer.request(batch, [pair]);
+        const requestId = mock.posted[0].id;
+
+        computer.request(undefined, []);
+        expect(mock.terminate).toHaveBeenCalledOnce();
+        mock.respond(requestId, new Float32Array([1, 0, 0]));
         expect(onColors).toHaveBeenLastCalledWith(null);
 
-        await flush();
+        computer.request(batch, [pair]);
+        expect(mock.posted).toHaveLength(2);
+    });
+
+    it('sends encoded images to the worker and applies its result for the current batch', () => {
+        const { onColors, computer, mock } = setup();
+        const batch = makeBatch(1);
+        const pair = makePair();
+        computer.request(batch, [pair]);
+        expect(onColors).toHaveBeenLastCalledWith(null);
         expect(mock.posted).toHaveLength(1);
+        expect(mock.posted[0].cameras[0].blob).toBe(pair.blob);
 
         const colors = new Float32Array([1, 0, 0]);
         mock.respond(mock.posted[0].id, colors);
         expect(onColors).toHaveBeenLastCalledWith(colors);
     });
 
-    it('drops a request whose batch is no longer current before it reaches the worker', async () => {
+    it('ignores a result for a batch that is no longer current', () => {
         const { computer, mock } = setup();
         const stale = makeBatch(1);
         const current = makeBatch(2);
         computer.request(stale, [makePair()]);
         computer.request(current, [makePair()]);
-
-        await flush();
-        expect(mock.posted).toHaveLength(1); // only the current batch is sent
+        expect(mock.posted).toHaveLength(2);
     });
 
     it('ignores a stale worker result and reuses cached colors when the batch returns', async () => {
@@ -118,6 +134,23 @@ describe('createCameraRgbColorComputer', () => {
         expect(mock.posted).toHaveLength(2);
     });
 
+    it('evicts old point colors when more batches are visited', () => {
+        const { computer, mock } = setup();
+        const pair = makePair();
+        const first = makeBatch(1);
+        const second = makeBatch(2);
+        const third = makeBatch(3);
+        for (const batch of [first, second, third]) {
+            computer.request(batch, [pair]);
+            mock.respond(mock.posted.at(-1)!.id, new Float32Array([1, 0, 0]));
+        }
+
+        computer.request(second, [pair]);
+        expect(mock.posted).toHaveLength(3);
+        computer.request(first, [pair]);
+        expect(mock.posted).toHaveLength(4);
+    });
+
     it('does not duplicate work for the same batch already in flight', async () => {
         const { computer, mock } = setup();
         const batch = makeBatch(1);
@@ -126,6 +159,16 @@ describe('createCameraRgbColorComputer', () => {
         computer.request(batch, [pair]);
         await flush();
         expect(mock.posted).toHaveLength(1);
+    });
+
+    it('retries a batch whose queued worker request was cancelled', () => {
+        const { computer, mock } = setup();
+        const batch = makeBatch(1);
+        const pair = makePair();
+        computer.request(batch, [pair]);
+        mock.cancel(mock.posted[0].id);
+        computer.request(batch, [pair]);
+        expect(mock.posted).toHaveLength(2);
     });
 
     it('ignores a worker result whose cameras are no longer current for the same batch', async () => {
@@ -147,26 +190,20 @@ describe('createCameraRgbColorComputer', () => {
         expect(onColors).toHaveBeenLastCalledWith(freshColors);
     });
 
-    it('recomputes a batch after a decode failure instead of stranding it', async () => {
-        let failNext = true;
-        const flakyDecode = async (): Promise<ImageData> => {
-            if (failNext) throw new Error('corrupt image');
-            return { width: 2, height: 2, data: new Uint8ClampedArray(16) } as ImageData;
-        };
-        const { onColors, computer, mock } = setup(flakyDecode);
+    it('recomputes a batch after a worker decode failure instead of stranding it', () => {
+        const { onColors, computer, mock } = setup();
         const batch = makeBatch(1);
         const pair = makePair();
+        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
         computer.request(batch, [pair]);
-        await flush();
-        expect(mock.posted).toHaveLength(0); // decode failed, nothing reached the worker
+        mock.respondWithError(mock.posted[0].id);
         expect(onColors).toHaveBeenLastCalledWith(null);
 
         // The failed request must not dedupe later attempts for the same batch.
-        failNext = false;
         computer.request(batch, [pair]);
-        await flush();
-        expect(mock.posted).toHaveLength(1);
+        expect(mock.posted).toHaveLength(2);
+        consoleError.mockRestore();
     });
 
     it('replaces the worker and clears pending after a worker failure', async () => {
@@ -190,6 +227,7 @@ describe('createCameraRgbColorComputer', () => {
 
     it('terminates the worker on dispose', () => {
         const { computer, mock } = setup();
+        computer.request(makeBatch(1), [makePair()]);
         computer.dispose();
         expect(mock.terminate).toHaveBeenCalledOnce();
     });
