@@ -231,7 +231,7 @@ describe('groupAnnotationsBySource — ordering', () => {
 });
 
 describe('buildAnnotationForest', () => {
-    it('returns a single flat node for a root with no children', () => {
+    it('wraps a childless root in the no-parent-track group', () => {
         const root = {
             ...createAnnotationFixture(),
             id: 'root',
@@ -242,9 +242,9 @@ describe('buildAnnotationForest', () => {
         const forest = buildAnnotationForest({ cuboids: [root] });
 
         expect(forest).toHaveLength(1);
-        expect(forest[0].cuboid).toBe(root);
-        expect(forest[0].children).toHaveLength(0);
-        expect(forest[0].subtreeSize).toBe(1);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[0].children[0].cuboid).toBe(root);
     });
 
     it('nests children under their parent root', () => {
@@ -304,7 +304,7 @@ describe('buildAnnotationForest', () => {
         expect(forest[0].children[0].children[0].subtreeSize).toBe(1);
     });
 
-    it('handles roots with null trackNumber as flat nodes', () => {
+    it('wraps a root with null trackNumber in the no-parent-track group', () => {
         const nullTrack = {
             ...createAnnotationFixture(),
             id: 'null-track',
@@ -315,11 +315,12 @@ describe('buildAnnotationForest', () => {
         const forest = buildAnnotationForest({ cuboids: [nullTrack] });
 
         expect(forest).toHaveLength(1);
-        expect(forest[0].children).toHaveLength(0);
-        expect(forest[0].subtreeSize).toBe(1);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[0].children[0].cuboid).toBe(nullTrack);
     });
 
-    it('returns multiple top-level nodes for separate root groups', () => {
+    it('places parent root and childless root in separate groups', () => {
         const root1 = {
             ...createAnnotationFixture(),
             id: 'root1',
@@ -343,10 +344,12 @@ describe('buildAnnotationForest', () => {
 
         expect(forest).toHaveLength(2);
         expect(forest[0].cuboid).toBe(root1);
-        expect(forest[1].cuboid).toBe(root2);
+        expect(forest[0].children[0].cuboid).toBe(child1);
+        expect(forest[1].cuboid).toBeNull();
+        expect(forest[1].children[0].cuboid).toBe(root2);
     });
 
-    it('appends no-track group after standalone roots', () => {
+    it('places absent-parent orphan and standalone root in separate groups', () => {
         const root = {
             ...createAnnotationFixture(),
             id: 'root',
@@ -357,16 +360,17 @@ describe('buildAnnotationForest', () => {
             ...createAnnotationFixture(),
             id: 'orphan',
             trackNumber: 5,
-            parentTrackNumber: 99
+            parentTrackNumber: 99,
+            parentTrackClassName: 'truck'
         };
 
         const forest = buildAnnotationForest({ cuboids: [root, orphan] });
 
         expect(forest).toHaveLength(2);
-        expect(forest[0].cuboid).toBe(root);
+        expect(forest[0].cuboid).toBeNull();
+        expect(forest[0].children[0].cuboid).toBe(orphan);
         expect(forest[1].cuboid).toBeNull();
-        expect(forest[1].children).toHaveLength(1);
-        expect(forest[1].children[0].cuboid).toBe(orphan);
+        expect(forest[1].children[0].cuboid).toBe(root);
     });
 
     it('groups orphan with parentTrackClassName under absent parent node', () => {
@@ -411,50 +415,6 @@ describe('buildAnnotationForest', () => {
         expect(forest[0].subtreeSize).toBe(2);
     });
 
-    it('groups multiple true orphans under a single no-track node', () => {
-        const orphanA = {
-            ...createAnnotationFixture(),
-            id: 'orphan-a',
-            trackNumber: 5,
-            parentTrackNumber: 99,
-            parentTrackClassName: null
-        };
-        const orphanB = {
-            ...createAnnotationFixture(),
-            id: 'orphan-b',
-            trackNumber: 6,
-            parentTrackNumber: 88,
-            parentTrackClassName: null
-        };
-
-        const forest = buildAnnotationForest({ cuboids: [orphanA, orphanB] });
-
-        expect(forest).toHaveLength(1);
-        expect(forest[0].cuboid).toBeNull();
-        expect(forest[0].children).toHaveLength(2);
-        expect(forest[0].children[0].cuboid).toBe(orphanA);
-        expect(forest[0].children[1].cuboid).toBe(orphanB);
-        expect(forest[0].subtreeSize).toBe(2);
-    });
-
-    it('groups true orphans without parentTrackClassName under a no-track node', () => {
-        const orphan = {
-            ...createAnnotationFixture(),
-            id: 'orphan',
-            trackNumber: 5,
-            parentTrackNumber: 99,
-            parentTrackClassName: null
-        };
-
-        const forest = buildAnnotationForest({ cuboids: [orphan] });
-
-        expect(forest).toHaveLength(1);
-        expect(forest[0].cuboid).toBeNull();
-        expect(forest[0].children).toHaveLength(1);
-        expect(forest[0].children[0].cuboid).toBe(orphan);
-        expect(forest[0].subtreeSize).toBe(1);
-    });
-
     it('handles multi-level nesting with absent intermediate', () => {
         const truck = {
             ...createAnnotationFixture(),
@@ -476,10 +436,12 @@ describe('buildAnnotationForest', () => {
         expect(forest[0].cuboid).toBeNull();
         expect(forest[0].children).toHaveLength(1);
         expect(forest[0].children[0].cuboid).toBe(window);
-        expect(forest[1].cuboid).toBe(truck);
+        expect(forest[1].cuboid).toBeNull();
+        expect(forest[1].children).toHaveLength(1);
+        expect(forest[1].children[0].cuboid).toBe(truck);
     });
 
-    it('places absent parent groups after present parents and before standalone roots', () => {
+    it('places absent parent groups after present parents, standalone roots in no-parent-track group', () => {
         const truck = {
             ...createAnnotationFixture(),
             id: 'truck',
@@ -515,7 +477,8 @@ describe('buildAnnotationForest', () => {
         expect(forest[0].children).toHaveLength(1);
         expect(forest[1].cuboid).toBeNull();
         expect(forest[1].children[0].cuboid).toBe(absentChild);
-        expect(forest[2].cuboid).toBe(standalone);
+        expect(forest[2].cuboid).toBeNull();
+        expect(forest[2].children[0].cuboid).toBe(standalone);
     });
 });
 

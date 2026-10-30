@@ -111,6 +111,26 @@
         parentTrackClassName: 'truck'
     });
 
+    // Cuboids with a track but no parent track → "No parent track" group
+    const noParentTrackCuboid1 = createCuboidAnnotation({
+        ...base,
+        id: 'no-parent-track-0',
+        annotationClassId: 'cabin',
+        annotationSourceId: 'ground-truth',
+        trackNumber: 20,
+        parentTrackNumber: null,
+        parentTrackClassName: null
+    });
+    const noParentTrackCuboid2 = createCuboidAnnotation({
+        ...base,
+        id: 'no-parent-track-1',
+        annotationClassId: 'trailer',
+        annotationSourceId: 'ground-truth',
+        trackNumber: 21,
+        parentTrackNumber: null,
+        parentTrackClassName: null
+    });
+
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/PointCloudAnnotationList',
         component: PointCloudAnnotationList,
@@ -137,6 +157,14 @@
         cuboids: [gtCuboid1, gtCuboid2, predCuboid],
         annotationSources: sources,
         selectedCuboidId: 'annotation-2'
+    }}
+/>
+
+<Story
+    name="No parent track"
+    args={{
+        cuboids: [noParentTrackCuboid1, noParentTrackCuboid2],
+        annotationSources: [sources[0]]
     }}
 />
 

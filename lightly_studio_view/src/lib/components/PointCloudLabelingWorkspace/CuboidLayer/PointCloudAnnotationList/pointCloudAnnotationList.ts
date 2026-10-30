@@ -5,7 +5,7 @@ import type {
 } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 export const UNKNOWN_SOURCE_NAME = 'Unknown source';
-export const NO_TRACK_GROUP_LABEL = 'No track';
+export const NO_PARENT_TRACK_GROUP_LABEL = 'No parent track';
 
 interface AnnotationGroup {
     readonly sourceId: string;
@@ -176,34 +176,23 @@ interface GroupOrphansUnderAbsentParentsParams {
     buildNode: (cuboid: CuboidAnnotation) => AnnotationTreeNode;
 }
 
-interface GroupOrphansUnderAbsentParentsReturn {
-    absentParentGroups: AnnotationTreeNode[];
-    trueOrphans: CuboidAnnotation[];
-}
-
 /**
  * Groups orphans whose parent is absent from the frame into virtual parent nodes.
  *
- * Orphans with a `parentTrackClassName` are grouped by `parentTrackNumber` under
- * a node with `cuboid: null`. Orphans without a class name are returned separately.
+ * Orphans are grouped by `parentTrackNumber` under a node with `cuboid: null`.
  */
 function groupOrphansUnderAbsentParents({
     orphans,
     buildNode
-}: GroupOrphansUnderAbsentParentsParams): GroupOrphansUnderAbsentParentsReturn {
-    const trueOrphans: CuboidAnnotation[] = [];
+}: GroupOrphansUnderAbsentParentsParams): AnnotationTreeNode[] {
     const orphansByParentTrack = new Map<number, CuboidAnnotation[]>();
 
     for (const orphan of orphans) {
-        if (orphan.parentTrackClassName) {
-            const group = orphansByParentTrack.get(orphan.parentTrackNumber!);
-            if (group) {
-                group.push(orphan);
-            } else {
-                orphansByParentTrack.set(orphan.parentTrackNumber!, [orphan]);
-            }
+        const group = orphansByParentTrack.get(orphan.parentTrackNumber!);
+        if (group) {
+            group.push(orphan);
         } else {
-            trueOrphans.push(orphan);
+            orphansByParentTrack.set(orphan.parentTrackNumber!, [orphan]);
         }
     }
 
@@ -212,17 +201,16 @@ function groupOrphansUnderAbsentParents({
         absentParentGroups.push(buildVirtualGroupNode(groupCuboids.map(buildNode)));
     }
 
-    return { absentParentGroups, trueOrphans };
+    return absentParentGroups;
 }
 
 /**
  * Converts a flat, pre-sorted list of cuboids into a forest of annotation trees.
  *
- * Roots (parentTrackNumber === null) become top-level nodes.
- * Cuboids whose parentTrackNumber matches a known trackNumber become children.
- * Orphans whose parent is absent but have a parentTrackClassName are grouped
- * under a virtual parent node (cuboid: null). True orphans with no class name
- * remain flat top-level nodes.
+ * Parent roots (with children) become top-level tree nodes.
+ * Orphans whose parent is absent from the frame are grouped under a virtual
+ * parent node (cuboid: null). Standalone roots (no children) are collected
+ * into a "No parent track" group at the end.
  */
 export function buildAnnotationForest({
     cuboids
@@ -279,20 +267,19 @@ export function buildAnnotationForest({
         }
     }
 
-    const { absentParentGroups, trueOrphans } = groupOrphansUnderAbsentParents({
+    const absentParentGroups = groupOrphansUnderAbsentParents({
         orphans,
         buildNode
     });
 
-    const noTrackChildren = trueOrphans.map(buildNode);
-    const noTrackGroup: AnnotationTreeNode[] =
-        noTrackChildren.length > 0 ? [buildVirtualGroupNode(noTrackChildren)] : [];
+    const noParentTrackChildren = standaloneRoots.map(buildNode);
+    const noParentTrackGroup: AnnotationTreeNode[] =
+        noParentTrackChildren.length > 0 ? [buildVirtualGroupNode(noParentTrackChildren)] : [];
 
     return [
         ...parentRoots.map(buildNode),
         ...absentParentGroups,
-        ...standaloneRoots.map(buildNode),
-        ...noTrackGroup
+        ...noParentTrackGroup
     ];
 }
 
