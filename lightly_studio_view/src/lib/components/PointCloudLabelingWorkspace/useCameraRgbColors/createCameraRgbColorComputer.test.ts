@@ -68,6 +68,22 @@ describe('createCameraRgbColorComputer', () => {
         expect(onColors).toHaveBeenNthCalledWith(2, null);
     });
 
+    it('stops in-flight camera work when camera colors are disabled', () => {
+        const { onColors, computer, mock } = setup();
+        const batch = makeBatch(1);
+        const pair = makePair();
+        computer.request(batch, [pair]);
+        const requestId = mock.posted[0].id;
+
+        computer.request(undefined, []);
+        expect(mock.terminate).toHaveBeenCalledOnce();
+        mock.respond(requestId, new Float32Array([1, 0, 0]));
+        expect(onColors).toHaveBeenLastCalledWith(null);
+
+        computer.request(batch, [pair]);
+        expect(mock.posted).toHaveLength(2);
+    });
+
     it('sends encoded images to the worker and applies its result for the current batch', () => {
         const { onColors, computer, mock } = setup();
         const batch = makeBatch(1);

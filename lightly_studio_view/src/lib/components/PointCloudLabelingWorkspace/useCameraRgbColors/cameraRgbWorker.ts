@@ -49,6 +49,11 @@ async function processQueue(): Promise<void> {
         queued = undefined;
         try {
             const decoded: CameraData[] = await Promise.all(cameras.map(decodeCamera));
+            if (queued) {
+                const result: WorkerOutput = { id, cancelled: true };
+                (self as unknown as Worker).postMessage(result);
+                continue;
+            }
             const colors = computeCameraRgbColors(positions, count, decoded);
             const result: WorkerOutput = { id, colors };
             (self as unknown as Worker).postMessage(result, [colors.buffer]);

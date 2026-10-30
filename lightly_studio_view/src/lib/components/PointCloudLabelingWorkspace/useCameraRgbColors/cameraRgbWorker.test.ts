@@ -113,5 +113,6 @@ describe('camera RGB worker', () => {
         finishDecode?.(bitmap);
         await vi.waitFor(() => expect(postMessage).toHaveBeenCalledTimes(3));
         expect(postMessage.mock.calls.map(([result]) => result.id)).toEqual([2, 1, 3]);
+        expect(postMessage).toHaveBeenCalledWith({ id: 1, cancelled: true });
     });
 });

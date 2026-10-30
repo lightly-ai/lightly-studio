@@ -119,6 +119,9 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
         if (!batch || cameraPairs.length === 0) {
             latestBatch = undefined;
             latestSignature = undefined;
+            pending.clear();
+            worker?.terminate();
+            worker = undefined;
             onColors(null);
             return;
         }
