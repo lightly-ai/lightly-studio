@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import json
 import re
+import ssl
 from pathlib import Path
 from typing import Any
 
+import fsspec
 import pytest
+from fsspec.spec import AbstractFileSystem
 from labelformat.types import ParseError
 from PIL import Image
 from pytest_mock import MockerFixture
@@ -451,6 +454,27 @@ class TestDataset:
             dataset.add_samples_from_coco(
                 annotations_json=annotations_path,
                 images_path=images_path,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+            )
+
+    def test_add_samples_from_coco__annotations_json_access_error(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        # The base `isfile` returns False for every error, as in s3fs. A TLS error
+        # must not become a "file not found" error.
+        fs = AbstractFileSystem()
+        mocker.patch.object(
+            fs, "info", side_effect=ssl.SSLCertVerificationError("CERTIFICATE_VERIFY_FAILED")
+        )
+        mocker.patch.object(fsspec.core, "url_to_fs", return_value=(fs, "bucket/annotations.json"))
+
+        dataset = ImageDataset.create(name="test_dataset")
+        with pytest.raises(ssl.SSLCertVerificationError, match="CERTIFICATE_VERIFY_FAILED"):
+            dataset.add_samples_from_coco(
+                annotations_json="s3://bucket/annotations.json",
+                images_path="s3://bucket/images",
                 annotation_type=AnnotationType.OBJECT_DETECTION,
             )
 

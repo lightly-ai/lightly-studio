@@ -551,7 +551,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
         images_path = _normalize_input_path(path=images_path)
         fs, fs_path = fsspec.core.url_to_fs(url=annotations_json)
-        if not fs.isfile(fs_path) or not str(annotations_json).endswith(".json"):
+        if not str(annotations_json).endswith(".json") or not _is_file(fs=fs, path=fs_path):
             raise FileNotFoundError(f"COCO annotations json file not found: '{annotations_json}'")
 
         label_input: COCOObjectDetectionInput | COCOInstanceSegmentationInput
@@ -914,6 +914,14 @@ def _generate_embeddings_annotations(
     embed_samples.embed_annotation_collection(
         session=session, annotation_collection_id=annotation_collection_id
     )
+
+
+def _is_file(fs: fsspec.AbstractFileSystem, path: str) -> bool:
+    """Return True if the path is a file, False if it is missing or not a file."""
+    try:
+        return bool(fs.info(path)["type"] == "file")
+    except FileNotFoundError:
+        return False
 
 
 def _log_missing_images(annotation_source: str, missing_paths: list[str]) -> None:
