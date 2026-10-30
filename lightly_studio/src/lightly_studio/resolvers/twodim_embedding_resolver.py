@@ -18,6 +18,11 @@ from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.resolvers import embedding_plot_resolver, sample_embedding_resolver
 
+# A marker is placed at the mean position of its nearest samples: 1 in 20 samples, but no more
+# than 20 samples.
+MARKER_NEIGHBOR_COUNT_MAX = 20
+MARKER_NEIGHBOR_FRACTION = 20
+
 
 def get_twodim_embeddings(
     session: Session,
@@ -143,6 +148,56 @@ def get_twodim_embeddings_from_axes(
         np.frombuffer(y_values, dtype=np.float32),
         sample_ids,
     )
+
+
+def get_marker_positions(  # noqa: PLR0913
+    session: Session,
+    collection_id: UUID,
+    embedding_model_id: UUID,
+    marker_embeddings: Sequence[Sequence[float]],
+    sample_ids: Sequence[UUID],
+    x_values: NDArray[np.float32],
+    y_values: NDArray[np.float32],
+) -> list[tuple[float, float]]:
+    """Return the plot position of each marker embedding.
+
+    N is the number of plotted samples and D is the embedding dimension. A marker is placed at
+    the mean plot position of the K samples with the nearest embeddings, with
+    K = max(1, min(MARKER_NEIGHBOR_COUNT_MAX, N // MARKER_NEIGHBOR_FRACTION)). The marker does
+    not use the projection of its own embedding: a text embedding is usually far from all image
+    embeddings, so its projection falls outside the plotted samples.
+
+    Args:
+        session: Database session.
+        collection_id: Collection identifier.
+        embedding_model_id: Embedding model identifier.
+        marker_embeddings: The marker embeddings, each of shape (D,).
+        sample_ids: The N plotted sample IDs.
+        x_values: The x coordinates of the plotted samples of shape (N,).
+        y_values: The y coordinates of the plotted samples of shape (N,).
+
+    Returns:
+        The (x, y) position of each marker, in the order of ``marker_embeddings``. An empty
+        list if there are no plotted samples.
+    """
+    if not sample_ids:
+        return []
+    neighbor_count = max(
+        1, min(MARKER_NEIGHBOR_COUNT_MAX, len(sample_ids) // MARKER_NEIGHBOR_FRACTION)
+    )
+    index_by_sample_id = {sample_id: index for index, sample_id in enumerate(sample_ids)}
+    positions: list[tuple[float, float]] = []
+    for marker_embedding in marker_embeddings:
+        nearest_sample_ids = sample_embedding_resolver.get_nearest_sample_ids(
+            session=session,
+            collection_id=collection_id,
+            embedding_model_id=embedding_model_id,
+            embedding=marker_embedding,
+            limit=neighbor_count,
+        )
+        indices = [index_by_sample_id[sample_id] for sample_id in nearest_sample_ids]
+        positions.append((float(x_values[indices].mean()), float(y_values[indices].mean())))
+    return positions
 
 
 def _calculate_2d_embeddings(

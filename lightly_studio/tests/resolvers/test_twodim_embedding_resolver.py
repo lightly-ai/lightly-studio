@@ -275,3 +275,59 @@ def test_get_twodim_embeddings_from_axes(db_session: Session) -> None:
         image_a.sample_id: (1.0, 2.0),
         image_b.sample_id: (4.0, 5.0),
     }
+
+
+def test_get_marker_positions(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=2,
+    )
+    images = helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path=f"{index}.jpg"), [1.0, index / 100]) for index in range(40)
+        ],
+    )
+    sample_ids = [image.sample_id for image in images]
+    x_values = np.arange(40, dtype=np.float32)
+    y_values = np.full(40, 5.0, dtype=np.float32)
+
+    positions = twodim_embedding_resolver.get_marker_positions(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        marker_embeddings=[[1.0, 0.0], [0.0, 1.0]],
+        sample_ids=sample_ids,
+        x_values=x_values,
+        y_values=y_values,
+    )
+
+    # 40 samples give 40 // 20 = 2 neighbors. [1, 0] is nearest to the samples 0 and 1, and
+    # [0, 1] is nearest to the samples 38 and 39.
+    assert positions == [(0.5, 5.0), (38.5, 5.0)]
+
+
+def test_get_marker_positions__no_samples(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=2,
+    )
+    empty = np.array([], dtype=np.float32)
+
+    positions = twodim_embedding_resolver.get_marker_positions(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        marker_embeddings=[[1.0, 0.0]],
+        sample_ids=[],
+        x_values=empty,
+        y_values=empty,
+    )
+
+    assert positions == []
