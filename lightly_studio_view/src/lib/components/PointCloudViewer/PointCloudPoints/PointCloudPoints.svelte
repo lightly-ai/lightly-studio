@@ -12,7 +12,7 @@
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { SceneViewState } from '../sceneViewState';
     import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
-    import { getCameraRgbColors } from '$lib/components/PointCloudLabelingWorkspace/useCameraRgbColors/cameraRgbContext.svelte';
+    import { getCameraRgbColors } from '$lib/components/PointCloudLabelingWorkspace/useCameraRgbColors';
     interface Props {
         batch: PointBatch;
         clippingPlanes?: Plane[];

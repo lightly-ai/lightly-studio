@@ -8,8 +8,7 @@
         useWorkspaceControllerContext
     } from './pointCloudWorkspaceLayoutContext.svelte';
     import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
-    import { useCameraRgbColors } from './useCameraRgbColors/useCameraRgbColors.svelte';
-    import { provideCameraRgbColors } from './useCameraRgbColors/cameraRgbContext.svelte';
+    import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
 
     const { cameraPane } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
