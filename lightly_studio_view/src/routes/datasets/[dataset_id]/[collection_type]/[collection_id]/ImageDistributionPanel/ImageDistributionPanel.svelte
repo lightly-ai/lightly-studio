@@ -6,6 +6,7 @@
     import {
         useCategoricalMetadataDistribution,
         useImageAnnotationCounts,
+        useImageFieldDistribution,
         useImageAnnotationCountsBySampleTags,
         useImageAnnotationCountsQueryKey,
         useMetadataDistributionsBySampleTags,
@@ -13,6 +14,13 @@
         useTags
     } from '$lib/hooks';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+    import {
+        IMAGE_FIELDS,
+        fromImageFieldId,
+        toImageFieldId,
+        type ImageField
+    } from '$lib/hooks/useImageFieldDistribution';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -30,6 +38,7 @@
         selectComparisonSampleTags,
         selectNumericMetadataKeys
     } from '../metadataDistributionSource';
+    import { applyImageFieldRange, selectImageFieldRanges } from './imageFieldRanges';
 
     type ImageDistributionFilter = ReturnType<typeof buildImageFilter>;
 
@@ -82,6 +91,7 @@
     } = useMetadataFilters();
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
     const { imageFilter } = useImageFilters();
+    const { dimensionsBounds, dimensionsValues, updateDimensionsValues } = useDimensions();
 
     // Distribution queries always show the full dataset so bar heights stay
     // stable as sidebar filters are applied.  Filtering is communicated through
@@ -297,10 +307,16 @@
     const numericMetadataKeys = $derived(selectNumericMetadataKeys($metadataInfo));
     const categoricalMetadataKeys = $derived(selectCategoricalMetadataKeys($metadataInfo));
     const activeMetadataField = $derived.by<
-        { name: string; type: 'numeric' | 'categorical' } | undefined
+        | { name: string; type: 'numeric' | 'categorical' }
+        | { name: ImageField; type: 'image' }
+        | undefined
     >(() => {
         if (activeDistributionSourceId !== 'metadata' || activeDistributionGroupId === undefined) {
             return undefined;
+        }
+        const imageField = fromImageFieldId(activeDistributionGroupId);
+        if (imageField) {
+            return { name: imageField, type: 'image' };
         }
         if (categoricalMetadataKeys.includes(activeDistributionGroupId)) {
             return { name: activeDistributionGroupId, type: 'categorical' };
@@ -321,6 +337,15 @@
     // query.data is already Record<string, HistogramData> — the hook applies
     // selectDistributions internally via the TanStack Query `select` option.
     const metadataDistributions = $derived(metadataHistogramsQuery.data ?? {});
+
+    const imageFieldHistogramsQuery = useImageFieldDistribution(() => ({
+        collectionId,
+        filter: distributionBaseFilter,
+        binCount: histogramBinCount,
+        fields: activeMetadataField?.type === 'image' ? [activeMetadataField.name] : undefined,
+        enabled: activeMetadataField?.type === 'image'
+    }));
+    const imageFields = IMAGE_FIELDS.map((field) => ({ id: toImageFieldId(field), label: field }));
 
     const categoricalMetadataQuery = useCategoricalMetadataDistribution(() => ({
         collectionId,
@@ -369,15 +394,17 @@
     );
     const metadataDistributionSource = $derived(
         buildMetadataDistributionSource({
-            histograms: metadataDistributions,
+            histograms: { ...metadataDistributions, ...imageFieldHistogramsQuery.data },
+            imageFields,
             numericKeys: numericMetadataKeys,
             categoricalKeys: categoricalMetadataKeys,
             categorical: categoricalMetadataDistributions,
             filteredCategorical: categoricalMetadataFilteredDistributions,
-            selectedRanges: $metadataValues,
+            selectedRanges: { ...$metadataValues, ...selectImageFieldRanges($dimensionsValues) },
             selectedValues: $categoricalMetadataValues,
             tagDistributions: metadataTagDistributions,
-            numericLoading: metadataHistogramsQuery.isFetching,
+            numericLoading:
+                metadataHistogramsQuery.isFetching || imageFieldHistogramsQuery.isFetching,
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,
             categoricalError: categoricalMetadataQuery.error?.message,
@@ -395,11 +422,24 @@
     );
 
     // Selecting a histogram range (bin click or press-drag-release) narrows
-    // the metadata filter for that key; re-selecting the current range resets it.
+    // the filter for that group; re-selecting the current range resets it.
     const handleHistogramRangeSelect = (
         metadataKey: string,
         range: { min: number; max: number }
     ) => {
+        const imageField = fromImageFieldId(metadataKey);
+        if (imageField) {
+            if (!$dimensionsBounds || !$dimensionsValues) return;
+            updateDimensionsValues(
+                applyImageFieldRange({
+                    field: imageField,
+                    bounds: $dimensionsBounds,
+                    values: $dimensionsValues,
+                    range
+                })
+            );
+            return;
+        }
         const bound = $metadataBounds[metadataKey];
         if (!bound) return;
         updateMetadataValues({
