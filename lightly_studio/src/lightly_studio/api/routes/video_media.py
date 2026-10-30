@@ -196,12 +196,13 @@ async def serve_video_by_sample_id(
             detail=f"File not found: {file_path}",
         ) from exc
     except OSError as exc:
-        # Errors from botocore and aiohttp, for example TLS errors, have no `strerror`
-        error_message = exc.strerror or str(exc)
-        logger.warning("Error accessing file %s: %s", file_path, error_message)
+        logger.warning("Error accessing file %s: %s", file_path, exc)
+        # Errors from botocore and aiohttp, for example TLS errors, have no `strerror`.
+        # Their message can contain the storage endpoint URL, so only the log shows it.
+        cause = exc.strerror or type(exc).__name__
         raise HTTPException(
             status_code=status.HTTP_STATUS_NOT_FOUND,
-            detail=f"Error accessing file {file_path}: {error_message}",
+            detail=f"Error accessing file {file_path}: {cause}",
         ) from exc
 
 

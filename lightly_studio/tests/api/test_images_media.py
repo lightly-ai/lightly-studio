@@ -165,7 +165,7 @@ def test_stream_image_access_error_without_strerror(
     mocker: MockerFixture,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    """Test that an OSError without strerror returns its message, for example a TLS error."""
+    """Test that an OSError without strerror logs its message and returns only its class name."""
     collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
     image = create_image(
         session=db_session,
@@ -175,16 +175,18 @@ def test_stream_image_access_error_without_strerror(
         height=100,
     )
     mocker.patch.object(
-        fsspec.core, "url_to_fs", side_effect=OSError("SSL: CERTIFICATE_VERIFY_FAILED")
+        fsspec.core,
+        "url_to_fs",
+        side_effect=OSError(
+            "SSL validation failed for https://minio:9000/bucket [SSL: CERTIFICATE_VERIFY_FAILED]"
+        ),
     )
 
     response = media_test_client.get(f"/images/sample/{image.sample_id}")
 
     assert response.status_code == 404
-    assert response.json()["detail"] == (
-        "Error accessing file s3://bucket/image.png: SSL: CERTIFICATE_VERIFY_FAILED"
-    )
-    assert "SSL: CERTIFICATE_VERIFY_FAILED" in caplog.text
+    assert response.json()["detail"] == "Error accessing file s3://bucket/image.png: OSError"
+    assert "https://minio:9000" in caplog.text
 
 
 def test_get_media_executor_has_workers() -> None:
