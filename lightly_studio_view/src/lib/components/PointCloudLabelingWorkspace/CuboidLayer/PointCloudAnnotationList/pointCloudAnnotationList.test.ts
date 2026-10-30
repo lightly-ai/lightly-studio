@@ -408,6 +408,7 @@ describe('buildAnnotationForest', () => {
         expect(forest[2].children).toHaveLength(0);
     });
 
+
     it('groups orphan with parentTrackClassName under absent parent node', () => {
         const cabin = {
             ...createAnnotationFixture(),
