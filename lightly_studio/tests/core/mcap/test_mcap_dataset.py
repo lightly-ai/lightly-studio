@@ -363,6 +363,46 @@ class TestMcapDataset:
         cuboid_frame_ids = [cuboid.frame_id for _, labels in messages for cuboid in labels.cuboids]
         assert cuboid_frame_ids == ["odom"]
 
+    def test_export_scene_update_mcaps__default_target_frame_ignores_other_source(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        tmp_path: Path,
+    ) -> None:
+        # Most cuboids are in "base_link", but in another source. The recording has no
+        # transform from "odom" to "base_link", so only "odom" works for "ground_truth".
+        mcap_ds, sequence, _ = mcap_helpers.index_recording(
+            tmp_path=tmp_path, reference_frame_ids=[helpers.BASE_FRAME_ID]
+        )
+        _write_cuboid_labels(mcap_ds=mcap_ds, frame_id="odom")
+        timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+        add_labels.write_sequence_labels(
+            dataset=mcap_ds,
+            sequence=sequence,
+            annotation_mcap_uri="memory://predictions_labeled.mcap",
+            messages=[
+                (
+                    timestamp_ns,
+                    SceneUpdateLabels(
+                        cuboids=(
+                            mcap_helpers.cuboid(
+                                timestamp_ns=timestamp_ns, track_id=8, frame_id="base_link"
+                            ),
+                            mcap_helpers.cuboid(
+                                timestamp_ns=timestamp_ns, track_id=9, frame_id="base_link"
+                            ),
+                        )
+                    ),
+                )
+            ],
+            annotation_source="predictions",
+        )
+
+        uris = mcap_ds.export_scene_update_mcaps(output_dir=str(tmp_path / "out"))
+
+        messages = add_labels.read_scene_updates(uris[0], DEFAULT_SCENE_UPDATE_TOPIC)
+        cuboid_frame_ids = [cuboid.frame_id for _, labels in messages for cuboid in labels.cuboids]
+        assert cuboid_frame_ids == ["odom"]
+
     def test_export_scene_update_mcaps__no_common_frame(
         self,
         patch_collection: None,  # noqa: ARG002

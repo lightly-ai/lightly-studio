@@ -365,7 +365,10 @@ class McapDataset:
         sequence_ids = [sequence.sample_id for sequence in exported]
         annotation_collection = self._annotation_collection(annotation_source=annotation_source)
         if target_frame_id is None:
-            target_frame_id = self._default_target_frame_id(sequence_ids=sequence_ids)
+            target_frame_id = self._default_target_frame_id(
+                sequence_ids=sequence_ids,
+                annotation_collection_id=annotation_collection.collection_id,
+            )
         with tempfile.TemporaryDirectory() as local_dir:
             local_paths = mcap_scene_update_export.write_annotation_files(
                 session=self._session,
@@ -493,17 +496,22 @@ class McapDataset:
             f"Annotation source '{annotation_source}' not found. Available: {available}."
         )
 
-    def _default_target_frame_id(self, sequence_ids: Sequence[UUID]) -> str:
+    def _default_target_frame_id(
+        self, sequence_ids: Sequence[UUID], annotation_collection_id: UUID
+    ) -> str:
         """Return the first frame of `export_frame_ids` for the sequences.
 
-        That is the frame most cuboids are stored in or, without cuboids, the first
-        reference frame that the recordings of the sequences share.
+        That is the frame most cuboids of the annotation source are stored in or,
+        without such cuboids, the first reference frame that the recordings of the
+        sequences share.
 
         Raises:
             ExportError: If the recordings share no coordinate frame.
         """
         frame_ids = mcap_scene_update_export.export_frame_ids(
-            session=self._session, sequence_ids=sequence_ids
+            session=self._session,
+            sequence_ids=sequence_ids,
+            annotation_collection_id=annotation_collection_id,
         )
         if not frame_ids:
             raise ExportError(

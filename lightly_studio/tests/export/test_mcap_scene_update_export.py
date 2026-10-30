@@ -101,8 +101,14 @@ def test_export_frame_ids(
         session=session, recording_id=sequence.recording_id, frame_ids=["base_link"]
     )
 
+    ground_truth = mcap_helpers.annotation_collection(
+        session=session, dataset=dataset, name=add_labels.DEFAULT_ANNOTATION_SOURCE
+    )
+
     result = mcap_scene_update_export.export_frame_ids(
-        session=session, sequence_ids=[sequence.sample_id]
+        session=session,
+        sequence_ids=[sequence.sample_id],
+        annotation_collection_id=ground_truth.collection_id,
     )
 
     assert result == ["odom", "base_link"]
@@ -149,8 +155,14 @@ def test_export_frame_ids__ordered_by_cuboid_count(
         session=session, recording_id=sequence.recording_id, frame_ids=["map", "base_link"]
     )
 
+    ground_truth = mcap_helpers.annotation_collection(
+        session=session, dataset=dataset, name=add_labels.DEFAULT_ANNOTATION_SOURCE
+    )
+
     result = mcap_scene_update_export.export_frame_ids(
-        session=session, sequence_ids=[sequence.sample_id]
+        session=session,
+        sequence_ids=[sequence.sample_id],
+        annotation_collection_id=ground_truth.collection_id,
     )
 
     # 2 cuboids in "base_link", 1 in "odom", then the reference frames not listed yet.
@@ -170,7 +182,7 @@ def test_export_frame_ids__no_cuboids(
     )
 
     result = mcap_scene_update_export.export_frame_ids(
-        session=session, sequence_ids=[sequence.sample_id]
+        session=session, sequence_ids=[sequence.sample_id], annotation_collection_id=uuid4()
     )
 
     assert result == ["map", "base_link"]
