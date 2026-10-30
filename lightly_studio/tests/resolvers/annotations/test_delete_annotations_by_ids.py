@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import sys
 from typing import Any
 from uuid import UUID, uuid4
 
 import pytest
+from pytest_mock import MockerFixture
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
@@ -11,6 +14,8 @@ from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.caption import CaptionTable
+from lightly_studio.models.embedding_plot import EmbeddingPlotTable
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
@@ -18,6 +23,7 @@ from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import (
     annotation_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_run_resolver,
     evaluation_sample_metric_resolver,
 )
 from tests.helpers_resolvers import (
@@ -151,9 +157,19 @@ def test_delete_annotations_by_ids__deletes_tag_links_and_embeddings(
     db_session.commit()
     to_delete_id, to_keep_id = to_delete.sample_id, to_keep.sample_id
 
+    plot = EmbeddingPlotTable(
+        collection_id=annotation_collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        is_dirty=False,
+    )
+    plot = db_session.merge(plot)
+    db_session.commit()
+
     annotation_resolver.delete_annotations_by_ids(session=db_session, annotation_ids=[to_delete_id])
 
     assert _get_tag_link_sample_ids(session=db_session) == [to_keep_id]
+    db_session.refresh(plot)
+    assert plot.is_dirty is True
     assert _get_embedding_sample_ids(session=db_session) == [to_keep_id]
     assert db_session.get(SampleTable, to_delete_id) is None
 
@@ -195,6 +211,11 @@ def test_delete_annotations_by_ids__delete_samples_false_keeps_sample(db_session
     db_session.add(annotation.sample)
     db_session.commit()
     annotation_id = annotation.sample_id
+    plot = EmbeddingPlotTable(
+        collection_id=annotation.sample.collection_id, embedding_model_id=uuid4(), is_dirty=False
+    )
+    plot = db_session.merge(plot)
+    db_session.commit()
 
     deleted_count = annotation_resolver.delete_annotations_by_ids(
         session=db_session, annotation_ids=[annotation_id], delete_samples=False
@@ -205,6 +226,8 @@ def test_delete_annotations_by_ids__delete_samples_false_keeps_sample(db_session
     assert db_session.get(ObjectDetectionAnnotationTable, annotation_id) is None
     assert db_session.get(SampleTable, annotation_id) is not None
     assert _get_tag_link_sample_ids(session=db_session) == [annotation_id]
+    db_session.refresh(plot)
+    assert plot.is_dirty is False
 
 
 def test_delete_annotations_by_ids__multiple(db_session: Session) -> None:
@@ -298,6 +321,110 @@ def test_delete_annotations_by_ids__deletes_evaluation_metrics(db_session: Sessi
         == []
     )
     assert db_session.get(AnnotationBaseTable, pred_annotation_id) is not None
+
+
+def test_delete_annotations_by_ids__retries_on_transient_integrity_error(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """The delete retries when DuckDB raises a spurious IntegrityError on annotation_base."""
+    image = _create_image_in_new_collection(session=db_session)
+    (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
+    annotation_id = annotation.sample_id
+    module = sys.modules["lightly_studio.resolvers.annotation_resolver.delete_annotations_by_ids"]
+    original_fn = module._delete_by_sample_ids
+    annotation_base_attempts = 0
+
+    def delete_with_transient_error(session: Session, tables: Any, sample_ids: Any) -> None:
+        nonlocal annotation_base_attempts
+        if tables == (AnnotationBaseTable,):
+            annotation_base_attempts += 1
+            if annotation_base_attempts == 1:
+                raise IntegrityError("FK constraint", "", Exception())
+        original_fn(session=session, tables=tables, sample_ids=sample_ids)
+
+    mocker.patch.object(module, "_delete_by_sample_ids", side_effect=delete_with_transient_error)
+    mocker.patch.object(module.time, "sleep")
+
+    deleted_count = annotation_resolver.delete_annotations_by_ids(
+        session=db_session, annotation_ids=[annotation_id]
+    )
+
+    assert deleted_count == 1
+    assert db_session.get(AnnotationBaseTable, annotation_id) is None
+    assert db_session.get(SampleTable, annotation_id) is None
+    assert annotation_base_attempts == 2
+
+
+def test_delete_annotations_by_ids__raises_after_exhausting_retry_attempts(
+    db_session: Session,
+    mocker: MockerFixture,
+) -> None:
+    """The delete re-raises IntegrityError after all retry attempts are exhausted."""
+    image = _create_image_in_new_collection(session=db_session)
+    (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
+    annotation_id = annotation.sample_id
+    module = sys.modules["lightly_studio.resolvers.annotation_resolver.delete_annotations_by_ids"]
+    original_fn = module._delete_by_sample_ids
+
+    def delete_always_fails_on_annotation_base(
+        session: Session, tables: Any, sample_ids: Any
+    ) -> None:
+        if tables == (AnnotationBaseTable,):
+            raise IntegrityError("FK constraint", "", Exception())
+        original_fn(session=session, tables=tables, sample_ids=sample_ids)
+
+    mocker.patch.object(
+        module, "_delete_by_sample_ids", side_effect=delete_always_fails_on_annotation_base
+    )
+    mocker.patch.object(module.time, "sleep")
+
+    with pytest.raises(IntegrityError):
+        annotation_resolver.delete_annotations_by_ids(
+            session=db_session, annotation_ids=[annotation_id]
+        )
+
+    assert db_session.get(AnnotationBaseTable, annotation_id) is not None
+
+
+def test_delete_annotations_by_ids__marks_evaluation_run_stale(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation_details = [
+        AnnotationDetails(sample_id=image.sample_id, annotation_label_id=label.annotation_label_id)
+    ]
+    gt_annotation = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=annotation_details,
+        collection_name="ground_truth",
+    )[0]
+    pred_annotation = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=annotation_details,
+        collection_name="predictions",
+    )[0]
+    run = evaluation_run_resolver.create(
+        session=db_session,
+        evaluation_run_input=EvaluationRunCreate(
+            name="run",
+            gt_annotation_collection_id=gt_annotation.annotation_collection_id,
+            pred_annotation_collection_id=pred_annotation.annotation_collection_id,
+            dataset_id=collection.dataset_id,
+            task_type=EvaluationTaskType.OBJECT_DETECTION,
+        ),
+    )
+    assert run.stale_since is None
+
+    annotation_resolver.delete_annotations_by_ids(
+        session=db_session, annotation_ids=[pred_annotation.sample_id]
+    )
+
+    refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
+    assert refreshed is not None
+    assert refreshed.stale_since is not None
 
 
 def _create_image_in_new_collection(session: Session) -> ImageTable:

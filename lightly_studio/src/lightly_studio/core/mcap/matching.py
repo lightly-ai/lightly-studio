@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import bisect
-from collections.abc import Sequence
-from typing import Callable, NamedTuple, Optional
+from collections.abc import Callable, Sequence
+from typing import NamedTuple, Optional
 
 MatchFunction = Callable[[int, Sequence[int]], Optional[int]]
 """Selects which candidate timestamp matches a query timestamp.

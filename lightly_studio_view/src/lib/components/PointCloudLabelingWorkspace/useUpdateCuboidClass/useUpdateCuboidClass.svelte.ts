@@ -43,9 +43,9 @@ export function useUpdateCuboidClass({
                     label_name: className
                 }
             ]);
-        } catch {
+        } catch (error) {
             toast.error('Failed to update annotation class. Please try again.');
-            return;
+            throw error;
         }
         void queryClient.invalidateQueries({
             queryKey: getTickDetailsSequenceQueryKey({

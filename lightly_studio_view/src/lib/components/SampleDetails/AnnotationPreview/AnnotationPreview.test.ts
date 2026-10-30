@@ -1,5 +1,7 @@
 import { render } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
+import { useGlobalStorage } from '$lib/hooks';
 import AnnotationPreview from './AnnotationPreview.svelte';
 
 vi.mock(
@@ -23,6 +25,10 @@ const renderInSvg = (saveAs: 'mask' | 'box') => {
 };
 
 describe('AnnotationPreview', () => {
+    const { maskOpacity } = useGlobalStorage();
+
+    afterEach(() => maskOpacity.set(IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity));
+
     it('renders the mask image and the box in mask mode', () => {
         const container = renderInSvg('mask');
         expect(container.querySelector('image')).not.toBeNull();
@@ -33,5 +39,13 @@ describe('AnnotationPreview', () => {
         const container = renderInSvg('box');
         expect(container.querySelector('image')).toBeNull();
         expect(container.querySelector('rect')).not.toBeNull();
+    });
+
+    it('keeps the mask visible when the mask opacity setting is 0', () => {
+        maskOpacity.set(0);
+
+        const container = renderInSvg('mask');
+
+        expect(container.querySelector('image')?.getAttribute('opacity')).toBe('0.3');
     });
 });

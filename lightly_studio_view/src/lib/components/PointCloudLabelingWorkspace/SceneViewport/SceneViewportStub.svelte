@@ -1,13 +1,19 @@
 <script lang="ts">
-    import type { ComponentProps } from 'svelte';
+    import type { ComponentProps, Snippet } from 'svelte';
     import type SceneViewport from './SceneViewport.svelte';
     import type { CuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
+    /** Minimal renderer retaining workspace content without creating a WebGL canvas. */
     interface Props {
+        /** Shared transform state used to exercise annotation persistence. */
         transforms: ComponentProps<typeof SceneViewport>['transforms'];
+        /** Header content supplied by the workspace. */
+        header?: Snippet;
+        /** Editing toolbar supplied by the main viewport. */
+        tools?: Snippet;
     }
 
-    let { transforms }: Props = $props();
+    let { transforms, header, tools }: Props = $props();
 
     // Minimal annotation used to seed the transform state before committing.
     const stubAnnotation: CuboidAnnotation = {
@@ -32,6 +38,8 @@
 </script>
 
 <div data-testid="workspace-scene-viewport">
+    {@render header?.()}
+    {@render tools?.()}
     <button
         onclick={() => {
             transforms.reconcile([stubAnnotation]);

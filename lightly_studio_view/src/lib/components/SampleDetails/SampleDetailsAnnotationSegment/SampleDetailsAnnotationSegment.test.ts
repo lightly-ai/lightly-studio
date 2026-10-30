@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
+import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
 
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
@@ -138,6 +139,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
+        useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
 
     it('renders a flat list without source groups when there is a single source', () => {
@@ -300,7 +302,7 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(visibleRowIds).toContain('pred-2');
         });
 
-        it('re-collapses a seeded-hidden source after navigating to another sample', async () => {
+        it('keeps a seeded-hidden source expanded after the user expands it', async () => {
             const user = userEvent.setup();
             mocks.selectedCollectionIds = [groundTruthSource.collection_id];
 
@@ -312,14 +314,33 @@ describe('SampleDetailsAnnotationSegment', () => {
             await user.click(screen.getByText(predictionsSource.name));
             expect(getRow('pred-1')).toBeDefined();
 
-            // Navigating to another sample re-applies the seeded collapse.
+            // The next sample keeps the group expanded, and its annotations stay hidden.
             await rerender({ ...defaultProps, annotations, sampleId: 'sample-2' });
 
-            const visibleRowIds = screen
-                .queryAllByTestId('mock-annotation-row')
-                .map((row) => row.getAttribute('data-annotation-id'));
-            expect(visibleRowIds).not.toContain('pred-1');
-            expect(visibleRowIds).not.toContain('pred-2');
+            expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+        });
+
+        it('shows a seeded-hidden source on the next sample after the user shows it', async () => {
+            const user = userEvent.setup();
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations }
+            });
+
+            await user.click(screen.getByTestId('source-group-eye-off'));
+
+            const nextAnnotations = [
+                createAnnotation('gt-9', groundTruthSource.collection_id, 'cat'),
+                createAnnotation('pred-9', predictionsSource.collection_id, 'cat')
+            ];
+            await rerender({ ...defaultProps, annotations: nextAnnotations, sampleId: 'sample-2' });
+
+            // The shown source is visible, and its untouched collapse keeps the grid default.
+            expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+            await user.click(screen.getByText(predictionsSource.name));
+            expect(getRow('pred-9')).not.toHaveAttribute('data-hidden', 'true');
         });
 
         it('starts with all annotations visible when all sources are selected', () => {
@@ -364,6 +385,124 @@ describe('SampleDetailsAnnotationSegment', () => {
             await user.click(screen.getByText(predictionsSource.name));
             expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
             expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+        });
+    });
+
+    describe('keeping the source state across samples', () => {
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+        });
+
+        const firstAnnotations = [
+            createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('pred-1', predictionsSource.collection_id, 'cat')
+        ];
+        const nextAnnotations = [
+            createAnnotation('gt-2', groundTruthSource.collection_id, 'dog'),
+            createAnnotation('pred-2', predictionsSource.collection_id, 'dog')
+        ];
+
+        it('keeps collapsed and hidden sources on the next sample', async () => {
+            const user = userEvent.setup();
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: firstAnnotations }
+            });
+
+            // The QA flow: collapse both groups, then hide Predictions.
+            await user.click(screen.getByText(groundTruthSource.name));
+            await user.click(screen.getByText(predictionsSource.name));
+            await user.click(screen.getAllByTestId('source-group-eye')[1]);
+
+            // A sample without Predictions in between must not reset its state.
+            await rerender({
+                ...defaultProps,
+                annotations: [createAnnotation('gt-3', groundTruthSource.collection_id, 'cat')],
+                sampleId: 'sample-2'
+            });
+            await rerender({ ...defaultProps, annotations: nextAnnotations, sampleId: 'sample-3' });
+
+            expect(screen.queryAllByTestId('mock-annotation-row')).toHaveLength(0);
+            expect(screen.getAllByTestId('source-group-eye')).toHaveLength(1);
+            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(1);
+
+            await user.click(screen.getByText(groundTruthSource.name));
+            await user.click(screen.getByText(predictionsSource.name));
+            expect(getRow('gt-2')).not.toHaveAttribute('data-hidden', 'true');
+            expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+        });
+
+        it('expands a collapsed source when the user creates its first annotation', async () => {
+            const user = userEvent.setup();
+            // The mocked label context is read at mount, so the new annotation's ID is set now.
+            mocks.lastCreatedAnnotationId = 'pred-new';
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: firstAnnotations }
+            });
+
+            await user.click(screen.getByText(predictionsSource.name));
+            const groundTruthOnly = [
+                createAnnotation('gt-2', groundTruthSource.collection_id, 'dog')
+            ];
+            await rerender({ ...defaultProps, annotations: groundTruthOnly, sampleId: 'sample-2' });
+            await rerender({
+                ...defaultProps,
+                annotations: [
+                    ...groundTruthOnly,
+                    createAnnotation('pred-new', predictionsSource.collection_id, 'cat')
+                ],
+                sampleId: 'sample-2'
+            });
+
+            expect(getRow('pred-new')).toBeDefined();
+        });
+
+        it('keeps an annotation drawn into a hidden source visible', async () => {
+            const user = userEvent.setup();
+            // The mocked label context is read at mount, so the new annotation's ID is set now.
+            mocks.lastCreatedAnnotationId = 'pred-new';
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: firstAnnotations }
+            });
+
+            await user.click(screen.getAllByTestId('source-group-eye')[1]);
+            await rerender({ ...defaultProps, annotations: [], sampleId: 'sample-2' });
+            await rerender({
+                ...defaultProps,
+                annotations: [createAnnotation('pred-new', predictionsSource.collection_id, 'cat')],
+                sampleId: 'sample-2'
+            });
+
+            expect(getRow('pred-new')).not.toHaveAttribute('data-hidden', 'true');
+        });
+
+        it('keeps the visibility set with the annotation eyes on the next sample', async () => {
+            const user = userEvent.setup();
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: firstAnnotations }
+            });
+
+            await user.click(within(getRow('pred-1')).getByTestId('mock-annotation-row-toggle'));
+            await rerender({ ...defaultProps, annotations: nextAnnotations, sampleId: 'sample-2' });
+
+            expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('gt-2')).not.toHaveAttribute('data-hidden', 'true');
+        });
+
+        it('keeps the default state of untouched sources', async () => {
+            const user = userEvent.setup();
+            const { rerender } = render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: firstAnnotations }
+            });
+
+            await user.click(screen.getByText(groundTruthSource.name));
+            await rerender({ ...defaultProps, annotations: nextAnnotations, sampleId: 'sample-2' });
+
+            expect(screen.queryAllByTestId('mock-annotation-row')).toHaveLength(1);
+            expect(getRow('pred-2')).not.toHaveAttribute('data-hidden', 'true');
         });
     });
 

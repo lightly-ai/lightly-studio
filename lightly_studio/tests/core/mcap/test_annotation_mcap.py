@@ -62,3 +62,14 @@ def test_annotation_mcap_exists__memory() -> None:
 
     assert annotation_mcap.annotation_mcap_exists(uri="memory://labels/foo_labeled.mcap")
     assert not annotation_mcap.annotation_mcap_exists(uri="memory://labels/missing_labeled.mcap")
+
+
+def test_annotation_mcap_file_name() -> None:
+    assert (
+        annotation_mcap.annotation_mcap_file_name(recording_uri="s3://b/runs/foo.mcap")
+        == "foo_labeled.mcap"
+    )
+    assert (
+        annotation_mcap.annotation_mcap_file_name(recording_uri="C:\\data\\foo.mcap")
+        == "foo_labeled.mcap"
+    )

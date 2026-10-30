@@ -8,7 +8,6 @@
 /** Keys of the shortcut state object that can be recorded by the user. */
 export type ShortcutSettingKey =
     | 'hideAnnotations'
-    | 'goBack'
     | 'toggleEditMode'
     | 'keyToolbarSelection'
     | 'keyToolbarDrag'
@@ -34,25 +33,33 @@ export interface StaticShortcutConfig {
     displayValue: string;
 }
 
-/** Recordable shortcut rows shown in the Keyboard Shortcuts section. */
-export const shortcutSettings: readonly ShortcutSettingConfig[] = [
-    { id: 'hide-annotations', label: 'Hide Annotations', key: 'hideAnnotations' },
-    { id: 'go-back', label: 'Go Back', key: 'goBack' },
-    { id: 'toggle-edit-mode', label: 'Toggle Edit Mode', key: 'toggleEditMode' },
-    { id: 'toolbar-selection', label: 'Toolbar selection', key: 'keyToolbarSelection' },
-    { id: 'toolbar-drag', label: 'Toolbar drag', key: 'keyToolbarDrag' },
-    { id: 'toolbar-bounding-box', label: 'Toolbar bounding box', key: 'keyToolbarBoundingBox' },
-    {
-        id: 'toolbar-segmentation-mask',
-        label: 'Toolbar segmentation mask',
-        key: 'keyToolbarSegmentationMask'
-    },
-    { id: 'toolbar-slic', label: 'AI-Assisted labeling', key: 'keyToolbarSlic' },
-    { id: 'toolbar-brush-mode', label: 'Toolbar brush mode', key: 'keyToolbarBrush' },
-    { id: 'toolbar-eraser-mode', label: 'Toolbar eraser mode', key: 'keyToolbarEraser' }
+/** Recordable shortcuts for navigation and general actions. */
+export const generalShortcuts: readonly ShortcutSettingConfig[] = [
+    { id: 'hide-annotations', label: 'Hide annotations', key: 'hideAnnotations' },
+    { id: 'toggle-edit-mode', label: 'Toggle edit mode', key: 'toggleEditMode' }
 ] as const;
 
-/** Non-recordable shortcut rows (static display only). */
-export const staticShortcuts: readonly StaticShortcutConfig[] = [
-    { id: 'change-brush-size', label: 'Change brush size', displayValue: 'Alt + scroll' }
+/** Recordable shortcuts that select a tool in the annotation toolbar. */
+export const toolShortcuts: readonly ShortcutSettingConfig[] = [
+    { id: 'toolbar-selection', label: 'Selection', key: 'keyToolbarSelection' },
+    { id: 'toolbar-drag', label: 'Drag', key: 'keyToolbarDrag' },
+    { id: 'toolbar-bounding-box', label: 'Bounding box', key: 'keyToolbarBoundingBox' },
+    {
+        id: 'toolbar-segmentation-mask',
+        label: 'Segmentation mask',
+        key: 'keyToolbarSegmentationMask'
+    },
+    { id: 'toolbar-slic', label: 'AI-assisted labeling', key: 'keyToolbarSlic' },
+    { id: 'toolbar-brush-mode', label: 'Brush', key: 'keyToolbarBrush' },
+    { id: 'toolbar-eraser-mode', label: 'Eraser', key: 'keyToolbarEraser' }
+] as const;
+
+/** Non-recordable general shortcut rows (static display only). */
+export const staticGeneralShortcuts: readonly StaticShortcutConfig[] = [
+    { id: 'go-back', label: 'Go back', displayValue: 'Escape' }
+] as const;
+
+/** Non-recordable tool shortcut rows (static display only). */
+export const staticToolShortcuts: readonly StaticShortcutConfig[] = [
+    { id: 'change-brush-size', label: 'Brush size', displayValue: 'Alt + scroll' }
 ] as const;

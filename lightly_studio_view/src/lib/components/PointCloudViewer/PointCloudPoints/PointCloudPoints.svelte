@@ -1,67 +1,91 @@
 <script lang="ts">
     import { T, useThrelte } from '@threlte/core';
     import { onDestroy, untrack } from 'svelte';
-    import type { PerspectiveCamera } from 'three';
+    import { createPointCloudFrameBuffers } from '../createPointCloudFrameBuffers';
+    import type { OrthographicCamera, PerspectiveCamera, Plane } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-    import { fitCameraToBounds } from '../pointCloudCamera';
-    import { createPointCloudBuffer } from '../pointCloudBuffer';
     import type { ColorMode } from '../pointCloudUtils';
     import type { PointBatch } from '../types';
-
+    import type {
+        CuboidAnnotation,
+        CameraMode
+    } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { SceneViewState } from '../sceneViewState';
+    import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
+    import { getCameraRgbColors } from '$lib/components/PointCloudLabelingWorkspace/useCameraRgbColors';
     interface Props {
         batch: PointBatch;
+        clippingPlanes?: Plane[];
         colorMode: ColorMode;
         pointSize: number;
         intensityRange?: [number, number];
-        /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
-        camera?: PerspectiveCamera;
+        camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
+        cameraMode?: CameraMode;
+        cameraCuboid?: CuboidAnnotation;
+        isActive?: () => boolean;
+        isScaleSource?: boolean;
+        viewState?: SceneViewState | null;
+        onViewStateChange?: (viewState: SceneViewState) => void;
     }
     let {
         batch,
+        clippingPlanes = [],
         colorMode,
         pointSize,
         intensityRange,
         fitKey = '',
         camera,
-        controls
+        controls,
+        cameraMode = 'perspective',
+        cameraCuboid,
+        isActive,
+        isScaleSource = false,
+        viewState = null,
+        onViewStateChange
     }: Props = $props();
-    const { invalidate } = useThrelte();
-    const pointCloudBuffer = createPointCloudBuffer();
-    let fittedKey: string | undefined;
-    onDestroy(() => pointCloudBuffer.dispose());
-    // Position effect: copy batch into shared buffers, update draw range and bounds.
-    // camera and controls are read in the tracked section so the effect retries the fit
-    // once both refs are bound; fittedKey is only updated after the fit is performed.
-    // The camera is refitted when fitKey changes, e.g. when the coordinate frame changes.
-    $effect(() => {
-        const currentBatch = batch;
-        const currentCamera = camera;
-        const currentControls = controls;
-        const currentFitKey = fitKey;
-        untrack(() => {
-            const bounds = pointCloudBuffer.updatePositions(currentBatch);
-            if (fittedKey !== currentFitKey && bounds && currentCamera && currentControls) {
-                fitCameraToBounds(currentCamera, currentControls, bounds);
-                fittedKey = currentFitKey;
-            }
-            invalidate();
-        });
-    });
-    // Color effect: rebuild colors when batch, colorMode, or intensityRange change.
+
+    const { invalidate, renderer } = useThrelte();
+    renderer.localClippingEnabled = true;
+    const frameBuffers = createPointCloudFrameBuffers();
+    onDestroy(() => frameBuffers.dispose());
+    let prepared = $state.raw<ReturnType<typeof frameBuffers.update>>();
+    const cameraSync = usePointCloudCamera(() => ({
+        camera,
+        controls,
+        fitKey,
+        cameraMode,
+        cameraCuboid,
+        isActive,
+        isScaleSource,
+        viewState,
+        onViewStateChange
+    }));
+    const getCameraColors = getCameraRgbColors();
+    // Rebuild frame geometries and colors when batch, colorMode, intensityRange, or camera RGB change.
     $effect(() => {
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
-        const currentColors = currentBatch.colors;
+        const cameraColors = mode === 'camera-rgb' ? (getCameraColors() ?? undefined) : undefined;
+        if (!currentBatch.segments) void currentBatch.colors;
         untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
+            prepared = frameBuffers.update(currentBatch, mode, range, cameraColors);
             invalidate();
         });
     });
+    $effect(() => {
+        const bounds = prepared?.bounds;
+        void camera;
+        void controls;
+        void fitKey;
+        untrack(() => cameraSync.updateBounds(bounds));
+    });
 </script>
 
-<T.Points geometry={pointCloudBuffer.geometry}>
-    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} />
-</T.Points>
+{#each prepared?.geometries ?? [] as geometry (geometry)}
+    <T.Points {geometry}>
+        <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} {clippingPlanes} />
+    </T.Points>
+{/each}

@@ -6,7 +6,8 @@ export type ExportType =
     | 'segmentation'
     | 'captions'
     | 'youtube_vis_segmentation'
-    | 'semantic_segmentations';
+    | 'semantic_segmentations'
+    | 'scene_update_mcap';
 
 interface ExportOption {
     value: ExportType;
@@ -28,6 +29,11 @@ const youtubeVisOption: ExportOption = {
     label: 'YouTube-VIS Video Segmentation Masks'
 };
 
+const sceneUpdateOption: ExportOption = {
+    value: 'scene_update_mcap',
+    label: 'Cuboid Annotations (MCAP)'
+};
+
 export function getExportOptions(sampleType: string | undefined): ExportOption[] {
     if (sampleType === 'video') {
         return [
@@ -36,10 +42,12 @@ export function getExportOptions(sampleType: string | undefined): ExportOption[]
         ];
     }
     if (sampleType === 'video_frame') return [youtubeVisOption];
+    if (sampleType === 'sequence') return [sceneUpdateOption];
     return imageExportOptions;
 }
 
 export function getDefaultExportType(sampleType: string | undefined): ExportType {
+    if (sampleType === 'sequence') return 'scene_update_mcap';
     return sampleType === 'video' || sampleType === 'video_frame'
         ? 'youtube_vis_segmentation'
         : 'samples';

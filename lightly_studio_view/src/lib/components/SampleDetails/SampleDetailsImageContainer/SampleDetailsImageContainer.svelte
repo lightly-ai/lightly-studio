@@ -3,6 +3,7 @@
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { ZoomableContainer } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { afterNavigate } from '$app/navigation';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import SampleDetailsAnnotation from '../SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
@@ -31,6 +32,7 @@
     import AssistedLabelingOverlays from '$lib/components/SampleDetails/AssistedLabelingOverlays/AssistedLabelingOverlays.svelte';
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
+    import { getPreviewMaskOpacity } from '../previewMaskOpacity';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -67,7 +69,8 @@
         annotationType
     }: SampleDetailsImageContainerProps = $props();
 
-    const { isEditingMode, imageBrightness, imageContrast } = useGlobalStorage();
+    const { isEditingMode, imageBrightness, imageContrast, maskOpacity } = useGlobalStorage();
+    const { customLabelColorsStore } = useCustomLabelColors();
     // Same as the CSS filter `brightness(b) contrast(c)`.
     const filterSlope = $derived($imageBrightness * $imageContrast);
     const filterIntercept = $derived(0.5 - 0.5 * $imageContrast);
@@ -108,10 +111,18 @@
         })
     );
 
+    const drawerCustomColor = $derived(
+        annotationLabel ? $customLabelColorsStore[annotationLabel] : undefined
+    );
     const drawerStrokeColor = $derived(
-        annotationLabel !== 'default' && annotationLabel
-            ? getColorByLabel(annotationLabel, 1).color
-            : 'rgb(0, 0, 255)'
+        drawerCustomColor?.color ??
+            (annotationLabel !== 'default' && annotationLabel
+                ? getColorByLabel(annotationLabel, 1).color
+                : 'rgb(0, 0, 255)')
+    );
+    // Matches the opacity of the saved mask, see SampleAnnotation.
+    const previewMaskOpacity = $derived(
+        getPreviewMaskOpacity({ maskOpacity: $maskOpacity, labelAlpha: drawerCustomColor?.alpha })
     );
 
     $effect(() => {
@@ -234,7 +245,7 @@
     panEnabled={isPanEnabled({
         isDrawing: annotationLabelContext.isDrawing,
         isErasing: annotationLabelContext.isErasing,
-        status: sampleDetailsToolbarContext.status
+        blocksPan: assistedLabeling.blocksPan
     })}
     cursor={'grab'}
     boundingBox={annotationDetailsBoundingBox}
@@ -356,6 +367,7 @@
                     {sample}
                     {mousePosition}
                     {drawerStrokeColor}
+                    previewOpacity={previewMaskOpacity}
                     onFinishErasePendingChange={handlePendingChange}
                 />
             {:else if sampleDetailsToolbarContext.status === 'brush' && isSegmentationType(annotationTypeInCurrentView)}
@@ -367,6 +379,7 @@
                     {brushRadius}
                     {refetch}
                     {drawerStrokeColor}
+                    previewOpacity={previewMaskOpacity}
                     {sample}
                     annotationType={annotationTypeInCurrentView}
                     onFinishBrushPendingChange={handlePendingChange}

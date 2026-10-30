@@ -15,8 +15,7 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTagLinkTable
-from lightly_studio.models.two_dim_embedding import TwoDimEmbeddingTable
-from lightly_studio.resolvers import collection_resolver, sample_embedding_resolver, tag_resolver
+from lightly_studio.resolvers import collection_resolver, tag_resolver
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
@@ -27,6 +26,7 @@ from tests.helpers_resolvers import (
     create_images,
     create_sample_embedding,
     create_samples_with_embeddings,
+    create_saved_plot,
     create_tag,
 )
 
@@ -176,24 +176,17 @@ def test_add_samples_by_filter__image_filter_with_embedding_region_tags_only_reg
     inside_b = images[1]
     outside = images[2]
     # Seed the 2D embedding cache with known coordinates.
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
-        session=db_session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
     coordinates_by_sample = {
         inside_a.sample_id: (1.0, 1.0),
         inside_b.sample_id: (5.0, 5.0),
         outside.sample_id: (100.0, 100.0),
     }
-    db_session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates_by_sample[sid][0] for sid in cached_sample_ids],
-            y=[coordinates_by_sample[sid][1] for sid in cached_sample_ids],
-        )
+    create_saved_plot(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates=coordinates_by_sample,
     )
-    db_session.commit()
 
     response = test_client.post(
         f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
@@ -277,24 +270,17 @@ def test_add_samples_by_filter__annotations_filter_with_embedding_region_tags_on
         embedding=[2.1, 0.2, 0.3],
     )
     # Seed the 2D embedding cache with known coordinates.
-    cache_key, cached_sample_ids = sample_embedding_resolver.get_hash_by_collection_id(
-        session=db_session,
-        collection_id=annotation_collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-    )
     coordinates_by_sample = {
         inside_a.sample_id: (1.0, 1.0),
         inside_b.sample_id: (5.0, 5.0),
         outside.sample_id: (100.0, 100.0),
     }
-    db_session.add(
-        TwoDimEmbeddingTable(
-            hash=cache_key,
-            x=[coordinates_by_sample[sid][0] for sid in cached_sample_ids],
-            y=[coordinates_by_sample[sid][1] for sid in cached_sample_ids],
-        )
+    create_saved_plot(
+        session=db_session,
+        collection_id=annotation_collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates=coordinates_by_sample,
     )
-    db_session.commit()
 
     response = test_client.post(
         f"/api/collections/{annotation_collection_id}/tags/{tag.tag_id}/add/samples_by_filter",

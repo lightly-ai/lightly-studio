@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import shutil
 import tempfile
 from collections.abc import Generator
@@ -13,23 +14,38 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Path
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 from sqlmodel import Field, Session
 
 from lightly_studio.api.routes.api import collection as collection_api
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
+from lightly_studio.core.mcap import annotation_mcap
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.errors import NotFoundError
-from lightly_studio.export import image_dataset_export, video_dataset_export
+from lightly_studio.errors import ExportError, NotFoundError
+from lightly_studio.export import (
+    image_dataset_export,
+    mcap_scene_update_export,
+    video_dataset_export,
+)
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.export_format import ExportFormat
-from lightly_studio.resolvers import collection_resolver, export_job_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    export_job_resolver,
+    mcap_group_sequence_resolver,
+)
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 export_router = APIRouter(prefix="/collections/{collection_id}", tags=["export"])
 _STREAM_CHUNK_SIZE_BYTES = 64 * 1024
+_SCENE_UPDATE_DIR_NAME = "scene_update_mcaps"
+# An `s3://` URI with a bucket, e.g. `s3://bucket` or `s3://bucket/prefix`.
+_S3_URI_PATTERN = re.compile(r"^s3://[^/]+")
 logger = logging.getLogger(__name__)
 
 
@@ -66,6 +82,65 @@ class ExportCaptionsPrepareBody(BaseModel):
     """Request body for the captions prepare endpoint."""
 
     image_filter: ImageFilter | None = None
+
+
+class ExportSceneUpdateScopeBody(BaseModel):
+    """Selects the MCAP sequences of a SceneUpdate export.
+
+    `sequence_id` wins over `mcap_sequence_filter`. With neither, all sequences are used.
+    """
+
+    mcap_sequence_filter: McapSequenceFilter | None = None
+    sequence_id: UUID | None = None
+
+
+class ExportSceneUpdatePrepareBody(ExportSceneUpdateScopeBody):
+    """Request body for the SceneUpdate prepare endpoint."""
+
+    annotation_collection_id: UUID
+    target_frame_id: str
+    topic: Annotated[str, StringConstraints(min_length=1)] = (
+        annotation_mcap.DEFAULT_SCENE_UPDATE_TOPIC
+    )
+    """The topic to write the SceneUpdate messages on."""
+    # Only file name characters, so the suffix cannot add a folder to the file name. An empty
+    # suffix keeps the recording's file name.
+    suffix: Annotated[str, StringConstraints(pattern=r"^[A-Za-z0-9_.-]*$")] = (
+        annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX
+    )
+    """Inserted before the `.mcap` extension of each recording's file name."""
+
+
+class ExportSceneUpdateWriteBody(ExportSceneUpdatePrepareBody):
+    """Request body for the SceneUpdate write endpoint."""
+
+    output_uri: str
+
+
+class AnnotationCollectionOption(BaseModel):
+    """An annotation set that can be chosen for the SceneUpdate export."""
+
+    collection_id: UUID
+    name: str
+    frame_ids: list[str]
+    """The frames the cuboids of this set can be exported in, the default first."""
+
+
+class ExportSceneUpdateOptionsView(BaseModel):
+    """Choices for the SceneUpdate export form."""
+
+    sequence_count: int
+    annotation_collections: list[AnnotationCollectionOption]
+    topic: str
+    """The default topic the SceneUpdate messages are written on."""
+    suffix: str
+    """The default suffix inserted before the `.mcap` extension of each file name."""
+
+
+class ExportSceneUpdateWriteResponse(BaseModel):
+    """Response body for the SceneUpdate write endpoint."""
+
+    uris: list[str]
 
 
 @export_router.post(
@@ -106,7 +181,9 @@ def export_collection_prepare(
     )
 
     temp_dir = PathlibPath(tempfile.mkdtemp())
-    filename = f"{collection.name}_exported_{datetime.now(timezone.utc)}.txt"
+    filename = (
+        f"{collection.name}_exported_{datetime.now(timezone.utc).strftime('%Y-%m-%dT%H-%M-%S')}.txt"
+    )
     output_path = temp_dir / filename
     try:
         output_path.write_text("\n".join(exported))
@@ -201,6 +278,119 @@ def export_collection_annotations_prepare(
     return ExportKeyResponse(export_key=export.export_key)
 
 
+@export_router.post("/export/scene-update/options")
+def export_collection_scene_update_options(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportSceneUpdateScopeBody,
+) -> ExportSceneUpdateOptionsView:
+    """Return the choices for exporting MCAP cuboids as SceneUpdate annotation files."""
+    sequence_ids = _scope_sequence_ids(session=session, collection=collection, body=body)
+    return ExportSceneUpdateOptionsView(
+        sequence_count=len(sequence_ids),
+        annotation_collections=[
+            AnnotationCollectionOption(
+                collection_id=annotation.collection_id,
+                name=annotation.name,
+                frame_ids=mcap_scene_update_export.export_frame_ids(
+                    session=session,
+                    sequence_ids=sequence_ids,
+                    annotation_collection_id=annotation.collection_id,
+                ),
+            )
+            for annotation in _dataset_annotation_collections(
+                session=session, sequence_collection=collection
+            )
+        ],
+        topic=annotation_mcap.DEFAULT_SCENE_UPDATE_TOPIC,
+        suffix=annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
+    )
+
+
+@export_router.post("/export/scene-update/prepare")
+def export_collection_scene_update_prepare(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportSceneUpdatePrepareBody,
+) -> ExportKeyResponse:
+    """Write the SceneUpdate annotation files for download and persist their path."""
+    sequence_ids = _scope_sequence_ids(session=session, collection=collection, body=body)
+    _validate_annotation_collection_id(
+        session=session,
+        collection=collection,
+        annotation_collection_id=body.annotation_collection_id,
+    )
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    try:
+        annotation_dir = temp_dir / _SCENE_UPDATE_DIR_NAME
+        annotation_dir.mkdir()
+        paths = mcap_scene_update_export.write_annotation_files(
+            session=session,
+            sequence_ids=sequence_ids,
+            annotation_collection_id=body.annotation_collection_id,
+            target_frame_id=body.target_frame_id,
+            local_dir=annotation_dir,
+            topic=body.topic,
+            suffix=body.suffix,
+        )
+        # A single file downloads as is, several files download as a zip of the directory.
+        export_path = paths[0] if len(paths) == 1 else annotation_dir
+        export = export_job_resolver.create(
+            session=session, collection_id=collection.collection_id, export_path=str(export_path)
+        )
+    except Exception:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+    return ExportKeyResponse(export_key=export.export_key)
+
+
+@export_router.post("/export/scene-update/write")
+def export_collection_scene_update_write(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(collection_api.get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ExportSceneUpdateWriteBody,
+) -> ExportSceneUpdateWriteResponse:
+    """Write the SceneUpdate annotation files to an `s3://` prefix."""
+    if _S3_URI_PATTERN.match(body.output_uri) is None:
+        raise ExportError(
+            "The output location must be an S3 URI with a bucket, e.g. 's3://bucket'."
+        )
+    sequence_ids = _scope_sequence_ids(session=session, collection=collection, body=body)
+    _validate_annotation_collection_id(
+        session=session,
+        collection=collection,
+        annotation_collection_id=body.annotation_collection_id,
+    )
+    temp_dir = PathlibPath(tempfile.mkdtemp())
+    try:
+        paths = mcap_scene_update_export.write_annotation_files(
+            session=session,
+            sequence_ids=sequence_ids,
+            annotation_collection_id=body.annotation_collection_id,
+            target_frame_id=body.target_frame_id,
+            local_dir=temp_dir,
+            topic=body.topic,
+            suffix=body.suffix,
+        )
+        uris = mcap_scene_update_export.upload(local_paths=paths, output_dir=body.output_uri)
+    finally:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+    return ExportSceneUpdateWriteResponse(uris=uris)
+
+
 @export_router.post("/export/captions/prepare")
 def export_collection_captions_prepare(
     collection: Annotated[
@@ -271,6 +461,56 @@ def export_download(
             "Content-Disposition": f"attachment; filename={export_path.name}",
         },
     )
+
+
+def _scope_sequence_ids(
+    session: Session,
+    collection: CollectionTable,
+    body: ExportSceneUpdateScopeBody,
+) -> list[UUID]:
+    """Return the ids of the sequences a SceneUpdate export covers."""
+    if collection.sample_type != SampleType.SEQUENCE:
+        raise ExportError("SceneUpdate export is only supported for MCAP sequence collections.")
+    if body.sequence_id is not None:
+        all_ids = mcap_group_sequence_resolver.get_sample_ids(
+            session=session, collection_id=collection.collection_id
+        )
+        if body.sequence_id not in all_ids:
+            raise NotFoundError("Sequence not found.")
+        return [body.sequence_id]
+    return sorted(
+        mcap_group_sequence_resolver.get_sample_ids(
+            session=session,
+            collection_id=collection.collection_id,
+            filters=body.mcap_sequence_filter,
+        )
+    )
+
+
+def _validate_annotation_collection_id(
+    session: Session, collection: CollectionTable, annotation_collection_id: UUID
+) -> None:
+    """Raise `NotFoundError` if the annotation set does not belong to the collection."""
+    annotation_collections = _dataset_annotation_collections(
+        session=session, sequence_collection=collection
+    )
+    if all(
+        annotation.collection_id != annotation_collection_id
+        for annotation in annotation_collections
+    ):
+        raise NotFoundError("Annotation source not found.")
+
+
+def _dataset_annotation_collections(
+    session: Session, sequence_collection: CollectionTable
+) -> list[CollectionTable]:
+    """Return the annotation sets under the GROUP collection of a SEQUENCE collection."""
+    for child in sequence_collection.children:
+        if child.sample_type == SampleType.GROUP:
+            return collection_resolver.get_annotation_collections(
+                session=session, parent_collection_id=child.collection_id
+            )
+    return []
 
 
 def _generate_annotations_export(

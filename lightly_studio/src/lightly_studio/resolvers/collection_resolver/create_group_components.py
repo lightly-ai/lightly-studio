@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TypeAlias
 from uuid import UUID
 
 from sqlmodel import Session
-from typing_extensions import TypeAlias
 
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.group_component_definition import GroupComponentDefinitionTable
