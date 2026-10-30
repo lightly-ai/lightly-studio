@@ -6,10 +6,8 @@ import {
     type SuperpixelMaskEditor,
     type SuperpixelStrokePreview
 } from '@lightly-ai/slic';
-import {
-    decodeRLEToBinaryMask,
-    interpolateLineBetweenPoints
-} from '$lib/components/SampleAnnotation/utils';
+import { decodeRLEToBinaryMask } from '$lib/components/SampleAnnotation/utils';
+import { traceSlicStroke } from './traceSlicStroke';
 
 interface SlicMaskEditorProps {
     segmentation: Segmentation;
@@ -27,32 +25,39 @@ export function createSlicMaskEditor({
     let mask = segmentationMask
         ? decodeRLEToBinaryMask(segmentationMask, width, height)
         : new Uint8Array(width * height);
-    const scaleX = width / segmentation.width;
-    const scaleY = height / segmentation.height;
     let strokeMask: Uint8Array | null = null;
     let mode: SuperpixelStrokePreview['mode'] = 'add';
     const touchedLabels = new Set<number>();
     let lastPoint: { x: number; y: number } | null = null;
-    const labelAtPoint = (point: { x: number; y: number }) =>
-        getLabelAtPoint(segmentation, point.x, point.y, scaleX, scaleY);
+    const toSlicPoint = (point: { x: number; y: number }) => ({
+        x: Math.max(0, Math.min(segmentation.width, (point.x * segmentation.width) / width)),
+        y: Math.max(0, Math.min(segmentation.height, (point.y * segmentation.height) / height))
+    });
+    const labelAtPoint = (point: { x: number; y: number }) => {
+        const { x, y } = toSlicPoint(point);
+        return getLabelAtPoint(segmentation, x, y);
+    };
 
     function* targetPixels(label: number): Generator<number> {
         for (const index of getSegmentPixelIndexes(segmentation, label)) {
             const x = index % segmentation.width;
             const y = Math.floor(index / segmentation.width);
-            // Ceil matches nearest-neighbor upsampling: floor(target / scale).
-            const left = Math.ceil(x * scaleX);
-            const right = Math.ceil((x + 1) * scaleX);
-            const bottom = Math.ceil((y + 1) * scaleY);
-            for (let targetY = Math.ceil(y * scaleY); targetY < bottom; targetY++) {
+            // Multiply integer dimensions first to avoid rounding an exact edge into the next row.
+            const left = Math.ceil((x * width) / segmentation.width);
+            const right = Math.min(width, Math.ceil(((x + 1) * width) / segmentation.width));
+            const bottom = Math.min(height, Math.ceil(((y + 1) * height) / segmentation.height));
+            for (
+                let targetY = Math.ceil((y * height) / segmentation.height);
+                targetY < bottom;
+                targetY++
+            ) {
                 for (let targetX = left; targetX < right; targetX++) {
                     yield targetY * width + targetX;
                 }
             }
         }
     }
-    const paint = (point: { x: number; y: number }) => {
-        const label = labelAtPoint(point);
+    const paint = (label: number) => {
         if (!strokeMask || touchedLabels.has(label)) return;
         touchedLabels.add(label);
         for (const index of targetPixels(label)) strokeMask[index] = mode === 'add' ? 1 : 0;
@@ -82,15 +87,15 @@ export function createSlicMaskEditor({
                 }
             }
             strokeMask = mask.slice();
-            paint(point);
+            paint(labelAtPoint(point));
             lastPoint = point;
             return preview();
         },
         extendStroke(point) {
             if (!lastPoint) return null;
             const count = touchedLabels.size;
-            for (const interpolated of interpolateLineBetweenPoints(lastPoint, point)) {
-                paint(interpolated);
+            for (const { x, y } of traceSlicStroke(toSlicPoint(lastPoint), toSlicPoint(point))) {
+                paint(getLabelAtPoint(segmentation, x, y));
             }
             lastPoint = point;
             return touchedLabels.size === count ? null : preview();
