@@ -30,5 +30,6 @@ export {
     createCuboidAnnotation
 } from './coordinates';
 export { createPointCloudFrame } from './pointCloudFrame';
+export { interpolateCuboidGeometry } from './interpolateCuboidGeometry';
 export { exportPointCloudFrame } from './frameTransfer';
 export type { PointCloudFrameTransfer } from './frameTransfer';
