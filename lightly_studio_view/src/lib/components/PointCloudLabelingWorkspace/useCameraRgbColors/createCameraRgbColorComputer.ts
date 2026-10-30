@@ -22,6 +22,8 @@ interface WorkerResult {
     cancelled?: boolean;
 }
 
+const MAX_CACHED_BATCHES = 2;
+
 /**
  * Owns the projection worker and matches each async result to the batch it was computed for.
  *
@@ -36,7 +38,7 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
         deps.createWorker ??
         (() => new Worker(new URL('./cameraRgbWorker.ts', import.meta.url), { type: 'module' }));
 
-    const cache = new WeakMap<PointBatch, { signature: string; colors: Float32Array }>();
+    const cache = new Map<PointBatch, { signature: string; colors: Float32Array }>();
     const pending = new Map<number, { batch: PointBatch; signature: string }>();
     const blobIds = new WeakMap<Blob, number>();
     let nextBlobId = 1;
@@ -63,7 +65,12 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
                 );
                 return;
             }
+            cache.delete(request.batch);
             cache.set(request.batch, { signature: request.signature, colors: event.data.colors });
+            if (cache.size > MAX_CACHED_BATCHES) {
+                const oldestBatch = cache.keys().next().value;
+                if (oldestBatch) cache.delete(oldestBatch);
+            }
             // Only apply to the on-screen batch if both it and its cameras are still current:
             // a newer request may have changed the cameras while this batch stayed displayed.
             if (request.batch === latestBatch && request.signature === latestSignature) {
@@ -122,9 +129,12 @@ export function createCameraRgbColorComputer(deps: ComputerDeps) {
 
         const cached = cache.get(batch);
         if (cached?.signature === signature) {
+            cache.delete(batch);
+            cache.set(batch, cached);
             onColors(cached.colors);
             return;
         }
+        if (cached) cache.delete(batch);
 
         // Already computing this exact batch; keep the current state instead of duplicating work.
         for (const inFlight of pending.values()) {

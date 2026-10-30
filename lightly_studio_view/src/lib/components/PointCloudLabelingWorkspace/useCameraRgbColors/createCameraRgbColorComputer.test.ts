@@ -118,6 +118,23 @@ describe('createCameraRgbColorComputer', () => {
         expect(mock.posted).toHaveLength(2);
     });
 
+    it('evicts old point colors when more batches are visited', () => {
+        const { computer, mock } = setup();
+        const pair = makePair();
+        const first = makeBatch(1);
+        const second = makeBatch(2);
+        const third = makeBatch(3);
+        for (const batch of [first, second, third]) {
+            computer.request(batch, [pair]);
+            mock.respond(mock.posted.at(-1)!.id, new Float32Array([1, 0, 0]));
+        }
+
+        computer.request(second, [pair]);
+        expect(mock.posted).toHaveLength(3);
+        computer.request(first, [pair]);
+        expect(mock.posted).toHaveLength(4);
+    });
+
     it('does not duplicate work for the same batch already in flight', async () => {
         const { computer, mock } = setup();
         const batch = makeBatch(1);
