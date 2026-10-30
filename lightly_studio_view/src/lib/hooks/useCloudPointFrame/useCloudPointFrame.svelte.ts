@@ -47,6 +47,10 @@ export const useCloudPointFrame = (
             queryFn: () =>
                 Promise.all(tickQueries.map((options) => client.ensureQueryData(options))),
             select: (data: TickData[]) => selectFrame(data, selectedChannelIds),
+            // The selected frame's batch exposes lazy getters that pack all accumulated segments on
+            // first read. Structural sharing would read them during comparison, packing every window
+            // eagerly; the selector already returns a stable frame when channels and ticks match.
+            structuralSharing: false,
             // Skip fetching until the tick is known and at least one lidar is selected.
             enabled: Boolean(datasetId && sequenceId && (selectedChannelIds?.length ?? 1)),
             // Preserve the mounted scene and its camera while the next window is loading.

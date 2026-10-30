@@ -7,10 +7,46 @@
         usePointCloudWorkspaceLayoutContext,
         useWorkspaceControllerContext
     } from './pointCloudWorkspaceLayoutContext.svelte';
+    import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
+    import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
 
     const { cameraPane } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
+
+    const { tickDetails } = useTickDetails({
+        getDatasetId: () => layout.datasetId,
+        getSequenceId: () => layout.sequenceId,
+        getSeqNumber: () => layout.workspace.currentTick,
+        getDisplayFrameId: () => layout.workspace.referenceFrameId || undefined
+    });
+    const { query: cameraFrames } = useTickCameraFrames(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId,
+        seqNumber: layout.workspace.currentTick,
+        displayFrameId: layout.workspace.referenceFrameId || undefined
+    }));
+
+    const cameraPairs = $derived(
+        layout.workspace.isShowingSensorFrames
+            ? []
+            : layout.workspace.cameraChannels
+                  .filter((ch) => layout.selectedCameraChannelIds.includes(ch.channel_id))
+                  .flatMap((ch) => {
+                      const projection =
+                          tickDetails.data?.camera_channels[ch.group_component_name]?.projection;
+                      const blob = cameraFrames.data?.[ch.channel_id];
+                      return projection && blob ? [{ projection, blob }] : [];
+                  })
+    );
+
+    const cameraRgb = useCameraRgbColors({
+        getBatch: () => layout.sceneFrame?.batch,
+        getColorMode: () => layout.colorMode,
+        getCameraPairs: () => cameraPairs
+    });
+
+    provideCameraRgbColors(() => cameraRgb.colors);
 </script>
 
 <PaneGroup direction="vertical" class="min-h-0 flex-1">

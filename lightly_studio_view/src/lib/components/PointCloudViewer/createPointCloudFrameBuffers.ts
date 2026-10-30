@@ -28,10 +28,15 @@ export function createPointCloudFrameBuffers() {
         }
     }
 
-    function update(batch: PointBatch, mode: ColorMode, intensityRange?: [number, number]) {
+    function update(
+        batch: PointBatch,
+        mode: ColorMode,
+        intensityRange?: [number, number],
+        cameraColors?: Float32Array
+    ) {
         const segments = batch.segments ?? [batch];
         retain(segments);
-        const colors = getPointCloudFrameColors(batch, mode, intensityRange);
+        const colors = getPointCloudFrameColors(batch, mode, intensityRange, cameraColors);
         const bounds = new Box3();
         const geometries = segments.map((segment, index) => {
             const frame = frames.get(segment)!;

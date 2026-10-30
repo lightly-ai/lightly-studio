@@ -12,6 +12,7 @@
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { SceneViewState } from '../sceneViewState';
     import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
+    import { getCameraRgbColors } from '$lib/components/PointCloudLabelingWorkspace/useCameraRgbColors';
     interface Props {
         batch: PointBatch;
         clippingPlanes?: Plane[];
@@ -61,13 +62,16 @@
         viewState,
         onViewStateChange
     }));
+    const getCameraColors = getCameraRgbColors();
+    // Rebuild frame geometries and colors when batch, colorMode, intensityRange, or camera RGB change.
     $effect(() => {
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
+        const cameraColors = mode === 'camera-rgb' ? (getCameraColors() ?? undefined) : undefined;
         if (!currentBatch.segments) void currentBatch.colors;
         untrack(() => {
-            prepared = frameBuffers.update(currentBatch, mode, range);
+            prepared = frameBuffers.update(currentBatch, mode, range, cameraColors);
             invalidate();
         });
     });
