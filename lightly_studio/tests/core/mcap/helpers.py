@@ -412,6 +412,25 @@ def write_mcap_with_undecodable_camera_info(path: Path) -> Path:
     return path
 
 
+def write_mcap_with_metadata(path: Path, records: Sequence[tuple[str, dict[str, str]]]) -> Path:
+    """Writes an MCAP file with only Metadata records and no messages.
+
+    Args:
+        path: The path to write the file to.
+        records: `(name, data)` pairs to add as Metadata records, in order.
+
+    Returns:
+        The path of the written file.
+    """
+    with path.open("wb") as stream:
+        writer = RawWriter(output=stream)
+        writer.start()
+        for name, data in records:
+            writer.add_metadata(name=name, data=data)
+        writer.finish()
+    return path
+
+
 def write_mcap_with_malformed_json_video(path: Path, payload: bytes = b"not valid json") -> Path:
     """Writes an MCAP whose video topic is JSON-encoded with malformed payloads.
 

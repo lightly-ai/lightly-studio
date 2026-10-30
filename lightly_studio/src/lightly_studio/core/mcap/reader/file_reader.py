@@ -515,6 +515,15 @@ class McapFileReader:
         """
         return self._topic_index.topics()
 
+    def get_metadata_records(self) -> list[tuple[str, dict[str, str]]]:
+        """Returns the Metadata records of the file, in file order.
+
+        Returns:
+            `(name, data)` pairs, one per Metadata record. A file without Metadata
+            records returns an empty list.
+        """
+        return [(record.name, dict(record.metadata)) for record in self._reader.iter_metadata()]
+
     def _require_loaded_locators(self, topic: str) -> list[FrameLocator]:
         """Returns the cached locators of a topic.
 
