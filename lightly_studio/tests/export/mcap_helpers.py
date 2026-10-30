@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -30,6 +31,7 @@ def index_recording(
     base_link_poses: tuple[tuple[int, tuple[float, float, float]], ...] = (),
     dataset_name: str = "perception",
     metadata_records: tuple[tuple[str, dict[str, str]], ...] = (),
+    reference_frame_ids: Sequence[str] | None = None,
 ) -> tuple[McapDataset, McapSequence, list[UUID]]:
     """Indexes `tmp_path / "recording.mcap"` and returns its dataset, sequence and group IDs."""
     tmp_path.mkdir(parents=True, exist_ok=True)
@@ -45,6 +47,7 @@ def index_recording(
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
         max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+        reference_frame_ids=reference_frame_ids,
     )
     sequence = dataset.get_sequences()[0]
     group_ids = [entry.sample_id for entry in sequence.get_samples()]

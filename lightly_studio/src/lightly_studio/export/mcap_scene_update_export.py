@@ -49,7 +49,9 @@ def common_reference_frame_ids(session: Session, sequence_ids: Sequence[UUID]) -
     ]
 
 
-def export_frame_ids(session: Session, sequence_ids: Sequence[UUID]) -> list[str]:
+def export_frame_ids(
+    session: Session, sequence_ids: Sequence[UUID], annotation_collection_id: UUID
+) -> list[str]:
     """Returns the coordinate frames the cuboids of the sequences can be exported in.
 
     The frames the cuboids are stored in come first, ordered by cuboid count
@@ -59,12 +61,16 @@ def export_frame_ids(session: Session, sequence_ids: Sequence[UUID]) -> list[str
     Args:
         session: The database session.
         sequence_ids: The sequences to export. An empty sequence gives `[]`.
+        annotation_collection_id: The annotation source to export cuboids from. Only
+            its cuboids are counted.
 
     Returns:
         The frame IDs, without duplicates and without empty IDs.
     """
     stored_frame_ids = annotation_resolver.get_cuboid_frame_ids_by_sequence_ids(
-        session=session, sequence_ids=sequence_ids
+        session=session,
+        sequence_ids=sequence_ids,
+        annotation_collection_id=annotation_collection_id,
     )
     reference_frame_ids = common_reference_frame_ids(session=session, sequence_ids=sequence_ids)
     return stored_frame_ids + [
