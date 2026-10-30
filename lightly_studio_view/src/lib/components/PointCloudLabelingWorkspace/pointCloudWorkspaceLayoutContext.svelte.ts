@@ -58,6 +58,8 @@ export interface PointCloudWorkspaceLayoutState {
     showNavigationHelpers: boolean;
     /** Whether hovered annotation metadata is shown in scene viewports. */
     showAnnotationTooltips: boolean;
+    /** Accumulation preferences and actions for the scene settings. */
+    accumulation?: ReturnType<typeof createWorkspaceController>['accumulation'];
     /** Strategy used to color the point cloud. */
     colorMode: Exclude<ColorMode, 'none'>;
     /** Selected cuboid identifier, or null. */

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { T, useThrelte } from '@threlte/core';
     import { onDestroy, untrack } from 'svelte';
-    import { createPointCloudBuffer } from '../pointCloudBuffer';
+    import { createPointCloudFrameBuffers } from '../createPointCloudFrameBuffers';
     import type { OrthographicCamera, PerspectiveCamera, Plane } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type { ColorMode } from '../pointCloudUtils';
@@ -47,8 +47,9 @@
 
     const { invalidate, renderer } = useThrelte();
     renderer.localClippingEnabled = true;
-    const pointCloudBuffer = createPointCloudBuffer();
-    onDestroy(() => pointCloudBuffer.dispose());
+    const frameBuffers = createPointCloudFrameBuffers();
+    onDestroy(() => frameBuffers.dispose());
+    let prepared = $state.raw<ReturnType<typeof frameBuffers.update>>();
     const cameraSync = usePointCloudCamera(() => ({
         camera,
         controls,
@@ -62,27 +63,25 @@
     }));
     $effect(() => {
         const currentBatch = batch;
+        const mode = colorMode;
+        const range = intensityRange;
+        if (!currentBatch.segments) void currentBatch.colors;
+        untrack(() => {
+            prepared = frameBuffers.update(currentBatch, mode, range);
+            invalidate();
+        });
+    });
+    $effect(() => {
+        const bounds = prepared?.bounds;
         void camera;
         void controls;
         void fitKey;
-        untrack(() => {
-            cameraSync.updateBounds(pointCloudBuffer.updatePositions(currentBatch));
-            invalidate();
-        });
-    });
-    // Color effect: rebuild colors when batch, colorMode, or intensityRange change.
-    $effect(() => {
-        const currentBatch = batch;
-        const mode = colorMode;
-        const range = intensityRange;
-        const currentColors = currentBatch.colors;
-        untrack(() => {
-            pointCloudBuffer.updateColors(currentBatch.count, mode, range, currentColors);
-            invalidate();
-        });
+        untrack(() => cameraSync.updateBounds(bounds));
     });
 </script>
 
-<T.Points geometry={pointCloudBuffer.geometry}>
-    <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} {clippingPlanes} />
-</T.Points>
+{#each prepared?.geometries ?? [] as geometry (geometry)}
+    <T.Points {geometry}>
+        <T.PointsMaterial vertexColors size={pointSize} sizeAttenuation={false} {clippingPlanes} />
+    </T.Points>
+{/each}
