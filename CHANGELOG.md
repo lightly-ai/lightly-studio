@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Color the point cloud from the camera images with the new "Camera RGB" color mode in the point-cloud workspace.
 - Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files from the export dialog, as a download or to S3. In the point-cloud workspace, the export covers the open recording.
 - Python SDK: Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate `_labeled.mcap` files with `McapDataset.export_annotations_to_folder`.
+- Python SDK: `connect()` trusts the custom CA certificates of an S3-compatible storage when the enterprise instance provides them.
 
 ### Changed
 
