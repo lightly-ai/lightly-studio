@@ -2,8 +2,10 @@
     import { Settings2 } from '@lucide/svelte';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Button } from '$lib/components/ui/button';
-    import { Slider } from '$lib/components/ui/slider';
     import * as Popover from '$lib/components/ui/popover';
+    import type { ComponentProps } from 'svelte';
+    import AccumulationSettings from './AccumulationSettings.svelte';
+    import PointSizeSettings from './PointSizeSettings.svelte';
 
     interface Props {
         showOrthographicViews: boolean;
@@ -11,6 +13,7 @@
         showNavigationHelpers: boolean;
         showAnnotationTooltips: boolean;
         disabled?: boolean;
+        accumulation?: ComponentProps<typeof AccumulationSettings>;
         onToggle: (showOrthographicViews: boolean) => void;
         onPointSizeChange: (pointSize: number) => void;
         onToggleNavigationHelpers: (show: boolean) => void;
@@ -23,6 +26,7 @@
         showNavigationHelpers,
         showAnnotationTooltips,
         disabled = false,
+        accumulation,
         onToggle,
         onPointSizeChange,
         onToggleNavigationHelpers,
@@ -61,22 +65,7 @@
             />
             <span>Show orthographic projections</span>
         </label>
-        <div class="space-y-2 border-t pt-3">
-            <div class="flex items-center justify-between text-sm">
-                <span>Point size</span>
-                <span class="tabular-nums text-muted-foreground">{pointSize}</span>
-            </div>
-            <Slider
-                type="single"
-                value={pointSize}
-                min={1}
-                max={10}
-                step={0.5}
-                {disabled}
-                aria-label="Point size"
-                onValueChange={(value) => onPointSizeChange(value)}
-            />
-        </div>
+        <PointSizeSettings {pointSize} {disabled} {onPointSizeChange} />
         <label class="flex items-center gap-2 border-t pt-3 text-sm">
             <Checkbox
                 checked={showNavigationHelpers}
@@ -93,5 +82,13 @@
             />
             <span>Show annotation tooltips</span>
         </label>
+        {#if accumulation}
+            <AccumulationSettings
+                accumulatePointClouds={accumulation.accumulatePointClouds}
+                accumulationRadius={accumulation.accumulationRadius}
+                setAccumulatePointClouds={accumulation.setAccumulatePointClouds}
+                setAccumulationRadius={accumulation.setAccumulationRadius}
+            />
+        {/if}
     </Popover.Content>
 </Popover.Root>

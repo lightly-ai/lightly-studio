@@ -1,3 +1,4 @@
+import { fromStore } from 'svelte/store';
 import { createPointCloudWorkspaceContext } from './provider/createPointCloudWorkspaceContext';
 import type { PointCloudWorkspaceContext } from './provider/types';
 import type { WorkspaceOptions } from './workspaceOptions';
@@ -9,6 +10,7 @@ import { useWorkspaceSceneData } from './useWorkspaceSceneData/useWorkspaceScene
 import { useWorkspaceEditing } from './useWorkspaceEditing/useWorkspaceEditing.svelte';
 import { useWorkspaceFullscreen } from './useWorkspaceFullscreen/useWorkspaceFullscreen.svelte';
 import { useCameraPane } from './useCameraPane/useCameraPane.svelte';
+import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 
 /** Composes focused workspace controllers and projects their state for scene consumers. */
 export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
@@ -22,10 +24,27 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         getResetKey: () => getOptions().sequenceId
     });
 
+    const accumulatePointClouds = useSessionStorage<boolean>(
+        'lightlyStudio_pointCloudAccumulate',
+        false
+    );
+    const accumulationRadius = useSessionStorage<number>(
+        'lightlyStudio_pointCloudAccumulationRadius',
+        1
+    );
+    const accumulating = fromStore(accumulatePointClouds);
+    const radius = fromStore(accumulationRadius);
+
     workspace = createPointCloudWorkspaceContext(() => ({
         datasetId: getOptions().datasetId,
         sequenceId: getOptions().sequenceId,
         selectedLidarChannels: lidarSelection.selectedChannels ?? undefined,
+        accumulationRadius: accumulating.current ? radius.current : 0,
+        // Only the cloud query should depend on ticks; eager reads make the tick query
+        // depend on its own result through every call to this input getter.
+        get accumulationTickNumbers() {
+            return workspace.ticks?.map((tick) => tick.seq_number) ?? [];
+        },
         // The hash tick is 1-based; the transport tracks 0-based seq numbers.
         initialTick: (getOptions().tickNumber ?? 1) - 1,
         statusOverride: getOptions().status
@@ -34,7 +53,11 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
     const presentation = useWorkspacePresentation();
     const fullscreen = useWorkspaceFullscreen();
     const cameraPane = useCameraPane();
-    const playback = useWorkspacePlayback(() => workspace, getOptions);
+    const playback = useWorkspacePlayback(
+        () => workspace,
+        getOptions,
+        () => (accumulating.current ? radius.current : 0)
+    );
     const data = useWorkspaceSceneData(() => workspace, getOptions);
     const editing = useWorkspaceEditing(
         () => workspace,
@@ -61,6 +84,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
         showAnnotationTooltips: presentation.showAnnotationTooltips,
+        accumulation,
         colorMode: presentation.colorMode,
         selectedCuboidId: editing.selectedCuboidId,
         hoveredCuboidId: editing.hoveredCuboidId,
@@ -94,6 +118,17 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         onPreviousSequence: getOptions().onPreviousSequence,
         onNextSequence: getOptions().onNextSequence
     });
+    const accumulation = {
+        get accumulatePointClouds() {
+            return accumulating.current;
+        },
+        get accumulationRadius() {
+            return radius.current;
+        },
+        setAccumulatePointClouds: accumulatePointClouds.set,
+        setAccumulationRadius: accumulationRadius.set
+    };
+
     return {
         get workspace() {
             return workspace;
@@ -104,6 +139,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         playback,
         data,
         editing,
+        accumulation,
         lidarSelection,
         cameraSelection,
         get options() {

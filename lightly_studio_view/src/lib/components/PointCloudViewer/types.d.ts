@@ -3,6 +3,8 @@ import type { ColorMode } from './pointCloudUtils';
 
 /** A batch of points stored in pre-packed typed arrays. */
 export interface PointBatch {
+    /** Immutable sensor batches retained separately while an accumulation window advances. */
+    segments?: readonly PointBatch[];
     /** Flat position data [x0,y0,z0, x1,y1,z1, ...]. Length >= count * 3. */
     positions: Float32Array;
     /** Per-point intensity values. Length >= count. */

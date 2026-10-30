@@ -1,5 +1,5 @@
 import { beforeAll, describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/svelte';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
@@ -171,9 +171,14 @@ describe('PointCloudLabelingWorkspace', () => {
         schedulerParams.current = undefined;
         sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
         sessionStorage.removeItem('lightlyStudio_pointCloudShowAnnotationTooltips');
+        sessionStorage.removeItem('lightlyStudio_pointCloudAccumulate');
+        sessionStorage.removeItem('lightlyStudio_pointCloudAccumulationRadius');
     });
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
+        Element.prototype.hasPointerCapture = vi.fn(() => false);
+        Element.prototype.setPointerCapture = vi.fn();
+        Element.prototype.releasePointerCapture = vi.fn();
     });
 
     it('renders the chrome and the empty state by default', () => {
@@ -227,6 +232,27 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(
             screen.getByRole('checkbox', { name: 'Show annotation tooltips' })
         ).not.toBeChecked();
+    });
+
+    it('configures and persists accumulation from the 3D scene settings', async () => {
+        const user = userEvent.setup();
+        const view = render(PointCloudLabelingWorkspace, { props: defaultProps });
+        expect(
+            screen.queryByRole('checkbox', { name: 'Accumulate point clouds' })
+        ).not.toBeInTheDocument();
+        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
+        await user.click(screen.getByRole('checkbox', { name: 'Accumulate point clouds' }));
+        const slider = within(screen.getByLabelText('Accumulation radius')).getByRole('slider');
+        await user.click(slider);
+        await user.keyboard('{Home}{ArrowRight}{ArrowRight}');
+        expect(sessionStorage.getItem('lightlyStudio_pointCloudAccumulate')).toBe('true');
+        expect(sessionStorage.getItem('lightlyStudio_pointCloudAccumulationRadius')).toBe('3');
+
+        view.unmount();
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
+        expect(screen.getByRole('checkbox', { name: 'Accumulate point clouds' })).toBeChecked();
+        expect(screen.getByText('±3 ticks')).toBeInTheDocument();
     });
 
     it('does not use the Space shortcut from form controls', async () => {
@@ -424,6 +450,15 @@ describe('PointCloudLabelingWorkspace', () => {
         await rerender({ ...props, tickNumber: 2 });
 
         expect(screen.getByText('Frame 2 / 2')).toBeInTheDocument();
+    });
+
+    it('includes earlier accumulation neighbors when buffering after a seek', async () => {
+        sessionStorage.setItem('lightlyStudio_pointCloudAccumulate', 'true');
+        sessionStorage.setItem('lightlyStudio_pointCloudAccumulationRadius', '1');
+        const user = userEvent.setup();
+        render(PointCloudLabelingWorkspace, { props: { ...defaultProps, tickNumber: 2 } });
+        await user.click(screen.getByRole('checkbox', { name: 'Buffer entire sequence' }));
+        expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 0, endIndex: 1 }]);
     });
 
     it('starts whole-sequence buffering at the selected tick', async () => {
