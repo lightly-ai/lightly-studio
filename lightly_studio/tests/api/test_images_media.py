@@ -5,9 +5,12 @@ from __future__ import annotations
 from pathlib import Path
 
 import cv2
+import fsspec
 import numpy as np
+import pytest
 from fastapi.testclient import TestClient
 from PIL import Image as PILImage
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 import lightly_studio.utils.executor as executor_module
@@ -154,6 +157,36 @@ def test_stream_image_file_not_found(
     response = media_test_client.get(f"/images/sample/{image.sample_id}")
 
     assert response.status_code == 404
+
+
+def test_stream_image_access_error_without_strerror(
+    media_test_client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Test that an OSError without strerror logs its message and returns only its class name."""
+    collection = create_collection(session=db_session, sample_type=SampleType.IMAGE)
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs="s3://bucket/image.png",
+        width=100,
+        height=100,
+    )
+    mocker.patch.object(
+        fsspec.core,
+        "url_to_fs",
+        side_effect=OSError(
+            "SSL validation failed for https://minio:9000/bucket [SSL: CERTIFICATE_VERIFY_FAILED]"
+        ),
+    )
+
+    response = media_test_client.get(f"/images/sample/{image.sample_id}")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Error accessing file s3://bucket/image.png: OSError"
+    assert "https://minio:9000" in caplog.text
 
 
 def test_get_media_executor_has_workers() -> None:

@@ -46,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the annotation grid, changing the class after "Select all" now changes every selected annotation, not only the first 100. The selected annotations count and undo also cover all of them.
 - In the distribution panel, metadata bars now include images without annotations. Before, those images showed as filtered out even with no filters set.
 - The distribution panel keeps the selected plot when you open a sample and go back to the grid.
+- Python SDK: `add_samples_from_coco` now shows the real cause when it cannot read the annotations file from cloud storage.
 
 ### Security
 
