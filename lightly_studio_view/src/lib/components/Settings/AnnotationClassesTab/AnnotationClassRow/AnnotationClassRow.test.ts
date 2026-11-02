@@ -60,6 +60,17 @@ describe('AnnotationClassRow', () => {
         expect(screen.getByText('cat')).toBeInTheDocument();
     });
 
+    it.each(['Enter', 'Escape'])('keeps renaming on %s during IME composition', async (key) => {
+        const { onRename } = renderRow();
+        const input = await startRename();
+
+        await fireEvent.input(input, { target: { value: 'kitty' } });
+        await fireEvent.keyDown(input, { key, isComposing: true });
+
+        expect(onRename).not.toHaveBeenCalled();
+        expect(screen.getByRole('textbox', { name: 'New name for cat' })).toHaveValue('kitty');
+    });
+
     it.each([
         ['unchanged', 'cat'],
         ['blank', '   ']
