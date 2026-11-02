@@ -27,15 +27,13 @@ describe('AnnotationClassRow', () => {
         document.body.innerHTML = '';
     });
 
-    it('shows the name and a singular or plural annotation count', () => {
-        renderRow({ annotationCount: 1 });
+    it.each([
+        [1, /^\s*1\s+annotation\s*$/],
+        [2, /^\s*2\s+annotations\s*$/]
+    ])('shows the name and the count for %i annotations', (annotationCount, countText) => {
+        renderRow({ annotationCount });
         expect(screen.getByText('cat')).toBeInTheDocument();
-        expect(screen.getByText(/^\s*1\s+annotation\s*$/)).toBeInTheDocument();
-    });
-
-    it('uses the plural for several annotations', () => {
-        renderRow({ annotationCount: 2 });
-        expect(screen.getByText(/^\s*2\s+annotations\s*$/)).toBeInTheDocument();
+        expect(screen.getByText(countText)).toBeInTheDocument();
     });
 
     it('renames on Enter without submitting the form', async () => {
