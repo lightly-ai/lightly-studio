@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Color the point cloud from the camera images with the new "Camera RGB" color mode in the point-cloud workspace.
 - Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files from the export dialog, as a download or to S3. In the point-cloud workspace, the export covers the open recording.
 - Python SDK: Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate `_labeled.mcap` files with `McapDataset.export_annotations_to_folder`.
+- Python SDK: `connect()` trusts the custom CA certificates of an S3-compatible storage when the enterprise instance provides them.
 
 ### Changed
 
@@ -40,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The header of the filters panel, with the button to hide the panel, stays visible when you scroll the filters. You no longer have to scroll back to the top to hide the panel.
 - Fixed skipped cells and leftover pixels when labeling with superpixels.
 - Brush, eraser, and box drawing previews now use the custom color of the label.
 - Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
@@ -48,6 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the annotation grid, changing the class after "Select all" now changes every selected annotation, not only the first 100. The selected annotations count and undo also cover all of them.
 - In the distribution panel, metadata bars now include images without annotations. Before, those images showed as filtered out even with no filters set.
 - The distribution panel keeps the selected plot when you open a sample and go back to the grid.
+- Python SDK: `add_samples_from_coco` now shows the real cause when it cannot read the annotations file from cloud storage.
 
 ### Security
 
