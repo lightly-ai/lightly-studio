@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.2.1\] - 2026-11-02
+
+### Added
+
 - Delete selected annotations in bulk from the annotation grid.
 - Explore and edit point-cloud annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
 - Collapse the camera strip in the point-cloud workspace to give the scene more space.
@@ -32,8 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the settings dialog, "Save changes" is enabled only when there are changes to save.
 - DuckDB database files retain a format readable by DuckDB 1.x when created or updated with DuckDB 2.x.
 
-### Deprecated
-
 ### Removed
 
 - BREAKING: Dropped Python 3.9 support. Upgrade to Python 3.10–3.14.
@@ -50,8 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - In the distribution panel, metadata bars now include images without annotations. Before, those images showed as filtered out even with no filters set.
 - The distribution panel keeps the selected plot when you open a sample and go back to the grid.
 - Python SDK: `add_samples_from_coco` now shows the real cause when it cannot read the annotations file from cloud storage.
-
-### Security
 
 ## \[1.2.0\] - 2026-10-23
 

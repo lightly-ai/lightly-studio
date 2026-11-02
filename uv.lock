@@ -2292,7 +2292,7 @@ wheels = [
 
 [[package]]
 name = "lightly-studio"
-version = "1.2.0"
+version = "1.2.1"
 source = { editable = "lightly_studio" }
 default-groups = ["cpu", "dev"]
 dependencies = [
