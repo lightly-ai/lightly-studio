@@ -113,6 +113,7 @@ def test_get_sequence_tracks__sparse_ticks_and_gap(
                 "object_track_id": str(track_id),
                 "object_track_number": 7,
                 "managed": False,
+                "annotation_label_name": "truck",
                 "annotations": [
                     {
                         "seq_number": 2,

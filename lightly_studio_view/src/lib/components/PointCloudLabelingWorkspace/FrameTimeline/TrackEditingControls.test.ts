@@ -52,6 +52,7 @@ describe('TrackEditingControls', () => {
                     object_track_id: 'track-1',
                     object_track_number: 1,
                     managed: true,
+                    annotation_label_name: 'truck',
                     annotations: [{ annotation_id: 'cuboid-1', seq_number: 2, interpolated: false }]
                 },
                 onTrackStarted: vi.fn(),

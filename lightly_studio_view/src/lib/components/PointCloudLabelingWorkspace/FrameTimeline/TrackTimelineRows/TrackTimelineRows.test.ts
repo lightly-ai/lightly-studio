@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+import { getColorByLabel } from '$lib/utils';
 import TrackTimelineRows from './TrackTimelineRows.svelte';
 import { buildTrackTimeline } from './buildTrackTimeline';
 
@@ -12,6 +13,7 @@ const track: SequenceTrackView = {
     object_track_id: 'track-1',
     object_track_number: 7,
     managed: false,
+    annotation_label_name: 'truck',
     annotations: [
         { annotation_id: 'a', seq_number: 2, interpolated: false },
         { annotation_id: 'b', seq_number: 5, interpolated: true },
@@ -39,6 +41,7 @@ describe('TrackTimelineRows', () => {
                         object_track_id: 'track-2',
                         object_track_number: 8,
                         managed: false,
+                        annotation_label_name: 'person',
                         annotations: [{ annotation_id: 'd', seq_number: 9, interpolated: false }]
                     }
                 ],
@@ -47,7 +50,15 @@ describe('TrackTimelineRows', () => {
             }
         });
 
-        expect(screen.getByRole('button', { name: 'Track 8' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'person · Track 8' })).toBeInTheDocument();
+        const truckRow = screen.getByRole('button', { name: 'truck · Track 7' });
+        expect(truckRow.querySelector('span')).toHaveStyle({
+            backgroundColor: getColorByLabel('truck').color
+        });
+        expect(screen.getByTitle('Generated annotations')).toHaveStyle({
+            backgroundColor: getColorByLabel('truck').color,
+            opacity: '0.35'
+        });
         await fireEvent.click(screen.getByRole('button', { name: 'Next keyframe' }));
         expect(onSelectTick).toHaveBeenCalledWith(12);
         await fireEvent.click(screen.getByRole('button', { name: 'Track 7 keyframe at frame 1' }));
@@ -68,7 +79,7 @@ describe('TrackTimelineRows', () => {
             }
         });
 
-        expect(screen.getAllByRole('button', { name: /^Track \d+$/ })).toHaveLength(30);
-        expect(screen.getByRole('button', { name: 'Track 30' })).toBeInTheDocument();
+        expect(screen.getAllByRole('button', { name: /^truck · Track \d+$/ })).toHaveLength(30);
+        expect(screen.getByRole('button', { name: 'truck · Track 30' })).toBeInTheDocument();
     });
 });

@@ -1,5 +1,7 @@
 <script lang="ts">
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { getColorByLabel } from '$lib/utils';
     import { buildTrackTimeline } from './buildTrackTimeline';
 
     interface Props {
@@ -11,6 +13,16 @@
     }
 
     let { ticks, tracks, currentTick, onSelectTick, onSelectTrack }: Props = $props();
+    const { colorVersion } = useCustomLabelColors();
+    const trackColors = $derived.by(() => {
+        void $colorVersion;
+        return new Map(
+            tracks.map((track) => [
+                track.object_track_id,
+                getColorByLabel(track.annotation_label_name, 1).color
+            ])
+        );
+    });
     let selectedTrackId = $state<string | null>(null);
     const selectedTrack = $derived(
         tracks.find((track) => track.object_track_id === selectedTrackId) ?? tracks[0]
@@ -55,24 +67,32 @@
         <div class="max-h-32 overflow-y-auto">
             {#each tracks as track (track.object_track_id)}
                 {@const timeline = buildTrackTimeline(track, ticks)}
+                {@const color = trackColors.get(track.object_track_id) ?? '#ffffff'}
                 <div class="flex h-6 items-center border-t border-border/50">
                     <button
                         type="button"
-                        class="w-20 shrink-0 truncate px-2 text-left hover:text-primary"
+                        class="flex w-32 shrink-0 items-center gap-1.5 truncate px-2 text-left hover:underline"
+                        title={`${track.annotation_label_name} · Track ${track.object_track_number}`}
                         aria-pressed={selectedTrack?.object_track_id === track.object_track_id}
                         onclick={() => {
                             selectedTrackId = track.object_track_id;
                             onSelectTrack?.(track.object_track_id);
                             if (timeline.annotations[0])
                                 onSelectTick(timeline.annotations[0].seq_number);
-                        }}>Track {track.object_track_number}</button
+                        }}
                     >
+                        <span class="size-2 shrink-0 rounded-full" style:background-color={color}
+                        ></span>
+                        <span class="truncate"
+                            >{track.annotation_label_name} · Track {track.object_track_number}</span
+                        >
+                    </button>
                     <div class="relative mx-2 h-4 min-w-0 flex-1">
                         {#each timeline.runs as run}
                             <span
-                                class="absolute top-1 h-2 rounded-sm {run.interpolated
-                                    ? 'bg-primary/35'
-                                    : 'bg-primary/70'}"
+                                class="absolute top-1 h-2 rounded-sm"
+                                style:background-color={color}
+                                style:opacity={run.interpolated ? 0.35 : 0.7}
                                 style:left={`${(run.startIndex / ticks.length) * 100}%`}
                                 style:width={`${((run.endIndex - run.startIndex + 1) / ticks.length) * 100}%`}
                                 title={run.interpolated
@@ -83,7 +103,8 @@
                         {#each timeline.annotations.filter((item) => !item.interpolated) as item (item.annotation_id)}
                             <button
                                 type="button"
-                                class="absolute top-0 z-10 h-4 w-1.5 -translate-x-1/2 rounded-sm bg-primary ring-1 ring-background"
+                                class="absolute top-0 z-10 h-4 w-1.5 -translate-x-1/2 rounded-sm ring-1 ring-background"
+                                style:background-color={color}
                                 style:left={`${((item.index! + 0.5) / ticks.length) * 100}%`}
                                 aria-label={`Track ${track.object_track_number} keyframe at frame ${item.index! + 1}`}
                                 onclick={() => {
