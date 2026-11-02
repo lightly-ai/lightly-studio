@@ -82,6 +82,7 @@
             <AnnotationClassList
                 classes={visibleClasses}
                 isLoading={classes.query.isLoading}
+                isError={classes.query.isError}
                 addName={canAdd ? trimmedQuery : ''}
                 isAddEnterTarget={canAddWithEnter}
                 showEmptyHint={sortedClasses.length === 0 && !canAdd}

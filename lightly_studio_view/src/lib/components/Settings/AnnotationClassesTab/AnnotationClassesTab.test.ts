@@ -5,12 +5,17 @@ import AnnotationClassesTab from './AnnotationClassesTab.svelte';
 
 const mocks = vi.hoisted(() => ({
     addClass: vi.fn(),
-    data: [] as unknown[] | undefined
+    data: [] as unknown[] | undefined,
+    isError: false
 }));
 
 vi.mock('./useAnnotationClasses', () => ({
     useAnnotationClasses: () => ({
-        query: { data: mocks.data, isLoading: mocks.data === undefined },
+        query: {
+            data: mocks.data,
+            isLoading: mocks.data === undefined && !mocks.isError,
+            isError: mocks.isError
+        },
         addClass: mocks.addClass,
         renameClass: vi.fn(),
         deleteClass: vi.fn()
@@ -31,6 +36,7 @@ describe('AnnotationClassesTab', () => {
             { annotation_label_id: 'c', annotation_label_name: 'cat', annotation_count: 0 },
             { annotation_label_id: 'b', annotation_label_name: 'bear', annotation_count: 2 }
         ];
+        mocks.isError = false;
         mockParams({ dataset_id: 'd', collection_id: 'c1' });
     });
 
@@ -127,6 +133,17 @@ describe('AnnotationClassesTab', () => {
 
         await vi.waitFor(() => expect(mocks.addClass).toHaveBeenCalled());
         expect(input()).toHaveValue('wolf');
+    });
+
+    it('shows an error and no add when the classes fail to load', async () => {
+        mocks.data = undefined;
+        mocks.isError = true;
+        render(AnnotationClassesTab);
+        await fireEvent.input(input(), { target: { value: 'wolf' } });
+
+        expect(screen.getByText('Could not load the annotation classes.')).toBeInTheDocument();
+        expect(screen.queryByText(/no annotation classes yet/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/Add new annotation class/)).not.toBeInTheDocument();
     });
 
     it('shows that an existing class exists and offers no add row', async () => {

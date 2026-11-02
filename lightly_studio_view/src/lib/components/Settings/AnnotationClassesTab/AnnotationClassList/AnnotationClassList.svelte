@@ -11,6 +11,7 @@
     interface Props {
         classes: AnnotationClassItem[];
         isLoading: boolean;
+        isError: boolean;
         // The name to offer for adding. Empty when no class can be added.
         addName: string;
         // The add row is the only match, so it comes first and Enter adds the class.
@@ -26,6 +27,7 @@
     const {
         classes,
         isLoading,
+        isError,
         addName,
         isAddEnterTarget,
         showEmptyHint,
@@ -42,6 +44,10 @@
     {/if}
     {#if isLoading}
         <li class="px-2 py-3 text-sm text-muted-foreground">Loading annotation classes…</li>
+    {:else if isError}
+        <li class="px-2 py-3 text-sm text-muted-foreground">
+            Could not load the annotation classes.
+        </li>
     {:else if showEmptyHint}
         <li class="px-2 py-6 text-sm text-muted-foreground">
             This dataset has no annotation classes yet. Type a name above and press Enter to add the
