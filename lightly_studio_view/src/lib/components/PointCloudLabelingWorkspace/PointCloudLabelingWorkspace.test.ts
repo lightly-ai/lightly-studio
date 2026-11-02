@@ -30,6 +30,11 @@ vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', 
     useUpdateAnnotationsMutation: () => ({ updateAnnotations })
 }));
 
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: vi.fn() })
+}));
+
 vi.mock('./SceneViewport/SceneViewport.svelte', async () => ({
     default: (await import('./SceneViewport/SceneViewportStub.svelte')).default
 }));

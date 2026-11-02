@@ -43,6 +43,25 @@ def patch_engine_singleton(mocker: MockerFixture) -> None:
     mocker.patch.object(db_manager, "_engine", new=None)
 
 
+@pytest.mark.parametrize("single_threaded", [False, True])
+def test_database_engine__creates_duckdb_1x_storage(tmp_path: Path, single_threaded: bool) -> None:
+    """New databases retain the v1.0.0 storage format when reopened and written."""
+    db_file = tmp_path / "compatible.db"
+    for _ in range(2):
+        engine = DatabaseEngine(engine_url=f"duckdb:///{db_file}", single_threaded=single_threaded)
+        try:
+            with engine.session() as session:
+                create_collection(session=session)
+        finally:
+            engine.close()
+
+        # The DuckDB header stores the v1.0.0 format as little-endian version 64.
+        with db_file.open("rb") as file:
+            header = file.read(20)
+        assert header[8:12] == b"DUCK"
+        assert int.from_bytes(header[12:20], byteorder="little") == 64
+
+
 def test_get_engine__default(
     mocker: MockerFixture,
     patch_engine_singleton: None,  # noqa ARG001
@@ -484,7 +503,8 @@ def test_database_engine__duckdb_omits_postgres_pool_options(
     DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'test.db'}")
 
     kwargs = create_engine_mock.call_args.kwargs
-    assert "connect_args" not in kwargs
+    assert "prepare_threshold" not in kwargs["connect_args"]
+    assert not any(key.startswith("keepalives") for key in kwargs["connect_args"])
     assert "pool_pre_ping" not in kwargs
 
 

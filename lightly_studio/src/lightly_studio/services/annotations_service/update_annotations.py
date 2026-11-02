@@ -46,20 +46,11 @@ def update_annotations(
             track_id_to_label_id[result.object_track_id] = result.annotation_label_id
 
     # Update the label for all annotations in the track if needed
-    # TODO(Horatiu, 02/2026): This can be optimized by doing a bulk update in the database
-    # instead of updating each annotation one by one
     for object_track_id, annotation_label_id in track_id_to_label_id.items():
-        siblings = annotation_resolver.get_all_by_object_track_id(
+        annotation_resolver.update_label_by_object_track_id(
             session=session,
             object_track_id=object_track_id,
+            annotation_label_id=annotation_label_id,
         )
-        for sibling in siblings:
-            if sibling.annotation_label_id == annotation_label_id:
-                continue
-            annotation_resolver.update_annotation_label(
-                session=session,
-                annotation_id=sibling.sample_id,
-                annotation_label_id=annotation_label_id,
-            )
 
     return results
