@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The header of the filters panel, with the button to hide the panel, stays visible when you scroll the filters. You no longer have to scroll back to the top to hide the panel.
 - Fixed skipped cells and leftover pixels when labeling with superpixels.
 - Brush, eraser, and box drawing previews now use the custom color of the label.
 - Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
