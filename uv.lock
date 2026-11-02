@@ -2342,6 +2342,7 @@ dependencies = [
 [package.optional-dependencies]
 cloud-storage = [
     { name = "adlfs" },
+    { name = "certifi" },
     { name = "gcsfs" },
     { name = "s3fs" },
 ]
@@ -2358,6 +2359,7 @@ cpu = [
 ]
 dev = [
     { name = "black" },
+    { name = "cryptography" },
     { name = "hatchling" },
     { name = "httpx" },
     { name = "moto", extra = ["server"] },
@@ -2395,6 +2397,7 @@ requires-dist = [
     { name = "alembic-postgresql-enum", specifier = ">=1.10.0" },
     { name = "av", specifier = ">=10.0.0" },
     { name = "brotli-asgi", specifier = ">=1.4.0" },
+    { name = "certifi", marker = "extra == 'cloud-storage'", specifier = ">=2023.7.22" },
     { name = "click", specifier = ">=8.0.0" },
     { name = "duckdb", marker = "python_full_version < '3.15'", specifier = ">=1.2.2,<1.6" },
     { name = "duckdb", marker = "python_full_version >= '3.15'", specifier = ">=2.0.0,<3.0" },
@@ -2445,6 +2448,7 @@ cpu = [
 ]
 dev = [
     { name = "black", specifier = ">=24.8.0" },
+    { name = "cryptography", specifier = ">=42.0.0" },
     { name = "hatchling", specifier = ">=1.27.0" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "moto", extras = ["server"], specifier = ">=5.0.0" },
