@@ -12,10 +12,13 @@ export const useAdjacentMcapSequences = ({
     sampleId: string;
     collectionId: string;
 }) => {
-    const { mcapSequenceFilter } = useMcapSequenceFilters();
+    const { filterParams, mcapSequenceFilter } = useMcapSequenceFilters();
     const { textEmbedding } = useGlobalStorage();
 
-    const filter = get(mcapSequenceFilter);
+    // The page can open without the grid, e.g. from the groups view, while the stored grid
+    // filter still belongs to another collection.
+    const isGridCollection = get(filterParams)?.collection_id === collectionId;
+    const filter = isGridCollection ? get(mcapSequenceFilter) : null;
     const embedding = get(textEmbedding);
     return useAdjacentSamples({
         params: {
