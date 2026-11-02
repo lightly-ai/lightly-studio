@@ -31,8 +31,9 @@ class EvaluationClassMetricTable(SQLModel, table=True):
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     evaluation_run_id: UUID = Field(foreign_key="evaluation_run.id", index=True)
-    # Not a foreign key, so that stored metrics never block deleting a label.
-    annotation_label_id: UUID
+    annotation_label_id: UUID = Field(
+        foreign_key="annotation_label.annotation_label_id", index=True
+    )
     metric_name: str
     # Config fields that differ from the run's config_json. Empty for the run's own config.
     config_override: dict[str, Any] = Field(

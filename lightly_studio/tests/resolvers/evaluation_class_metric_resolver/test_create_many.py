@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import uuid
+
 import pytest
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session
@@ -112,6 +114,25 @@ def test_create_many__rejects_same_config_override_in_other_key_order(
     with pytest.raises(IntegrityError):
         evaluation_class_metric_resolver.create_many(
             session=db_session, records=[_record({"classwise": True, "iou_threshold": 0.75})]
+        )
+    db_session.rollback()
+
+
+def test_create_many__unknown_annotation_label(db_session: Session) -> None:
+    run = evaluation_sample_metric_helpers.create_run(session=db_session)
+
+    # DuckDB and PostgreSQL both raise an IntegrityError for a foreign key violation.
+    with pytest.raises(IntegrityError):
+        evaluation_class_metric_resolver.create_many(
+            session=db_session,
+            records=[
+                EvaluationClassMetricCreate(
+                    evaluation_run_id=run.id,
+                    annotation_label_id=uuid.uuid4(),
+                    metric_name="average_precision",
+                    value=0.5,
+                )
+            ],
         )
     db_session.rollback()
 
