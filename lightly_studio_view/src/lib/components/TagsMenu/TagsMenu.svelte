@@ -10,13 +10,17 @@
         addSampleIdsToTagId,
         addSamplesToTagByFilter,
         deleteTag,
-        renameTag
+        renameTag,
+        removeThingIdsToTagId,
+        removeSamplesFromTagByFilter
     } from '$lib/api/lightly_studio_local';
     import TagAssignInput from './TagAssignInput.svelte';
     import TagRenameInput from './TagRenameInput.svelte';
     import TagActionMenu from './TagActionMenu.svelte';
+    import TagSelectionCount from './TagSelectionCount.svelte';
+    import { useSelectionTagCounts } from './useSelectionTagCounts.svelte';
     import { toast } from 'svelte-sonner';
-    import { get } from 'svelte/store';
+    import { cn } from '$lib/utils';
     import { usePostHog } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -56,6 +60,26 @@
             : $selectedSampleIds
     );
 
+    const selectAllSnapshot = $derived(
+        isAnnotationGrid
+            ? getSelectAllAnnotationSnapshot(collection_id)
+            : getSelectAllSnapshot(collection_id)
+    );
+    // Use the grid filter while the selection is an unmodified select-all, so that a
+    // large selection does not send a potentially large ID list.
+    const selectionFilter = $derived(
+        $selectAllSnapshot != null && $selectAllSnapshot.size === selectedIds.size
+            ? $selectAllSnapshot.filter
+            : null
+    );
+
+    const { query: selectionTagCounts } = useSelectionTagCounts(() => ({
+        collection_id,
+        selection: selectionFilter ? { filter: selectionFilter } : { sample_ids: [...selectedIds] },
+        enabled: hasSelection
+    }));
+    const tagCounts = $derived(hasSelection ? selectionTagCounts.data : undefined);
+
     const { trackEvent } = usePostHog();
     const { user } = useAuth();
     const canManageTags = $derived(hasMinimumRole(user?.role, 'labeler'));
@@ -67,19 +91,11 @@
     let openActionsTagId = $state<string | null>(null);
     let suppressCloseAutoFocusTagId = $state<string | null>(null);
 
-    // Tag by filter when the selection is still an unmodified select-all (do not send
-    // a potentially large ID list), else fall back to the ID-list path.
     function assignSelectionToTag(tag_id: string) {
-        const snapshot = get(
-            isAnnotationGrid
-                ? getSelectAllAnnotationSnapshot(collection_id)
-                : getSelectAllSnapshot(collection_id)
-        );
-        const isUnmodifiedSelectAll = snapshot != null && snapshot.size === selectedIds.size;
-        if (isUnmodifiedSelectAll) {
+        if (selectionFilter) {
             return addSamplesToTagByFilter({
                 path: { collection_id, tag_id },
-                body: { filter: snapshot.filter }
+                body: { filter: selectionFilter }
             });
         }
         return addSampleIdsToTagId({
@@ -133,11 +149,38 @@
                 trackTagged(true);
             }
             loadTags();
+            selectionTagCounts.refetch();
         } catch (error) {
             console.error('Failed to assign tag', error);
             toast.error('Failed to assign tag. Please try again.');
         } finally {
             assignBusy = false;
+        }
+    }
+
+    let removingTagId = $state<string | null>(null);
+
+    async function handleRemoveFromSelection(tag: TagView, count: number) {
+        removingTagId = tag.tag_id;
+        try {
+            const response = selectionFilter
+                ? await removeSamplesFromTagByFilter({
+                      path: { collection_id, tag_id: tag.tag_id },
+                      body: { filter: selectionFilter }
+                  })
+                : await removeThingIdsToTagId({
+                      path: { tag_id: tag.tag_id },
+                      body: { sample_ids: [...selectedIds] }
+                  });
+            if (response.error) {
+                throw new Error('Failed to remove tag.');
+            }
+            await selectionTagCounts.refetch();
+            toast.success(`Removed "${tag.name}" from ${count} items`);
+        } catch {
+            toast.error('Failed to remove tag. Please try again.');
+        } finally {
+            removingTagId = null;
         }
     }
 
@@ -210,8 +253,12 @@
     <div class="mb-3 w-full space-y-1">
         <div class="space-y-1">
             {#each $tags as tag (tag.tag_id)}
+                {@const selectionCount = tagCounts?.get(tag.tag_id) ?? 0}
                 <div
-                    class="flex items-center gap-2 py-0.5"
+                    class={cn(
+                        'group flex items-center gap-2 py-0.5',
+                        tagCounts && selectionCount === 0 && 'opacity-50'
+                    )}
                     data-testid="tag-menu-item"
                     data-onboarding-tag
                 >
@@ -234,6 +281,16 @@
                             />
                         {/if}
                     </div>
+                    {#if tagCounts && editingTagId !== tag.tag_id}
+                        <TagSelectionCount
+                            tagName={tag.name}
+                            count={selectionCount}
+                            total={selectedIds.size}
+                            canRemove={canManageTags && allowAssign}
+                            busy={removingTagId === tag.tag_id}
+                            onRemove={() => handleRemoveFromSelection(tag, selectionCount)}
+                        />
+                    {/if}
                     {#if canManageTags && editingTagId !== tag.tag_id}
                         <TagActionMenu
                             {tag}

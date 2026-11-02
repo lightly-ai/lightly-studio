@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- The tags menu shows how many selected samples carry each tag. Remove a tag from all selected samples with one click.
 - Delete selected annotations in bulk from the annotation grid.
 - Explore and edit point-cloud annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
 - Collapse the camera strip in the point-cloud workspace to give the scene more space.

@@ -3,6 +3,8 @@ import {
     addSamplesToTagByFilter,
     createTag,
     deleteTag,
+    removeSamplesFromTagByFilter,
+    removeThingIdsToTagId,
     renameTag
 } from '$lib/api/lightly_studio_local';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
@@ -23,6 +25,8 @@ const mocks = vi.hoisted(() => ({
     selectedSampleAnnotationCropIds: {} as Record<string, Set<string>>,
     selectAllSnapshotByCollection: {} as Record<string, SelectAllSnapshot | null>,
     selectAllAnnotationSnapshotByCollection: {} as Record<string, SelectAllSnapshot | null>,
+    selectionTagCounts: undefined as Map<string, number> | undefined,
+    refetchSelectionTagCounts: vi.fn(),
     loadTags: vi.fn(),
     tagSelectionToggle: vi.fn(),
     clearTagSelected: vi.fn()
@@ -36,9 +40,22 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
         addSampleIdsToTagId: vi.fn(),
         addSamplesToTagByFilter: vi.fn(),
         deleteTag: vi.fn(),
-        renameTag: vi.fn()
+        renameTag: vi.fn(),
+        removeThingIdsToTagId: vi.fn(),
+        removeSamplesFromTagByFilter: vi.fn()
     };
 });
+
+vi.mock('./useSelectionTagCounts.svelte', () => ({
+    useSelectionTagCounts: () => ({
+        query: {
+            get data() {
+                return mocks.selectionTagCounts;
+            },
+            refetch: mocks.refetchSelectionTagCounts
+        }
+    })
+}));
 
 vi.mock('$lib/hooks/useTags/useTags.js', () => ({
     useTags: vi.fn(() => ({
@@ -97,6 +114,19 @@ describe('TagsMenu', () => {
         mocks.selectedSampleAnnotationCropIds = {};
         mocks.selectAllSnapshotByCollection = {};
         mocks.selectAllAnnotationSnapshotByCollection = {};
+        mocks.selectionTagCounts = undefined;
+        vi.mocked(removeThingIdsToTagId).mockResolvedValue({
+            data: true,
+            error: undefined,
+            request: mockRequest,
+            response: mockResponse
+        });
+        vi.mocked(removeSamplesFromTagByFilter).mockResolvedValue({
+            data: true,
+            error: undefined,
+            request: mockRequest,
+            response: mockResponse
+        });
         vi.mocked(addSampleIdsToTagId).mockResolvedValue({
             data: true,
             error: undefined,
@@ -522,5 +552,57 @@ describe('TagsMenu', () => {
         await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
 
         expect(mocks.tagSelectionToggle).not.toHaveBeenCalled();
+    });
+
+    it('shows selection counts and removes a tag from the selected samples', async () => {
+        mocks.selectedSampleIdsByCollection = {
+            'collection-1': new Set(['sample-1', 'sample-2'])
+        };
+        mocks.selectionTagCounts = new Map([['tag-1', 1]]);
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        expect(screen.getByTestId('tag-selection-count')).toHaveTextContent('1 / 2');
+        await fireEvent.click(screen.getByLabelText('Remove tag Vehicle from selection'));
+
+        await waitFor(() => {
+            expect(removeThingIdsToTagId).toHaveBeenCalledWith({
+                path: { tag_id: 'tag-1' },
+                body: { sample_ids: ['sample-1', 'sample-2'] }
+            });
+        });
+        expect(mocks.refetchSelectionTagCounts).toHaveBeenCalled();
+        expect(toast.success).toHaveBeenCalledWith('Removed "Vehicle" from 1 items');
+    });
+
+    it('removes a tag by filter for an unmodified select-all', async () => {
+        const filter = { filter_type: 'image' } as TagByFilterBody['filter'];
+        mocks.selectedSampleIdsByCollection = {
+            'collection-1': new Set(['sample-1', 'sample-2'])
+        };
+        mocks.selectAllSnapshotByCollection = { 'collection-1': { filter, size: 2 } };
+        mocks.selectionTagCounts = new Map([['tag-1', 2]]);
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        await fireEvent.click(screen.getByLabelText('Remove tag Vehicle from selection'));
+
+        await waitFor(() => {
+            expect(removeSamplesFromTagByFilter).toHaveBeenCalledWith({
+                path: { collection_id: 'collection-1', tag_id: 'tag-1' },
+                body: { filter }
+            });
+        });
+        expect(removeThingIdsToTagId).not.toHaveBeenCalled();
     });
 });

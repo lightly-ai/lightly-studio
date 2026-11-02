@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, StrictInt
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Field, select
+from sqlmodel import Field, col, select
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -356,3 +356,79 @@ def remove_thing_ids_to_tag_id(
         session=session, tag_id=tag_id, sample_ids=sample_ids
     )
     return True
+
+
+@tag_router.delete(
+    "/collections/{collection_id}/tags/{tag_id}/remove/samples_by_filter",
+)
+def remove_samples_from_tag_by_filter(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
+    tag_id: Annotated[UUID, Path(title="Tag Id")],
+    body: TagByFilterBody,
+) -> bool:
+    """Remove a tag from every sample a grid filter matches."""
+    tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
+    if tag is None or tag.collection_id != collection_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Tag {tag_id} not found in collection {collection_id}.",
+        )
+
+    sample_ids_query = build_sample_ids_query(
+        session=session, collection_id=collection_id, grid_filter=body.filter
+    )
+    tag_resolver.remove_samples_from_tag_from_query(
+        session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
+    )
+    return True
+
+
+class SelectionTagCountsBody(BaseModel):
+    """A sample selection, given either as sample IDs or as a grid filter."""
+
+    sample_ids: list[UUID] | None = None
+    filter: GridFilter | None = None
+
+
+class SelectionTagCount(BaseModel):
+    """Number of selected samples that carry a tag."""
+
+    tag_id: UUID
+    sample_count: int
+
+
+@tag_router.post(
+    "/collections/{collection_id}/tags/selection_counts",
+    response_model=list[SelectionTagCount],
+)
+def count_selection_tags(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
+    body: SelectionTagCountsBody,
+) -> list[SelectionTagCount]:
+    """Count, for each tag, how many samples of a selection carry it.
+
+    The filter takes precedence over the sample IDs.
+    """
+    if body.filter is not None:
+        sample_ids_query = build_sample_ids_query(
+            session=session, collection_id=collection_id, grid_filter=body.filter
+        )
+    else:
+        sample_ids_query = select(SampleTable.sample_id).where(
+            col(SampleTable.sample_id).in_(body.sample_ids or [])
+        )
+    counts = tag_resolver.count_samples_by_tag_from_query(
+        session=session, sample_ids_query=sample_ids_query
+    )
+    return [
+        SelectionTagCount(tag_id=tag_id, sample_count=sample_count)
+        for tag_id, sample_count in counts.items()
+    ]

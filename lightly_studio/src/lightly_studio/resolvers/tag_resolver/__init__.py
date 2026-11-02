@@ -7,6 +7,9 @@ from lightly_studio.resolvers.tag_resolver.add_samples_to_tag_from_query import 
     add_samples_to_tag_from_query,
 )
 from lightly_studio.resolvers.tag_resolver.add_tag_to_sample import add_tag_to_sample
+from lightly_studio.resolvers.tag_resolver.count_samples_by_tag_from_query import (
+    count_samples_by_tag_from_query,
+)
 from lightly_studio.resolvers.tag_resolver.create import create
 from lightly_studio.resolvers.tag_resolver.delete import delete
 from lightly_studio.resolvers.tag_resolver.get_all_by_collection_id import (
@@ -26,6 +29,9 @@ from lightly_studio.resolvers.tag_resolver.get_tags_by_sample import get_tags_by
 from lightly_studio.resolvers.tag_resolver.remove_sample_ids_from_tag_id import (
     remove_sample_ids_from_tag_id,
 )
+from lightly_studio.resolvers.tag_resolver.remove_samples_from_tag_from_query import (
+    remove_samples_from_tag_from_query,
+)
 from lightly_studio.resolvers.tag_resolver.remove_tag_from_sample import remove_tag_from_sample
 from lightly_studio.resolvers.tag_resolver.rename import rename
 from lightly_studio.resolvers.tag_resolver.split_samples import (
@@ -38,6 +44,7 @@ __all__ = [
     "add_sample_ids_to_tag_id",
     "add_samples_to_tag_from_query",
     "add_tag_to_sample",
+    "count_samples_by_tag_from_query",
     "create",
     "delete",
     "get_all_by_collection_id",
@@ -49,6 +56,7 @@ __all__ = [
     "get_sample_ids_by_tag_id",
     "get_tags_by_sample",
     "remove_sample_ids_from_tag_id",
+    "remove_samples_from_tag_from_query",
     "remove_tag_from_sample",
     "rename",
     "split_samples",
