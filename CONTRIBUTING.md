@@ -10,7 +10,7 @@ We welcome contributions of all kinds, including:
 After you have your changes ready, and you create a new pull request, a maintainer will review your PR, may ask for changes, suggest improvements, or approve once ready.
 
 ## Requirements
-- Python **3.9–3.14** (3.9 recommended)
+- Python **3.10–3.14** (3.10 recommended)
 - Uv version **0.12.6** (pinned exactly, see `required-version` in the root `pyproject.toml`)
 - Node.js **24+** (exact version pinned in `lightly_studio_view/.nvmrc`)
 

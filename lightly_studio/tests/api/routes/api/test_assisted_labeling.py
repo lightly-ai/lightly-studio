@@ -27,6 +27,7 @@ from lightly_studio.assisted_labeling.provider import (
     ProviderError,
     SegmentationPrompt,
 )
+from lightly_studio.usage import usage_reporter
 from tests.helpers_resolvers import create_collection, create_image
 from tests.services.assisted_labeling_service.helpers import StubProvider
 
@@ -123,6 +124,40 @@ def test_create_interactive_annotation_preview__provider_thread(
     assert response.json() == {"prediction": None}
     assert len(thread_names) == 1
     assert thread_names[0].startswith("assisted_labeling")
+
+
+@pytest.mark.usefixtures("stub_provider")
+@pytest.mark.parametrize(
+    ("headers", "expected_user_email"),
+    [
+        ({"X-User-Email": "ada@example.com"}, "ada@example.com"),
+        ({"X-User-Email": "  "}, None),
+        ({}, None),
+    ],
+)
+def test_create_interactive_annotation_preview__reports_usage(
+    headers: dict[str, str],
+    expected_user_email: str | None,
+    db_session: Session,
+    media_test_client: TestClient,
+    mocker: MockerFixture,
+) -> None:
+    report = mocker.patch.object(usage_reporter, "report")
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = _post_interactive(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        headers=headers,
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    (event,) = report.call_args.kwargs["events"]
+    assert event.user_email == expected_user_email
+    assert event.operation == "segment_interactive"
+    assert event.collection_id == collection.collection_id
 
 
 def test_create_interactive_annotation_preview__points_and_boxes(
@@ -253,6 +288,30 @@ def test_create_instances_annotation_preview(
     assert [prediction["score"] for prediction in predictions] == [0.8]
 
 
+@pytest.mark.usefixtures("stub_provider")
+def test_create_instances_annotation_preview__reports_usage(
+    db_session: Session,
+    media_test_client: TestClient,
+    mocker: MockerFixture,
+) -> None:
+    report = mocker.patch.object(usage_reporter, "report")
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = _post_instances(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        headers={"X-User-Email": "ada@example.com"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    (event,) = report.call_args.kwargs["events"]
+    assert event.user_email == "ada@example.com"
+    assert event.operation == "segment_instances"
+    assert event.collection_id == collection.collection_id
+
+
 def test_create_instances_annotation_preview__too_many_instances(
     db_session: Session, media_test_client: TestClient
 ) -> None:
@@ -314,6 +373,7 @@ def _post_interactive(
     collection_id: UUID,
     sample_id: UUID,
     boxes: list[dict[str, float]] | None = None,
+    headers: dict[str, str] | None = None,
 ) -> Response:
     return client.post(
         "/api/annotate/interactive",
@@ -323,10 +383,16 @@ def _post_interactive(
             "points": [POSITIVE_POINT],
             "boxes": boxes,
         },
+        headers=headers,
     )
 
 
-def _post_instances(client: TestClient, collection_id: UUID, sample_id: UUID) -> Response:
+def _post_instances(
+    client: TestClient,
+    collection_id: UUID,
+    sample_id: UUID,
+    headers: dict[str, str] | None = None,
+) -> Response:
     return client.post(
         "/api/annotate/instances",
         json={
@@ -334,4 +400,5 @@ def _post_instances(client: TestClient, collection_id: UUID, sample_id: UUID) ->
             "sample_id": str(sample_id),
             "text_prompt": "dog",
         },
+        headers=headers,
     )

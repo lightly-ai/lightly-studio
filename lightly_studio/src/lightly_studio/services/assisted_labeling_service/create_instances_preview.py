@@ -25,10 +25,17 @@ def create_instances_preview(
     provider: AssistedLabelingProvider,
     image: ProviderImage,
     request: InstancesAnnotationRequest,
+    user_email: str | None,
 ) -> InstancesAnnotationResponse:
     """Returns the previews of all matching instances sorted by score. Saves nothing.
 
     The number of instances is limited by `request.max_instances`.
+
+    Args:
+        provider: The provider to call.
+        image: The image to segment.
+        request: The preview request.
+        user_email: Email of the user who triggered the call, if known.
 
     Raises:
         ProviderUnavailableError: If the provider is not configured.
@@ -42,7 +49,14 @@ def create_instances_preview(
         text=request.text_prompt,
         max_masks=max(request.max_instances, _MIN_MULTI_INSTANCE_MASKS),
     )
-    predictions = run_provider.segment(provider=provider, image=image, prompt=prompt)
+    predictions = run_provider.segment(
+        provider=provider,
+        image=image,
+        prompt=prompt,
+        operation=run_provider.OPERATION_INSTANCES,
+        collection_id=request.collection_id,
+        user_email=user_email,
+    )
     previews = to_annotation_preview.to_sorted_annotation_previews(
         predictions=predictions, width=image.width, height=image.height
     )

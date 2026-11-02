@@ -17,8 +17,12 @@
         selectedClassNames: string[];
         onClassBarClick: (item: CategoryCount) => void;
         onClose: () => void;
-        // The host keeps the bin count so that it stays when the panel closes and opens again.
+        // The host keeps these settings so that they stay when the panel closes and opens again.
         histogramBinCount: number;
+        /** The source that the user picked, for example `classes` or `metadata`. */
+        selectedSourceId: string | undefined;
+        /** The group that the user picked, for example a metadata key. */
+        selectedGroupId: string | undefined;
     }
 
     let {
@@ -27,7 +31,9 @@
         selectedClassNames,
         onClassBarClick,
         onClose,
-        histogramBinCount = $bindable()
+        histogramBinCount = $bindable(),
+        selectedSourceId = $bindable(),
+        selectedGroupId = $bindable()
     }: Props = $props();
 
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
@@ -75,6 +81,8 @@
     onCategoricalRetry={metadataDistribution.onCategoricalRetry}
     {histogramBinCount}
     onHistogramBinCountChange={(binCount) => (histogramBinCount = binCount)}
+    bind:selectedSourceId
+    bind:selectedGroupId
     onGroupChange={(sourceId, groupId) => {
         activeDistributionSourceId = sourceId;
         activeDistributionGroupId = groupId;

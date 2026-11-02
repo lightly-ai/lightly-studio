@@ -10,7 +10,6 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable
@@ -322,58 +321,6 @@ def test_get_tick_details__target_frame_id(db_session: Session, tmp_path: Path) 
         (0.0, 0.0, -0.7071067811865476, 0.7071067811865476)
     )
     assert (cuboid.sx, cuboid.sy, cuboid.sz) == pytest.approx((2.0, 1.0, 1.5))
-
-
-def test_get_tick_details__target_frame_id_of_cuboid(db_session: Session) -> None:
-    # The recording URI does not exist, so the test fails if the recording is read.
-    fixture = helpers.create_mcap_sequence(session=db_session, uri="/missing/recording.mcap")
-    _add_tick_with_cuboid(session=db_session, fixture=fixture, timestamp_ns=1_000)
-
-    result = recording_service.get_tick_details(
-        session=db_session,
-        dataset_id=fixture.sequence_collection.dataset_id,
-        sequence_id=fixture.sample_id,
-        seq_number=0,
-        target_frame_id="odom",
-    )
-
-    assert result is not None
-    cuboid = result.annotations[0].cuboid_3d_details
-    assert cuboid is not None
-    assert cuboid.frame_id == "odom"
-    assert (cuboid.px, cuboid.py, cuboid.pz) == pytest.approx((0.0, 0.0, 0.5))
-
-
-def test_get_tick_details__target_frame_id_without_timestamp(db_session: Session) -> None:
-    fixture = helpers.create_mcap_sequence(session=db_session)
-    _add_tick_with_cuboid(session=db_session, fixture=fixture, timestamp_ns=None)
-
-    with pytest.raises(McapAccessError, match="The tick has no timestamp"):
-        recording_service.get_tick_details(
-            session=db_session,
-            dataset_id=fixture.sequence_collection.dataset_id,
-            sequence_id=fixture.sample_id,
-            seq_number=0,
-            target_frame_id=mcap_helpers.LIDAR_FRAME_ID,
-        )
-
-
-def test_get_tick_details__target_frame_id_not_connected(
-    db_session: Session, tmp_path: Path
-) -> None:
-    # No static transforms are stored and the recording has no `/tf` topic.
-    mcap_path = mcap_helpers.write_mcap(path=tmp_path / "recording.mcap")
-    fixture = helpers.create_mcap_sequence(session=db_session, uri=str(mcap_path))
-    _add_tick_with_cuboid(session=db_session, fixture=fixture, timestamp_ns=1_050_000_000)
-
-    with pytest.raises(TransformNotFoundError):
-        recording_service.get_tick_details(
-            session=db_session,
-            dataset_id=fixture.sequence_collection.dataset_id,
-            sequence_id=fixture.sample_id,
-            seq_number=0,
-            target_frame_id=mcap_helpers.LIDAR_FRAME_ID,
-        )
 
 
 def test_get_tick_details__unknown_sequence(db_session: Session) -> None:

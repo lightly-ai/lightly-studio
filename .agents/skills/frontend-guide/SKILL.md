@@ -7,6 +7,14 @@ description: Read before writing or reviewing any frontend code in lightly_studi
 
 Coding standards for frontend development in LightlyStudio using SvelteKit and TypeScript.
 
+## Runtime
+
+- Use the Node version from `lightly_studio_view/.nvmrc` for frontend commands.
+- Before running `npm`, `npx`, `make`, or frontend tests/builds, activate it with `nvm use` from
+  `lightly_studio_view` (currently Node 24.13.1).
+- If the shell does not expose `nvm`, use the matching installed Node 24 binary explicitly rather
+  than falling back to another Node version.
+
 ## Key Principles
 
 - Write concise, technical TypeScript code. Use Svelte-specific features (like runes) only when necessary within Svelte-compiled components.
