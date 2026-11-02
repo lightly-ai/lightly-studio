@@ -164,12 +164,4 @@ describe('AnnotationClassesTab', () => {
         ).toBeInTheDocument();
         expect(screen.queryByText('bear')).not.toBeInTheDocument();
     });
-
-    it('says that changes save immediately', () => {
-        render(AnnotationClassesTab);
-
-        expect(
-            screen.getByText('Changes to annotation classes save immediately.')
-        ).toBeInTheDocument();
-    });
 });

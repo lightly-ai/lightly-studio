@@ -10,7 +10,6 @@
     const { totalCount, visibleCount, searchText, exactMatchName, isLoading }: Props = $props();
 </script>
 
-<p class="px-2 text-xs text-muted-foreground">Changes to annotation classes save immediately.</p>
 <!-- Empty while the classes load, because counts and matches are not known yet. The list
      shows the loading state, and min-h-4 keeps the layout still. -->
 <p class="min-h-4 px-2 text-xs text-muted-foreground">
