@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Renaming an annotation class that has annotations no longer fails on DuckDB. If your DuckDB database was created before this version, re-index your data to get the fix.
+
 ### Security
 
 ## \[1.2.1\] - 2026-11-02

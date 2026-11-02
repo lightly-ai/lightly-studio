@@ -40,8 +40,12 @@ class AnnotationLabelTable(AnnotationLabelBase, table=True):
     """This class defines the AnnotationLabel model."""
 
     __tablename__ = "annotation_label"
-    # Ensure that the combination of annotation_label_name and dataset_id is unique.
-    __table_args__ = (UniqueConstraint("annotation_label_name", "dataset_id"),)
+    # The combination of annotation_label_name and dataset_id is unique. The resolvers check
+    # this. Only PostgreSQL also has the constraint: DuckDB cannot update a column with an
+    # index while a foreign key references the row, so a rename would fail.
+    __table_args__ = (
+        UniqueConstraint("annotation_label_name", "dataset_id").ddl_if(dialect="postgresql"),
+    )
 
     annotation_label_id: UUID = Field(default_factory=uuid4, primary_key=True)
     # TODO (Mihnea, 01/2026): change to datetime
