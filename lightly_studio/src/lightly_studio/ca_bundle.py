@@ -17,8 +17,9 @@ from ssl import PROTOCOL_TLS_CLIENT, SSLContext, SSLError
 
 MAX_CA_BUNDLE_PEM_BYTES = 64 * 1024
 
+# With re.ASCII, "\s" matches only ASCII whitespace. SSLContext accepts only ASCII text.
 _CERTIFICATE_PATTERN = re.compile(
-    r"-----BEGIN CERTIFICATE-----[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----"
+    r"-----BEGIN CERTIFICATE-----[A-Za-z0-9+/=\s]+-----END CERTIFICATE-----", flags=re.ASCII
 )
 
 # Paths of the CA bundle files written by this process.

@@ -125,6 +125,14 @@ def test_write_ca_bundle__rejects_invalid_certificate() -> None:
         ca_bundle.write_ca_bundle(pem=pem)
 
 
+def test_write_ca_bundle__rejects_non_ascii_whitespace(ca_pem: str) -> None:
+    begin_line, first_base64_line, rest = ca_pem.split("\n", maxsplit=2)
+    pem = f"{begin_line}\n{first_base64_line}\u00a0\n{rest}"
+
+    with pytest.raises(ValueError, match="no PEM certificate"):
+        ca_bundle.write_ca_bundle(pem=pem)
+
+
 def test_write_ca_bundle__rejected_bundle_writes_no_file(tmp_path: Path) -> None:
     files_before = set(tmp_path.iterdir())
 
