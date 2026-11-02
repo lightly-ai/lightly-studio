@@ -3,10 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ColumnElement
 from sqlmodel import Session, col, func, select
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -26,6 +24,7 @@ from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import mcap_group_sequence_resolver, similarity_utils
+from lightly_studio.resolvers.mcap_group_sequence_resolver import sequence_grid_query
 from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
     McapSequenceFilter,
 )
@@ -66,7 +65,7 @@ def get_all_by_collection_id(
         text_embedding=text_embedding,
     )
 
-    total_count_query = _scope_query(
+    total_count_query = sequence_grid_query.scope_query(
         query=select(func.count()).select_from(McapGroupSequenceTable),
         collection_id=collection_id,
         embedding_model_id=embedding_model_id,
@@ -77,12 +76,12 @@ def get_all_by_collection_id(
     sequences: list[McapGroupSequenceTable]
     similarity_scores: dict[UUID, float] = {}
     if distance_expr is not None:
-        similarity_query = _scope_query(
+        similarity_query = sequence_grid_query.scope_query(
             query=select(McapGroupSequenceTable, distance_expr),
             collection_id=collection_id,
             embedding_model_id=embedding_model_id,
             filters=filters,
-        ).order_by(distance_expr, *_default_order())
+        ).order_by(distance_expr, *sequence_grid_query.default_order())
         similarity_query = _paginate(query=similarity_query, pagination=pagination)
         rows = session.exec(similarity_query).all()
         sequences = [sequence for sequence, _ in rows]
@@ -91,12 +90,12 @@ def get_all_by_collection_id(
             for sequence, distance in rows
         }
     else:
-        samples_query = _scope_query(
+        samples_query = sequence_grid_query.scope_query(
             query=select(McapGroupSequenceTable),
             collection_id=collection_id,
             embedding_model_id=None,
             filters=filters,
-        ).order_by(*_default_order())
+        ).order_by(*sequence_grid_query.default_order())
         samples_query = _paginate(query=samples_query, pagination=pagination)
         sequences = list(session.exec(samples_query).all())
 
@@ -141,34 +140,6 @@ def get_all_by_collection_id(
         total_count=total_count,
         next_cursor=_compute_next_cursor(pagination=pagination, total_count=total_count),
     )
-
-
-def _scope_query(
-    query: QueryType,
-    collection_id: UUID,
-    embedding_model_id: UUID | None,
-    filters: McapSequenceFilter | None,
-) -> QueryType:
-    """Scope a query on McapGroupSequenceTable to a collection, embeddings and filters.
-
-    With an embedding model, only sequences with an embedding of that model are kept.
-    """
-    query = query.join(
-        SampleTable, col(McapGroupSequenceTable.sample_id) == col(SampleTable.sample_id)
-    ).where(col(SampleTable.collection_id) == collection_id)
-    query = similarity_utils.apply_similarity_join(
-        query=query,
-        sample_id_column=col(McapGroupSequenceTable.sample_id),
-        embedding_model_id=embedding_model_id,
-    )
-    if filters is not None:
-        query = filters.apply(query)
-    return query
-
-
-def _default_order() -> list[ColumnElement[Any]]:
-    """Order by creation time, with the sample ID as tiebreaker for a stable order."""
-    return [col(SampleTable.created_at).asc(), col(SampleTable.sample_id).asc()]
 
 
 def _paginate(query: QueryType, pagination: Paginated | None) -> QueryType:
