@@ -272,6 +272,10 @@ MatchExpr: TypeAlias = Annotated[
         EqualityFloatExpr,
         TagsContainsExpr,
         MetadataComparisonExpr,
+        SampleEvaluationMatchExpr,
+        ConfusionMatchExpr,
+        FalsePositiveMatchExpr,
+        FalseNegativeMatchExpr,
         ClassificationMatchExpr,
         ObjectDetectionMatchExpr,
         SegmentationMaskMatchExpr,
@@ -300,3 +304,32 @@ class QueryExpr(BaseModel):
     """Top-level model representing a complete query expression."""
 
     match_expr: MatchExpr
+
+    @pydantic.model_validator(mode="after")
+    def validate_evaluation_scope(self) -> Self:  # noqa: N804
+        """Evaluation filters apply to samples, not nested annotation queries."""
+        _validate_evaluation_scope(expr=self.match_expr, in_annotation=False)
+        return self
+
+
+def _validate_evaluation_scope(expr: MatchExpr, in_annotation: bool) -> None:
+    if isinstance(
+        expr,
+        (
+            SampleEvaluationMatchExpr,
+            ConfusionMatchExpr,
+            FalsePositiveMatchExpr,
+            FalseNegativeMatchExpr,
+        ),
+    ):
+        if in_annotation:
+            raise ValueError("Evaluation filters cannot be nested inside annotation queries.")
+    elif isinstance(
+        expr, (ClassificationMatchExpr, ObjectDetectionMatchExpr, SegmentationMaskMatchExpr)
+    ):
+        _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
+    elif isinstance(expr, (AndExpr, OrExpr)):
+        for child in expr.children:
+            _validate_evaluation_scope(expr=child, in_annotation=in_annotation)
+    elif isinstance(expr, NotExpr):
+        _validate_evaluation_scope(expr=expr.child, in_annotation=in_annotation)
