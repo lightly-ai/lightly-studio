@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AnnotationClassRow from './AnnotationClassRow.svelte';
 
@@ -90,8 +90,8 @@ describe('AnnotationClassRow', () => {
         renderRow();
         await fireEvent.click(screen.getByRole('button', { name: 'Delete cat' }));
 
-        await waitFor(() =>
-            expect(screen.getByText(/This also deletes 2 annotations/)).toBeInTheDocument()
-        );
+        const dialog = await screen.findByRole('dialog');
+        expect(within(dialog).getByText(/This also deletes/)).toBeInTheDocument();
+        expect(within(dialog).getByText('2 annotations')).toBeInTheDocument();
     });
 });
