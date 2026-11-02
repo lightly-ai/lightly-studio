@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The previous and next buttons of a point cloud sequence now follow the tags, the embedding plot selection, and the text search of the point clouds grid.
+
 ### Security
 
 ## \[1.2.1\] - 2026-11-02
