@@ -83,6 +83,20 @@ describe('AnnotationClassesTab', () => {
         expect(mocks.addClass).toHaveBeenCalledTimes(1);
     });
 
+    it('keeps text typed while a class is being added', async () => {
+        let resolveAdd: (value: unknown) => void = () => {};
+        mocks.addClass.mockReturnValue(new Promise((resolve) => (resolveAdd = resolve)));
+        render(AnnotationClassesTab);
+        await fireEvent.input(input(), { target: { value: 'wolf' } });
+        await fireEvent.keyDown(input(), { key: 'Enter' });
+
+        await fireEvent.input(input(), { target: { value: 'fox' } });
+        resolveAdd({ annotation_label_id: 'new' });
+        await new Promise((resolve) => setTimeout(resolve));
+
+        expect(input()).toHaveValue('fox');
+    });
+
     it('does not add on Enter while an IME composes text', async () => {
         render(AnnotationClassesTab);
         await fireEvent.input(input(), { target: { value: 'wolf' } });

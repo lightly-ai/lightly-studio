@@ -4,6 +4,7 @@
     import { AnnotationClassList } from './AnnotationClassList';
     import { AnnotationClassSearchInput } from './AnnotationClassSearchInput';
     import { AnnotationClassesStatus } from './AnnotationClassesStatus';
+    import { searchAnnotationClasses } from './AnnotationClassesTab.helpers';
     import { useAnnotationClasses } from './useAnnotationClasses';
 
     interface Props {
@@ -23,25 +24,9 @@
     let query = $state('');
 
     const trimmedQuery = $derived(query.trim());
-    const sortedClasses = $derived(
-        [...(classes.query.data ?? [])].sort((a, b) =>
-            a.annotation_label_name.localeCompare(b.annotation_label_name)
-        )
+    const { sortedClasses, visibleClasses, exactMatch, canAdd, canAddWithEnter } = $derived(
+        searchAnnotationClasses(classes.query.data ?? [], trimmedQuery)
     );
-    const visibleClasses = $derived(
-        sortedClasses.filter((c) =>
-            c.annotation_label_name.toLowerCase().includes(trimmedQuery.toLowerCase())
-        )
-    );
-    const exactMatch = $derived(
-        sortedClasses.find(
-            (c) => c.annotation_label_name.toLowerCase() === trimmedQuery.toLowerCase()
-        )
-    );
-    const canAdd = $derived(trimmedQuery.length > 0 && !exactMatch);
-    // Enter adds only when nothing matches, so a partial search like "bea" for "bear"
-    // never adds a class by accident.
-    const canAddWithEnter = $derived(canAdd && visibleClasses.length === 0);
 
     // The last added class is highlighted and scrolled into view, so the user can
     // edit it, for example its color, straight away.
@@ -55,7 +40,8 @@
         isAdding = true;
         try {
             const created = await classes.addClass(name);
-            query = '';
+            // Keep text that the user typed while the request was pending.
+            if (query.trim() === name) query = '';
             addedId = created.annotation_label_id ?? null;
         } catch {
             // The hook already shows an error toast. Keep the typed name so the user can retry.
