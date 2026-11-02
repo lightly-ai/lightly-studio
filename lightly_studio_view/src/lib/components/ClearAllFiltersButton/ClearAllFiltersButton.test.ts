@@ -13,6 +13,7 @@ describe('ClearAllFiltersButton', () => {
             props: {
                 collectionId: 'parent-images-id',
                 isCaptions: true,
+                isGroups: false,
                 isImages: false,
                 isVideos: false,
                 isVideoFrames: false

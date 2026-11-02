@@ -10,6 +10,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     ImageStub,
     create_collection,
+    create_groups,
     create_images,
     create_tag,
 )
@@ -217,3 +218,32 @@ def test_get_all__sample_counts(db_session: Session) -> None:
     assert sample_counts_by_id[group_ids[0]] == 3
     assert sample_counts_by_id[group_ids[1]] == 2
     assert sample_counts_by_id[group_ids[2]] == 1
+
+
+def test_get_all__exclude_reviewed_groups(db_session: Session) -> None:
+    """Exclude either review tag, keep untagged groups, and intersect with inclusion."""
+    collection_id, ids = create_groups(session=db_session, count=4)
+    accepted = create_tag(session=db_session, collection_id=collection_id, tag_name="accepted")
+    changes = create_tag(session=db_session, collection_id=collection_id, tag_name="needs_changes")
+    for tag, sample_ids in [(accepted, ids[:2]), (changes, ids[1:3])]:
+        tag_resolver.add_sample_ids_to_tag_id(
+            session=db_session, tag_id=tag.tag_id, sample_ids=sample_ids
+        )
+    filters = GroupFilter(excluded_tag_ids=[accepted.tag_id, changes.tag_id])
+    result = group_resolver.get_all(
+        session=db_session, collection_id=collection_id, pagination=None, filters=filters
+    )
+    assert [sample.sample_id for sample in result.samples] == [ids[3]]
+    assert result.total_count == 1
+    filters = GroupFilter(
+        sample_filter=SampleFilter(tag_ids=[accepted.tag_id]), excluded_tag_ids=[changes.tag_id]
+    )
+    result = group_resolver.get_all(
+        session=db_session, collection_id=collection_id, pagination=None, filters=filters
+    )
+    assert [sample.sample_id for sample in result.samples] == [ids[0]]
+    filters.excluded_tag_ids = [accepted.tag_id]
+    result = group_resolver.get_all(
+        session=db_session, collection_id=collection_id, pagination=None, filters=filters
+    )
+    assert result.total_count == 0
