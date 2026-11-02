@@ -76,15 +76,19 @@ def test_sample_evaluation__boolean_criteria(test_client: TestClient, db_session
         create_image(
             session=db_session, collection_id=collection.collection_id, file_path_abs=f"/{name}.jpg"
         )
-        for name in ["a", "b", "missing"]
+        for name in ["a", "b", "c", "d", "missing"]
     ]
     run = create_run(session=db_session, collection_id=collection.collection_id, name="run1")
     create_sample_metrics(
         session=db_session,
         run_id=run.id,
         sample_metrics=[
-            SampleMetricStub(sample_id=images[0].sample_id, metrics={"fp": 0, "tp": 1}),
-            SampleMetricStub(sample_id=images[1].sample_id, metrics={"fp": 2, "tp": 1}),
+            # Each OR branch selects a different sample that also passes NOT.
+            SampleMetricStub(sample_id=images[0].sample_id, metrics={"fp": 0, "tp": 1, "fn": 0}),
+            SampleMetricStub(sample_id=images[1].sample_id, metrics={"fp": 0, "tp": 0, "fn": 1}),
+            # Each AND child excludes a sample that passes the other child.
+            SampleMetricStub(sample_id=images[2].sample_id, metrics={"fp": 2, "tp": 1, "fn": 0}),
+            SampleMetricStub(sample_id=images[3].sample_id, metrics={"fp": 0, "tp": 0, "fn": 0}),
         ],
     )
     expression = {
@@ -114,7 +118,7 @@ def test_sample_evaluation__boolean_criteria(test_client: TestClient, db_session
                             },
                             {
                                 "type": "evaluation_metric_comparison_expr",
-                                "metric_name": "absent",
+                                "metric_name": "fn",
                                 "operator": "!=",
                                 "value": 0,
                             },
@@ -131,4 +135,5 @@ def test_sample_evaluation__boolean_criteria(test_client: TestClient, db_session
         },
     )
     assert response.status_code == 200
-    assert [sample["file_name"] for sample in response.json()["data"]] == ["a.jpg"]
+    assert response.json()["total_count"] == 2
+    assert {sample["file_name"] for sample in response.json()["data"]} == {"a.jpg", "b.jpg"}
