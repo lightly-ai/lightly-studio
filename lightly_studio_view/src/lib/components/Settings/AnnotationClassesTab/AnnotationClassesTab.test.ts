@@ -5,7 +5,7 @@ import AnnotationClassesTab from './AnnotationClassesTab.svelte';
 
 const mocks = vi.hoisted(() => ({
     addClass: vi.fn(),
-    data: [] as unknown[]
+    data: [] as unknown[] | undefined
 }));
 
 vi.mock('./useAnnotationClasses', () => ({
@@ -70,6 +70,17 @@ describe('AnnotationClassesTab', () => {
 
         expect(mocks.addClass).toHaveBeenCalledWith('wolf');
         await vi.waitFor(() => expect(input()).toHaveValue(''));
+    });
+
+    it('does not add on Enter while the classes load', async () => {
+        mocks.data = undefined;
+        render(AnnotationClassesTab);
+        await fireEvent.input(input(), { target: { value: 'bear' } });
+
+        await fireEvent.keyDown(input(), { key: 'Enter' });
+
+        expect(mocks.addClass).not.toHaveBeenCalled();
+        expect(screen.queryByText(/Add new annotation class/)).not.toBeInTheDocument();
     });
 
     it('does not add a class twice while adding', async () => {

@@ -25,7 +25,7 @@
 
     const trimmedQuery = $derived(query.trim());
     const { sortedClasses, visibleClasses, exactMatch, canAdd, canAddWithEnter } = $derived(
-        searchAnnotationClasses(classes.query.data ?? [], trimmedQuery)
+        searchAnnotationClasses(classes.query.data, trimmedQuery)
     );
 
     // The last added class is highlighted and scrolled into view, so the user can

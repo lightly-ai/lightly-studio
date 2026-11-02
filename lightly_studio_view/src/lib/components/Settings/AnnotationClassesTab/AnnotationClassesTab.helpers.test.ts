@@ -33,6 +33,14 @@ describe('searchAnnotationClasses', () => {
         expect(result.canAddWithEnter).toBe(true);
     });
 
+    it('does not allow adding before the classes load', () => {
+        const result = searchAnnotationClasses(undefined, 'dog');
+
+        expect(result.visibleClasses).toEqual([]);
+        expect(result.canAdd).toBe(false);
+        expect(result.canAddWithEnter).toBe(false);
+    });
+
     it('does not allow adding an empty name', () => {
         const result = searchAnnotationClasses(classes, '');
 
