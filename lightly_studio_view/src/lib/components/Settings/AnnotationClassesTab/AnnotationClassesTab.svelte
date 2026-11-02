@@ -72,6 +72,7 @@
                 visibleCount={visibleClasses.length}
                 searchText={trimmedQuery}
                 exactMatchName={exactMatch?.annotation_label_name}
+                isLoading={classes.query.isLoading}
             />
         </div>
         <!-- Full width, so the scrollbar is at the dialog edge. -->

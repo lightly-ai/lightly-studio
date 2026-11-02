@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('./useAnnotationClasses', () => ({
     useAnnotationClasses: () => ({
-        query: { data: mocks.data, isLoading: false },
+        query: { data: mocks.data, isLoading: mocks.data === undefined },
         addClass: mocks.addClass,
         renameClass: vi.fn(),
         deleteClass: vi.fn()
@@ -81,6 +81,7 @@ describe('AnnotationClassesTab', () => {
 
         expect(mocks.addClass).not.toHaveBeenCalled();
         expect(screen.queryByText(/Add new annotation class/)).not.toBeInTheDocument();
+        expect(screen.queryByText(/No annotation class matches/)).not.toBeInTheDocument();
     });
 
     it('does not add a class twice while adding', async () => {
