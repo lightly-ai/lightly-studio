@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed a browser freeze on collections with an integer metadata field that has a very wide range, such as an ID.
+
 ### Security
 
 ## \[1.2.1\] - 2026-11-02
