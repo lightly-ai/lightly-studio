@@ -345,7 +345,7 @@ Only these call sites color by source; the rest stay on `getColorByLabel`. I che
 
 ---
 
-## Open questions
+## Decisions
 
-1. **Non-class names in `getColorByLabel`.** `PlotPanel/plotColorUtils` colors plot categories (for example tag names like `"Train"`) with `getColorByLabel`. A class with the same name and a saved color would then recolor that plot category. This happens today too. Keep it, or move plots to `getDefaultColor`?
-2. **Size of PR 5.** It touches the most call sites (~180 lines with tests). If review wants it smaller, split it: Tasks 5.1+5.2 (store, `getColorBySource`, picker) as one PR, Task 5.3 (renderers) as the next. The catch: between the two PRs, source colors set in the sidebar would not show in annotations, so the two would have to merge together.
+- Plot categories keep using `getColorByLabel`; a class with the same name recolors them, as today.
+- PR 5 stays one PR, so source colors never go missing between merges.
