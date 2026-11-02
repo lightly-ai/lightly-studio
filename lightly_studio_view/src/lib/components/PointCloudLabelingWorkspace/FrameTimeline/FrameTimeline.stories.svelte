@@ -85,6 +85,7 @@
             {
                 object_track_id: 'track-7',
                 object_track_number: 7,
+                managed: false,
                 annotations: [
                     { annotation_id: 'a', seq_number: 2, interpolated: false },
                     { annotation_id: 'b', seq_number: 5, interpolated: true },
@@ -94,6 +95,7 @@
             {
                 object_track_id: 'track-8',
                 object_track_number: 8,
+                managed: false,
                 annotations: [{ annotation_id: 'd', seq_number: 9, interpolated: false }]
             }
         ]

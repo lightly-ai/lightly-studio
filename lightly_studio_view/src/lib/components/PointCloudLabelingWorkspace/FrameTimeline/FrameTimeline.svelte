@@ -38,6 +38,7 @@
         onPlayToggle: () => void;
         onPlaybackIntervalChange: (intervalMs: number) => void;
         onSelectTick: (seqNumber: number) => void;
+        onSelectTrack?: (trackId: string) => void;
         /** Called when the user starts dragging the slider. */
         onSeekStart?: () => void;
         /** Called when the user releases the slider. */
@@ -62,6 +63,7 @@
         onPlayToggle,
         onPlaybackIntervalChange,
         onSelectTick,
+        onSelectTrack,
         onSeekStart,
         onSeekEnd,
         onPreviousSequence,
@@ -107,5 +109,5 @@
             {onSeekEnd}
         />
     </div>
-    <TrackTimelineRows {ticks} {tracks} {currentTick} {onSelectTick} />
+    <TrackTimelineRows {ticks} {tracks} {currentTick} {onSelectTick} {onSelectTrack} />
 </div>

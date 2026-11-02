@@ -10,6 +10,7 @@
     import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
     import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
     import { useSequenceTracks } from './FrameTimeline/useSequenceTracks.svelte';
+    import TrackEditingControls from './FrameTimeline/TrackEditingControls.svelte';
 
     const { cameraPane } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
@@ -18,6 +19,13 @@
         datasetId: layout.datasetId,
         sequenceId: layout.sequenceId
     }));
+    let selectedTrackId = $state<string | null>(null);
+    const selectedCuboid = $derived(
+        layout.sceneCuboids.find((cuboid) => cuboid.id === layout.selectedCuboidId)
+    );
+    const selectedTrack = $derived(
+        tracksQuery.data?.tracks.find((track) => track.object_track_id === selectedTrackId)
+    );
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => layout.datasetId,
@@ -99,6 +107,20 @@
 </PaneGroup>
 
 <div class="flex-none">
+    {#if layout.isEditingMode}
+        <TrackEditingControls
+            datasetId={layout.datasetId}
+            sequenceId={layout.sequenceId}
+            currentTick={layout.workspace.currentTick}
+            ticks={layout.workspace.ticks}
+            {selectedCuboid}
+            {selectedTrack}
+            onTrackStarted={(id) => (selectedTrackId = id)}
+            onSaved={async () => {
+                await Promise.all([tracksQuery.refetch(), layout.workspace.tickDetails.refetch()]);
+            }}
+        />
+    {/if}
     {#if tracksQuery.isError}
         <div class="px-2 py-1 text-xs text-destructive">
             Object tracks could not be loaded.
@@ -121,6 +143,7 @@
         onPlayToggle={layout.onPlayToggle}
         onPlaybackIntervalChange={layout.onPlaybackIntervalChange}
         onSelectTick={layout.onSelectTick}
+        onSelectTrack={(id) => (selectedTrackId = id)}
         onSeekStart={layout.onSeekStart}
         onSeekEnd={layout.onSeekEnd}
         onPreviousSequence={layout.onPreviousSequence}

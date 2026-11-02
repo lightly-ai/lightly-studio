@@ -18,6 +18,7 @@ class SequenceTrackView(BaseModel):
 
     object_track_id: UUID
     object_track_number: int
+    managed: bool
     annotations: list[TrackAnnotationView]
 
 

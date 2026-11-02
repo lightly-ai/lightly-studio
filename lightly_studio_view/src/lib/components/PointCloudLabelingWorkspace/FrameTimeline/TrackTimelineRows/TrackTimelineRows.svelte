@@ -7,9 +7,10 @@
         tracks: SequenceTrackView[];
         currentTick: number;
         onSelectTick: (seqNumber: number) => void;
+        onSelectTrack?: (trackId: string) => void;
     }
 
-    let { ticks, tracks, currentTick, onSelectTick }: Props = $props();
+    let { ticks, tracks, currentTick, onSelectTick, onSelectTrack }: Props = $props();
     let selectedTrackId = $state<string | null>(null);
     const selectedTrack = $derived(
         tracks.find((track) => track.object_track_id === selectedTrackId) ?? tracks[0]
@@ -61,6 +62,7 @@
                         aria-pressed={selectedTrack?.object_track_id === track.object_track_id}
                         onclick={() => {
                             selectedTrackId = track.object_track_id;
+                            onSelectTrack?.(track.object_track_id);
                             if (timeline.annotations[0])
                                 onSelectTick(timeline.annotations[0].seq_number);
                         }}>Track {track.object_track_number}</button
@@ -86,6 +88,7 @@
                                 aria-label={`Track ${track.object_track_number} keyframe at frame ${item.index! + 1}`}
                                 onclick={() => {
                                     selectedTrackId = track.object_track_id;
+                                    onSelectTrack?.(track.object_track_id);
                                     onSelectTick(item.seq_number);
                                 }}
                             ></button>

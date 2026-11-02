@@ -30,6 +30,10 @@ class ObjectTrackTable(SQLModel, table=True):
     # Vendor track id from the source annotations, unique per sequence not per dataset.
     source_track_id: int | None = None
 
+    # Tracks started in the point-cloud workspace can be extended with generated cuboids.
+    managed: bool = False
+    sequence_sample_id: UUID | None = Field(default=None, foreign_key="sequence.sample_id")
+
     # Parent track for nested boxes, e.g. a truck cabin or bed.
     parent_object_track_id: UUID | None = Field(
         default=None, foreign_key="object_track.object_track_id", index=True
@@ -58,6 +62,8 @@ class ObjectTrackView(BaseModel):
     object_track_number: int
     dataset_id: UUID
     source_track_id: int | None = None
+    managed: bool = False
+    sequence_sample_id: UUID | None = None
     parent_object_track_id: UUID | None = None
 
 
@@ -67,6 +73,8 @@ class ObjectTrackCreate(SQLModel):
     object_track_number: int
     dataset_id: UUID
     source_track_id: int | None = None
+    managed: bool = False
+    sequence_sample_id: UUID | None = None
     parent_object_track_id: UUID | None = None
 
 

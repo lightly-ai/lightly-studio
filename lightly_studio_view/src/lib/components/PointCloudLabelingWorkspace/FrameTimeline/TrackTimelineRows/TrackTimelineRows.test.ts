@@ -11,6 +11,7 @@ const ticks: TickView[] = [2, 5, 9, 12].map((seq_number) => ({
 const track: SequenceTrackView = {
     object_track_id: 'track-1',
     object_track_number: 7,
+    managed: false,
     annotations: [
         { annotation_id: 'a', seq_number: 2, interpolated: false },
         { annotation_id: 'b', seq_number: 5, interpolated: true },
@@ -37,6 +38,7 @@ describe('TrackTimelineRows', () => {
                     {
                         object_track_id: 'track-2',
                         object_track_number: 8,
+                        managed: false,
                         annotations: [{ annotation_id: 'd', seq_number: 9, interpolated: false }]
                     }
                 ],

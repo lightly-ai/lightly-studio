@@ -67,6 +67,7 @@ def get_sequence_tracks(
             SequenceTrackView(
                 object_track_id=track_id,
                 object_track_number=track_row.object_track_number,
+                managed=track_row.managed,
                 annotations=[],
             ),
         )
