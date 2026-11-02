@@ -84,7 +84,7 @@ lightly-studio = "lightly_studio.cli:main"
 [project.optional-dependencies]
 cloud-storage = [
     # The default CA bundle to which custom S3 CA certificates are appended.
-    "certifi>=2023.7.22",
+    "certifi>=2026.10.19",
     "s3fs>=2023.1.0",
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",

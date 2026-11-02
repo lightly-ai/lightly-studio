@@ -2397,7 +2397,7 @@ requires-dist = [
     { name = "alembic-postgresql-enum", specifier = ">=1.10.0" },
     { name = "av", specifier = ">=10.0.0" },
     { name = "brotli-asgi", specifier = ">=1.4.0" },
-    { name = "certifi", marker = "extra == 'cloud-storage'", specifier = ">=2023.7.22" },
+    { name = "certifi", marker = "extra == 'cloud-storage'", specifier = ">=2026.10.19" },
     { name = "click", specifier = ">=8.0.0" },
     { name = "duckdb", marker = "python_full_version < '3.15'", specifier = ">=1.2.2,<1.6" },
     { name = "duckdb", marker = "python_full_version >= '3.15'", specifier = ">=2.0.0,<3.0" },
