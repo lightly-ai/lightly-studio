@@ -1,94 +1,77 @@
 <script lang="ts">
-    import { T, useThrelte } from '@threlte/core';
-    import { OrbitControls } from '@threlte/extras';
-    import type { OrbitControls as ThreeOrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+    import { T } from '@threlte/core';
+    import type { PerspectiveCamera, OrthographicCamera, Plane } from 'three';
+    import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
-    import * as THREE from 'three';
-    import { createSceneNavigationController } from './sceneNavigationController';
+    import SceneCamera from './SceneCamera/SceneCamera.svelte';
     import type { ColorMode } from './pointCloudUtils';
     import type { PointBatch } from './types';
-    import type { WorkspaceTool } from '$lib/components/PointCloudLabelingWorkspace/domain';
-
+    import type {
+        CuboidAnnotation,
+        CameraMode,
+        WorkspaceTool
+    } from '$lib/components/PointCloudLabelingWorkspace/domain';
+    import type { SceneViewState } from './sceneViewState';
+    import { useSceneCameraNavigation } from './useSceneCameraNavigation/useSceneCameraNavigation.svelte';
     interface Props {
-        /** Current point cloud batch with positions, intensities, and count. */
         batch: PointBatch;
-        /** How points are colored: by height, intensity, per-point rgb, or neutral gray. */
+        clippingPlanes?: Plane[];
         colorMode?: ColorMode;
-        /** Screen-space point size in pixels. */
         pointSize?: number;
-        /** Min/max clamp for intensity-based coloring. */
         intensityRange?: [number, number];
-        /** Refits the camera whenever this changes, e.g. when the coordinate frame changes. */
         fitKey?: string;
-        /** Tool that determines whether orbit rotation is enabled. */
         activeTool?: WorkspaceTool;
+        cameraMode?: CameraMode;
+        cameraCuboid?: CuboidAnnotation;
+        isScaleSource?: boolean;
+        isActive?: () => boolean;
+        navigationId?: symbol;
+        viewState?: SceneViewState | null;
+        onViewStateChange?: (viewState: SceneViewState) => void;
     }
-
     let {
         batch,
+        clippingPlanes = [],
         colorMode = 'none',
         pointSize = 2,
         intensityRange,
         fitKey = '',
-        activeTool = 'select'
+        activeTool = 'select',
+        cameraMode = 'perspective',
+        cameraCuboid,
+        isScaleSource = false,
+        isActive,
+        navigationId,
+        viewState = null,
+        onViewStateChange
     }: Props = $props();
 
-    const BACKGROUND_COLOR = 'hsl(20, 14.3%, 4.1%)';
-    const { invalidate, renderer } = useThrelte();
-    let cameraRef: THREE.PerspectiveCamera | undefined = $state();
-    let controlsRef: ThreeOrbitControls | undefined = $state();
-
-    $effect(() => {
-        if (!cameraRef || !controlsRef) return;
-        const navigation = createSceneNavigationController({
-            camera: cameraRef,
-            controls: controlsRef,
-            invalidate
-        });
-        const canvas = renderer.domElement;
-        const suppress = (event: Event) => event.preventDefault();
-        canvas.addEventListener('contextmenu', suppress);
-        canvas.addEventListener('pointerdown', navigation.cancel);
-        return () => {
-            canvas.removeEventListener('contextmenu', suppress);
-            canvas.removeEventListener('pointerdown', navigation.cancel);
-            navigation.dispose();
-        };
-    });
+    let activeCamera = $state<PerspectiveCamera | OrthographicCamera>();
+    let controlsRef = $state<OrbitControls>();
+    useSceneCameraNavigation(() => ({
+        camera: activeCamera,
+        controls: controlsRef,
+        isActive,
+        navigationId
+    }));
 </script>
 
-<T.Color attach="background" args={[BACKGROUND_COLOR]} />
-
-<T.PerspectiveCamera
-    bind:ref={cameraRef}
-    makeDefault
-    fov={60}
-    near={0.1}
-    far={10000}
-    up={[0, 0, 1]}
->
-    <OrbitControls
-        bind:ref={controlsRef}
-        enableDamping
-        enableRotate={activeTool !== 'create-cuboid'}
-        screenSpacePanning={false}
-        mouseButtons={{
-            LEFT: THREE.MOUSE.ROTATE,
-            MIDDLE: THREE.MOUSE.DOLLY,
-            RIGHT: THREE.MOUSE.PAN
-        }}
-        touches={{ ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE }}
-    />
-</T.PerspectiveCamera>
-
+<T.Color attach="background" args={['hsl(20, 14.3%, 4.1%)']} />
+<SceneCamera {cameraMode} {activeTool} bind:camera={activeCamera} bind:controls={controlsRef} />
 <T.AmbientLight intensity={1} />
-
 <PointCloudPoints
     {batch}
+    {clippingPlanes}
     {colorMode}
     {pointSize}
     {intensityRange}
     {fitKey}
-    camera={cameraRef}
+    camera={activeCamera}
     controls={controlsRef}
+    {cameraMode}
+    {cameraCuboid}
+    {isActive}
+    {isScaleSource}
+    {viewState}
+    {onViewStateChange}
 />

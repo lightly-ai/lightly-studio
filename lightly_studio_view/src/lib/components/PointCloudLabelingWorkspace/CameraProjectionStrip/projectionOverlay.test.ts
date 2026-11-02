@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { CameraProjectionView } from '$lib/api/lightly_studio_local/types.gen';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
+import { createSegmentedPointBatch } from '$lib/hooks/useCloudPointFrame/createSegmentedPointBatch';
+import { mergePointBatches } from '$lib/hooks/useCloudPointFrame/mergePointBatches';
 import {
     projectCuboid,
     projectCuboidFaces,
@@ -18,6 +20,28 @@ const projection: CameraProjectionView = {
 };
 
 describe('projectionOverlay', () => {
+    it('keeps camera projections identical when the scene retains separate sensor batches', () => {
+        const segments = [
+            {
+                positions: new Float32Array([0, 0, 2]),
+                intensities: new Float32Array([10]),
+                count: 1
+            },
+            {
+                positions: new Float32Array([1, 0, 2]),
+                intensities: new Float32Array([20]),
+                count: 1
+            }
+        ];
+        const packed = mergePointBatches(segments);
+        const retained = createSegmentedPointBatch(segments);
+        expect(projectPointCloudData(retained, projection, 5000, true)).toEqual(
+            projectPointCloudData(packed, projection, 5000, true)
+        );
+        expect(projectPointCloud(retained, projection)).toEqual(
+            projectPointCloud(packed, projection)
+        );
+    });
     it('projects a point with the camera matrix', () => {
         expect(projectPoint([1, 2, 2], projection)).toEqual({ x: 55, y: 50 });
     });

@@ -130,7 +130,7 @@ export function useSlicInteraction(getProps: () => SampleSlicRectProps) {
         stroke.cancel();
     };
     const renderStrokePreview = (stroke: SuperpixelStrokePreview) => {
-        if (slicResult) preview.renderStroke(stroke.mask);
+        if (slicResult) preview.renderStroke(stroke.mask, sample.width, sample.height);
     };
     const updateHover = (point: { x: number; y: number } | null) => {
         if (point && editor && slicResult) preview.updateHover(point, editor);

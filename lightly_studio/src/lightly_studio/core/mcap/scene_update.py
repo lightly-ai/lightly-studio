@@ -6,11 +6,13 @@ import math
 from collections.abc import Mapping
 from typing import Any
 
-from lightly_studio.core.mcap import capture_time, message_fields
+from lightly_studio.core.mcap import capture_time, message_fields, scene_update_schema
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 
 FRAME_ENTITY_ID = "frame"
+
+_ENTITY_LIFETIME = {"sec": 0, "nanosec": 150_000_000}
 
 _ENTITIES_FIELDS = ("entities",)
 _ID_FIELDS = ("id",)
@@ -62,6 +64,102 @@ def from_decoded_message(decoded_message: Any) -> SceneUpdateLabels:
             continue
         cuboids.append(_cuboid(entity))
     return SceneUpdateLabels(cuboids=tuple(cuboids), frame_tags=frame_tags)
+
+
+def to_message(labels: SceneUpdateLabels, frame_id: str) -> dict[str, Any]:
+    """Builds a `foxglove_msgs/msg/SceneUpdate` ROS2-dict message from decoded labels.
+
+    The reverse of `from_decoded_message`. `deletions` is always empty.
+
+    Args:
+        labels: The cuboids and optional frame tags to encode.
+        frame_id: The coordinate frame of every entity. Replaces each cuboid's own
+            `CuboidLabel.frame_id`.
+
+    Returns:
+        A dict shaped like the decoded ROS2 message, ready for `serialize_dynamic`.
+    """
+    entities = [_cuboid_entity(cuboid=cuboid, frame_id=frame_id) for cuboid in labels.cuboids]
+    if labels.frame_tags is not None:
+        entities.append(_frame_tags_entity(frame_tags=labels.frame_tags, frame_id=frame_id))
+    return {"deletions": [], "entities": entities}
+
+
+def _cuboid_entity(cuboid: CuboidLabel, frame_id: str) -> dict[str, Any]:
+    """Returns the SceneEntity dict of a single cuboid."""
+    return {
+        "timestamp": _time(timestamp_ns=cuboid.timestamp_ns),
+        "frame_id": frame_id,
+        "id": f"{cuboid.class_name}_{cuboid.track_id}",
+        "lifetime": _ENTITY_LIFETIME,
+        "frame_locked": False,
+        "metadata": [
+            {"key": _CLASS_KEY, "value": cuboid.class_name},
+            {"key": _TRACK_ID_KEY, "value": str(cuboid.track_id)},
+            {
+                "key": _PARENT_TRACK_ID_KEY,
+                "value": "" if cuboid.parent_track_id is None else str(cuboid.parent_track_id),
+            },
+            {"key": _INTERPOLATED_KEY, "value": "true" if cuboid.interpolated else "false"},
+        ],
+        "arrows": [],
+        "cubes": [_cube(cuboid=cuboid)],
+        "spheres": [],
+        "cylinders": [],
+        "lines": [],
+        "triangles": [],
+        "texts": [],
+        "models": [],
+    }
+
+
+def _cube(cuboid: CuboidLabel) -> dict[str, Any]:
+    """Returns the single CubePrimitive dict of a cuboid."""
+    red, green, blue, alpha = scene_update_schema.class_color(class_name=cuboid.class_name)
+    x, y, z = cuboid.position
+    quaternion_x, quaternion_y, quaternion_z, quaternion_w = cuboid.rotation
+    length, width, height = cuboid.size
+    return {
+        "pose": {
+            "position": {"x": x, "y": y, "z": z},
+            "orientation": {
+                "x": quaternion_x,
+                "y": quaternion_y,
+                "z": quaternion_z,
+                "w": quaternion_w,
+            },
+        },
+        "size": {"x": length, "y": width, "z": height},
+        "color": {"r": red, "g": green, "b": blue, "a": alpha},
+    }
+
+
+def _frame_tags_entity(frame_tags: FrameTags, frame_id: str) -> dict[str, Any]:
+    """Returns the metadata-only `frame` SceneEntity dict for frame-level tags."""
+    return {
+        "timestamp": _time(timestamp_ns=frame_tags.timestamp_ns),
+        "frame_id": frame_id,
+        "id": FRAME_ENTITY_ID,
+        "lifetime": _ENTITY_LIFETIME,
+        "frame_locked": False,
+        "metadata": [{"key": tag, "value": "true"} for tag in sorted(frame_tags.tags)],
+        "arrows": [],
+        "cubes": [],
+        "spheres": [],
+        "cylinders": [],
+        "lines": [],
+        "triangles": [],
+        "texts": [],
+        "models": [],
+    }
+
+
+def _time(timestamp_ns: int) -> dict[str, int]:
+    """Returns a Time dict for a nanosecond timestamp."""
+    return {
+        "sec": timestamp_ns // capture_time.NANOSECONDS_PER_SECOND,
+        "nanosec": timestamp_ns % capture_time.NANOSECONDS_PER_SECOND,
+    }
 
 
 def _cuboid(entity: Any) -> CuboidLabel:

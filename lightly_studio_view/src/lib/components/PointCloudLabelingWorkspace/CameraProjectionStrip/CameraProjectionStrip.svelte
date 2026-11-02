@@ -1,36 +1,32 @@
 <script lang="ts">
+    import type {
+        ChannelSummaryView,
+        AnnotationView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import type { PointBatch } from '$lib/components/PointCloudViewer';
+    import type { AnnotationClassColor } from './projectionOverlay';
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
-    import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
-    import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
-    import type { PointBatch } from '$lib/components/PointCloudViewer/types';
-    import type { AnnotationClassColor } from './projectionOverlay';
     import ProjectionControls from './ProjectionControls.svelte';
+    import { ChevronDown, ChevronUp } from '@lucide/svelte';
+    import { Button } from '$lib/components';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
+    import WorkspacePanelHeader from '../WorkspacePanelHeader/WorkspacePanelHeader.svelte';
 
-    /**
-     * Horizontal strip of camera tiles for the active point-cloud tick. The tile images
-     * come from the tick data, keyed by channel ID. The full-resolution frame is located
-     * by the tick's MCAP locators, keyed by `group_component_name`.
-     */
     interface Props {
-        /** Dataset the sequence belongs to. */
         datasetId: string;
-        /** MCAP sequence being labeled. */
         sequenceId: string;
-        /** Zero-based tick position to render frames for. */
         seqNumber: number;
-        /** Frame the workspace requests cuboids in, so both share one tick-details query. */
         displayFrameId?: string;
-        /** All camera slots configured for the sequence; this is the stable tile layout. */
         cameraChannels: ChannelSummaryView[];
-        /** Camera channel IDs currently shown in the projection strip. */
         selectedChannelIds: number[];
         batch?: PointBatch;
         annotations?: readonly AnnotationView[];
         annotationClasses?: readonly AnnotationClassColor[];
         canProject?: boolean;
         onPlaybackToggle?: () => void;
+        collapsed?: boolean;
+        onToggleCollapsed?: () => void;
     }
 
     let {
@@ -44,7 +40,9 @@
         annotations = [],
         annotationClasses = [],
         canProject = true,
-        onPlaybackToggle
+        onPlaybackToggle,
+        collapsed = false,
+        onToggleCollapsed
     }: Props = $props();
     const projectionSettings = useProjectionSettings();
 
@@ -64,37 +62,55 @@
 </script>
 
 <div
-    class="flex h-full min-h-0 flex-col border-t bg-background p-2"
+    class="flex h-full min-h-0 flex-col bg-background"
+    class:justify-center={collapsed}
     data-testid="workspace-projection-strip"
 >
-    <div class="flex shrink-0 items-center justify-between px-1 pb-2 text-xs">
-        <span class="text-muted-foreground">Camera projections</span>
-        <ProjectionControls
-            settings={$projectionSettings}
-            onChange={(settings) => projectionSettings.set(settings)}
-            {onPlaybackToggle}
-        />
-    </div>
-    <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-auto">
-        {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
-            {@const channel =
-                tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
-            <CameraProjectionFrame
-                {datasetId}
-                {recordingId}
-                channelId={summaryChannel.channel_id}
-                keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
-                logTimeNs={channel?.log_time_ns}
-                blob={cameraFrames.data?.[summaryChannel.channel_id]}
-                label={summaryChannel.group_component_name}
-                {batch}
-                {annotations}
-                {annotationClasses}
-                projection={canProject ? (channel?.projection ?? undefined) : undefined}
+    <WorkspacePanelHeader title="Camera projections">
+        {#snippet actions()}
+            <ProjectionControls
+                settings={$projectionSettings}
+                onChange={(settings) => projectionSettings.set(settings)}
                 {onPlaybackToggle}
-                projectionSettings={$projectionSettings}
-                onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
             />
-        {/each}
-    </div>
+            {#if onToggleCollapsed}
+                <Button
+                    variant="ghost"
+                    icon={collapsed ? ChevronUp : ChevronDown}
+                    ariaLabel={collapsed ? 'Expand camera strip' : 'Collapse camera strip'}
+                    buttonProps={{
+                        type: 'button',
+                        size: 'xs',
+                        class: 'h-7 w-7 p-0',
+                        onclick: onToggleCollapsed
+                    }}
+                />
+            {/if}
+        {/snippet}
+    </WorkspacePanelHeader>
+    {#if !collapsed}
+        <!-- Reserve scrollbar height so resizing the tiles cannot toggle overflow in a loop. -->
+        <div class="scrollbar-thin flex min-h-0 flex-1 gap-2 overflow-x-scroll px-2 pb-2">
+            {#each summaryCameraChannels.filter( (channel) => selectedChannelIds.includes(channel.channel_id) ) as summaryChannel}
+                {@const channel =
+                    tickDetails.data?.camera_channels[summaryChannel.group_component_name]}
+                <CameraProjectionFrame
+                    {datasetId}
+                    {recordingId}
+                    channelId={summaryChannel.channel_id}
+                    keyframeTimestampNs={channel?.keyframe_log_time_ns ?? undefined}
+                    logTimeNs={channel?.log_time_ns}
+                    blob={cameraFrames.data?.[summaryChannel.channel_id]}
+                    label={summaryChannel.group_component_name}
+                    {batch}
+                    {annotations}
+                    {annotationClasses}
+                    projection={canProject ? (channel?.projection ?? undefined) : undefined}
+                    {onPlaybackToggle}
+                    projectionSettings={$projectionSettings}
+                    onProjectionSettingsChange={(settings) => projectionSettings.set(settings)}
+                />
+            {/each}
+        </div>
+    {/if}
 </div>

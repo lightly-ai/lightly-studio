@@ -1,7 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ComponentProps } from 'svelte';
-import { writable } from 'svelte/store';
 import FindInstancesOverlay from './FindInstancesOverlay.svelte';
 
 const prediction = {
@@ -21,10 +20,6 @@ const mocks = vi.hoisted(() => ({
         removePrediction: vi.fn(),
         clear: vi.fn()
     }
-}));
-
-vi.mock('$lib/hooks/useSettings', () => ({
-    useSettings: () => ({ settingsStore: writable({ key_go_back: 'Escape' }) })
 }));
 
 const defaultProps = {

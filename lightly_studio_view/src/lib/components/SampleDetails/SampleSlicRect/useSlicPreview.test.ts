@@ -41,7 +41,7 @@ it('renders hover and stroke masks independently and clears previews between str
     });
     preview.updateHover({ x: 0, y: 0 }, editor);
     expect(maskToDataUrl).toHaveBeenCalledOnce();
-    preview.renderStroke(new Uint8Array([1, 1]));
+    preview.renderStroke(new Uint8Array([1, 1]), 2, 1);
     expect(preview.strokeMaskDataUrl).toBe('data:image/png;base64,11');
     preview.clearStroke();
     expect(preview.strokeMaskDataUrl).toBe('');

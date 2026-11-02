@@ -1,6 +1,8 @@
 <script lang="ts">
     import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
     import SampleAnnotationSegmentationRLE from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';
+    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { getPreviewMaskOpacity } from '../previewMaskOpacity';
 
     interface Props {
         preview: Pick<AnnotationPreview, 'bbox' | 'segmentation_mask'>;
@@ -9,6 +11,8 @@
     }
 
     let { preview, image, saveAs }: Props = $props();
+
+    const { maskOpacity } = useGlobalStorage();
 </script>
 
 <g pointer-events="none" data-testid="annotation-preview">
@@ -17,7 +21,7 @@
             width={image.width}
             segmentation={preview.segmentation_mask}
             colorFill="rgba(34, 197, 94, 0.55)"
-            opacity={0.85}
+            opacity={getPreviewMaskOpacity({ maskOpacity: $maskOpacity })}
         />
     {/if}
     <rect

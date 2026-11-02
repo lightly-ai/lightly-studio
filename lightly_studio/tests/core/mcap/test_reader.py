@@ -735,6 +735,23 @@ class TestMcapFileReader:
                     timestamp_ns=helpers.IMAGE_LOG_TIMES_NS[0],
                 )
 
+    def test_get_metadata_records(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_metadata(
+            tmp_path / "metadata.mcap", records=[("rosbag2", {"a": "1"}), ("rosbag2", {"b": "2"})]
+        )
+
+        with McapFileReader(path) as reader:
+            assert reader.get_metadata_records() == [
+                ("rosbag2", {"a": "1"}),
+                ("rosbag2", {"b": "2"}),
+            ]
+
+    def test_get_metadata_records__none(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_metadata(tmp_path / "no_metadata.mcap", records=[])
+
+        with McapFileReader(path) as reader:
+            assert reader.get_metadata_records() == []
+
     def test_close(self, mcap_path: Path) -> None:
         mcap_file_reader = McapFileReader(mcap_path)
         mcap_file_reader.close()

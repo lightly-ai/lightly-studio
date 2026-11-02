@@ -1,7 +1,5 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import { get } from 'svelte/store';
-    import { useSettings } from '$lib/hooks/useSettings';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import SampleAnnotationRect from '$lib/components/SampleDetails/SampleAnnotationRect/SampleAnnotationRect.svelte';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
@@ -37,13 +35,12 @@
     }: Props = $props();
 
     const drag = useDragBox(() => ({ interactionRect }));
-    const { settingsStore } = useSettings();
 
     // Captured before the panel's handler, so Escape ends the drawing, then clears the boxes
     // and results, and only then closes the tool.
     const onKeyDown = (event: KeyboardEvent) => {
         if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
-        if (event.key !== get(settingsStore).key_go_back) return;
+        if (event.key !== 'Escape') return;
         if (isDrawingBox) {
             drag.cancel();
             onDrawEnd();
