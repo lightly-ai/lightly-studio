@@ -314,6 +314,65 @@ def _tagged_sample_ids(session: Session, tag_id: UUID) -> set[UUID]:
     return {sample_id for sample_id in linked if sample_id is not None}
 
 
+def test_remove_samples_by_filter__image_subset_filter_untags_only_subset(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    wide = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="wide.png", width=1920
+    )
+    narrow = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="narrow.png", width=10
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[wide.sample_id, narrow.sample_id]
+    )
+
+    response = test_client.request(
+        "DELETE",
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/remove/samples_by_filter",
+        json={"filter": {"filter_type": "image", "width": {"min": 100}}},
+    )
+
+    assert response.status_code == 200
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {narrow.sample_id}
+
+
+@pytest.mark.parametrize("use_filter", [False, True])
+def test_count_selection_tags(
+    db_session: Session, test_client: TestClient, use_filter: bool
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag_a = create_tag(session=db_session, collection_id=collection_id, tag_name="a")
+    tag_b = create_tag(session=db_session, collection_id=collection_id, tag_name="b")
+    wide = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="wide.png", width=1920
+    )
+    narrow = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="narrow.png", width=10
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag_a.tag_id, sample_ids=[wide.sample_id, narrow.sample_id]
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag_b.tag_id, sample_ids=[narrow.sample_id]
+    )
+
+    # Both bodies select only the wide image.
+    body: dict[str, object] = (
+        {"filter": {"filter_type": "image", "width": {"min": 100}}}
+        if use_filter
+        else {"sample_ids": [str(wide.sample_id)]}
+    )
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/selection_counts", json=body
+    )
+
+    assert response.status_code == 200
+    assert response.json() == [{"tag_id": str(tag_a.tag_id), "sample_count": 1}]
+
+
 # `None` exercises the whole-collection scope, the image filter the grid-filter query. Both
 # select all 10 samples, so the expected partition is identical.
 @pytest.mark.parametrize("grid_filter", [None, {"filter_type": "image"}])
