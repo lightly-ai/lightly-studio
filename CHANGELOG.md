@@ -9,30 +9,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Delete selected annotations in bulk from the annotation grid.
-- Explore and edit point-cloud annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
-- Collapse the camera strip in the point-cloud workspace to give the scene more space.
-- Adjust point size, navigation helpers, and annotation tooltips from the point-cloud scene settings.
-- Set the opacity of segmentation masks with the "Mask opacity" slider in the sample details view.
-- Reset brightness, contrast, and mask opacity to their defaults with one button in the sample details view.
-- The distribution panel of image datasets shows histograms of the image width and height. Select a range on a histogram to filter the images by width or height.
-- The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
-- Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
-- Accumulate point clouds from neighboring ticks in the point-cloud 3D scene. Set how many ticks to include in the scene settings.
-- Color the point cloud from the camera images with the new "Camera RGB" color mode in the point-cloud workspace.
-- Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files from the export dialog, as a download or to S3. In the point-cloud workspace, the export covers the open recording.
-- Python SDK: Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate `_labeled.mcap` files with `McapDataset.export_annotations_to_folder`.
-- Python SDK: `connect()` trusts the custom CA certificates of an S3-compatible storage when the enterprise instance provides them.
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.2.1\] - 2026-11-02
+
+### Added
+
+- Point clouds
+    - Explore and edit annotations in synchronized top, side, and front views alongside the 3D scene. Expand any view for a closer look while keeping zoom and navigation synchronized.
+    - Edit the location, dimensions, and rotation of a cuboid in the annotation details panel.
+    - Resize a cuboid with handles on its faces.
+    - Change the class of a cuboid in the annotation list.
+    - Show the points and annotations on the camera images of the camera strip, and enlarge a camera image for a closer look.
+    - Collapse the camera strip to give the scene more space.
+    - Accumulate point clouds from neighboring ticks in the 3D scene. Set how many ticks to include in the scene settings.
+    - Color the point cloud from the camera images with the new "Camera RGB" color mode.
+    - Adjust point size, navigation helpers, and annotation tooltips in the scene settings.
+    - Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files from the export dialog, as a download or to S3.
+    - Python SDK: Export the cuboid annotations and frame tags of MCAP recordings as Foxglove SceneUpdate files with `McapDataset.export_annotations_to_folder`.
+
+- Annotations
+    - Label with the "Smart select" and "Find all instances" assisted labeling tools in the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
+    - Delete selected annotations in bulk from the annotation grid.
+    - Set the opacity of segmentation masks with the "Mask opacity" slider in the sample details view.
+    - Reset brightness, contrast, and mask opacity to their defaults with one button in the sample details view.
+
+- Filtering
+    - See histograms of the image width and height in the distribution panel of image datasets, and compare them by tag. Select a range on a histogram to filter the images by width or height.
+    - Use metadata and boolean values in the query editor, with hover help and a metadata filter example.
+
+- Other
+    - Python SDK: `connect()` trusts the custom CA certificates of an S3-compatible storage when the enterprise instance provides them.
 
 ### Changed
 
-- Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
-- The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
-- Reorganised the settings dialog into a tabbed layout.
-- In the settings dialog, "Save changes" is enabled only when there are changes to save.
-- DuckDB database files retain a format readable by DuckDB 1.x when created or updated with DuckDB 2.x.
+- Embedding plot
+    - Saved embedding plots now load in milliseconds instead of seconds on datasets with over 100k samples.
 
-### Deprecated
+- Settings
+    - The settings dialog is organized in tabs.
+    - "Save changes" in the settings dialog is enabled only when there are changes to save.
+
+- Other
+    - The sample details view keeps collapsed and hidden annotation sources when you go to another sample. A page reload restores the defaults.
+    - DuckDB database files retain a format readable by DuckDB 1.x when created or updated with DuckDB 2.x.
 
 ### Removed
 
@@ -40,18 +68,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- The header of the filters panel, with the button to hide the panel, stays visible when you scroll the filters. You no longer have to scroll back to the top to hide the panel.
-- Fixed skipped cells and leftover pixels when labeling with superpixels.
-- Brush, eraser, and box drawing previews now use the custom color of the label.
-- Fixed existing selections disappearing while painting with superpixels and improved responsiveness when selecting many cells.
-- In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
-- In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
-- In the annotation grid, changing the class after "Select all" now changes every selected annotation, not only the first 100. The selected annotations count and undo also cover all of them.
-- In the distribution panel, metadata bars now include images without annotations. Before, those images showed as filtered out even with no filters set.
-- The distribution panel keeps the selected plot when you open a sample and go back to the grid.
-- Python SDK: `add_samples_from_coco` now shows the real cause when it cannot read the annotations file from cloud storage.
+- Annotations
+    - Labeling with superpixels no longer skips cells or leaves pixels behind.
+    - Existing selections no longer disappear while you paint with superpixels, and selecting many cells is faster.
+    - Brush, eraser, and box drawing previews now use the custom color of the label.
+    - In the annotation grid, changing the class after "Select all" now changes every selected annotation, not only the first 100. The selected annotations count and undo also cover all of them.
+    - In Safari, the image in the details view has the correct size again, so annotations and labeling tools line up with it and show on top of it.
 
-### Security
+- Filtering
+    - The header of the filters panel, with the button to hide the panel, stays visible when you scroll the filters. You no longer have to scroll back to the top to hide the panel.
+    - In the distribution panel, metadata bars now include images without annotations. Before, those images showed as filtered out even with no filters set.
+    - The distribution panel keeps the selected plot when you open a sample and go back to the grid.
+
+- Other
+    - In the settings dialog, pressing Escape while setting a shortcut now cancels the change instead of closing the dialog. The "Go back" shortcut is now always Escape and can no longer be changed.
+    - Exporting from the export dialog no longer fails on Windows.
+    - Python SDK: `add_samples_from_coco` now shows the real cause when it cannot read the annotations file from cloud storage.
 
 ## \[1.2.0\] - 2026-10-23
 
