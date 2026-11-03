@@ -7,6 +7,7 @@
     import { onDestroy } from 'svelte';
     import type { Snippet } from 'svelte';
     import { hexToHsl, hslToHex, isHexColor } from './color-picker.helpers';
+    import SaturationBox from './saturation-box.svelte';
 
     type Hsl = ReturnType<typeof hexToHsl>;
 
@@ -56,7 +57,6 @@
     ];
 
     // DOM references for interactions
-    let saturationRef = $state<HTMLDivElement>();
     let hueRef = $state<HTMLDivElement>();
 
     // One color state: HSL drives the picker UI, hex is the value that gets previewed.
@@ -73,31 +73,6 @@
         hsl = value;
         hex = hslToHex(value);
         schedulePreview();
-    }
-
-    function updateSaturationAndLightness(e: MouseEvent) {
-        if (!saturationRef) return;
-
-        const rect = saturationRef.getBoundingClientRect();
-        const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-        const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
-
-        setFromHsl({ h: hsl.h, s: Math.round(x * 100), l: Math.round((1 - y) * 100) });
-    }
-
-    // Mousemove calls only the updater so a drag cannot register additional listeners.
-    function handleSaturationPick(e: MouseEvent) {
-        updateSaturationAndLightness(e);
-        const onMouseMove = (moveEvent: MouseEvent) => updateSaturationAndLightness(moveEvent);
-
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener(
-            'mouseup',
-            () => {
-                document.removeEventListener('mousemove', onMouseMove);
-            },
-            { once: true }
-        );
     }
 
     function updateHue(e: MouseEvent) {
@@ -228,22 +203,10 @@
                 <div class="p-3">
                     <!-- Color pickers -->
                     <div class="space-y-3">
-                        <!-- Main saturation/lightness picker -->
-                        <div
-                            class="relative h-28 cursor-crosshair rounded"
-                            style={`background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsl.h}, 100%, 50%))`}
-                            bind:this={saturationRef}
-                            onmousedown={handleSaturationPick}
-                            role="dialog"
-                            aria-label="Saturation and lightness picker"
-                            tabindex="0"
-                        >
-                            <!-- Selection indicator -->
-                            <div
-                                class="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
-                                style={`left: ${hsl.s}%; top: ${100 - hsl.l}%; background-color: ${hex}`}
-                            ></div>
-                        </div>
+                        <SaturationBox
+                            {hsl}
+                            onPick={(s, l) => setFromHsl({ ...hsl, s, l })}
+                        />
 
                         <!-- Hue slider -->
                         <div
