@@ -62,6 +62,28 @@ describe('ColorPicker', () => {
         expect(onChange).toHaveBeenCalledWith('#888888', 1);
     });
 
+    it('keeps the hue when the saturation box reaches black', async () => {
+        const onChange = vi.fn();
+        render(ColorPicker, {
+            props: { ...defaultProps, initialColor: '#0000ff', onChange }
+        });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+        const box = screen.getByRole('slider', { name: 'Saturation and lightness' });
+        vi.spyOn(box, 'getBoundingClientRect').mockReturnValue({
+            left: 0,
+            top: 0,
+            width: 100,
+            height: 100
+        } as DOMRect);
+
+        await fireEvent.pointerDown(box, { clientX: 100, clientY: 100, pointerId: 1 });
+        await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#000000', 1));
+        await fireEvent.pointerUp(box, { pointerId: 1 });
+        await fireEvent.pointerDown(box, { clientX: 100, clientY: 50, pointerId: 1 });
+
+        await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1));
+    });
+
     it('restores the original color when cancelling a preview', async () => {
         const onChange = vi.fn();
         render(ColorPicker, { props: { ...defaultProps, onChange } });
@@ -85,10 +107,10 @@ describe('ColorPicker', () => {
         await waitFor(() => {
             expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1);
         });
-        // jsdom has no PointerEvent, and bits-ui checks that the pointer is outside the panel.
+        // bits-ui checks that the pointer is outside the panel, so the events need coordinates.
         const outside = { bubbles: true, clientX: 500, clientY: 500 };
-        await fireEvent(document.body, new MouseEvent('pointerdown', outside));
-        await fireEvent(document.body, new MouseEvent('pointerup', outside));
+        await fireEvent.pointerDown(document.body, outside);
+        await fireEvent.pointerUp(document.body, outside);
         await fireEvent.click(document.body, outside);
 
         // bits-ui debounces the outside interaction.
@@ -141,12 +163,15 @@ describe('ColorPicker', () => {
         parent.addEventListener('click', parentClick);
         document.body.appendChild(parent);
 
-        render(ColorPicker, { props: defaultProps, target });
-        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+        try {
+            render(ColorPicker, { props: defaultProps, target });
+            await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
-        expect(parentClick).not.toHaveBeenCalled();
-        expect(screen.getByRole('dialog', { name: 'Color picker' })).toBeInTheDocument();
-        parent.remove();
+            expect(parentClick).not.toHaveBeenCalled();
+            expect(screen.getByRole('dialog', { name: 'Color picker' })).toBeInTheDocument();
+        } finally {
+            parent.remove();
+        }
     });
 
     it('works inside a modal dialog without closing it', async () => {
