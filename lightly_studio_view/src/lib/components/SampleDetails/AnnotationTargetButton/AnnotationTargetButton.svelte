@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Pencil } from '@lucide/svelte';
+    import { Pencil, PencilOff } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { cn } from '$lib/utils';
 
@@ -36,12 +36,12 @@
             isSourceHidden && 'cursor-not-allowed',
             isTarget && !isSourceHidden && 'bg-primary text-primary-foreground',
             isTarget && isSourceHidden && 'bg-muted text-muted-foreground',
-            !isTarget && isSourceHidden && 'text-muted-foreground/20',
+            !isTarget && isSourceHidden && 'text-muted-foreground/50',
             !isTarget && !isSourceHidden && needsPick && 'text-amber-400 hover:bg-amber-400/15',
             !isTarget &&
                 !isSourceHidden &&
                 !needsPick &&
-                'text-muted-foreground/40 hover:bg-muted hover:text-foreground'
+                'text-foreground/80 hover:bg-muted hover:text-foreground'
         )}
         onclick={(e) => {
             e.stopPropagation();
@@ -50,6 +50,11 @@
         }}
         data-testid={`annotation-target-${sourceName}`}
     >
-        <Pencil class="size-3.5" />
+        <!-- A crossed-out pencil, so a hidden source reads as disabled without relying on color. -->
+        {#if isSourceHidden}
+            <PencilOff class="size-3.5" data-testid="annotation-target-disabled-icon" />
+        {:else}
+            <Pencil class="size-3.5" />
+        {/if}
     </button>
 </Tooltip>
