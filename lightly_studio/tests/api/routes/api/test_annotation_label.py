@@ -49,7 +49,12 @@ def test_create_annotation_label(db_session: Session, test_client: TestClient) -
 def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="cat")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    )
+    label.color = "#ff8040"
+    label.alpha = 0.5
+    db_session.commit()
 
     labels_result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels")
     assert labels_result.status_code == HTTP_STATUS_OK
@@ -57,31 +62,8 @@ def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> 
     assert len(labels_result.json()) == 1
     label = labels_result.json()[0]
     assert label["annotation_label_name"] == "cat"
-
-
-def test_get_annotation_labels__color(db_session: Session, test_client: TestClient) -> None:
-    collection = create_collection(session=db_session)
-    collection_id = collection.collection_id
-    colored = create_annotation_label(
-        session=db_session, root_collection_id=collection_id, label_name="cat"
-    )
-    colored.color = "#ff8040"
-    colored.alpha = 0.5
-    db_session.add(colored)
-    db_session.commit()
-    create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="dog")
-
-    labels_result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels")
-    counts_result = test_client.get(
-        f"/api/collections/{collection_id!s}/annotation_labels_with_counts"
-    )
-
-    assert labels_result.status_code == HTTP_STATUS_OK
-    assert counts_result.status_code == HTTP_STATUS_OK
-    for result in (labels_result, counts_result):
-        by_name = {label["annotation_label_name"]: label for label in result.json()}
-        assert (by_name["cat"]["color"], by_name["cat"]["alpha"]) == ("#ff8040", 0.5)
-        assert (by_name["dog"]["color"], by_name["dog"]["alpha"]) == (None, None)
+    assert label["color"] == "#ff8040"
+    assert label["alpha"] == 0.5
 
 
 def test_get_annotation_label(db_session: Session, test_client: TestClient) -> None:
@@ -166,15 +148,18 @@ def test_update_annotation_label__keeps_color(db_session: Session, test_client: 
 def test_read_annotation_labels_with_counts(db_session: Session, test_client: TestClient) -> None:
     collection_id = create_collection(session=db_session).collection_id
     image_id = create_image(session=db_session, collection_id=collection_id).sample_id
-    cat_id = create_annotation_label(
+    cat = create_annotation_label(
         session=db_session, root_collection_id=collection_id, label_name="cat"
-    ).annotation_label_id
+    )
+    cat.color = "#ff8040"
+    cat.alpha = 0.5
+    db_session.commit()
     create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="dog")
     create_annotation(
         session=db_session,
         collection_id=collection_id,
         sample_id=image_id,
-        annotation_label_id=cat_id,
+        annotation_label_id=cat.annotation_label_id,
     )
 
     result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels_with_counts")
@@ -182,6 +167,8 @@ def test_read_annotation_labels_with_counts(db_session: Session, test_client: Te
     assert result.status_code == HTTP_STATUS_OK
     counts = {row["annotation_label_name"]: row["annotation_count"] for row in result.json()}
     assert counts == {"cat": 1, "dog": 0}
+    colors = {row["annotation_label_name"]: (row["color"], row["alpha"]) for row in result.json()}
+    assert colors == {"cat": ("#ff8040", 0.5), "dog": (None, None)}
 
 
 def test_set_annotation_label_color(db_session: Session, test_client: TestClient) -> None:
