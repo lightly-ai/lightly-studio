@@ -58,6 +58,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             saveAs: state.saveAs,
             annotationClass: smartSelectClass,
             annotationSource: annotationLabelContext.annotationSource,
+            annotationSourceMissing: annotationLabelContext.annotationSourceMissing,
             onSaved: refetch
         };
     });
@@ -71,6 +72,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             saveAs: state.saveAs,
             annotationClass: instancesClass,
             annotationSource: annotationLabelContext.annotationSource,
+            annotationSourceMissing: annotationLabelContext.annotationSourceMissing,
             onSaved: refetch
         };
     });

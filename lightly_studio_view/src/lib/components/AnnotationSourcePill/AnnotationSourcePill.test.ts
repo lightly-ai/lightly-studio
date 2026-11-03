@@ -8,6 +8,7 @@ import AnnotationSourcePill from './AnnotationSourcePill.svelte';
 // Control the source list, the current selection, and the persistence/setter spies.
 const mocks = vi.hoisted(() => ({
     annotationSource: null as string | null,
+    context: {} as { annotationSource?: string | null; annotationSourceMissing?: boolean },
     collections: [] as { collection_id: string; name: string }[],
     setAnnotationSource: vi.fn(),
     updateLastAnnotationSource: vi.fn(),
@@ -16,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     useAnnotationLabelContext: () => ({
-        context: { annotationSource: mocks.annotationSource },
+        context: Object.assign(mocks.context, { annotationSource: mocks.annotationSource }),
         setAnnotationSource: mocks.setAnnotationSource
     })
 }));
@@ -52,6 +53,7 @@ describe('AnnotationSourcePill', () => {
         vi.clearAllMocks();
         mocks.annotationSource = null;
         mocks.collections = [];
+        mocks.context = {};
         mocks.enforceColoringByClassStore.set(false);
         Element.prototype.scrollIntoView = vi.fn();
     });
@@ -68,18 +70,22 @@ describe('AnnotationSourcePill', () => {
         expect(trigger()).toHaveTextContent('predictions');
     });
 
-    it('falls back to the default "annotation" collection when none is chosen', () => {
+    it('asks for a source when there are several and none is chosen', () => {
+        // A default here would let the first box land in a source the user never picked.
         mocks.collections = [source('ground_truth'), source('annotation')];
         renderPill();
 
-        expect(trigger()).toHaveTextContent('annotation');
+        expect(trigger()).toHaveTextContent('Pick a source');
+        expect(mocks.context.annotationSourceMissing).toBe(true);
+        expect(mocks.setAnnotationSource).not.toHaveBeenCalled();
     });
 
-    it('falls back to the first source when no default collection exists', () => {
-        mocks.collections = [source('ground_truth'), source('predictions')];
+    it('uses the only source when there is just one', () => {
+        mocks.collections = [source('ground_truth')];
         renderPill();
 
         expect(trigger()).toHaveTextContent('ground_truth');
+        expect(mocks.context.annotationSourceMissing).toBe(false);
     });
 
     it('falls back to the literal default with no sources', () => {
@@ -114,11 +120,10 @@ describe('AnnotationSourcePill', () => {
         expect(mocks.updateLastAnnotationSource).toHaveBeenCalledWith('col-1', 'new_source');
     });
 
-    it('seeds the context with the displayed source on a fresh session', () => {
-        mocks.collections = [source('ground_truth'), source('predictions')];
+    it('seeds the context with the only source on a fresh session', () => {
+        mocks.collections = [source('ground_truth')];
         renderPill();
 
-        // Without an explicit pick, the first draw must land in the shown source, not the default.
         expect(mocks.setAnnotationSource).toHaveBeenCalledWith('ground_truth');
     });
 

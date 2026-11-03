@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { isAnnotationSourceMissing } from '$lib/contexts/annotationSourceGuard';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
@@ -190,6 +191,10 @@
         width: number;
         height: number;
     }) => {
+        if (isAnnotationSourceMissing(annotationLabelContext)) {
+            pendingBbox.clear();
+            return;
+        }
         const pendingOperation = startCreateBoundingBoxPending();
 
         try {

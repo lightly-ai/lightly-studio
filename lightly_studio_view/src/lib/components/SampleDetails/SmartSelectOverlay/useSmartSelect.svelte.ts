@@ -1,3 +1,4 @@
+import { isAnnotationSourceMissing } from '$lib/contexts/annotationSourceGuard';
 import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
@@ -24,6 +25,7 @@ interface UseSmartSelectParams {
     saveAs: SaveAs;
     annotationClass: string | null | undefined;
     annotationSource: string | null | undefined;
+    annotationSourceMissing?: boolean;
     onSaved: () => void;
 }
 
@@ -97,6 +99,13 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
 
     const save = async () => {
         if (!preview || isSaving) return;
+        // Before isSaving is set, so a refused save leaves the overlay usable.
+        if (
+            isAnnotationSourceMissing({
+                annotationSourceMissing: getParams().annotationSourceMissing
+            })
+        )
+            return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
         const className = pickClassName({ selected: annotationClass, hint: hintedClass });

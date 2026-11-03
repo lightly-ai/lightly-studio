@@ -37,23 +37,32 @@
 
     const sourceNames = $derived(annotationCollections.data?.map((c) => c.name) ?? []);
 
-    // The source new annotations are written to. Falls back to the conventional default
-    // collection, then the first existing source, then the default.
+    // The source new annotations are written to. With several sources the user must pick one,
+    // so nothing lands in a source by accident; with one source it is that one, and with none
+    // the backend default is created on the first annotation.
     const effectiveSource = $derived(
         annotationLabelContext.annotationSource ??
-            sourceNames.find((name) => name === DEFAULT_SOURCE_NAME) ??
-            sourceNames[0] ??
-            DEFAULT_SOURCE_NAME
+            (sourceNames.length === 0
+                ? DEFAULT_SOURCE_NAME
+                : sourceNames.length === 1
+                  ? sourceNames[0]
+                  : null)
     );
 
     // Merge the effective source so a just-typed (not yet persisted) source stays listed
     // and selected until the collections query refetches after the first annotation lands.
-    const options = $derived([...new Set([...sourceNames, effectiveSource])]);
+    const options = $derived(
+        effectiveSource ? [...new Set([...sourceNames, effectiveSource])] : sourceNames
+    );
 
-    // Seed the context with the displayed source once the list has loaded.
     $effect(() => {
-        if (!annotationLabelContext.annotationSource && sourceNames.length > 0) {
-            setAnnotationSource(effectiveSource);
+        annotationLabelContext.annotationSourceMissing = effectiveSource === null;
+    });
+
+    // Seed the context with the only source once the list has loaded.
+    $effect(() => {
+        if (!annotationLabelContext.annotationSource && sourceNames.length === 1) {
+            setAnnotationSource(sourceNames[0]);
         }
     });
 
@@ -103,13 +112,19 @@
                     data-testid="annotation-source-pill-trigger"
                 >
                     <span class="shrink-0 text-muted-foreground">Adding to</span>
-                    {#if showColorMarker}
-                        <ColorMarker
-                            label={effectiveSource}
-                            markerProps={{ 'data-testid': `color-marker-${effectiveSource}` }}
-                        />
+                    {#if effectiveSource === null}
+                        <span class="min-w-0 truncate font-medium text-amber-400"
+                            >Pick a source</span
+                        >
+                    {:else}
+                        {#if showColorMarker}
+                            <ColorMarker
+                                label={effectiveSource}
+                                markerProps={{ 'data-testid': `color-marker-${effectiveSource}` }}
+                            />
+                        {/if}
+                        <span class="min-w-0 truncate font-medium">{effectiveSource}</span>
                     {/if}
-                    <span class="min-w-0 truncate font-medium">{effectiveSource}</span>
                     <ChevronsUpDownIcon class="size-3.5 shrink-0 opacity-50" />
                 </button>
             {/snippet}

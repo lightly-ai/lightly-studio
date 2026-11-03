@@ -1,3 +1,4 @@
+import { isAnnotationSourceMissing } from '$lib/contexts/annotationSourceGuard';
 import { untrack } from 'svelte';
 import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
@@ -22,6 +23,7 @@ interface UseFindInstancesParams {
     saveAs: SaveAs;
     annotationClass: string | null | undefined;
     annotationSource: string | null | undefined;
+    annotationSourceMissing?: boolean;
     onSaved: () => void;
 }
 
@@ -138,6 +140,12 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const save = async () => {
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
+        if (
+            isAnnotationSourceMissing({
+                annotationSourceMissing: getParams().annotationSourceMissing
+            })
+        )
+            return;
         if (!annotationClass || !canSave()) return;
         isSaving = true;
         try {

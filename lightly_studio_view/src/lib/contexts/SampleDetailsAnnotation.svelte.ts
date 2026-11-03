@@ -15,6 +15,10 @@ export type AnnotationLabelContext = {
     // Selected annotation source.
     annotationSource?: string | null;
 
+    // True while there are several annotation sources and the user hasn't picked one, so new
+    // annotations must not be created. Set by the "Adding to" picker.
+    annotationSourceMissing?: boolean;
+
     // The annotation type selected via toolbar.
     annotationType?: AnnotationType | null;
 
