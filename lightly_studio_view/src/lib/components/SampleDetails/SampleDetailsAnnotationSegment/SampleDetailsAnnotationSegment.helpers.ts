@@ -141,7 +141,7 @@ export const toggleSourceVisibility = (
 
 /**
  * Computes the initially hidden annotations when entering the details page:
- * annotations whose source is not selected in the grid's source filter start hidden.
+ * annotations the grid filter does not draw (source unselected, or pair unticked) start hidden.
  *
  * The selection always describes the collection on screen, because
  * useSeedAnnotationSourceFilter fills it for every collection route, so no intersection with
@@ -149,10 +149,16 @@ export const toggleSourceVisibility = (
  */
 export const computeSeededHiddenIds = (
     annotations: AnnotationView[],
-    isSourceVisible: (sourceId: string) => boolean
+    isAnnotationShown: (sourceId: string, className: string) => boolean
 ): Set<string> =>
     new Set(
         annotations
-            .filter((annotation) => !isSourceVisible(annotation.annotation_collection_id))
+            .filter(
+                (annotation) =>
+                    !isAnnotationShown(
+                        annotation.annotation_collection_id,
+                        annotation.annotation_label.annotation_label_name
+                    )
+            )
             .map((annotation) => annotation.sample_id)
     );

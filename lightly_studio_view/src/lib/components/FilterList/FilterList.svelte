@@ -1,6 +1,8 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
     import { Input } from '$lib/components/ui/input';
+    import { ChevronDown } from '@lucide/svelte';
+    import { FilterActionButton } from '$lib/components/FilterActionButton';
     import FilterListActions from './FilterListActions.svelte';
     import FilterListRow from './FilterListRow.svelte';
     import { matchesSearch, selectAllVisible, type FilterListItem } from './filterList.helpers';
@@ -102,13 +104,11 @@
         {/if}
     {/each}
     {#if hiddenCount > 0}
-        <button
-            type="button"
-            class="text-xs text-diffuse-foreground hover:text-foreground hover:underline"
+        <FilterActionButton
+            label="Show {Math.min(PAGE_SIZE, hiddenCount)} more of {hiddenCount}"
+            icon={ChevronDown}
             onclick={() => (shownCount += PAGE_SIZE)}
-        >
-            Show {Math.min(PAGE_SIZE, hiddenCount)} more of {hiddenCount}
-        </button>
+        />
     {/if}
     {#if items.length === 0 && emptyText}
         <p class="text-sm text-diffuse-foreground">{emptyText}</p>

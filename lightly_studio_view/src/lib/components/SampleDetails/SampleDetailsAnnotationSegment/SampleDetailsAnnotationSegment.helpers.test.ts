@@ -189,6 +189,16 @@ describe('computeSeededHiddenIds', () => {
         expect(hiddenIds).toEqual(new Set());
     });
 
+    it('hides the annotations of an unticked pair', () => {
+        const hiddenIds = computeSeededHiddenIds(
+            annotations,
+            (sourceId, className) =>
+                !(sourceId === predictionsSource.collection_id && className === 'cat')
+        );
+
+        expect(hiddenIds).toEqual(new Set(['pred-1']));
+    });
+
     it('hides annotations of an unselected source even when the selected source has no annotations', () => {
         const predictionsOnly = [
             createAnnotation('pred-1', predictionsSource.collection_id, 'cat')

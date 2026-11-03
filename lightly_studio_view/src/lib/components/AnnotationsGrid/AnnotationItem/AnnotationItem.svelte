@@ -5,7 +5,7 @@
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useAnnotationClassVisibility } from '$lib/hooks';
+    import { isAnnotationShown } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { getColorByLabel, hexToRgba } from '$lib/utils';
     import type { CropWindow } from './renderCropObjectUrl';
 
@@ -39,7 +39,6 @@
 
     const { isHidden } = useHideAnnotations();
     const { customLabelColorsStore } = useCustomLabelColors();
-    const { isClassHidden } = useAnnotationClassVisibility();
 
     if (
         !untrack(() => annotation.object_detection_details) &&
@@ -80,7 +79,9 @@
     }
 
     const labelName = $derived(annotation.annotation_label.annotation_label_name);
-    const isAnnotationClassHidden = isClassHidden(untrack(() => labelName));
+    const isAnnotationClassHidden = $derived(
+        !$isAnnotationShown(annotation.annotation_collection_id, labelName)
+    );
 
     const colorStroke = $derived.by(
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
@@ -142,7 +143,7 @@
     `}
     >
         {#if isRLESegmentation}
-            <div class:invisible={$isHidden || $isAnnotationClassHidden}>
+            <div class:invisible={$isHidden || isAnnotationClassHidden}>
                 <AnnotationCanvas
                     sampleId={annotation.sample_id}
                     sourceWidth={sample.width}
@@ -166,7 +167,7 @@
         {/if}
         <div
             class="annotation-box"
-            class:invisible={$isHidden || $isAnnotationClassHidden}
+            class:invisible={$isHidden || isAnnotationClassHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
             top: ${(containerHeight - annotationHeight * scale) / 2}px;

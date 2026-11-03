@@ -74,6 +74,23 @@ export const setLabelColorOrder = (labels: readonly string[]) => {
     useCustomLabelColors().refreshColors();
 };
 
+// Position of each annotation source in the categorical palette.
+const sourceColorIndex = new Map<string, number>();
+
+/**
+ * Gives each annotation source its own palette color by its position in `sourceNames`, so
+ * sources never share a color. A custom color still wins. Class colors are not affected.
+ */
+export const setSourceColorOrder = (sourceNames: readonly string[]) => {
+    const unchanged =
+        sourceNames.length === sourceColorIndex.size &&
+        sourceNames.every((name, index) => sourceColorIndex.get(name) === index);
+    if (unchanged) return;
+    sourceColorIndex.clear();
+    sourceNames.forEach((name, index) => sourceColorIndex.set(name, index));
+    useCustomLabelColors().refreshColors();
+};
+
 // FNV-1a 32-bit hash. Mixes each byte into all 32 bits, so the result distributes
 // well even when reduced modulo a power-of-two table length.
 const fnv1aHash = (value: string) => {
@@ -98,7 +115,7 @@ export const getColorByLabel = (label: string, alpha: number = 1) => {
         }
     }
 
-    const paletteIndex = labelColorIndex.get(label);
+    const paletteIndex = sourceColorIndex.get(label) ?? labelColorIndex.get(label);
     if (paletteIndex !== undefined && paletteIndex < CATEGORICAL_PALETTE.length) {
         return getColorPair(hexToRgb(CATEGORICAL_PALETTE[paletteIndex]), alpha);
     }

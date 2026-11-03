@@ -1,93 +1,104 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getAnnotationsFilter } from '$lib/hooks/useImagesInfinite/getAnnotationsFilter';
-import { useAnnotationPairFilter } from './useAnnotationPairFilter';
+import {
+    isAnnotationShown,
+    setActivePairFilterCollection,
+    useAnnotationPairFilter
+} from './useAnnotationPairFilter';
+import { NO_MATCH_PAIR } from './pairFilter.helpers';
 
 const IMAGES = 'images-collection';
 const ANNOTATIONS = 'annotations-collection';
+const pair = (source: string, label: string) => ({
+    collection_id: source,
+    annotation_label_id: `${label}-id`,
+    label_name: label
+});
+const request = ({ collection_id, annotation_label_id }: ReturnType<typeof pair>) => ({
+    collection_id,
+    annotation_label_id
+});
+const GT_DEER = pair('gt', 'deer');
+const GT_RACCOON = pair('gt', 'raccoon');
+const MODEL_DEER = pair('model', 'deer');
 
 describe('useAnnotationPairFilter', () => {
     beforeEach(() => {
-        useAnnotationPairFilter(IMAGES).clear();
-        useAnnotationPairFilter(ANNOTATIONS).clear();
+        for (const id of [IMAGES, ANNOTATIONS]) {
+            const filter = useAnnotationPairFilter(id);
+            filter.clear();
+            filter.setKnownPairs([GT_DEER, GT_RACCOON, MODEL_DEER]);
+        }
     });
 
-    it('toggles one pair on and off', () => {
-        const { pairs, togglePair } = useAnnotationPairFilter(IMAGES);
+    it('sends no pair filter while everything is ticked', () => {
+        const { pairs, includeUnannotated, isActive } = useAnnotationPairFilter(IMAGES);
 
-        togglePair('ground_truth', 'deer');
-        togglePair('model_v1', 'raccoon');
-        expect(get(pairs)).toEqual([
-            { collection_id: 'ground_truth', annotation_label_id: 'deer' },
-            { collection_id: 'model_v1', annotation_label_id: 'raccoon' }
-        ]);
-
-        togglePair('ground_truth', 'deer');
-        expect(get(pairs)).toEqual([{ collection_id: 'model_v1', annotation_label_id: 'raccoon' }]);
-    });
-
-    it('sets and unsets every class of a source', () => {
-        const { pairs, setSource } = useAnnotationPairFilter(IMAGES);
-
-        setSource('ground_truth', ['deer', 'raccoon'], true);
-        expect(get(pairs)).toEqual([
-            { collection_id: 'ground_truth', annotation_label_id: 'deer' },
-            { collection_id: 'ground_truth', annotation_label_id: 'raccoon' }
-        ]);
-
-        setSource('ground_truth', ['deer', 'raccoon'], false);
         expect(get(pairs)).toEqual([]);
+        expect(get(includeUnannotated)).toBe(false);
+        expect(get(isActive)).toBe(false);
     });
 
-    it('reports a source as checked, partial or unchecked', () => {
-        const { sourceState, togglePair } = useAnnotationPairFilter(IMAGES);
-        const labelIds = ['deer', 'raccoon'];
+    it('sends the ticked pairs and the unannotated images once one pair is unticked', () => {
+        const { pairs, includeUnannotated, togglePair } = useAnnotationPairFilter(IMAGES);
 
-        expect(sourceState('ground_truth', labelIds)).toBe('unchecked');
-        togglePair('ground_truth', 'deer');
-        expect(sourceState('ground_truth', labelIds)).toBe('partial');
-        // A deer in another source does not tick ground_truth's classes.
-        togglePair('model_v1', 'raccoon');
-        expect(sourceState('ground_truth', labelIds)).toBe('partial');
-        togglePair('ground_truth', 'raccoon');
-        expect(sourceState('ground_truth', labelIds)).toBe('checked');
+        togglePair(GT_RACCOON);
+
+        expect(get(pairs)).toEqual([request(GT_DEER), request(MODEL_DEER)]);
+        expect(get(includeUnannotated)).toBe(true);
     });
 
-    it('sends no source_label_pairs while nothing is ticked', () => {
-        const { pairs, togglePair } = useAnnotationPairFilter(IMAGES);
-        expect(getAnnotationsFilter({ source_label_pairs: get(pairs) })).toBeUndefined();
+    it('sends every pair without unannotated images when only "No annotations" is unticked', () => {
+        const { pairs, includeUnannotated, setUnannotatedTicked } = useAnnotationPairFilter(IMAGES);
 
-        togglePair('ground_truth', 'deer');
-        expect(getAnnotationsFilter({ source_label_pairs: get(pairs) })).toEqual({
-            filter_type: 'annotations',
-            source_label_pairs: [{ collection_id: 'ground_truth', annotation_label_id: 'deer' }]
-        });
+        setUnannotatedTicked(false);
+
+        expect(get(pairs)).toHaveLength(3);
+        expect(get(includeUnannotated)).toBe(false);
     });
 
-    it('keeps the pairs of each tab across a switch to the annotations tab and back', () => {
-        useAnnotationPairFilter(IMAGES).togglePair('ground_truth', 'deer');
+    it('sends a pair that matches nothing when nothing is ticked', () => {
+        const filter = useAnnotationPairFilter(IMAGES);
 
-        const annotationsTab = useAnnotationPairFilter(ANNOTATIONS);
-        expect(get(annotationsTab.pairs)).toEqual([]);
-        annotationsTab.togglePair(ANNOTATIONS, 'raccoon');
+        filter.setUnticked([GT_DEER, GT_RACCOON, MODEL_DEER]);
+        filter.setUnannotatedTicked(false);
 
-        expect(get(useAnnotationPairFilter(IMAGES).pairs)).toEqual([
-            { collection_id: 'ground_truth', annotation_label_id: 'deer' }
-        ]);
-        expect(get(useAnnotationPairFilter(ANNOTATIONS).pairs)).toEqual([
-            { collection_id: ANNOTATIONS, annotation_label_id: 'raccoon' }
-        ]);
+        expect(get(filter.pairs)).toEqual([NO_MATCH_PAIR]);
     });
 
-    it('drops every pair of one source', () => {
-        const { pairs, togglePair, dropSource } = useAnnotationPairFilter(IMAGES);
-        togglePair('ground_truth', 'deer');
-        togglePair('model_v1', 'deer');
+    it('keeps a new pair ticked', () => {
+        const filter = useAnnotationPairFilter(IMAGES);
+        filter.togglePair(GT_RACCOON);
 
-        dropSource('model_v1');
+        filter.setKnownPairs([GT_DEER, GT_RACCOON, MODEL_DEER, pair('gt', 'fox')]);
 
-        expect(get(pairs)).toEqual([
-            { collection_id: 'ground_truth', annotation_label_id: 'deer' }
-        ]);
+        expect(get(filter.pairs)).toContainEqual(request(pair('gt', 'fox')));
+    });
+
+    it('keeps the ticks of each tab apart', () => {
+        useAnnotationPairFilter(IMAGES).togglePair(GT_DEER);
+
+        expect(get(useAnnotationPairFilter(ANNOTATIONS).unticked)).toEqual([]);
+        expect(get(useAnnotationPairFilter(IMAGES).unticked)).toEqual([GT_DEER]);
+    });
+
+    it('drops the unticked pairs of a deleted source', () => {
+        const filter = useAnnotationPairFilter(IMAGES);
+        filter.setUnticked([GT_DEER, MODEL_DEER]);
+
+        filter.dropSource('model');
+
+        expect(get(filter.unticked)).toEqual([GT_DEER]);
+    });
+
+    it('draws only the annotations of ticked pairs in the collection on screen', () => {
+        setActivePairFilterCollection(IMAGES);
+        useAnnotationPairFilter(IMAGES).togglePair(GT_DEER);
+
+        expect(get(isAnnotationShown)('gt', 'deer')).toBe(false);
+        expect(get(isAnnotationShown)('model', 'deer')).toBe(true);
+
+        setActivePairFilterCollection(ANNOTATIONS);
+        expect(get(isAnnotationShown)('gt', 'deer')).toBe(true);
     });
 });

@@ -73,11 +73,18 @@ describe('useSeedAnnotationSourceFilter', () => {
 
     // Review Focus 4: deleting a source with ticked pairs must not leave the grid filtering
     // on a source that no longer exists.
-    it('drops the ticked pairs of a source that left the source list', async () => {
-        const { pairs, togglePair, clear } = useAnnotationPairFilter('images-2');
+    it('drops the pairs of a source that left the source list', async () => {
+        const gtDeer = { collection_id: 'gt', annotation_label_id: 'deer', label_name: 'deer' };
+        const gtFox = { collection_id: 'gt', annotation_label_id: 'fox', label_name: 'fox' };
+        const predRaccoon = {
+            collection_id: 'pred',
+            annotation_label_id: 'raccoon',
+            label_name: 'raccoon'
+        };
+        const { pairs, setKnownPairs, togglePair, clear } = useAnnotationPairFilter('images-2');
         clear();
-        togglePair('gt', 'deer');
-        togglePair('pred', 'raccoon');
+        setKnownPairs([gtDeer, gtFox, predRaccoon]);
+        togglePair(gtFox);
         mocks.collections = [
             { collection_id: 'gt', name: 'Ground truth' },
             { collection_id: 'pred', name: 'Predictions' }
@@ -91,6 +98,7 @@ describe('useSeedAnnotationSourceFilter', () => {
         await rerender({ collectionId: 'images-3' });
         await rerender({ collectionId: 'images-2' });
 
+        // The deleted source no longer appears in the ticked pairs the grid sends.
         expect(get(pairs)).toEqual([{ collection_id: 'gt', annotation_label_id: 'deer' }]);
     });
 });

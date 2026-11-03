@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { isAnnotationShown } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { isAnnotationSourceBlocked } from '$lib/contexts/annotationSourceGuard';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { MoveAnnotationToSource } from '$lib/components/MoveAnnotationToSource';
@@ -94,7 +95,11 @@
     // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
     // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
     const seededHiddenIds = $derived(
-        computeSeededHiddenIds(classificationAnnotations, $isSourceVisible)
+        computeSeededHiddenIds(
+            classificationAnnotations,
+            (sourceId, className) =>
+                $isSourceVisible(sourceId) && $isAnnotationShown(sourceId, className)
+        )
     );
 
     // Local visibility changes must not alter source colors or card layout.

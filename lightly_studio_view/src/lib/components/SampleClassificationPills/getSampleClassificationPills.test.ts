@@ -44,7 +44,7 @@ function createAnnotation({
  */
 function sourceFilter(selectedCollectionIds: string[]) {
     return {
-        isSourceVisible: (sourceId: string) =>
+        isAnnotationShown: (sourceId: string) =>
             selectedCollectionIds.length === 0 || selectedCollectionIds.includes(sourceId),
         multipleSourcesVisible: selectedCollectionIds.length > 1
     };

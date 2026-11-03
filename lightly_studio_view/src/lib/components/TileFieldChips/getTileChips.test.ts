@@ -33,7 +33,12 @@ const summarize = (chips: ReturnType<typeof getImageTileChips>) =>
 describe('getImageTileChips', () => {
     it('shows nothing when no field is ticked', () => {
         expect(
-            getImageTileChips({ fields: [], sample, isSourceVisible: () => true, sourceNames: {} })
+            getImageTileChips({
+                fields: [],
+                sample,
+                isAnnotationShown: () => true,
+                sourceNames: {}
+            })
         ).toEqual([]);
     });
 
@@ -41,7 +46,7 @@ describe('getImageTileChips', () => {
         const chips = getImageTileChips({
             fields: ['metadata:location', 'tag:t-reviewed', 'source:gt', 'tags', 'classes'],
             sample,
-            isSourceVisible: () => true,
+            isAnnotationShown: () => true,
             sourceNames: { gt: 'ground_truth' }
         });
         expect(summarize(chips)).toEqual([
@@ -57,7 +62,7 @@ describe('getImageTileChips', () => {
         const [chip] = getImageTileChips({
             fields: ['classes'],
             sample,
-            isSourceVisible: () => true,
+            isAnnotationShown: () => true,
             sourceNames: {}
         });
         expect(chip.classes).toEqual([
@@ -70,7 +75,7 @@ describe('getImageTileChips', () => {
         const [chip] = getImageTileChips({
             fields: ['metadata:night'],
             sample,
-            isSourceVisible: () => true,
+            isAnnotationShown: () => true,
             sourceNames: {}
         });
         expect(chip).toMatchObject({ kind: 'metadata', label: 'night', value: 'true' });
@@ -84,14 +89,18 @@ describe('getImageTileChips', () => {
         const chips = getImageTileChips({
             fields: ['classes'],
             sample: mixed,
-            isSourceVisible: (id) => id === 'gt',
+            isAnnotationShown: (id) => id === 'gt',
             sourceNames: {}
         });
         expect(chips[0].title).toBe('Classes: 1 deer');
     });
 
     it('shows one tag by name only on images that carry it', () => {
-        const params = { fields: ['tag:t-reviewed'], isSourceVisible: () => true, sourceNames: {} };
+        const params = {
+            fields: ['tag:t-reviewed'],
+            isAnnotationShown: () => true,
+            sourceNames: {}
+        };
         expect(getImageTileChips({ ...params, sample })).toEqual([
             { id: 'tag:t-reviewed', kind: 'tag', value: 'reviewed', title: 'Tag: reviewed' }
         ]);
@@ -111,7 +120,7 @@ describe('getImageTileChips', () => {
         const chips = getImageTileChips({
             fields: ['source:model', 'source:gt', 'source:empty'],
             sample: mixed,
-            isSourceVisible: (id) => id === 'gt',
+            isAnnotationShown: (id) => id === 'gt',
             sourceNames: { gt: 'ground_truth', model: 'model_v1', empty: 'model_v2' }
         });
         expect(summarize(chips)).toEqual([
@@ -126,7 +135,7 @@ describe('getImageTileChips', () => {
         const chips = getImageTileChips({
             fields: ['classes', 'tags', 'tag:t-train', 'source:gt', 'metadata:location'],
             sample: bare,
-            isSourceVisible: () => true,
+            isAnnotationShown: () => true,
             sourceNames: {}
         });
         expect(chips).toEqual([]);

@@ -1,25 +1,27 @@
 <script lang="ts">
-    import { Eye, Settings } from '@lucide/svelte';
-    import { get } from 'svelte/store';
+    import { Settings } from '@lucide/svelte';
     import type { AnnotationCountMode, ImageFilter } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components';
-    import { Input } from '$lib/components/ui/input';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import FilterListRow from '$lib/components/FilterList/FilterListRow.svelte';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
-    import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
-    import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
-    import { resolveEffectiveColorBySource } from '$lib/utils';
-    import AnnotationClassRows from './AnnotationClassRows.svelte';
-    import AnnotationSourceNode from './AnnotationSourceNode.svelte';
-    import { buildSourceTree, formatCount } from './buildSourceTree';
-    import { filterSourceTree } from './filterSourceTree';
+    import GroupBySwitch from './GroupBySwitch.svelte';
+    import PairRows from './PairRows.svelte';
+    import TreeChildRow from './TreeChildRow.svelte';
+    import TreeGroupRow from './TreeGroupRow.svelte';
+    import TreeSearchField from './TreeSearchField.svelte';
+    import TreeStatusLine from './TreeStatusLine.svelte';
+    import { groupPairRows } from './groupPairRows';
+    import { buildPairRows, formatCount, toNamedPair } from './pairRows';
+    import { createMatcher, matchRows } from './treeSearch';
+    import { getTreeStatus } from './treeStatus';
     import { useSourceLabelCounts } from './useSourceLabelCounts.svelte';
+    import { useTreeActions } from './useTreeActions';
+    import { useTreeGroupBy } from './useTreeGroupBy';
 
     interface Props {
-        /** The collection on screen. Its pairs and its annotation sources are used. */
+        /** The collection on screen. Its ticks and its annotation sources are used. */
         collectionId: string;
         /** The image collection the counts are taken on. */
         countsCollectionId: string;
@@ -28,14 +30,8 @@
         countMode: AnnotationCountMode;
         /** Show only this source, e.g. on the annotations grid of one source. */
         singleSourceId?: string;
-        showVisibilityToggle?: boolean;
-        /** The "No annotations" row, pinned at the bottom. Omit to hide it. */
-        unannotatedRow?: {
-            current_count: number;
-            total_count: number;
-            selected: boolean;
-            onToggle: () => void;
-        };
+        /** The counts of the "No annotations" row, pinned at the bottom. Omit to hide it. */
+        unannotatedCount?: { current_count: number; total_count: number };
     }
 
     let {
@@ -44,8 +40,7 @@
         countsFilter,
         countMode,
         singleSourceId,
-        showVisibilityToggle = false,
-        unannotatedRow
+        unannotatedCount
     }: Props = $props();
 
     const sourcesQuery = useAnnotationCollections(() => ({
@@ -56,10 +51,9 @@
         filter: countsFilter,
         countMode
     }));
-    const { pairs, togglePair, setSource } = $derived(useAnnotationPairFilter(collectionId));
-    const { selectedCollectionIds, setSelectedCollectionIds, multipleSourcesVisible } =
-        useAnnotationCollectionsFilter();
-    const { enforceColoringByClassStore } = useSettings();
+    const filter = $derived(useAnnotationPairFilter(collectionId));
+    const { unticked, unannotatedTicked } = $derived(filter);
+    const { groupBy, setGroupBy } = $derived(useTreeGroupBy(collectionId));
     const { openSettingsDialog } = useSettingsDialog();
 
     const sources = $derived(
@@ -67,29 +61,45 @@
             ? [{ id: singleSourceId, name: '' }]
             : (sourcesQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
-    const tree = $derived(buildSourceTree(sources, countsQuery.data ?? [], $pairs));
+    const knownPairs = $derived(buildPairRows(sources, countsQuery.data ?? [], []));
+    // The grid request needs every pair to send the ticked ones.
+    $effect(() => {
+        if (countsQuery.data) filter.setKnownPairs(knownPairs.map(toNamedPair));
+    });
+
     let query = $state('');
-    const searching = $derived(query.trim() !== '');
-    const hasClasses = $derived(tree.some((node) => node.classes.length > 0));
-    const visibleTree = $derived(filterSourceTree(tree, query));
-    const colorBySource = $derived(
-        resolveEffectiveColorBySource({
-            multipleSourcesVisible: $multipleSourcesVisible,
-            enforceColoringByClass: $enforceColoringByClassStore
+    let useRegex = $state(false);
+    const rows = $derived(buildPairRows(sources, countsQuery.data ?? [], $unticked));
+    const matcher = $derived(createMatcher(query, useRegex));
+    const searching = $derived(matcher.kind === 'ok');
+    const matches = $derived(matchRows(rows, matcher));
+    const find = $derived(matcher.kind === 'ok' ? matcher.find : undefined);
+    const allGroups = $derived(groupPairRows(rows, $groupBy, sources));
+    const groups = $derived(
+        groupPairRows(matches, $groupBy, sources).filter((g) => !searching || g.rows.length > 0)
+    );
+    const status = $derived(
+        getTreeStatus({
+            rows,
+            matches,
+            searching,
+            unannotatedTicked: unannotatedCount ? $unannotatedTicked : undefined
         })
     );
+    const actions = useTreeActions({
+        getFilter: () => filter,
+        getRows: () => rows,
+        getMatches: () => matches,
+        hasUnannotatedRow: () => Boolean(unannotatedCount)
+    });
 
-    const toggleSourceVisibility = (sourceId: string) => {
-        const ids = get(selectedCollectionIds);
-        setSelectedCollectionIds(
-            ids.includes(sourceId) ? ids.filter((id) => id !== sourceId) : [...ids, sourceId]
-        );
-    };
+    // More than 3 groups start collapsed. A search opens the matching ones without changing
+    // what the user chose.
+    let userOpen = $state<Record<string, boolean>>({});
+    const isOpen = (id: string) =>
+        searching || (userOpen[`${$groupBy}:${id}`] ?? allGroups.length <= 3);
+    const toggleOpen = (id: string) => (userOpen[`${$groupBy}:${id}`] = !isOpen(id));
 </script>
-
-{#snippet eyeSpacer()}
-    <Eye class="size-4" />
-{/snippet}
 
 <Segment title="Annotations">
     {#snippet headerAction()}
@@ -106,57 +116,57 @@
         />
     {/snippet}
     <div class="space-y-2" data-testid="annotation-source-tree">
-        {#if hasClasses}
-            <Input
-                value={query}
-                oninput={(event) => (query = event.currentTarget.value)}
-                placeholder="Search annotation classes…"
-                aria-label="Search annotation classes"
-                class="h-8"
-            />
-        {/if}
-        {#if searching && visibleTree.length === 0}
-            <p class="text-sm text-diffuse-foreground">No matching annotation classes</p>
-        {:else if tree.length > 1}
-            {#each visibleTree as node (node.id)}
-                <AnnotationSourceNode
-                    {node}
-                    isHidden={!$selectedCollectionIds.includes(node.id)}
-                    showSourceColor={colorBySource}
-                    showClassColor
-                    forceOpen={searching}
-                    highlight={query}
-                    {showVisibilityToggle}
-                    onToggleSource={(checked) => setSource(node.id, node.labelIds, checked)}
-                    onTogglePair={(labelId) => togglePair(node.id, labelId)}
-                    onToggleVisibility={() => toggleSourceVisibility(node.id)}
+        <GroupBySwitch value={$groupBy} onChange={setGroupBy} />
+        <TreeSearchField
+            {query}
+            {useRegex}
+            invalid={matcher.kind === 'invalid'}
+            onQueryChange={(value) => (query = value)}
+            onRegexChange={(value) => (useRegex = value)}
+        />
+        <TreeStatusLine
+            text={status.text}
+            actions={status.actions}
+            invalid={matcher.kind === 'invalid'}
+            onAction={actions.runStatusAction}
+        />
+        {#if rows.length === 0 && sources.length <= 1}
+            <p class="text-sm text-diffuse-foreground">No annotations yet.</p>
+        {:else if sources.length <= 1}
+            <div class="space-y-1">
+                <PairRows
+                    rows={matches}
+                    show="class"
+                    {find}
+                    onToggle={(row) => actions.setRows([row], !row.ticked)}
+                    onOnly={(row) => actions.onlyRows([row])}
+                />
+            </div>
+        {:else}
+            {#each groups as group (`${$groupBy}:${group.id}`)}
+                <TreeGroupRow
+                    {group}
+                    open={isOpen(group.id)}
+                    {find}
+                    onToggleOpen={() => toggleOpen(group.id)}
+                    onSetRows={actions.setRows}
+                    onOnlyRows={actions.onlyRows}
                 />
             {/each}
-        {:else if tree.length === 1 && tree[0].classes.length > 0}
-            <AnnotationClassRows
-                items={visibleTree[0].classes}
-                showClassColor
-                highlight={query}
-                {showVisibilityToggle}
-                onToggle={(labelId) => togglePair(tree[0].id, labelId)}
-            />
-        {:else}
-            <p class="text-sm text-diffuse-foreground">No annotations yet.</p>
         {/if}
-        {#if unannotatedRow}
-            <div class={tree.length > 1 ? 'mt-2 border-t pl-8 pr-2 pt-2' : 'mt-2 border-t pt-2'}>
-                <FilterListRow
-                    item={{
-                        id: 'no-annotations',
-                        label: 'No annotations',
-                        selected: unannotatedRow.selected,
-                        count: formatCount(unannotatedRow.current_count, unannotatedRow.total_count)
-                    }}
-                    checked={unannotatedRow.selected}
-                    onToggle={unannotatedRow.onToggle}
+        {#if unannotatedCount && query.trim() === ''}
+            <div class="mt-2 border-t pt-2 {sources.length > 1 ? 'pl-8 pr-2' : ''}">
+                <TreeChildRow
+                    label="No annotations"
+                    ariaLabel="No annotations"
+                    checked={$unannotatedTicked}
+                    count={formatCount(
+                        unannotatedCount.current_count,
+                        unannotatedCount.total_count
+                    )}
                     testId="annotation-source-tree-pinned"
-                    emphasized
-                    trailingSpacer={showVisibilityToggle ? eyeSpacer : undefined}
+                    onToggle={() => filter.setUnannotatedTicked(!$unannotatedTicked)}
+                    onOnly={actions.onlyUnannotated}
                 />
             </div>
         {/if}
