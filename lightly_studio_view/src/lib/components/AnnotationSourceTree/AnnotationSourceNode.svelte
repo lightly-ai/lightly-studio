@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ChevronRight } from '@lucide/svelte';
+    import { ChevronRight, Database } from '@lucide/svelte';
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import ColorMarker from '$lib/components/SideMenu/ColorMarker/ColorMarker.svelte';
     import AnnotationClassRows from './AnnotationClassRows.svelte';
@@ -34,8 +34,11 @@
     const open = $derived(userOpen ?? !isEmpty);
 </script>
 
-<div data-testid="annotation-source-node">
-    <div class="group flex w-full items-center gap-2" data-testid="annotation-source-row">
+<div class="mb-1" data-testid="annotation-source-node">
+    <div
+        class="group flex w-full items-center gap-2 rounded-md bg-muted px-2 py-1.5"
+        data-testid="annotation-source-row"
+    >
         <button
             type="button"
             aria-label="{open ? 'Collapse' : 'Expand'} {node.name}"
@@ -58,7 +61,11 @@
         {#if showSourceColor}
             <ColorMarker label={node.name} />
         {/if}
-        <span class="flex-1 truncate text-base font-medium">{node.name}</span>
+        <Database class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        <span class="truncate text-base font-medium">{node.name}</span>
+        <span class="flex-1 text-xs text-muted-foreground" data-testid="annotation-source-caption"
+            >source</span
+        >
         {#if node.count}
             <span class="text-sm text-diffuse-foreground" data-testid="annotation-source-count"
                 >{node.count}</span
@@ -73,7 +80,7 @@
         {/if}
     </div>
     {#if open && !isEmpty}
-        <div class="mt-1 space-y-1 pl-6">
+        <div class="ml-4 mt-1 space-y-1 border-l border-border pl-3">
             <AnnotationClassRows
                 items={node.classes}
                 {showClassColor}
