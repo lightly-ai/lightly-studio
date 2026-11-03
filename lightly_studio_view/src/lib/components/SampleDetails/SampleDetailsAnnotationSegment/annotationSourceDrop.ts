@@ -39,17 +39,3 @@ export const findDropSource = (
     const source = sources.find((candidate) => candidate.collection_id === sourceId);
     return source ? { id: source.collection_id, name: source.name } : undefined;
 };
-
-/**
- * Returns the sources that have no annotation group on this sample. They are hidden from the
- * panel, so they are shown as extra drop zones while an annotation is dragged.
- */
-export const getSourcesWithoutGroup = (
-    sources: AnnotationCollectionView[],
-    groups: { id: string }[]
-): DropSource[] => {
-    const groupIds = new Set(groups.map((group) => group.id));
-    return sources
-        .filter((source) => !groupIds.has(source.collection_id))
-        .map((source) => ({ id: source.collection_id, name: source.name }));
-};

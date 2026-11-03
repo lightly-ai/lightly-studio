@@ -2,7 +2,7 @@ import { toast } from 'svelte-sonner';
 import type { AnnotationLabelContext } from './SampleDetailsAnnotation.svelte';
 
 export const MISSING_ANNOTATION_SOURCE_MESSAGE =
-    'Pick an annotation source in "Adding to" before adding annotations.';
+    'Pick a source with the pencil in the Annotations panel before adding annotations.';
 
 /**
  * Returns true, and tells the user why, when a new annotation must not be created because there

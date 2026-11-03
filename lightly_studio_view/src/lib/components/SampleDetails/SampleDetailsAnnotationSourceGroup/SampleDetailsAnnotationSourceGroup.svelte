@@ -9,6 +9,7 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { untrack, type Snippet } from 'svelte';
     import { slide } from 'svelte/transition';
+    import { cn } from '$lib/utils';
 
     interface Props {
         name: string;
@@ -24,6 +25,10 @@
         onToggleVisibility?: (e: MouseEvent) => void;
         /** Called when the user expands or collapses the group. */
         onOpenChange?: (open: boolean) => void;
+        /** Rendered at the start of the header, e.g. the button that makes this the target. */
+        leading?: Snippet;
+        /** Tints the header, e.g. for the source new annotations go to. */
+        highlighted?: boolean;
         children: Snippet;
     }
 
@@ -36,6 +41,8 @@
         allHidden = false,
         onToggleVisibility,
         onOpenChange,
+        leading,
+        highlighted = false,
         children
     }: Props = $props();
 
@@ -43,10 +50,15 @@
 
     // The component is reused across samples (the parent's {#each} is keyed by source id), so
     // re-apply the seeded collapse on sample change. Tracked by sampleId so a manual toggle
-    // persists within a sample and the chevron stays independent of the eye.
+    // persists within a sample and the chevron stays independent of the eye. An empty group
+    // starts collapsed, so it is also re-applied when its first annotation arrives.
     let appliedSampleId = $state(untrack(() => sampleId));
+    let wasEmpty = $state(untrack(() => count === 0));
     $effect(() => {
-        if (appliedSampleId === sampleId) return;
+        const isEmpty = count === 0;
+        const gotFirstAnnotation = wasEmpty && !isEmpty;
+        wasEmpty = isEmpty;
+        if (appliedSampleId === sampleId && !gotFirstAnnotation) return;
         appliedSampleId = sampleId;
         open = initiallyOpen;
     });
@@ -56,7 +68,15 @@
 </script>
 
 <Collapsible bind:open {onOpenChange}>
-    <div class="flex items-center gap-2" data-testid="annotation-source-group-header" title={name}>
+    <div
+        class={cn(
+            '-mx-1 flex items-center gap-2 rounded-md px-1',
+            highlighted && 'bg-primary/10 ring-1 ring-primary/40'
+        )}
+        data-testid="annotation-source-group-header"
+        title={name}
+    >
+        {@render leading?.()}
         {#if showColorMarker}
             <ColorMarker
                 label={name}

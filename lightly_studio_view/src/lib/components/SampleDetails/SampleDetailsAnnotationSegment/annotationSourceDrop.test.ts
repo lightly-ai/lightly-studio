@@ -1,6 +1,6 @@
 import type { AnnotationCollectionView } from '$lib/api/lightly_studio_local';
 import { describe, expect, it } from 'vitest';
-import { findDropSource, getSourceDropMove, getSourcesWithoutGroup } from './annotationSourceDrop';
+import { findDropSource, getSourceDropMove } from './annotationSourceDrop';
 
 const sources = [
     { collection_id: 'source-gt', name: 'Ground truth' },
@@ -35,14 +35,5 @@ describe('findDropSource', () => {
             name: 'Predictions'
         });
         expect(findDropSource(sources, 'source-missing')).toBeUndefined();
-    });
-});
-
-describe('getSourcesWithoutGroup', () => {
-    it('returns the sources that have no group, in source order', () => {
-        expect(getSourcesWithoutGroup(sources, [{ id: 'source-pred' }])).toEqual([
-            { id: 'source-gt', name: 'Ground truth' },
-            { id: 'source-new', name: 'Review' }
-        ]);
     });
 });

@@ -4,8 +4,10 @@ import {
     UNKNOWN_SOURCE_NAME,
     areAllAnnotationsHidden,
     computeSeededHiddenIds,
+    getTargetSourceHint,
     groupAnnotationsBySource,
     isSourceGroupInitiallyOpen,
+    listAllSourceGroups,
     toggleSourceVisibility
 } from './SampleDetailsAnnotationSegment.helpers';
 
@@ -232,5 +234,55 @@ describe('isSourceGroupInitiallyOpen', () => {
             true
         );
         expect(isSourceGroupInitiallyOpen(annotations, new Set(), 'a2', false)).toBe(true);
+    });
+});
+
+describe('listAllSourceGroups', () => {
+    const gtAnnotation = createAnnotation('a1', groundTruthSource.collection_id, 'cat');
+    const groups = [
+        {
+            id: groundTruthSource.collection_id,
+            name: groundTruthSource.name,
+            annotations: [gtAnnotation]
+        }
+    ];
+
+    it('adds an empty group for each source without annotations, in source order', () => {
+        const result = listAllSourceGroups(groups, [predictionsSource, groundTruthSource], null);
+
+        expect(result.map((group) => [group.name, group.annotations.length])).toEqual([
+            [predictionsSource.name, 0],
+            [groundTruthSource.name, 1]
+        ]);
+    });
+
+    it('adds the typed target source last when it does not exist yet', () => {
+        const result = listAllSourceGroups(groups, [groundTruthSource], 'Review');
+
+        expect(result.map((group) => group.name)).toEqual([groundTruthSource.name, 'Review']);
+    });
+
+    it('adds no extra group when the target source exists', () => {
+        const result = listAllSourceGroups(groups, [groundTruthSource], groundTruthSource.name);
+
+        expect(result).toHaveLength(1);
+    });
+});
+
+describe('getTargetSourceHint', () => {
+    it('asks for a target when none is picked', () => {
+        expect(getTargetSourceHint({ targetSource: null, isTargetHidden: false })).toContain(
+            'pencil'
+        );
+    });
+
+    it('warns when the target source is hidden', () => {
+        expect(getTargetSourceHint({ targetSource: 'Review', isTargetHidden: true })).toBe(
+            'New annotations go to Review, which is hidden.'
+        );
+    });
+
+    it('says nothing when the target is picked and shown', () => {
+        expect(getTargetSourceHint({ targetSource: 'Review', isTargetHidden: false })).toBeNull();
     });
 });

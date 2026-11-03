@@ -53,6 +53,65 @@ export const groupAnnotationsBySource = (
     return groups;
 };
 
+/** ID prefix of the group for a typed source that has no annotation, so no ID, yet. */
+export const PENDING_SOURCE_ID_PREFIX = 'pending:';
+
+/**
+ * Lists a group for every source, so any source can be picked as the target, also one without
+ * annotations on this sample. Groups keep the order of `sources`, then unknown sources, then
+ * the target source when it is typed but not created yet.
+ */
+export const listAllSourceGroups = (
+    groups: AnnotationSourceGroup[],
+    sources: AnnotationCollectionView[],
+    targetSource: string | null
+): AnnotationSourceGroup[] => {
+    const groupsById = new Map(groups.map((group) => [group.id, group]));
+    const sourceIds = new Set(sources.map((source) => source.collection_id));
+    const sourceGroups = sources.map(
+        (source) =>
+            groupsById.get(source.collection_id) ?? {
+                id: source.collection_id,
+                name: source.name,
+                annotations: []
+            }
+    );
+    const unknownGroups = groups.filter((group) => !sourceIds.has(group.id));
+    const isTargetPending =
+        targetSource !== null && !sources.some((source) => source.name === targetSource);
+    const pendingGroups = isTargetPending
+        ? [
+              {
+                  id: `${PENDING_SOURCE_ID_PREFIX}${targetSource}`,
+                  name: targetSource,
+                  annotations: []
+              }
+          ]
+        : [];
+    return [...sourceGroups, ...unknownGroups, ...pendingGroups];
+};
+
+/**
+ * Returns the line shown above the source groups about where new annotations go, or null when
+ * nothing needs saying.
+ */
+export const getTargetSourceHint = ({
+    targetSource,
+    isTargetHidden
+}: {
+    targetSource: string | null;
+    isTargetHidden: boolean;
+}): string | null => {
+    if (targetSource === null) {
+        return 'Click the pencil next to a source to choose where new annotations go.';
+    }
+    // Visibility and target sit in the same row, so hiding the target is easy to do by accident.
+    if (isTargetHidden) {
+        return `New annotations go to ${targetSource}, which is hidden.`;
+    }
+    return null;
+};
+
 /**
  * Whether every annotation in the list is hidden.
  */

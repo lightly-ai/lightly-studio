@@ -3,7 +3,6 @@
     import { page } from '$app/state';
     import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
     import { ImageAdjustments } from '$lib/components/ImageAdjustments';
-    import AnnotationSourcePill from '$lib/components/AnnotationSourcePill/AnnotationSourcePill.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -246,19 +245,13 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            <div class="flex items-center gap-2">
-                <!-- Always visible, so it's clear which source a new annotation lands in. -->
-                {#if !annotationLabelContext.isOnAnnotationDetailsView}
-                    <AnnotationSourcePill {collectionId} />
-                {/if}
-                {#if $isEditingMode}
-                    <ImageAdjustments
-                        bind:brightness={$imageBrightness}
-                        bind:contrast={$imageContrast}
-                        bind:maskOpacity={$maskOpacity}
-                    />
-                {/if}
-            </div>
+            {#if $isEditingMode}
+                <ImageAdjustments
+                    bind:brightness={$imageBrightness}
+                    bind:contrast={$imageContrast}
+                    bind:maskOpacity={$maskOpacity}
+                />
+            {/if}
         </div>
         <Separator class="bg-border-hard" />
 
