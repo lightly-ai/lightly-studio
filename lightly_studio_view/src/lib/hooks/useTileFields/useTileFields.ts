@@ -29,6 +29,17 @@ export const getSourceId = (fieldId: string): string | undefined =>
 export const getMetadataKey = (fieldId: string): string | undefined =>
     stripPrefix(fieldId, METADATA_PREFIX);
 
+/** What a field shows; each kind has its own marker on tiles and in the menu. */
+type TileFieldKind = 'class' | 'source' | 'tag' | 'metadata';
+
+/** Returns the kind of a field id. */
+export const getTileFieldKind = (fieldId: string): TileFieldKind => {
+    if (fieldId === TILE_FIELD_CLASSES) return 'class';
+    if (fieldId === TILE_FIELD_SOURCE || getSourceId(fieldId) !== undefined) return 'source';
+    if (fieldId === TILE_FIELD_TAGS || getTagId(fieldId) !== undefined) return 'tag';
+    return 'metadata';
+};
+
 /**
  * The fields shown on a grid's tiles. Until the user picks fields, annotation tiles show their
  * class, since a box alone does not say what it is; image tiles show nothing extra.

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import TileFieldChip from './TileFieldChip/TileFieldChip.svelte';
     import type { TileChip } from './getTileChips';
 
     interface Props {
@@ -20,12 +21,7 @@
         data-testid="tile-field-chips"
     >
         {#each chips as chip (chip.id)}
-            <span
-                class="pointer-events-auto box-border block h-5 max-w-full shrink-0 truncate rounded bg-black/60 px-1.5 text-xs font-medium leading-5 text-white backdrop-blur-sm"
-                title={chip.title}
-            >
-                {chip.text}
-            </span>
+            <TileFieldChip {chip} />
         {/each}
     </div>
 {/if}

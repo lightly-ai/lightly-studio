@@ -4,6 +4,7 @@ import {
     getMetadataKey,
     getSourceId,
     getTagId,
+    getTileFieldKind,
     metadataTileField,
     sourceTileField,
     tagTileField,
@@ -59,5 +60,15 @@ describe('field ids', () => {
         expect(getTagId('tags')).toBeUndefined();
         expect(getSourceId(sourceTileField('s1'))).toBe('s1');
         expect(getSourceId('source')).toBeUndefined();
+    });
+});
+
+describe('getTileFieldKind', () => {
+    it('tells classes, sources, tags, and metadata apart', () => {
+        expect(
+            ['classes', 'source', 'source:s1', 'tags', 'tag:t1', 'metadata:camera'].map(
+                getTileFieldKind
+            )
+        ).toEqual(['class', 'source', 'source', 'tag', 'tag', 'metadata']);
     });
 });

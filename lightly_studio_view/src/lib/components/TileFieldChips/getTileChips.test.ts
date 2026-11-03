@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatClassCounts, getAnnotationTileChips, getImageTileChips } from './getTileChips';
+import { getAnnotationTileChips, getImageTileChips } from './getTileChips';
 
 type ImageSample = Parameters<typeof getImageTileChips>[0]['sample'];
 type ImageAnnotation = ImageSample['annotations'][number];
@@ -27,12 +27,8 @@ const annotation = {
     metadata_dict: { data: { occluded: false } }
 } as unknown as Parameters<typeof getAnnotationTileChips>[0]['annotation'];
 
-describe('formatClassCounts', () => {
-    it('counts distinct classes, most frequent first', () => {
-        expect(formatClassCounts(['cat', 'deer', 'deer'])).toBe('2 deer, 1 cat');
-        expect(formatClassCounts([])).toBe('');
-    });
-});
+const summarize = (chips: ReturnType<typeof getImageTileChips>) =>
+    chips.map((chip) => [chip.kind, chip.title]);
 
 describe('getImageTileChips', () => {
     it('shows nothing when no field is ticked', () => {
@@ -41,18 +37,43 @@ describe('getImageTileChips', () => {
         ).toEqual([]);
     });
 
-    it('builds one chip per ticked field in tick order', () => {
+    it('orders chips as classes, sources, tags, then metadata, whatever the tick order', () => {
         const chips = getImageTileChips({
-            fields: ['metadata:location', 'classes', 'tags'],
+            fields: ['metadata:location', 'tag:t-reviewed', 'source:gt', 'tags', 'classes'],
+            sample,
+            isSourceVisible: () => true,
+            sourceNames: { gt: 'ground_truth' }
+        });
+        expect(summarize(chips)).toEqual([
+            ['class', 'Classes: 2 deer, 1 cat'],
+            ['source', 'Source ground_truth: 2 deer, 1 cat'],
+            ['tag', 'Tag: reviewed'],
+            ['tag', 'Tags: train, reviewed'],
+            ['metadata', 'location: site 12']
+        ]);
+    });
+
+    it('gives class chips one colored entry per class, most frequent first', () => {
+        const [chip] = getImageTileChips({
+            fields: ['classes'],
             sample,
             isSourceVisible: () => true,
             sourceNames: {}
         });
-        expect(chips).toEqual([
-            { id: 'metadata:location', text: 'location: site 12', title: 'location: site 12' },
-            { id: 'classes', text: '2 deer, 1 cat', title: 'Annotation classes: 2 deer, 1 cat' },
-            { id: 'tags', text: 'train, reviewed', title: 'Tags: train, reviewed' }
+        expect(chip.classes).toEqual([
+            { name: 'deer', text: '2 deer' },
+            { name: 'cat', text: '1 cat' }
         ]);
+    });
+
+    it('splits a metadata chip into a muted key and its value', () => {
+        const [chip] = getImageTileChips({
+            fields: ['metadata:night'],
+            sample,
+            isSourceVisible: () => true,
+            sourceNames: {}
+        });
+        expect(chip).toMatchObject({ kind: 'metadata', label: 'night', value: 'true' });
     });
 
     it('counts only annotations from visible sources', () => {
@@ -66,13 +87,13 @@ describe('getImageTileChips', () => {
             isSourceVisible: (id) => id === 'gt',
             sourceNames: {}
         });
-        expect(chips[0].text).toBe('1 deer');
+        expect(chips[0].title).toBe('Classes: 1 deer');
     });
 
     it('shows one tag by name only on images that carry it', () => {
         const params = { fields: ['tag:t-reviewed'], isSourceVisible: () => true, sourceNames: {} };
         expect(getImageTileChips({ ...params, sample })).toEqual([
-            { id: 'tag:t-reviewed', text: 'reviewed', title: 'Tag: reviewed' }
+            { id: 'tag:t-reviewed', kind: 'tag', value: 'reviewed', title: 'Tag: reviewed' }
         ]);
         expect(getImageTileChips({ ...params, sample: { ...sample, tags: [] } })).toEqual([]);
     });
@@ -93,10 +114,11 @@ describe('getImageTileChips', () => {
             isSourceVisible: (id) => id === 'gt',
             sourceNames: { gt: 'ground_truth', model: 'model_v1', empty: 'model_v2' }
         });
-        expect(chips.map((chip) => chip.text)).toEqual([
-            'model_v1: 2 deer, 1 cat',
-            'ground_truth: 1 deer'
+        expect(summarize(chips)).toEqual([
+            ['source', 'Source model_v1: 2 deer, 1 cat'],
+            ['source', 'Source ground_truth: 1 deer']
         ]);
+        expect(chips[0]).toMatchObject({ label: 'model_v1', sourceName: 'model_v1' });
     });
 
     it('skips fields the image has no value for', () => {
@@ -112,18 +134,19 @@ describe('getImageTileChips', () => {
 });
 
 describe('getAnnotationTileChips', () => {
-    it('shows the class, tags, source, and metadata of the annotation', () => {
+    it('shows the class, source, tags, and metadata of the annotation in that order', () => {
         const chips = getAnnotationTileChips({
-            fields: ['classes', 'tags', 'source', 'metadata:occluded', 'tag:t-hard', 'tag:t-x'],
+            fields: ['metadata:occluded', 'tag:t-hard', 'tags', 'source', 'classes', 'tag:t-x'],
             annotation,
             sourceName: 'ground_truth'
         });
-        expect(chips.map((chip) => chip.text)).toEqual([
-            'deer',
-            'hard',
-            'ground_truth',
-            'occluded: false',
-            'hard'
+        expect(summarize(chips)).toEqual([
+            ['class', 'Class: deer'],
+            ['source', 'Source: ground_truth'],
+            ['tag', 'Tag: hard'],
+            ['tag', 'Tags: hard'],
+            ['metadata', 'occluded: false']
         ]);
+        expect(chips[0].classes).toEqual([{ name: 'deer', text: 'deer' }]);
     });
 });
