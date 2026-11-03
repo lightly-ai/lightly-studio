@@ -12,11 +12,11 @@
         deleteTag,
         renameTag
     } from '$lib/api/lightly_studio_local';
+    import { getSelectionTarget } from '$lib/hooks/useSelectionTarget/useSelectionTarget';
     import TagAssignInput from './TagAssignInput.svelte';
     import { ItemRenameInput } from '$lib/components/ItemRenameInput';
     import { ItemActionMenu } from '$lib/components/ItemActionMenu';
     import { toast } from 'svelte-sonner';
-    import { get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -48,12 +48,7 @@
         $tags.forEach((tag) => setTagSelected(tag.tag_id, ids.includes(tag.tag_id)));
     };
 
-    const {
-        getSelectedSampleIds,
-        selectedSampleAnnotationCropIds,
-        getSelectAllSnapshot,
-        getSelectAllAnnotationSnapshot
-    } = useGlobalStorage();
+    const { getSelectedSampleIds, selectedSampleAnnotationCropIds } = useGlobalStorage();
 
     const selectedSampleIds = $derived(getSelectedSampleIds(collection_id));
     const hasSelection = $derived(
@@ -81,21 +76,16 @@
     // Tag by filter when the selection is still an unmodified select-all (do not send
     // a potentially large ID list), else fall back to the ID-list path.
     function assignSelectionToTag(tag_id: string) {
-        const snapshot = get(
-            isAnnotationGrid
-                ? getSelectAllAnnotationSnapshot(collection_id)
-                : getSelectAllSnapshot(collection_id)
-        );
-        const isUnmodifiedSelectAll = snapshot != null && snapshot.size === selectedIds.size;
-        if (isUnmodifiedSelectAll) {
+        const target = getSelectionTarget(collection_id, gridType);
+        if (target.kind === 'filter') {
             return addSamplesToTagByFilter({
                 path: { collection_id, tag_id },
-                body: { filter: snapshot.filter }
+                body: { filter: target.filter }
             });
         }
         return addSampleIdsToTagId({
             path: { collection_id, tag_id },
-            body: { sample_ids: [...selectedIds] }
+            body: { sample_ids: target.ids }
         });
     }
 
