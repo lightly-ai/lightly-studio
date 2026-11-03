@@ -46,12 +46,13 @@ def test_create_annotation_label(db_session: Session, test_client: TestClient) -
 def test_get_annotation_labels(db_session: Session, test_client: TestClient) -> None:
     collection = create_collection(session=db_session)
     collection_id = collection.collection_id
-    label = create_annotation_label(
-        session=db_session, root_collection_id=collection_id, label_name="cat"
+    create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="cat",
+        color="#ff8040",
+        alpha=0.5,
     )
-    label.color = "#ff8040"
-    label.alpha = 0.5
-    db_session.commit()
 
     labels_result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels")
     assert labels_result.status_code == HTTP_STATUS_OK
@@ -124,18 +125,19 @@ def test_update_annotation_label__duplicate_name(
 def test_read_annotation_labels_with_counts(db_session: Session, test_client: TestClient) -> None:
     collection_id = create_collection(session=db_session).collection_id
     image_id = create_image(session=db_session, collection_id=collection_id).sample_id
-    cat = create_annotation_label(
-        session=db_session, root_collection_id=collection_id, label_name="cat"
-    )
-    cat.color = "#ff8040"
-    cat.alpha = 0.5
-    db_session.commit()
+    cat_id = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_id,
+        label_name="cat",
+        color="#ff8040",
+        alpha=0.5,
+    ).annotation_label_id
     create_annotation_label(session=db_session, root_collection_id=collection_id, label_name="dog")
     create_annotation(
         session=db_session,
         collection_id=collection_id,
         sample_id=image_id,
-        annotation_label_id=cat.annotation_label_id,
+        annotation_label_id=cat_id,
     )
 
     result = test_client.get(f"/api/collections/{collection_id!s}/annotation_labels_with_counts")
