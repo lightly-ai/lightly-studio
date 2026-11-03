@@ -6,6 +6,9 @@
     import { X } from '@lucide/svelte';
     import { onDestroy } from 'svelte';
     import type { Snippet } from 'svelte';
+    import { hexToHsl, hslToHex, isHexColor } from './color-picker.helpers';
+
+    type Hsl = ReturnType<typeof hexToHsl>;
 
     let {
         initialColor = '#ff0000',
@@ -26,7 +29,6 @@
     } = $props();
 
     let isOpen = $state(false);
-    let colorValue = $state(initialColor);
     let alphaValue = $state(initialAlpha);
     let originalColor = initialColor;
     let originalAlpha = initialAlpha;
@@ -57,97 +59,20 @@
     let saturationRef = $state<HTMLDivElement>();
     let hueRef = $state<HTMLDivElement>();
 
-    // HSL color model state (for the color picker UI)
-    let hue = $state(0);
-    let saturation = $state(100);
-    let lightness = $state(50);
+    // One color state: HSL drives the picker UI, hex is the value that gets previewed.
+    let hsl = $state<Hsl>(hexToHsl(initialColor));
+    let hex = $state(initialColor);
 
-    // Convert hex to HSL on initialization
-    $effect(() => {
-        if (colorValue.startsWith('#')) {
-            const [h, s, l] = hexToHsl(colorValue);
-            hue = h;
-            saturation = s;
-            lightness = l;
-        }
-    });
-
-    // Convert HSL to hex when HSL values change
-    $effect(() => {
-        colorValue = hslToHex(hue, saturation, lightness);
-    });
-
-    // Helper: Convert hex to HSL
-    function hexToHsl(hex: string): [number, number, number] {
-        // Remove # if present
-        hex = hex.replace(/^#/, '');
-
-        // Parse hex
-        const r = parseInt(hex.slice(0, 2), 16) / 255;
-        const g = parseInt(hex.slice(2, 4), 16) / 255;
-        const b = parseInt(hex.slice(4, 6), 16) / 255;
-
-        const max = Math.max(r, g, b);
-        const min = Math.min(r, g, b);
-        const l = (max + min) / 2;
-
-        let h = 0;
-        let s = 0;
-
-        if (max !== min) {
-            const d = max - min;
-            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-            switch (max) {
-                case r:
-                    h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-                    break;
-                case g:
-                    h = ((b - r) / d + 2) / 6;
-                    break;
-                case b:
-                    h = ((r - g) / d + 4) / 6;
-                    break;
-            }
-        }
-
-        return [Math.round(h * 360), Math.round(s * 100), Math.round(l * 100)];
+    function setFromHex(value: string): void {
+        hex = value;
+        hsl = hexToHsl(value);
+        schedulePreview();
     }
 
-    // Helper: Convert HSL to hex
-    function hslToHex(h: number, s: number, l: number): string {
-        h /= 360;
-        s /= 100;
-        l /= 100;
-
-        let r, g, b;
-
-        if (s === 0) {
-            r = g = b = l;
-        } else {
-            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-            const p = 2 * l - q;
-
-            r = hueToRgb(p, q, h + 1 / 3);
-            g = hueToRgb(p, q, h);
-            b = hueToRgb(p, q, h - 1 / 3);
-        }
-
-        function hueToRgb(p: number, q: number, t: number) {
-            if (t < 0) t += 1;
-            if (t > 1) t -= 1;
-            if (t < 1 / 6) return p + (q - p) * 6 * t;
-            if (t < 1 / 2) return q;
-            if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-            return p;
-        }
-
-        const toHex = (x: number) => {
-            const hex = Math.round(x * 255).toString(16);
-            return hex.length === 1 ? '0' + hex : hex;
-        };
-
-        return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    function setFromHsl(value: Hsl): void {
+        hsl = value;
+        hex = hslToHex(value);
+        schedulePreview();
     }
 
     function updateSaturationAndLightness(e: MouseEvent) {
@@ -157,9 +82,7 @@
         const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
         const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
 
-        saturation = Math.round(x * 100);
-        lightness = Math.round((1 - y) * 100);
-        schedulePreview();
+        setFromHsl({ h: hsl.h, s: Math.round(x * 100), l: Math.round((1 - y) * 100) });
     }
 
     // Mousemove calls only the updater so a drag cannot register additional listeners.
@@ -183,8 +106,7 @@
         const rect = hueRef.getBoundingClientRect();
         const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
 
-        hue = Math.round(x * 360);
-        schedulePreview();
+        setFromHsl({ ...hsl, h: Math.round(x * 360) });
     }
 
     // Mousemove calls only the updater so a drag cannot register additional listeners.
@@ -202,21 +124,11 @@
         );
     }
 
-    // Handle preset color selection
-    function selectPresetColor(color: string) {
-        colorValue = color;
-        schedulePreview();
-    }
-
     // Handle manual hex input
     function handleHexInput(e: Event) {
         const value = (e.target as HTMLInputElement).value;
 
-        // Simple validation for hex color format
-        if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-            colorValue = value;
-            schedulePreview();
-        }
+        if (isHexColor(value)) setFromHex(value);
     }
 
     // Handle transparency slider
@@ -232,7 +144,7 @@
         previewFrame = requestAnimationFrame(() => {
             previewFrame = undefined;
             hasPreviewed = true;
-            onChange(colorValue, alphaValue);
+            onChange(hex, alphaValue);
         });
     }
 
@@ -252,7 +164,8 @@
     function resetState(): void {
         originalColor = initialColor;
         originalAlpha = initialAlpha;
-        colorValue = initialColor;
+        hex = initialColor;
+        hsl = hexToHsl(initialColor);
         alphaValue = initialAlpha;
         hasPreviewed = false;
     }
@@ -269,7 +182,7 @@
     // Apply changes and close
     function applyChanges() {
         cancelScheduledPreview();
-        onChange?.(colorValue, alphaValue);
+        onChange?.(hex, alphaValue);
         onClose?.(true);
         hasPreviewed = false;
         isOpen = false;
@@ -318,7 +231,7 @@
                         <!-- Main saturation/lightness picker -->
                         <div
                             class="relative h-28 cursor-crosshair rounded"
-                            style={`background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hue}, 100%, 50%))`}
+                            style={`background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsl.h}, 100%, 50%))`}
                             bind:this={saturationRef}
                             onmousedown={handleSaturationPick}
                             role="dialog"
@@ -328,7 +241,7 @@
                             <!-- Selection indicator -->
                             <div
                                 class="absolute h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md"
-                                style={`left: ${saturation}%; top: ${100 - lightness}%; background-color: ${colorValue}`}
+                                style={`left: ${hsl.s}%; top: ${100 - hsl.l}%; background-color: ${hex}`}
                             ></div>
                         </div>
 
@@ -345,7 +258,7 @@
                             <!-- Hue indicator -->
                             <div
                                 class="absolute top-0 h-full w-1 -translate-x-1/2 border-x border-white shadow-sm"
-                                style={`left: ${(hue / 360) * 100}%`}
+                                style={`left: ${(hsl.h / 360) * 100}%`}
                             ></div>
                         </div>
 
@@ -353,11 +266,11 @@
                         <div class="flex items-center gap-2">
                             <div
                                 class="h-6 w-6 rounded border"
-                                style={`background-color: ${colorValue}`}
+                                style={`background-color: ${hex}`}
                             ></div>
                             <input
                                 type="text"
-                                value={colorValue}
+                                value={hex}
                                 class="bg-background flex-1 rounded border px-2 py-1 text-xs uppercase"
                                 oninput={handleHexInput}
                             />
@@ -388,10 +301,10 @@
                                         type="button"
                                         class={cn(
                                             'h-4 w-4 rounded-sm border',
-                                            colorValue === color ? 'ring-primary ring-1' : ''
+                                            hex === color ? 'ring-primary ring-1' : ''
                                         )}
                                         style={`background-color: ${color}`}
-                                        onclick={() => selectPresetColor(color)}
+                                        onclick={() => setFromHex(color)}
                                         title={color}
                                     ></button>
                                 {/each}
