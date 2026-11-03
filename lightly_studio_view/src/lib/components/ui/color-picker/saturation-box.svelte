@@ -3,8 +3,12 @@
 
     type Hsl = ReturnType<typeof hexToHsl>;
 
-    let { hsl, onPick }: { hsl: Hsl; onPick: (saturation: number, lightness: number) => void } =
-        $props();
+    interface Props {
+        hsl: Hsl;
+        onPick: (saturation: number, lightness: number) => void;
+    }
+
+    let { hsl, onPick }: Props = $props();
 
     let isDragging = false;
 
@@ -46,7 +50,7 @@
 </script>
 
 <div
-    class="relative h-28 cursor-crosshair rounded"
+    class="relative h-28 cursor-crosshair touch-none rounded"
     style={`background-image: linear-gradient(to top, #000, transparent), linear-gradient(to right, #fff, hsl(${hsl.h}, 100%, 50%))`}
     role="slider"
     aria-label="Saturation and lightness"
