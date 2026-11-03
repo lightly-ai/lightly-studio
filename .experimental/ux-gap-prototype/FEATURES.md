@@ -104,7 +104,7 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   Video, frame and caption grids keep the flat class list. Rows 20, 22. Try: after Step f,
   expand `labels` and `model_v1`, tick deer under `labels` only. Commits: e703f7250,
   29a9251f7, c94837430, 97ec6946c.
-  Restyle: a source is a filled header band with a database icon and a "source" caption; its classes sit behind a thin guide line.
+  Restyle: a source is a filled header band with a database icon (tooltip "Annotation source"); its classes sit behind a thin guide line.
 - **Filters only.** Source rows have a checkbox and a read-only color dot; class rows have a
   checkbox, a read-only color dot and the eye. Renaming, deleting and coloring sources moved to
   Settings > Annotation sources, opened by the gear in the source list header ("Manage

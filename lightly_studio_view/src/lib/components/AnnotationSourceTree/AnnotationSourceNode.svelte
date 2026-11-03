@@ -28,6 +28,11 @@
         onToggleVisibility
     }: Props = $props();
 
+    // "N of N" shortens to "N"; "a of b" to "a / b".
+    const compactCount = $derived.by(() => {
+        const [current, total] = (node.count ?? '').split(' of ');
+        return current === total ? current : `${current} / ${total}`;
+    });
     const isEmpty = $derived(node.classes.length === 0);
     // A source starts open, an empty one collapsed, until the user clicks the chevron.
     let userOpen = $state<boolean | null>(null);
@@ -61,14 +66,14 @@
         {#if showSourceColor}
             <ColorMarker label={node.name} />
         {/if}
-        <Database class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        <span class="truncate text-base font-medium">{node.name}</span>
-        <span class="flex-1 text-xs text-muted-foreground" data-testid="annotation-source-caption"
-            >source</span
-        >
+        <span class="shrink-0" title="Annotation source">
+            <Database class="size-4 text-muted-foreground" aria-hidden="true" />
+        </span>
+        <span class="min-w-0 flex-1 truncate text-base font-medium">{node.name}</span>
         {#if node.count}
-            <span class="text-sm text-diffuse-foreground" data-testid="annotation-source-count"
-                >{node.count}</span
+            <span
+                class="shrink-0 whitespace-nowrap text-sm text-diffuse-foreground"
+                data-testid="annotation-source-count">{compactCount}</span
             >
         {/if}
         {#if showVisibilityToggle}
@@ -80,7 +85,7 @@
         {/if}
     </div>
     {#if open && !isEmpty}
-        <div class="ml-4 mt-1 space-y-1 border-l border-border pl-3">
+        <div class="ml-4 mt-1 space-y-1 border-l border-foreground/30 pl-3">
             <AnnotationClassRows
                 items={node.classes}
                 {showClassColor}

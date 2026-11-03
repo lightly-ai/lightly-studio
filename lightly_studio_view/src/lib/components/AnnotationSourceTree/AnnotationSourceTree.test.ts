@@ -91,7 +91,7 @@ describe('AnnotationSourceTree', () => {
         expect(rows).toHaveLength(2);
         const groundTruth = rows[0];
         expect(within(groundTruth).getByRole('button', { name: 'Collapse ground_truth' }));
-        expect(within(groundTruth).getByText('4 of 6')).toBeInTheDocument();
+        expect(within(groundTruth).getByText('4 / 6')).toBeInTheDocument();
         expect(
             within(groundTruth).getByRole('button', { name: 'Hide annotation source ground_truth' })
         ).toBeInTheDocument();
@@ -123,13 +123,13 @@ describe('AnnotationSourceTree', () => {
         ).toBeInTheDocument();
     });
 
-    it('captions a source row "source" only when there are several sources', () => {
+    it('marks a source row with a tooltip only when there are several sources', () => {
         const { unmount } = render(AnnotationSourceTree, { props: defaultProps });
-        expect(screen.getAllByTestId('annotation-source-caption')[0]).toHaveTextContent('source');
+        expect(screen.getAllByTitle('Annotation source').length).toBeGreaterThan(1);
         unmount();
         mocks.sources = [{ collection_id: 'gt', name: 'ground_truth' }];
         render(AnnotationSourceTree, { props: defaultProps });
-        expect(screen.queryByTestId('annotation-source-caption')).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Annotation source')).not.toBeInTheDocument();
     });
 
     it('renders an empty source collapsed, with no children', () => {
