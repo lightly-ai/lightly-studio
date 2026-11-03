@@ -27,10 +27,11 @@ from lightly_studio.database.db_manager import (
     _detect_backend_from_url,
 )
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import image_resolver
+from lightly_studio.resolvers import image_resolver, tag_resolver
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
+    create_tag,
 )
 
 
@@ -321,6 +322,48 @@ def test_close__removes_wal_and_allows_reconnect(
 
     db_manager.connect(db_file=str(db_file), cleanup_existing=False)
     db_manager.close()
+
+
+def test_database_engine__duckdb_keeps_index_entries_after_wal_replay(tmp_path: Path) -> None:
+    """Rows replayed from the WAL stay deletable after the next checkpoint.
+
+    Without a checkpoint right after the replay, DuckDB drops the replayed rows from
+    the ART indexes at the next shutdown checkpoint, and a later delete fails with
+    "Failed to delete all rows from index" (duckdb/duckdb#26106).
+    """
+    db_url = f"duckdb:///{tmp_path / 'replay.db'}"
+
+    # A server run tags two images and stops without a checkpoint, so the WAL stays.
+    engine = DatabaseEngine(engine_url=db_url)
+    with engine.session() as session:
+        collection_id = create_collection(session=session).collection_id
+        sample_ids = [
+            create_image(
+                session=session, collection_id=collection_id, file_path_abs=f"/{i}.png"
+            ).sample_id
+            for i in range(2)
+        ]
+        tag_id = create_tag(session=session, collection_id=collection_id).tag_id
+        session.connection().execute(sqlmodel.text("CHECKPOINT"))
+        tag_resolver.add_sample_ids_to_tag_id(session=session, tag_id=tag_id, sample_ids=sample_ids)
+        # Make the shutdown checkpoint fail, as if the process was killed.
+        session.connection().execute(sqlmodel.text("SET debug_checkpoint_abort = 'before_header'"))
+    engine.close()
+    assert (tmp_path / "replay.db.wal").exists()
+
+    # The next run replays the WAL and checkpoints on shutdown.
+    DatabaseEngine(engine_url=db_url).close()
+
+    # The run after that removes the tag again.
+    engine = DatabaseEngine(engine_url=db_url)
+    try:
+        with engine.session() as session:
+            tag_resolver.remove_sample_ids_from_tag_id(
+                session=session, tag_id=tag_id, sample_ids=sample_ids
+            )
+            assert tag_resolver.get_sample_ids_by_tag_id(session=session, tag_id=tag_id) == []
+    finally:
+        engine.close()
 
 
 def test_database_engine__duckdb_lock_conflict_raises_clear_error(

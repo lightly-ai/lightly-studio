@@ -152,6 +152,7 @@ class DatabaseEngine:
             )
         else:
             _create_duckdb_schema(engine=self._engine, engine_url=self._engine_url)
+            _checkpoint_duckdb(engine=self._engine)
 
     @contextmanager
     def session(self) -> Generator[Session, None, None]:
@@ -374,6 +375,18 @@ def _create_duckdb_schema(engine: Engine, engine_url: str) -> None:
                 "LIGHTLY_STUDIO_DATABASE_URL to point at a different database."
             ) from e
         raise
+
+
+def _checkpoint_duckdb(engine: Engine) -> None:
+    """Write the data that DuckDB replayed from the WAL on open into the database file.
+
+    Without this checkpoint, the next automatic or shutdown checkpoint removes the replayed
+    rows from the ART indexes. A later delete of these rows then fails with "Failed to delete
+    all rows from index" and invalidates the database (duckdb/duckdb#26106).
+    TODO(Gabriel, 11/2026): Remove when a DuckDB release fixes duckdb/duckdb#26106.
+    """
+    with engine.connect() as conn:
+        conn.execute(statement=text("CHECKPOINT"))
 
 
 def _detect_backend_from_url(engine_url: str) -> DatabaseBackend:
