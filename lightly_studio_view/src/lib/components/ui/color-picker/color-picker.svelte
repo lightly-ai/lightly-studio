@@ -42,6 +42,7 @@
     </Popover.Trigger>
     <Popover.Content
         side={position}
+        align={position === 'left' || position === 'right' ? 'start' : 'center'}
         sideOffset={8}
         collisionPadding={10}
         role="dialog"

@@ -37,7 +37,13 @@
 
 <div class="flex items-center justify-between border-b px-3 py-2">
     <h3 class="text-sm font-medium">Color</h3>
-    <Button variant="ghost" size="icon" class="h-6 w-6" onclick={onCancel}>
+    <Button
+        variant="ghost"
+        size="icon"
+        class="h-6 w-6"
+        aria-label="Close"
+        onclick={onCancel}
+    >
         <X class="h-4 w-4" />
     </Button>
 </div>
