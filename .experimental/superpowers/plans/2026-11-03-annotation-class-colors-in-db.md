@@ -100,7 +100,7 @@ Cases that no single test covers end to end. Check them during review.
 
 ## PR stack
 
-PR 1 is based on `michal-lig-11481-refactor-color-picker-panel`. Each next PR is based on the
+PR 1 is based on `michal-lig-11355-annotation-class-colors-design`. Each next PR is based on the
 previous one. Every PR leaves the app working.
 
 **Backend**
