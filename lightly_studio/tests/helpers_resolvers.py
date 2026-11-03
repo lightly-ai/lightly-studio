@@ -261,8 +261,6 @@ def create_annotation_label(
     session: Session,
     root_collection_id: UUID,
     label_name: str = "cat",
-    color: str | None = None,
-    alpha: float | None = None,
 ) -> AnnotationLabelTable:
     """Helper function to insert an annotation label."""
     collection = collection_resolver.get_by_id(session=session, collection_id=root_collection_id)
@@ -270,19 +268,13 @@ def create_annotation_label(
         raise ValueError(f"Collection {root_collection_id} doesn't exist")
     dataset_id = collection.dataset_id
 
-    label = annotation_label_resolver.create(
+    return annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(
             dataset_id=dataset_id,
             annotation_label_name=label_name,
         ),
     )
-    if color is not None or alpha is not None:
-        label.color = color
-        label.alpha = alpha
-        session.commit()
-        session.refresh(label)
-    return label
 
 
 def get_annotation_by_type(
