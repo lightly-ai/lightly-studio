@@ -111,6 +111,7 @@
   },
   "overrides": {
     "dompurify": "^3.4.17",
-    "handlebars": "^4.7.10"
+    "handlebars": "^4.7.10",
+    "tinypool": "^2.2.0"
   }
 }
