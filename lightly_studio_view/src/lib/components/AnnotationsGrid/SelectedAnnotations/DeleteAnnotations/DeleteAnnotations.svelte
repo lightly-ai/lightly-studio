@@ -5,7 +5,7 @@
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { get } from 'svelte/store';
     import { toast } from 'svelte-sonner';
-    import DeleteAnnotationsDialog from '../DeleteAnnotationsDialog/DeleteAnnotationsDialog.svelte';
+    import DeleteAnnotationsDialog from '$lib/components/DeleteAnnotationsDialog/DeleteAnnotationsDialog.svelte';
 
     interface Props {
         collectionId: string;

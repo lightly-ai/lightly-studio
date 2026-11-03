@@ -1,14 +1,17 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
     import * as Dialog from '$lib/components/ui/dialog';
+    import type { Snippet } from 'svelte';
 
     interface Props {
         selectedCount: number;
         disabled: boolean;
         onDelete: () => Promise<void> | void;
+        /** Replaces the default "Delete N annotations" button, e.g. with an icon button. */
+        trigger?: Snippet<[{ props: Record<string, unknown> }]>;
     }
 
-    let { selectedCount, disabled, onDelete }: Props = $props();
+    let { selectedCount, disabled, onDelete, trigger }: Props = $props();
 
     let open = $state(false);
     const countLabel = $derived(
@@ -28,14 +31,18 @@
 <Dialog.Root bind:open>
     <Dialog.Trigger>
         {#snippet child({ props })}
-            <Button
-                {...props}
-                variant="destructive"
-                class="w-full"
-                disabled={selectedCount === 0 || disabled}
-            >
-                Delete {countLabel}
-            </Button>
+            {#if trigger}
+                {@render trigger({ props })}
+            {:else}
+                <Button
+                    {...props}
+                    variant="destructive"
+                    class="w-full"
+                    disabled={selectedCount === 0 || disabled}
+                >
+                    Delete {countLabel}
+                </Button>
+            {/if}
         {/snippet}
     </Dialog.Trigger>
     <Dialog.Content class="max-w-sm">
