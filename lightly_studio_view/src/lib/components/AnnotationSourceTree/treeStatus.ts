@@ -9,9 +9,9 @@ import { toNamedPair, type PairRow } from './pairRows';
 export type StatusAction = 'showOnly' | 'add' | 'hide' | 'showAll' | 'hideAll';
 
 export const STATUS_ACTION_LABELS: Record<StatusAction, string> = {
-    showOnly: 'Show only these',
-    add: 'Add these',
-    hide: 'Hide these',
+    showOnly: 'Show only',
+    add: 'Add',
+    hide: 'Hide',
     showAll: 'Show all',
     hideAll: 'Hide all'
 };
@@ -54,8 +54,7 @@ const getSearchStatus = (
     if (shown < matches.length) actions.push('add');
     if (shown > 0) actions.push('hide');
     const noun = matches.length === 1 ? 'match' : 'matches';
-    const shownText = shown < matches.length ? ` · ${shown} shown` : '';
-    return { text: `${matches.length} ${noun}${shownText}`, actions };
+    return { text: `${matches.length} ${noun}`, actions };
 };
 
 /** The new ticks after a status action. `unannotatedTicked` is left out when unchanged. */

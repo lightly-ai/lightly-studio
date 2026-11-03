@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { Eye, EyeOff, Filter, Plus } from '@lucide/svelte';
+    import { FilterActionButton } from '$lib/components/FilterActionButton';
     import { STATUS_ACTION_LABELS, type StatusAction } from './treeStatus';
 
     interface Props {
@@ -9,23 +11,24 @@
     }
 
     let { text, actions, invalid, onAction }: Props = $props();
+
+    const ICONS = { showOnly: Filter, add: Plus, hide: EyeOff, showAll: Eye, hideAll: EyeOff };
 </script>
 
-<p
-    class="flex flex-wrap items-center gap-x-1 text-xs text-muted-foreground"
+<div
+    class="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground"
     data-testid="annotation-tree-status"
 >
     {#if invalid}
         <span class="text-destructive">Invalid pattern</span>
     {:else}
-        <span>{text}</span>
+        <span class="mr-0.5">{text}</span>
         {#each actions as action (action)}
-            <span aria-hidden="true">·</span>
-            <button
-                type="button"
-                class="underline-offset-2 hover:text-foreground hover:underline"
-                onclick={() => onAction(action)}>{STATUS_ACTION_LABELS[action]}</button
-            >
+            <FilterActionButton
+                label={STATUS_ACTION_LABELS[action]}
+                icon={ICONS[action]}
+                onclick={() => onAction(action)}
+            />
         {/each}
     {/if}
-</p>
+</div>

@@ -145,7 +145,7 @@ describe('AnnotationSourceTree', () => {
         expect(screen.queryByText('No annotations')).toBeNull();
         expect(screen.getByText('1 match')).toBeInTheDocument();
 
-        await userEvent.click(screen.getByRole('button', { name: 'Show only these' }));
+        await userEvent.click(screen.getByRole('button', { name: 'Show only' }));
         expect(tickedPairs()).toEqual([{ collection_id: 'gt', annotation_label_id: 'raccoon-id' }]);
         expect(get(filter().includeUnannotated)).toBe(false);
 

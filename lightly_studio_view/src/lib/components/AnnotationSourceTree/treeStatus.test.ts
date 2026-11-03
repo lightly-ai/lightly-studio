@@ -37,7 +37,7 @@ describe('getTreeStatus', () => {
         const deerMatches = matchRows(deerUnticked, createMatcher('deer', false));
         expect(
             getTreeStatus({ rows: deerUnticked, matches: deerMatches, searching: true })
-        ).toEqual({ text: '2 matches · 0 shown', actions: ['showOnly', 'add'] });
+        ).toEqual({ text: '2 matches', actions: ['showOnly', 'add'] });
         expect(getTreeStatus({ rows, matches: [], searching: true }).text).toBe('No matches');
     });
 });

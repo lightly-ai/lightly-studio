@@ -97,15 +97,16 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   chips on tiles and in the sample details view; the eyes are gone. Everything starts ticked,
   "No annotations" too, and then no annotation filter is sent; new sources and classes start
   ticked. Unticking "No annotations" hides images without annotations. The status line reads
-  "Showing everything", "N hidden · Show all · Hide all" or "Everything hidden", or while searching
-  "m matches · j shown · Show only these · Add these · Hide these" (only the actions that change
-  something). Search matches source or class names, case-insensitive; with regex on, an invalid
+  "Showing everything", "N hidden" with [Show all] [Hide all] buttons, or "Everything hidden", or
+  while searching "m matches" with [Show only] [Add] [Hide] (only the buttons that change
+  something). Filter actions here and in tag, class and metadata lists ("Select all", "Clear",
+  "Show N more") are small outline buttons with an icon. Search matches source or class names, case-insensitive; with regex on, an invalid
   pattern turns the field red and says "Invalid pattern". Hovering a row shows "Only"; the group
   checkbox ticks or unticks the whole group. More than 3 groups start collapsed with a compact "k/n" summary when partly ticked; a search
   opens the matching ones. "Clear all filters" ticks everything again. Each tab keeps its own
   ticks and grouping; deleting a source drops its ticks. Video, frame and caption grids keep the
   flat class list. Rows 20, 22, 29. Try: Images tab, untick car under `labels`, open an image
-  with a car; then By class, type `^ca` with regex on, "Show only these".
+  with a car; then By class, type `^ca` with regex on, "Show only".
 - **Filters only.** Group and child rows have a checkbox, a read-only color dot or tinted
   database icon, and a count. Renaming, deleting and coloring sources moved to Settings >
   Annotation sources, opened by the gear in the section header ("Manage annotation sources").
