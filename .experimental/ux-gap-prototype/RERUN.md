@@ -100,6 +100,7 @@ the Annotations plot counts the new boxes.
 |---|---|---|
 | 23 | Sample view, edit mode: drag a `model_v1` row's grip onto the `labels` group (or use the folder icon) | Box moves to `labels`, keeps its embedding |
 | 22, 23 | Annotations grid, edit mode, select `model_v1` tiles, pill: Annotate, "Move to annotation source…" | Tiles leave the grid; they show under `labels`. No selected-annotations side panel |
+| 22, 23 | Images grid, edit mode, select 3 tiles, press T, then L; type in the search box and press T | T opens Tag, L opens Annotate (classifications, "k/N" per class); T typed in a field only types |
 
 Time 4 images fixed from predictions against 4 labeled from scratch, as in the original step.
 

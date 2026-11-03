@@ -110,3 +110,4 @@ export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointF
 export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
+export { usePillShortcuts } from '$lib/hooks/usePillShortcuts/usePillShortcuts';

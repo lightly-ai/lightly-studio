@@ -4,6 +4,18 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialog from './SettingsDialog.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
 
+const pillMocks = vi.hoisted(() => ({ setKeys: vi.fn() }));
+vi.mock('$lib/hooks/usePillShortcuts/usePillShortcuts', async () => {
+    const { readable } = await import('svelte/store');
+    return {
+        usePillShortcuts: () => ({
+            tagKey: readable('t'),
+            annotateKey: readable('l'),
+            setKeys: pillMocks.setKeys
+        })
+    };
+});
+
 // Mock the useSettings hook
 vi.mock('$lib/hooks/useSettings', () => {
     const mockSaveSettings = vi.fn().mockResolvedValue({ success: true });
@@ -365,5 +377,36 @@ describe('SettingsDialog', () => {
             const elements = document.querySelectorAll(`#${id}`);
             expect(elements.length, `Expected exactly one element with id="${id}"`).toBe(1);
         }
+    });
+
+    it('lists and saves the selection pill shortcuts', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const tagButton = screen.getByLabelText('Open tag menu');
+        expect(tagButton).toHaveTextContent('t');
+        expect(screen.getByLabelText('Open annotate menu')).toHaveTextContent('l');
+
+        await fireEvent.click(tagButton);
+        await fireEvent.keyDown(document, { key: 'g' });
+        await fireEvent.click(screen.getByText('Save changes'));
+
+        await waitFor(() =>
+            expect(pillMocks.setKeys).toHaveBeenCalledWith({ tagKey: 'g', annotateKey: 'l' })
+        );
+    });
+
+    it('refuses a key that another shortcut already uses', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        const tagButton = screen.getByLabelText('Open tag menu');
+        await fireEvent.click(tagButton);
+        await fireEvent.keyDown(document, { key: 'e' });
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            '"e" is already used by Toggle edit mode.'
+        );
+        expect(tagButton).toHaveTextContent('t');
     });
 });

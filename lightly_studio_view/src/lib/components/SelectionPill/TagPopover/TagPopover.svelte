@@ -26,8 +26,11 @@
         selectedCount: number;
         open: boolean;
         onOpenChange: (open: boolean) => void;
+        /** The key that opens this menu, shown on the trigger. */
+        shortcutHint?: string;
     }
-    let { collectionId, gridType, selectedCount, open, onOpenChange }: Props = $props();
+    let { collectionId, gridType, selectedCount, open, onOpenChange, shortcutHint }: Props =
+        $props();
 
     const client = useQueryClient();
     const { tags, loadTags } = $derived(useTags({ collection_id: collectionId }));
@@ -122,6 +125,10 @@
         aria-label="Tag"
     >
         <Tag class="size-4" /> Tag
+        {#if shortcutHint}<kbd
+                class="ml-1 rounded border border-primary-foreground/30 px-1 text-[10px] uppercase opacity-80"
+                >{shortcutHint}</kbd
+            >{/if}
     </Popover.Trigger>
     <Popover.Content class="w-64 p-0" align="center">
         <Command.Root label="Tags">

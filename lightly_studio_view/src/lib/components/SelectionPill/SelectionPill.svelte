@@ -1,6 +1,7 @@
 <script lang="ts">
     import { X } from '@lucide/svelte';
     import { fly } from 'svelte/transition';
+    import { usePillShortcuts } from '$lib/hooks/usePillShortcuts/usePillShortcuts';
     import type { GridType } from '$lib/types';
     import AnnotationsAnnotatePopover from './AnnotationsAnnotatePopover/AnnotationsAnnotatePopover.svelte';
     import ImagesAnnotatePopover from './ImagesAnnotatePopover/ImagesAnnotatePopover.svelte';
@@ -19,7 +20,36 @@
 
     let tagOpen = $state(false);
     let annotateOpen = $state(false);
+    const hasAnnotate = $derived(gridType === 'images' || gridType === 'annotations');
+    const { tagKey, annotateKey } = usePillShortcuts();
+
+    function isTyping(target: EventTarget | null) {
+        const element = target instanceof HTMLElement ? target : null;
+        return (
+            element !== null &&
+            (element.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName))
+        );
+    }
+
+    // Lives here, so only collection grids hear T and L; sample details owns its own keys.
+    function handleKeydown(event: KeyboardEvent) {
+        if (!isEditing || selectedCount === 0 || event.repeat) return;
+        if (event.ctrlKey || event.metaKey || event.altKey) return;
+        if (isTyping(event.target) || isTyping(document.activeElement)) return;
+        const key = event.key.toLowerCase();
+        if (key === $tagKey.toLowerCase()) {
+            event.preventDefault();
+            annotateOpen = false;
+            tagOpen = true;
+        } else if (hasAnnotate && key === $annotateKey.toLowerCase()) {
+            event.preventDefault();
+            tagOpen = false;
+            annotateOpen = true;
+        }
+    }
 </script>
+
+<svelte:window onkeydown={handleKeydown} />
 
 {#if selectedCount > 0}
     <div
@@ -39,6 +69,7 @@
                     {selectedCount}
                     open={tagOpen}
                     onOpenChange={(open) => (tagOpen = open)}
+                    shortcutHint={$tagKey}
                 />
                 {#if gridType === 'images'}
                     <ImagesAnnotatePopover
@@ -46,6 +77,7 @@
                         {selectedCount}
                         open={annotateOpen}
                         onOpenChange={(open) => (annotateOpen = open)}
+                        shortcutHint={$annotateKey}
                     />
                 {:else if gridType === 'annotations'}
                     <AnnotationsAnnotatePopover
@@ -53,6 +85,7 @@
                         {selectedCount}
                         open={annotateOpen}
                         onOpenChange={(open) => (annotateOpen = open)}
+                        shortcutHint={$annotateKey}
                     />
                 {/if}
             {/if}

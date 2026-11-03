@@ -15,7 +15,9 @@ export type ShortcutSettingKey =
     | 'keyToolbarSegmentationMask'
     | 'keyToolbarSlic'
     | 'keyToolbarBrush'
-    | 'keyToolbarEraser';
+    | 'keyToolbarEraser'
+    | 'openTagMenu'
+    | 'openAnnotateMenu';
 
 export interface ShortcutSettingConfig {
     /** Unique HTML id for the control (used by label `for`). */
@@ -53,6 +55,19 @@ export const toolShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'toolbar-brush-mode', label: 'Brush', key: 'keyToolbarBrush' },
     { id: 'toolbar-eraser-mode', label: 'Eraser', key: 'keyToolbarEraser' }
 ] as const;
+
+/** Recordable shortcuts that open the selection pill's menus. Kept in localStorage. */
+export const selectionShortcuts: readonly ShortcutSettingConfig[] = [
+    { id: 'open-tag-menu', label: 'Open tag menu', key: 'openTagMenu' },
+    { id: 'open-annotate-menu', label: 'Open annotate menu', key: 'openAnnotateMenu' }
+] as const;
+
+/** Every recordable shortcut, to name the one a new key conflicts with. */
+export const allRecordableShortcuts: readonly ShortcutSettingConfig[] = [
+    ...generalShortcuts,
+    ...toolShortcuts,
+    ...selectionShortcuts
+];
 
 /** Non-recordable general shortcut rows (static display only). */
 export const staticGeneralShortcuts: readonly StaticShortcutConfig[] = [

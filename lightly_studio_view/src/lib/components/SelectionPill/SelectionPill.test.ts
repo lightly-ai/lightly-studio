@@ -1,6 +1,6 @@
 import { QueryClient } from '@tanstack/svelte-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { GridType } from '$lib/types';
 import SelectionPillHarness from './SelectionPillHarness.svelte';
 
@@ -87,5 +87,50 @@ describe('SelectionPill', () => {
 
         expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Annotate' })).toBeNull();
+    });
+
+    describe('shortcuts', () => {
+        beforeEach(() => {
+            vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => {} });
+        });
+        afterEach(() => {
+            vi.unstubAllGlobals();
+            document.body.innerHTML = '';
+        });
+
+        const tagMenu = () => screen.queryByPlaceholderText('Search or create a tag…');
+
+        it('T opens the tag popover in edit mode with a selection', async () => {
+            renderPill({ isEditing: true });
+            await fireEvent.keyDown(window, { key: 't' });
+            expect(await screen.findByPlaceholderText('Search or create a tag…')).toBeVisible();
+        });
+
+        it('L opens the annotate popover', async () => {
+            renderPill({ isEditing: true });
+            await fireEvent.keyDown(window, { key: 'l' });
+            expect(await screen.findByPlaceholderText('Search or create a class…')).toBeVisible();
+        });
+
+        it('ignores T while an input has focus', async () => {
+            renderPill({ isEditing: true });
+            const input = document.createElement('input');
+            document.body.appendChild(input);
+            input.focus();
+            await fireEvent.keyDown(input, { key: 't' });
+            expect(tagMenu()).toBeNull();
+        });
+
+        it('ignores T outside edit mode', async () => {
+            renderPill();
+            await fireEvent.keyDown(window, { key: 't' });
+            expect(tagMenu()).toBeNull();
+        });
+
+        it('ignores T with an empty selection', async () => {
+            renderPill({ isEditing: true, selectedCount: 0 });
+            await fireEvent.keyDown(window, { key: 't' });
+            expect(tagMenu()).toBeNull();
+        });
     });
 });

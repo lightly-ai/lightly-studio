@@ -3,12 +3,15 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import { usePillShortcuts } from '$lib/hooks/usePillShortcuts/usePillShortcuts';
+    import { get } from 'svelte/store';
     import { SettingsDialogState } from './settingsDialogState.svelte';
     import { SettingsTabs } from './SettingsTabs';
 
     const { settingsStore, saveSettings } = useSettings();
     const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
 
+    const pillShortcuts = usePillShortcuts();
     const dialogState = new SettingsDialogState();
     let activeTab = $state('shortcuts');
 
@@ -16,7 +19,10 @@
     let wasDialogOpen = false;
     $effect(() => {
         if ($isSettingsDialogOpen && !wasDialogOpen) {
-            dialogState.hydrate($settingsStore);
+            dialogState.hydrate($settingsStore, {
+                tagKey: get(pillShortcuts.tagKey),
+                annotateKey: get(pillShortcuts.annotateKey)
+            });
             activeTab = 'shortcuts';
         }
         wasDialogOpen = $isSettingsDialogOpen;
@@ -38,6 +44,7 @@
 
         try {
             await saveSettings(dialogState.getSavePayload());
+            pillShortcuts.setKeys(dialogState.getPillKeys());
             setOpen(false);
         } catch (error) {
             console.error('Error saving settings:', error);

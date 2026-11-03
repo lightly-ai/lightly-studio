@@ -30,8 +30,10 @@
         selectedCount: number;
         open: boolean;
         onOpenChange: (open: boolean) => void;
+        /** The key that opens this menu, shown on the trigger. */
+        shortcutHint?: string;
     }
-    let { collectionId, selectedCount, open, onOpenChange }: Props = $props();
+    let { collectionId, selectedCount, open, onOpenChange, shortcutHint }: Props = $props();
 
     const client = useQueryClient();
     const {
@@ -150,6 +152,10 @@
         aria-label="Annotate"
     >
         <Tags class="size-4" /> Annotate
+        {#if shortcutHint}<kbd
+                class="ml-1 rounded border border-primary-foreground/30 px-1 text-[10px] uppercase opacity-80"
+                >{shortcutHint}</kbd
+            >{/if}
     </Popover.Trigger>
     <Popover.Content class="w-72 p-0" align="center">
         <div class="border-b px-3 py-2 text-sm font-medium">All {selectedCount} selected</div>

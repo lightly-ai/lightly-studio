@@ -63,6 +63,11 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 - **Annotate popover, Annotations grid.** "All N selected", one row per class with its count and
   a trash that deletes those annotations after a confirm, "Relabel all to…" (undo with Ctrl+Z),
   and "Move to annotation source…". Commits: a02c00bd7.
+- **T and L open the pill menus.** In edit mode with a selection, T opens Tag and L opens
+  Annotate; the pill shows both keys. They do nothing while a text field has focus or outside a
+  collection grid. Settings > Shortcuts > Selection rebinds them ("Open tag menu", "Open annotate
+  menu"); a key another shortcut uses is refused. Stored in localStorage. Try: Images grid, edit
+  mode, select tiles, press T.
 
 ## Filter panel
 

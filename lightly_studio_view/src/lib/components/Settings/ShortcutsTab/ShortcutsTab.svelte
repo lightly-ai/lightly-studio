@@ -2,6 +2,7 @@
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import {
         generalShortcuts,
+        selectionShortcuts,
         staticGeneralShortcuts,
         staticToolShortcuts,
         toolShortcuts
@@ -12,7 +13,7 @@
     interface Props {
         dialogState: Pick<
             SettingsDialogState,
-            'shortcuts' | 'recordingShortcut' | 'startRecording'
+            'shortcuts' | 'recordingShortcut' | 'startRecording' | 'shortcutError'
         >;
     }
 
@@ -44,6 +45,9 @@
 {/snippet}
 
 <div class="space-y-8">
+    {#if dialogState.shortcutError}
+        <p role="alert" class="text-sm text-destructive">{dialogState.shortcutError}</p>
+    {/if}
     <SettingsGroup title="General" columns={2}>
         {@render recordableRows(generalShortcuts)}
         {@render staticRows(staticGeneralShortcuts)}
@@ -51,5 +55,8 @@
     <SettingsGroup title="Annotation tools" columns={2}>
         {@render recordableRows(toolShortcuts)}
         {@render staticRows(staticToolShortcuts)}
+    </SettingsGroup>
+    <SettingsGroup title="Selection" columns={2}>
+        {@render recordableRows(selectionShortcuts)}
     </SettingsGroup>
 </div>

@@ -3,7 +3,7 @@ import type {
     GridViewThumbnailQualityType,
     SettingView
 } from '$lib/api/lightly_studio_local';
-import type { ShortcutSettingKey } from './settingsDialogConfig';
+import { allRecordableShortcuts, type ShortcutSettingKey } from './settingsDialogConfig';
 
 type RenderingMode = GridViewSampleRenderingType;
 type ThumbnailQualityMode = GridViewThumbnailQualityType;
@@ -19,6 +19,14 @@ interface SettingsDialogShortcutState {
     keyToolbarBrush: string;
     keyToolbarEraser: string;
 }
+
+/** The selection pill keys, stored in localStorage rather than in the backend settings. */
+interface PillShortcutKeys {
+    tagKey: string;
+    annotateKey: string;
+}
+
+const DEFAULT_PILL_KEYS: PillShortcutKeys = { tagKey: 't', annotateKey: 'l' };
 
 interface SettingsDialogFormState {
     shortcutSettings: SettingsDialogShortcutState;
@@ -105,7 +113,9 @@ export function normalizeShortcutKey(event: ShortcutKeyboardEvent): string {
  * Hydrate from the settings store each time the dialog opens.
  */
 export class SettingsDialogState {
-    shortcuts = $state<SettingsDialogShortcutState>({
+    shortcuts = $state<
+        SettingsDialogShortcutState & { openTagMenu: string; openAnnotateMenu: string }
+    >({
         hideAnnotations: 'v',
         toggleEditMode: 'e',
         keyToolbarSelection: 's',
@@ -114,8 +124,13 @@ export class SettingsDialogState {
         keyToolbarSegmentationMask: 'm',
         keyToolbarSlic: 'a',
         keyToolbarBrush: 'r',
-        keyToolbarEraser: 'x'
+        keyToolbarEraser: 'x',
+        openTagMenu: DEFAULT_PILL_KEYS.tagKey,
+        openAnnotateMenu: DEFAULT_PILL_KEYS.annotateKey
     });
+    savedPillKeys: PillShortcutKeys = $state(DEFAULT_PILL_KEYS);
+    /** Why the last recorded key was refused, e.g. because another shortcut uses it. */
+    shortcutError: string | null = $state(null);
     gridViewRendering: RenderingMode = $state('contain');
     gridViewThumbnailQuality: ThumbnailQualityMode = $state('raw');
     imageInterpolation = $state(true);
@@ -131,15 +146,26 @@ export class SettingsDialogState {
     /** Whether any form value differs from the hydrated settings. */
     get hasChanges(): boolean {
         const payload = this.getSavePayload();
-        return Object.entries(payload).some(
-            ([key, value]) => this.savedPayload[key as keyof SettingView] !== value
+        const pillKeys = this.getPillKeys();
+        return (
+            pillKeys.tagKey !== this.savedPillKeys.tagKey ||
+            pillKeys.annotateKey !== this.savedPillKeys.annotateKey ||
+            Object.entries(payload).some(
+                ([key, value]) => this.savedPayload[key as keyof SettingView] !== value
+            )
         );
     }
 
     /** Populate form fields from the latest store values. */
-    hydrate(settings: SettingView): void {
+    hydrate(settings: SettingView, pillKeys: PillShortcutKeys = DEFAULT_PILL_KEYS): void {
         const formState = createSettingsDialogFormState(settings);
-        this.shortcuts = formState.shortcutSettings;
+        this.shortcuts = {
+            ...formState.shortcutSettings,
+            openTagMenu: pillKeys.tagKey,
+            openAnnotateMenu: pillKeys.annotateKey
+        };
+        this.savedPillKeys = { ...pillKeys };
+        this.shortcutError = null;
         this.gridViewRendering = formState.gridViewRendering;
         this.gridViewThumbnailQuality = formState.gridViewThumbnailQuality;
         this.imageInterpolation = formState.imageInterpolation;
@@ -162,13 +188,26 @@ export class SettingsDialogState {
 
         // Escape cancels recording. Stopping it also keeps the dialog open.
         if (event.key !== 'Escape') {
-            this.shortcuts[this.recordingShortcut] = normalizeShortcutKey(event);
+            const key = normalizeShortcutKey(event);
+            const recording = this.recordingShortcut;
+            const taken = allRecordableShortcuts.find(
+                (shortcut) => shortcut.key !== recording && this.shortcuts[shortcut.key] === key
+            );
+            this.shortcutError = taken ? `"${key}" is already used by ${taken.label}.` : null;
+            if (!taken) this.shortcuts[recording] = key;
         }
         this.recordingShortcut = null;
     }
 
     clearRecording(): void {
         this.recordingShortcut = null;
+    }
+
+    getPillKeys(): PillShortcutKeys {
+        return {
+            tagKey: this.shortcuts.openTagMenu,
+            annotateKey: this.shortcuts.openAnnotateMenu
+        };
     }
 
     getSavePayload(): Partial<SettingView> {
