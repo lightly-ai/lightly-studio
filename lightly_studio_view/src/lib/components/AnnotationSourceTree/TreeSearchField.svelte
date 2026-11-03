@@ -6,19 +6,20 @@
         query: string;
         useRegex: boolean;
         invalid: boolean;
+        placeholder: string;
         onQueryChange: (query: string) => void;
         onRegexChange: (useRegex: boolean) => void;
     }
 
-    let { query, useRegex, invalid, onQueryChange, onRegexChange }: Props = $props();
+    let { query, useRegex, invalid, placeholder, onQueryChange, onRegexChange }: Props = $props();
 </script>
 
 <div class="relative">
     <Input
         value={query}
         oninput={(event) => onQueryChange(event.currentTarget.value)}
-        placeholder="Search sources and classes…"
-        aria-label="Search sources and classes"
+        {placeholder}
+        aria-label={placeholder.replace('…', '')}
         aria-invalid={invalid}
         class={cn('h-8 pr-10', invalid && 'border-destructive focus-visible:ring-destructive')}
     />

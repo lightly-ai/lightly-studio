@@ -193,6 +193,36 @@ describe('AnnotationSourceTree', () => {
         expect(summaries[0]).toHaveTextContent('1/2');
     });
 
+    it('collapses and expands every group at once, and stays open while searching', async () => {
+        render(AnnotationSourceTree, defaultProps);
+        const childRows = () => screen.queryAllByTestId('annotation-class-item');
+        expect(childRows()).toHaveLength(3);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Collapse all' }));
+        expect(childRows()).toHaveLength(0);
+
+        const search = screen.getByRole('textbox', { name: 'Search sources and classes' });
+        await userEvent.type(search, 'deer');
+        expect(childRows()).toHaveLength(2);
+        await userEvent.clear(search);
+        expect(childRows()).toHaveLength(0);
+
+        await userEvent.click(screen.getByRole('button', { name: 'Expand all' }));
+        expect(childRows()).toHaveLength(3);
+    });
+
+    it('shows one source of the annotations grid as a flat class list searched by class', async () => {
+        render(AnnotationSourceTree, { ...defaultProps, singleSourceId: 'gt' });
+
+        expect(screen.queryByRole('button', { name: 'By class' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Collapse all' })).toBeNull();
+        expect(screen.queryByTestId('annotation-source-row')).toBeNull();
+
+        await userEvent.click(screen.getByRole('button', { name: 'Use regular expression' }));
+        await userEvent.type(screen.getByRole('textbox', { name: 'Search classes' }), '^$');
+        expect(screen.getByText('No matches')).toBeInTheDocument();
+    });
+
     it('shows a flat class list with no source row for one source', () => {
         mocks.sources = [{ collection_id: 'gt', name: 'ground_truth' }];
 

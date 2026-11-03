@@ -103,7 +103,9 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   "Show N more") are small outline buttons with an icon. Search matches source or class names, case-insensitive; with regex on, an invalid
   pattern turns the field red and says "Invalid pattern". Hovering a row shows "Only"; the group
   checkbox ticks or unticks the whole group. More than 3 groups start collapsed with a compact "k/n" summary when partly ticked; a search
-  opens the matching ones. "Clear all filters" ticks everything again. Each tab keeps its own
+  opens the matching ones. "Clear all filters" ticks everything again. A collapse all / expand all
+  button sits at the end of the switch row. On the Annotations grid (one source per tab) the
+  switch is hidden, the list is flat and the search reads "Search classes…". Each tab keeps its own
   ticks and grouping; deleting a source drops its ticks. Video, frame and caption grids keep the
   flat class list. Rows 20, 22, 29. Try: Images tab, untick car under `labels`, open an image
   with a car; then By class, type `^ca` with regex on, "Show only".

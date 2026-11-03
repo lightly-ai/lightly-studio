@@ -6,6 +6,7 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import CollapseAllButton from './CollapseAllButton.svelte';
     import GroupBySwitch from './GroupBySwitch.svelte';
     import PairRows from './PairRows.svelte';
     import TreeChildRow from './TreeChildRow.svelte';
@@ -19,6 +20,7 @@
     import { useSourceLabelCounts } from './useSourceLabelCounts.svelte';
     import { useTreeActions } from './useTreeActions';
     import { useTreeGroupBy } from './useTreeGroupBy';
+    import { useTreeOpenState } from './useTreeOpenState.svelte';
 
     interface Props {
         /** The collection on screen. Its ticks and its annotation sources are used. */
@@ -72,7 +74,9 @@
     const rows = $derived(buildPairRows(sources, countsQuery.data ?? [], $unticked));
     const matcher = $derived(createMatcher(query, useRegex));
     const searching = $derived(matcher.kind === 'ok');
-    const matches = $derived(matchRows(rows, matcher));
+    // The annotations grid shows one source, so the tree is a flat class list.
+    const isFlat = $derived(sources.length <= 1);
+    const matches = $derived(matchRows(rows, matcher, { classesOnly: Boolean(singleSourceId) }));
     const find = $derived(matcher.kind === 'ok' ? matcher.find : undefined);
     const allGroups = $derived(groupPairRows(rows, $groupBy, sources));
     const groups = $derived(
@@ -95,10 +99,12 @@
 
     // More than 3 groups start collapsed. A search opens the matching ones without changing
     // what the user chose.
-    let userOpen = $state<Record<string, boolean>>({});
-    const isOpen = (id: string) =>
-        searching || (userOpen[`${$groupBy}:${id}`] ?? allGroups.length <= 3);
-    const toggleOpen = (id: string) => (userOpen[`${$groupBy}:${id}`] = !isOpen(id));
+    const openState = useTreeOpenState(() => ({
+        groupBy: $groupBy,
+        groupIds: allGroups.filter((group) => group.rows.length > 0).map((group) => group.id),
+        groupCount: allGroups.length,
+        searching
+    }));
 </script>
 
 <Segment title="Annotations">
@@ -116,11 +122,21 @@
         />
     {/snippet}
     <div class="space-y-2" data-testid="annotation-source-tree">
-        <GroupBySwitch value={$groupBy} onChange={setGroupBy} />
+        {#if !singleSourceId}
+            <div class="flex items-center gap-1">
+                <div class="min-w-0 flex-1">
+                    <GroupBySwitch value={$groupBy} onChange={setGroupBy} />
+                </div>
+                {#if !isFlat}
+                    <CollapseAllButton anyOpen={openState.anyOpen} onToggle={openState.setAll} />
+                {/if}
+            </div>
+        {/if}
         <TreeSearchField
             {query}
             {useRegex}
             invalid={matcher.kind === 'invalid'}
+            placeholder={singleSourceId ? 'Search classes…' : 'Search sources and classes…'}
             onQueryChange={(value) => (query = value)}
             onRegexChange={(value) => (useRegex = value)}
         />
@@ -130,9 +146,9 @@
             invalid={matcher.kind === 'invalid'}
             onAction={actions.runStatusAction}
         />
-        {#if rows.length === 0 && sources.length <= 1}
+        {#if rows.length === 0 && isFlat}
             <p class="text-sm text-diffuse-foreground">No annotations yet.</p>
-        {:else if sources.length <= 1}
+        {:else if isFlat}
             <div class="space-y-1">
                 <PairRows
                     rows={matches}
@@ -146,16 +162,16 @@
             {#each groups as group (`${$groupBy}:${group.id}`)}
                 <TreeGroupRow
                     {group}
-                    open={isOpen(group.id)}
+                    open={openState.isOpen(group.id)}
                     {find}
-                    onToggleOpen={() => toggleOpen(group.id)}
+                    onToggleOpen={() => openState.toggle(group.id)}
                     onSetRows={actions.setRows}
                     onOnlyRows={actions.onlyRows}
                 />
             {/each}
         {/if}
         {#if unannotatedCount && query.trim() === ''}
-            <div class="mt-2 border-t pt-2 {sources.length > 1 ? 'pl-8 pr-2' : ''}">
+            <div class="mt-2 border-t pt-2 {!isFlat ? 'pl-8 pr-2' : ''}">
                 <TreeChildRow
                     label="No annotations"
                     ariaLabel="No annotations"

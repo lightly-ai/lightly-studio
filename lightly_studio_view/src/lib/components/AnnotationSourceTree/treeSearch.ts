@@ -39,13 +39,19 @@ export const createMatcher = (query: string, useRegex: boolean): Matcher => {
 };
 
 /**
- * The rows whose source name or class name matches. A source match keeps all its classes, a
+ * The rows whose source name or class name (only the class name with `classesOnly`) matches. A source match keeps all its classes, a
  * class match keeps that class under each source. No query or an invalid one keeps all rows.
  */
-export const matchRows = (rows: PairRow[], matcher: Matcher): PairRow[] => {
+export const matchRows = (
+    rows: PairRow[],
+    matcher: Matcher,
+    { classesOnly = false }: { classesOnly?: boolean } = {}
+): PairRow[] => {
     if (matcher.kind !== 'ok') return rows;
     return rows.filter(
-        (row) => matcher.find(row.sourceName) !== null || matcher.find(row.className) !== null
+        (row) =>
+            matcher.find(row.className) !== null ||
+            (!classesOnly && matcher.find(row.sourceName) !== null)
     );
 };
 
