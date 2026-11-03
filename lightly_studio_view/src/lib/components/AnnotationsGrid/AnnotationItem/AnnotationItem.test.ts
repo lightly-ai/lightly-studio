@@ -1,7 +1,10 @@
 import { render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { useAnnotationClassVisibility } from '$lib/hooks';
+import {
+    setActivePairFilterCollection,
+    useAnnotationPairFilter
+} from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
 import AnnotationItem from './AnnotationItem.svelte';
@@ -14,6 +17,7 @@ vi.mock('$lib/components', async () => {
 const createSegmentationAnnotation = (): AnnotationView =>
     ({
         sample_id: 'annotation-1',
+        annotation_collection_id: 'gt',
         annotation_type: 'segmentation_mask',
         annotation_label: { annotation_label_name: 'car' },
         segmentation_details: {
@@ -35,7 +39,8 @@ const defaultProps = {
 
 describe('AnnotationItem', () => {
     beforeEach(() => {
-        useAnnotationClassVisibility().hiddenClassNamesStore.set([]);
+        setActivePairFilterCollection('gt');
+        useAnnotationPairFilter('gt').clear();
         useHideAnnotations().isHidden.set(false);
         useCustomLabelColors().clearCustomColors();
     });
@@ -83,8 +88,12 @@ describe('AnnotationItem', () => {
         });
     });
 
-    it('hides annotations when their class is hidden', () => {
-        useAnnotationClassVisibility().hiddenClassNamesStore.set(['car']);
+    it('hides annotations when their pair is unticked', () => {
+        useAnnotationPairFilter('gt').togglePair({
+            collection_id: 'gt',
+            annotation_label_id: 'car-id',
+            label_name: 'car'
+        });
 
         const { container } = render(AnnotationItem, { props: defaultProps });
 

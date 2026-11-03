@@ -43,12 +43,13 @@ const KIND_ORDER: TileFieldKind[] = ['class', 'source', 'tag', 'metadata'];
 export const getImageTileChips = ({
     fields,
     sample,
-    isSourceVisible,
+    isAnnotationShown,
     sourceNames
 }: {
     fields: string[];
     sample: Pick<ImageView, 'annotations' | 'tags' | 'metadata_dict'>;
-    isSourceVisible: (sourceId: string) => boolean;
+    /** Whether annotations of a given source and class are shown. */
+    isAnnotationShown: (sourceId: string, className: string) => boolean;
     /** Annotation source names by id, for the chips of single sources. */
     sourceNames: Record<string, string>;
 }): TileChip[] =>
@@ -56,8 +57,12 @@ export const getImageTileChips = ({
         if (fieldId === TILE_FIELD_CLASSES) {
             const classes = countClasses(
                 sample.annotations
-                    .filter((annotation) => isSourceVisible(annotation.annotation_collection_id))
-                    .map((annotation) => annotation.annotation_label.annotation_label_name)
+                    .map((annotation) => ({
+                        sourceId: annotation.annotation_collection_id,
+                        name: annotation.annotation_label.annotation_label_name
+                    }))
+                    .filter(({ sourceId, name }) => isAnnotationShown(sourceId, name))
+                    .map(({ name }) => name)
             );
             return classes.length > 0 ? { classes, title: `Classes: ${joinTexts(classes)}` } : null;
         }

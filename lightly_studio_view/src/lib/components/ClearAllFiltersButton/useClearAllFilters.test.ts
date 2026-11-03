@@ -64,9 +64,13 @@ describe('useClearAllFilters', () => {
         expect(get(storage.getSelectedSampleIds(collectionId)).has('sample-1')).toBe(true);
     });
 
-    it('clears the ticked source and class pairs', () => {
-        const { pairs, togglePair } = useAnnotationPairFilter(collectionId);
-        togglePair('source-1', 'label-1');
+    it('ticks every source and class pair and "No annotations" again', () => {
+        const pair = { collection_id: 'source-1', annotation_label_id: 'label-1', label_name: 'a' };
+        const { pairs, unticked, setKnownPairs, togglePair, setUnannotatedTicked } =
+            useAnnotationPairFilter(collectionId);
+        setKnownPairs([pair]);
+        togglePair(pair);
+        setUnannotatedTicked(false);
 
         const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
         expect(get(hasActiveFilters)).toBe(true);
@@ -74,6 +78,7 @@ describe('useClearAllFilters', () => {
         clearAllFilters();
 
         expect(get(pairs)).toEqual([]);
+        expect(get(unticked)).toEqual([]);
         expect(get(hasActiveFilters)).toBe(false);
     });
 

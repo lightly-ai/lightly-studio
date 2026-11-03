@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { useAnnotationClassVisibility } from '$lib/hooks';
+    import { isAnnotationShown } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
     import { resolveEffectiveColorBySource } from '$lib/utils';
@@ -33,7 +33,6 @@
     } = $props();
 
     const { isHidden } = useHideAnnotations();
-    const { hiddenClassNamesStore } = useAnnotationClassVisibility();
     const { showBoundingBoxesForSegmentationStore, enforceColoringByClassStore } = useSettings();
     const { isSourceVisible, multipleSourcesVisible, collectionIdToName } =
         useAnnotationCollectionsFilter();
@@ -75,7 +74,7 @@
         const showInstanceSegmentationBoundingBoxes = $showBoundingBoxesForSegmentationStore;
         const sourceIsVisible = $isSourceVisible;
         const idToName = $collectionIdToName;
-        const hiddenClasses = $hiddenClassNamesStore;
+        const isShown = $isAnnotationShown;
         const colorBySource = resolveEffectiveColorBySource({
             multipleSourcesVisible: $multipleSourcesVisible,
             enforceColoringByClass: $enforceColoringByClassStore
@@ -84,9 +83,11 @@
         return sample.annotations
             .filter((annotation) => sourceIsVisible(annotation.annotation_collection_id))
             .filter((annotation) => annotation.annotation_type !== 'classification')
-            .filter(
-                (annotation) =>
-                    !hiddenClasses.includes(annotation.annotation_label.annotation_label_name)
+            .filter((annotation) =>
+                isShown(
+                    annotation.annotation_collection_id,
+                    annotation.annotation_label.annotation_label_name
+                )
             )
             .map((annotation) => {
                 const canvas = mapToCanvasAnnotation(

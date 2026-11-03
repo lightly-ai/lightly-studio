@@ -90,27 +90,27 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 - **Metadata value counts match the grid.** Categorical value counts use the same filter as the
   images grid, so they equal the footer. Row 15. Try: select a source, filter `split` =
   labeled, compare the dropdown count with the footer. Commits: 22e8c729e.
-- **"No annotations" filter.** A row pinned at the bottom of the Annotations section matches
-  images without annotations, with a count lined up with the class counts. Row 29.
-  Try: class filter, tick "No annotations". Commits: ccb8f9f48, fed8a60b0.
-- **Classes nested under their source.** On the Images and Annotations grids one
-  "Annotations" section replaces "Annotation sources" and "Annotation classes". With two or
-  more sources each source is a collapsible row with a tri-state checkbox, color dot, count and
-  eye, and its classes sit under it. A tick is one exact pair: "deer" under `labels` matches
-  only deer in `labels`, not deer in `model_v1`. With one source the class list is flat. Child
-  counts are images with that class in that source under the other filters; a source count
-  adds up its class counts. The class eye hides the class under every source; the source eye
-  hides the source. Each tab keeps its own ticks, and deleting a source drops its ticks.
-  Video, frame and caption grids keep the flat class list. Rows 20, 22. Try: after Step f,
-  expand `labels` and `model_v1`, tick deer under `labels` only. Commits: e703f7250,
-  29a9251f7, c94837430, 97ec6946c.
-  Restyle: a source is a filled header band with a database icon (tooltip "Annotation source"); its classes sit behind a thin guide line.
-  Search: one field filters classes across all sources in place, opens matching sources and highlights the match; "No annotations" stays. Counts read "N" or "a / b" everywhere.
-- **Filters only.** Source rows have a checkbox and a read-only color dot; class rows have a
-  checkbox, a read-only color dot and the eye. Renaming, deleting and coloring sources moved to
-  Settings > Annotation sources, opened by the gear in the source list header ("Manage
-  annotation sources"). Class colors are set in Settings > Annotation classes. Tags keep their
-  "..." menu. Rows 20, 22. Try: Images tab, gear next to "Annotations".
+- **Annotation filter v2: what you filter is what you see.** On the Images and Annotations
+  grids the "Annotations" section has a "By source" | "By class" switch, a search field
+  "Search sources and classes…" with a `.*` regex toggle, a status line and the tree. A tick
+  both filters the grid and draws that (source, class) pair's boxes, masks and classification
+  chips on tiles and in the sample details view; the eyes are gone. Everything starts ticked,
+  "No annotations" too, and then no annotation filter is sent; new sources and classes start
+  ticked. Unticking "No annotations" hides images without annotations. The status line reads
+  "Showing everything", or "Showing k of n · Show all · Hide all", or while searching
+  "m matches · j shown · Show only these · Add these · Hide these" (only the actions that change
+  something). Search matches source or class names, case-insensitive; with regex on, an invalid
+  pattern turns the field red and says "Invalid pattern". Hovering a row shows "Only" (and "All"
+  on a partly ticked group). More than 3 groups start collapsed with a "k of n" summary; a search
+  opens the matching ones. "Clear all filters" ticks everything again. Each tab keeps its own
+  ticks and grouping; deleting a source drops its ticks. Video, frame and caption grids keep the
+  flat class list. Rows 20, 22, 29. Try: Images tab, untick car under `labels`, open an image
+  with a car; then By class, type `^ca` with regex on, "Show only these".
+- **Filters only.** Group and child rows have a checkbox, a read-only color dot or tinted
+  database icon, and a count. Renaming, deleting and coloring sources moved to Settings >
+  Annotation sources, opened by the gear in the section header ("Manage annotation sources").
+  Class colors are set in Settings > Annotation classes. Tags keep their "..." menu. Rows 20,
+  22. Try: Images tab, gear next to "Annotations".
 - **Pinned filter panel header.** "Hide filters" stays reachable while the panel scrolls.
   Row 30. Try: scroll the filter panel down, hide it. Commits: b8c3dc7a4.
 

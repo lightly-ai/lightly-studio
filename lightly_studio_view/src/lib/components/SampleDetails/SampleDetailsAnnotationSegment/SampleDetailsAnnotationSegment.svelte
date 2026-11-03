@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { isAnnotationShown } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -134,12 +135,16 @@
 
     // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
     // the effect-written `annotationsIdsToHide`); drives the initial collapse.
-    const gridHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
+    const isShownInGrid = $derived(
+        (sourceId: string, className: string) =>
+            $isSourceVisible(sourceId) && $isAnnotationShown(sourceId, className)
+    );
+    const gridHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, isShownInGrid));
     // The seed also applies the source visibility the user set on earlier samples.
     const seededHiddenIds = $derived(
-        computeSeededHiddenIds(annotationsSort, (sourceId) => {
+        computeSeededHiddenIds(annotationsSort, (sourceId, className) => {
             const hidden = $sourceGroupStates[sourceId]?.hidden;
-            return hidden === undefined ? $isSourceVisible(sourceId) : !hidden;
+            return hidden === undefined ? isShownInGrid(sourceId, className) : !hidden;
         })
     );
 

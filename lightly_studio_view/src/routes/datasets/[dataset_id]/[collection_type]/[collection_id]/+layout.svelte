@@ -29,7 +29,6 @@
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { AnnotationSourceTree } from '$lib/components/AnnotationSourceTree';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
-    import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
     import { useImagesWithoutAnnotationsCount } from '$lib/hooks/useImagesWithoutAnnotationsCount/useImagesWithoutAnnotationsCount';
     import {
         isAnnotationDetailsRoute,
@@ -63,7 +62,10 @@
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-    import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
+    import {
+        setActivePairFilterCollection,
+        useAnnotationPairFilter
+    } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -402,11 +404,14 @@
     // backend restricts the counted annotations by their own collection id.
     const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
         useAnnotationCollectionsFilter();
-    // The "No annotations" row exists on the images grid only.
-    const { includeUnannotated, toggleIncludeUnannotated } = useUnannotatedImagesFilter();
     // The images and annotations grids filter by exact (annotation source, annotation class)
-    // pairs instead of the class filter and the source scope.
-    const { pairs: annotationPairs } = $derived(useAnnotationPairFilter(collectionId));
+    // pairs instead of the class filter and the source scope. "No annotations" exists on the
+    // images grid only.
+    const { pairs: annotationPairs, includeUnannotated } = $derived(
+        useAnnotationPairFilter(collectionId)
+    );
+    // The overlays draw only the ticked pairs of the collection on screen.
+    $effect(() => setActivePairFilterCollection(collectionId));
     const usesPairFilter = $derived(isImages || isAnnotations);
     const pairFilter = $derived<AnnotationsFilter | undefined>(
         $annotationPairs.length > 0
@@ -490,14 +495,8 @@
         filter: imageAnnotationCountsFilter,
         enabled: isImages
     }));
-    const unannotatedFilterRow = $derived(
-        isImages && imagesWithoutAnnotationsCountQuery.data
-            ? {
-                  ...imagesWithoutAnnotationsCountQuery.data,
-                  selected: $includeUnannotated,
-                  onToggle: toggleIncludeUnannotated
-              }
-            : undefined
+    const unannotatedCount = $derived(
+        isImages ? imagesWithoutAnnotationsCountQuery.data : undefined
     );
 
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
@@ -738,8 +737,7 @@
                                     countsFilter={sourceTreeCountsFilter}
                                     countMode={isImages ? 'samples' : 'objects'}
                                     singleSourceId={isAnnotations ? collectionId : undefined}
-                                    showVisibilityToggle={showAnnotationVisibilityToggle}
-                                    unannotatedRow={unannotatedFilterRow}
+                                    {unannotatedCount}
                                 />
                             {:else if !isCaptions && !isPointClouds}
                                 <LabelsMenu
@@ -749,7 +747,6 @@
                                     onSetAnnotationFilter={(labels) =>
                                         setAnnotationFilterSelection(labels, collectionId)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
-                                    unannotatedRow={unannotatedFilterRow}
                                 />
                             {/if}
 

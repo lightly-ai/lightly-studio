@@ -3,8 +3,8 @@ import { resolveEffectiveColorBySource } from '$lib/utils';
 
 interface GetSampleClassificationPillsParams {
     annotations: AnnotationView[];
-    /** Whether annotations from a given source should be shown. */
-    isSourceVisible: (sourceId: string) => boolean;
+    /** Whether annotations of a given source and class are shown. */
+    isAnnotationShown: (sourceId: string, className: string) => boolean;
     /** Whether more than one source is visible, which switches pill colors to per-source. */
     multipleSourcesVisible: boolean;
     collectionIdToName: Record<string, string>;
@@ -73,7 +73,7 @@ function dedupeAndSortPills(pills: SampleClassificationPill[]): SampleClassifica
 
 export function getSampleClassificationPills({
     annotations,
-    isSourceVisible,
+    isAnnotationShown,
     multipleSourcesVisible,
     collectionIdToName,
     enforceColoringByClass
@@ -85,7 +85,12 @@ export function getSampleClassificationPills({
 
     return dedupeAndSortPills(
         annotations
-            .filter((annotation) => isSourceVisible(annotation.annotation_collection_id))
+            .filter((annotation) =>
+                isAnnotationShown(
+                    annotation.annotation_collection_id,
+                    annotation.annotation_label.annotation_label_name
+                )
+            )
             .filter(isClassificationAnnotation)
             .map((annotation) =>
                 createSampleClassificationPill({

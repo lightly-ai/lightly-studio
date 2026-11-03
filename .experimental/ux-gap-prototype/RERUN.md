@@ -60,12 +60,13 @@ For the baseline, run the same command from the main worktree's `lightly_studio`
 | 28 | Open an image, switch to Annotations, open an annotation, switch back | The same image is open |
 | 19 | Annotations tab, no evaluation, open "Sort by" | Message: "Run an evaluation to sort by its metrics." |
 | 20, 22 | Source list: gear ("Manage annotation sources"); in Settings > Annotation sources rename a source, then delete it; type "review_round_2", Enter | Settings opens on Annotation sources; no "..." or color picker on filter rows; source renamed; delete says how many annotations go and warns about evaluation runs, then the source is gone; the new source is highlighted |
+| 20, 22 | Annotations section: untick car under `labels`; open an image with a car; By class, regex on, type `^ca`, "Show only these"; "Clear all filters" | Status says "Showing k of n"; no car box on tiles or in the sample view; matches highlighted, only car and cat ticked; everything ticked again and "Showing everything" |
 
 ### Step b: curate
 
 | Row | Do | Prototype should |
 |---|---|---|
-| 29 | Class filter, tick "No annotations" | Only images without boxes (3,600 on fresh data) |
+| 29 | Annotations section: "Hide all", then tick "No annotations" (or hover it, "Only") | Only images without boxes (3,600 on fresh data) |
 
 Then tag about 100 of them `to_label`, as in the original step.
 

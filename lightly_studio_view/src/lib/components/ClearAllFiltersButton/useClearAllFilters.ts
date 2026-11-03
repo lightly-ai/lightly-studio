@@ -9,7 +9,6 @@ import {
 } from '$lib/hooks';
 import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
 import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
-import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
 import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForVideos';
@@ -101,18 +100,15 @@ function useTagAndLabelFilters(collectionId: string, includeLabels = true): Filt
         collection_id: collectionId,
         autoLoad: false
     });
-    const { includeUnannotated, clearIncludeUnannotated } = useUnannotatedImagesFilter();
     return {
         isActive: derived(
-            [tagsSelected, storage.selectedAnnotationFilterIds, includeUnannotated],
-            ([$tags, $labels, $unannotated]) =>
-                $tags.size > 0 || (includeLabels && ($labels.size > 0 || $unannotated))
+            [tagsSelected, storage.selectedAnnotationFilterIds],
+            ([$tags, $labels]) => $tags.size > 0 || (includeLabels && $labels.size > 0)
         ),
         clear: () => {
             clearTagsSelected();
             if (!includeLabels) return;
             storage.clearSelectedAnnotationFilterIds();
-            clearIncludeUnannotated();
         }
     };
 }
@@ -160,8 +156,8 @@ function useAnnotationSourcesFilter(): FilterGroup {
 }
 
 function useAnnotationPairGroup(collectionId: string): FilterGroup {
-    const { pairs, clear } = useAnnotationPairFilter(collectionId);
-    return { isActive: derived(pairs, ($pairs) => $pairs.length > 0), clear };
+    const { isActive, clear } = useAnnotationPairFilter(collectionId);
+    return { isActive, clear };
 }
 
 function useEmbeddingPlotFilter(collectionId: string): FilterGroup {

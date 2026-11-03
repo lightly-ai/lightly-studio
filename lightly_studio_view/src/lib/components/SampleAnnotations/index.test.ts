@@ -5,7 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleAnnotations from './index.svelte';
 import { useSettings } from '$lib/hooks/useSettings';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-import { useAnnotationClassVisibility } from '$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility';
+import {
+    setActivePairFilterCollection,
+    useAnnotationPairFilter
+} from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
 import * as utils from '$lib/utils';
 
 type UseSettingsReturn = ReturnType<typeof useSettings>;
@@ -175,7 +178,8 @@ describe('SampleAnnotations', () => {
             }
         );
 
-        useAnnotationClassVisibility().hiddenClassNamesStore.set([]);
+        setActivePairFilterCollection('images-1');
+        useAnnotationPairFilter('images-1').clear();
         const { setSelectedCollectionIds, setCollectionIdToName } =
             useAnnotationCollectionsFilter();
         setCollectionIdToName({ [SAMPLE_SOURCE_ID]: 'Ground truth' });
@@ -256,9 +260,13 @@ describe('SampleAnnotations', () => {
         });
     });
 
-    it('does not render annotations for hidden classes', async () => {
+    it('does not draw the annotations of an unticked pair', async () => {
         setShowBoundingBoxesForSegmentation(true);
-        useAnnotationClassVisibility().toggleClassVisibility('car');
+        useAnnotationPairFilter('images-1').togglePair({
+            collection_id: SAMPLE_SOURCE_ID,
+            annotation_label_id: 'car-id',
+            label_name: 'car'
+        });
 
         render(SampleAnnotations, {
             props: {

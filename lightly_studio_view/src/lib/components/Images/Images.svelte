@@ -8,7 +8,6 @@
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
     import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
     import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
@@ -43,7 +42,9 @@
     };
     const { collection_id, textEmbedding }: ImagesProps = $props();
 
-    const { pairs: annotationPairs } = $derived(useAnnotationPairFilter(collection_id));
+    const { pairs: annotationPairs, includeUnannotated } = $derived(
+        useAnnotationPairFilter(collection_id)
+    );
 
     const { tagsSelected } = $derived.by(() =>
         useTags({
@@ -66,8 +67,6 @@
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
     const { tileFields } = useTileFields();
-
-    const { includeUnannotated } = useUnannotatedImagesFilter();
 
     const samplesParams = $derived({
         collection_id,

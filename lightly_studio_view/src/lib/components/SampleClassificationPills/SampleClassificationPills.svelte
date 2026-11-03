@@ -3,6 +3,7 @@
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks';
+    import { isAnnotationShown } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { getColorByLabel } from '$lib/utils';
     import { getColorPair } from '$lib/utils/getColorPair';
     import {
@@ -40,7 +41,10 @@
     const pills = $derived(
         getSampleClassificationPills({
             annotations: sample.annotations,
-            isSourceVisible: showAllSources ? () => true : $isSourceVisible,
+            isAnnotationShown: showAllSources
+                ? () => true
+                : (sourceId, className) =>
+                      $isSourceVisible(sourceId) && $isAnnotationShown(sourceId, className),
             multipleSourcesVisible: showAllSources ? false : $multipleSourcesVisible,
             collectionIdToName: $collectionIdToName,
             enforceColoringByClass: $enforceColoringByClassStore

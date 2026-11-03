@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { isAnnotationShown } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
@@ -42,7 +43,8 @@
         getImageTileChips({
             fields: tileFields,
             sample,
-            isSourceVisible: $isSourceVisible,
+            isAnnotationShown: (sourceId, className) =>
+                $isSourceVisible(sourceId) && $isAnnotationShown(sourceId, className),
             sourceNames: $collectionIdToName
         })
     );
