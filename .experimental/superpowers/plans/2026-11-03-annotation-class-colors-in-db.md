@@ -2,46 +2,112 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Save custom annotation class colors per dataset in the database, so all users of a dataset see them after a reload, and add "Reset to default" to the color picker.
-
-**Architecture:** Nullable `color`/`alpha` columns on `annotation_label` and a `PUT /annotation_labels/{label_id}/color` endpoint. In the frontend, one factory makes two color stores: one for classes, one for sources. Each store has a saved layer and a preview layer owned by one picker session. Apply saves the preview, Cancel discards it. A class-list refetch replaces only the saved layer.
-
-**Tech Stack:** FastAPI, SQLModel, Alembic (PostgreSQL), DuckDB (`create_all`), SvelteKit, Svelte 5, TanStack Query, hey-api generated client, vitest, pytest.
-
 **Spec:** `.experimental/superpowers/specs/2026-11-03-annotation-class-colors-in-db-design.md`
+
+## Goal
+
+Save custom annotation class colors per dataset in the database, so all users of a dataset
+see them after a reload. Add "Reset to default" to the color picker.
+
+## Architecture
+
+**Backend**
+- Nullable `color` and `alpha` columns on `annotation_label`.
+- A `PUT /annotation_labels/{label_id}/color` endpoint to set or clear them.
+
+**Frontend**
+- One factory makes two color stores: one for annotation classes, one for annotation sources.
+- Each store has two layers:
+  - a **saved** layer, loaded from the class list;
+  - a **preview** layer, owned by one open color picker.
+- Apply saves the preview, Cancel discards it. A class list refetch replaces only the saved layer.
+
+**Tech stack:** FastAPI, SQLModel, Alembic (PostgreSQL), DuckDB (`create_all`), SvelteKit,
+Svelte 5, TanStack Query, hey-api generated client, vitest, pytest.
 
 ## Global Constraints
 
-- Colors are per dataset, not per user. `color`/`alpha` are nullable; null means the default (hashed palette) color.
-- A rename must not clear the color. Do not add color fields to `AnnotationLabelBase` or `AnnotationLabelCreate`; `PUT /annotation_labels/{label_id}` keeps taking `AnnotationLabelCreate`.
-- Class colors and source colors never share a map. Call sites that color by source use `getColorBySource` and the source store; all others use `getColorByLabel` and the class store.
-- Preview is a local layer: Apply saves, Cancel discards, a same-dataset refetch keeps it, a dataset change clears it. A failed save shows a toast and reverts to the saved color.
-- Source colors stay browser-only. Out of scope: live updates from other users, export/import.
+**Behavior**
+- Colors are per dataset, not per user. `color`/`alpha` are nullable; null means the
+  default (hashed palette) color.
+- A rename must not clear the color. Do not add color fields to `AnnotationLabelBase` or
+  `AnnotationLabelCreate`; `PUT /annotation_labels/{label_id}` keeps taking `AnnotationLabelCreate`.
+- Class colors and source colors never share a map:
+  - call sites that color by source use `getColorBySource` and the source store;
+  - all others use `getColorByLabel` and the class store.
+- The preview is local:
+  - Apply saves it, Cancel discards it.
+  - A refetch of the same dataset keeps it; a dataset change clears it.
+  - A failed save shows a toast and reverts to the saved color.
 - "Reset to default" shows only when the caller passes `onReset`. Only class colors pass it.
-- Existing DuckDB files are not upgraded (as in #2782); PR 1 adds a CHANGELOG note.
-- User-facing text says "annotation class" and "annotation source", never "label" (glossary skill).
-- Load skills before editing: `python-guide` + `backend-guide` for `lightly_studio/**`, `frontend-guide` for `lightly_studio_view/**`, `best-practices` for new modules, `changelog` for `CHANGELOG.md`, `pull-requests` before each PR.
-- Frontend tests have no `QueryClientProvider`; stub hooks that use TanStack (see `VideoDetails.test.ts`).
-- Each PR stays under ~200 changed lines, excluding `lightly_studio_view/src/lib/api/**` and lockfiles. Commit and push only on request; never force push.
-- Validation: backend `cd lightly_studio && make static-checks && uv run pytest <tests>` (migration PRs also `make migration-check-postgresql`); frontend `cd lightly_studio_view && make static-checks && make test`.
+- Existing DuckDB files are not upgraded (as in #2782). PR 1 adds a CHANGELOG note.
+- User-facing text says "annotation class" and "annotation source", never "label".
+
+**Out of scope:** saving source colors (they stay browser-only), live updates from other
+users, export/import of colors.
+
+**Process**
+- Load skills before editing:
+  - `python-guide` + `backend-guide` for `lightly_studio/**`
+  - `frontend-guide` for `lightly_studio_view/**`
+  - `best-practices` for new modules, `changelog` for `CHANGELOG.md`, `glossary` for user-facing text
+  - `pull-requests` before each PR
+- Frontend tests have no `QueryClientProvider`. Stub hooks that use TanStack Query
+  (see `VideoDetails.test.ts`).
+- Each PR stays under ~200 changed lines, not counting `lightly_studio_view/src/lib/api/**`
+  and lockfiles.
+- Commit and push only on request. Never force push.
+- Validation:
+  - Backend: `cd lightly_studio && make static-checks && uv run pytest <tests>`.
+    Migration PRs also run `make migration-check-postgresql`.
+  - Frontend: `cd lightly_studio_view && make static-checks && make test`.
+
+## Decisions
+
+- **Plots keep `getColorByLabel`.** A class with the same name as a plot category recolors
+  it, as today.
+- **The frontend keys colors by class name, the server by class ID.** A refetch after a
+  rename moves the color to the new name. Keying the frontend store by ID is not worth the
+  extra work for the rare case of a rename while a preview is open.
+- **The save hook is stubbed per test file** (PR 11), not globally in `src/setupTests.ts`,
+  so tests that need the real hook still get it.
 
 ## Review Focus
 
-1. **Class list refetch while a class picker is open.** The preview stays and Apply saves it. Test: PR 12.
-2. **Reopen the picker while a save is pending, or apply twice quickly.** The first save does not clear the second preview; an older save resolving late does not overwrite a newer one, locally or on the server. Tests: PRs 10, 11.
-3. **Switch dataset while a preview is open, a save is pending, or the new class list is still loading.** No color, preview or class ID of the old dataset is used in the new one. Tests: PRs 10, 11, 12.
-4. **A source and a class with the same name** (e.g. `"Predictions"`). Changing one never changes the other. Tests: PRs 7, 8.
-5. **Save or reset fails** (network error, class deleted meanwhile, class missing from the loaded list). A toast shows and the swatch shows the saved color. Tests: PRs 10, 11.
+Cases that no single test covers end to end. Check them during review.
+
+1. **The class list refetches while a class picker is open.**
+   The preview stays, and Apply saves it. *Test: PR 12.*
+2. **The user reopens the picker while a save is pending, or applies twice quickly.**
+   The first save does not clear the second preview. An older save that finishes late does
+   not overwrite a newer one, in the browser or on the server. *Tests: PRs 10, 11.*
+3. **The user switches dataset while a preview is open, a save is pending, or the new class
+   list is still loading.** No color, preview or class ID of the old dataset is used in the
+   new one. *Tests: PRs 10, 11, 12.*
+4. **An annotation source and an annotation class have the same name** (e.g. `"Predictions"`).
+   Changing one never changes the other. *Tests: PRs 7, 8.*
+5. **A save or reset fails** (network error, class deleted meanwhile, class missing from the
+   loaded list). A toast shows, and the swatch shows the saved color. *Tests: PRs 10, 11.*
 
 ---
 
 ## PR stack
+
+PR 1 is based on `michal-lig-11481-refactor-color-picker-panel`. Each next PR is based on the
+previous one. Every PR leaves the app working.
+
+**Backend**
 
 | # | Title | Branch | Est. LOC |
 |---|-------|--------|----------|
 | 1 | Add color columns to annotation classes | `michal-lig-11355-01-color-columns` | ~90 |
 | 2 | Add a resolver to set an annotation class color | `michal-lig-11355-02-set-color-resolver` | ~115 |
 | 3 | Add an endpoint to set an annotation class color | `michal-lig-11355-03-set-color-endpoint` | ~110 (+ generated) |
+
+**Frontend prefactors** (no user-visible change, except the bug fix in PR 4 and the reset button in PR 9)
+
+| # | Title | Branch | Est. LOC |
+|---|-------|--------|----------|
 | 4 | Seed the annotation class color picker from useColorPicker | `michal-lig-11355-04-seed-legend-picker` | ~45 |
 | 5 | Extract the custom color store into a factory | `michal-lig-11355-05-color-store-factory` | ~130 (moved code) |
 | 6 | Keep color previews in a separate layer | `michal-lig-11355-06-preview-layer` | ~170 |
@@ -49,10 +115,18 @@
 | 8 | Keep annotation source colors in their own store | `michal-lig-11355-08-source-color-store` | ~110 |
 | 9 | Add "Reset to default" to the color picker | `michal-lig-11355-09-reset-to-default` | ~120 |
 | 10 | Let the color picker save changes asynchronously | `michal-lig-11355-10-async-color-save` | ~140 |
+
+**Frontend feature**
+
+| # | Title | Branch | Est. LOC |
+|---|-------|--------|----------|
 | 11 | Save annotation class colors in the dataset | `michal-lig-11355-11-save-class-colors` | ~195 |
 | 12 | Load annotation class colors from the dataset | `michal-lig-11355-12-load-class-colors` | ~125 |
 
-PR 1 is based on `michal-lig-11481-refactor-color-picker-panel`; each next PR on the previous one. PRs 1–3 are backend only. PRs 4–10 are frontend prefactors that each leave the app working. PR 11 saves; PR 12 loads, and must come after PR 11 because loading without saving would wipe session colors on every refetch.
+PR 12 must come after PR 11: loading colors without saving them would wipe the colors set in
+the current session on every refetch.
+
+LOC counts additions plus deletions, tests included, generated files excluded.
 
 ---
 
@@ -290,11 +364,3 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass.
 - [ ] **Step 5: Manual check** with `cd lightly_studio && make build-lightly_studio_view` and a fresh DuckDB file: set a class color and reload (kept); rename (kept); reset and reload (default); add a class with a legend picker open (preview stays); switch dataset with a picker open (nothing carries over); set a source color (class color unchanged). Commit on request.
-
----
-
-## Decisions
-
-- Plot categories keep using `getColorByLabel`; a class with the same name recolors them, as today.
-- PR 11 stubs the save hook per test file, not globally in `src/setupTests.ts`.
-- The frontend store keys colors by class name; the server keys them by class ID. A refetch after a rename moves the color to the new name. Keying the store by ID is not worth the churn for the rare case of a rename during an open preview.
