@@ -92,27 +92,6 @@ export const listAllSourceGroups = (
 };
 
 /**
- * Returns the line shown above the source groups about where new annotations go, or null when
- * nothing needs saying.
- */
-export const getTargetSourceHint = ({
-    targetSource,
-    isTargetHidden
-}: {
-    targetSource: string | null;
-    isTargetHidden: boolean;
-}): string | null => {
-    if (targetSource === null) {
-        return 'Click the pencil next to a source to choose where new annotations go.';
-    }
-    // Adding to a hidden source is blocked, so say why drawing does nothing.
-    if (isTargetHidden) {
-        return `${targetSource} is hidden. Show it to add annotations to it.`;
-    }
-    return null;
-};
-
-/**
  * Whether every annotation in the list is hidden.
  */
 export const areAllAnnotationsHidden = (

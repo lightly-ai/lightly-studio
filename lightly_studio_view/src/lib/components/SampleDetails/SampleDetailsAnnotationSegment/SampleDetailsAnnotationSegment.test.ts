@@ -701,7 +701,6 @@ describe('SampleDetailsAnnotationSegment', () => {
         it('asks for a target when there are several sources and none is picked', () => {
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
-            expect(screen.getByTestId('annotation-target-hint')).toBeInTheDocument();
             expect(
                 screen.getByTestId(`annotation-target-${predictionsSource.name}`)
             ).toHaveAttribute('aria-pressed', 'false');
@@ -716,11 +715,10 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(mocks.setAnnotationSource).toHaveBeenCalledWith(predictionsSource.name);
         });
 
-        it('marks the picked target and drops the hint', () => {
+        it('marks the picked target', () => {
             mocks.annotationSource = predictionsSource.name;
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
-            expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
             expect(
                 screen.getByTestId(`annotation-target-${predictionsSource.name}`)
             ).toHaveAttribute('aria-pressed', 'true');
@@ -758,16 +756,16 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(mocks.setAnnotationSource).not.toHaveBeenCalled();
         });
 
-        it('explains that hiding the target blocks new annotations', async () => {
+        it('shows the target as disabled once it is hidden', async () => {
             const user = userEvent.setup();
             mocks.annotationSource = groundTruthSource.name;
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
             await user.click(screen.getByTestId('source-group-eye'));
 
-            expect(screen.getByTestId('annotation-target-hint')).toHaveTextContent(
-                `${groundTruthSource.name} is hidden.`
-            );
+            const pencil = screen.getByTestId(`annotation-target-${groundTruthSource.name}`);
+            expect(pencil).toHaveAttribute('aria-pressed', 'true');
+            expect(pencil).toHaveAttribute('aria-disabled', 'true');
         });
 
         it('hides the pencils from viewers', () => {

@@ -26,7 +26,6 @@
     import {
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
-        getTargetSourceHint,
         groupAnnotationsBySource,
         listAllSourceGroups,
         isSourceGroupInitiallyOpen,
@@ -116,9 +115,6 @@
     const isTargetHidden = $derived(
         targetGroup !== undefined &&
             areAllAnnotationsHidden(targetGroup.annotations, annotationsIdsToHide)
-    );
-    const targetHint = $derived(
-        getTargetSourceHint({ targetSource: annotationTarget.targetSource, isTargetHidden })
     );
 
     // The annotation row that is being dragged to another source, if any.
@@ -307,11 +303,6 @@
 <Segment title="Annotations">
     {#if isGrouped}
         <div class="flex flex-col gap-3">
-            {#if targetHint && canEdit}
-                <p class="text-xs text-amber-400" data-testid="annotation-target-hint">
-                    {targetHint}
-                </p>
-            {/if}
             {#each sourceGroups as group (group.id)}
                 {@const isTarget = group.name === annotationTarget.targetSource}
                 <AnnotationSourceDropZone

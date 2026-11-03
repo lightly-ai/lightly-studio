@@ -4,7 +4,6 @@ import {
     UNKNOWN_SOURCE_NAME,
     areAllAnnotationsHidden,
     computeSeededHiddenIds,
-    getTargetSourceHint,
     groupAnnotationsBySource,
     isSourceGroupInitiallyOpen,
     listAllSourceGroups,
@@ -266,23 +265,5 @@ describe('listAllSourceGroups', () => {
         const result = listAllSourceGroups(groups, [groundTruthSource], groundTruthSource.name);
 
         expect(result).toHaveLength(1);
-    });
-});
-
-describe('getTargetSourceHint', () => {
-    it('asks for a target when none is picked', () => {
-        expect(getTargetSourceHint({ targetSource: null, isTargetHidden: false })).toContain(
-            'pencil'
-        );
-    });
-
-    it('explains that a hidden target blocks new annotations', () => {
-        expect(getTargetSourceHint({ targetSource: 'Review', isTargetHidden: true })).toBe(
-            'Review is hidden. Show it to add annotations to it.'
-        );
-    });
-
-    it('says nothing when the target is picked and shown', () => {
-        expect(getTargetSourceHint({ targetSource: 'Review', isTargetHidden: false })).toBeNull();
     });
 });
