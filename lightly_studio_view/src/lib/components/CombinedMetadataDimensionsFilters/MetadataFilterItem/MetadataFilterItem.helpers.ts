@@ -10,13 +10,21 @@ type MetadataBound = MetadataBounds[string];
 // and commit.
 export const FLOAT_SLIDER_TICKS = 1000; // float granularity: 0.1% of the range
 
+// bits-ui allocates one tick object per step on every slider update, even when no ticks are
+// rendered. Uncapped, an ID-like field (e.g. a range of 28M) freezes the browser tab.
+export const MAX_INTEGER_SLIDER_TICKS = 10_000;
+
 /**
  * Number of slider ticks (integer domain 0..ticks, step 1) for a field.
- * Integer fields get one tick per integer so every value stays selectable even for wide ranges.
+ * Integer fields get one tick per integer, so every value stays selectable, up to
+ * MAX_INTEGER_SLIDER_TICKS. Wider integer ranges are rounded to that resolution.
  * Float fields use a fixed resolution since their real values aren't enumerable anyway.
  */
 export const getSliderTickCount = (bound: MetadataBound, isInteger: boolean): number => {
-    return isInteger ? Math.max(1, bound.max - bound.min) : FLOAT_SLIDER_TICKS;
+    if (!isInteger) {
+        return FLOAT_SLIDER_TICKS;
+    }
+    return Math.max(1, Math.min(bound.max - bound.min, MAX_INTEGER_SLIDER_TICKS));
 };
 
 /** Map a real metadata value onto the slider's integer tick domain, clamped to [0, ticks]. */
