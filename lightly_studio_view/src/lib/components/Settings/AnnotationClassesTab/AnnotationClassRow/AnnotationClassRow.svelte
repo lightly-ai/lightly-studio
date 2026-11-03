@@ -44,8 +44,9 @@
     };
     // The input is inside the settings form, so Enter must not submit it.
     const onRenameKeyDown = (event: KeyboardEvent) => {
-        // Enter and Escape during IME composition belong to the input method.
-        if (event.isComposing) return;
+        // Enter and Escape during IME composition belong to the input method. Safari sends
+        // the Enter that confirms the text with isComposing false and keyCode 229.
+        if (event.isComposing || event.keyCode === 229) return;
         if (event.key === 'Enter') {
             event.preventDefault();
             saveRename();

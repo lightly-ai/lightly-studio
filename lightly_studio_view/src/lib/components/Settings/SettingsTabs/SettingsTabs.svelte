@@ -1,6 +1,7 @@
 <script lang="ts">
     import * as Tabs from '$lib/components/ui/tabs';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
+    import { AnnotationClassesTab } from '../AnnotationClassesTab';
     import { AnnotationsTab } from '../AnnotationsTab';
     import { DisplayTab } from '../DisplayTab';
     import { ShortcutsTab } from '../ShortcutsTab';
@@ -15,7 +16,12 @@
     const tabs = [
         { value: 'shortcuts', label: 'Shortcuts', component: ShortcutsTab },
         { value: 'display', label: 'Display', component: DisplayTab },
-        { value: 'annotations', label: 'Annotations', component: AnnotationsTab }
+        { value: 'annotations', label: 'Annotations', component: AnnotationsTab },
+        {
+            value: 'annotation-classes',
+            label: 'Annotation classes',
+            component: AnnotationClassesTab
+        }
     ];
 </script>
 
