@@ -1,15 +1,21 @@
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import { resolveTargetSource } from './resolveTargetSource';
+import { getTargetBlockedReason, resolveTargetSource } from './resolveTargetSource';
 
 /**
  * The annotation source new annotations are written to, and the action that changes it.
- * Keeps `annotationSourceMissing` in the shared context up to date, so drawing tools refuse
- * to create an annotation while no source is picked. Call it from one always-mounted
- * component of the sample details page.
+ * Keeps `annotationSourceBlockedReason` in the shared context up to date, so drawing tools refuse
+ * to create an annotation while no source is picked or the picked one is hidden. Call it from
+ * one always-mounted component of the sample details page.
  */
-export const useAnnotationTarget = (getCollectionId: () => string) => {
+export const useAnnotationTarget = ({
+    getCollectionId,
+    getIsTargetHidden
+}: {
+    getCollectionId: () => string;
+    getIsTargetHidden: () => boolean;
+}) => {
     const { context, setAnnotationSource } = useAnnotationLabelContext();
     const { updateLastAnnotationSource } = useGlobalStorage();
     const annotationCollections = useAnnotationCollections(() => ({
@@ -20,7 +26,10 @@ export const useAnnotationTarget = (getCollectionId: () => string) => {
     const targetSource = $derived(resolveTargetSource(context.annotationSource, sourceNames));
 
     $effect(() => {
-        context.annotationSourceMissing = targetSource === null;
+        context.annotationSourceBlockedReason = getTargetBlockedReason(
+            targetSource,
+            getIsTargetHidden()
+        );
     });
 
     // Seed the context with the only source once the list has loaded.

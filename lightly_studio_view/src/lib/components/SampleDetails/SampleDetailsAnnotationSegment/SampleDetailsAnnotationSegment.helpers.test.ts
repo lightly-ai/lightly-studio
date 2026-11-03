@@ -276,9 +276,9 @@ describe('getTargetSourceHint', () => {
         );
     });
 
-    it('warns when the target source is hidden', () => {
+    it('explains that a hidden target blocks new annotations', () => {
         expect(getTargetSourceHint({ targetSource: 'Review', isTargetHidden: true })).toBe(
-            'New annotations go to Review, which is hidden.'
+            'Review is hidden. Show it to add annotations to it.'
         );
     });
 

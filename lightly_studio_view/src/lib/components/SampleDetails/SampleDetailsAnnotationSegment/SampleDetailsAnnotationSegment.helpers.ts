@@ -105,9 +105,9 @@ export const getTargetSourceHint = ({
     if (targetSource === null) {
         return 'Click the pencil next to a source to choose where new annotations go.';
     }
-    // Visibility and target sit in the same row, so hiding the target is easy to do by accident.
+    // Adding to a hidden source is blocked, so say why drawing does nothing.
     if (isTargetHidden) {
-        return `New annotations go to ${targetSource}, which is hidden.`;
+        return `${targetSource} is hidden. Show it to add annotations to it.`;
     }
     return null;
 };

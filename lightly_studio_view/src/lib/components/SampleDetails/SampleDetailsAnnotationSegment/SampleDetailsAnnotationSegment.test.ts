@@ -746,6 +746,30 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(mocks.setAnnotationSource).toHaveBeenCalledWith('Review');
         });
 
+        it('does not make a hidden source the target', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('source-group-eye'));
+            const pencil = screen.getByTestId(`annotation-target-${groundTruthSource.name}`);
+            await user.click(pencil);
+
+            expect(pencil).toHaveAttribute('aria-disabled', 'true');
+            expect(mocks.setAnnotationSource).not.toHaveBeenCalled();
+        });
+
+        it('explains that hiding the target blocks new annotations', async () => {
+            const user = userEvent.setup();
+            mocks.annotationSource = groundTruthSource.name;
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('source-group-eye'));
+
+            expect(screen.getByTestId('annotation-target-hint')).toHaveTextContent(
+                `${groundTruthSource.name} is hidden.`
+            );
+        });
+
         it('hides the pencils from viewers', () => {
             mocks.userRole = 'viewer';
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });

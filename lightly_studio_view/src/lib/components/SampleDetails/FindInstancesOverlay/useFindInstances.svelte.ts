@@ -1,4 +1,4 @@
-import { isAnnotationSourceMissing } from '$lib/contexts/annotationSourceGuard';
+import { isAnnotationSourceBlocked } from '$lib/contexts/annotationSourceGuard';
 import { untrack } from 'svelte';
 import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
@@ -23,7 +23,7 @@ interface UseFindInstancesParams {
     saveAs: SaveAs;
     annotationClass: string | null | undefined;
     annotationSource: string | null | undefined;
-    annotationSourceMissing?: boolean;
+    annotationSourceBlockedReason?: string | null;
     onSaved: () => void;
 }
 
@@ -141,8 +141,8 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
     const save = async () => {
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
         if (
-            isAnnotationSourceMissing({
-                annotationSourceMissing: getParams().annotationSourceMissing
+            isAnnotationSourceBlocked({
+                annotationSourceBlockedReason: getParams().annotationSourceBlockedReason
             })
         )
             return;

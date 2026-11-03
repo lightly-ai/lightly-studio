@@ -79,7 +79,11 @@
     const { enforceColoringByClassStore } = useSettings();
     const { sourceGroupStates, setSourceGroupState } = useAnnotationSourceGroupState();
     const { moveToSource } = useMoveAnnotationsToSource();
-    const annotationTarget = useAnnotationTarget(() => collectionId);
+    // `isTargetHidden` is declared below; the getter only runs once the component is set up.
+    const annotationTarget = useAnnotationTarget({
+        getCollectionId: () => collectionId,
+        getIsTargetHidden: () => isTargetHidden
+    });
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -109,13 +113,12 @@
     const targetGroup = $derived(
         sourceGroups.find((group) => group.name === annotationTarget.targetSource)
     );
+    const isTargetHidden = $derived(
+        targetGroup !== undefined &&
+            areAllAnnotationsHidden(targetGroup.annotations, annotationsIdsToHide)
+    );
     const targetHint = $derived(
-        getTargetSourceHint({
-            targetSource: annotationTarget.targetSource,
-            isTargetHidden:
-                targetGroup !== undefined &&
-                areAllAnnotationsHidden(targetGroup.annotations, annotationsIdsToHide)
-        })
+        getTargetSourceHint({ targetSource: annotationTarget.targetSource, isTargetHidden })
     );
 
     // The annotation row that is being dragged to another source, if any.
@@ -343,6 +346,10 @@
                                 <AnnotationTargetButton
                                     sourceName={group.name}
                                     {isTarget}
+                                    isSourceHidden={areAllAnnotationsHidden(
+                                        group.annotations,
+                                        annotationsIdsToHide
+                                    )}
                                     needsPick={annotationTarget.targetSource === null}
                                     onSetTarget={() => annotationTarget.setTargetSource(group.name)}
                                 />

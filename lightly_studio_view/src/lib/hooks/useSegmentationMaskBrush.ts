@@ -1,4 +1,4 @@
-import { isAnnotationSourceMissing } from '$lib/contexts/annotationSourceGuard';
+import { isAnnotationSourceBlocked } from '$lib/contexts/annotationSourceGuard';
 import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     computeBoundingBoxFromMask,
@@ -158,7 +158,7 @@ export function useSegmentationMaskBrush({
             }
         }
 
-        if (isAnnotationSourceMissing(annotationLabelContext)) return;
+        if (isAnnotationSourceBlocked(annotationLabelContext)) return;
 
         let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
 

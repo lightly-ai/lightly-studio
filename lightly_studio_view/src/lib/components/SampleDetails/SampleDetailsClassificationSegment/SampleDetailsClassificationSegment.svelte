@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { isAnnotationSourceMissing } from '$lib/contexts/annotationSourceGuard';
+    import { isAnnotationSourceBlocked } from '$lib/contexts/annotationSourceGuard';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { MoveAnnotationToSource } from '$lib/components/MoveAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
@@ -141,7 +141,7 @@
 
     const createClassificationAnnotation = async (labelName: string) => {
         if (!annotationLabels.data) return false;
-        if (isAnnotationSourceMissing(annotationLabelContext)) return false;
+        if (isAnnotationSourceBlocked(annotationLabelContext)) return false;
 
         let label = annotationLabels.data.find(
             (labelItem) => labelItem.annotation_label_name === labelName
