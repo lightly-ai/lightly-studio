@@ -29,6 +29,8 @@
         leading?: Snippet;
         /** Tints the header, e.g. for the source new annotations go to. */
         highlighted?: boolean;
+        /** A short line under the name, e.g. "New annotations go here". */
+        subtitle?: string;
         children: Snippet;
     }
 
@@ -43,6 +45,7 @@
         onOpenChange,
         leading,
         highlighted = false,
+        subtitle,
         children
     }: Props = $props();
 
@@ -85,7 +88,15 @@
             />
         {/if}
         <CollapsibleTrigger class="flex min-w-0 flex-1 items-center justify-between py-1">
-            <span class="truncate text-sm font-medium">{name}</span>
+            <span class="flex min-w-0 flex-col items-start">
+                <span class="max-w-full truncate text-sm font-medium">{name}</span>
+                {#if subtitle}
+                    <span
+                        class="text-xs text-primary"
+                        data-testid="annotation-source-group-subtitle">{subtitle}</span
+                    >
+                {/if}
+            </span>
             <div class="flex shrink-0 items-center gap-2">
                 <span class="text-xs text-muted-foreground">{count}</span>
                 <ChevronDown

@@ -1,7 +1,12 @@
 import { untrack } from 'svelte';
+import { get } from 'svelte/store';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import {
+    TARGET_PICK_MESSAGES,
+    useAnnotateVariant
+} from '$lib/hooks/useAnnotateVariant/useAnnotateVariant';
 import { getTargetBlockedReason, resolveTargetSource } from './resolveTargetSource';
 
 /**
@@ -19,6 +24,8 @@ export const useAnnotationTarget = ({
 }) => {
     const { context, setAnnotationSource } = useAnnotationLabelContext();
     const { updateLastAnnotationSource, lastAnnotationSource } = useGlobalStorage();
+    // Fixed for the page load, so it is read once.
+    const pickMessage = TARGET_PICK_MESSAGES[get(useAnnotateVariant().annotateVariant)];
     const annotationCollections = useAnnotationCollections(() => ({
         collectionId: getCollectionId()
     }));
@@ -29,7 +36,8 @@ export const useAnnotationTarget = ({
     $effect(() => {
         context.annotationSourceBlockedReason = getTargetBlockedReason(
             targetSource,
-            getIsTargetHidden()
+            getIsTargetHidden(),
+            pickMessage
         );
     });
 

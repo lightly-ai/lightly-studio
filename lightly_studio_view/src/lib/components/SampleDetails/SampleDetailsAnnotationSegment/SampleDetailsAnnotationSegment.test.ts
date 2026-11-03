@@ -14,8 +14,19 @@ const mocks = vi.hoisted(() => ({
     userRole: 'labeler' as string | undefined,
     moveToSource: vi.fn(),
     annotationSource: null as string | null,
-    setAnnotationSource: vi.fn()
+    setAnnotationSource: vi.fn(),
+    annotateVariant: undefined as unknown as { set: (value: 'pencil' | 'radio') => void }
 }));
+
+vi.mock('$lib/hooks/useAnnotateVariant/useAnnotateVariant', async (importOriginal) => {
+    const { writable } = await import('svelte/store');
+    const annotateVariant = writable<'pencil' | 'radio'>('pencil');
+    mocks.annotateVariant = annotateVariant;
+    return {
+        ...(await importOriginal<object>()),
+        useAnnotateVariant: () => ({ annotateVariant })
+    };
+});
 
 // Replace the heavy per-annotation row with a lightweight stub.
 vi.mock(
@@ -158,6 +169,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.userRole = 'labeler';
         mocks.annotationSource = null;
         mocks.moveToSource.mockResolvedValue(true);
+        mocks.annotateVariant.set('pencil');
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
 
@@ -769,6 +781,13 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(pencil).toHaveAttribute('aria-disabled', 'true');
         });
 
+        it('shows no radio hint in the pencil variant', () => {
+            mocks.isEditingMode.set(true);
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
+        });
+
         it('hides the pencils from viewers', () => {
             mocks.userRole = 'viewer';
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
@@ -777,6 +796,74 @@ describe('SampleDetailsAnnotationSegment', () => {
                 screen.queryByTestId(`annotation-target-${groundTruthSource.name}`)
             ).not.toBeInTheDocument();
             expect(screen.queryByTestId('new-annotation-source-button')).not.toBeInTheDocument();
+        });
+    });
+
+    describe('picking the target source with radios', () => {
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+            mocks.annotateVariant.set('radio');
+            mocks.isEditingMode.set(true);
+        });
+
+        const annotations = [createAnnotation('a1', groundTruthSource.collection_id, 'cat')];
+        const radioId = (name: string) => `annotation-target-radio-${name}`;
+
+        it('shows a radio instead of a pencil and asks for a pick', () => {
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.getByTestId(radioId(predictionsSource.name))).toHaveAttribute(
+                'aria-checked',
+                'false'
+            );
+            expect(
+                screen.queryByTestId(`annotation-target-${predictionsSource.name}`)
+            ).not.toBeInTheDocument();
+            expect(screen.getByTestId('annotation-target-hint')).toHaveTextContent(
+                'Pick where new annotations go.'
+            );
+        });
+
+        it('makes a source the target with its radio, also without annotations', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId(radioId(predictionsSource.name)));
+
+            expect(mocks.setAnnotationSource).toHaveBeenCalledWith(predictionsSource.name);
+        });
+
+        it('says new annotations go to the picked source', () => {
+            mocks.annotationSource = predictionsSource.name;
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.getByTestId(radioId(predictionsSource.name))).toHaveAttribute(
+                'aria-checked',
+                'true'
+            );
+            expect(screen.getByTestId('annotation-source-group-subtitle')).toHaveTextContent(
+                'New annotations go here'
+            );
+            expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
+        });
+
+        it('does not make a hidden source the target', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('source-group-eye'));
+            await user.click(screen.getByTestId(radioId(groundTruthSource.name)));
+
+            expect(mocks.setAnnotationSource).not.toHaveBeenCalled();
+        });
+
+        it('hides the radios outside edit mode', () => {
+            mocks.isEditingMode.set(false);
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.queryByTestId(radioId(groundTruthSource.name))).not.toBeInTheDocument();
+            expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
         });
     });
 });

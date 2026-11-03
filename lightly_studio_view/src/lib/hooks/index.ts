@@ -114,3 +114,4 @@ export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
 export { usePillShortcuts } from '$lib/hooks/usePillShortcuts/usePillShortcuts';
+export { useAnnotateVariant } from '$lib/hooks/useAnnotateVariant/useAnnotateVariant';
