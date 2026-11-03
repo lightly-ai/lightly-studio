@@ -125,7 +125,7 @@ describe('AnnotationSourceTree', () => {
         expect(
             rows.map((row) => within(row).getByRole('checkbox').getAttribute('aria-label'))
         ).toEqual(['deer', 'raccoon']);
-        expect(within(rows[0]).getByText('5 / 6')).toBeInTheDocument();
+        expect(within(rows[0]).getByText('2 sources')).toBeInTheDocument();
 
         await userEvent.click(within(rows[0]).getByRole('checkbox', { name: 'deer' }));
         expect(tickedPairs()).toEqual([{ collection_id: 'gt', annotation_label_id: 'raccoon-id' }]);
@@ -171,7 +171,12 @@ describe('AnnotationSourceTree', () => {
         expect(screen.getAllByTestId('annotation-source-node')).toHaveLength(2);
     });
 
-    it('collapses groups when there are more than 3, with a summary', () => {
+    it('collapses groups when there are more than 3, with a summary when partly ticked', () => {
+        filter().togglePair({
+            collection_id: 'gt',
+            annotation_label_id: 'deer-id',
+            label_name: 'deer'
+        });
         mocks.sources = [
             ...mocks.sources,
             { collection_id: 'a', name: 'a_source' },
@@ -181,7 +186,9 @@ describe('AnnotationSourceTree', () => {
         render(AnnotationSourceTree, defaultProps);
 
         expect(screen.queryByRole('checkbox', { name: 'deer in ground_truth' })).toBeNull();
-        expect(screen.getAllByTestId('annotation-group-summary')[0]).toHaveTextContent('all');
+        const summaries = screen.getAllByTestId('annotation-group-summary');
+        expect(summaries).toHaveLength(1);
+        expect(summaries[0]).toHaveTextContent('1 of 2');
     });
 
     it('shows a flat class list with no source row for one source', () => {

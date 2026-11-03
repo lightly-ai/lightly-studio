@@ -1,5 +1,6 @@
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+import { setSourceColorOrder } from '$lib/utils/getColorByLabel';
 import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
 
 // The last source list seen per collection, to find the sources that disappeared.
@@ -30,6 +31,11 @@ export function useSeedAnnotationSourceFilter(getCollectionId: () => string): vo
         seedSelectionIfNeeded(
             collectionId,
             sources.map((source) => ({ id: source.collection_id, name: source.name }))
+        );
+
+        // Sources sorted by name take the palette in order, so no two share a color.
+        setSourceColorOrder(
+            sources.map((source) => source.name).sort((a, b) => a.localeCompare(b))
         );
 
         const sourceIds = sources.map((source) => source.collection_id);

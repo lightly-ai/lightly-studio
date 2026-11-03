@@ -26,9 +26,14 @@
     const isEmpty = $derived(group.rows.length === 0);
     const expanded = $derived(open && !isEmpty);
     const isSource = $derived(group.sourceId !== undefined);
-    const collapsedSummary = $derived(
-        summary.ticked === group.rows.length ? 'all' : `${summary.ticked} of ${group.rows.length}`
+    // A class group sums the same images over its sources, so it counts sources instead.
+    const sourcesSummary = $derived(
+        summary.state === 'partial'
+            ? `${summary.ticked} of ${group.rows.length} sources`
+            : `${group.rows.length} ${group.rows.length === 1 ? 'source' : 'sources'}`
     );
+    // The checkbox already says "all" or "none"; a partial collapsed source spells it out.
+    const showCollapsedSummary = $derived(isSource && !expanded && summary.state === 'partial');
 </script>
 
 <div class="mb-1" data-testid="annotation-source-node">
@@ -44,7 +49,9 @@
             class="flex shrink-0 items-center disabled:opacity-30"
             onclick={onToggleOpen}
         >
-            <ChevronRight class="size-4 transition-transform {expanded ? 'rotate-90' : ''}" />
+            <span class={cn('flex transition-transform', expanded && 'rotate-90')}>
+                <ChevronRight class="size-4" />
+            </span>
         </button>
         <Checkbox
             checked={summary.state === 'checked'}
@@ -65,14 +72,15 @@
                 'min-w-0 flex-1 truncate text-base font-medium',
                 summary.state === 'unchecked' && 'text-muted-foreground'
             )}
-            ><HighlightedText
-                text={group.name}
-                range={find?.(group.name) ?? null}
-            />{#if !expanded && !isEmpty}<span
-                    class="ml-1.5 text-xs font-normal text-muted-foreground"
-                    data-testid="annotation-group-summary">{collapsedSummary}</span
-                >{/if}</span
+            title={group.name}
+            ><HighlightedText text={group.name} range={find?.(group.name) ?? null} /></span
         >
+        {#if showCollapsedSummary}
+            <span
+                class="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+                data-testid="annotation-group-summary">{summary.ticked} of {group.rows.length}</span
+            >
+        {/if}
         {#if !isEmpty}
             {#if summary.state !== 'checked'}
                 <RowAction
@@ -87,7 +95,12 @@
                 onclick={() => onOnlyRows(group.rows)}
             />
         {/if}
-        {#if summary.count}
+        {#if !isSource && !isEmpty}
+            <span
+                class="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
+                data-testid="annotation-source-count">{sourcesSummary}</span
+            >
+        {:else if summary.count}
             <span
                 class="shrink-0 whitespace-nowrap text-sm text-diffuse-foreground"
                 data-testid="annotation-source-count">{summary.count}</span

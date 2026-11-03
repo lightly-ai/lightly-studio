@@ -1,10 +1,16 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { CATEGORICAL_PALETTE, getColorByLabel, setLabelColorOrder } from './getColorByLabel';
+import {
+    CATEGORICAL_PALETTE,
+    getColorByLabel,
+    setLabelColorOrder,
+    setSourceColorOrder
+} from './getColorByLabel';
 import { hexToRgb } from './colorConvert';
 
 afterEach(() => {
     useCustomLabelColors().clearCustomColors();
     setLabelColorOrder([]);
+    setSourceColorOrder([]);
 });
 
 describe('getColorByLabel', () => {
@@ -98,5 +104,18 @@ describe('getColorByLabel', () => {
             useCustomLabelColors().deleteCustomColor('cat');
             expect(getColorByLabel('cat', 1)).toEqual(original);
         });
+    });
+});
+
+describe('setSourceColorOrder', () => {
+    test('gives each annotation source its own color unless it has a custom one', () => {
+        const sources = ['labels', 'model_v1', 'model_v2', 'model_v4'];
+        setSourceColorOrder(sources);
+
+        const colors = sources.map((name) => getColorByLabel(name, 1).color);
+        expect(new Set(colors).size).toBe(sources.length);
+
+        useCustomLabelColors().setCustomColor('labels', '#123456', 1);
+        expect(getColorByLabel('labels', 1).color).not.toBe(colors[0]);
     });
 });
