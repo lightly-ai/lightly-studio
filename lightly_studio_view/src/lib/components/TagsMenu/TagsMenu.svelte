@@ -1,37 +1,16 @@
 <script lang="ts">
-    import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { FilterList } from '$lib/components/FilterList';
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import {
-        createTag,
-        addSampleIdsToTagId,
-        addSamplesToTagByFilter,
-        deleteTag,
-        renameTag
-    } from '$lib/api/lightly_studio_local';
-    import { getSelectionTarget } from '$lib/hooks/useSelectionTarget/useSelectionTarget';
-    import TagAssignInput from './TagAssignInput.svelte';
+    import { deleteTag, renameTag } from '$lib/api/lightly_studio_local';
     import { ItemRenameInput } from '$lib/components/ItemRenameInput';
     import { ItemActionMenu } from '$lib/components/ItemActionMenu';
     import { toast } from 'svelte-sonner';
-    import { usePostHog } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
-    let {
-        collection_id,
-        gridType,
-        allowAssign = true
-    }: Parameters<typeof useTags>[0] & {
-        gridType: GridType;
-        /** Set to false for views without a selection to assign tags to, so they only filter. */
-        allowAssign?: boolean;
-    } = $props();
-
-    const isAnnotationGrid = $derived(gridType === 'annotations');
+    let { collection_id }: Parameters<typeof useTags>[0] = $props();
 
     const { tags, tagsSelected, tagSelectionToggle, setTagSelected, loadTags, clearTagSelected } =
         $derived(useTags({ collection_id }));
@@ -48,99 +27,14 @@
         $tags.forEach((tag) => setTagSelected(tag.tag_id, ids.includes(tag.tag_id)));
     };
 
-    const { getSelectedSampleIds, selectedSampleAnnotationCropIds } = useGlobalStorage();
-
-    const selectedSampleIds = $derived(getSelectedSampleIds(collection_id));
-    const hasSelection = $derived(
-        isAnnotationGrid
-            ? ($selectedSampleAnnotationCropIds[collection_id]?.size ?? 0) > 0
-            : $selectedSampleIds.size > 0
-    );
-    const selectedIds = $derived(
-        isAnnotationGrid
-            ? ($selectedSampleAnnotationCropIds[collection_id] ?? new Set<string>())
-            : $selectedSampleIds
-    );
-
-    const { trackEvent } = usePostHog();
     const { user } = useAuth();
     const canManageTags = $derived(hasMinimumRole(user?.role, 'labeler'));
 
-    let assignBusy = $state(false);
     let deletingTagId = $state<string | null>(null);
     let editingTagId = $state<string | null>(null);
     let renamingTagId = $state<string | null>(null);
     let openActionsTagId = $state<string | null>(null);
     let suppressCloseAutoFocusTagId = $state<string | null>(null);
-
-    // Tag by filter when the selection is still an unmodified select-all (do not send
-    // a potentially large ID list), else fall back to the ID-list path.
-    function assignSelectionToTag(tag_id: string) {
-        const target = getSelectionTarget(collection_id, gridType);
-        if (target.kind === 'filter') {
-            return addSamplesToTagByFilter({
-                path: { collection_id, tag_id },
-                body: { filter: target.filter }
-            });
-        }
-        return addSampleIdsToTagId({
-            path: { collection_id, tag_id },
-            body: { sample_ids: target.ids }
-        });
-    }
-
-    async function handleAssign(name: string) {
-        assignBusy = true;
-        const snapshotCount = selectedIds.size;
-
-        function trackTagged(isNewTag: boolean) {
-            try {
-                trackEvent('samples_tagged', {
-                    collection_id,
-                    grid_type: gridType,
-                    sample_count: snapshotCount,
-                    is_new_tag: isNewTag
-                });
-            } catch (e) {
-                console.error('Failed to track samples_tagged event', e);
-            }
-        }
-
-        try {
-            const existingTag = $tags.find(
-                (t: TagView) => t.name.toLowerCase() === name.toLowerCase()
-            );
-            if (existingTag) {
-                const response = await assignSelectionToTag(existingTag.tag_id);
-                if (response.error) {
-                    toast.error('Failed to assign tag. Please try again.');
-                    return;
-                }
-                trackTagged(false);
-            } else {
-                const createResponse = await createTag({
-                    path: { collection_id },
-                    body: { name }
-                });
-                if (createResponse.error || !createResponse.data?.tag_id) {
-                    toast.error('Failed to create tag. Please try again.');
-                    return;
-                }
-                const assignResponse = await assignSelectionToTag(createResponse.data.tag_id);
-                if (assignResponse.error) {
-                    toast.error('Failed to assign tag. Please try again.');
-                    return;
-                }
-                trackTagged(true);
-            }
-            loadTags();
-        } catch (error) {
-            console.error('Failed to assign tag', error);
-            toast.error('Failed to assign tag. Please try again.');
-        } finally {
-            assignBusy = false;
-        }
-    }
 
     async function handleDeleteTag(tag: TagView, event: MouseEvent) {
         event.stopPropagation();
@@ -257,14 +151,5 @@
                 {/if}
             {/snippet}
         </FilterList>
-
-        {#if canManageTags && allowAssign}
-            <TagAssignInput
-                options={$tags}
-                {hasSelection}
-                busy={assignBusy}
-                onSelect={handleAssign}
-            />
-        {/if}
     </div>
 </Segment>

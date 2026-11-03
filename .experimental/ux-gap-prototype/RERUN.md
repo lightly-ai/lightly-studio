@@ -99,7 +99,7 @@ the Annotations plot counts the new boxes.
 | Row | Do | Prototype should |
 |---|---|---|
 | 23 | Sample view, edit mode: drag a `model_v1` row's grip onto the `labels` group (or use the folder icon) | Box moves to `labels`, keeps its embedding |
-| 22, 23 | Annotations grid, edit mode, select `model_v1` tiles, "Move to annotation source" | Tiles leave the grid; they show under `labels` |
+| 22, 23 | Annotations grid, edit mode, select `model_v1` tiles, pill: Annotate, "Move to annotation source…" | Tiles leave the grid; they show under `labels`. No selected-annotations side panel |
 
 Time 4 images fixed from predictions against 4 labeled from scratch, as in the original step.
 

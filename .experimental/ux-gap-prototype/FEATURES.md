@@ -19,9 +19,10 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   source and its annotations, metadata included. The SDK can delete a source too. Rows 20, 22.
   Try: source list, "...", Delete. Commits: c007c8c28, 7c3501e6e, 405b4ab41, 7f07a5c11.
 - **Move annotations to another source.** One annotation from the sample details panel (folder
-  icon), many from the Annotations grid in edit mode ("Move to annotation source"). IDs, tags and
-  embeddings stay. If the move fails, the annotations stay where they were. Rows 22, 23.
-  Try: Annotations grid, edit mode, select tiles, "Move to annotation source".
+  icon), many from the selection pill on the Annotations grid (Annotate, "Move to annotation
+  source…"). IDs, tags and embeddings stay. If the move fails, the annotations stay where they
+  were. Rows 22, 23. Try: Annotations grid, edit mode, select tiles, Annotate, "Move to
+  annotation source…".
   Commits: 3f7cd598f, d127a1dd4.
 - **Drag annotations between sources.** In edit mode each annotation row in sample details has a
   grip; drop it on another source group. Row 23. Try: open a sample with two sources, edit mode,
@@ -45,6 +46,23 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 - **Removed: amber hint above the annotation sources.** A line warned when no target was picked
   or the target was hidden. Dropped because the pencils and the toast on a blocked draw already
   say what to do. Rows 22, 23. Commits: 1fb9dda64 (added), 60b20b12a (removed).
+
+## Selection pill
+
+- **Selection edits live in the pill.** In edit mode the "N selected" pill shows Tag and
+  Annotate; outside edit mode it shows only the count and clear. The side panels for selected
+  images and selected annotations and the "Assign tag to selection" input in the tag filter are
+  gone. Rows 22, 23. Try: Images grid, edit mode, select tiles.
+- **Tag popover.** One field finds or creates a tag; each row shows "k/N" with + and × on hover.
+  Toasts say "Added 'a' to 9 items" and "Removed 'b' from 3 items". Images and Annotations grids.
+  Commits: 23ea42cc4, 9eb0543af.
+- **Annotate popover, Images grid.** Pick an annotation source (none is picked when there are
+  several; a hidden source is refused), then + adds a classification of a class to every
+  selected image and × deletes it after "Delete raccoon from 1 image in ground_truth?". Rows show
+  "k/N" for the picked source; a new name offers "Create 'name'". Commits: a408f5ed4.
+- **Annotate popover, Annotations grid.** "All N selected", one row per class with its count and
+  a trash that deletes those annotations after a confirm, "Relabel all to…" (undo with Ctrl+Z),
+  and "Move to annotation source…". Commits: a02c00bd7.
 
 ## Filter panel
 

@@ -11,6 +11,7 @@ import {
     readAnnotationLabels,
     readCollection
 } from '$lib/api/lightly_studio_local/sdk.gen';
+import { get } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks';
 import AnnotationsAnnotatePopoverHarness from './AnnotationsAnnotatePopoverHarness.svelte';
 
@@ -45,6 +46,7 @@ beforeEach(() => {
     mocks.target = { kind: 'ids', ids };
     const storage = useGlobalStorage();
     storage.clearSelectedSampleAnnotationCrops('c1');
+    storage.clearReversibleActions();
     ids.forEach((id) => storage.toggleSampleAnnotationCropSelection('c1', id));
     vi.mocked(labelCounts).mockResolvedValue({
         data: [
@@ -71,7 +73,7 @@ beforeEach(() => {
         data: { deleted_count: 1 }
     } as never);
     vi.mocked(bulkRelabelAnnotations).mockResolvedValue({
-        data: { previous_labels: [] }
+        data: { previous_labels: [{ annotation_id: 'a1', label_name: 'deer' }] }
     } as never);
     vi.mocked(moveAnnotations).mockResolvedValue({ data: { moved_count: 4 } } as never);
 });
@@ -133,6 +135,9 @@ describe('AnnotationsAnnotatePopover', () => {
                 body: { annotation_ids: ids, label_name: 'raccoon' }
             })
         );
+        expect(get(useGlobalStorage().reversibleActions)).toEqual([
+            expect.objectContaining({ groupId: 'annotation-label-change' })
+        ]);
 
         ids.forEach((id) => useGlobalStorage().toggleSampleAnnotationCropSelection('c1', id));
         await user.clear(input);

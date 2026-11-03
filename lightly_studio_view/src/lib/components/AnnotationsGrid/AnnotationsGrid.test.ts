@@ -22,11 +22,8 @@ const SORT_BY: AnnotationEvaluationMetricSortExpr = {
 const mocks = vi.hoisted(() => ({
     annotationsData: [] as AnnotationWithPayloadView[],
     sortedAnnotationsData: [] as AnnotationWithPayloadView[],
-    relabelAnnotations: vi.fn(),
     selectAllAnnotationSnapshot: null as unknown as Writable<unknown>,
-    updateAnnotationsRaw: vi.fn(),
     refresh: vi.fn(),
-    isPendingStore: null as unknown as Writable<boolean>,
     pickedAnnotationIds: null as unknown as Writable<Record<string, Set<string>>>,
     toggleSampleAnnotationCropSelection: vi.fn(),
     clearSelectedSampleAnnotationCrops: vi.fn(),
@@ -86,7 +83,6 @@ vi.mock('$lib/hooks/useSettings', async () => {
 
 vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
-    mocks.isPendingStore = writable(false);
     mocks.pickedAnnotationIds = writable({});
     mocks.textEmbeddingStore = writable(undefined);
     mocks.selectAllAnnotationSnapshot = writable(null);
@@ -151,19 +147,6 @@ vi.mock('$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite', () => ({
     }))
 }));
 
-vi.mock('$lib/hooks/useBulkRelabelAnnotations/useBulkRelabelAnnotations', () => ({
-    useBulkRelabelAnnotations: vi.fn(() => ({
-        relabelAnnotations: mocks.relabelAnnotations,
-        isPending: mocks.isPendingStore
-    }))
-}));
-
-vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
-    useUpdateAnnotationsMutation: vi.fn(() => ({
-        updateAnnotations: mocks.updateAnnotationsRaw
-    }))
-}));
-
 vi.mock('$lib/hooks/useScrollRestoration/useScrollRestoration', () => ({
     useScrollRestoration: vi.fn(() => ({
         initialize: vi.fn(),
@@ -215,12 +198,6 @@ vi.mock('./AnnotationClassificationGridItem/AnnotationClassificationGridItem.sve
     return { default: MockClassification };
 });
 
-vi.mock('./SelectedAnnotations/SelectedAnnotations.svelte', async () => {
-    const { default: MockSelectedAnnotations } =
-        await import('./SelectedAnnotations/SelectedAnnotations.mock.svelte');
-    return { default: MockSelectedAnnotations };
-});
-
 vi.mock('./AnnotationItem/renderCropObjectUrl', () => ({
     renderCropObjectUrl: vi.fn().mockResolvedValue(null)
 }));
@@ -260,9 +237,6 @@ describe('AnnotationsGrid', () => {
         mocks.textEmbeddingStore.set(undefined);
         mocks.sortBy = null;
         mocks.selectAllAnnotationSnapshot.set(null);
-        mocks.relabelAnnotations.mockResolvedValue({
-            data: { previous_labels: [{ annotation_id: 'cls-1', label_name: 'cat' }] }
-        });
     });
 
     function renderWithSortSelection() {
@@ -319,83 +293,5 @@ describe('AnnotationsGrid', () => {
         await fireEvent.click(gridItem);
 
         expect(mocks.toggleSampleAnnotationCropSelection).toHaveBeenCalledWith('col-1', 'cls-1');
-    });
-
-    it('relabels every selected annotation, including ones not loaded', async () => {
-        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
-        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1', 'not-loaded']) });
-        mocks.isEditingModeStore.set(true);
-
-        renderGrid();
-
-        await fireEvent.click(screen.getByTestId('mock-select-label'));
-
-        expect(mocks.relabelAnnotations).toHaveBeenCalledWith({
-            collectionId: 'col-1',
-            selectedIds: new Set(['cls-1', 'not-loaded']),
-            selectAllSnapshot: null,
-            labelName: 'new-label'
-        });
-        expect(mocks.clearSelectedSampleAnnotationCrops).toHaveBeenCalledWith('col-1');
-    });
-
-    it('passes the annotation select-all snapshot to the relabel', async () => {
-        const snapshot = { filter: { filter_type: 'annotations' }, size: 2 };
-        mocks.selectAllAnnotationSnapshot.set(snapshot);
-        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
-        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1', 'not-loaded']) });
-        mocks.isEditingModeStore.set(true);
-
-        renderGrid();
-
-        await fireEvent.click(screen.getByTestId('mock-select-label'));
-
-        expect(mocks.relabelAnnotations).toHaveBeenCalledWith(
-            expect.objectContaining({ selectAllSnapshot: snapshot })
-        );
-    });
-
-    it('undoes the relabel with the previous labels from the server', async () => {
-        mocks.relabelAnnotations.mockResolvedValue({
-            data: {
-                previous_labels: [
-                    { annotation_id: 'cls-1', label_name: 'cat' },
-                    { annotation_id: 'not-loaded', label_name: 'dog' }
-                ]
-            }
-        });
-        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
-        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1', 'not-loaded']) });
-        mocks.isEditingModeStore.set(true);
-
-        renderGrid();
-
-        await fireEvent.click(screen.getByTestId('mock-select-label'));
-
-        expect(mocks.addReversibleAction).toHaveBeenCalledWith(
-            expect.objectContaining({
-                description: 'Undo label change for 2 annotations',
-                groupId: 'annotation-label-change'
-            })
-        );
-        await mocks.addReversibleAction.mock.calls[0][0].execute();
-        expect(mocks.updateAnnotationsRaw).toHaveBeenCalledWith([
-            { annotation_id: 'cls-1', label_name: 'cat', collection_id: 'col-1' },
-            { annotation_id: 'not-loaded', label_name: 'dog', collection_id: 'col-1' }
-        ]);
-    });
-
-    it('keeps the selection and adds no undo when the relabel fails', async () => {
-        mocks.relabelAnnotations.mockResolvedValue({ error: { detail: 'Boom' } });
-        mocks.annotationsData = [buildClassificationAnnotation('cls-1')];
-        mocks.pickedAnnotationIds.set({ 'col-1': new Set(['cls-1']) });
-        mocks.isEditingModeStore.set(true);
-
-        renderGrid();
-
-        await fireEvent.click(screen.getByTestId('mock-select-label'));
-
-        expect(mocks.addReversibleAction).not.toHaveBeenCalled();
-        expect(mocks.clearSelectedSampleAnnotationCrops).not.toHaveBeenCalled();
     });
 });

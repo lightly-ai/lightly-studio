@@ -10,12 +10,9 @@
     import { onDestroy, onMount } from 'svelte';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
-    import { useAnnotationSortBy, useBulkRelabelAnnotations } from '$lib/hooks';
+    import { useAnnotationSortBy } from '$lib/hooks';
     import { afterNavigate, goto } from '$app/navigation';
-    import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
-    import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
-    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import type { AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -25,8 +22,6 @@
     import { useAnnotationTileSelection } from './useAnnotationTileSelection/useAnnotationTileSelection';
     import AnnotationTile from './AnnotationTile/AnnotationTile.svelte';
     import { resolveTileFields, useTileFields } from '$lib/hooks/useTileFields/useTileFields';
-    import { get } from 'svelte/store';
-    import { toast } from 'svelte-sonner';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -48,7 +43,6 @@
 
     // Access the settings store
     const { showAnnotationTextLabelsStore } = useSettings();
-    const { isEditingMode } = page.data.globalStorage;
 
     // Track the setting value
     let showLabels = $derived($showAnnotationTextLabelsStore);
@@ -57,7 +51,6 @@
     const {
         getCollectionVersion,
         setfilteredAnnotationCount,
-        addReversibleAction,
         clearReversibleActions,
         textEmbedding
     } = useGlobalStorage();
@@ -112,12 +105,7 @@
         sort_by: searchEmbedding ? undefined : ($sortByFor(collection_id) ?? undefined)
     });
 
-    const { annotations: infiniteAnnotations, refresh } = useAnnotationsInfinite(() => queryParams);
-    const { relabelAnnotations, isPending } = useBulkRelabelAnnotations();
-
-    const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
-        getCollectionId: () => collection_id
-    });
+    const { annotations: infiniteAnnotations } = useAnnotationsInfinite(() => queryParams);
     let infiniteLoaderIdentifier = $derived(
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
@@ -146,9 +134,7 @@
     const { user } = useAuth();
     const {
         selectedSampleAnnotationCropIds: pickedAnnotationIds,
-        toggleSampleAnnotationCropSelection,
-        clearSelectedSampleAnnotationCrops,
-        getSelectAllAnnotationSnapshot
+        toggleSampleAnnotationCropSelection
     } = useGlobalStorage();
 
     const annotations: AnnotationWithPayloadView[] = $derived(
@@ -190,42 +176,7 @@
         }
     }
 
-    const selectedCount = $derived($pickedAnnotationIds[collection_id]?.size ?? 0);
-
-    const handleSelectLabel = async (item: { value: string; label: string }) => {
-        const snapshot = get(getSelectAllAnnotationSnapshot(collection_id));
-        const { data, error } = await relabelAnnotations({
-            collectionId: collection_id,
-            selectedIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
-            selectAllSnapshot:
-                snapshot?.filter.filter_type === 'annotations'
-                    ? { filter: snapshot.filter, size: snapshot.size }
-                    : null,
-            labelName: item.value
-        });
-        if (!data) {
-            toast.error('Failed to update annotations: ' + JSON.stringify(error));
-            return;
-        }
-
-        addAnnotationLabelChangeToUndoStack({
-            annotations: data.previous_labels.map((previousLabel) => ({
-                sample_id: previousLabel.annotation_id,
-                annotation_label: { annotation_label_name: previousLabel.label_name }
-            })),
-            collectionId: collection_id,
-            addReversibleAction,
-            updateAnnotations: updateAnnotationsRaw,
-            refresh
-        });
-        toast.success('Annotations updated successfully');
-        clearSelectedSampleAnnotationCrops(collection_id);
-    };
-
     const scrollResetKey = $derived(infiniteLoaderIdentifier);
-    const hideSelectedAnnotationsPanel = $derived(
-        infiniteAnnotations.isFetched && annotations.length === 0
-    );
 </script>
 
 <div class="flex h-full min-w-0 flex-1">
@@ -298,15 +249,4 @@
             {/snippet}
         </GridContainer>
     </div>
-    {#if $isEditingMode && !hideSelectedAnnotationsPanel}
-        <div class="min-w-[250px] max-w-[30%] flex-1">
-            <SelectedAnnotations
-                {selectedCount}
-                disabled={selectedCount === 0}
-                isLoading={$isPending}
-                onSelect={handleSelectLabel}
-                collectionId={collection_id}
-            />
-        </div>
-    {/if}
 </div>

@@ -132,6 +132,7 @@
         filteredSampleCount,
         filteredCaptionCount,
         filteredAnnotationCount,
+        isEditingMode,
         // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
         // captures a store reference that never goes stale.
         textEmbedding
@@ -688,11 +689,7 @@
                             {/if}
 
                             <div>
-                                <TagsMenu
-                                    collection_id={metadataCollectionId}
-                                    {gridType}
-                                    allowAssign={!isCaptions}
-                                />
+                                <TagsMenu collection_id={metadataCollectionId} />
                             </div>
 
                             <EmbeddingSelectionFilterItem
@@ -780,7 +777,13 @@
                     {@render children()}
                 </div>
                 {#if isCollectionGrid}
-                    <SelectionPill selectedCount={$selectedCount} onClear={clearSelection} />
+                    <SelectionPill
+                        selectedCount={$selectedCount}
+                        onClear={clearSelection}
+                        {collectionId}
+                        {gridType}
+                        isEditing={$isEditingMode}
+                    />
                 {/if}
             {/snippet}
 

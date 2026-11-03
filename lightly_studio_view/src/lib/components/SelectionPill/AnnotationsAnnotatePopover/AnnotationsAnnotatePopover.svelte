@@ -18,6 +18,9 @@
     } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCollection } from '$lib/hooks/useCollection/useCollection';
+    import { getAnnotationsInfiniteQueryKeyPrefix } from '$lib/hooks/useAnnotationsInfinite/createAnnotationsInfiniteOptions';
+    import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+    import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { getSelectionTarget } from '$lib/hooks/useSelectionTarget/useSelectionTarget';
     import { buildSelectionAnnotationsFilter } from './annotationsAnnotatePopover.helpers';
 
@@ -31,8 +34,14 @@
     let { collectionId, selectedCount, open, onOpenChange }: Props = $props();
 
     const client = useQueryClient();
-    const { selectedSampleAnnotationCropIds, clearSelectedSampleAnnotationCrops } =
-        useGlobalStorage();
+    const {
+        selectedSampleAnnotationCropIds,
+        clearSelectedSampleAnnotationCrops,
+        addReversibleAction
+    } = useGlobalStorage();
+    const { updateAnnotations } = useUpdateAnnotationsMutation({
+        getCollectionId: () => collectionId
+    });
     const { deleteAnnotations } = useBulkDeleteAnnotations();
     const { relabelAnnotations } = useBulkRelabelAnnotations();
     const { moveToSource } = useMoveAnnotationsToSource();
@@ -106,6 +115,19 @@
             toast.error('Failed to relabel the annotations.');
             return;
         }
+        addAnnotationLabelChangeToUndoStack({
+            annotations: data.previous_labels.map((previous) => ({
+                sample_id: previous.annotation_id,
+                annotation_label: { annotation_label_name: previous.label_name }
+            })),
+            collectionId,
+            addReversibleAction,
+            updateAnnotations,
+            refresh: () =>
+                client.invalidateQueries({
+                    queryKey: [...getAnnotationsInfiniteQueryKeyPrefix(collectionId)]
+                })
+        });
         toast.success(`Relabeled ${data.previous_labels.length} annotations to '${labelName}'`);
         name = '';
         finish();

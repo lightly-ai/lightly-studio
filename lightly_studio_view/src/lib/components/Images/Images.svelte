@@ -33,7 +33,6 @@
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { page } from '$app/state';
     import SampleImageGridItem from '../SampleImageGridItem/SampleImageGridItem.svelte';
-    import BulkClassificationPanelContainer from '../BulkClassificationPanel/BulkClassificationPanelContainer.svelte';
     import { useTileFields } from '$lib/hooks/useTileFields/useTileFields';
 
     // Import the settings hook
@@ -360,5 +359,4 @@
             {/snippet}
         </GridContainer>
     </div>
-    <BulkClassificationPanelContainer collectionId={collection_id} />
 </div>

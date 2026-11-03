@@ -1,28 +1,15 @@
-import {
-    addSampleIdsToTagId,
-    addSamplesToTagByFilter,
-    createTag,
-    deleteTag,
-    renameTag
-} from '$lib/api/lightly_studio_local';
+import { deleteTag, renameTag } from '$lib/api/lightly_studio_local';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { readable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import TagsMenu from './TagsMenu.svelte';
-import type { TagByFilterBody } from '$lib/api/lightly_studio_local';
 import type { TagView } from '$lib/services/types';
 import { toast } from 'svelte-sonner';
 import useAuth from '$lib/hooks/useAuth/useAuth';
 
-type SelectAllSnapshot = { filter: TagByFilterBody['filter']; size: number };
-
 const mocks = vi.hoisted(() => ({
     tags: [] as TagView[],
     tagsSelected: new Set<string>(),
-    selectedSampleIdsByCollection: {} as Record<string, Set<string>>,
-    selectedSampleAnnotationCropIds: {} as Record<string, Set<string>>,
-    selectAllSnapshotByCollection: {} as Record<string, SelectAllSnapshot | null>,
-    selectAllAnnotationSnapshotByCollection: {} as Record<string, SelectAllSnapshot | null>,
     loadTags: vi.fn(),
     tagSelectionToggle: vi.fn(),
     clearTagSelected: vi.fn()
@@ -32,9 +19,6 @@ vi.mock('$lib/api/lightly_studio_local', async () => {
     const actual = await vi.importActual('$lib/api/lightly_studio_local');
     return {
         ...actual,
-        createTag: vi.fn(),
-        addSampleIdsToTagId: vi.fn(),
-        addSamplesToTagByFilter: vi.fn(),
         deleteTag: vi.fn(),
         renameTag: vi.fn()
     };
@@ -48,18 +32,6 @@ vi.mock('$lib/hooks/useTags/useTags.js', () => ({
         loadTags: mocks.loadTags,
         clearTagSelected: mocks.clearTagSelected
     }))
-}));
-
-vi.mock('$lib/hooks/useGlobalStorage', () => ({
-    useGlobalStorage: () => ({
-        getSelectedSampleIds: (collectionId: string) =>
-            readable(mocks.selectedSampleIdsByCollection[collectionId] ?? new Set<string>()),
-        selectedSampleAnnotationCropIds: readable(mocks.selectedSampleAnnotationCropIds),
-        getSelectAllSnapshot: (collectionId: string) =>
-            readable(mocks.selectAllSnapshotByCollection[collectionId] ?? null),
-        getSelectAllAnnotationSnapshot: (collectionId: string) =>
-            readable(mocks.selectAllAnnotationSnapshotByCollection[collectionId] ?? null)
-    })
 }));
 
 vi.mock('svelte-sonner', () => ({
@@ -93,33 +65,6 @@ describe('TagsMenu', () => {
         });
         mocks.tags = [sampleTag];
         mocks.tagsSelected = new Set<string>();
-        mocks.selectedSampleIdsByCollection = {};
-        mocks.selectedSampleAnnotationCropIds = {};
-        mocks.selectAllSnapshotByCollection = {};
-        mocks.selectAllAnnotationSnapshotByCollection = {};
-        vi.mocked(addSampleIdsToTagId).mockResolvedValue({
-            data: true,
-            error: undefined,
-            request: mockRequest,
-            response: mockResponse
-        });
-        vi.mocked(addSamplesToTagByFilter).mockResolvedValue({
-            data: true,
-            error: undefined,
-            request: mockRequest,
-            response: mockResponse
-        });
-        vi.mocked(createTag).mockResolvedValue({
-            data: {
-                tag_id: 'created-tag-id',
-                name: 'Created Tag',
-                created_at: new Date('2024-01-03T00:00:00.000Z'),
-                updated_at: new Date('2024-01-03T00:00:00.000Z')
-            },
-            error: undefined,
-            request: mockRequest,
-            response: mockResponse
-        });
         vi.mocked(deleteTag).mockResolvedValue({
             data: {
                 status: 'deleted'
@@ -139,209 +84,10 @@ describe('TagsMenu', () => {
         });
     });
 
-    async function pickExistingTag(query: string, optionLabel: string) {
-        const input = screen.getByPlaceholderText('Assign tag to selection');
-        await fireEvent.focus(input);
-        await fireEvent.input(input, { target: { value: query } });
-        await fireEvent.click(screen.getByRole('button', { name: optionLabel }));
-    }
-
     it('shows the tag search even for a short tag list', () => {
-        render(TagsMenu, { props: { collection_id: 'collection-1', gridType: 'images' } });
+        render(TagsMenu, { props: { collection_id: 'collection-1' } });
 
         expect(screen.getByPlaceholderText('Search tags…')).toBeInTheDocument();
-    });
-
-    it('assigns an existing tag to the selected samples', async () => {
-        mocks.selectedSampleIdsByCollection = {
-            'collection-1': new Set(['sample-1', 'sample-2'])
-        };
-
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
-            }
-        });
-
-        await pickExistingTag('veh', 'Vehicle');
-
-        await waitFor(() => {
-            expect(addSampleIdsToTagId).toHaveBeenCalledWith({
-                path: {
-                    collection_id: 'collection-1',
-                    tag_id: 'tag-1'
-                },
-                body: {
-                    sample_ids: ['sample-1', 'sample-2']
-                }
-            });
-        });
-
-        expect(createTag).not.toHaveBeenCalled();
-        expect(mocks.loadTags).toHaveBeenCalled();
-    });
-
-    it('hides the assign input when allowAssign is false', () => {
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'captions',
-                allowAssign: false
-            }
-        });
-
-        expect(screen.queryByPlaceholderText('Assign tag to selection')).not.toBeInTheDocument();
-    });
-
-    it('tags by filter when the selection is an unmodified select-all', async () => {
-        mocks.selectedSampleIdsByCollection = {
-            'collection-1': new Set(['sample-1', 'sample-2'])
-        };
-        mocks.selectAllSnapshotByCollection = {
-            'collection-1': { filter: { filter_type: 'image' }, size: 2 }
-        };
-
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
-            }
-        });
-
-        await pickExistingTag('veh', 'Vehicle');
-
-        await waitFor(() => {
-            expect(addSamplesToTagByFilter).toHaveBeenCalledWith({
-                path: {
-                    collection_id: 'collection-1',
-                    tag_id: 'tag-1'
-                },
-                body: {
-                    filter: { filter_type: 'image' }
-                }
-            });
-        });
-
-        expect(addSampleIdsToTagId).not.toHaveBeenCalled();
-        expect(mocks.loadTags).toHaveBeenCalled();
-    });
-
-    it('tags by the annotation filter when the annotation select-all is unmodified', async () => {
-        mocks.tags = [sampleTag];
-        mocks.selectedSampleAnnotationCropIds = {
-            'collection-1': new Set(['annotation-1', 'annotation-2'])
-        };
-        mocks.selectAllAnnotationSnapshotByCollection = {
-            'collection-1': { filter: { filter_type: 'annotations' }, size: 2 }
-        };
-
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'annotations'
-            }
-        });
-
-        await pickExistingTag('veh', 'Vehicle');
-
-        await waitFor(() => {
-            expect(addSamplesToTagByFilter).toHaveBeenCalledWith({
-                path: {
-                    collection_id: 'collection-1',
-                    tag_id: 'tag-1'
-                },
-                body: {
-                    filter: { filter_type: 'annotations' }
-                }
-            });
-        });
-
-        expect(addSampleIdsToTagId).not.toHaveBeenCalled();
-    });
-
-    it('falls back to the ID path when the snapshot size no longer matches', async () => {
-        mocks.selectedSampleIdsByCollection = {
-            'collection-1': new Set(['sample-1', 'sample-2'])
-        };
-        mocks.selectAllSnapshotByCollection = {
-            'collection-1': { filter: { filter_type: 'image' }, size: 5 }
-        };
-
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
-            }
-        });
-
-        await pickExistingTag('veh', 'Vehicle');
-
-        await waitFor(() => {
-            expect(addSampleIdsToTagId).toHaveBeenCalledWith({
-                path: {
-                    collection_id: 'collection-1',
-                    tag_id: 'tag-1'
-                },
-                body: {
-                    sample_ids: ['sample-1', 'sample-2']
-                }
-            });
-        });
-
-        expect(addSamplesToTagByFilter).not.toHaveBeenCalled();
-    });
-
-    it('creates an annotation tag and assigns it to the selected annotations', async () => {
-        mocks.tags = [];
-        mocks.selectedSampleAnnotationCropIds = {
-            'collection-1': new Set(['annotation-1', 'annotation-2'])
-        };
-
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'annotations'
-            }
-        });
-
-        const input = screen.getByPlaceholderText('Assign tag to selection');
-        await fireEvent.focus(input);
-        await fireEvent.input(input, { target: { value: 'New Annotation Tag' } });
-        await fireEvent.keyDown(input, { key: 'Enter' });
-
-        await waitFor(() => {
-            expect(createTag).toHaveBeenCalledWith({
-                path: {
-                    collection_id: 'collection-1'
-                },
-                body: {
-                    name: 'New Annotation Tag'
-                }
-            });
-        });
-
-        expect(addSampleIdsToTagId).toHaveBeenCalledWith({
-            path: {
-                collection_id: 'collection-1',
-                tag_id: 'created-tag-id'
-            },
-            body: {
-                sample_ids: ['annotation-1', 'annotation-2']
-            }
-        });
-        expect(mocks.loadTags).toHaveBeenCalled();
-    });
-
-    it('disables tag assignment when no samples are selected', () => {
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
-            }
-        });
-
-        expect(screen.getByPlaceholderText('Assign tag to selection')).toBeDisabled();
     });
 
     it('keeps tag filters but hides tag mutations for viewers', () => {
@@ -353,13 +99,11 @@ describe('TagsMenu', () => {
 
         render(TagsMenu, {
             props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
+                collection_id: 'collection-1'
             }
         });
 
         expect(screen.getByText('Vehicle')).toBeVisible();
-        expect(screen.queryByPlaceholderText('Assign tag to selection')).not.toBeInTheDocument();
         expect(screen.queryByTestId('tag-actions-trigger-tag-1')).not.toBeInTheDocument();
     });
 
@@ -372,44 +116,17 @@ describe('TagsMenu', () => {
 
         render(TagsMenu, {
             props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
+                collection_id: 'collection-1'
             }
         });
 
-        expect(screen.getByPlaceholderText('Assign tag to selection')).toBeVisible();
         expect(screen.getByTestId('tag-actions-trigger-tag-1')).toBeVisible();
-    });
-
-    it('shows a toast when tag assignment throws unexpectedly', async () => {
-        mocks.selectedSampleIdsByCollection = {
-            'collection-1': new Set(['sample-1'])
-        };
-        const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
-        vi.mocked(addSampleIdsToTagId).mockRejectedValue(new Error('network error'));
-
-        render(TagsMenu, {
-            props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
-            }
-        });
-
-        await pickExistingTag('veh', 'Vehicle');
-
-        await waitFor(() => {
-            expect(toast.error).toHaveBeenCalledWith('Failed to assign tag. Please try again.');
-        });
-
-        expect(mocks.loadTags).not.toHaveBeenCalled();
-        consoleErrorSpy.mockRestore();
     });
 
     it('deletes a tag from the sidebar actions menu', async () => {
         render(TagsMenu, {
             props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
+                collection_id: 'collection-1'
             }
         });
 
@@ -435,8 +152,7 @@ describe('TagsMenu', () => {
 
         render(TagsMenu, {
             props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
+                collection_id: 'collection-1'
             }
         });
 
@@ -454,8 +170,7 @@ describe('TagsMenu', () => {
     it('renames a tag from the inline row edit via tick button', async () => {
         render(TagsMenu, {
             props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
+                collection_id: 'collection-1'
             }
         });
 
@@ -497,8 +212,7 @@ describe('TagsMenu', () => {
 
         render(TagsMenu, {
             props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
+                collection_id: 'collection-1'
             }
         });
 
@@ -520,8 +234,7 @@ describe('TagsMenu', () => {
     it('does not toggle the checkbox when opening the tag actions menu', async () => {
         render(TagsMenu, {
             props: {
-                collection_id: 'collection-1',
-                gridType: 'images'
+                collection_id: 'collection-1'
             }
         });
 
