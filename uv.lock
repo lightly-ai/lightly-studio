@@ -102,7 +102,7 @@ dependencies = [
     { name = "jmespath" },
     { name = "multidict" },
     { name = "python-dateutil" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
     { name = "wrapt" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1d/ce/7d593e50d481b649c99a407c8249f9cf6437840a3adc4ecc9127f9a843d2/aiobotocore-3.2.1.tar.gz", hash = "sha256:59b1c1f59860cb10b2e5096edcc87a88842bee301969bd76a3ca0b1c4c30e6d3", size = 122788, upload-time = "2026-03-04T22:30:43.342Z" }
@@ -263,8 +263,7 @@ version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "frozenlist" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/61/62/06741b579156360248d1ec624842ad0edf697050bbaf7c3e46394e106ad1/aiosignal-1.4.0.tar.gz", hash = "sha256:f47eecd9468083c2029cc99945502cb7708b082c232f9aca65da147157b251c7", size = 25007, upload-time = "2025-07-03T22:54:43.528Z" }
 wheels = [
@@ -279,8 +278,7 @@ dependencies = [
     { name = "mako" },
     { name = "sqlalchemy" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/94/13/8b084e0f2efb0275a1d534838844926f798bd766566b1375174e2448cd31/alembic-1.18.4.tar.gz", hash = "sha256:cb6e1fd84b6174ab8dbb2329f86d631ba9559dd78df550b57804d607672cedbc", size = 2056725, upload-time = "2026-02-10T16:00:47.195Z" }
 wheels = [
@@ -326,17 +324,16 @@ sdist = { url = "https://files.pythonhosted.org/packages/3e/38/7859ff46355f76f8d
 
 [[package]]
 name = "anyio"
-version = "4.14.2"
+version = "4.16.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "idna" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.15'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/61/cc/a381afa6efea9f496eff839d4a6a1aed3bfafc7b3ab4b0d1b243a12573dd/anyio-4.14.2.tar.gz", hash = "sha256:cfa139f3ed1a23ee8f88a145ddb5ac7605b8bbfd8592baacd7ce3d8bb4313c7f", size = 260176, upload-time = "2026-07-12T20:29:07.082Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/a1/98/7e457a3b014976887a050561955c0b76e1e7e2d6e27b78ecef2ef80518f2/anyio-4.16.0.tar.gz", hash = "sha256:59bb03251907983d1603d27c3087ddb1e93299ea2163adcdba37899a4fb12ffb", size = 310971, upload-time = "2026-11-01T11:20:07.282Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/da/35/f2287558c17e29fafc8ef3daf819bb9834061cfa43bff8014f7df7f63bdc/anyio-4.14.2-py3-none-any.whl", hash = "sha256:9f505dda5ac9f0c8309b5e8bd445a8c2bf7246f3ce950121e45ea15bc41d1494", size = 125813, upload-time = "2026-07-12T20:29:05.763Z" },
+    { url = "https://files.pythonhosted.org/packages/a9/16/7757fb84c819accc7d7e9af5291b261e4abb8627ee040f99e7d35ef2457a/anyio-4.16.0-py3-none-any.whl", hash = "sha256:c66ae634e0b8228396b801741beb3294326d4b6102f7bba4041c0dfb58c29026", size = 134521, upload-time = "2026-11-01T11:20:05.59Z" },
 ]
 
 [[package]]
@@ -496,8 +493,7 @@ dependencies = [
     { name = "jsonschema" },
     { name = "pydantic", version = "2.12.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pydantic", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/d0/e3/82cc7240504b1c0d2d7ed7028b05ccceedb02932b8638c61a8372a5d875f/aws_sam_translator-1.103.0.tar.gz", hash = "sha256:8317b72ef412db581dc7846932a44dfc1729adea578d9307a3e6ece46a7882ca", size = 344881, upload-time = "2025-11-21T19:50:51.818Z" }
 wheels = [
@@ -523,8 +519,7 @@ version = "1.38.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "requests" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c8/29/9641b73248745774a52c7ce7f965ed1febbdea787ec21caad3ae6891d18a/azure_core-1.38.3.tar.gz", hash = "sha256:a7931fd445cb4af8802c6f39c6a326bbd1e34b115846550a8245fa656ead6f8e", size = 367267, upload-time = "2026-03-12T20:28:21.122Z" }
 wheels = [
@@ -559,8 +554,7 @@ dependencies = [
     { name = "cryptography" },
     { name = "msal" },
     { name = "msal-extensions" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c5/0e/3a63efb48aa4a5ae2cfca61ee152fbcb668092134d3eb8bfda472dd5c617/azure_identity-1.25.3.tar.gz", hash = "sha256:ab23c0d63015f50b630ef6c6cf395e7262f439ce06e5d07a64e874c724f8d9e6", size = 286304, upload-time = "2026-03-13T01:12:20.892Z" }
 wheels = [
@@ -575,8 +569,7 @@ dependencies = [
     { name = "azure-core" },
     { name = "cryptography" },
     { name = "isodate" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/71/24/072ba8e27b0e2d8fec401e9969b429d4f5fc4c8d4f0f05f4661e11f7234a/azure_storage_blob-12.28.0.tar.gz", hash = "sha256:e7d98ea108258d29aa0efbfd591b2e2075fa1722a2fae8699f0b3c9de11eff41", size = 604225, upload-time = "2026-01-06T23:48:57.282Z" }
 wheels = [
@@ -660,8 +653,7 @@ version = "4.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "soupsieve" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/43/65/318323f98dbee45d42dff61d8f047181bc6f2268a9068cfad035a46be5af/beautifulsoup4-4.15.0.tar.gz", hash = "sha256:288e3ca7d54b06f2ac191970bc275c1939cb46d450b255bf6718b04aa37ab4f7", size = 632571, upload-time = "2026-06-07T16:44:20.453Z" }
 wheels = [
@@ -680,7 +672,7 @@ dependencies = [
     { name = "platformdirs" },
     { name = "pytokens" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e1/c5/61175d618685d42b005847464b8fb4743a67b1b8fdb75e50e5a96c31a27a/black-26.3.1.tar.gz", hash = "sha256:2c50f5063a9641c7eed7795014ba37b0f5fa227f3d408b968936e24bc0566b07", size = 666155, upload-time = "2026-03-12T03:36:03.593Z" }
 wheels = [
@@ -935,8 +927,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "regex" },
     { name = "sympy" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/ee/b5/436c192cdf8dbddd8e09a591384f126c5a47937c14953d87b1dacacd0543/cfn_lint-1.41.0.tar.gz", hash = "sha256:6feca1cf57f9ed2833bab68d9b1d38c8033611e571fa792e45ab4a39e2b8ab57", size = 3408534, upload-time = "2025-11-18T20:03:33.431Z" }
 wheels = [
@@ -1178,7 +1169,7 @@ version = "46.0.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cffi", marker = "platform_python_implementation != 'PyPy'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/60/04/ee2a9e8542e4fa2773b81771ff8349ff19cdd56b7258a0cc442639052edb/cryptography-46.0.5.tar.gz", hash = "sha256:abace499247268e3757271b2f1e244b36b06f8515cf27c4d49468fc9eb16e93d", size = 750064, upload-time = "2026-02-10T19:18:38.255Z" }
 wheels = [
@@ -1578,7 +1569,7 @@ name = "exceptiongroup"
 version = "1.3.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
@@ -1621,8 +1612,7 @@ dependencies = [
     { name = "pydantic", version = "2.12.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "pydantic", version = "2.14.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "starlette" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
     { name = "typing-inspection", version = "0.4.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "typing-inspection", version = "0.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
@@ -2117,8 +2107,7 @@ name = "grpcio"
 version = "1.85.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f0/03/f9e805772d4d01da2a1754a5f63c58601eacaf8f1e878729217188de7d16/grpcio-1.85.1.tar.gz", hash = "sha256:5f530287d5de5f7f66089ead81de44f6787162944dab3922efa65dfdff108a1d", size = 14091456, upload-time = "2026-10-30T16:01:16.909Z" }
 wheels = [
@@ -2305,8 +2294,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "tqdm" },
     { name = "typer" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b4/a8/94ccc0aec97b996a3a68f3e1fa06a4bd7185dd02bf22bfba794a0ade8440/huggingface_hub-1.7.1.tar.gz", hash = "sha256:be38fe66e9b03c027ad755cb9e4b87ff0303c98acf515b5d579690beb0bf3048", size = 722097, upload-time = "2026-03-13T09:36:07.758Z" }
 wheels = [
@@ -2688,8 +2676,7 @@ dependencies = [
     { name = "torchvision", version = "0.29.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'linux') or (python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "torchvision", version = "0.29.2+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "tqdm" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
     { name = "uvicorn" },
     { name = "xxhash" },
 ]
@@ -3095,7 +3082,7 @@ version = "4.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backports-datetime-fromisoformat", marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f9/03/261af5efb3d3ce0e2db3fd1e11dc5a96b74a4fb76e488da1c845a8f12345/marshmallow-4.2.2.tar.gz", hash = "sha256:ba40340683a2d1c15103647994ff2f6bc2c8c80da01904cbe5d96ee4baa78d9f", size = 221404, upload-time = "2026-02-04T15:47:03.401Z" }
 wheels = [
@@ -3326,7 +3313,7 @@ dependencies = [
     { name = "griffelib" },
     { name = "mkdocs-autorefs" },
     { name = "mkdocstrings" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/29/33/c225eaf898634bdda489a6766fc35d1683c640bffe0e0acd10646b13536d/mkdocstrings_python-2.0.3.tar.gz", hash = "sha256:c518632751cc869439b31c9d3177678ad2bfa5c21b79b863956ad68fc92c13b8", size = 199083, upload-time = "2026-02-20T10:38:36.368Z" }
 wheels = [
@@ -3610,7 +3597,7 @@ name = "multidict"
 version = "6.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1a/c2/c2d94cbe6ac1753f3fc980da97b3d930efe1da3af3c9f5125354436c073d/multidict-6.7.1.tar.gz", hash = "sha256:ec6652a1bee61c53a3e5776b6049172c53b6aaba34f18c9ad04f82712bac623d", size = 102010, upload-time = "2026-01-26T02:46:45.979Z" }
 wheels = [
@@ -3752,8 +3739,7 @@ dependencies = [
     { name = "mypy-extensions" },
     { name = "pathspec" },
     { name = "tomli", marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/f5/db/4efed9504bc01309ab9c2da7e352cc223569f05478012b5d9ece38fd44d2/mypy-1.19.1.tar.gz", hash = "sha256:19d88bb05303fe63f71dd2c6270daca27cb9401c4ca8255fe50d1d920e0eb9ba", size = 3582404, upload-time = "2025-12-15T05:03:48.42Z" }
 wheels = [
@@ -5116,8 +5102,7 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "requests" },
     { name = "six" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b3/03/ed31e77f260971ed633c13815107b08edf999c7d1ec769d6313765ec89cb/posthog-6.9.3.tar.gz", hash = "sha256:7d201774ea9eba156f1de46d34313e30b2384d523900fe8e425accc92486cc34", size = 126554, upload-time = "2025-11-11T17:56:58.191Z" }
 wheels = [
@@ -5270,8 +5255,7 @@ name = "psycopg"
 version = "3.3.6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
     { name = "tzdata", marker = "sys_platform == 'win32'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/76/26/3ea4ca5eaea1c0debcdf7ee7c1613fbe721dc27a03c461c0817ffd8a0601/psycopg-3.3.6.tar.gz", hash = "sha256:c081f2250df751a943036e42db6df4571c66cd0aabe8291a7a506512b12007d2", size = 168171, upload-time = "2026-09-18T13:22:55.152Z" }
@@ -5588,7 +5572,7 @@ resolution-markers = [
 dependencies = [
     { name = "annotated-types" },
     { name = "pydantic-core", version = "2.41.5", source = { registry = "https://pypi.org/simple" } },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "typing-extensions" },
     { name = "typing-inspection", version = "0.4.2", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/96/ad/a17bc283d7d81837c061c49e3eaa27a45991759a1b7eae1031921c6bd924/pydantic-2.12.4.tar.gz", hash = "sha256:0f8cb9555000a4b5b617f66bfd2566264c4984b27589d3b845685983e8ea85ac", size = 821038, upload-time = "2025-11-05T10:50:08.59Z" }
@@ -5660,7 +5644,7 @@ resolution-markers = [
 dependencies = [
     { name = "annotated-types" },
     { name = "pydantic-core", version = "2.50.2", source = { registry = "https://pypi.org/simple" } },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "typing-extensions" },
     { name = "typing-inspection", version = "0.4.4", source = { registry = "https://pypi.org/simple" } },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/9f/d5/b4867fa7c7f04c34997d7d8aad744f64d210bb99d67cf18bf3fb1eea1aed/pydantic-2.14.2.tar.gz", hash = "sha256:fb7b2db6cefe8414dd612edeede49c4c433acb0432b0f92b95024e45f66c505d", size = 911596, upload-time = "2026-10-29T16:37:12.476Z" }
@@ -5680,7 +5664,7 @@ resolution-markers = [
     "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/71/70/23b021c950c2addd24ec408e9ab05d59b035b39d97cdc1130e1bce647bb6/pydantic_core-2.41.5.tar.gz", hash = "sha256:08daa51ea16ad373ffd5e7606252cc32f07bc72b28284b6bc9c6df804816476e", size = 460952, upload-time = "2025-11-04T13:43:49.098Z" }
 wheels = [
@@ -5855,7 +5839,7 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/af/8e/23ec1021834e35041fbb2f10946141e6acdfd39379c45cc4d65a4e8a1d98/pydantic_core-2.50.2.tar.gz", hash = "sha256:1b0e8dc3932cf4e9ed5727570325cacc716b9409ffc794a221c0ccc72e8eb775", size = 518711, upload-time = "2026-10-29T16:34:57.465Z" }
 wheels = [
@@ -6046,7 +6030,7 @@ name = "pyjwt"
 version = "2.12.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c2/27/a3b6e5bf6ff856d2509292e95c8f57f0df7017cf5394921fc4e4ef40308a/pyjwt-2.12.1.tar.gz", hash = "sha256:c74a7a2adf861c04d002db713dd85f84beb242228e671280bf709d765b03672b", size = 102564, upload-time = "2026-03-13T19:27:37.25Z" }
 wheels = [
@@ -6321,8 +6305,7 @@ dependencies = [
     { name = "attrs" },
     { name = "rpds-py", version = "0.30.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "rpds-py", version = "2026.9.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/22/f5/df4e9027acead3ecc63e50fe1e36aca1523e1719559c499951bb4b53188f/referencing-0.37.0.tar.gz", hash = "sha256:44aefc3142c5b842538163acb373e24cce6632bd54bdb01b21ad5863489f50d8", size = 78036, upload-time = "2025-10-13T15:30:48.871Z" }
 wheels = [
@@ -7398,8 +7381,7 @@ version = "2.0.48"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "greenlet", marker = "platform_machine == 'AMD64' or platform_machine == 'WIN32' or platform_machine == 'aarch64' or platform_machine == 'amd64' or platform_machine == 'ppc64le' or platform_machine == 'win32' or platform_machine == 'x86_64'" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/1f/73/b4a9737255583b5fa858e0bb8e116eb94b88c910164ed2ed719147bde3de/sqlalchemy-2.0.48.tar.gz", hash = "sha256:5ca74f37f3369b45e1f6b7b06afb182af1fd5dde009e4ffd831830d98cbe5fe7", size = 9886075, upload-time = "2026-03-02T15:28:51.474Z" }
 wheels = [
@@ -7485,8 +7467,7 @@ version = "0.52.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "anyio" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.13'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/c4/68/79977123bb7be889ad680d79a40f339082c1978b5cfcf62c2d8d196873ac/starlette-0.52.1.tar.gz", hash = "sha256:834edd1b0a23167694292e94f597773bc3f89f362be6effee198165a35d62933", size = 2653702, upload-time = "2026-01-18T13:34:11.062Z" }
 wheels = [
@@ -7512,8 +7493,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docker" },
     { name = "python-dotenv" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "typing-extensions" },
     { name = "urllib3" },
     { name = "wrapt" },
 ]
@@ -7640,7 +7620,7 @@ dependencies = [
     { name = "nvidia-nvtx-cu12", marker = "(python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "sympy", marker = "(python_full_version < '3.11' and sys_platform != 'linux') or (python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "triton", version = "3.6.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and platform_machine == 'x86_64' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform != 'linux') or (python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.11' and sys_platform != 'linux') or (python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5b/30/bfebdd8ec77db9a79775121789992d6b3b75ee5494971294d7b4b7c999bc/torch-2.10.0-2-cp310-none-macosx_11_0_arm64.whl", hash = "sha256:2b980edd8d7c0a68c4e951ee1856334a43193f98730d97408fbd148c1a933313", size = 79411457, upload-time = "2026-02-10T21:44:59.189Z" },
@@ -7697,7 +7677,7 @@ dependencies = [
     { name = "jinja2", marker = "(python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "networkx", version = "3.4.2", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "sympy", marker = "(python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "typing-extensions", marker = "(python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp310-cp310-linux_aarch64.whl", hash = "sha256:31ae44836c8b9bbd1a3943d29c7c7457709ddf7c6173aa34aefe9d2203e4c405", upload-time = "2026-01-23T15:10:02Z" },
@@ -7810,7 +7790,7 @@ dependencies = [
     { name = "setuptools", marker = "(python_full_version >= '3.11' and sys_platform != 'linux') or (python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "sympy", marker = "(python_full_version >= '3.11' and sys_platform != 'linux') or (python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "triton", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform != 'linux') or (python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "typing-extensions", marker = "(python_full_version >= '3.11' and sys_platform != 'linux') or (python_full_version >= '3.11' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://files.pythonhosted.org/packages/2d/a5/fa947e2bbb072933f8c0ad5e02bd11126bcfc2b624fe234ac29a7b63600c/torch-2.15.0-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:e808b63d616a43b326e1a5677d45a2e5babe7a8ce27edb03ddb48e7dd9b6d663", size = 138527954, upload-time = "2026-10-28T15:16:30.29Z" },
@@ -7861,7 +7841,7 @@ dependencies = [
     { name = "networkx", version = "3.6.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "setuptools", marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
     { name = "sympy", marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
+    { name = "typing-extensions", marker = "(python_full_version >= '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
 ]
 wheels = [
     { url = "https://download-r2.pytorch.org/whl/cpu/torch-2.15.0%2Bcpu-cp311-cp311-linux_s390x.whl", hash = "sha256:ef0bd617c9439a54d698d95fb7c3f63efcc48c29efdd42b177e87d862cb574fa", upload-time = "2026-10-28T13:17:54Z" },
@@ -8167,8 +8147,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "botocore-stubs" },
     { name = "types-s3transfer" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version == '3.11.*'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.12'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/32/4d/79372b423a2f2b14ae57193b57faac61ea0b9d3dfbd57c4685c078406eaa/types_boto3-1.42.69.tar.gz", hash = "sha256:e6e5c746322212de7064ac2796d287121952da7a4aef261e13c013a0cbc8fad5", size = 101677, upload-time = "2026-03-16T21:09:02.273Z" }
 wheels = [
@@ -8219,81 +8198,8 @@ wheels = [
 
 [[package]]
 name = "typing-extensions"
-version = "4.15.0"
-source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.11' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.11' and sys_platform != 'darwin' and sys_platform != 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.11' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-]
-sdist = { url = "https://files.pythonhosted.org/packages/72/94/1a15dd82efb362ac84269196e94cf00f187f7ed21c242792a923cdb1c61f/typing_extensions-4.15.0.tar.gz", hash = "sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466", size = 109391, upload-time = "2025-08-25T13:49:26.313Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/18/67/36e9267722cc04a6b9f15c7f3441c2363321a3ea07da7ae0c0707beb2a9c/typing_extensions-4.15.0-py3-none-any.whl", hash = "sha256:f0fa19c6845758ab08074a0cfa8b7aecb71c999ca73d62883bc25cc018c4e548", size = 44614, upload-time = "2025-08-25T13:49:24.86Z" },
-]
-
-[[package]]
-name = "typing-extensions"
 version = "4.16.0"
 source = { registry = "https://pypi.org/simple" }
-resolution-markers = [
-    "python_full_version >= '3.15' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version >= '3.15' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-]
 sdist = { url = "https://files.pythonhosted.org/packages/f6/cc/6253133b5bb138fc3306cebfbda2c520f545d36b5be2c7255cc528bb45d6/typing_extensions-4.16.0.tar.gz", hash = "sha256:dc983d19a509c94dba722ee6abd33940f7c05a89e243c47e907eb4db6f1a43e5", size = 113555, upload-time = "2026-07-02T08:40:05.92Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl", hash = "sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8", size = 45571, upload-time = "2026-07-02T08:40:04.659Z" },
@@ -8311,7 +8217,7 @@ resolution-markers = [
     "python_full_version < '3.11' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/55/e3/70399cb7dd41c10ac53367ae42139cf4b1ca5f36bb3dc6c9d33acdb43655/typing_inspection-0.4.2.tar.gz", hash = "sha256:ba561c48a67c5958007083d386c3295464928b01faa735ab8547c5692e87f464", size = 75949, upload-time = "2025-10-01T02:14:41.687Z" }
 wheels = [
@@ -8380,7 +8286,7 @@ resolution-markers = [
     "python_full_version == '3.11.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
-    { name = "typing-extensions", version = "4.16.0", source = { registry = "https://pypi.org/simple" } },
+    { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/a3/26/b09b8010994eccc3c09092e6b34058f36a460eea2d4c3e8b910c695975a0/typing_inspection-0.4.4.tar.gz", hash = "sha256:547274fa6b0a561ccf549cc9524b999a578e737d015d8709d021f9d0d13bea47", size = 76928, upload-time = "2026-08-12T12:37:25.997Z" }
 wheels = [
@@ -8412,7 +8318,7 @@ source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "click" },
     { name = "h11" },
-    { name = "typing-extensions", version = "4.15.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/e3/ad/4a96c425be6fb67e0621e62d86c402b4a17ab2be7f7c055d9bd2f638b9e2/uvicorn-0.42.0.tar.gz", hash = "sha256:9b1f190ce15a2dd22e7758651d9b6d12df09a13d51ba5bf4fc33c383a48e1775", size = 85393, upload-time = "2026-03-16T06:19:50.077Z" }
 wheels = [
