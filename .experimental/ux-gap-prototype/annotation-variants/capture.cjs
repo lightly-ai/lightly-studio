@@ -60,10 +60,14 @@ async function chooseDeerIfAsked(page) {
 }
 
 async function capture(browser, column) {
-    const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+    // 2x, so text stays sharp when Slack scales the images.
+    const context = await browser.newContext({
+        viewport: { width: 1440, height: 900 },
+        deviceScaleFactor: 2
+    });
     const page = await context.newPage();
     const shot = (step) =>
-        page.screenshot({ path: path.join(OUT, `${column.name}-${step}.jpg`), quality: 85 });
+        page.screenshot({ path: path.join(OUT, `${column.name}-${step}.png`) });
 
     await page.goto(column.url);
     await page.getByRole('button', { name: /^Edit/ }).click();
@@ -85,6 +89,13 @@ async function capture(browser, column) {
     await chooseDeerIfAsked(page);
     await pause(page, 1500);
     await shot('4-deer-box-in-model_v2');
+
+    const addClassification = page.getByTestId('add-classification-button');
+    if (await addClassification.isVisible().catch(() => false)) {
+        await addClassification.scrollIntoViewIfNeeded();
+        await pause(page, 500);
+        await shot('5-classification');
+    }
 
     await context.close();
 }

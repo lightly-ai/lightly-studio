@@ -14,10 +14,10 @@ The switch keeps the last value in localStorage. To go back, open a URL with
 
 ## Files
 
-- `side-by-side-<step>.jpg`: the three columns at steps 1 to 4.
-- `main.gif`, `pencil.gif`, `radio.gif`: the four steps of one column, 1.8 s per frame.
-- `shots/`: the single screenshots. `shots/radio-5-classification-caption.jpg` shows the text
-  under the Classification "+".
+- `side-by-side-<step>.png`: the full window of the three columns at steps 1 to 5.
+- `panel-<step>.png`: the Annotations panel of the three columns at 2x, for a close look.
+- `main.gif`, `pencil.gif`, `radio.gif`: the steps of one column, 2 s per frame.
+- `shots/` (not committed): the single 2880x1800 screenshots. Run `capture.cjs` to make them.
 - `capture.cjs`, `side_by_side.py`: the scripts that make the files above.
 - `COMPARISON.md`: one page to send with the images.
 

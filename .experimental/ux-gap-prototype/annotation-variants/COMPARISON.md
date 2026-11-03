@@ -11,7 +11,7 @@ Task: add a deer box to `model_v2` on one image. The dataset has 8 annotation so
 | Classification "+" | No hint | No hint | "Adds to model_v2" |
 | Outside edit mode | The pill is hidden | The pencils show | The radios are hidden |
 
-Images: `side-by-side-1-edit-mode.jpg` to `side-by-side-4-deer-box-in-model_v2.jpg`.
+Images: `side-by-side-<step>.png` (full window) and `panel-<step>.png` (close-up), steps 1 to 5.
 GIFs: `main.gif`, `pencil.gif`, `radio.gif`.
 
 ## Open questions
