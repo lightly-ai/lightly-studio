@@ -19,6 +19,7 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import type { GridType } from '$lib/types';
     import SelectionCountRow from '../SelectionCountRow/SelectionCountRow.svelte';
+    import { useSelectionUndo } from '../useSelectionUndo/useSelectionUndo';
 
     interface Props {
         collectionId: string;
@@ -33,6 +34,7 @@
         $props();
 
     const client = useQueryClient();
+    const { offerUndo } = useSelectionUndo();
     const { tags, loadTags } = $derived(useTags({ collection_id: collectionId }));
     // Reading selectedCount makes the target (and so the counts query) follow the selection.
     const target = $derived.by(() => {
@@ -52,7 +54,7 @@
         const path = { collection_id: collectionId, tag_id: tagId };
         return target.kind === 'filter'
             ? addSamplesToTagByFilter({ path, body: { filter: target.filter } })
-            : addSampleIdsToTagId({ path, body: { sample_ids: target.ids } });
+            : addIds(tagId, target.ids);
     }
 
     function remove(tagId: string) {
@@ -61,10 +63,36 @@
                   path: { collection_id: collectionId, tag_id: tagId },
                   body: { filter: target.filter }
               })
-            : removeThingIdsToTagId({
-                  path: { tag_id: tagId },
-                  body: { sample_ids: target.ids }
-              });
+            : removeIds(tagId, target.ids);
+    }
+
+    const addIds = (tagId: string, ids: string[]) =>
+        addSampleIdsToTagId({
+            path: { collection_id: collectionId, tag_id: tagId },
+            body: { sample_ids: ids }
+        });
+    const removeIds = (tagId: string, ids: string[]) =>
+        removeThingIdsToTagId({
+            path: { tag_id: tagId },
+            body: { sample_ids: ids }
+        });
+
+    type Revert = (changedIds: string[]) => Promise<{ error?: unknown }>;
+
+    // Undo touches only the items the action changed, so items that had the tag keep it.
+    function offerUndoFor(message: string, changedIds: string[], revert: Revert) {
+        if (changedIds.length === 0) {
+            toast.success(message);
+            return;
+        }
+        offerUndo({
+            message,
+            revert: async () => {
+                const response = await revert(changedIds);
+                if (response.error) throw new Error('Failed to undo.');
+                refresh();
+            }
+        });
     }
 
     function refresh() {
@@ -78,15 +106,16 @@
     }
 
     async function run(
-        action: () => Promise<{ error?: unknown }>,
+        action: () => Promise<{ data?: { changed_ids: string[] }; error?: unknown }>,
         success: string,
-        fail: string
+        fail: string,
+        revert: Revert
     ): Promise<boolean> {
         busy = true;
         try {
             const response = await action();
             if (response.error) throw new Error(fail);
-            toast.success(success);
+            offerUndoFor(success, response.data?.changed_ids ?? [], revert);
             refresh();
             return true;
         } catch {
@@ -98,9 +127,19 @@
     }
 
     const addTag = (tagId: string, tagName: string) =>
-        run(() => add(tagId), `Added '${tagName}' to ${items}`, 'Failed to add tag.');
+        run(
+            () => add(tagId),
+            `Added '${tagName}' to ${items}`,
+            'Failed to add tag.',
+            (ids) => removeIds(tagId, ids)
+        );
     const removeTag = (tagId: string, tagName: string) =>
-        run(() => remove(tagId), `Removed '${tagName}' from ${items}`, 'Failed to remove tag.');
+        run(
+            () => remove(tagId),
+            `Removed '${tagName}' from ${items}`,
+            'Failed to remove tag.',
+            (ids) => addIds(tagId, ids)
+        );
 
     async function createAndAdd(tagName: string) {
         try {

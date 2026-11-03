@@ -80,7 +80,10 @@ export { useAnnotationSortBy } from '$lib/hooks/useAnnotationSortBy/useAnnotatio
 export { useAnnotationEvaluationMetricsInfo } from '$lib/hooks/useAnnotationEvaluationMetricsInfo/useAnnotationEvaluationMetricsInfo.svelte';
 export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotationOrderBy.svelte';
 export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
-export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
+export {
+    formatBulkCreateToast,
+    useBulkCreateClassifications
+} from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
 export { useBulkDeleteAnnotations } from '$lib/hooks/useBulkDeleteAnnotations/useBulkDeleteAnnotations';
 export { useMoveAnnotationsToSource } from '$lib/hooks/useMoveAnnotationsToSource/useMoveAnnotationsToSource';
 export { useBulkRelabelAnnotations } from '$lib/hooks/useBulkRelabelAnnotations/useBulkRelabelAnnotations';

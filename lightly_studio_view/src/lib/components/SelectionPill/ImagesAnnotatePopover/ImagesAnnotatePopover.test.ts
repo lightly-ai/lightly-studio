@@ -5,6 +5,7 @@ import { toast } from 'svelte-sonner';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     bulkCreateClassifications,
+    bulkDeleteAnnotations,
     countImageAnnotationsByCollection,
     deleteForSamples,
     readAnnotationCollections,
@@ -24,10 +25,13 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', async () => ({
     countImageAnnotationsByCollection: vi.fn(),
     bulkCreateClassifications: vi.fn(),
     bulkCreateClassificationsByFilter: vi.fn(),
+    bulkDeleteAnnotations: vi.fn(),
     deleteForSamples: vi.fn(),
     getAnalyticsConfig: vi.fn().mockResolvedValue({})
 }));
-vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('svelte-sonner', () => ({
+    toast: { success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }
+}));
 vi.mock('$app/state', () => ({ page: { params: { dataset_id: 'root' } } }));
 vi.mock('$lib/hooks/useSelectionTarget/useSelectionTarget', () => ({
     getSelectionTarget: () => mocks.target
@@ -205,6 +209,36 @@ describe('ImagesAnnotatePopover', () => {
         const keys = invalidate.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey));
         expect(keys.some((k) => k.includes('countImageAnnotationsByCollection'))).toBe(true);
         expect(keys).toContain(JSON.stringify(['readImagesInfinite', 'c1']));
+    });
+
+    it('Undo after + deletes exactly the created classifications', async () => {
+        vi.mocked(bulkCreateClassifications).mockResolvedValue({
+            data: { created_annotation_ids: ['a1'], created_count: 1, skipped_count: 0 }
+        } as never);
+        vi.mocked(bulkDeleteAnnotations).mockResolvedValue({ data: { deleted_count: 1 } } as never);
+        setup();
+        await screen.findByText('0/1');
+        await fireEvent.click(screen.getByLabelText('Add fox to selection'));
+
+        await waitFor(() =>
+            expect(toast.success).toHaveBeenCalledWith(
+                'Added the annotation class to 1 images.',
+                expect.objectContaining({ action: expect.objectContaining({ label: 'Undo' }) })
+            )
+        );
+        const [, options] = vi.mocked(toast.success).mock.calls[0] as unknown as [
+            string,
+            { action: { onClick: () => void } }
+        ];
+        options.action.onClick();
+
+        await waitFor(() =>
+            expect(bulkDeleteAnnotations).toHaveBeenCalledWith({
+                path: { collection_id: 'c1' },
+                body: { annotation_ids: ['a1'] }
+            })
+        );
+        await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Undone'));
     });
 
     it('offers Create for a new class name', async () => {

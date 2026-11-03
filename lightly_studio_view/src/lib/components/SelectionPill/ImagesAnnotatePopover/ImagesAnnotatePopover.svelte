@@ -11,9 +11,11 @@
     import * as Dialog from '$lib/components/ui/dialog';
     import * as Popover from '$lib/components/ui/popover';
     import {
+        formatBulkCreateToast,
         useAnnotationCollections,
         useAnnotationCollectionsFilter,
         useBulkCreateClassifications,
+        useBulkDeleteAnnotations,
         useGlobalStorage
     } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -28,6 +30,7 @@
     import { getImagesInfiniteQueryKeyPrefix } from '$lib/hooks/useImagesInfinite/createImagesInfiniteOptions';
     import { getSelectionTarget } from '$lib/hooks/useSelectionTarget/useSelectionTarget';
     import SelectionCountRow from '../SelectionCountRow/SelectionCountRow.svelte';
+    import { useSelectionUndo } from '../useSelectionUndo/useSelectionUndo';
     import AnnotateSourceMenu from './AnnotateSourceMenu.svelte';
     import {
         buildSelectionCountsFilter,
@@ -52,6 +55,8 @@
 
     const client = useQueryClient();
     const { addClass } = useBulkCreateClassifications();
+    const { deleteAnnotations } = useBulkDeleteAnnotations();
+    const { offerUndo } = useSelectionUndo();
     const { isSourceVisible } = useAnnotationCollectionsFilter();
     const { getSelectedSampleIds, getSelectAllSnapshot } = useGlobalStorage();
     const sourcesQuery = useAnnotationCollections(() => ({ collectionId }));
@@ -143,14 +148,17 @@
         }
         busy = true;
         try {
-            await addClass({
+            const selectedIds = get(getSelectedSampleIds(collectionId));
+            const result = await addClass({
                 collectionId,
-                selectedIds: get(getSelectedSampleIds(collectionId)),
+                selectedIds,
                 className,
                 sourceName: targetSource,
                 selectAllSnapshot: get(getSelectAllSnapshot(collectionId)),
-                rootCollectionId: page.params.dataset_id ?? collectionId
+                rootCollectionId: page.params.dataset_id ?? collectionId,
+                showSuccessToast: false
             });
+            offerUndoForCreate(formatBulkCreateToast(result, selectedIds.size), result);
             name = '';
             refresh();
         } catch {
@@ -158,6 +166,27 @@
         } finally {
             busy = false;
         }
+    }
+
+    // Undo deletes exactly the classifications this add created.
+    function offerUndoForCreate(message: string, result: { created_annotation_ids: string[] }) {
+        if (result.created_annotation_ids.length === 0) {
+            toast.success(message);
+            return;
+        }
+        offerUndo({
+            message,
+            revert: async () => {
+                const { error } = await deleteAnnotations({
+                    collectionId,
+                    rootCollectionId: page.params.dataset_id ?? collectionId,
+                    selectedIds: new Set(result.created_annotation_ids),
+                    selectAllSnapshot: null
+                });
+                if (error) throw new Error('Failed to undo.');
+                refresh();
+            }
+        });
     }
 
     async function confirmDelete() {
