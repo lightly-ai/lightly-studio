@@ -88,6 +88,8 @@ def read_annotation_labels_with_counts(
             dataset_id=label.dataset_id,
             annotation_label_id=label.annotation_label_id,
             annotation_label_name=label.annotation_label_name,
+            color=label.color,
+            alpha=label.alpha,
             annotation_count=counts.get(label.annotation_label_id, 0),
         )
         for label in labels
