@@ -74,15 +74,21 @@
         void loadTags();
     }
 
-    async function run(action: () => Promise<{ error?: unknown }>, success: string, fail: string) {
+    async function run(
+        action: () => Promise<{ error?: unknown }>,
+        success: string,
+        fail: string
+    ): Promise<boolean> {
         busy = true;
         try {
             const response = await action();
             if (response.error) throw new Error(fail);
             toast.success(success);
             refresh();
+            return true;
         } catch {
             toast.error(fail);
+            return false;
         } finally {
             busy = false;
         }
@@ -94,17 +100,19 @@
         run(() => remove(tagId), `Removed '${tagName}' from ${items}`, 'Failed to remove tag.');
 
     async function createAndAdd(tagName: string) {
-        const created = await createTag({
-            path: { collection_id: collectionId },
-            body: { name: tagName }
-        });
-        const tagId = created.data?.tag_id;
-        if (created.error || !tagId) {
+        try {
+            const created = await createTag({
+                path: { collection_id: collectionId },
+                body: { name: tagName }
+            });
+            const tagId = created.data?.tag_id;
+            if (created.error || !tagId) throw new Error('Failed to create tag.');
+            // Refresh right away so a failed add leaves the new tag in the list for a retry.
+            refresh();
+            if (await addTag(tagId, tagName)) name = '';
+        } catch {
             toast.error('Failed to create tag.');
-            return;
         }
-        await addTag(tagId, tagName);
-        name = '';
     }
 </script>
 

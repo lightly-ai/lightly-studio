@@ -1,7 +1,6 @@
 import { QueryClient } from '@tanstack/svelte-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { readable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -14,10 +13,19 @@ import {
 } from '$lib/api/lightly_studio_local/sdk.gen';
 import TagPopoverHarness from './TagPopoverHarness.svelte';
 
-const mocks = vi.hoisted(() => ({
-    target: { kind: 'ids', ids: ['s1', 's2', 's3'] } as unknown,
-    loadTags: vi.fn()
-}));
+const mocks = await vi.hoisted(async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        target: { kind: 'ids', ids: ['s1', 's2', 's3'] } as unknown,
+        tags: writable<{ tag_id: string; name: string }[]>([]),
+        loadTags: vi.fn()
+    };
+});
+const baseTags = [
+    { tag_id: 'a', name: 'a' },
+    { tag_id: 'b', name: 'b' },
+    { tag_id: 'c', name: 'c' }
+];
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', async () => ({
     ...(await vi.importActual('$lib/api/lightly_studio_local/sdk.gen')),
@@ -34,11 +42,7 @@ vi.mock('$lib/hooks/useSelectionTarget/useSelectionTarget', () => ({
 }));
 vi.mock('$lib/hooks/useTags/useTags', () => ({
     useTags: () => ({
-        tags: readable([
-            { tag_id: 'a', name: 'a' },
-            { tag_id: 'b', name: 'b' },
-            { tag_id: 'c', name: 'c' }
-        ]),
+        tags: mocks.tags,
         loadTags: mocks.loadTags
     })
 }));
@@ -52,6 +56,7 @@ function setup() {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    mocks.tags.set(baseTags);
     mocks.target = { kind: 'ids', ids: ['s1', 's2', 's3'] };
     vi.mocked(countTagsForSelection).mockResolvedValue({
         data: [
@@ -156,5 +161,50 @@ describe('TagPopover', () => {
             )
         );
         expect(toast.success).toHaveBeenCalledWith("Added 'fresh' to 3 items");
+    });
+
+    describe('create failures', () => {
+        async function typeFresh() {
+            setup();
+            const input = await screen.findByPlaceholderText('Search or create a tag…');
+            const user = userEvent.setup();
+            await user.type(input, 'fresh');
+            await screen.findByText("Create 'fresh'");
+            return { input, user };
+        }
+
+        it('toasts an error and does not reject when createTag throws', async () => {
+            const unhandled = vi.fn();
+            process.on('unhandledRejection', unhandled);
+            vi.mocked(createTag).mockRejectedValue(new Error('network'));
+            const { user } = await typeFresh();
+            await user.keyboard('{Enter}');
+
+            await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to create tag.'));
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            process.off('unhandledRejection', unhandled);
+            expect(unhandled).not.toHaveBeenCalled();
+        });
+
+        it('refreshes tags and keeps the input when the add after create fails', async () => {
+            vi.mocked(addSampleIdsToTagId).mockResolvedValueOnce({ error: {} } as never);
+            mocks.loadTags.mockImplementation(() =>
+                mocks.tags.set([...baseTags, { tag_id: 'new', name: 'fresh' }])
+            );
+            const { input, user } = await typeFresh();
+            await user.keyboard('{Enter}');
+
+            await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Failed to add tag.'));
+            expect(mocks.loadTags).toHaveBeenCalled();
+            expect(input).toHaveValue('fresh');
+
+            // The tag now exists, so the Create row is gone and a retry only adds.
+            await waitFor(() => expect(screen.queryByText("Create 'fresh'")).toBeNull());
+            await user.keyboard('{Enter}');
+            await waitFor(() =>
+                expect(toast.success).toHaveBeenCalledWith("Added 'fresh' to 3 items")
+            );
+            expect(createTag).toHaveBeenCalledTimes(1);
+        });
     });
 });
