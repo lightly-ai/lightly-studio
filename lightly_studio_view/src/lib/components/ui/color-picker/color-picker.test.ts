@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import ColorPickerInDialogTestWrapper from './ColorPickerInDialogTestWrapper.test.svelte';
 import ColorPicker from './color-picker.svelte';
 
@@ -15,14 +15,24 @@ afterEach(() => {
 });
 
 describe('ColorPicker', () => {
+    beforeAll(() => {
+        // jsdom has no pointer capture and no PointerEvent, so pointer coordinates would be lost.
+        HTMLElement.prototype.setPointerCapture = vi.fn();
+        window.PointerEvent ??= class extends MouseEvent {
+            pointerId: number;
+            constructor(type: string, init: PointerEventInit = {}) {
+                super(type, init);
+                this.pointerId = init.pointerId ?? 0;
+            }
+        } as typeof PointerEvent;
+    });
+
     it('previews the selected color while dragging', async () => {
         const onChange = vi.fn();
         render(ColorPicker, { props: { ...defaultProps, onChange } });
         await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
-        const picker = screen.getByRole('dialog', {
-            name: 'Saturation and lightness picker'
-        });
+        const picker = screen.getByRole('slider', { name: 'Saturation and lightness' });
         vi.spyOn(picker, 'getBoundingClientRect').mockReturnValue({
             left: 0,
             top: 0,
@@ -30,12 +40,11 @@ describe('ColorPicker', () => {
             height: 100
         } as DOMRect);
 
-        await fireEvent.mouseDown(picker, { clientX: 100, clientY: 25 });
+        await fireEvent.pointerDown(picker, { clientX: 100, clientY: 25, pointerId: 1 });
 
         await waitFor(() => {
             expect(onChange).toHaveBeenLastCalledWith('#ff8080', 1);
         });
-        await fireEvent.mouseUp(document);
     });
 
     it('previews a gray preset exactly', async () => {
@@ -158,32 +167,4 @@ describe('ColorPicker', () => {
         expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
         expect(screen.getByRole('dialog', { name: 'Host dialog' })).toBeInTheDocument();
     });
-
-    it.each(['Saturation and lightness picker', 'Hue picker'])(
-        'registers one mousemove listener for a drag on %s',
-        async (pickerName) => {
-            render(ColorPicker, { props: defaultProps });
-            await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
-
-            const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
-            const picker = screen.getByRole('dialog', { name: pickerName });
-            vi.spyOn(picker, 'getBoundingClientRect').mockReturnValue({
-                left: 0,
-                top: 0,
-                width: 100,
-                height: 100
-            } as DOMRect);
-
-            await fireEvent.mouseDown(picker, { clientX: 25, clientY: 25 });
-            await fireEvent.mouseMove(document, { clientX: 50, clientY: 50 });
-            await fireEvent.mouseMove(document, { clientX: 75, clientY: 75 });
-
-            const mouseMoveRegistrations = addEventListenerSpy.mock.calls.filter(
-                ([eventName]) => eventName === 'mousemove'
-            );
-            expect(mouseMoveRegistrations).toHaveLength(1);
-
-            await fireEvent.mouseUp(document);
-        }
-    );
 });
