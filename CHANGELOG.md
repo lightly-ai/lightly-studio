@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python SDK: Added Python 3.15 support.
 - The embedding plot shows the active plot filter and lets you clear it right on the plot.
+- A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
 
 ### Changed
 
