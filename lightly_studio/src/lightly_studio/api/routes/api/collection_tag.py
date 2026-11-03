@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, StrictInt
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Field, col, select
+from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -18,6 +19,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.api.routes.api.validators import Paginated
+from lightly_studio.database import db_array
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.sample import SampleTable
@@ -166,6 +168,12 @@ class SampleIdsBody(BaseModel):
     sample_ids: list[UUID] | None = Field(None, description="sample ids to add/remove")
 
 
+class TagChangeResult(BaseModel):
+    """The samples a tag add or remove changed, so the client can undo exactly them."""
+
+    changed_ids: list[UUID]
+
+
 @tag_router.post(
     "/collections/{collection_id}/tags/{tag_id}/add/samples",
     status_code=HTTP_STATUS_CREATED,
@@ -179,8 +187,8 @@ def add_sample_ids_to_tag_id(
     ],
     tag_id: UUID,
     body: SampleIdsBody,
-) -> bool:
-    """Add sample_ids to a tag_id."""
+) -> TagChangeResult:
+    """Add sample_ids to a tag_id and return the samples that did not have it."""
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if tag is None:
         raise HTTPException(
@@ -195,8 +203,13 @@ def add_sample_ids_to_tag_id(
         )
 
     sample_ids = body.sample_ids if body.sample_ids else []
+    _, changed_ids = tag_resolver.split_sample_ids_by_tag(
+        session=session,
+        tag_id=tag_id,
+        sample_ids_query=_sample_ids_query(sample_ids=sample_ids, collection_id=collection_id),
+    )
     tag_resolver.add_sample_ids_to_tag_id(session=session, tag_id=tag_id, sample_ids=sample_ids)
-    return True
+    return TagChangeResult(changed_ids=changed_ids)
 
 
 class TagByFilterBody(BaseModel):
@@ -221,10 +234,10 @@ def add_samples_to_tag_by_filter(
     ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
     body: TagByFilterBody,
-) -> bool:
+) -> TagChangeResult:
     """Tag every sample a grid filter matches.
 
-    Idempotent on re-run.
+    Idempotent on re-run. Returns the samples that did not have the tag before.
     """
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if tag is None:
@@ -242,10 +255,13 @@ def add_samples_to_tag_by_filter(
     sample_ids_query = build_sample_ids_query(
         session=session, collection_id=collection_id, grid_filter=body.filter
     )
+    _, changed_ids = tag_resolver.split_sample_ids_by_tag(
+        session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
+    )
     tag_resolver.add_samples_to_tag_from_query(
         session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
     )
-    return True
+    return TagChangeResult(changed_ids=changed_ids)
 
 
 class TagCountsBody(BaseModel):
@@ -394,8 +410,8 @@ def remove_thing_ids_to_tag_id(
     session: SessionDep,
     tag_id: UUID,
     body: SampleIdsBody,
-) -> bool:
-    """Add thing_ids to a tag_id."""
+) -> TagChangeResult:
+    """Remove sample_ids from a tag_id and return the samples that had it."""
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if not tag:
         raise HTTPException(
@@ -404,10 +420,15 @@ def remove_thing_ids_to_tag_id(
         )
 
     sample_ids = body.sample_ids if body.sample_ids else []
+    changed_ids, _ = tag_resolver.split_sample_ids_by_tag(
+        session=session,
+        tag_id=tag_id,
+        sample_ids_query=_sample_ids_query(sample_ids=sample_ids, collection_id=None),
+    )
     tag_resolver.remove_sample_ids_from_tag_id(
         session=session, tag_id=tag_id, sample_ids=sample_ids
     )
-    return True
+    return TagChangeResult(changed_ids=changed_ids)
 
 
 @tag_router.delete("/collections/{collection_id}/tags/{tag_id}/remove/samples_by_filter")
@@ -419,8 +440,11 @@ def remove_samples_from_tag_by_filter(
     ],
     tag_id: Annotated[UUID, Path(title="Tag Id")],
     body: TagByFilterBody,
-) -> bool:
-    """Remove a tag from every sample a grid filter matches."""
+) -> TagChangeResult:
+    """Remove a tag from every sample a grid filter matches.
+
+    Returns the samples that had the tag before.
+    """
     tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
     if tag is None or tag.collection_id != collection_id:
         raise HTTPException(
@@ -431,7 +455,19 @@ def remove_samples_from_tag_by_filter(
     sample_ids_query = build_sample_ids_query(
         session=session, collection_id=collection_id, grid_filter=body.filter
     )
+    changed_ids, _ = tag_resolver.split_sample_ids_by_tag(
+        session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
+    )
     tag_resolver.remove_samples_from_tag_from_query(
         session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
     )
-    return True
+    return TagChangeResult(changed_ids=changed_ids)
+
+
+def _sample_ids_query(sample_ids: list[UUID], collection_id: UUID | None) -> SelectOfScalar[UUID]:
+    query = select(SampleTable.sample_id).where(
+        db_array.in_array(column=col(SampleTable.sample_id), values=sample_ids)
+    )
+    if collection_id is not None:
+        query = query.where(col(SampleTable.collection_id) == collection_id)
+    return query
