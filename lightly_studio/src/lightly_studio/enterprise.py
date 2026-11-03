@@ -3,7 +3,7 @@
 Provides ``connect`` to establish a database connection to a remote
 LightlyStudio enterprise instance. The function exchanges an API key or JWT
 token for the database engine URL, applies any server-provided cloud storage
-credentials, and delegates to ``db_manager.connect``.
+credentials, delegates to ``db_manager.connect`` and sets a ``LocalTransport``.
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_API_URL,
     LIGHTLY_STUDIO_TOKEN,
 )
+from lightly_studio.transport import studio_transport
+from lightly_studio.transport.local.local_transport import LocalTransport
 
 logger = logging.getLogger(__name__)
 
@@ -115,6 +117,7 @@ def connect(
             logger.info(f"  {key}: configured")
 
     db_manager.connect(db_url=config.engine_url)
+    studio_transport.set_transport(transport=LocalTransport())
 
     _track_connection(
         config=config, auth_method=auth_method, event=tracking.ENTERPRISE_CONNECTION_ESTABLISHED
