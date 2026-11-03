@@ -19,6 +19,7 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import type { GridType } from '$lib/types';
     import SelectionCountRow from '../SelectionCountRow/SelectionCountRow.svelte';
+    import { formatTagAddToast, formatTagRemoveToast } from './tagToasts';
     import { useSelectionUndo } from '../useSelectionUndo/useSelectionUndo';
 
     interface Props {
@@ -48,7 +49,6 @@
     let busy = $state(false);
     const trimmed = $derived(name.trim());
     const exists = $derived($tags.some((t) => t.name.toLowerCase() === trimmed.toLowerCase()));
-    const items = $derived(`${selectedCount} ${selectedCount === 1 ? 'item' : 'items'}`);
 
     function add(tagId: string) {
         const path = { collection_id: collectionId, tag_id: tagId };
@@ -107,7 +107,7 @@
 
     async function run(
         action: () => Promise<{ data?: { changed_ids: string[] }; error?: unknown }>,
-        success: string,
+        message: (changed: number, selected: number) => string,
         fail: string,
         revert: Revert
     ): Promise<boolean> {
@@ -115,7 +115,8 @@
         try {
             const response = await action();
             if (response.error) throw new Error(fail);
-            offerUndoFor(success, response.data?.changed_ids ?? [], revert);
+            const changedIds = response.data?.changed_ids ?? [];
+            offerUndoFor(message(changedIds.length, selectedCount), changedIds, revert);
             refresh();
             return true;
         } catch {
@@ -129,14 +130,14 @@
     const addTag = (tagId: string, tagName: string) =>
         run(
             () => add(tagId),
-            `Added '${tagName}' to ${items}`,
+            (changed, selected) => formatTagAddToast(tagName, changed, selected),
             'Failed to add tag.',
             (ids) => removeIds(tagId, ids)
         );
     const removeTag = (tagId: string, tagName: string) =>
         run(
             () => remove(tagId),
-            `Removed '${tagName}' from ${items}`,
+            (changed, selected) => formatTagRemoveToast(tagName, changed, selected),
             'Failed to remove tag.',
             (ids) => addIds(tagId, ids)
         );
