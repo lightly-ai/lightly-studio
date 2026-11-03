@@ -5,6 +5,9 @@ from __future__ import annotations
 from typing import Protocol
 
 from lightly_studio.transport.collection_transport import CollectionTransport
+from lightly_studio.transport.metadata_transport import MetadataTransport
+from lightly_studio.transport.sample_transport import SampleTransport
+from lightly_studio.transport.tag_transport import TagTransport
 
 
 class StudioTransport(Protocol):
@@ -17,3 +20,15 @@ class StudioTransport(Protocol):
     @property
     def collections(self) -> CollectionTransport:
         """The transport for collections."""
+
+    @property
+    def samples(self) -> SampleTransport:
+        """The transport for samples and captions."""
+
+    @property
+    def tags(self) -> TagTransport:
+        """The transport for tags."""
+
+    @property
+    def metadata(self) -> MetadataTransport:
+        """The transport for metadata."""
