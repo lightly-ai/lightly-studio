@@ -1,16 +1,11 @@
 <script lang="ts">
-    // TODO(Michal, 10/2026): Replace the custom panel portal, positioning and dismissal with
-    // the Popover from $lib/components/ui/popover. Floating UI handles dialogs and containing
-    // blocks, so getPortalTarget and getTransformedAncestor can go.
-
     import { Button } from '$lib/components/ui/button';
+    import * as Popover from '$lib/components/ui/popover';
     import { Slider } from '$lib/components/ui/slider';
     import { cn } from '$lib/utils/shadcn.js';
     import { X } from '@lucide/svelte';
-    import { Dialog as DialogPrimitive } from 'bits-ui';
     import { onDestroy } from 'svelte';
     import type { Snippet } from 'svelte';
-    import { fly } from 'svelte/transition';
 
     let {
         initialColor = '#ff0000',
@@ -31,7 +26,6 @@
     } = $props();
 
     let isOpen = $state(false);
-    let triggerElement: HTMLElement;
     let colorValue = $state(initialColor);
     let alphaValue = $state(initialAlpha);
     let originalColor = initialColor;
@@ -250,36 +244,26 @@
 
     onDestroy(cancelScheduledPreview);
 
-    // Make sure events don't propagate out from the color picker
-    function preventPropagation(e: Event) {
+    // Keep clicks in the picker away from document-level listeners, for example the canvas.
+    function stopPropagation(e: Event) {
         e.stopPropagation();
-        e.preventDefault();
     }
 
-    // Inside a modal dialog, the panel must be in the dialog. Otherwise the dialog blocks
-    // pointer events and keyboard focus outside of it.
-    const getPortalTarget = (): HTMLElement | string =>
-        triggerElement?.closest<HTMLElement>('[role="dialog"]') ?? 'body';
-
-    // Toggle the picker open/closed
-    function togglePicker(e: Event) {
-        e.stopPropagation();
-        e.preventDefault();
-
-        if (isOpen) {
-            cancelChanges();
-            return;
-        }
-
+    function resetState(): void {
         originalColor = initialColor;
         originalAlpha = initialAlpha;
         colorValue = initialColor;
         alphaValue = initialAlpha;
         hasPreviewed = false;
-        isOpen = true;
+    }
 
-        // Position the picker in the next frame after it's rendered
-        setTimeout(updatePickerPosition, 0);
+    // bits-ui calls this only for user actions: the trigger, Escape or a click outside.
+    function handleOpenChange(open: boolean): void {
+        if (open) {
+            resetState();
+        } else {
+            cancelChanges();
+        }
     }
 
     // Apply changes and close
@@ -304,147 +288,22 @@
         hasPreviewed = false;
         isOpen = false;
     }
-
-    // Handle escape key
-    function handleKeyDown(e: KeyboardEvent) {
-        if (e.key === 'Escape') {
-            cancelChanges();
-        }
-    }
-
-    // Handle clicks outside
-    function setupClickOutside() {
-        function handleClickOutside(e: MouseEvent) {
-            if (isOpen && triggerElement) {
-                const pickerElement = document.getElementById('color-picker-panel');
-                if (
-                    pickerElement &&
-                    !pickerElement.contains(e.target as Node) &&
-                    !triggerElement.contains(e.target as Node)
-                ) {
-                    cancelChanges();
-                }
-            }
-        }
-
-        document.addEventListener('mousedown', handleClickOutside);
-
-        // Add a window resize listener to reposition if needed
-        const handleResize = () => updatePickerPosition();
-        window.addEventListener('resize', handleResize);
-
-        return {
-            destroy: () => {
-                document.removeEventListener('mousedown', handleClickOutside);
-                window.removeEventListener('resize', handleResize);
-            }
-        };
-    }
-
-    // Position the picker to ensure it's visible in the viewport
-    function updatePickerPosition() {
-        if (!triggerElement) return;
-
-        requestAnimationFrame(() => {
-            const pickerElement = document.getElementById('color-picker-panel');
-            if (!pickerElement) return;
-
-            const triggerRect = triggerElement.getBoundingClientRect();
-            const viewportWidth = window.innerWidth;
-            const viewportHeight = window.innerHeight;
-            const pickerWidth = pickerElement.offsetWidth;
-            const pickerHeight = pickerElement.offsetHeight;
-
-            // Initial position calculation based on preferred position
-            let left, top;
-
-            switch (position) {
-                case 'top':
-                    left = triggerRect.left + triggerRect.width / 2 - pickerWidth / 2;
-                    top = triggerRect.top - pickerHeight - 8;
-                    break;
-                case 'bottom':
-                    left = triggerRect.left + triggerRect.width / 2 - pickerWidth / 2;
-                    top = triggerRect.bottom + 8;
-                    break;
-                case 'left':
-                    left = triggerRect.left - pickerWidth - 8;
-                    top = triggerRect.top;
-                    break;
-                case 'right':
-                default:
-                    left = triggerRect.right + 8;
-                    top = triggerRect.top;
-                    break;
-            }
-
-            // Adjust if picker would go off-screen
-            if (left < 10) left = 10;
-            if (top < 10) top = 10;
-            if (left + pickerWidth > viewportWidth - 10) left = viewportWidth - pickerWidth - 10;
-            if (top + pickerHeight > viewportHeight - 10) top = viewportHeight - pickerHeight - 10;
-
-            // A transformed ancestor, for example a centered dialog, is the containing
-            // block of a fixed element, so the position is relative to it.
-            const container = getTransformedAncestor(pickerElement);
-            const offset = container?.getBoundingClientRect() ?? { left: 0, top: 0 };
-
-            // Apply the calculated position
-            pickerElement.style.position = 'fixed';
-            pickerElement.style.left = `${left - offset.left}px`;
-            pickerElement.style.top = `${top - offset.top}px`;
-        });
-    }
-
-    function getTransformedAncestor(element: HTMLElement): HTMLElement | null {
-        for (let node = element.parentElement; node; node = node.parentElement) {
-            if (getComputedStyle(node).transform !== 'none') return node;
-        }
-        return null;
-    }
-
-    $effect(() => {
-        if (!isOpen) return;
-
-        const cleanup = setupClickOutside();
-        return cleanup.destroy;
-    });
 </script>
 
-<div class="relative inline-block">
-    <!-- Trigger button with strong event isolation -->
-    <button
-        type="button"
-        class="m-0 border-0 bg-transparent p-0"
-        onclick={togglePicker}
-        onkeydown={handleKeyDown}
-        bind:this={triggerElement}
-        tabindex="0"
-    >
+<Popover.Root bind:open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover.Trigger class="m-0 border-0 bg-transparent p-0" onclick={stopPropagation}>
         {@render children()}
-    </button>
-
-    <!-- Color picker panel with portal via fixed positioning -->
-    {#if isOpen}
-        <DialogPrimitive.Portal to={getPortalTarget()}>
-            <div
-                id="color-picker-panel"
-                role="dialog"
-                aria-label="Color picker"
-                class={cn(
-                    'bg-popover text-popover-foreground pointer-events-auto z-50 w-56 rounded-md border shadow-md',
-                    className
-                )}
-                transition:fly={{
-                    duration: 150,
-                    y: 0,
-                    x: 0
-                }}
-                onkeydown={handleKeyDown}
-                onclick={preventPropagation}
-                onmousedown={preventPropagation}
-                tabindex="-1"
-            >
+    </Popover.Trigger>
+    <Popover.Content
+        side={position}
+        sideOffset={8}
+        collisionPadding={10}
+        role="dialog"
+        aria-label="Color picker"
+        class={cn('w-56 p-0', className)}
+        onclick={stopPropagation}
+        onmousedown={stopPropagation}
+    >
                 <!-- Header -->
                 <div class="flex items-center justify-between border-b px-3 py-2">
                     <h3 class="text-sm font-medium">Color</h3>
@@ -555,7 +414,5 @@
                         </Button>
                     </div>
                 </div>
-            </div>
-        </DialogPrimitive.Portal>
-    {/if}
-</div>
+    </Popover.Content>
+</Popover.Root>
