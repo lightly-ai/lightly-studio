@@ -7,6 +7,7 @@ from uuid import UUID
 
 import pydantic
 from fastapi import APIRouter, Depends, HTTPException, Path
+from pydantic import BaseModel
 from pydantic_core import PydanticCustomError
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -27,13 +28,13 @@ from lightly_studio.resolvers import annotation_label_resolver, annotation_resol
 annotations_label_router = APIRouter()
 
 
-class AnnotationLabelCreateRequest(pydantic.BaseModel):
+class AnnotationLabelCreateRequest(BaseModel):
     """Request model for creating or updating an annotation label."""
 
     annotation_label_name: str
 
 
-class AnnotationLabelColorRequest(pydantic.BaseModel):
+class AnnotationLabelColorRequest(BaseModel):
     """Request model for setting or clearing the color of an annotation label.
 
     Both fields are set to choose a color, or both are null to restore the default color.
