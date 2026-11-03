@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel, StrictInt
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Field, select
+from sqlmodel import Field, col, select
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
 from lightly_studio.api.routes.api.status import (
@@ -248,6 +248,58 @@ def add_samples_to_tag_by_filter(
     return True
 
 
+class TagCountsBody(BaseModel):
+    """Body for counting tags over a selection.
+
+    Send either explicit ``sample_ids`` or a ``filter`` that selects the samples.
+    """
+
+    sample_ids: list[UUID] | None = None
+    filter: GridFilter | None = None
+
+
+class TagCountView(BaseModel):
+    """Number of selected samples that carry a tag."""
+
+    tag_id: UUID
+    count: int
+
+
+@tag_router.post(
+    "/collections/{collection_id}/tags/counts",
+    response_model=list[TagCountView],
+)
+def count_tags_for_selection(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
+    body: TagCountsBody,
+) -> list[TagCountView]:
+    """Count how many samples of a selection carry each tag.
+
+    Tags carried by none of the selected samples are omitted.
+    """
+    if body.sample_ids is not None:
+        sample_ids_query = select(SampleTable.sample_id).where(
+            col(SampleTable.sample_id).in_(body.sample_ids)
+        )
+    elif body.filter is not None:
+        sample_ids_query = build_sample_ids_query(
+            session=session, collection_id=collection_id, grid_filter=body.filter
+        )
+    else:
+        raise HTTPException(
+            status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
+            detail="Either sample_ids or filter is required.",
+        )
+    counts = tag_resolver.count_samples_per_tag(
+        session=session, collection_id=collection_id, sample_ids_query=sample_ids_query
+    )
+    return [TagCountView(tag_id=tag_id, count=count) for tag_id, count in counts.items()]
+
+
 class SplitDefinitionBody(BaseModel):
     """One output tag and its relative size."""
 
@@ -354,5 +406,32 @@ def remove_thing_ids_to_tag_id(
     sample_ids = body.sample_ids if body.sample_ids else []
     tag_resolver.remove_sample_ids_from_tag_id(
         session=session, tag_id=tag_id, sample_ids=sample_ids
+    )
+    return True
+
+
+@tag_router.delete("/collections/{collection_id}/tags/{tag_id}/remove/samples_by_filter")
+def remove_samples_from_tag_by_filter(
+    session: SessionDep,
+    collection_id: Annotated[
+        UUID,
+        Path(title="collection Id", description="The ID of the collection"),
+    ],
+    tag_id: Annotated[UUID, Path(title="Tag Id")],
+    body: TagByFilterBody,
+) -> bool:
+    """Remove a tag from every sample a grid filter matches."""
+    tag = tag_resolver.get_by_id(session=session, tag_id=tag_id)
+    if tag is None or tag.collection_id != collection_id:
+        raise HTTPException(
+            status_code=HTTP_STATUS_NOT_FOUND,
+            detail=f"Tag {tag_id} not found in collection {collection_id}.",
+        )
+
+    sample_ids_query = build_sample_ids_query(
+        session=session, collection_id=collection_id, grid_filter=body.filter
+    )
+    tag_resolver.remove_samples_from_tag_from_query(
+        session=session, tag_id=tag_id, sample_ids_query=sample_ids_query
     )
     return True

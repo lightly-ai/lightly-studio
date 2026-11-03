@@ -11,6 +11,7 @@ from sqlmodel import Session, col, select
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CREATED,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.models.collection import SampleType
@@ -391,3 +392,125 @@ def _post_split(
     if grid_filter is not None:
         body["filter"] = grid_filter
     return test_client.post(f"/api/collections/{collection_id}/tags/split", json=body)
+
+
+def test_tag_counts__by_ids(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag_a = create_tag(session=db_session, collection_id=collection_id, tag_name="a")
+    tag_b = create_tag(session=db_session, collection_id=collection_id, tag_name="b")
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="s0.png"), ImageStub(path="s1.png"), ImageStub(path="s2.png")],
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag_a.tag_id, sample_ids=[i.sample_id for i in images]
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag_b.tag_id, sample_ids=[images[2].sample_id]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/counts",
+        json={"sample_ids": [str(images[0].sample_id), str(images[1].sample_id)]},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [{"tag_id": str(tag_a.tag_id), "count": 2}]
+
+
+def test_tag_counts__by_filter(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    wide = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="wide.png", width=1920
+    )
+    narrow = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="narrow.png", width=10
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[wide.sample_id, narrow.sample_id]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/counts",
+        json={"filter": {"filter_type": "image", "width": {"min": 100}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [{"tag_id": str(tag.tag_id), "count": 1}]
+
+
+def test_tag_counts__annotation_grid(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+    )
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+    )
+    tag = create_tag(session=db_session, collection_id=annotation_collection_id)
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[annotation.sample_id]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{annotation_collection_id}/tags/counts",
+        json={"filter": {"filter_type": "annotations"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [{"tag_id": str(tag.tag_id), "count": 1}]
+
+
+def test_tag_counts__no_target_is_422(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    response = test_client.post(f"/api/collections/{collection_id}/tags/counts", json={})
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+
+
+def test_remove_samples_by_filter(db_session: Session, test_client: TestClient) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    wide = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="wide.png", width=1920
+    )
+    narrow = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="narrow.png", width=10
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[wide.sample_id, narrow.sample_id]
+    )
+
+    response = test_client.request(
+        "DELETE",
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/remove/samples_by_filter",
+        json={"filter": {"filter_type": "image", "width": {"min": 100}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {narrow.sample_id}
+
+
+def test_remove_samples_by_filter__tag_in_other_collection_is_404(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+
+    response = test_client.request(
+        "DELETE",
+        f"/api/collections/{uuid.uuid4()}/tags/{tag.tag_id}/remove/samples_by_filter",
+        json={"filter": {"filter_type": "image"}},
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
