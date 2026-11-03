@@ -132,7 +132,6 @@
         filteredSampleCount,
         filteredCaptionCount,
         filteredAnnotationCount,
-        isEditingMode,
         // Sourced from the stable singleton (not `$derived(data)`) so `search`, created once below,
         // captures a store reference that never goes stale.
         textEmbedding
@@ -782,7 +781,6 @@
                         onClear={clearSelection}
                         {collectionId}
                         {gridType}
-                        isEditing={$isEditingMode}
                     />
                 {/if}
             {/snippet}

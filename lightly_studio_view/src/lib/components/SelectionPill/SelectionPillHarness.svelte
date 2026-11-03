@@ -8,11 +8,10 @@
         selectedCount: number;
         onClear: () => void;
         gridType: GridType;
-        isEditing: boolean;
     }
-    let { client, selectedCount, onClear, gridType, isEditing }: Props = $props();
+    let { client, selectedCount, onClear, gridType }: Props = $props();
 </script>
 
 <QueryClientProvider {client}>
-    <SelectionPill {selectedCount} {onClear} collectionId="c1" {gridType} {isEditing} />
+    <SelectionPill {selectedCount} {onClear} collectionId="c1" {gridType} />
 </QueryClientProvider>

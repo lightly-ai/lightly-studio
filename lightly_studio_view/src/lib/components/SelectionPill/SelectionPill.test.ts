@@ -21,8 +21,7 @@ vi.mock('$lib/hooks/useSelectionTarget/useSelectionTarget', () => ({
 const defaultProps = {
     selectedCount: 3,
     onClear: vi.fn(),
-    gridType: 'images' as GridType,
-    isEditing: false
+    gridType: 'images' as GridType
 };
 
 function renderPill(props: Partial<typeof defaultProps> = {}) {
@@ -38,13 +37,14 @@ describe('SelectionPill', () => {
         expect(screen.queryByText(/selected/)).toBeNull();
     });
 
-    it('shows only the count and clear outside edit mode', async () => {
+    it('shows the count, Tag, Annotate and clear with a selection', async () => {
         const onClear = vi.fn();
         renderPill({ onClear });
 
         expect(screen.getByText('3 selected')).toBeInTheDocument();
-        expect(screen.queryByRole('button', { name: 'Tag' })).toBeNull();
-        expect(screen.queryByRole('button', { name: 'Annotate' })).toBeNull();
+        expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Annotate' })).toBeInTheDocument();
+        expect(screen.queryByTestId('selection-hint')).toBeNull();
         await fireEvent.click(screen.getByTestId('clear-selection-button'));
         expect(onClear).toHaveBeenCalledOnce();
     });
@@ -58,15 +58,8 @@ describe('SelectionPill', () => {
         await waitFor(() => expect(screen.queryByText('3 selected')).not.toBeInTheDocument());
     });
 
-    it('shows Tag and Annotate in edit mode', () => {
-        renderPill({ isEditing: true });
-
-        expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: 'Annotate' })).toBeInTheDocument();
-    });
-
     it('Annotate opens the classification popover on the images grid', async () => {
-        renderPill({ isEditing: true });
+        renderPill();
 
         await fireEvent.click(screen.getByRole('button', { name: 'Annotate' }));
 
@@ -75,7 +68,7 @@ describe('SelectionPill', () => {
     });
 
     it('Annotate opens the annotation popover on the annotations grid', async () => {
-        renderPill({ isEditing: true, gridType: 'annotations' });
+        renderPill({ gridType: 'annotations' });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Annotate' }));
 
@@ -83,7 +76,7 @@ describe('SelectionPill', () => {
     });
 
     it('has no Annotate on other grids', () => {
-        renderPill({ isEditing: true, gridType: 'videos' });
+        renderPill({ gridType: 'videos' });
 
         expect(screen.getByRole('button', { name: 'Tag' })).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: 'Annotate' })).toBeNull();
@@ -100,20 +93,20 @@ describe('SelectionPill', () => {
 
         const tagMenu = () => screen.queryByPlaceholderText('Search or create a tag…');
 
-        it('T opens the tag popover in edit mode with a selection', async () => {
-            renderPill({ isEditing: true });
+        it('T opens the tag popover with a selection', async () => {
+            renderPill();
             await fireEvent.keyDown(window, { key: 't' });
             expect(await screen.findByPlaceholderText('Search or create a tag…')).toBeVisible();
         });
 
         it('L opens the annotate popover', async () => {
-            renderPill({ isEditing: true });
+            renderPill();
             await fireEvent.keyDown(window, { key: 'l' });
             expect(await screen.findByPlaceholderText('Search or create a class…')).toBeVisible();
         });
 
         it('ignores T while an input has focus', async () => {
-            renderPill({ isEditing: true });
+            renderPill();
             const input = document.createElement('input');
             document.body.appendChild(input);
             input.focus();
@@ -121,16 +114,37 @@ describe('SelectionPill', () => {
             expect(tagMenu()).toBeNull();
         });
 
-        it('ignores T outside edit mode', async () => {
-            renderPill();
+        it('ignores T with an empty selection', async () => {
+            renderPill({ selectedCount: 0 });
             await fireEvent.keyDown(window, { key: 't' });
             expect(tagMenu()).toBeNull();
         });
+    });
 
-        it('ignores T with an empty selection', async () => {
-            renderPill({ isEditing: true, selectedCount: 0 });
-            await fireEvent.keyDown(window, { key: 't' });
-            expect(tagMenu()).toBeNull();
+    // Kept last: dismissing sets a module-wide flag that later renders would see.
+    describe('hint', () => {
+        it('names the keys when nothing is selected', () => {
+            renderPill({ selectedCount: 0 });
+
+            expect(screen.getByTestId('selection-hint')).toHaveTextContent(
+                'Select images to tag t or annotate l'
+            );
+        });
+
+        it('leaves out annotate on grids without an Annotate menu', () => {
+            renderPill({ selectedCount: 0, gridType: 'videos' });
+
+            const hint = screen.getByTestId('selection-hint');
+            expect(hint).toHaveTextContent('Select videos to tag t');
+            expect(hint).not.toHaveTextContent('annotate');
+        });
+
+        it('hides after a dismiss', async () => {
+            renderPill({ selectedCount: 0 });
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Dismiss hint' }));
+
+            await waitFor(() => expect(screen.queryByTestId('selection-hint')).toBeNull());
         });
     });
 });
