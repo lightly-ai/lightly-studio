@@ -75,7 +75,7 @@ Then tag about 100 of them `to_label`, as in the original step.
 |---|---|---|
 | 25 | Draw a box | It stays on screen while it saves |
 | 21 | Edit mode, select a box | Panel beside it: class, source, delete |
-| 22 | Open an image with two sources, before picking anything | Header shows "Adding to Pick a source"; drawing a box shows "Pick an annotation source..." and creates nothing |
+| 22 | Open an image with two sources, draw a box before picking; click the pencil on a source in the Annotations panel, then hide that source with its eye and draw again | No pencil is filled at first; the first draw shows "Pick a source with the pencil in the Annotations panel..." and creates nothing. The hidden source shows a crossed-out pencil; drawing shows "... is hidden. Show it ..." and creates nothing. No hint line above the sources |
 | 11 | Press right arrow through a few images | Next image shows at once |
 | 34 | Reopen the Annotations plot | The new box is a point |
 
