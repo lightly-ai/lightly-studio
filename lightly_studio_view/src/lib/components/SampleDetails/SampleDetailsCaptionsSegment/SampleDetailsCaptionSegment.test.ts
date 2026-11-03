@@ -87,7 +87,7 @@ describe('SampleDetailsCaptionSegment', () => {
         render(SampleDetailsCaptionSegment, { props: defaultProps });
 
         expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
-            'No captions. Click Edit annotations to add one.'
+            'No captions. Click Edit to add one.'
         );
     });
 

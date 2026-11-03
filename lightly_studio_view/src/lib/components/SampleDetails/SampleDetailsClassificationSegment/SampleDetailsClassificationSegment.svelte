@@ -324,7 +324,7 @@
             {#if classificationAnnotations.length === 0 && !$isEditingMode}
                 <p class="text-sm text-muted-foreground" data-testid="empty-state-message">
                     {#if canEdit}
-                        No classifications. Click <strong>Edit annotations</strong> to add one.
+                        No classifications. Click <strong>Edit</strong> to add one.
                     {:else}
                         No classifications.
                     {/if}

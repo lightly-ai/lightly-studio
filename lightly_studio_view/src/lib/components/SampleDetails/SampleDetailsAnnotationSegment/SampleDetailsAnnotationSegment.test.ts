@@ -602,7 +602,7 @@ describe('SampleDetailsAnnotationSegment', () => {
             render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
-                'No annotations. Click Edit annotations and use the toolbar.'
+                'No annotations. Click Edit and use the toolbar.'
             );
         });
 

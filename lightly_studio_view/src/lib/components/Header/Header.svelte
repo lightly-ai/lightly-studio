@@ -148,12 +148,12 @@
                             icon={Pencil}
                             buttonProps={{
                                 onclick: () => setEditMode(true, 'click'),
-                                title: 'Edit annotations',
+                                title: 'Edit',
                                 'data-testid': 'header-editing-mode-button',
                                 class: 'nav-button'
                             }}
                         >
-                            Edit annotations
+                            Edit
                         </Button>
                     {/if}
                 {/if}

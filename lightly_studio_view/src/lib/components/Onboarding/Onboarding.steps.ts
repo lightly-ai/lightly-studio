@@ -297,7 +297,7 @@ export function createTourSteps(opts: StepsOptions) {
             element: editButton,
             title: 'Edit annotations',
             description:
-                'Click Edit annotations to enter edit mode. From there you can draw bounding boxes, paint segmentation masks, and modify existing annotations directly on your images.',
+                'Click Edit to enter edit mode. From there you can draw bounding boxes, paint segmentation masks, and modify existing annotations directly on your images.',
             showButtons: ['previous', 'next'],
             nextBtnText: 'Next',
             prevBtnText: 'Prev',

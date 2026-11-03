@@ -90,7 +90,7 @@
         {/if}
     </div>
     {#if open && !isEmpty}
-        <div class="ml-4 mt-1 space-y-1 border-l border-foreground/30 pl-3">
+        <div class="ml-4 mt-1 space-y-1 border-l border-foreground/30 pl-3 pr-2">
             <AnnotationClassRows
                 items={node.classes}
                 {showClassColor}

@@ -631,7 +631,7 @@ describe('SampleDetailsClassificationSegment', () => {
             render(SampleDetailsClassificationSegment, { props: defaultProps });
 
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent(
-                'No classifications. Click Edit annotations to add one.'
+                'No classifications. Click Edit to add one.'
             );
         });
 

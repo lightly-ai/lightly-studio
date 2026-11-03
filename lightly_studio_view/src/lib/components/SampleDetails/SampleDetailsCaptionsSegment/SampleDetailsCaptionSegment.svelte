@@ -82,7 +82,7 @@
             {#if !captions?.length && !$isEditingMode}
                 <p class="text-sm text-muted-foreground" data-testid="empty-state-message">
                     {#if canEdit}
-                        No captions. Click <strong>Edit annotations</strong> to add one.
+                        No captions. Click <strong>Edit</strong> to add one.
                     {:else}
                         No captions.
                     {/if}

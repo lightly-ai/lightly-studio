@@ -55,7 +55,7 @@
                 emphasized && 'text-muted-foreground'
             )}
             data-testid="{testId}-name"
-            >{parts.before}{#if parts.match}<mark class="rounded-sm bg-primary/20 text-inherit"
+            >{parts.before}{#if parts.match}<mark class="rounded-sm bg-primary/25 text-foreground"
                     >{parts.match}</mark
                 >{/if}{parts.after}</span
         >

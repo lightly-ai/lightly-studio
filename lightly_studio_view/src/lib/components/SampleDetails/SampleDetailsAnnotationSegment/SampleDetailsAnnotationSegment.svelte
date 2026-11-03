@@ -366,7 +366,7 @@
             {#if $isEditingMode}
                 No annotations. Use the toolbar to add one.
             {:else if canEdit}
-                No annotations. Click <strong>Edit annotations</strong> and use the toolbar.
+                No annotations. Click <strong>Edit</strong> and use the toolbar.
             {:else}
                 No annotations.
             {/if}

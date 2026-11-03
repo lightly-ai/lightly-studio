@@ -153,6 +153,22 @@ describe('AnnotationSourceTree', () => {
         expect(screen.getByText('No annotations')).toBeInTheDocument();
     });
 
+    it('expands a collapsed source while searching and highlights the match', async () => {
+        render(AnnotationSourceTree, defaultProps);
+        await userEvent.click(screen.getByRole('button', { name: 'Collapse ground_truth' }));
+        expect(screen.queryByRole('checkbox', { name: 'raccoon in ground_truth' })).toBeNull();
+
+        await userEvent.type(
+            screen.getByRole('textbox', { name: 'Search annotation classes' }),
+            'ra'
+        );
+        expect(
+            screen.getByRole('checkbox', { name: 'raccoon in ground_truth' })
+        ).toBeInTheDocument();
+        const name = screen.getByTestId('annotation-class-name');
+        expect(name.querySelector('mark')).toHaveTextContent('ra');
+    });
+
     it('renders an empty source collapsed, with no children', () => {
         mocks.sources = [...mocks.sources, { collection_id: 'empty', name: 'empty_source' }];
 

@@ -124,6 +124,8 @@
                     isHidden={!$selectedCollectionIds.includes(node.id)}
                     showSourceColor={colorBySource}
                     showClassColor
+                    forceOpen={searching}
+                    highlight={query}
                     {showVisibilityToggle}
                     onToggleSource={(checked) => setSource(node.id, node.labelIds, checked)}
                     onTogglePair={(labelId) => togglePair(node.id, labelId)}
