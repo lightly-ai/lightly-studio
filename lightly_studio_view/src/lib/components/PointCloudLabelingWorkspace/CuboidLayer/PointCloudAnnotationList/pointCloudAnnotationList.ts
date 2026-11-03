@@ -278,11 +278,7 @@ export function buildAnnotationForest({
     const noParentTrackGroup: AnnotationTreeNode[] =
         noParentTrackChildren.length > 0 ? [buildVirtualGroupNode(noParentTrackChildren)] : [];
 
-    return [
-        ...parentRoots.map(buildNode),
-        ...absentParentGroups,
-        ...noParentTrackGroup
-    ];
+    return [...parentRoots.map(buildNode), ...absentParentGroups, ...noParentTrackGroup];
 }
 
 /** Returns true when the subtree rooted at {@link node} contains a cuboid with the given ID. */
