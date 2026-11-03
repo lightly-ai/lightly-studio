@@ -286,10 +286,11 @@ def test_set_annotation_label_color__clear(db_session: Session, test_client: Tes
     label_id = create_annotation_label(
         session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     ).annotation_label_id
-    test_client.put(
+    setup_result = test_client.put(
         f"/api/annotation_labels/{label_id!s}/color",
         json={"color": "#ff8040", "alpha": 0.5},
     )
+    assert setup_result.status_code == HTTP_STATUS_OK
 
     result = test_client.put(
         f"/api/annotation_labels/{label_id!s}/color",

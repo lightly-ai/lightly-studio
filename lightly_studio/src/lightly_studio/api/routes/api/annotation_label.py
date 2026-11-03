@@ -5,8 +5,8 @@ from __future__ import annotations
 from typing import Annotated
 from uuid import UUID
 
+import pydantic
 from fastapi import APIRouter, Depends, HTTPException, Path
-from pydantic import BaseModel, Field, model_validator
 from pydantic_core import PydanticCustomError
 
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -27,28 +27,29 @@ from lightly_studio.resolvers import annotation_label_resolver, annotation_resol
 annotations_label_router = APIRouter()
 
 
-class AnnotationLabelCreateRequest(BaseModel):
+class AnnotationLabelCreateRequest(pydantic.BaseModel):
     """Request model for creating or updating an annotation label."""
 
     annotation_label_name: str
 
 
-class AnnotationLabelColorRequest(BaseModel):
+class AnnotationLabelColorRequest(pydantic.BaseModel):
     """Request model for setting or clearing the color of an annotation label.
 
-    Both fields are set to choose a color, or both are None to restore the default color.
+    Both fields are set to choose a color, or both are null to restore the default color.
     """
 
-    color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-    alpha: float | None = Field(default=None, ge=0, le=1)
+    color: str | None = pydantic.Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
+    alpha: float | None = pydantic.Field(default=None, ge=0, le=1)
 
-    @model_validator(mode="after")
-    def _check_color_and_alpha_are_set_together(self) -> AnnotationLabelColorRequest:  # noqa: N804
+    @pydantic.model_validator(mode="after")
+    def validate_color_and_alpha_are_set_together(self) -> AnnotationLabelColorRequest:  # noqa: N804
+        """Require color and alpha to be set together or cleared together."""
         if (self.color is None) != (self.alpha is None):
             # PydanticCustomError keeps the 422 body JSON serializable. A plain ValueError
             # puts the exception object into the error context.
             raise PydanticCustomError(
-                "color_alpha_mismatch", "color and alpha must be both set or both None"
+                "color_alpha_mismatch", "Set both color and alpha, or set both to null."
             )
         return self
 
