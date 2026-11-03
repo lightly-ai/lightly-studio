@@ -232,6 +232,29 @@ def test_get_adjacent_samples__returns_adjacents_for_mcap_sequences(
     assert data["total_count"] == 1
 
 
+def test_get_adjacent_samples__mcap_sequences_with_filter(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    sequence = mcap_sequence_helpers.create_mcap_sequence(session=db_session)
+
+    response = test_client.post(
+        f"/api/samples/{sequence.sample_id}/adjacents",
+        json={
+            "sample_type": "sequence",
+            "collection_id": str(sequence.sequence_collection.collection_id),
+            "filters": {
+                "filter_type": "mcap_sequence",
+                "sample_filter": {"sample_ids": [str(uuid4())]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    # The only sequence is filtered out.
+    assert response.json() is None
+
+
 def test_get_adjacent_samples__annotations_match_grid_ordering(
     db_session: Session,
     test_client: TestClient,
