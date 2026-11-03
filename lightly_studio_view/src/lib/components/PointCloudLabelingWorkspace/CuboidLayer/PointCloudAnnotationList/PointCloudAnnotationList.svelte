@@ -63,7 +63,7 @@
     function forestNodeKey(node: AnnotationTreeNode): string {
         if (node.cuboid) return node.cuboid.id;
         const firstChild = node.children[0]?.cuboid;
-        if (firstChild?.parentTrackClassName) return `absent-${firstChild.parentTrackNumber}`;
+        if (firstChild?.parentTrackNumber != null) return `absent-${firstChild.parentTrackNumber}`;
         return 'no-track';
     }
 </script>
