@@ -5,9 +5,9 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Mapped, aliased
-from sqlmodel import col, or_, select
+from sqlmodel import and_, col, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array
@@ -18,6 +18,13 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from lightly_studio.type_definitions import QueryType
+
+
+class SourceLabelPair(BaseModel):
+    """An annotation class in one annotation source."""
+
+    collection_id: UUID
+    annotation_label_id: UUID
 
 
 class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
@@ -31,6 +38,13 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
     collection_ids: list[UUID] | None = Field(default=None, description="List of collection UUIDs")
     annotation_label_ids: list[UUID] | None = Field(
         default=None, description="List of annotation label UUIDs"
+    )
+    source_label_pairs: list[SourceLabelPair] | None = Field(
+        default=None,
+        description=(
+            "Match annotations whose annotation source and annotation class equal one of the "
+            "pairs. Both values must match on the same annotation."
+        ),
     )
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
     sample_ids: list[UUID] | None = Field(
@@ -134,6 +148,7 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
         """Whether a predicate other than the collection scope is set."""
         return bool(
             self.annotation_label_ids
+            or self.source_label_pairs
             or self.tag_ids
             or self.annotation_types
             or self.sample_ids
@@ -180,6 +195,21 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
                 db_array.in_array(
                     column=col(AnnotationBaseTable.annotation_label_id),
                     values=self.annotation_label_ids,
+                )
+            )
+
+        # Filter by exact (annotation source, annotation class) pairs
+        if self.source_label_pairs:
+            query = query.where(
+                or_(
+                    *(
+                        and_(
+                            col(annotation_sample.collection_id) == pair.collection_id,
+                            col(AnnotationBaseTable.annotation_label_id)
+                            == pair.annotation_label_id,
+                        )
+                        for pair in self.source_label_pairs
+                    )
                 )
             )
 

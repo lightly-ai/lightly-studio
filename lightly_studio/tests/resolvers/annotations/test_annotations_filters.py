@@ -20,6 +20,7 @@ from lightly_studio.resolvers import annotation_resolver, image_resolver
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
     AnnotationsFilter,
+    SourceLabelPair,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
@@ -324,6 +325,138 @@ def test_apply_to_parent_sample_query__unannotated_samples_in_sources(
     )
 
     assert sample_ids == {in_source_b.sample_id, unannotated.sample_id}
+
+
+class _PairData:
+    """Five images annotated in two annotation sources.
+
+    Image "gt_deer" has a deer in ground_truth, "gt_raccoon" a raccoon in ground_truth,
+    "model_raccoon" a raccoon in model_v1, "model_deer" a deer in model_v1, and
+    "none" has no annotation.
+    """
+
+    def __init__(self, session: Session) -> None:
+        self.collection_id = create_collection(session=session).collection_id
+        self.deer = create_annotation_label(
+            session=session, root_collection_id=self.collection_id, label_name="deer"
+        ).annotation_label_id
+        self.raccoon = create_annotation_label(
+            session=session, root_collection_id=self.collection_id, label_name="raccoon"
+        ).annotation_label_id
+        self.image_ids: dict[str, UUID] = {}
+        self.source_ids: dict[str, UUID] = {}
+        for name, source, label in [
+            ("gt_deer", "ground_truth", self.deer),
+            ("gt_raccoon", "ground_truth", self.raccoon),
+            ("model_raccoon", "model_v1", self.raccoon),
+            ("model_deer", "model_v1", self.deer),
+            ("none", None, None),
+        ]:
+            image = create_image(
+                session=session, collection_id=self.collection_id, file_path_abs=f"/{name}"
+            )
+            self.image_ids[name] = image.sample_id
+            if source is None or label is None:
+                continue
+            annotation = create_annotation(
+                session=session,
+                collection_id=self.collection_id,
+                sample_id=image.sample_id,
+                annotation_label_id=label,
+                annotation_collection_name=source,
+            )
+            self.source_ids[source] = annotation.annotation_collection_id
+
+    def pair(self, source: str, label_id: UUID) -> SourceLabelPair:
+        return SourceLabelPair(
+            collection_id=self.source_ids[source], annotation_label_id=label_id
+        )
+
+    def names(self, sample_ids: set[UUID]) -> set[str]:
+        return {name for name, sample_id in self.image_ids.items() if sample_id in sample_ids}
+
+
+def test_pairs__one_pair(db_session: Session) -> None:
+    data = _PairData(session=db_session)
+    pairs_filter = AnnotationsFilter(source_label_pairs=[data.pair("ground_truth", data.deer)])
+
+    assert _image_names(session=db_session, data=data, annotations_filter=pairs_filter) == {
+        "gt_deer"
+    }
+    assert _annotation_image_names(
+        session=db_session, data=data, annotations_filter=pairs_filter
+    ) == {"gt_deer"}
+
+
+def test_pairs__two_pairs_or(db_session: Session) -> None:
+    data = _PairData(session=db_session)
+    pairs_filter = AnnotationsFilter(
+        source_label_pairs=[
+            data.pair("ground_truth", data.deer),
+            data.pair("model_v1", data.raccoon),
+        ]
+    )
+
+    assert _image_names(session=db_session, data=data, annotations_filter=pairs_filter) == {
+        "gt_deer",
+        "model_raccoon",
+    }
+    assert _annotation_image_names(
+        session=db_session, data=data, annotations_filter=pairs_filter
+    ) == {"gt_deer", "model_raccoon"}
+
+
+def test_pairs__mismatched_pair_excluded(db_session: Session) -> None:
+    data = _PairData(session=db_session)
+    pairs_filter = AnnotationsFilter(
+        source_label_pairs=[
+            data.pair("ground_truth", data.deer),
+            data.pair("model_v1", data.raccoon),
+        ]
+    )
+
+    # A raccoon in ground_truth and a deer in model_v1 match a class and a source,
+    # but not one pair.
+    image_names = _image_names(session=db_session, data=data, annotations_filter=pairs_filter)
+    annotation_names = _annotation_image_names(
+        session=db_session, data=data, annotations_filter=pairs_filter
+    )
+    assert "gt_raccoon" not in image_names
+    assert "model_deer" not in image_names
+    assert "gt_raccoon" not in annotation_names
+    assert "model_deer" not in annotation_names
+
+
+def test_pairs__with_unannotated_samples(db_session: Session) -> None:
+    data = _PairData(session=db_session)
+    pairs_filter = AnnotationsFilter(
+        source_label_pairs=[data.pair("ground_truth", data.deer)],
+        include_unannotated_samples=True,
+    )
+
+    assert _image_names(session=db_session, data=data, annotations_filter=pairs_filter) == {
+        "gt_deer",
+        "none",
+    }
+
+
+def _image_names(
+    session: Session, data: _PairData, annotations_filter: AnnotationsFilter
+) -> set[str]:
+    return data.names(
+        _get_image_sample_ids(
+            session=session,
+            collection_id=data.collection_id,
+            annotations_filter=annotations_filter,
+        )
+    )
+
+
+def _annotation_image_names(
+    session: Session, data: _PairData, annotations_filter: AnnotationsFilter
+) -> set[str]:
+    annotations = annotations_resolver.get_all(session=session, filters=annotations_filter)
+    return data.names({annotation.parent_sample_id for annotation in annotations.annotations})
 
 
 def _get_image_sample_ids(
