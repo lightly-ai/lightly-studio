@@ -67,10 +67,15 @@ users, export/import of colors.
 - **Plots keep `getColorByLabel`.** A class with the same name as a plot category recolors
   it, as today.
 - **The frontend keys colors by class name, the server by class ID.** A refetch after a
-  rename moves the color to the new name. Keying the frontend store by ID is not worth the
-  extra work for the rare case of a rename while a preview is open.
+  rename moves the color to the new name. A picker session keeps the name it started with
+  (PR 6), so a rename while a preview is open leaves no stray preview. Keying the frontend
+  store by ID would touch every color reader for no extra gain.
 - **The save hook is stubbed per test file** (PR 11), not globally in `src/setupTests.ts`,
   so tests that need the real hook still get it.
+- **Accepted gap: cancelling a second preview while the first save is pending.** Apply A,
+  then preview and cancel B before A's save finishes: the swatch shows the color saved
+  before A until A's save finishes, then A. The gap lasts one request; tracking pending
+  saves apart from the open preview is not worth the extra state.
 
 ## Review Focus
 
@@ -108,7 +113,7 @@ previous one. Every PR leaves the app working.
 
 | # | Title | Branch | Est. LOC |
 |---|-------|--------|----------|
-| 4 | Seed the annotation class color picker from useColorPicker | `michal-lig-11355-04-seed-legend-picker` | ~45 |
+| 4 | Fix the annotation class color picker seed and button name | `michal-lig-11355-04-seed-legend-picker` | ~65 |
 | 5 | Extract the custom color store into a factory | `michal-lig-11355-05-color-store-factory` | ~130 (moved code) |
 | 6 | Keep color previews in a separate layer | `michal-lig-11355-06-preview-layer` | ~170 |
 | 7 | Color annotations by source through getColorBySource | `michal-lig-11355-07-get-color-by-source` | ~145 |
@@ -188,16 +193,21 @@ LOC counts additions plus deletions, tests included, generated files excluded.
 
 ---
 
-## PR 4: Seed the annotation class color picker from useColorPicker
+## PR 4: Fix the annotation class color picker seed and button name
 
-**Purpose:** Bug fix. `AnnotationColorLegend` seeds the picker with alpha `0.4` for a class without a custom color, so Apply without changes dims the class.
+**Purpose:** Two fixes in the class color legend:
+- It seeds the picker with alpha `0.4` for a class without a custom color, so Apply without changes dims the class.
+- Its picker button has no accessible name, so a screen reader cannot tell which class it changes (CodeRabbit on #3018).
 
 **Files:**
 - Modify: `lightly_studio_view/src/lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte`, `AnnotationColorLegend.test.ts`
+- Modify: `lightly_studio_view/src/lib/components/ui/color-picker/color-picker.svelte`, `color-picker.test.ts`
 
 Delete `getInitialColor`, `getInitialAlpha` and the destructured `getCustomColor`/`hasCustomColor`; pass `initialColor={picker.initialColor}` and `initialAlpha={picker.initialAlpha}`, as `ColorMarker.svelte` does.
 
-- [ ] **Step 1: Write the failing test** `'keeps full opacity when Apply is clicked without changes'`: open the picker, click `Apply` → `useCustomLabelColors().getCustomColor('cat')?.alpha === 1`.
+`ColorPicker` gets the prop `triggerLabel?: string`, passed as `aria-label` to `Popover.Trigger`. The legend passes `triggerLabel={`Change the color of ${labelName}`}`.
+
+- [ ] **Step 1: Write the failing test** `'keeps full opacity when Apply is clicked without changes'`: open the picker, click `Apply` → `useCustomLabelColors().getCustomColor('cat')?.alpha === 1`; `'names the picker button after the class'`: `getByRole('button', { name: 'Change the color of cat' })` exists. In `color-picker.test.ts`: `'sets the trigger aria-label from triggerLabel'`.
 - [ ] **Step 2: Run** `npx vitest run src/lib/components/AnnotationColorLegend`. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** the suite passes. Commit on request.
@@ -232,9 +242,9 @@ Delete `getInitialColor`, `getInitialAlpha` and the destructured `getCustomColor
   - `hasSavedColor(name: string): boolean` — saved layer only.
   - `replaceSavedColors(colors: Record<string, CustomColor>): void` — keeps previews.
   - `setCustomColor`/`deleteCustomColor` write the saved layer; `getCustomColor`/`hasCustomColor` read the overlaid view.
-- `useColorPicker`: a session starts at the first `setColor` after a finished one, with `owner = Symbol()`. `setColor` → `setPreviewColor`. `finishColorChange(true)` writes the preview to the saved layer, then `clearPreviewColor`; `finishColorChange(false)` only `clearPreviewColor`. `onDestroy` also calls `clearPreviewColor` for an open session, so unmounting mid-preview (closing the settings dialog, filtering the row away) drops the preview. Remove `colorBeforePreview` and `isPreviewing`.
+- `useColorPicker`: a session starts at the first `setColor` after a finished one, with `owner = Symbol()` and `name = getLabel()`. All preview, save and cleanup calls of the session use that `name`, not the current `getLabel()`, because a rename can change the label while the picker stays mounted (Settings rows are keyed by class ID). `setColor` → `setPreviewColor`. `finishColorChange(true)` writes the preview to the saved layer, then `clearPreviewColor`; `finishColorChange(false)` only `clearPreviewColor`. `onDestroy` also calls `clearPreviewColor` for an open session, so unmounting mid-preview (closing the settings dialog, filtering the row away) drops the preview. Remove `colorBeforePreview` and `isPreviewing`.
 
-- [ ] **Step 1: Write failing tests.** Factory: `'a preview overrides the saved color'`, `'a null preview shows the default'`, `'clearPreviewColor of a stale owner keeps the newer preview'`, `'replaceSavedColors keeps previews'`, `'hasSavedColor ignores previews'`. Hook: `'cancel keeps a saved color written during the preview'` (preview `#abcdef`, `setCustomColor('cat', '#112233')` from outside, cancel → `#112233`); `'unmounting during a preview drops the preview'` (preview `#abcdef`, unmount the wrapper → `getCustomColor('cat')` undefined).
+- [ ] **Step 1: Write failing tests.** Factory: `'a preview overrides the saved color'`, `'a null preview shows the default'`, `'clearPreviewColor of a stale owner keeps the newer preview'`, `'replaceSavedColors keeps previews'`, `'hasSavedColor ignores previews'`. Hook: `'cancel keeps a saved color written during the preview'` (preview `#abcdef`, `setCustomColor('cat', '#112233')` from outside, cancel → `#112233`); `'unmounting during a preview drops the preview'` (preview `#abcdef`, unmount the wrapper → `getCustomColor('cat')` undefined); `'cancel after a rename drops the preview of the old name'` (preview `cat`, change the label to `kitty`, cancel → `getCustomColor('cat')` undefined).
 - [ ] **Step 2: Run** `npx vitest run src/lib/hooks`. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. If the partial `useCustomLabelColors` mocks in `LabelsMenu.test.ts` or `SampleDetailsClassificationSegment.test.ts` fail, add `setPreviewColor`/`clearPreviewColor: vi.fn()`. Commit on request.
@@ -269,7 +279,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 **Interfaces:**
 - Produces: `export type ColorKind = 'class' | 'source'`; `useColorPicker(getLabel: () => string, options: { kind: ColorKind })`. `'class'` uses `useCustomLabelColors` + `getColorByLabel`; `'source'` uses `useCustomSourceColors` + `getColorBySource`.
 
-- [ ] **Step 1: Write failing tests:** `ColorMarker.test.ts` `'a source color does not change the class color with the same name'` (class `Predictions` = `#111111`, Apply `#0000ff` in `ColorMarker` → class store keeps `#111111`, source store has `#0000ff`; switch existing assertions to `useCustomSourceColors()`); `SampleAnnotation.test.ts` `'a class color does not recolor the source in source mode'`.
+- [ ] **Step 1: Write failing tests:** `ColorMarker.test.ts` `'a source color does not change the class color with the same name'` (class `Predictions` = `#111111`, Apply `#0000ff` in `ColorMarker` → class store keeps `#111111`, source store has `#0000ff`; switch existing assertions to `useCustomSourceColors()`, and move the `getColorByLabel` spies and mocks to `getColorBySource`); `SampleAnnotation.test.ts` `'a class color does not recolor the source in source mode'`.
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
@@ -310,11 +320,13 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
   - `setSavedColor(name: string, color: CustomColor | undefined, ticket: SaveTicket): void` — applies only if `ticket.generation` is current and `ticket.seq` is greater than the last applied for `name`; `undefined` deletes.
   - `reset(): void` — clears the saved layer, the previews and the counters, and bumps the generation, so saves begun before it never apply. PR 12 calls it on dataset change.
   - `replaceSavedColors` keeps the counters and the generation.
+  - `getGeneration(): number` — the current generation.
 - `useColorPicker(getLabel, options: { kind: ColorKind; onCommit?: (color: CustomColor | undefined) => Promise<void> })`:
+  - A session also records `getGeneration()` when it starts. If the generation changed by Apply (a dataset switch with the picker still open), Apply acts as Cancel and does not call `onCommit`.
   - `finishColorChange(applied: boolean): Promise<void>`. On Apply: capture `owner`, the preview value and `ticket = beginSave(label)`, end the session, await `onCommit?.(value)`, on success `setSavedColor(label, value, ticket)`, then always `clearPreviewColor(label, owner)`. A rejection is not rethrown; the `onCommit` owner shows the toast.
   - `resetColor(): Promise<void>`: same flow with a new owner, `setPreviewColor(label, null, owner)`, `value = undefined`.
 
-- [ ] **Step 1: Write failing tests:** `'apply calls onCommit with the applied color'`, `'shows the preview until onCommit settles'`, `'reverts to the saved color when onCommit rejects'`, `'keeps the saved color when a reset fails'`, `'reopening while a save is pending keeps the new preview'` (Apply `#aaaaaa` with deferred `onCommit`, `setColor('#bbbbbb')`, resolve → effective `#bbbbbb`, saved `#aaaaaa`), `'an older save that resolves late does not overwrite a newer one'` (Apply A, Apply B, resolve B then A → saved B); factory `'setSavedColor ignores an older sequence'`, `'reset clears saved colors and previews'`, `'setSavedColor ignores a save begun before reset'`.
+- [ ] **Step 1: Write failing tests:** `'apply calls onCommit with the applied color'`, `'shows the preview until onCommit settles'`, `'reverts to the saved color when onCommit rejects'`, `'keeps the saved color when a reset fails'`, `'reopening while a save is pending keeps the new preview'` (Apply `#aaaaaa` with deferred `onCommit`, `setColor('#bbbbbb')`, resolve → effective `#bbbbbb`, saved `#aaaaaa`), `'an older save that resolves late does not overwrite a newer one'` (Apply A, Apply B, resolve B then A → saved B), `'apply after a store reset acts as cancel'` (preview, `reset()`, Apply → `onCommit` not called); factory `'setSavedColor ignores an older sequence'`, `'reset clears saved colors and previews'`, `'setSavedColor ignores a save begun before reset'`.
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
