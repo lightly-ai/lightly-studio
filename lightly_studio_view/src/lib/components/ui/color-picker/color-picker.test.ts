@@ -48,6 +48,9 @@ describe('ColorPicker', () => {
         await waitFor(() => {
             expect(onChange).toHaveBeenLastCalledWith('#888888', 1);
         });
+        onChange.mockClear();
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onChange).toHaveBeenCalledWith('#888888', 1);
     });
 
     it('restores the original color when cancelling a preview', async () => {
