@@ -12,7 +12,7 @@ interface Params {
     /** The collection that owns the annotation sources. */
     collectionId: string;
     sources: Source[];
-    onRenamed: () => void;
+    onRenamed: (source: Source, newName: string) => void;
 }
 
 const FALLBACK_ERROR = 'Could not rename the annotation source. Try again.';
@@ -39,7 +39,7 @@ export const useRenameAnnotationSource = (getParams: () => Params) => {
             }
             // Source names show in filters, panels, pills and evaluations, so refetch everything.
             client.invalidateQueries();
-            onRenamed();
+            onRenamed(source, newName);
         } catch {
             toast.error(FALLBACK_ERROR);
         } finally {

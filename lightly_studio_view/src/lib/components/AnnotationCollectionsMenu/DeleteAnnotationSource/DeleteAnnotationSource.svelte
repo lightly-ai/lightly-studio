@@ -6,16 +6,18 @@
     interface Props {
         collectionId: string;
         source: { id: string; name: string };
+        /** Known annotation count. Without it, the dialog fetches the count. */
+        annotationCount?: number;
         /** Called when the dialog closes, after a delete or a cancel. */
         onClose: () => void;
     }
-    const { collectionId, source, onClose }: Props = $props();
+    const { collectionId, source, annotationCount: knownCount, onClose }: Props = $props();
     const { mutation, remove, annotationCount } = useDeleteAnnotationSource(() => ({
         collectionId,
         source,
         onDeleted: onClose
     }));
-    const count = $derived(annotationCount());
+    const count = $derived(knownCount ?? annotationCount());
     const countText = $derived(
         count === undefined
             ? 'all its annotations'
@@ -35,7 +37,8 @@
         <Dialog.Header>
             <Dialog.Title>Delete annotation source?</Dialog.Title>
             <Dialog.Description>
-                Delete “{source.name}” and {countText}? This cannot be undone.
+                Delete “{source.name}” and {countText}? Evaluation runs that use these annotations
+                become out of date. This cannot be undone.
             </Dialog.Description>
         </Dialog.Header>
         <Dialog.Footer>

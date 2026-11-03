@@ -7,9 +7,10 @@
         // The row is the only match, so Enter adds the class.
         isEnterTarget: boolean;
         onAdd: () => void;
+        kind?: string;
     }
 
-    const { name, isEnterTarget, onAdd }: Props = $props();
+    const { name, isEnterTarget, onAdd, kind = 'annotation class' }: Props = $props();
 </script>
 
 <li class={cn(!isEnterTarget && 'mt-1 border-t border-border/40 pt-1')}>
@@ -23,7 +24,7 @@
     >
         <Plus class="size-3 shrink-0 text-primary" />
         <span class="min-w-0 flex-1 truncate">
-            Add new annotation class
+            Add new {kind}
             <span class="font-medium text-foreground">"{name}"</span>
         </span>
         {#if isEnterTarget}

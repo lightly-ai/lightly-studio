@@ -12,6 +12,13 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 
 ## Annotation source management
 
+- **Settings > Annotation sources.** A tab after Annotation classes, laid out like it. One field
+  finds a source or, when none matches, adds it on Enter; the new row is highlighted. Each row
+  has a color dot (picker), the name (click or pencil to rename inline; a duplicate name is
+  refused with a toast), the annotation count and a trash. Delete confirms with the count and
+  warns that evaluation runs using the annotations go out of date. A rename moves the custom
+  color and keeps the source the pencil target. Changes save at once. Rows 20, 22. Try: header
+  menu, Settings, Annotation sources, type "review_round_2", Enter.
 - **Rename a source.** The "..." menu on a source in the filter panel has Rename, as for tags,
   with an inline input. Rows 20, 22. Try: Images tab, source list, "...", Rename.
   Commits: 7c3501e6e, 405b4ab41.

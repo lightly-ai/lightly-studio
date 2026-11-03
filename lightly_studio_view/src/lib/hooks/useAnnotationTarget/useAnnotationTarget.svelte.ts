@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -17,7 +18,7 @@ export const useAnnotationTarget = ({
     getIsTargetHidden: () => boolean;
 }) => {
     const { context, setAnnotationSource } = useAnnotationLabelContext();
-    const { updateLastAnnotationSource } = useGlobalStorage();
+    const { updateLastAnnotationSource, lastAnnotationSource } = useGlobalStorage();
     const annotationCollections = useAnnotationCollections(() => ({
         collectionId: getCollectionId()
     }));
@@ -38,6 +39,17 @@ export const useAnnotationTarget = ({
             setAnnotationSource(sourceNames[0]);
         }
     });
+
+    // Settings can rename the target source while this page is open. The rename updates the
+    // stored source, so follow it.
+    $effect(() =>
+        lastAnnotationSource.subscribe((stored) => {
+            const name = stored[untrack(getCollectionId)];
+            if (name && name !== untrack(() => context.annotationSource)) {
+                setAnnotationSource(name);
+            }
+        })
+    );
 
     const setTargetSource = (name: string) => {
         const trimmed = name.trim();

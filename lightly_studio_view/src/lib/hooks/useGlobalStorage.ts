@@ -448,6 +448,13 @@ export const useGlobalStorage = () => {
                 return value;
             });
         },
+        // Keeps the pencil target when its annotation source is renamed.
+        renameLastAnnotationSource: (collectionId: string, oldName: string, newName: string) => {
+            lastAnnotationSource.update((value) => {
+                if (value[collectionId] === oldName) value[collectionId] = newName;
+                return value;
+            });
+        },
         lastAnnotationBrushSize,
         updateLastAnnotationBrushSize: (collectionId: string, size: number) => {
             lastAnnotationBrushSize.update((value) => {

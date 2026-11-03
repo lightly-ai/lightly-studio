@@ -66,6 +66,7 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
             addReversibleAction: vi.fn(),
             updateLastAnnotationLabel: vi.fn(),
             updateLastAnnotationSource: vi.fn(),
+            lastAnnotationSource: writable({}),
             isEditingMode
         }))
     };

@@ -33,9 +33,7 @@ describe('DeleteAnnotationSource', () => {
         render(DeleteAnnotationSource, defaultProps);
 
         expect(
-            screen.getByText(
-                /Delete “predictions” and its 12 annotations\? This cannot be undone\./
-            )
+            screen.getByText(/Delete “predictions” and its 12 annotations\? Evaluation runs/)
         ).toBeInTheDocument();
         expect(mocks.remove).not.toHaveBeenCalled();
 
