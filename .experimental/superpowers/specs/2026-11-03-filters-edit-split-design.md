@@ -95,14 +95,19 @@ New:
 ```text
 POST   /collections/{id}/tags/counts                  tag counts for a selection (IDs or filter)
 DELETE /collections/{id}/tags/{tag_id}/remove/samples_by_filter
+POST   /collections/{id}/annotations/classifications/delete_for_samples
+POST   /collections/{id}/annotations/label_counts     class counts of an annotation selection
 ```
 
 The tag counts cover samples on the Images grid and annotation crops on the Annotations grid.
 
-The class "k/N" on the Images grid uses the existing image annotation counts. They already
-restrict to given sources (`annotation_count_helpers/restrict_to_annotation_sources.py`); pass
-the picked source and the selection as the filter. Unverified: whether that filter accepts a
-list of sample IDs. Check it first in slice 1; if not, add the IDs to the count body.
+`delete_for_samples` is needed because `AnnotationsFilter.sample_ids` holds annotation IDs, so
+no existing filter scopes a delete to parent images.
+
+The class "k/N" on the Images grid uses the existing image annotation counts with
+`count_mode: samples`. They already restrict to given sources
+(`annotation_count_helpers/restrict_to_annotation_sources.py`), and `SampleFilter.sample_ids`
+takes an ID selection.
 
 ## Slice 2: Settings > Annotation sources
 
