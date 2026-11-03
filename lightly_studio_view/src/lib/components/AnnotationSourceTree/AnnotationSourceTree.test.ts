@@ -132,6 +132,27 @@ describe('AnnotationSourceTree', () => {
         expect(screen.queryByTitle('Annotation source')).not.toBeInTheDocument();
     });
 
+    it('filters classes across sources while searching and keeps the pinned row', async () => {
+        render(AnnotationSourceTree, {
+            ...defaultProps,
+            unannotatedRow: { current_count: 5, total_count: 7, selected: false, onToggle: vi.fn() }
+        });
+        const search = screen.getByRole('textbox', { name: 'Search annotation classes' });
+
+        await userEvent.type(search, 'RAC');
+        expect(screen.getAllByTestId('annotation-source-node')).toHaveLength(1);
+        expect(
+            screen.getByRole('checkbox', { name: 'raccoon in ground_truth' })
+        ).toBeInTheDocument();
+        expect(screen.queryByRole('checkbox', { name: 'deer in ground_truth' })).toBeNull();
+        expect(screen.getByText('No annotations')).toBeInTheDocument();
+
+        await userEvent.clear(search);
+        await userEvent.type(search, 'zebra');
+        expect(screen.getByText('No matching annotation classes')).toBeInTheDocument();
+        expect(screen.getByText('No annotations')).toBeInTheDocument();
+    });
+
     it('renders an empty source collapsed, with no children', () => {
         mocks.sources = [...mocks.sources, { collection_id: 'empty', name: 'empty_source' }];
 
@@ -170,7 +191,7 @@ describe('AnnotationSourceTree', () => {
         const checkboxes = within(tree).getAllByRole('checkbox');
         const last = checkboxes[checkboxes.length - 1];
         expect(last).toHaveAccessibleName('No annotations');
-        expect(within(tree).getByText('5 of 7')).toBeInTheDocument();
+        expect(within(tree).getByText('5 / 7')).toBeInTheDocument();
 
         await userEvent.click(last);
         expect(onToggle).toHaveBeenCalledOnce();

@@ -10,9 +10,11 @@
         showClassColor: boolean;
         showVisibilityToggle: boolean;
         onToggle: (labelId: string) => void;
+        /** Highlights the match of this text in the class names. */
+        highlight?: string;
     }
 
-    let { items, showClassColor, showVisibilityToggle, onToggle }: Props = $props();
+    let { items, showClassColor, showVisibilityToggle, onToggle, highlight = '' }: Props = $props();
 
     // Visibility is per class name, so hiding a class hides it under every source.
     const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
@@ -47,6 +49,7 @@
             checked={item.selected}
             onToggle={() => onToggle(item.id)}
             testId="annotation-class"
+            {highlight}
             {leading}
             {trailing}
         />

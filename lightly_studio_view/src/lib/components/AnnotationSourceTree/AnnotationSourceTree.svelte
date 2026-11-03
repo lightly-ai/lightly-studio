@@ -1,8 +1,9 @@
 <script lang="ts">
-    import { Settings } from '@lucide/svelte';
+    import { Eye, Settings } from '@lucide/svelte';
     import { get } from 'svelte/store';
     import type { AnnotationCountMode, ImageFilter } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components';
+    import { Input } from '$lib/components/ui/input';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import FilterListRow from '$lib/components/FilterList/FilterListRow.svelte';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
@@ -14,6 +15,7 @@
     import AnnotationClassRows from './AnnotationClassRows.svelte';
     import AnnotationSourceNode from './AnnotationSourceNode.svelte';
     import { buildSourceTree, formatCount } from './buildSourceTree';
+    import { filterSourceTree } from './filterSourceTree';
     import { useSourceLabelCounts } from './useSourceLabelCounts.svelte';
 
     interface Props {
@@ -66,6 +68,10 @@
             : (sourcesQuery.data ?? []).map((c) => ({ id: c.collection_id, name: c.name }))
     );
     const tree = $derived(buildSourceTree(sources, countsQuery.data ?? [], $pairs));
+    let query = $state('');
+    const searching = $derived(query.trim() !== '');
+    const hasClasses = $derived(tree.some((node) => node.classes.length > 0));
+    const visibleTree = $derived(filterSourceTree(tree, query));
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: $multipleSourcesVisible,
@@ -80,6 +86,10 @@
         );
     };
 </script>
+
+{#snippet eyeSpacer()}
+    <Eye class="size-4" />
+{/snippet}
 
 <Segment title="Annotations">
     {#snippet headerAction()}
@@ -96,13 +106,24 @@
         />
     {/snippet}
     <div class="space-y-2" data-testid="annotation-source-tree">
-        {#if tree.length > 1}
-            {#each tree as node (node.id)}
+        {#if hasClasses}
+            <Input
+                value={query}
+                oninput={(event) => (query = event.currentTarget.value)}
+                placeholder="Search annotation classes…"
+                aria-label="Search annotation classes"
+                class="h-8"
+            />
+        {/if}
+        {#if searching && visibleTree.length === 0}
+            <p class="text-sm text-diffuse-foreground">No matching annotation classes</p>
+        {:else if tree.length > 1}
+            {#each visibleTree as node (node.id)}
                 <AnnotationSourceNode
                     {node}
                     isHidden={!$selectedCollectionIds.includes(node.id)}
                     showSourceColor={colorBySource}
-                    showClassColor={!colorBySource}
+                    showClassColor
                     {showVisibilityToggle}
                     onToggleSource={(checked) => setSource(node.id, node.labelIds, checked)}
                     onTogglePair={(labelId) => togglePair(node.id, labelId)}
@@ -111,8 +132,9 @@
             {/each}
         {:else if tree.length === 1 && tree[0].classes.length > 0}
             <AnnotationClassRows
-                items={tree[0].classes}
-                showClassColor={!colorBySource}
+                items={visibleTree[0].classes}
+                showClassColor
+                highlight={query}
                 {showVisibilityToggle}
                 onToggle={(labelId) => togglePair(tree[0].id, labelId)}
             />
@@ -120,18 +142,21 @@
             <p class="text-sm text-diffuse-foreground">No annotations yet.</p>
         {/if}
         {#if unannotatedRow}
-            <FilterListRow
-                item={{
-                    id: 'no-annotations',
-                    label: 'No annotations',
-                    selected: unannotatedRow.selected,
-                    count: formatCount(unannotatedRow.current_count, unannotatedRow.total_count)
-                }}
-                checked={unannotatedRow.selected}
-                onToggle={unannotatedRow.onToggle}
-                testId="annotation-source-tree-pinned"
-                emphasized
-            />
+            <div class={tree.length > 1 ? 'mt-2 border-t pl-8 pr-2 pt-2' : 'mt-2 border-t pt-2'}>
+                <FilterListRow
+                    item={{
+                        id: 'no-annotations',
+                        label: 'No annotations',
+                        selected: unannotatedRow.selected,
+                        count: formatCount(unannotatedRow.current_count, unannotatedRow.total_count)
+                    }}
+                    checked={unannotatedRow.selected}
+                    onToggle={unannotatedRow.onToggle}
+                    testId="annotation-source-tree-pinned"
+                    emphasized
+                    trailingSpacer={showVisibilityToggle ? eyeSpacer : undefined}
+                />
+            </div>
         {/if}
     </div>
 </Segment>

@@ -2,8 +2,11 @@ import type { SourceLabelCount, SourceLabelPair } from '$lib/api/lightly_studio_
 import { formatInteger } from '$lib/utils';
 import { getSourceState } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
 
+/** "N" when nothing is filtered out, "a / b" otherwise. */
 export const formatCount = (current: number, total: number) =>
-    `${formatInteger(current)} of ${formatInteger(total)}`;
+    current === total
+        ? formatInteger(current)
+        : `${formatInteger(current)} / ${formatInteger(total)}`;
 
 /**
  * One row per annotation source, with its annotation classes as children.

@@ -1,7 +1,7 @@
 <script lang="ts">
     import { ChevronRight, Database } from '@lucide/svelte';
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
-    import ColorMarker from '$lib/components/SideMenu/ColorMarker/ColorMarker.svelte';
+    import { useColorPicker } from '$lib/hooks';
     import AnnotationClassRows from './AnnotationClassRows.svelte';
     import SourceVisibilityToggle from './SourceVisibilityToggle.svelte';
     import type { buildSourceTree } from './buildSourceTree';
@@ -11,6 +11,10 @@
         isHidden: boolean;
         showSourceColor: boolean;
         showClassColor: boolean;
+        /** Opens the source while a search is active, whatever the user chose. */
+        forceOpen?: boolean;
+        /** Highlights the match of this text in the class names. */
+        highlight?: string;
         showVisibilityToggle: boolean;
         onToggleSource: (checked: boolean) => void;
         onTogglePair: (labelId: string) => void;
@@ -22,21 +26,19 @@
         isHidden,
         showSourceColor,
         showClassColor,
+        forceOpen = false,
+        highlight = '',
         showVisibilityToggle,
         onToggleSource,
         onTogglePair,
         onToggleVisibility
     }: Props = $props();
 
-    // "N of N" shortens to "N"; "a of b" to "a / b".
-    const compactCount = $derived.by(() => {
-        const [current, total] = (node.count ?? '').split(' of ');
-        return current === total ? current : `${current} / ${total}`;
-    });
+    const picker = useColorPicker(() => node.name);
     const isEmpty = $derived(node.classes.length === 0);
     // A source starts open, an empty one collapsed, until the user clicks the chevron.
     let userOpen = $state<boolean | null>(null);
-    const open = $derived(userOpen ?? !isEmpty);
+    const open = $derived(forceOpen || (userOpen ?? !isEmpty));
 </script>
 
 <div class="mb-1" data-testid="annotation-source-node">
@@ -63,25 +65,28 @@
             disabled={isEmpty}
             onCheckedChange={() => onToggleSource(node.state !== 'checked')}
         />
-        {#if showSourceColor}
-            <ColorMarker label={node.name} />
-        {/if}
         <span class="shrink-0" title="Annotation source">
-            <Database class="size-4 text-muted-foreground" aria-hidden="true" />
+            <Database
+                class="size-4 {showSourceColor ? '' : 'text-muted-foreground'}"
+                style={showSourceColor ? `color: ${picker.borderColor}` : undefined}
+                aria-hidden="true"
+            />
         </span>
         <span class="min-w-0 flex-1 truncate text-base font-medium">{node.name}</span>
         {#if node.count}
             <span
                 class="shrink-0 whitespace-nowrap text-sm text-diffuse-foreground"
-                data-testid="annotation-source-count">{compactCount}</span
+                data-testid="annotation-source-count">{node.count}</span
             >
         {/if}
         {#if showVisibilityToggle}
-            <SourceVisibilityToggle
-                {isHidden}
-                sourceName={node.name}
-                onToggle={onToggleVisibility}
-            />
+            <span class="flex size-4 shrink-0 items-center justify-center">
+                <SourceVisibilityToggle
+                    {isHidden}
+                    sourceName={node.name}
+                    onToggle={onToggleVisibility}
+                />
+            </span>
         {/if}
     </div>
     {#if open && !isEmpty}
@@ -89,6 +94,7 @@
             <AnnotationClassRows
                 items={node.classes}
                 {showClassColor}
+                {highlight}
                 {showVisibilityToggle}
                 onToggle={onTogglePair}
             />
