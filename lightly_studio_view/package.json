@@ -110,6 +110,7 @@
     "vscode-languageserver": "^9.0.1"
   },
   "overrides": {
-    "handlebars": "^4.7.10"
+    "handlebars": "^4.7.10",
+    "tinypool": "^2.2.0"
   }
 }
