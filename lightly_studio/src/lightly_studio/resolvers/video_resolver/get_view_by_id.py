@@ -11,6 +11,7 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable, VideoView
+from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.resolvers.video_resolver.get_all_by_collection_id import (
     convert_video_table_to_view,
 )
@@ -74,4 +75,9 @@ def get_view_by_id(session: Session, sample_id: UUID) -> VideoView | None:
     )
 
     video, first_frame = session.exec(query).one()
-    return convert_video_table_to_view(video, first_frame)
+    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
+        session=session, annotations=first_frame.sample.annotations if first_frame else []
+    )
+    return convert_video_table_to_view(
+        video=video, first_frame=first_frame, parent_track_class_names=parent_track_class_names
+    )

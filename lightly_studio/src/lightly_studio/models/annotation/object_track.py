@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Mapped, relationship
 from sqlmodel import Field, Relationship, SQLModel
-
-if TYPE_CHECKING:
-    from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 
 
 class ObjectTrackTable(SQLModel, table=True):
@@ -51,23 +47,6 @@ class ObjectTrackTable(SQLModel, table=True):
             uselist=False,
         )
     )
-
-    annotations: Mapped[list[AnnotationBaseTable]] = Relationship(
-        sa_relationship=relationship(
-            "AnnotationBaseTable",
-            primaryjoin=("ObjectTrackTable.object_track_id == AnnotationBaseTable.object_track_id"),
-            foreign_keys="[AnnotationBaseTable.object_track_id]",
-            lazy="select",
-            viewonly=True,
-        )
-    )
-
-    @property
-    def first_annotation_class_name(self) -> str | None:
-        """Return the annotation class name from this track's first annotation, if any."""
-        if not self.annotations:
-            return None
-        return self.annotations[0].annotation_label.annotation_label_name
 
 
 class ObjectTrackView(BaseModel):
