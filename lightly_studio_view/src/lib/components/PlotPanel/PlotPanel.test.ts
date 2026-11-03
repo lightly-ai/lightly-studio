@@ -640,7 +640,7 @@ describe('PlotPanel.svelte', () => {
         });
     });
 
-    it('shows a region filter chip on the plot while a region is selected', async () => {
+    it('shows a plot filter chip on the plot while a region is selected', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
             () => new DOMRect(0, 0, 400, 400)
@@ -654,10 +654,10 @@ describe('PlotPanel.svelte', () => {
 
         plotSelectionCountStore.set(3);
         expect(await screen.findByTestId('plot-selection-chip')).toHaveTextContent(
-            'Region filter: 3 images'
+            'Plot filter: 3 images'
         );
 
-        await user.click(screen.getByRole('button', { name: 'Clear region filter' }));
+        await user.click(screen.getByRole('button', { name: 'Clear plot filter' }));
         expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
         expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
     });
