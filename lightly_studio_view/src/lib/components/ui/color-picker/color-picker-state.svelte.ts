@@ -3,12 +3,12 @@ import { hexToHsl, hslToHex } from './color-picker.helpers';
 
 type Hsl = ReturnType<typeof hexToHsl>;
 
-type Options = {
+interface Options {
     getInitialColor: () => string;
     getInitialAlpha: () => number;
     getOnChange: () => ((color: string, alpha: number) => void) | undefined;
     getOnClose: () => ((applied: boolean) => void) | undefined;
-};
+}
 
 export function createColorPickerState({
     getInitialColor,

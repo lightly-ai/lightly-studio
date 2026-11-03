@@ -77,7 +77,7 @@ All tasks are done. These points differ from the first version of the plan:
 
 **Interfaces:**
 - Consumes: `Popover`, `PopoverTrigger` and `PopoverContent` from `$lib/components/ui/popover` (bits-ui 1.8.0). `Dialog` from `$lib/components/ui/dialog` (only in the test wrapper).
-- Produces: `color-picker.svelte` with the same public props. The Popover content keeps `aria-label="Color picker"` (bits-ui gives it `role="dialog"`). Later tasks rely on the functions `applyChanges()` and `cancelChanges()`, and on `schedulePreview()` (requestAnimationFrame throttle), staying in this file.
+- Produces: `color-picker.svelte` with the same public props. The Popover content keeps `aria-label="Color picker"` and sets `role="dialog"` itself, because bits-ui does not add it. The functions `applyChanges()`, `cancelChanges()` and `schedulePreview()` (requestAnimationFrame throttle) stay in this file until Task 4 moves them to `color-picker-state.svelte.ts`.
 
 - [x] **Step 1: Update the tests to describe the new behavior**
 
@@ -229,7 +229,7 @@ git commit -m "Use d3-color for color picker conversions"
 
 **Interfaces:**
 - Consumes: `Hsl` from `./color-picker.helpers`.
-- Produces: `saturation-box.svelte` with the props `{ hsl: Hsl; onPick: (saturation: number, lightness: number) => void }`. The root element has `role="slider"`, `aria-label="Saturation and lightness"`, `aria-valuetext="Saturation {s}%, lightness {l}%"`, `aria-valuenow={s}` and `tabindex="0"`.
+- Produces: `saturation-box.svelte` with the props `{ hsl: Hsl; onPick: (saturation: number, lightness: number) => void }`, where `Hsl` is `ReturnType<typeof hexToHsl>`. The root element has `role="slider"`, `aria-label="Saturation and lightness"`, `aria-valuetext="Saturation {s}%, lightness {l}%"`, `aria-valuenow={s}` and `tabindex="0"`.
 
 - [x] **Step 1: Write the component tests**
 
