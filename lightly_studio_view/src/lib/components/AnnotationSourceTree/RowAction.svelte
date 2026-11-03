@@ -11,6 +11,6 @@
 <button
     type="button"
     aria-label={ariaLabel}
-    class="shrink-0 rounded px-1 text-xs text-muted-foreground opacity-0 hover:bg-background hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+    class="hidden shrink-0 rounded px-1 text-xs text-muted-foreground hover:bg-background hover:text-foreground focus:inline-block group-focus-within:inline-block group-hover:inline-block"
     {onclick}>{label}</button
 >

@@ -110,7 +110,7 @@ describe('AnnotationSourceTree', () => {
             { collection_id: 'model', annotation_label_id: 'deer-id' }
         ]);
         expect(get(filter().includeUnannotated)).toBe(true);
-        expect(screen.getByText('Showing 3 of 4')).toBeInTheDocument();
+        expect(screen.getByText('1 hidden')).toBeInTheDocument();
 
         await userEvent.click(screen.getByRole('button', { name: 'Show all' }));
         expect(tickedPairs()).toEqual([]);
@@ -188,7 +188,7 @@ describe('AnnotationSourceTree', () => {
         expect(screen.queryByRole('checkbox', { name: 'deer in ground_truth' })).toBeNull();
         const summaries = screen.getAllByTestId('annotation-group-summary');
         expect(summaries).toHaveLength(1);
-        expect(summaries[0]).toHaveTextContent('1 of 2');
+        expect(summaries[0]).toHaveTextContent('1/2');
     });
 
     it('shows a flat class list with no source row for one source', () => {

@@ -97,11 +97,11 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   chips on tiles and in the sample details view; the eyes are gone. Everything starts ticked,
   "No annotations" too, and then no annotation filter is sent; new sources and classes start
   ticked. Unticking "No annotations" hides images without annotations. The status line reads
-  "Showing everything", or "Showing k of n · Show all · Hide all", or while searching
+  "Showing everything", "N hidden · Show all · Hide all" or "Everything hidden", or while searching
   "m matches · j shown · Show only these · Add these · Hide these" (only the actions that change
   something). Search matches source or class names, case-insensitive; with regex on, an invalid
   pattern turns the field red and says "Invalid pattern". Hovering a row shows "Only" (and "All"
-  on a partly ticked group). More than 3 groups start collapsed with a "k of n" summary; a search
+  on a partly ticked group). More than 3 groups start collapsed with a compact "k/n" summary when partly ticked; a search
   opens the matching ones. "Clear all filters" ticks everything again. Each tab keeps its own
   ticks and grouping; deleting a source drops its ticks. Video, frame and caption grids keep the
   flat class list. Rows 20, 22, 29. Try: Images tab, untick car under `labels`, open an image

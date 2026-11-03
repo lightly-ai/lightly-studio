@@ -36,10 +36,8 @@ export const getTreeStatus = ({
     const total = rows.length + (hasRow ? 1 : 0);
     const shown = rows.filter((row) => row.ticked).length + (unannotatedTicked ? 1 : 0);
     if (shown === total) return { text: 'Showing everything', actions: [] };
-    return {
-        text: `Showing ${shown} of ${total}`,
-        actions: shown > 0 ? ['showAll', 'hideAll'] : ['showAll']
-    };
+    if (shown === 0) return { text: 'Everything hidden', actions: ['showAll'] };
+    return { text: `${total - shown} hidden`, actions: ['showAll', 'hideAll'] };
 };
 
 const getSearchStatus = (

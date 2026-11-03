@@ -21,7 +21,7 @@ describe('getTreeStatus', () => {
         const rows = testRows([toNamedPair(testRows()[0])]);
         expect(
             getTreeStatus({ rows, matches: rows, searching: false, unannotatedTicked: true })
-        ).toEqual({ text: 'Showing 4 of 5', actions: ['showAll', 'hideAll'] });
+        ).toEqual({ text: '1 hidden', actions: ['showAll', 'hideAll'] });
     });
 
     it('offers only the search actions that change something', () => {
@@ -40,6 +40,13 @@ describe('getTreeStatus', () => {
         ).toEqual({ text: '2 matches · 0 shown', actions: ['showOnly', 'add'] });
         expect(getTreeStatus({ rows, matches: [], searching: true }).text).toBe('No matches');
     });
+});
+
+it('says everything is hidden when nothing is ticked', () => {
+    const rows = testRows(testRows().map(toNamedPair));
+    expect(
+        getTreeStatus({ rows, matches: rows, searching: false, unannotatedTicked: false })
+    ).toEqual({ text: 'Everything hidden', actions: ['showAll'] });
 });
 
 describe('applyStatusAction', () => {

@@ -69,18 +69,20 @@
         </span>
         <span
             class={cn(
-                'min-w-0 flex-1 truncate text-base font-medium',
+                'min-w-0 truncate text-sm font-medium',
                 summary.state === 'unchecked' && 'text-muted-foreground'
             )}
             title={group.name}
             ><HighlightedText text={group.name} range={find?.(group.name) ?? null} /></span
         >
+        <!-- The summary gives way first, then the name: name > count > summary. -->
         {#if showCollapsedSummary}
             <span
-                class="shrink-0 whitespace-nowrap text-xs text-muted-foreground"
-                data-testid="annotation-group-summary">{summary.ticked} of {group.rows.length}</span
+                class="min-w-0 shrink-[1000] truncate text-xs text-muted-foreground"
+                data-testid="annotation-group-summary">{summary.ticked}/{group.rows.length}</span
             >
         {/if}
+        <span class="flex-1"></span>
         {#if !isEmpty}
             {#if summary.state !== 'checked'}
                 <RowAction
