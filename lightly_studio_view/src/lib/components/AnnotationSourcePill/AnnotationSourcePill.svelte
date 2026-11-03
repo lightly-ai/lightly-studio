@@ -100,7 +100,7 @@
 </script>
 
 <div
-    class="pointer-events-auto flex max-w-full items-center gap-1.5 rounded-lg bg-muted/80 px-2.5 py-1.5 text-sm shadow-md"
+    class="flex max-w-full items-center gap-1.5 rounded-lg border border-border bg-muted/80 px-2.5 py-1.5 text-sm"
 >
     <Popover.Root bind:open>
         <Popover.Trigger>
@@ -129,7 +129,7 @@
                 </button>
             {/snippet}
         </Popover.Trigger>
-        <Popover.Content class="w-[220px] p-0" side="top" align="start">
+        <Popover.Content class="w-[220px] p-0" side="bottom" align="end">
             <Command.Root bind:value={highlightedValue}>
                 <Command.Input
                     placeholder="Search or create a source..."

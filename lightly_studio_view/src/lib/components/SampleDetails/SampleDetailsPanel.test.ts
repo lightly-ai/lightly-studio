@@ -1,5 +1,6 @@
-import { fireEvent, render } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -59,6 +60,9 @@ vi.mock('$lib/components', async () => {
 vi.mock('$lib/components/ImageAdjustments', async () => ({
     ImageAdjustments: (await import('./SampleDetailsPanel.stub.svelte')).default
 }));
+vi.mock('$lib/components/AnnotationSourcePill/AnnotationSourcePill.svelte', async () => ({
+    default: (await import('./AnnotationSourcePillStub.test.svelte')).default
+}));
 vi.mock('./SampleDetailsImageContainer/SampleDetailsImageContainer.svelte', async () => ({
     default: (await import('./SampleDetailsPanel.stub.svelte')).default
 }));
@@ -77,6 +81,34 @@ const defaultProps = {
     selectableBox: emptySnippet,
     sidePanelItem: emptySnippet
 };
+
+describe('SampleDetailsPanel annotation source picker', () => {
+    beforeEach(() => {
+        isEditingMode.set(false);
+        mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
+    });
+
+    it('shows where new annotations go even outside edit mode', () => {
+        render(SampleDetailsPanel, { props: defaultProps });
+
+        expect(screen.getByTestId('annotation-source-pill')).toBeInTheDocument();
+    });
+
+    it('hides the picker on the annotation details view', () => {
+        render(SampleDetailsPanel, {
+            props: {
+                ...defaultProps,
+                isOnAnnotationDetailsView: true,
+                sample: {
+                    ...defaultProps.sample,
+                    annotations: [{ sample_id: 'annotation-1' } as AnnotationView]
+                }
+            }
+        });
+
+        expect(screen.queryByTestId('annotation-source-pill')).not.toBeInTheDocument();
+    });
+});
 
 describe('SampleDetailsPanel keyboard shortcuts', () => {
     beforeEach(() => {
