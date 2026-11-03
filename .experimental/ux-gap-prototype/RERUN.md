@@ -75,6 +75,7 @@ Then tag about 100 of them `to_label`, as in the original step.
 |---|---|---|
 | 25 | Draw a box | It stays on screen while it saves |
 | 21 | Edit mode, select a box | Panel beside it: class, source, delete |
+| 22 | Open an image with two sources, before picking anything | Header shows "Adding to Pick a source"; drawing a box shows "Pick an annotation source..." and creates nothing |
 | 11 | Press right arrow through a few images | Next image shows at once |
 | 34 | Reopen the Annotations plot | The new box is a point |
 
