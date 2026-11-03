@@ -14,6 +14,7 @@
     import SelectionMoreMenu from './SelectionMoreMenu/SelectionMoreMenu.svelte';
     import SelectionThumbnails from './SelectionThumbnails/SelectionThumbnails.svelte';
     import TagPopover from './TagPopover/TagPopover.svelte';
+    import { useSelectionUndo } from './useSelectionUndo/useSelectionUndo';
     import {
         canOfferSelectAll,
         getSelectionThumbnailURLs,
@@ -49,6 +50,7 @@
     const { tagKey, annotateKey } = usePillShortcuts();
     const { dismissed: hintDismissed, dismiss: dismissHint } = useSelectionHint();
     const { getSelectedSampleIds } = useGlobalStorage();
+    const { handleUndoKey } = useSelectionUndo();
     const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));
 
     // Reading selectedCount makes the target follow the selection.
@@ -79,6 +81,7 @@
 
     // Lives here, so only collection grids hear T and L; sample details owns its own keys.
     function handleKeydown(event: KeyboardEvent) {
+        if (handleUndoKey(event)) return;
         if (selectedCount === 0 || event.repeat) return;
         if (event.ctrlKey || event.metaKey || event.altKey) return;
         if (isTyping(event.target) || isTyping(document.activeElement)) return;

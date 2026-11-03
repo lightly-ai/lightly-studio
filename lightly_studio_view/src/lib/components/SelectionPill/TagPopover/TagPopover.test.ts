@@ -36,7 +36,9 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', async () => ({
     removeThingIdsToTagId: vi.fn(),
     removeSamplesFromTagByFilter: vi.fn()
 }));
-vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+vi.mock('svelte-sonner', () => ({
+    toast: { success: vi.fn(), error: vi.fn(), dismiss: vi.fn() }
+}));
 vi.mock('$lib/hooks/useSelectionTarget/useSelectionTarget', () => ({
     getSelectionTarget: () => mocks.target
 }));
@@ -73,6 +75,58 @@ beforeEach(() => {
 });
 
 describe('TagPopover', () => {
+    it('Undo after an add removes the tag only from the newly tagged items', async () => {
+        vi.mocked(addSampleIdsToTagId).mockResolvedValue({
+            data: { changed_ids: ['s2', 's3'] }
+        } as never);
+        setup();
+        await screen.findByText('1/3');
+        await fireEvent.click(screen.getByLabelText('Add a to selection'));
+
+        await waitFor(() =>
+            expect(toast.success).toHaveBeenCalledWith(
+                "Added 'a' to 3 items",
+                expect.objectContaining({ action: expect.objectContaining({ label: 'Undo' }) })
+            )
+        );
+        const [, options] = vi.mocked(toast.success).mock.calls[0] as unknown as [
+            string,
+            { action: { onClick: () => void } }
+        ];
+        options.action.onClick();
+
+        await waitFor(() =>
+            expect(removeThingIdsToTagId).toHaveBeenCalledWith({
+                path: { tag_id: 'a' },
+                body: { sample_ids: ['s2', 's3'] }
+            })
+        );
+        await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Undone'));
+    });
+
+    it('Undo after a remove re-adds the tag only to the items that had it', async () => {
+        vi.mocked(removeThingIdsToTagId).mockResolvedValue({
+            data: { changed_ids: ['s1'] }
+        } as never);
+        setup();
+        await screen.findByText('1/3');
+        await fireEvent.click(screen.getByLabelText('Remove a from selection'));
+
+        await waitFor(() => expect(toast.success).toHaveBeenCalled());
+        const [, options] = vi.mocked(toast.success).mock.calls[0] as unknown as [
+            string,
+            { action: { onClick: () => void } }
+        ];
+        options.action.onClick();
+
+        await waitFor(() =>
+            expect(addSampleIdsToTagId).toHaveBeenCalledWith({
+                path: { collection_id: 'c1', tag_id: 'a' },
+                body: { sample_ids: ['s1'] }
+            })
+        );
+    });
+
     it('shows k/N per tag and a list that scrolls after 5 rows', async () => {
         setup();
         expect(await screen.findByText('1/3')).toBeInTheDocument();

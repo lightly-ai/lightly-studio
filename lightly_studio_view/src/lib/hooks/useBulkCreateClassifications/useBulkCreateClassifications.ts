@@ -41,6 +41,8 @@ interface BulkCreateClassificationsInput {
     sourceName: string;
     selectAllSnapshot: SelectAllSnapshot | null;
     rootCollectionId: string;
+    /** False when the caller shows its own success toast, e.g. one with Undo. */
+    showSuccessToast?: boolean;
 }
 
 interface InvalidateBulkCreateQueriesInput {
@@ -143,7 +145,9 @@ export const useBulkCreateClassifications = (): UseBulkCreateClassifications => 
             rootCollectionId: input.rootCollectionId
         });
         trackBulkCreate(trackEvent, input, result);
-        toast.success(formatBulkCreateToast(result, input.selectedIds.size));
+        if (input.showSuccessToast !== false) {
+            toast.success(formatBulkCreateToast(result, input.selectedIds.size));
+        }
         return result;
     };
 

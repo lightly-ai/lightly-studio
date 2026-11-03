@@ -89,6 +89,12 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   sources and nothing remembered (or the remembered one deleted or hidden) it reads "Choose
   source" and + is refused. Class and tag rows show a thin k/N coverage bar. Keys 1-9 add the
   first nine classes while the search is empty. Try: select tiles, L, pick a source, reopen, 2.
+- **Undo after bulk tag and classification adds.** Tag add, tag remove and + on the Images
+  Annotate popover toast what changed with "Undo" for 10 s (or Z while no text field has
+  focus), and go on the header Undo stack. Undo touches only what changed: a tag add removes the
+  tag from the items that lacked it, a remove re-adds it to the items that had it, and + deletes
+  exactly the created classifications; then "Undone". Tag add and remove endpoints return
+  `changed_ids`. Try: select tiles, T, + on a tag, press Z.
 
 ## Filter panel
 
