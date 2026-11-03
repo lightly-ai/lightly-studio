@@ -26,6 +26,7 @@ from lightly_studio.models.annotation.annotation_base import (
     VideoAnnotationView,
     VideoFrameAnnotationView,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -225,6 +226,15 @@ def _build_base_query(
                     VideoTable.width,  # type: ignore[arg-type]
                     VideoTable.file_path_abs,  # type: ignore[arg-type]
                 ),
+            )
+            .options(
+                joinedload(AnnotationBaseTable.object_track).joinedload(
+                    ObjectTrackTable.parent_object_track
+                ),
+                joinedload(AnnotationBaseTable.object_track)
+                .joinedload(ObjectTrackTable.parent_object_track)
+                .selectinload(ObjectTrackTable.annotations)
+                .joinedload(AnnotationBaseTable.annotation_label),
             )
         )
 

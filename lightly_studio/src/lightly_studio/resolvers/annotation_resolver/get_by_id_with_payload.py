@@ -14,6 +14,7 @@ from lightly_studio.models.annotation.annotation_base import (
     ImageAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -113,6 +114,15 @@ def _get_video_frame_annotation_by_id(
                 VideoTable.width,  # type: ignore[arg-type]
                 VideoTable.file_path_abs,  # type: ignore[arg-type]
             ),
+        )
+        .options(
+            joinedload(AnnotationBaseTable.object_track).joinedload(
+                ObjectTrackTable.parent_object_track
+            ),
+            joinedload(AnnotationBaseTable.object_track)
+            .joinedload(ObjectTrackTable.parent_object_track)
+            .selectinload(ObjectTrackTable.annotations)
+            .joinedload(AnnotationBaseTable.annotation_label),
         )
         .where(col(AnnotationBaseTable.sample_id) == sample_id)
     )
