@@ -48,6 +48,7 @@ const mockUpdateSampleIds = vi.fn();
 const mockUpdateEmbeddingRegion = vi.fn();
 const mockSetPlotSelectionCount = vi.fn();
 const mockClearPlotSelectionCount = vi.fn();
+let plotSelectionCountStore: Writable<number>;
 
 class ResizeObserverMock {
     observe() {}
@@ -136,7 +137,8 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
 }));
 vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection', () => ({
     setPlotSelectionCount: (...args: [string, number]) => mockSetPlotSelectionCount(...args),
-    clearPlotSelectionCount: (...args: [string]) => mockClearPlotSelectionCount(...args)
+    clearPlotSelectionCount: (...args: [string]) => mockClearPlotSelectionCount(...args),
+    getPlotSelectionCount: () => plotSelectionCountStore
 }));
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     useMetadataFilters: () => ({
@@ -221,6 +223,7 @@ describe('PlotPanel.svelte', () => {
         usePlotColorByType('test-collection-id').clearSelectedColorByType();
         rangeSelectionStore = writable(null);
         selectedSampleIdsStore = writable([]);
+        plotSelectionCountStore = writable(0);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         videoFilterStore = writable(null);
         arrowDataStore = writable(undefined);
@@ -635,6 +638,28 @@ describe('PlotPanel.svelte', () => {
             polygon: SQUARE_POLYGON,
             axes: TEXT_LAYOUT_AXES
         });
+    });
+
+    it('shows a clear-selection chip on the plot while a selection exists', async () => {
+        const user = userEvent.setup();
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await screen.findByTestId('plot-viewport');
+        expect(screen.queryByTestId('plot-selection-chip')).not.toBeInTheDocument();
+
+        plotSelectionCountStore.set(3);
+        expect(await screen.findByTestId('plot-selection-chip')).toHaveTextContent(
+            '3 images selected'
+        );
+
+        await user.click(screen.getByRole('button', { name: 'Clear selection' }));
+        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
     });
 
     it('uses the text-axis viewport after resetting a user pan', async () => {
