@@ -84,13 +84,6 @@
         {/if}
         <span class="flex-1"></span>
         {#if !isEmpty}
-            {#if summary.state !== 'checked'}
-                <RowAction
-                    label="All"
-                    ariaLabel="Show all of {group.name}"
-                    onclick={() => onSetRows(group.rows, true)}
-                />
-            {/if}
             <RowAction
                 label="Only"
                 ariaLabel="Show only {group.name}"

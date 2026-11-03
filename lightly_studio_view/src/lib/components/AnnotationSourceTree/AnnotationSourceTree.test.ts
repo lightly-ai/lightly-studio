@@ -128,6 +128,8 @@ describe('AnnotationSourceTree', () => {
         expect(within(rows[0]).getByText('2 sources')).toBeInTheDocument();
 
         await userEvent.click(within(rows[0]).getByRole('checkbox', { name: 'deer' }));
+        // The group checkbox ticks the group; there is no separate "All" action.
+        expect(screen.queryByRole('button', { name: /^Show all of/ })).toBeNull();
         expect(tickedPairs()).toEqual([{ collection_id: 'gt', annotation_label_id: 'raccoon-id' }]);
     });
 
