@@ -2,6 +2,7 @@
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useAnnotateVariant } from '$lib/hooks';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import {
@@ -11,7 +12,8 @@
         useSettings
     } from '$lib/hooks';
     import AnnotationSourceDropZone from '../AnnotationSourceDropZone/AnnotationSourceDropZone.svelte';
-    import AnnotationTargetButton from '../AnnotationTargetButton/AnnotationTargetButton.svelte';
+    import AnnotationTargetControl from '../AnnotationTargetControl/AnnotationTargetControl.svelte';
+    import AnnotationTargetHint from '../AnnotationTargetHint/AnnotationTargetHint.svelte';
     import NewAnnotationSourceInput from '../NewAnnotationSourceInput/NewAnnotationSourceInput.svelte';
     import { useAnnotationTarget } from '$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -57,6 +59,7 @@
     }: SampleDetailsAnnotationSegmentProps = $props();
 
     const { addReversibleAction, updateLastAnnotationLabel, isEditingMode } = useGlobalStorage();
+    const { annotateVariant } = useAnnotateVariant();
     const { user } = useAuth();
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
@@ -302,6 +305,9 @@
 
 <Segment title="Annotations">
     {#if isGrouped}
+        {#if canEdit}
+            <AnnotationTargetHint needsPick={annotationTarget.targetSource === null} />
+        {/if}
         <div class="flex flex-col gap-3">
             {#each sourceGroups as group (group.id)}
                 {@const isTarget = group.name === annotationTarget.targetSource}
@@ -323,6 +329,12 @@
                             )}
                         showColorMarker={colorBySource}
                         highlighted={isTarget && canEdit}
+                        subtitle={isTarget &&
+                        canEdit &&
+                        $isEditingMode &&
+                        $annotateVariant === 'radio'
+                            ? 'New annotations go here'
+                            : undefined}
                         allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
                         onToggleVisibility={group.annotations.length > 0
                             ? (e) => {
@@ -334,7 +346,7 @@
                     >
                         {#snippet leading()}
                             {#if canEdit}
-                                <AnnotationTargetButton
+                                <AnnotationTargetControl
                                     sourceName={group.name}
                                     {isTarget}
                                     isSourceHidden={areAllAnnotationsHidden(

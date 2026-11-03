@@ -1,5 +1,6 @@
 <script lang="ts">
     import { isAnnotationSourceBlocked } from '$lib/contexts/annotationSourceGuard';
+    import AnnotationTargetCaption from '../AnnotationTargetCaption/AnnotationTargetCaption.svelte';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { MoveAnnotationToSource } from '$lib/components/MoveAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
@@ -415,6 +416,11 @@
                 >
                     +
                 </Button>
+                {#if isGrouped}
+                    <AnnotationTargetCaption
+                        targetSource={annotationLabelContext.annotationSource ?? null}
+                    />
+                {/if}
             {/if}
         </div>
     </div>

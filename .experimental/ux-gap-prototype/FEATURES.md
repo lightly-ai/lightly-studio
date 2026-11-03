@@ -44,6 +44,13 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   annotation on the sample, and "New source" adds a name that is created with the first
   annotation. Rows 22, 23. Try: sample details, click the pencil on a source, draw a box.
   Commits: 1fb9dda64.
+- **Radio variant of the source picker.** `?annotateVariant=radio` (kept in localStorage,
+  `pencil` is the default) puts a radio on each source group instead of the pencil, only in edit
+  mode. "Pick where new annotations go." shows in amber until a source is picked, the picked
+  group says "New annotations go here", and the Classification "+" says "Adds to <source>". For
+  Igor's feedback that a pencil next to a name reads as rename. Side-by-side with main and the
+  pencil in `annotation-variants/`. Try: open an image with several sources, edit mode, pick a
+  radio, draw a box.
 - **Hidden sources can't take new annotations.** A hidden source shows a crossed-out pencil
   that can't make it the target. Drawing into a hidden target refuses with a toast that says to
   show it. Rows 22, 23. Try: pick a source, hide it with the eye, draw a box.
