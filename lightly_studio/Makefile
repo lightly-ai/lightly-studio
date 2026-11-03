@@ -47,7 +47,7 @@ FLOCI_GCP_ENV := STORAGE_EMULATOR_HOST=http://localhost:$(FLOCI_GCP_PORT)
 
 # Installs the uv version that `required-version` in pyproject.toml pins, so a local
 # `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
-UV_VERSION := 0.12.6
+UV_VERSION := 0.13.6
 
 .PHONY: install-uv
 install-uv:

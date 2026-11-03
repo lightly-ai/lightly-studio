@@ -1,12 +1,18 @@
 import json
 import os
+import tempfile
+from pathlib import Path
 
 import fsspec
+import pytest
 from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
 from fastapi.testclient import TestClient
 from gcsfs import GCSFileSystem  # type: ignore[import-untyped]
 from pytest_mock import MockerFixture
 from s3fs import S3FileSystem  # type: ignore[import-untyped]
+
+from lightly_studio import ca_bundle
+from tests import helpers_tls
 
 
 def test_refresh_cloud_credentials__sets_env_vars(
@@ -182,3 +188,36 @@ def test_refresh_cloud_credentials__accepts_google_credentials(
     assert response.status_code == 204
     assert os.environ["GOOGLE_APPLICATION_CREDENTIALS"] == "/path/to/key.json"
     clear_cache.assert_called_once()
+
+
+def test_refresh_cloud_credentials__writes_ca_bundle(
+    test_client: TestClient,
+    mocker: MockerFixture,
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    mocker.patch.dict(os.environ, clear=False)
+    mocker.patch.object(ca_bundle, "_written_files", [])
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    ca_pem = helpers_tls.create_ca(common_name="Test Root CA").certificate_pem()
+
+    response = test_client.put(
+        "/api/cloud-credentials",
+        json={"AWS_ACCESS_KEY_ID": "key", "AWS_CA_BUNDLE_PEM": ca_pem},
+    )
+
+    assert response.status_code == 204
+    assert "AWS_CA_BUNDLE_PEM" not in os.environ
+    assert Path(os.environ["AWS_CA_BUNDLE"]).read_text().endswith(ca_pem)
+    ca_bundle.delete_ca_bundles(keep=None)
+
+
+def test_refresh_cloud_credentials__rejects_invalid_ca_bundle(
+    test_client: TestClient,
+) -> None:
+    response = test_client.put(
+        "/api/cloud-credentials",
+        json={"AWS_ACCESS_KEY_ID": "key", "AWS_CA_BUNDLE_PEM": "not a certificate"},
+    )
+
+    assert response.status_code == 400
