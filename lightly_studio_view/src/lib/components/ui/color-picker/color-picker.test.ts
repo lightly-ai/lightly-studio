@@ -38,6 +38,21 @@ describe('ColorPicker', () => {
         await fireEvent.mouseUp(document);
     });
 
+    it('previews a gray preset exactly', async () => {
+        const onChange = vi.fn();
+        render(ColorPicker, { props: { ...defaultProps, onChange } });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+
+        await fireEvent.click(screen.getByTitle('#888888'));
+
+        await waitFor(() => {
+            expect(onChange).toHaveBeenLastCalledWith('#888888', 1);
+        });
+        onChange.mockClear();
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onChange).toHaveBeenCalledWith('#888888', 1);
+    });
+
     it('restores the original color when cancelling a preview', async () => {
         const onChange = vi.fn();
         render(ColorPicker, { props: { ...defaultProps, onChange } });
