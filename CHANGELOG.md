@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python SDK: Added Python 3.15 support.
 - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
 
 ### Changed
@@ -22,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Renaming an annotation class that has annotations no longer fails on DuckDB. If your DuckDB database was created before this version, re-index your data to get the fix.
+- The browser no longer freezes when a collection has an integer metadata field with a very wide range, such as an ID.
 
 ### Security
 
