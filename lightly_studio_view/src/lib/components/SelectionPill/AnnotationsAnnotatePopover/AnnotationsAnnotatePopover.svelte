@@ -148,12 +148,12 @@
 
 <Popover.Root {open} {onOpenChange}>
     <Popover.Trigger
-        class="inline-flex h-7 items-center gap-1 rounded-md px-2 text-sm hover:bg-primary-foreground/10"
+        class="inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium hover:bg-accent"
         aria-label="Annotate"
     >
         <Tags class="size-4" /> Annotate
         {#if shortcutHint}<kbd
-                class="ml-1 rounded border border-primary-foreground/30 px-1 text-[10px] uppercase opacity-80"
+                class="ml-1 rounded border border-border bg-muted px-1 text-[10px] uppercase text-muted-foreground"
                 >{shortcutHint}</kbd
             >{/if}
     </Popover.Trigger>

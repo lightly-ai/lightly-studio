@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/svelte-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import type { GridType } from '$lib/types';
 import SelectionPillHarness from './SelectionPillHarness.svelte';
 
@@ -14,14 +15,22 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => {
     );
 });
 vi.mock('$app/state', () => ({ page: { params: { dataset_id: 'root' } } }));
+const selection = vi.hoisted(() => ({
+    target: { kind: 'ids', ids: ['s1', 's2', 's3'] } as
+        | { kind: 'ids'; ids: string[] }
+        | { kind: 'filter'; filter: object; size: number }
+}));
 vi.mock('$lib/hooks/useSelectionTarget/useSelectionTarget', () => ({
-    getSelectionTarget: () => ({ kind: 'ids', ids: ['s1', 's2', 's3'] })
+    getSelectionTarget: () => selection.target
 }));
 
 const defaultProps = {
     selectedCount: 3,
     onClear: vi.fn(),
-    gridType: 'images' as GridType
+    gridType: 'images' as GridType,
+    gridTotal: 0,
+    onSelectAll: undefined as (() => void) | undefined,
+    canSearchSimilar: false
 };
 
 function renderPill(props: Partial<typeof defaultProps> = {}) {
@@ -30,6 +39,56 @@ function renderPill(props: Partial<typeof defaultProps> = {}) {
 }
 
 describe('SelectionPill', () => {
+    beforeEach(() => {
+        selection.target = { kind: 'ids', ids: ['s1', 's2', 's3'] };
+        useGlobalStorage().clearSelectedSamples('c1');
+    });
+
+    it('stacks thumbnails of the first 3 selected images', () => {
+        useGlobalStorage().setAllSelectedSampleIds('c1', new Set(['s1', 's2', 's3', 's4']));
+        renderPill({ selectedCount: 4 });
+
+        const stack = screen.getByTestId('selection-thumbnails');
+        expect(stack.querySelectorAll('img')).toHaveLength(3);
+        expect(stack.querySelector('img')?.getAttribute('src')).toContain('/sample/s1');
+    });
+
+    it('offers "Select all N" for a partial ID selection and runs select-all', async () => {
+        const onSelectAll = vi.fn();
+        renderPill({ gridTotal: 120, onSelectAll });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Select all 120' }));
+
+        expect(onSelectAll).toHaveBeenCalledOnce();
+    });
+
+    it('hides "Select all N" once everything is selected', () => {
+        selection.target = { kind: 'filter', filter: {}, size: 3 };
+        renderPill({ gridTotal: 120, onSelectAll: vi.fn() });
+
+        expect(screen.queryByRole('button', { name: /Select all/ })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'More actions' })).toBeNull();
+    });
+
+    it('More lists Copy IDs, and Find similar images for one image with embeddings', async () => {
+        selection.target = { kind: 'ids', ids: ['s1'] };
+        renderPill({ selectedCount: 1, canSearchSimilar: true });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+
+        expect(await screen.findByRole('button', { name: 'Copy IDs' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Find similar images' })).toBeInTheDocument();
+    });
+
+    it('More has no Find similar images for several items', async () => {
+        renderPill({ canSearchSimilar: true });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'More actions' }));
+
+        expect(await screen.findByRole('button', { name: 'Copy IDs' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Find similar images' })).toBeNull();
+    });
+
     it('does not render when selectedCount is 0', () => {
         renderPill({ selectedCount: 0 });
 

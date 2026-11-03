@@ -79,6 +79,11 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   outside a collection grid. Settings > Shortcuts > Selection rebinds them ("Open tag menu",
   "Open annotate menu"); a key another shortcut uses is refused. Stored in localStorage. Try:
   Images grid, select tiles, press T.
+- **Pill shows what it holds.** A solid card with a border; up to 3 thumbnails of the selected
+  images (Images and video frames grids) before "N selected". A partial selection offers
+  "Select all N" (the footer count), which runs the grid's select-all. "More actions" (⋯) has
+  "Copy IDs" for an ID selection and "Find similar images" for one image with embeddings. Try:
+  Images grid, tick 2 tiles, "Select all 5,000".
 
 ## Filter panel
 

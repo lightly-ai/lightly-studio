@@ -101,6 +101,7 @@ the Annotations plot counts the new boxes.
 | 23 | Sample view, edit mode: drag a `model_v1` row's grip onto the `labels` group (or use the folder icon) | Box moves to `labels`, keeps its embedding |
 | 22, 23 | Annotations grid, edit mode off, select `model_v1` tiles, pill: Annotate, "Move to annotation source…" | Tiles leave the grid; they show under `labels`. No selected-annotations side panel |
 | 22, 23 | Images grid, edit mode off, nothing selected; then select 3 tiles, press T, then L; type in the search box and press T | The dashed hint names T and L; with a selection T opens Tag, L opens Annotate (classifications, "k/N" per class); T typed in a field only types |
+| 22 | Images grid, tick 2 tiles; open ⋯; click "Select all N" | Pill shows 2 thumbnails, "Select all N" with the footer count; ⋯ has "Copy IDs"; after select-all the link and ⋯ go away |
 
 Time 4 images fixed from predictions against 4 labeled from scratch, as in the original step.
 

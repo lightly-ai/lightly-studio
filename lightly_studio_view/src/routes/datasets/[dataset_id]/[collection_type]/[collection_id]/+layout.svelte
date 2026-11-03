@@ -781,6 +781,9 @@
                         onClear={clearSelection}
                         {collectionId}
                         {gridType}
+                        gridTotal={isAnnotations ? $filteredAnnotationCount : $filteredSampleCount}
+                        onSelectAll={canSelectAll ? selectAllHandle.handleSelectAll : undefined}
+                        canSearchSimilar={isImages && hasEmbeddings}
                     />
                 {/if}
             {/snippet}
