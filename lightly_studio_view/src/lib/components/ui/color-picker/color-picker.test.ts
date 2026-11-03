@@ -78,6 +78,7 @@ describe('ColorPicker', () => {
 
         await fireEvent.pointerDown(box, { clientX: 100, clientY: 100, pointerId: 1 });
         await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#000000', 1));
+        await fireEvent.pointerUp(box, { pointerId: 1 });
         await fireEvent.pointerDown(box, { clientX: 100, clientY: 50, pointerId: 1 });
 
         await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1));
