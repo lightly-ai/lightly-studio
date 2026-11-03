@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Python SDK: Added Python 3.15 support.
+- A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
 
 ### Changed
 
