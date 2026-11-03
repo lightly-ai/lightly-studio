@@ -642,42 +642,40 @@
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        <h2
+                            class="flex items-center justify-between px-4 py-2 text-lg font-semibold"
+                            data-testid="filter-panel-header"
                         >
-                            <!-- Sticky, so "Hide filters" stays reachable while the panel is scrolled. -->
-                            <h2
-                                class="sticky top-0 z-10 flex items-center justify-between bg-card py-2 text-lg font-semibold"
-                                data-testid="filter-panel-header"
-                            >
-                                <span class="flex items-center space-x-2">
-                                    <Filter class="size-5" />
-                                    <span>Filters</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <ClearAllFiltersButton
-                                        collectionId={metadataCollectionId}
-                                        {isCaptions}
-                                        {isImages}
-                                        {isVideos}
-                                        {isVideoFrames}
+                            <span class="flex items-center space-x-2">
+                                <Filter class="size-5" />
+                                <span>Filters</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <ClearAllFiltersButton
+                                    collectionId={metadataCollectionId}
+                                    {isCaptions}
+                                    {isImages}
+                                    {isVideos}
+                                    {isVideoFrames}
+                                />
+                                <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                    <Button
+                                        variant="ghost"
+                                        icon={PanelLeftClose}
+                                        ariaLabel="Hide filters"
+                                        buttonProps={{
+                                            onclick: toggleFilterPanelCollapsed,
+                                            'aria-expanded': true,
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
+                                        }}
                                     />
-                                    <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                        <Button
-                                            variant="ghost"
-                                            icon={PanelLeftClose}
-                                            ariaLabel="Hide filters"
-                                            buttonProps={{
-                                                onclick: toggleFilterPanelCollapsed,
-                                                'aria-expanded': true,
-                                                'data-testid': 'filter-panel-collapse',
-                                                class: 'size-6 p-0'
-                                            }}
-                                        />
-                                    </Tooltip>
-                                </span>
-                            </h2>
-
+                                </Tooltip>
+                            </span>
+                        </h2>
+                        <div
+                            class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        >
                             {#if isImages}
                                 <QueryControl
                                     {collectionId}

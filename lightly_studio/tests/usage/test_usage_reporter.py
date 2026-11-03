@@ -48,7 +48,7 @@ def test_report__does_nothing_without_config(
     event_queue = _patch_queue(mocker=mocker)
     start_worker = mocker.patch.object(usage_reporter, "_start_worker")
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", url)
-    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", token)
+    mocker.patch.object(env, "LIGHTLY_STUDIO_SERVICE_TOKEN", token)
 
     usage_reporter.report(events=[EVENT])
 
@@ -68,7 +68,7 @@ def test_report__sends_from_a_worker_thread(mocker: MockerFixture) -> None:
 
     send = mocker.patch.object(usage_reporter, "send", side_effect=_send)
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
-    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+    mocker.patch.object(env, "LIGHTLY_STUDIO_SERVICE_TOKEN", "t0k")
 
     usage_reporter.report(events=[EVENT])
 
@@ -84,7 +84,7 @@ def test_report__drops_events_when_the_queue_is_full(mocker: MockerFixture) -> N
     event_queue = _patch_queue(mocker=mocker, maxsize=1)
     mocker.patch.object(usage_reporter, "_start_worker")
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
-    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+    mocker.patch.object(env, "LIGHTLY_STUDIO_SERVICE_TOKEN", "t0k")
     second = dataclasses.replace(EVENT, event_id=UUID("00000000-0000-0000-0000-0000000000ab"))
 
     usage_reporter.report(events=[EVENT, second])
@@ -111,7 +111,7 @@ def test_report__drops_only_events_that_cannot_be_serialized(
     event_queue = _patch_queue(mocker=mocker)
     mocker.patch.object(usage_reporter, "_start_worker")
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
-    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+    mocker.patch.object(env, "LIGHTLY_STUDIO_SERVICE_TOKEN", "t0k")
 
     usage_reporter.report(events=[invalid, EVENT])
 
@@ -126,7 +126,7 @@ def test_report__queues_events_when_the_worker_cannot_start(mocker: MockerFixtur
         threading.Thread, "start", side_effect=RuntimeError("can't start new thread")
     )
     mocker.patch.object(env, "LIGHTLY_STUDIO_USAGE_REPORT_URL", URL)
-    mocker.patch.object(env, "LIGHTLY_STUDIO_CONTROL_PLANE_TOKEN", "t0k")
+    mocker.patch.object(env, "LIGHTLY_STUDIO_SERVICE_TOKEN", "t0k")
 
     usage_reporter.report(events=[EVENT])
     usage_reporter.report(events=[EVENT])

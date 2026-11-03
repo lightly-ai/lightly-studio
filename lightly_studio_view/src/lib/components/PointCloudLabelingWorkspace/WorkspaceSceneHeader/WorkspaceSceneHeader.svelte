@@ -19,6 +19,7 @@
             />
         {/if}
         <SceneViewSettings
+            accumulation={layout.accumulation}
             showOrthographicViews={layout.showOrthographicViews}
             pointSize={layout.pointSize}
             showNavigationHelpers={layout.showNavigationHelpers}

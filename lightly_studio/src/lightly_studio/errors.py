@@ -19,3 +19,7 @@ class UnknownImageSizeError(Exception):
 
 class AnnotationSourceInUseError(Exception):
     """Exception raised when an annotation source cannot change because other rows use it."""
+
+
+class ExportError(Exception):
+    """An export cannot be written. The message says why and is shown to the user."""

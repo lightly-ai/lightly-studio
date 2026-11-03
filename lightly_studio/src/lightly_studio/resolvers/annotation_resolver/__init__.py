@@ -50,6 +50,9 @@ from lightly_studio.resolvers.annotation_resolver.get_by_id import get_by_id, ge
 from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import (
     get_by_id_with_payload,
 )
+from lightly_studio.resolvers.annotation_resolver.get_cuboid_frame_ids_by_sequence_ids import (
+    get_cuboid_frame_ids_by_sequence_ids,
+)
 from lightly_studio.resolvers.annotation_resolver.get_label_ids_by_sample_ids import (
     get_label_ids_by_sample_ids,
 )
@@ -71,6 +74,9 @@ from lightly_studio.resolvers.annotation_resolver.update_bounding_box import (
 )
 from lightly_studio.resolvers.annotation_resolver.update_cuboid_3d import (
     update_cuboid_3d,
+)
+from lightly_studio.resolvers.annotation_resolver.update_label_by_object_track_id import (
+    update_label_by_object_track_id,
 )
 from lightly_studio.resolvers.annotation_resolver.update_segmentation_mask import (
     update_segmentation_mask,
@@ -104,6 +110,7 @@ __all__ = [
     "get_by_id",
     "get_by_id_with_payload",
     "get_by_ids",
+    "get_cuboid_frame_ids_by_sequence_ids",
     "get_label_ids_by_sample_ids",
     "get_sample_ids",
     "get_unembedded_annotation_ids",
@@ -111,6 +118,7 @@ __all__ = [
     "update_annotation_label",
     "update_bounding_box",
     "update_cuboid_3d",
+    "update_label_by_object_track_id",
     "update_segmentation_mask",
     "update_temporal_span",
 ]

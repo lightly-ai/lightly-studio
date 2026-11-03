@@ -76,8 +76,13 @@
                 <SettingsTabs bind:value={activeTab} {dialogState} />
 
                 <Dialog.Footer
-                    class="flex-row justify-end space-x-2 border-t border-border px-6 py-4"
+                    class="flex-row items-center justify-end space-x-2 border-t border-border px-6 py-4"
                 >
+                    {#if activeTab === 'annotation-classes'}
+                        <p class="mr-auto text-xs text-muted-foreground">
+                            Changes to annotation classes save immediately.
+                        </p>
+                    {/if}
                     <Button
                         variant="outline"
                         buttonProps={{ type: 'button', onclick: () => setOpen(false) }}

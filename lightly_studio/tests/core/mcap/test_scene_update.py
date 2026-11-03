@@ -7,6 +7,7 @@ import pytest
 
 from lightly_studio.core.mcap import scene_update
 from lightly_studio.core.mcap.errors import McapAccessError
+from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 
 TIMESTAMP_NS = 1_723_712_400_100_000_000
 
@@ -260,3 +261,105 @@ def test_from_decoded_message__non_finite_cuboid(
 
     with pytest.raises(McapAccessError, match="pose and size must be finite"):
         scene_update.from_decoded_message(SimpleNamespace(entities=[entity]))
+
+
+def _cuboid_label(
+    track_id: int = 7,
+    parent_track_id: int | None = 3,
+    interpolated: bool = False,
+) -> CuboidLabel:
+    return CuboidLabel(
+        timestamp_ns=1_789_513_603_950_075_334,
+        frame_id="odom",
+        class_name="truck_bed",
+        track_id=track_id,
+        parent_track_id=parent_track_id,
+        interpolated=interpolated,
+        position=(12.41, -3.08, 1.62),
+        rotation=(0.0043, 0.0512, 0.7071, 0.7052),
+        size=(5.2, 2.44, 1.15),
+    )
+
+
+def test_to_message__cuboid_entity() -> None:
+    labels = SceneUpdateLabels(cuboids=(_cuboid_label(),))
+
+    message = scene_update.to_message(labels=labels, frame_id="odom")
+
+    assert message["deletions"] == []
+    entities = message["entities"]
+    assert len(entities) == 1
+    entity = entities[0]
+    assert entity["id"] == "truck_bed_7"
+    assert entity["timestamp"] == {"sec": 1789513603, "nanosec": 950075334}
+    assert entity["frame_id"] == "odom"
+    assert entity["lifetime"] == {"sec": 0, "nanosec": 150_000_000}
+    assert entity["frame_locked"] is False
+    assert entity["metadata"] == [
+        {"key": "class", "value": "truck_bed"},
+        {"key": "track_id", "value": "7"},
+        {"key": "parent_track_id", "value": "3"},
+        {"key": "interpolated", "value": "false"},
+    ]
+    assert len(entity["cubes"]) == 1
+    cube = entity["cubes"][0]
+    assert cube["pose"]["position"] == {"x": 12.41, "y": -3.08, "z": 1.62}
+    assert cube["pose"]["orientation"] == {"x": 0.0043, "y": 0.0512, "z": 0.7071, "w": 0.7052}
+    assert cube["size"] == {"x": 5.2, "y": 2.44, "z": 1.15}
+    assert cube["color"]["a"] == 0.4
+    for field in (
+        "arrows",
+        "spheres",
+        "cylinders",
+        "lines",
+        "triangles",
+        "texts",
+        "models",
+    ):
+        assert entity[field] == []
+
+
+def test_to_message__no_parent_is_empty_string() -> None:
+    labels = SceneUpdateLabels(cuboids=(_cuboid_label(parent_track_id=None),))
+
+    message = scene_update.to_message(labels=labels, frame_id="odom")
+
+    assert message["entities"][0]["metadata"] == [
+        {"key": "class", "value": "truck_bed"},
+        {"key": "track_id", "value": "7"},
+        {"key": "parent_track_id", "value": ""},
+        {"key": "interpolated", "value": "false"},
+    ]
+
+
+def test_to_message__frame_tags_entity() -> None:
+    frame_tags = FrameTags(timestamp_ns=TIMESTAMP_NS, tags=("night", "lidar_dropout"), note=None)
+    labels = SceneUpdateLabels(cuboids=(), frame_tags=frame_tags)
+
+    message = scene_update.to_message(labels=labels, frame_id="odom")
+
+    assert len(message["entities"]) == 1
+    entity = message["entities"][0]
+    assert entity["id"] == "frame"
+    assert entity["cubes"] == []
+    assert entity["metadata"] == [
+        {"key": "lidar_dropout", "value": "true"},
+        {"key": "night", "value": "true"},
+    ]
+
+
+def test_to_message__empty_scene() -> None:
+    labels = SceneUpdateLabels(cuboids=())
+
+    message = scene_update.to_message(labels=labels, frame_id="odom")
+
+    assert message == {"deletions": [], "entities": []}
+
+
+def test_to_message__round_trip() -> None:
+    frame_tags = FrameTags(timestamp_ns=TIMESTAMP_NS, tags=("night",), note=None)
+    labels = SceneUpdateLabels(cuboids=(_cuboid_label(),), frame_tags=frame_tags)
+
+    message = scene_update.to_message(labels=labels, frame_id="odom")
+
+    assert scene_update.from_decoded_message(decoded_message=message) == labels

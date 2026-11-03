@@ -27,7 +27,8 @@ export function useWorkspaceSceneData(
     // advance together.
     // The fit key is captured with the snapshot, so the camera is re-centered once the points of
     // the newly selected display frame have loaded, not while the previous frame is still shown.
-    let sceneSnapshot = $state<{
+    // Keep sensor batch identities intact so overlapping windows can retain their GPU buffers.
+    let sceneSnapshot = $state.raw<{
         frame: NonNullable<PointCloudWorkspaceContext['cloudPointFrame']['data']>;
         annotations: Parameters<typeof tickAnnotationsToCuboids>[0];
         fitKey: string;

@@ -176,6 +176,7 @@ vi.mock('$lib/hooks', async () => ({
     useNumericMetadataDistribution: vi.fn(() => ({
         data: { score: { binEdges: [0, 1], counts: [1] } }
     })),
+    useImageFieldDistribution: vi.fn(() => ({ data: undefined, isFetching: false })),
     useCategoricalMetadataDistribution: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -564,8 +565,10 @@ describe('filter sidebar collapse/expand', () => {
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        // jsdom does not scroll, so the sticky position is the observable contract.
-        expect(screen.getByTestId('filter-panel-header')).toHaveClass('sticky', 'top-0');
+        // jsdom does not scroll, so the header sitting outside the scroll area is the contract.
+        const header = screen.getByTestId('filter-panel-header');
+        expect(header.nextElementSibling).toHaveClass('overflow-y-auto');
+        expect(header.closest('.overflow-y-auto')).toBeNull();
     });
 
     it('filter panel is collapsed when filterPanelCollapsed is true', async () => {

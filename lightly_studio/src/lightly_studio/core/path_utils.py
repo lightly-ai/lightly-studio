@@ -55,7 +55,8 @@ def check_input_file(path: PathLike, description: str, suffix: str) -> None:
     fs, fs_path = fsspec.core.url_to_fs(url=path_str)
     try:
         info = fs.info(fs_path)
-    except FileNotFoundError as error:
+    # `NotADirectoryError` is raised when a parent of the local path is a file.
+    except (FileNotFoundError, NotADirectoryError) as error:
         raise FileNotFoundError(
             f"{description[0].upper()}{description[1:]} not found: '{path_str}'."
             f"{double_slash_hint(path=path_str)}"

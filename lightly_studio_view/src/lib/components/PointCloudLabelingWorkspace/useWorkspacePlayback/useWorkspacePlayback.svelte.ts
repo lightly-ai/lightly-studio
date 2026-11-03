@@ -9,7 +9,8 @@ import type { WorkspaceOptions } from '../workspaceOptions';
 /** Manages buffered playback and seek interactions for one workspace. */
 export function useWorkspacePlayback(
     getWorkspace: () => PointCloudWorkspaceContext,
-    getOptions: () => WorkspaceOptions
+    getOptions: () => WorkspaceOptions,
+    getAccumulationRadius: () => number = () => 0
 ) {
     const bufferEntireSequence = useSessionStorage<boolean>(
         'lightlyStudio_pointCloudBufferEntireSequence',
@@ -36,20 +37,36 @@ export function useWorkspacePlayback(
             );
 
             if (buffering.current) {
-                return [{ startIndex: activeIndex, endIndex: getWorkspace().ticks.length - 1 }];
+                return [
+                    {
+                        startIndex: Math.max(0, activeIndex - getAccumulationRadius()),
+                        endIndex: getWorkspace().ticks.length - 1
+                    }
+                ];
             }
 
             return getMcapTickPrefetchRange({
                 activeIndex,
                 tickCount: getWorkspace().ticks.length,
-                prefetchTickCount: getOptions().prefetchTickCount ?? 50
+                prefetchTickCount: getOptions().prefetchTickCount ?? 50,
+                accumulationRadius: getAccumulationRadius()
             });
         }
     });
-    const isTickBuffered = (index: number) =>
-        tickPrefetch.bufferedRanges.some(
-            ({ startIndex, endIndex }) => index >= startIndex && index <= endIndex
-        );
+    const isTickBuffered = (index: number) => {
+        const radius = getAccumulationRadius();
+        const start = Math.max(0, index - radius);
+        const end = Math.min(getWorkspace().ticks.length - 1, index + radius);
+        for (let tick = start; tick <= end; tick++) {
+            if (
+                !tickPrefetch.bufferedRanges.some(
+                    ({ startIndex, endIndex }) => tick >= startIndex && tick <= endIndex
+                )
+            )
+                return false;
+        }
+        return true;
+    };
 
     const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
         usePointCloudTickNavigation({

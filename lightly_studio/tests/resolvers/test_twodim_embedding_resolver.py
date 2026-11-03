@@ -51,7 +51,14 @@ def test_get_twodim_embeddings__write_during_rebuild(
     if existing:
         db_session.add(EmbeddingPlotTable(collection_id=key[0], embedding_model_id=key[1]))
         db_session.commit()
-    engine = create_engine(db_session.connection().engine.url)
+    source_engine = db_session.connection().engine
+    # DuckDB requires concurrent connections to use the same storage configuration.
+    connect_args = (
+        {"config": {"storage_compatibility_version": "v1.0.0"}}
+        if source_engine.dialect.name == "duckdb"
+        else {}
+    )
+    engine = create_engine(source_engine.url, connect_args=connect_args)
     with Session(engine) as writer:
 
         def calculate(_embedding_values: object) -> list[tuple[float, float]]:

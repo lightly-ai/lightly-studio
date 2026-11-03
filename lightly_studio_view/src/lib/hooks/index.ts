@@ -83,6 +83,7 @@ export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnno
 export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
 export { useBulkDeleteAnnotations } from '$lib/hooks/useBulkDeleteAnnotations/useBulkDeleteAnnotations';
 export { useMoveAnnotationsToSource } from '$lib/hooks/useMoveAnnotationsToSource/useMoveAnnotationsToSource';
+export { useBulkRelabelAnnotations } from '$lib/hooks/useBulkRelabelAnnotations/useBulkRelabelAnnotations';
 export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
@@ -104,6 +105,7 @@ export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
 export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+export { getTickDetailsSequenceQueryKey } from '$lib/hooks/useTickDetails/getTickDetailsOptions';
 export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
 export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';

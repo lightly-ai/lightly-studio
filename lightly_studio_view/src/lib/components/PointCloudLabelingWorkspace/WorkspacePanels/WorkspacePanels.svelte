@@ -40,6 +40,7 @@
                     onTagsChange={() => void workspace.tickDetails.refetch()}
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
+                    onLabelChange={editing.handleLabelChange}
                     onDeleteCuboid={presentation.isEditingMode
                         ? editing.handleDeleteCuboid
                         : undefined}

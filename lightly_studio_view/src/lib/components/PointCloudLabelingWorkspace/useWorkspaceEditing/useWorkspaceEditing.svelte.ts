@@ -5,6 +5,7 @@ import type { useWorkspaceSceneData } from '../useWorkspaceSceneData/useWorkspac
 import { useCreateCuboidAnnotation } from '../useCreateCuboidAnnotation';
 import { useDeleteCuboidAnnotation } from '../useDeleteCuboidAnnotation';
 import { useUpdateCuboidAnnotation } from '../useUpdateCuboidAnnotation';
+import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 import type { Vector3, WorkspaceTool } from '../domain';
 
@@ -49,6 +50,13 @@ export function useWorkspaceEditing(
 
     const { handleCuboidTransform } = useUpdateCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
+        onUpdated: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+    });
+
+    const { handleLabelChange } = useUpdateCuboidClass({
+        getCollectionId: () => getOptions().annotationSourceCollectionId,
+        getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
         onUpdated: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
     });
 
@@ -121,6 +129,7 @@ export function useWorkspaceEditing(
         },
         handleCreateCuboid,
         handleDeleteCuboid,
+        handleLabelChange,
         panelCuboidTransform
     };
 }

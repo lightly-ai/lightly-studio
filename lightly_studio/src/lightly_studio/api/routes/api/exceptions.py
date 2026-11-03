@@ -24,6 +24,7 @@ from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavai
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
 from lightly_studio.errors import (
     AnnotationSourceInUseError,
+    ExportError,
     NotFoundError,
     QueryExprError,
     UnknownImageSizeError,
@@ -172,6 +173,15 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
         )
+
+    @app.exception_handler(ExportError)
+    async def _export_error_handler(_request: Request, _exc: ExportError) -> JSONResponse:
+        """Handle an export that cannot be written."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_BAD_REQUEST,
+        )
+        return JSONResponse(status_code=HTTP_STATUS_BAD_REQUEST, content={"error": str(_exc)})
 
     @app.exception_handler(QueryEmbedderError)
     async def _query_embedder_error_handler(
