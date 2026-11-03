@@ -33,7 +33,7 @@ dependencies = [
     # NumPy 2.5 requires Python 3.12 and higher.
     "numpy>=2.2.6; python_version < '3.12'",
     "numpy>=2.5.4; python_version >= '3.12'",
-    "pillow>=12.1.1; python_version < '3.11'",
+    "pillow>=12.3.0; python_version < '3.11'",
     "pillow>=13.0.0; python_version >= '3.11'",
     "fastapi>=0.115.5",
     "fsspec>=2023.1.0",
