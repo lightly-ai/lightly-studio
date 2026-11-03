@@ -75,6 +75,74 @@ def test_add_samples_by_filter__image_subset_filter_tags_only_subset(
     assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {wide.sample_id}
 
 
+def test_add_sample_ids__returns_only_newly_tagged_ids(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    old = create_image(session=db_session, collection_id=collection_id, file_path_abs="old.png")
+    new = create_image(session=db_session, collection_id=collection_id, file_path_abs="new.png")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[old.sample_id]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples",
+        json={"sample_ids": [str(old.sample_id), str(new.sample_id)]},
+    )
+
+    assert response.status_code == HTTP_STATUS_CREATED
+    assert response.json() == {"changed_ids": [str(new.sample_id)]}
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {
+        old.sample_id,
+        new.sample_id,
+    }
+
+
+def test_add_samples_by_filter__returns_only_newly_tagged_ids(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    old = create_image(session=db_session, collection_id=collection_id, file_path_abs="old.png")
+    new = create_image(session=db_session, collection_id=collection_id, file_path_abs="new.png")
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[old.sample_id]
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/add/samples_by_filter",
+        json={"filter": {"filter_type": "image"}},
+    )
+
+    assert response.json() == {"changed_ids": [str(new.sample_id)]}
+
+
+def test_remove_sample_ids__returns_only_ids_that_had_the_tag(
+    db_session: Session, test_client: TestClient
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    tag = create_tag(session=db_session, collection_id=collection_id)
+    tagged = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="tagged.png"
+    )
+    untagged = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="untagged.png"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[tagged.sample_id]
+    )
+
+    response = test_client.request(
+        "DELETE",
+        f"/api/collections/{collection_id}/tags/{tag.tag_id}/remove/samples",
+        json={"sample_ids": [str(tagged.sample_id), str(untagged.sample_id)]},
+    )
+
+    assert response.json() == {"changed_ids": [str(tagged.sample_id)]}
+    assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == set()
+
+
 def test_add_samples_by_filter__idempotent_on_rerun(
     db_session: Session, test_client: TestClient
 ) -> None:
@@ -498,6 +566,7 @@ def test_remove_samples_by_filter(db_session: Session, test_client: TestClient) 
     )
 
     assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"changed_ids": [str(wide.sample_id)]}
     assert _tagged_sample_ids(session=db_session, tag_id=tag.tag_id) == {narrow.sample_id}
 
 
