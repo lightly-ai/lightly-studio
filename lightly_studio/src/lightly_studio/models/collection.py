@@ -123,6 +123,18 @@ class AnnotationCollectionView(SQLModel):
     annotation_types: list[str] = Field(default_factory=list)
 
 
+class AnnotationCollectionWithCountView(AnnotationCollectionView):
+    """Annotation collection view with the number of annotations in it."""
+
+    annotation_count: int
+
+
+class AnnotationCollectionCreate(SQLModel):
+    """API input for creating an annotation collection."""
+
+    name: str = Field(min_length=1)
+
+
 # Import at the bottom to:
 # 1) avoid circular imports
 # 2) satisfy mypy

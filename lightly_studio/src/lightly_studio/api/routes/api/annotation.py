@@ -12,7 +12,7 @@ from sqlmodel import col
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND
+from lightly_studio.api.routes.api.status import HTTP_STATUS_CONFLICT, HTTP_STATUS_NOT_FOUND
 from lightly_studio.api.routes.api.validators import Paginated, PaginatedWithCursor
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
@@ -24,7 +24,13 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
-from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
+from lightly_studio.models.collection import (
+    AnnotationCollectionCreate,
+    AnnotationCollectionView,
+    AnnotationCollectionWithCountView,
+    CollectionTable,
+    SampleType,
+)
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -91,6 +97,72 @@ def read_annotation_collections(
         )
         for c in collections
     ]
+
+
+@annotations_router.get(
+    "/annotation_collections_with_counts",
+    response_model=list[AnnotationCollectionWithCountView],
+)
+def read_annotation_collections_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationCollectionWithCountView]:
+    """List annotation collections under the parent collection with their annotation counts."""
+    sources = read_annotation_collections(session=session, collection=collection)
+    counts = collection_resolver.get_annotation_counts_by_collection_ids(
+        session=session,
+        collection_ids=[s.collection_id for s in sources],
+    )
+    return [
+        AnnotationCollectionWithCountView(
+            collection_id=s.collection_id,
+            name=s.name,
+            annotation_types=s.annotation_types,
+            annotation_count=counts.get(s.collection_id, 0),
+        )
+        for s in sources
+    ]
+
+
+@annotations_router.post(
+    "/annotation_collections",
+    response_model=AnnotationCollectionView,
+)
+def create_annotation_collection(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    body: Annotated[AnnotationCollectionCreate, Body()],
+) -> AnnotationCollectionView:
+    """Create an empty annotation collection under the parent collection.
+
+    Responds with 409 if a child collection has the name.
+    """
+    name = body.name.strip()
+    existing_id = collection_resolver.get_by_name(
+        session=session,
+        name=name,
+        parent_collection_id=collection.collection_id,
+    )
+    if existing_id is not None:
+        raise HTTPException(
+            status_code=HTTP_STATUS_CONFLICT,
+            detail=f"An annotation source named '{name}' already exists.",
+        )
+    created_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=collection.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=name,
+    )
+    return AnnotationCollectionView(collection_id=created_id, name=name, annotation_types=[])
 
 
 class ReadAnnotationsWithPayloadRequest(BaseModel):

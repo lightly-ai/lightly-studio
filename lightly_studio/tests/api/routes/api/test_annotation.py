@@ -6,7 +6,11 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
-from lightly_studio.api.routes.api.status import HTTP_STATUS_NOT_FOUND, HTTP_STATUS_OK
+from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_OK,
+)
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import collection_resolver
@@ -390,3 +394,72 @@ def test_read_annotation_collections(
             ],
         }
     ]
+
+
+def test_read_annotation_collections_with_counts(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    dataset = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=dataset.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=dataset.collection_id)
+    for _ in range(2):
+        create_annotation(
+            session=db_session,
+            collection_id=dataset.collection_id,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_collection_name="ground_truth",
+        )
+    empty_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="empty_source",
+    )
+
+    response = test_client.get(
+        f"/api/collections/{dataset.collection_id!s}/annotation_collections_with_counts",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    counts = {source["name"]: source["annotation_count"] for source in response.json()}
+    assert counts == {"ground_truth": 2, "empty_source": 0}
+    empty_source = next(s for s in response.json() if s["name"] == "empty_source")
+    assert empty_source["collection_id"] == str(empty_id)
+
+
+def test_create_annotation_collection(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    dataset = create_collection(session=db_session)
+
+    response = test_client.post(
+        f"/api/collections/{dataset.collection_id!s}/annotation_collections",
+        json={"name": "review_round_2"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    created = response.json()
+    assert created["name"] == "review_round_2"
+    assert created["annotation_types"] == []
+    listed = test_client.get(
+        f"/api/collections/{dataset.collection_id!s}/annotation_collections",
+    ).json()
+    assert [(s["collection_id"], s["name"]) for s in listed] == [
+        (created["collection_id"], "review_round_2")
+    ]
+
+
+def test_create_annotation_collection__duplicate_name(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    dataset = create_collection(session=db_session)
+    url = f"/api/collections/{dataset.collection_id!s}/annotation_collections"
+    assert test_client.post(url, json={"name": "model_v1"}).status_code == HTTP_STATUS_OK
+
+    response = test_client.post(url, json={"name": "model_v1"})
+
+    assert response.status_code == HTTP_STATUS_CONFLICT
