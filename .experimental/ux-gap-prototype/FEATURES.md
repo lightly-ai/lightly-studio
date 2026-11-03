@@ -65,7 +65,9 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   T or annotate L" (no annotate on grids without an Annotate menu). × hides it for good; stored in
   localStorage.
 - **Tag popover.** One field finds or creates a tag; each row shows "k/N" with + and × on hover.
-  Toasts say "Added 'a' to 9 items" and "Removed 'b' from 3 items". Images and Annotations grids.
+  Toasts count only the items that changed ("Added 'a' to 2 items", "Removed 'b' from 1 item");
+  with no change they say "All 3 items already have 'a'" or "None of the 3 items have 'b'", with
+  no Undo. Images and Annotations grids.
   Commits: 23ea42cc4, 9eb0543af.
 - **Annotate popover, Images grid.** Pick an annotation source (none is picked when there are
   several; a hidden source is refused), then + adds a classification of a class to every

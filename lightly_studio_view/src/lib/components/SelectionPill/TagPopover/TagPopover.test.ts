@@ -66,7 +66,7 @@ beforeEach(() => {
             { tag_id: 'b', count: 3 }
         ]
     } as never);
-    const ok = { data: {} } as never;
+    const ok = { data: { changed_ids: ['s1', 's2', 's3'] } } as never;
     vi.mocked(addSampleIdsToTagId).mockResolvedValue(ok);
     vi.mocked(addSamplesToTagByFilter).mockResolvedValue(ok);
     vi.mocked(removeThingIdsToTagId).mockResolvedValue(ok);
@@ -85,7 +85,7 @@ describe('TagPopover', () => {
 
         await waitFor(() =>
             expect(toast.success).toHaveBeenCalledWith(
-                "Added 'a' to 3 items",
+                "Added 'a' to 2 items",
                 expect.objectContaining({ action: expect.objectContaining({ label: 'Undo' }) })
             )
         );
@@ -102,6 +102,18 @@ describe('TagPopover', () => {
             })
         );
         await waitFor(() => expect(toast.success).toHaveBeenCalledWith('Undone'));
+    });
+
+    it('says so and offers no Undo when every item already has the tag', async () => {
+        vi.mocked(addSampleIdsToTagId).mockResolvedValue({ data: { changed_ids: [] } } as never);
+        setup();
+        await screen.findByText('1/3');
+        await fireEvent.click(screen.getByLabelText('Add a to selection'));
+
+        await waitFor(() =>
+            expect(toast.success).toHaveBeenCalledWith("All 3 items already have 'a'")
+        );
+        expect(vi.mocked(toast.success).mock.calls[0]).toHaveLength(1);
     });
 
     it('Undo after a remove re-adds the tag only to the items that had it', async () => {
@@ -147,7 +159,7 @@ describe('TagPopover', () => {
                 body: { sample_ids: ['s1', 's2', 's3'] }
             })
         );
-        expect(toast.success).toHaveBeenCalledWith("Added 'a' to 3 items");
+        expect(toast.success).toHaveBeenCalledWith("Added 'a' to 3 items", expect.anything());
         expect(mocks.loadTags).toHaveBeenCalled();
         const keys = invalidate.mock.calls.map(([filters]) => JSON.stringify(filters?.queryKey));
         expect(keys.some((k) => k.includes('countTagsForSelection'))).toBe(true);
@@ -179,7 +191,7 @@ describe('TagPopover', () => {
                 body: { sample_ids: ['s1', 's2', 's3'] }
             })
         );
-        expect(toast.success).toHaveBeenCalledWith("Removed 'b' from 3 items");
+        expect(toast.success).toHaveBeenCalledWith("Removed 'b' from 3 items", expect.anything());
     });
 
     it('removes by filter when the target is a filter', async () => {
@@ -214,7 +226,7 @@ describe('TagPopover', () => {
                 expect.objectContaining({ path: { collection_id: 'c1', tag_id: 'new' } })
             )
         );
-        expect(toast.success).toHaveBeenCalledWith("Added 'fresh' to 3 items");
+        expect(toast.success).toHaveBeenCalledWith("Added 'fresh' to 3 items", expect.anything());
     });
 
     describe('create failures', () => {
@@ -256,7 +268,10 @@ describe('TagPopover', () => {
             await waitFor(() => expect(screen.queryByText("Create 'fresh'")).toBeNull());
             await user.keyboard('{Enter}');
             await waitFor(() =>
-                expect(toast.success).toHaveBeenCalledWith("Added 'fresh' to 3 items")
+                expect(toast.success).toHaveBeenCalledWith(
+                    "Added 'fresh' to 3 items",
+                    expect.anything()
+                )
             );
             expect(createTag).toHaveBeenCalledTimes(1);
         });
