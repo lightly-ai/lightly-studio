@@ -249,7 +249,7 @@
         e.stopPropagation();
     }
 
-    function resetState() {
+    function resetState(): void {
         originalColor = initialColor;
         originalAlpha = initialAlpha;
         colorValue = initialColor;

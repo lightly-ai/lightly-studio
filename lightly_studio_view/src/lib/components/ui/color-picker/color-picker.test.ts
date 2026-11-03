@@ -130,8 +130,14 @@ describe('ColorPicker', () => {
         render(ColorPickerInDialogTestWrapper, { props: { onChange } });
         await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
+        const hexInput = screen.getByRole('textbox');
+        hexInput.focus();
+        await fireEvent.click(hexInput);
+        expect(hexInput).toBe(document.activeElement);
+
         await fireEvent.click(screen.getByTitle('#0000ff'));
         await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1));
+        expect(screen.getByRole('dialog', { name: 'Host dialog' })).toBeInTheDocument();
         await fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
 
         expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
