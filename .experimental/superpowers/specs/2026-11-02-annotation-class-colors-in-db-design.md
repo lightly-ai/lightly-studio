@@ -1,6 +1,6 @@
 # Annotation class colors in the DB (LIG-11355)
 
-Builds on `michal-lig-11319-annotation-classes-tab-ui`.
+Builds on `michal-lig-11481-refactor-color-picker-panel`.
 
 ## Why
 
@@ -31,6 +31,8 @@ browser memory and are lost on reload.
   Drop the rename workaround in `useAnnotationClasses`.
 - Live preview is a local layer on top of saved colors, so a refetch does not drop it.
   Apply saves, Cancel discards. On save error: toast and revert.
+- "Reset to default" is a new button in `color-picker-panel.svelte`, shown only when the
+  caller passes an `onReset` prop to `ColorPicker`. Source colors do not pass it.
 
 ## Out of scope
 
