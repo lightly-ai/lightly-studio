@@ -276,11 +276,7 @@ export function buildAnnotationForest({
     const noParentTrackGroup: AnnotationTreeNode[] =
         noParentTrackChildren.length > 0 ? [buildVirtualGroupNode(noParentTrackChildren)] : [];
 
-    return [
-        ...parentRoots.map(buildNode),
-        ...absentParentGroups,
-        ...noParentTrackGroup
-    ];
+    return [...parentRoots.map(buildNode), ...absentParentGroups, ...noParentTrackGroup];
 }
 
 /**
