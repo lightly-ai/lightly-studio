@@ -83,7 +83,7 @@ All tasks are done. These points differ from the first version of the plan:
 
 In `color-picker.test.ts`:
 - Delete the tests `opens inside a transformed modal dialog and positions relative to it` and `positions relative to the viewport outside a modal dialog`. Floating UI now owns the placement.
-- In `restores the original color when dismissing a preview`, replace `fireEvent.mouseDown(document.body)` with the events that the bits-ui dismissible layer reacts to: `fireEvent.pointerDown(document.body)`, then `fireEvent.pointerUp(document.body)`, then `fireEvent.click(document.body)`. Keep the assertions.
+- In `restores the original color when dismissing a preview`, replace `fireEvent.mouseDown(document.body)` with the events that the bits-ui dismissible layer reacts to: `fireEvent.pointerDown`, `fireEvent.pointerUp` and `fireEvent.click` on `document.body`. Give each event `clientX: 500, clientY: 500`, because bits-ui checks that the pointer is outside the panel. Keep the assertions.
 - Add these tests:
 
 ```ts
@@ -229,7 +229,7 @@ git commit -m "Use d3-color for color picker conversions"
 
 **Interfaces:**
 - Consumes: `Hsl` from `./color-picker.helpers`.
-- Produces: `saturation-box.svelte` with the props `{ hsl: Hsl; onPick: (saturation: number, lightness: number) => void }`. The root element has `role="slider"`, `aria-label="Saturation and lightness"`, `aria-valuetext="Saturation {s}%, lightness {l}%"` and `tabindex="0"`.
+- Produces: `saturation-box.svelte` with the props `{ hsl: Hsl; onPick: (saturation: number, lightness: number) => void }`. The root element has `role="slider"`, `aria-label="Saturation and lightness"`, `aria-valuetext="Saturation {s}%, lightness {l}%"`, `aria-valuenow={s}` and `tabindex="0"`.
 
 - [x] **Step 1: Write the component tests**
 
@@ -261,9 +261,9 @@ Run: `npx vitest run src/lib/components/ui/color-picker`. Expected: the new test
 
 - [x] **Step 3: Write `saturation-box.svelte` and use it in `color-picker.svelte`**
 
-- A pointer down picks a color, calls `setPointerCapture` and sets `isDragging`.
-- A pointer move picks a color only while `isDragging`.
-- A pointer up or a pointer cancel clears `isDragging`.
+- A pointer down picks a color, calls `setPointerCapture` and stores its `pointerId` as `activePointerId`. A pointer down from another pointer during a drag is ignored.
+- A pointer move picks a color only if its `pointerId` is `activePointerId`.
+- A pointer up or a pointer cancel of `activePointerId` clears it.
 - Map the position the same way as today: `x` gives saturation 0–100, and the top of the box is lightness 100.
 - The arrow keys move by 1, or by 10 with Shift. Left and Right change saturation, Up and Down change lightness. Clamp to 0–100 and call `preventDefault`.
 - Keep the current gradient background and the indicator markup.
