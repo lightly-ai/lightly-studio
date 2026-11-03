@@ -5,6 +5,8 @@ interface DescribeExportScopeParams {
     sampleType: string | undefined;
     /** Names of the tags in the active tag filter. Empty when no tag filter is active. */
     tagNames: string[];
+    /** The ticked annotation filter pairs, e.g. "deer in ground_truth". Empty for none. */
+    pairNames?: string[];
 }
 
 interface DescribeExportScopeReturn {
@@ -18,15 +20,23 @@ interface DescribeExportScopeReturn {
 export function describeExportScope({
     count,
     sampleType,
-    tagNames
+    tagNames,
+    pairNames = []
 }: DescribeExportScopeParams): DescribeExportScopeReturn {
     const noun = getSampleNoun(sampleType, count);
     const base = `Exports the ${count} ${noun} matching your current filters`;
+    const pairs = pairNames.length > 0 ? `, with ${pairNames.join(', ')}` : '';
     if (tagNames.length === 0) {
-        return { summary: `${base}.`, hint: 'To export one tag, filter by that tag first.' };
+        return {
+            summary: `${base}${pairs}.`,
+            hint: 'To export one tag, filter by that tag first.'
+        };
     }
     const tagWord = tagNames.length === 1 ? 'tag' : 'tags';
-    return { summary: `${base} in ${tagWord} ${tagNames.join(' or ')}.`, hint: undefined };
+    return {
+        summary: `${base} in ${tagWord} ${tagNames.join(' or ')}${pairs}.`,
+        hint: undefined
+    };
 }
 
 function getSampleNoun(sampleType: string | undefined, count: number): string {

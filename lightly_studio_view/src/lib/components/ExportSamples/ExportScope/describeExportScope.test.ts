@@ -37,4 +37,17 @@ describe('describeExportScope', () => {
         });
         expect(summary).toBe('Exports the 2 samples matching your current filters.');
     });
+
+    it('names the ticked source and class pairs', () => {
+        const { summary } = describeExportScope({
+            count: 4,
+            sampleType: 'image',
+            tagNames: ['to_label'],
+            pairNames: ['deer in ground_truth', 'raccoon in model_v1']
+        });
+
+        expect(summary).toBe(
+            'Exports the 4 images matching your current filters in tag to_label, with deer in ground_truth, raccoon in model_v1.'
+        );
+    });
 });

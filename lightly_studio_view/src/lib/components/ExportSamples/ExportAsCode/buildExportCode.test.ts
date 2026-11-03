@@ -112,6 +112,70 @@ describe('buildExportCode', () => {
         expect(code).toBeUndefined();
     });
 
+    describe('with source and class pairs', () => {
+        const twoSources = [
+            { id: 'source-gt', name: 'ground_truth' },
+            { id: 'source-v1', name: 'model_v1' }
+        ];
+        const annotationsFilter = (
+            filter: Record<string, unknown>
+        ): ImageFilter['sample_filter'] => ({
+            annotations_filter: { filter_type: 'annotations', ...filter }
+        });
+
+        it('gives pairs within one source the result of the class filter', () => {
+            const classFilter = buildExportCode({
+                ...defaultParams,
+                annotationSources: twoSources,
+                imageFilter: {
+                    filter_type: 'image',
+                    sample_filter: annotationsFilter({ annotation_label_ids: ['deer-id'] })
+                }
+            });
+            const pairs = buildExportCode({
+                ...defaultParams,
+                annotationSources: twoSources,
+                imageFilter: {
+                    filter_type: 'image',
+                    sample_filter: annotationsFilter({
+                        source_label_pairs: [
+                            { collection_id: 'source-gt', annotation_label_id: 'deer-id' }
+                        ]
+                    })
+                }
+            });
+
+            expect(pairs).toEqual(classFilter);
+        });
+
+        it('gives no code for pairs across two sources, like a subset of sources', () => {
+            const sourceSubset = buildExportCode({
+                ...defaultParams,
+                annotationSources: twoSources,
+                imageFilter: {
+                    filter_type: 'image',
+                    sample_filter: annotationsFilter({ collection_ids: ['source-v1'] })
+                }
+            });
+            const pairs = buildExportCode({
+                ...defaultParams,
+                annotationSources: twoSources,
+                imageFilter: {
+                    filter_type: 'image',
+                    sample_filter: annotationsFilter({
+                        source_label_pairs: [
+                            { collection_id: 'source-gt', annotation_label_id: 'deer-id' },
+                            { collection_id: 'source-v1', annotation_label_id: 'raccoon-id' }
+                        ]
+                    })
+                }
+            });
+
+            expect(pairs).toEqual({ code: undefined, reason: SCOPE_NOT_SUPPORTED_REASON });
+            expect(pairs).toEqual(sourceSubset);
+        });
+    });
+
     it('gives no code for two tags', () => {
         const result = buildExportCode({
             ...defaultParams,

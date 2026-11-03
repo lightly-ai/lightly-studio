@@ -103,7 +103,7 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   hides the source. Each tab keeps its own ticks, and deleting a source drops its ticks.
   Video, frame and caption grids keep the flat class list. Rows 20, 22. Try: after Step f,
   expand `labels` and `model_v1`, tick deer under `labels` only. Commits: e703f7250,
-  29a9251f7, c94837430.
+  29a9251f7, c94837430, 97ec6946c.
 - **Filters only.** Source rows have a checkbox and a read-only color dot; class rows have a
   checkbox, a read-only color dot and the eye. Renaming, deleting and coloring sources moved to
   Settings > Annotation sources, opened by the gear in the source list header ("Manage
@@ -134,8 +134,10 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 
 ## Export to training
 
-- **Export scope and success toast.** The dialog names the image count and the filtered tags,
-  hints to filter by a tag, and confirms a finished export. Row 37. Try: filter by a tag, open
+- **Export scope and success toast.** The dialog names the image count, the filtered tags and
+  the ticked source and class pairs ("with deer in labels, deer in model_v1"), hints to filter
+  by a tag, and confirms a finished export. Copy as code gives no code for pairs, like for a
+  class filter, and says to clear the other filters. Row 37. Try: filter by a tag, open
   Export. Commits: ab6412685.
 - **Include images in a COCO export.** The zip holds `images/` and `annotations.json` with
   relative file names; the SDK gets `include_images` on `to_coco_object_detections`. Image paths

@@ -1,5 +1,11 @@
 <script lang="ts">
-    import { useGlobalStorage, useImageFilters, useVideoFilters } from '$lib/hooks';
+    import {
+        useAnnotationCollections,
+        useAnnotationLabels,
+        useGlobalStorage,
+        useImageFilters,
+        useVideoFilters
+    } from '$lib/hooks';
     import { describeExportScope } from './describeExportScope';
 
     interface Props {
@@ -21,8 +27,21 @@
         const collectionTags = $tags[collectionId] ?? [];
         return tagIds.map((id) => collectionTags.find((tag) => tag.tag_id === id)?.name ?? id);
     });
+    const sourcesQuery = useAnnotationCollections(() => ({ collectionId }));
+    const labelsQuery = useAnnotationLabels(() => ({ collectionId }));
+    const pairNames = $derived.by(() => {
+        if (sampleType === 'video') return [];
+        const pairs = $imageFilter?.sample_filter?.annotations_filter?.source_label_pairs ?? [];
+        const sources = sourcesQuery.data ?? [];
+        const labels = labelsQuery.data ?? [];
+        return pairs.map((pair) => {
+            const label = labels.find((l) => l.annotation_label_id === pair.annotation_label_id);
+            const source = sources.find((c) => c.collection_id === pair.collection_id);
+            return `${label?.annotation_label_name ?? pair.annotation_label_id} in ${source?.name ?? pair.collection_id}`;
+        });
+    });
     const scope = $derived(
-        describeExportScope({ count: $filteredSampleCount, sampleType, tagNames })
+        describeExportScope({ count: $filteredSampleCount, sampleType, tagNames, pairNames })
     );
 </script>
 
