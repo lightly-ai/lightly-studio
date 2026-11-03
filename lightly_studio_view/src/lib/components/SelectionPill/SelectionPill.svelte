@@ -99,7 +99,7 @@
 
 {#if selectedCount > 0}
     <div
-        class="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2"
+        class="pointer-events-none absolute bottom-4 left-1/2 z-30 w-max -translate-x-1/2"
         transition:fly={{ y: 20, duration: 200 }}
     >
         <div

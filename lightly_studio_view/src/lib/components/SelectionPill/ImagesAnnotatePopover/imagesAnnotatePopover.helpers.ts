@@ -26,3 +26,8 @@ export function buildSelectionCountsFilter(target: SelectionTarget, sourceId: st
 export function formatDeleteConfirm(className: string, count: number, sourceName: string) {
     return `Delete ${className} from ${count} ${count === 1 ? 'image' : 'images'} in ${sourceName}?`;
 }
+
+/** The row index a number key 1-9 picks, or null for any other key. */
+export function numberKeyIndex(key: string): number | null {
+    return /^[1-9]$/.test(key) ? Number(key) - 1 : null;
+}

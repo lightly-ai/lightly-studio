@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Plus, Tag, X } from '@lucide/svelte';
+    import { Tag } from '@lucide/svelte';
     import { useQueryClient } from '@tanstack/svelte-query';
     import { toast } from 'svelte-sonner';
     import * as Command from '$lib/components/ui/command';
@@ -18,7 +18,7 @@
     import { useSelectionTagCounts } from '$lib/hooks/useSelectionTagCounts';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import type { GridType } from '$lib/types';
-    import { tagRowActions } from './tagPopover.helpers';
+    import SelectionCountRow from '../SelectionCountRow/SelectionCountRow.svelte';
 
     interface Props {
         collectionId: string;
@@ -135,43 +135,14 @@
             <Command.Input placeholder="Search or create a tag…" bind:value={name} />
             <Command.List class="max-h-40" data-testid="tag-popover-list">
                 {#each $tags as tag (tag.tag_id)}
-                    {@const count = counts.get(tag.tag_id) ?? 0}
-                    {@const actions = tagRowActions(count, selectedCount)}
-                    <Command.Item
-                        value={tag.name}
-                        class="group h-8 justify-between"
-                        disabled={busy}
-                        onSelect={() => actions.canAdd && addTag(tag.tag_id, tag.name)}
-                    >
-                        <span class="min-w-0 truncate">{tag.name}</span>
-                        <span class="flex items-center gap-1">
-                            <span class="text-xs text-muted-foreground"
-                                >{count}/{selectedCount}</span
-                            >
-                            {#if actions.canAdd}
-                                <button
-                                    class="hidden rounded p-0.5 hover:bg-accent group-hover:block group-data-[selected]:block"
-                                    aria-label={`Add ${tag.name} to selection`}
-                                    disabled={busy}
-                                    onclick={(e) => {
-                                        e.stopPropagation();
-                                        void addTag(tag.tag_id, tag.name);
-                                    }}><Plus class="size-3.5" /></button
-                                >
-                            {/if}
-                            {#if actions.canRemove}
-                                <button
-                                    class="hidden rounded p-0.5 hover:bg-accent group-hover:block group-data-[selected]:block"
-                                    aria-label={`Remove ${tag.name} from selection`}
-                                    disabled={busy}
-                                    onclick={(e) => {
-                                        e.stopPropagation();
-                                        void removeTag(tag.tag_id, tag.name);
-                                    }}><X class="size-3.5" /></button
-                                >
-                            {/if}
-                        </span>
-                    </Command.Item>
+                    <SelectionCountRow
+                        name={tag.name}
+                        count={counts.get(tag.tag_id) ?? 0}
+                        total={selectedCount}
+                        {busy}
+                        onAdd={() => addTag(tag.tag_id, tag.name)}
+                        onRemove={() => removeTag(tag.tag_id, tag.name)}
+                    />
                 {/each}
                 {#if trimmed && !exists}
                     <Command.Item
