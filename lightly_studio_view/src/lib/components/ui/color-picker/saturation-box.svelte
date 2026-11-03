@@ -10,7 +10,8 @@
 
     let { hsl, onPick }: Props = $props();
 
-    let isDragging = false;
+    // Follow only the pointer that started the drag, so a second finger cannot change the color.
+    let activePointerId: number | null = null;
 
     const arrowSteps: Record<string, [number, number]> = {
         ArrowLeft: [-1, 0],
@@ -31,13 +32,18 @@
     }
 
     function handlePointerDown(e: PointerEvent): void {
+        if (activePointerId !== null) return;
         (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
-        isDragging = true;
+        activePointerId = e.pointerId;
         pickFromPointer(e);
     }
 
     function handlePointerMove(e: PointerEvent): void {
-        if (isDragging) pickFromPointer(e);
+        if (e.pointerId === activePointerId) pickFromPointer(e);
+    }
+
+    function handlePointerEnd(e: PointerEvent): void {
+        if (e.pointerId === activePointerId) activePointerId = null;
     }
 
     function handleKeyDown(e: KeyboardEvent): void {
@@ -59,8 +65,8 @@
     tabindex="0"
     onpointerdown={handlePointerDown}
     onpointermove={handlePointerMove}
-    onpointerup={() => (isDragging = false)}
-    onpointercancel={() => (isDragging = false)}
+    onpointerup={handlePointerEnd}
+    onpointercancel={handlePointerEnd}
     onkeydown={handleKeyDown}
 >
     <!-- Selection indicator -->

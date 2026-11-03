@@ -59,6 +59,17 @@ describe('SaturationBox', () => {
         expect(onPick).toHaveBeenCalledTimes(1);
     });
 
+    it('ignores a second pointer during a drag', async () => {
+        const box = getBox();
+        await fireEvent.pointerDown(box, { clientX: 10, clientY: 10, pointerId: 1 });
+        await fireEvent.pointerDown(box, { clientX: 90, clientY: 90, pointerId: 2 });
+        await fireEvent.pointerMove(box, { clientX: 80, clientY: 80, pointerId: 2 });
+        await fireEvent.pointerUp(box, { pointerId: 2 });
+        await fireEvent.pointerMove(box, { clientX: 50, clientY: 50, pointerId: 1 });
+        expect(onPick).toHaveBeenCalledTimes(2);
+        expect(onPick).toHaveBeenLastCalledWith(50, 50);
+    });
+
     it('clamps positions outside the box', async () => {
         const box = getBox();
         await fireEvent.pointerDown(box, { clientX: 150, clientY: -20, pointerId: 1 });
