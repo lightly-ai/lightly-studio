@@ -81,8 +81,8 @@ vi.mock('$lib/components/Header/MenuDialogHost.svelte', async () => ({
 vi.mock('$lib/components/QueryControl/QueryControl.svelte', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
-vi.mock('$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte', async () => ({
-    default: (await import('./LayoutStub.test.svelte')).default
+vi.mock('$lib/components/AnnotationSourceTree', async () => ({
+    AnnotationSourceTree: (await import('./LayoutStub.test.svelte')).default
 }));
 vi.mock(
     '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte',

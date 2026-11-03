@@ -27,7 +27,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { setLabelColorOrder } from '$lib/utils';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
+    import { AnnotationSourceTree } from '$lib/components/AnnotationSourceTree';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
     import { useImagesWithoutAnnotationsCount } from '$lib/hooks/useImagesWithoutAnnotationsCount/useImagesWithoutAnnotationsCount';
@@ -450,6 +450,19 @@
         })
     );
 
+    // The tree counts follow the other filters, not the tree's own pairs.
+    const sourceTreeCountsFilter = $derived(
+        buildImageFilter({
+            dimensionsValues: $dimensionsValues,
+            annotationFilter: undefined,
+            metadataFilters,
+            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
+            tagIds: isAnnotations ? [] : plotFilterTagIds,
+            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
+            queryExpr: isAnnotations ? null : plotFilterQueryExpr
+        })
+    );
+
     // Categorical value counts use the images-grid filter, so they match the grid footer.
     // Not `imageAnnotationCountsFilter`: it also carries the selected annotation sources,
     // which would drop every image without annotations from the counts.
@@ -460,6 +473,9 @@
     const isVideoFrameAnnotations = $derived(
         isAnnotations && parentCollection?.sampleType == SampleType.VIDEO_FRAME
     );
+    // The images and annotations grids nest annotation classes under their source. The
+    // annotations of video frames are counted on another collection, so they keep the flat list.
+    const showsSourceTree = $derived(isImages || (isAnnotations && !isVideoFrameAnnotations));
 
     // The count queries skip the request while every annotation source is unchecked:
     // their results are replaced with an empty list (see annotationCountsData).
@@ -714,11 +730,18 @@
                             {#if isImages}
                                 <ConfusionCellFilterItem />
                             {/if}
-                            {#if isImages}
-                                <AnnotationCollectionsMenu {collectionId} />
-                            {/if}
                             <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
-                            {#if !isCaptions && !isPointClouds}
+                            {#if showsSourceTree}
+                                <AnnotationSourceTree
+                                    {collectionId}
+                                    countsCollectionId={datasetId}
+                                    countsFilter={sourceTreeCountsFilter}
+                                    countMode={isImages ? 'samples' : 'objects'}
+                                    singleSourceId={isAnnotations ? collectionId : undefined}
+                                    showVisibilityToggle={showAnnotationVisibilityToggle}
+                                    unannotatedRow={unannotatedFilterRow}
+                                />
+                            {:else if !isCaptions && !isPointClouds}
                                 <LabelsMenu
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>
