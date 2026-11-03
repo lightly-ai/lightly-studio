@@ -108,5 +108,8 @@
     "uuid": "^13.0.0",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1"
+  },
+  "overrides": {
+    "handlebars": "^4.7.10"
   }
 }
