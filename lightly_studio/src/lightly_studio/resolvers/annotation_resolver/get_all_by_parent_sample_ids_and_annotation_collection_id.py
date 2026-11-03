@@ -82,8 +82,4 @@ def _view_relationship_options() -> list[LoaderOption]:
         joinedload(AnnotationBaseTable.object_track).joinedload(
             ObjectTrackTable.parent_object_track
         ),
-        joinedload(AnnotationBaseTable.object_track)
-        .joinedload(ObjectTrackTable.parent_object_track)
-        .selectinload(ObjectTrackTable.annotations)
-        .joinedload(AnnotationBaseTable.annotation_label),
     ]
