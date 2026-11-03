@@ -4,7 +4,7 @@
     import * as Popover from '$lib/components/ui/popover';
     import { useAnnotationCollections } from '$lib/hooks';
     import { cn } from '$lib/utils';
-    import type { Component } from 'svelte';
+    import type { Component, Snippet } from 'svelte';
 
     interface Props {
         /** The collection that owns the annotation sources. */
@@ -19,6 +19,8 @@
         /** When set, the trigger shows this text next to the icon. */
         triggerText?: string;
         disabled?: boolean;
+        /** Replaces the icon and text of the trigger with compact custom content. */
+        trigger?: Snippet;
         /** Called with the picked or typed source name. Return true to close the picker. */
         onPick: (sourceName: string) => Promise<boolean>;
     }
@@ -31,6 +33,7 @@
         icon: Icon,
         triggerText,
         disabled = false,
+        trigger,
         onPick
     }: Props = $props();
     const sources = useAnnotationCollections(() => ({ collectionId }));
@@ -55,14 +58,22 @@
         <Popover.Trigger
             class={cn(
                 'inline-flex items-center justify-center gap-2 rounded-md hover:bg-accent disabled:opacity-50',
-                triggerText ? 'h-9 w-full border px-3 text-sm' : 'size-7'
+                trigger
+                    ? 'h-7 gap-1.5 px-2 text-sm'
+                    : triggerText
+                      ? 'h-9 w-full border px-3 text-sm'
+                      : 'size-7'
             )}
             disabled={disabled || !sources.isSuccess}
             aria-label={label}
             onclick={(event) => event.stopPropagation()}
         >
-            <Icon class="size-4" />
-            {#if triggerText}{triggerText}{/if}
+            {#if trigger}
+                {@render trigger()}
+            {:else}
+                <Icon class="size-4" />
+                {#if triggerText}{triggerText}{/if}
+            {/if}
         </Popover.Trigger>
     </Tooltip>
     <Popover.Content class="w-64 p-0" align="end">

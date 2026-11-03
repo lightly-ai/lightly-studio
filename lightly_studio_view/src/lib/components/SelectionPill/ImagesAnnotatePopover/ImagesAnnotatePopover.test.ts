@@ -2,7 +2,7 @@ import { QueryClient } from '@tanstack/svelte-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { toast } from 'svelte-sonner';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     bulkCreateClassifications,
     countImageAnnotationsByCollection,
@@ -57,8 +57,19 @@ async function pickSource(name: string) {
     await fireEvent.click(await screen.findByRole('option', { name }));
 }
 
+const stored = new Map<string, string>();
+const SOURCE_KEY = 'lightly-studio.pill-annotate-source.c1';
+
+afterEach(() => vi.unstubAllGlobals());
+
 beforeEach(() => {
     vi.clearAllMocks();
+    stored.clear();
+    vi.stubGlobal('localStorage', {
+        getItem: (key: string) => stored.get(key) ?? null,
+        setItem: (key: string, value: string) => stored.set(key, value),
+        removeItem: (key: string) => stored.delete(key)
+    });
     mocks.target = { kind: 'ids', ids: ['s1'] };
     const storage = useGlobalStorage();
     storage.clearSelectedSamples('c1');
@@ -87,10 +98,60 @@ describe('ImagesAnnotatePopover', () => {
         mockSources([gt, pred]);
         setup();
         expect(await screen.findByRole('button', { name: 'Annotation source' })).toHaveTextContent(
-            'Pick an annotation source'
+            'Choose source'
         );
         await fireEvent.click(await screen.findByLabelText('Add fox to selection'));
         expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Pick a source'));
+        expect(bulkCreateClassifications).not.toHaveBeenCalled();
+    });
+
+    it('preselects the remembered source and remembers a new pick', async () => {
+        stored.set(SOURCE_KEY, 'predictions');
+        mockSources([gt, pred]);
+        setup();
+        const trigger = await screen.findByRole('button', { name: 'Annotation source' });
+        await waitFor(() => expect(trigger).toHaveTextContent('predictions'));
+
+        await pickSource('ground_truth');
+
+        expect(stored.get(SOURCE_KEY)).toBe('ground_truth');
+        expect(trigger).toHaveTextContent('ground_truth');
+    });
+
+    it('asks to choose when the remembered source is hidden', async () => {
+        stored.set(SOURCE_KEY, 'predictions');
+        mockSources([gt, pred]);
+        useAnnotationCollectionsFilter().setSelectedCollectionIds(['src-gt']);
+        setup();
+        expect(await screen.findByRole('button', { name: 'Annotation source' })).toHaveTextContent(
+            'Choose source'
+        );
+    });
+
+    it('number keys add the first classes while the search is empty', async () => {
+        setup();
+        const input = await screen.findByPlaceholderText('Search or create a class…');
+        await screen.findByText('0/1');
+        expect(screen.getByText('2')).toBeInTheDocument();
+
+        await fireEvent.keyDown(input, { key: '2' });
+
+        await waitFor(() =>
+            expect(bulkCreateClassifications).toHaveBeenCalledWith(
+                expect.objectContaining({ body: expect.objectContaining({ class_name: 'fox' }) })
+            )
+        );
+    });
+
+    it('digits go to a search that is not empty', async () => {
+        setup();
+        const user = userEvent.setup();
+        const input = await screen.findByPlaceholderText('Search or create a class…');
+        await screen.findByText('0/1');
+
+        await user.type(input, 'f2');
+
+        expect(input).toHaveValue('f2');
         expect(bulkCreateClassifications).not.toHaveBeenCalled();
     });
 
@@ -103,7 +164,7 @@ describe('ImagesAnnotatePopover', () => {
             'predictions is hidden. Show it in the Annotations panel to add annotations to it.'
         );
         expect(screen.getByRole('button', { name: 'Annotation source' })).toHaveTextContent(
-            'Pick an annotation source'
+            'Choose source'
         );
     });
 

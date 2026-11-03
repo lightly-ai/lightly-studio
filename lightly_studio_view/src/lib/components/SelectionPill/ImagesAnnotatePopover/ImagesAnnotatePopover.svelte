@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { Layers, Plus, Tags, X } from '@lucide/svelte';
+    import { Tags } from '@lucide/svelte';
     import { useQueryClient } from '@tanstack/svelte-query';
+    import { untrack } from 'svelte';
     import { get } from 'svelte/store';
     import { toast } from 'svelte-sonner';
     import { page } from '$app/state';
     import { deleteForSamples } from '$lib/api/lightly_studio_local';
-    import { AnnotationSourcePicker } from '$lib/components/AnnotationSourcePicker';
     import { Button } from '$lib/components/ui/button';
     import * as Command from '$lib/components/ui/command';
     import * as Dialog from '$lib/components/ui/dialog';
@@ -27,10 +27,18 @@
     } from '$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts';
     import { getImagesInfiniteQueryKeyPrefix } from '$lib/hooks/useImagesInfinite/createImagesInfiniteOptions';
     import { getSelectionTarget } from '$lib/hooks/useSelectionTarget/useSelectionTarget';
+    import SelectionCountRow from '../SelectionCountRow/SelectionCountRow.svelte';
+    import AnnotateSourceMenu from './AnnotateSourceMenu.svelte';
     import {
         buildSelectionCountsFilter,
-        formatDeleteConfirm
+        formatDeleteConfirm,
+        numberKeyIndex
     } from './imagesAnnotatePopover.helpers';
+    import {
+        readRememberedSource,
+        rememberSource,
+        usableRememberedSource
+    } from './rememberedSource';
 
     interface Props {
         collectionId: string;
@@ -51,18 +59,20 @@
 
     const sources = $derived(sourcesQuery.data ?? []);
     const labels = $derived(labelsQuery.data ?? []);
-    let chosenSource = $state<string | null>(null);
-    const targetSource = $derived(
-        resolveTargetSource(
-            chosenSource,
-            sources.map((s) => s.name)
-        )
-    );
     const sourceByName = (name: string | null) => sources.find((s) => s.name === name);
     const isHidden = (name: string | null) => {
         const source = sourceByName(name);
         return source !== undefined && !$isSourceVisible(source.collection_id);
     };
+    const sourceNames = $derived(sources.map((s) => s.name));
+    const remembered = readRememberedSource(untrack(() => collectionId));
+    let chosenSource = $state<string | null>(null);
+    const targetSource = $derived(
+        resolveTargetSource(
+            chosenSource ?? usableRememberedSource(remembered, sourceNames, isHidden),
+            sourceNames
+        )
+    );
     const targetSourceId = $derived(sourceByName(targetSource)?.collection_id);
 
     // Reading selectedCount makes the target (and so the counts query) follow the selection.
@@ -110,7 +120,19 @@
             return false;
         }
         chosenSource = sourceName;
+        rememberSource(collectionId, sourceName);
         return true;
+    }
+
+    // 1-9 add the first nine classes while the search is empty; typed digits search otherwise.
+    function handleNumberKey(event: KeyboardEvent) {
+        if (name !== '' || busy || event.ctrlKey || event.metaKey || event.altKey) return;
+        const index = numberKeyIndex(event.key);
+        const label = index === null ? undefined : labels[index];
+        if (!label) return;
+        event.preventDefault();
+        const className = label.annotation_label_name;
+        if ((counts.get(className) ?? 0) < selectedCount) void addToSelection(className);
     }
 
     async function addToSelection(className: string) {
@@ -176,63 +198,33 @@
                 >{shortcutHint}</kbd
             >{/if}
     </Popover.Trigger>
-    <Popover.Content class="w-72 p-0" align="center">
-        <div class="border-b p-2">
-            <AnnotationSourcePicker
-                {collectionId}
-                label="Annotation source"
-                heading="Add classifications to"
-                icon={Layers}
-                triggerText={targetSource ?? 'Pick an annotation source'}
-                disabled={busy}
-                onPick={pickSource}
-            />
-        </div>
+    <Popover.Content class="w-72 p-0" align="center" onkeydown={handleNumberKey}>
+        <AnnotateSourceMenu
+            {collectionId}
+            sourceName={targetSource}
+            disabled={busy}
+            onPick={pickSource}
+        />
         <Command.Root label="Annotation classes">
             <Command.Input placeholder="Search or create a class…" bind:value={name} />
-            <Command.List class="max-h-40" data-testid="annotate-popover-list">
-                {#each labels as label (label.annotation_label_id)}
+            <Command.List class="max-h-56" data-testid="annotate-popover-list">
+                {#each labels as label, index (label.annotation_label_id)}
                     {@const className = label.annotation_label_name}
                     {@const count = counts.get(className) ?? 0}
-                    <Command.Item
-                        value={className}
-                        class="group h-8 justify-between"
-                        disabled={busy}
-                        onSelect={() => count < selectedCount && addToSelection(className)}
-                    >
-                        <span class="min-w-0 truncate">{className}</span>
-                        <span class="flex items-center gap-1">
-                            <span class="text-xs text-muted-foreground"
-                                >{count}/{selectedCount}</span
-                            >
-                            {#if count < selectedCount}
-                                <button
-                                    class="hidden rounded p-0.5 hover:bg-accent group-hover:block group-data-[selected]:block"
-                                    aria-label={`Add ${className} to selection`}
-                                    disabled={busy}
-                                    onclick={(e) => {
-                                        e.stopPropagation();
-                                        void addToSelection(className);
-                                    }}><Plus class="size-3.5" /></button
-                                >
-                            {/if}
-                            {#if count > 0}
-                                <button
-                                    class="hidden rounded p-0.5 hover:bg-accent group-hover:block group-data-[selected]:block"
-                                    aria-label={`Remove ${className} from selection`}
-                                    disabled={busy}
-                                    onclick={(e) => {
-                                        e.stopPropagation();
-                                        pendingDelete = {
-                                            labelId: label.annotation_label_id!,
-                                            className,
-                                            count
-                                        };
-                                    }}><X class="size-3.5" /></button
-                                >
-                            {/if}
-                        </span>
-                    </Command.Item>
+                    <SelectionCountRow
+                        name={className}
+                        {count}
+                        total={selectedCount}
+                        {busy}
+                        shortcut={name === '' && index < 9 ? index + 1 : undefined}
+                        onAdd={() => addToSelection(className)}
+                        onRemove={() =>
+                            (pendingDelete = {
+                                labelId: label.annotation_label_id!,
+                                className,
+                                count
+                            })}
+                    />
                 {/each}
                 {#if trimmed && !exists}
                     <Command.Item

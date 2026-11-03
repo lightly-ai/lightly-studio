@@ -84,6 +84,11 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   "Select all N" (the footer count), which runs the grid's select-all. "More actions" (⋯) has
   "Copy IDs" for an ID selection and "Find similar images" for one image with embeddings. Try:
   Images grid, tick 2 tiles, "Select all 5,000".
+- **Annotate without the extra step.** The Images grid Annotate popover opens with "Add to
+  <source>" on top; the source is remembered per collection in localStorage. With several
+  sources and nothing remembered (or the remembered one deleted or hidden) it reads "Choose
+  source" and + is refused. Class and tag rows show a thin k/N coverage bar. Keys 1-9 add the
+  first nine classes while the search is empty. Try: select tiles, L, pick a source, reopen, 2.
 
 ## Filter panel
 
