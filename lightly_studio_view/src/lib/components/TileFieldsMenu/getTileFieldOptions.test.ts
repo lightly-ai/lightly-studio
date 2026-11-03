@@ -10,6 +10,9 @@ const sources = [
     { id: 's2', name: 'model_v1' }
 ];
 
+const kindsOf = (groups: ReturnType<typeof getTileFieldOptions>) =>
+    groups.map((group) => group.kind);
+
 const labelsOf = (groups: ReturnType<typeof getTileFieldOptions>) =>
     groups.map((group) => [group.label, group.options.map((option) => option.label)]);
 
@@ -28,6 +31,7 @@ describe('getTileFieldOptions', () => {
             ['Annotation sources', ['ground_truth', 'model_v1']],
             ['Metadata', ['location']]
         ]);
+        expect(kindsOf(groups)).toEqual([undefined, 'tag', 'source', 'metadata']);
         expect(groups[1].options[0].id).toBe('tag:t1');
         expect(groups[2].options[1].id).toBe('source:s2');
         expect(groups[3].options[0].id).toBe('metadata:location');

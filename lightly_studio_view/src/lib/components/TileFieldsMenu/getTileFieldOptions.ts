@@ -1,3 +1,4 @@
+import type { getTileFieldKind } from '$lib/hooks/useTileFields/useTileFields';
 import {
     metadataTileField,
     sourceTileField,
@@ -14,6 +15,8 @@ interface TileFieldOption {
 
 interface TileFieldGroup {
     label: string;
+    /** The kind of every option, for the header marker. Groups that mix kinds have none. */
+    kind?: ReturnType<typeof getTileFieldKind>;
     options: TileFieldOption[];
 }
 
@@ -50,10 +53,12 @@ export const getTileFieldOptions = ({
         },
         {
             label: 'Tags',
+            kind: 'tag',
             options: tags.map((tag) => ({ id: tagTileField(tag.tag_id), label: tag.name }))
         },
         {
             label: 'Annotation sources',
+            kind: 'source',
             options: sources.map((source) => ({
                 id: sourceTileField(source.id),
                 label: source.name
@@ -61,6 +66,7 @@ export const getTileFieldOptions = ({
         },
         {
             label: 'Metadata',
+            kind: 'metadata',
             options: metadataKeys.map((key) => ({ id: metadataTileField(key), label: key }))
         }
     ];

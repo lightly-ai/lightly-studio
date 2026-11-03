@@ -4,7 +4,13 @@
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Input } from '$lib/components/ui/input';
     import * as Popover from '$lib/components/ui/popover';
-    import { resolveTileFields, useTileFields } from '$lib/hooks/useTileFields/useTileFields';
+    import TileFieldMarker from '$lib/components/TileFieldMarker/TileFieldMarker.svelte';
+    import {
+        getSourceId,
+        getTileFieldKind,
+        resolveTileFields,
+        useTileFields
+    } from '$lib/hooks/useTileFields/useTileFields';
     import { filterTileFieldGroups, getTileFieldOptions } from './getTileFieldOptions';
 
     type OptionsParams = Parameters<typeof getTileFieldOptions>[0];
@@ -46,6 +52,11 @@
             checked={ticked.includes(option.id)}
             onCheckedChange={() => toggleTileField(collectionId, option.id, isAnnotations)}
         />
+        <!-- The same marker as on the tiles, so the menu and the chips read the same. -->
+        <TileFieldMarker
+            kind={getTileFieldKind(option.id)}
+            name={getSourceId(option.id) === undefined ? undefined : option.label}
+        />
         <span class="truncate" title={option.label}>{option.label}</span>
     </label>
 {/snippet}
@@ -77,7 +88,12 @@
         />
         <div class="min-h-0 flex-1 overflow-y-auto">
             {#each groups as group (group.label)}
-                <div class="px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground">
+                <div
+                    class="flex items-center gap-1.5 px-2 pb-1 pt-2 text-xs font-medium text-muted-foreground"
+                >
+                    {#if group.kind}
+                        <TileFieldMarker kind={group.kind} />
+                    {/if}
                     {group.label}
                 </div>
                 {#each group.options as option (option.id)}
