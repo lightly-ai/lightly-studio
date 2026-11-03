@@ -16,15 +16,15 @@
     data-testid="plot-selection-chip"
 >
     <span class="text-sm font-medium">
-        {count}
-        {count === 1 ? itemLabel : `${itemLabel}s`} selected
+        Region filter: {count}
+        {count === 1 ? itemLabel : `${itemLabel}s`}
     </span>
     <button
         type="button"
         class="shrink-0 text-muted-foreground hover:text-foreground"
         onclick={onClear}
-        title="Clear selection"
-        aria-label="Clear selection"
+        title="Clear region filter"
+        aria-label="Clear region filter"
     >
         <X class="size-4" />
     </button>

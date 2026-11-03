@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Python SDK: Added Python 3.15 support.
-- The embedding plot shows how many items are selected and lets you clear the selection right on the plot.
+- The embedding plot shows the active region filter and lets you clear it right on the plot.
 
 ### Changed
 
