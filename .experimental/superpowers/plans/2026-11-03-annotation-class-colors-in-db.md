@@ -256,7 +256,7 @@ Delete `getInitialColor`, `getInitialAlpha` and the destructured `getCustomColor
 Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `AnnotationCanvas`, `SampleClassificationPills`. All other `getColorByLabel` callers stay (`SampleDetailsImageContainer`, `AnnotationItem`, point cloud `useWorkspaceSceneData`, `videoEvents`, `useVideoFrameAnnotations`, `plotColorUtils`).
 
 **Files:**
-- Create: `lightly_studio_view/src/lib/hooks/useCustomSourceColors.ts` — returns `useCustomLabelColors()` plus `customSourceColorsStore` as an alias. Comment: `// Shares the class color store until source colors get their own store.`
+- Create: `lightly_studio_view/src/lib/hooks/useCustomSourceColors/useCustomSourceColors.ts` — returns `useCustomLabelColors()` plus `customSourceColorsStore` as an alias. Comment: `// Shares the class color store until source colors get their own store.`
 - Create: `lightly_studio_view/src/lib/utils/getColorBySource.ts`; Modify `getColorByLabel.ts` to extract and export `getDefaultColor`. Export from `lib/utils/index.ts` and `lib/hooks/index.ts`.
 - Modify: `lightly_studio_view/src/lib/components/SampleAnnotation/SampleAnnotation.svelte` — replace `colorLabel` with `colorSource: string | undefined`; when set, stroke/fill/text/mask alpha use the source store and `getColorBySource`.
 - Modify: `SampleAnnotations/index.svelte`, `AnnotationCanvas/AnnotationCanvas.svelte` — add `colorBySource?: boolean` to the canvas annotation type; `SampleAnnotations` sets it when it swaps in the source name; `resolveLabelColor` picks store and function by the flag; the canvas also re-renders on `$customSourceColorsStore`.
@@ -273,11 +273,11 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 ## PR 8: Keep annotation source colors in their own store
 
 **Files:**
-- Modify: `lightly_studio_view/src/lib/hooks/useCustomSourceColors.ts` — its own `createCustomColorStore()`; remove the PR 7 comment.
+- Modify: `lightly_studio_view/src/lib/hooks/useCustomSourceColors/useCustomSourceColors.ts` — its own `createCustomColorStore()`; remove the PR 7 comment.
 - Modify: `useColorPicker.svelte.ts`, `useColorPickerTestWrapper.test.svelte`, `useColorPicker.test.ts`, `AnnotationColorLegend.svelte` (`kind: 'class'`), `SideMenu/ColorMarker/ColorMarker.svelte` + `ColorMarker.test.ts` (`kind: 'source'`).
 
 **Interfaces:**
-- Produces: `export type ColorKind = 'class' | 'source'`; `useColorPicker(getLabel: () => string, options: { kind: ColorKind })`. `'class'` uses `useCustomLabelColors` + `getColorByLabel`; `'source'` uses `useCustomSourceColors` + `getColorBySource`.
+- Produces: `useColorPicker(getLabel: () => string, options: { kind: 'class' | 'source' })`. The union stays inline, not an exported type. `'class'` uses `useCustomLabelColors` + `getColorByLabel`; `'source'` uses `useCustomSourceColors` + `getColorBySource`.
 
 - [ ] **Step 1: Write failing tests:** `ColorMarker.test.ts` `'a source color does not change the class color with the same name'` (class `Predictions` = `#111111`, Apply `#0000ff` in `ColorMarker` → class store keeps `#111111`, source store has `#0000ff`; switch existing assertions to `useCustomSourceColors()`, and move the `getColorByLabel` spies and mocks to `getColorBySource`); `SampleAnnotation.test.ts` `'a class color does not recolor the source in source mode'`.
 - [ ] **Step 2: Run** them. Expected: FAIL.
@@ -321,7 +321,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
   - `reset(): void` — clears the saved layer, the previews and the counters, and bumps the generation, so saves begun before it never apply. PR 12 calls it on dataset change.
   - `replaceSavedColors` keeps the counters and the generation.
   - `getGeneration(): number` — the current generation.
-- `useColorPicker(getLabel, options: { kind: ColorKind; onCommit?: (color: CustomColor | undefined) => Promise<void> })`:
+- `useColorPicker(getLabel, options: { kind: 'class' | 'source'; onCommit?: (color: CustomColor | undefined) => Promise<void> })`:
   - A session also records `getGeneration()` when it starts. If the generation changed by Apply (a dataset switch with the picker still open), Apply acts as Cancel and does not call `onCommit`.
   - `finishColorChange(applied: boolean): Promise<void>`. On Apply: capture `owner`, the preview value and `ticket = beginSave(label)`, end the session, await `onCommit?.(value)`, on success `setSavedColor(label, value, ticket)`, then always `clearPreviewColor(label, owner)`. A rejection is not rethrown; the `onCommit` owner shows the toast.
   - `resetColor(): Promise<void>`: same flow with a new owner, `setPreviewColor(label, null, owner)`, `value = undefined`.
@@ -369,9 +369,9 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 **Interfaces:**
 - Consumes: `reset()` (PR 10).
 - `resetAnnotationClasses(datasetId)` also calls the class store's `reset()` when the dataset changes.
-- `setAnnotationClasses(datasetId, classes)` also calls `replaceSavedColors({ [name]: { color, alpha: alpha ?? 1 } })` for each accepted class with a non-null `color`.
+- `setAnnotationClasses(datasetId, classes)` also builds one map `{ [name]: { color, alpha: alpha ?? 1 } }` from all accepted classes with a non-null `color` and calls `replaceSavedColors` once with it. It also calls it when the map is empty, so old colors go away.
 
-- [ ] **Step 1: Write failing tests:** `'loads saved colors'` (`cat` has a color, `dog` with null has none); `'replaces the previous classes'` (load `cat`, then `kitty` with the same ID → `cat` none, `kitty` has it); `'a refetch of the same dataset keeps an open preview'` (preview `cat` = `#abcdef`, reload `ds-1` with saved `#112233` → `#abcdef`); `'switching datasets drops previews and colors'` (load and preview `cat` in `ds-1`, `resetAnnotationClasses('ds-2')` → `getCustomColor('cat')` undefined before any `ds-2` classes load).
+- [ ] **Step 1: Write failing tests:** `'loads saved colors'` (`cat` and `bird` have colors, `dog` with null has none → both `cat` and `bird` keep their colors); `'a reload without colors clears the saved colors'` (load `cat` with a color, reload `cat` with null → none); `'replaces the previous classes'` (load `cat`, then `kitty` with the same ID → `cat` none, `kitty` has it); `'a refetch of the same dataset keeps an open preview'` (preview `cat` = `#abcdef`, reload `ds-1` with saved `#112233` → `#abcdef`); `'switching datasets drops previews and colors'` (load and preview `cat` in `ds-1`, `resetAnnotationClasses('ds-2')` → `getCustomColor('cat')` undefined before any `ds-2` classes load).
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass.
