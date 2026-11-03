@@ -40,3 +40,22 @@ class SampleTagAnnotationCounts:
     sample_tag_id: UUID
     sample_tag_name: str
     counts: tuple[AnnotationClassCount, ...]
+
+
+@dataclass(frozen=True)
+class SourceLabelCount:
+    """Annotation count for one annotation class in one annotation source.
+
+    Attributes:
+        annotation_collection_id: ID of the annotation source.
+        annotation_label_id: ID of the annotation class.
+        label_name: Name of the annotation class.
+        current_count: Count under the request's filter.
+        total_count: Count without a filter.
+    """
+
+    annotation_collection_id: UUID
+    annotation_label_id: UUID
+    label_name: str
+    current_count: int
+    total_count: int

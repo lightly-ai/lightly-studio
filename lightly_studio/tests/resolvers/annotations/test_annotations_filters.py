@@ -368,9 +368,7 @@ class _PairData:
             self.source_ids[source] = annotation.annotation_collection_id
 
     def pair(self, source: str, label_id: UUID) -> SourceLabelPair:
-        return SourceLabelPair(
-            collection_id=self.source_ids[source], annotation_label_id=label_id
-        )
+        return SourceLabelPair(collection_id=self.source_ids[source], annotation_label_id=label_id)
 
     def names(self, sample_ids: set[UUID]) -> set[str]:
         return {name for name, sample_id in self.image_ids.items() if sample_id in sample_ids}

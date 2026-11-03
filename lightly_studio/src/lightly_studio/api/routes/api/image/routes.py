@@ -30,6 +30,7 @@ from lightly_studio.resolvers.image_filter import (
 from lightly_studio.resolvers.image_resolver import ImageField
 from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
+    SourceLabelCount,
 )
 
 # Default number of equal-width bins per image histogram.
@@ -253,6 +254,25 @@ def count_image_annotations_by_collection(
         }
         for label_name, current_count, total_count in counts
     ]
+
+
+@image_router.post("/collections/{collection_id}/images/annotations/count_by_source")
+def count_image_annotations_by_source(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ReadCountImageAnnotationsRequest | None = None,
+) -> list[SourceLabelCount]:
+    """Get image annotation counts per annotation source and annotation class."""
+    return image_resolver.count_image_annotations_by_source(
+        session=session,
+        collection_id=collection.collection_id,
+        image_filter=body.filter if body else None,
+        count_mode=body.count_mode if body else AnnotationCountMode.SAMPLES,
+    )
 
 
 class CountImagesWithoutAnnotationsRequest(BaseModel):

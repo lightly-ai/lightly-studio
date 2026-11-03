@@ -6,6 +6,9 @@ from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collecti
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_sample_tags import (
     count_image_annotations_by_sample_tags,
 )
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_source import (
+    count_image_annotations_by_source,
+)
 from lightly_studio.resolvers.image_resolver.count_images_without_annotations import (
     count_images_without_annotations,
 )
@@ -45,6 +48,7 @@ __all__ = [
     "build_sample_ids_query",
     "count_image_annotations_by_collection",
     "count_image_annotations_by_sample_tags",
+    "count_image_annotations_by_source",
     "count_images_without_annotations",
     "create_many",
     "delete",
