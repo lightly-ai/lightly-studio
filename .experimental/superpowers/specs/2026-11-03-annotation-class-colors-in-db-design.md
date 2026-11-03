@@ -27,7 +27,8 @@ browser memory and are lost on reload.
 **Frontend**
 - Separate class and source color lookups: `getColorByLabel` for classes, a new
   `getColorBySource` for sources. Call sites that color by source call the latter.
-- Load class colors from the class list. Colors are keyed by class ID, so renames keep them.
+- Load class colors from the class list. The server keys colors by class ID, so renames keep
+  them; the frontend looks them up by class name after each refetch.
   Drop the rename workaround in `useAnnotationClasses`.
 - Live preview is a local layer on top of saved colors, so a refetch does not drop it.
   Apply saves, Cancel discards. On save error: toast and revert.
