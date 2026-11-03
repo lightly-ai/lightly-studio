@@ -1,5 +1,7 @@
 import { render } from '@testing-library/svelte';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { get } from 'svelte/store';
+import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
 import UseSeedAnnotationSourceFilterHarness from './UseSeedAnnotationSourceFilter.harness.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -8,7 +10,11 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
-    useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
+    useAnnotationCollections: vi.fn(() => ({
+        get data() {
+            return mocks.collections;
+        }
+    }))
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
@@ -63,5 +69,28 @@ describe('useSeedAnnotationSourceFilter', () => {
         render(UseSeedAnnotationSourceFilterHarness, { collectionId: 'videos-1' });
 
         expect(mocks.seedSelectionIfNeeded).toHaveBeenCalledWith('videos-1', []);
+    });
+
+    // Review Focus 4: deleting a source with ticked pairs must not leave the grid filtering
+    // on a source that no longer exists.
+    it('drops the ticked pairs of a source that left the source list', async () => {
+        const { pairs, togglePair, clear } = useAnnotationPairFilter('images-2');
+        clear();
+        togglePair('gt', 'deer');
+        togglePair('pred', 'raccoon');
+        mocks.collections = [
+            { collection_id: 'gt', name: 'Ground truth' },
+            { collection_id: 'pred', name: 'Predictions' }
+        ];
+        const { rerender } = render(UseSeedAnnotationSourceFilterHarness, {
+            collectionId: 'images-2'
+        });
+        expect(get(pairs)).toHaveLength(2);
+
+        mocks.collections = [{ collection_id: 'gt', name: 'Ground truth' }];
+        await rerender({ collectionId: 'images-3' });
+        await rerender({ collectionId: 'images-2' });
+
+        expect(get(pairs)).toEqual([{ collection_id: 'gt', annotation_label_id: 'deer' }]);
     });
 });

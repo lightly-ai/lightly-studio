@@ -7,6 +7,7 @@ import {
     useVideoFramesBounds
 } from '$lib/hooks';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
+import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
 import { useClearAllFilters } from './useClearAllFilters';
 
 describe('useClearAllFilters', () => {
@@ -61,6 +62,19 @@ describe('useClearAllFilters', () => {
         expect(get(hasActiveFilters)).toBe(false);
         expect(get(storage.metadataValues)).toEqual({ score: { min: 0, max: 1 } });
         expect(get(storage.getSelectedSampleIds(collectionId)).has('sample-1')).toBe(true);
+    });
+
+    it('clears the ticked source and class pairs', () => {
+        const { pairs, togglePair } = useAnnotationPairFilter(collectionId);
+        togglePair('source-1', 'label-1');
+
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
+        expect(get(hasActiveFilters)).toBe(true);
+
+        clearAllFilters();
+
+        expect(get(pairs)).toEqual([]);
+        expect(get(hasActiveFilters)).toBe(false);
     });
 
     it('clears caption tags and metadata while preserving hidden image filters', () => {

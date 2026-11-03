@@ -16,7 +16,7 @@ export interface ClassifierSamples {
 
 export type NormalModeFilters = Pick<
     AnnotationsFilter,
-    'annotation_label_ids' | 'collection_ids' | 'include_unannotated_samples'
+    'annotation_label_ids' | 'collection_ids' | 'include_unannotated_samples' | 'source_label_pairs'
 > &
     Pick<SampleFilter, 'tag_ids' | 'sample_ids' | 'confusion_cell' | 'embedding_region'> & {
         dimensions?: DimensionBounds;

@@ -63,6 +63,7 @@
     import { SampleType } from '$lib/api/lightly_studio_local/types.gen';
     import type { AnnotationsFilter } from '$lib/api/lightly_studio_local/types.gen';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
+    import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
@@ -403,14 +404,25 @@
         useAnnotationCollectionsFilter();
     // The "No annotations" row exists on the images grid only.
     const { includeUnannotated, toggleIncludeUnannotated } = useUnannotatedImagesFilter();
+    // The images and annotations grids filter by exact (annotation source, annotation class)
+    // pairs instead of the class filter and the source scope.
+    const { pairs: annotationPairs } = $derived(useAnnotationPairFilter(collectionId));
+    const usesPairFilter = $derived(isImages || isAnnotations);
+    const pairFilter = $derived<AnnotationsFilter | undefined>(
+        $annotationPairs.length > 0
+            ? { filter_type: 'annotations', source_label_pairs: $annotationPairs }
+            : undefined
+    );
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
+        const annotationFilter = usesPairFilter ? pairFilter : $annotationFilterStore;
         const base =
             isImages && $includeUnannotated
                 ? {
-                      ...($annotationFilterStore ?? { filter_type: 'annotations' as const }),
+                      ...(annotationFilter ?? { filter_type: 'annotations' as const }),
                       include_unannotated_samples: true
                   }
-                : $annotationFilterStore;
+                : annotationFilter;
+        if (isImages) return base;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         // An empty list cannot be sent: the backend skips collection_ids when it is falsy, so

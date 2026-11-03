@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+    import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
@@ -29,8 +29,14 @@
     };
     const { collection_id, itemWidth }: AnnotationsProps = $props();
 
-    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
-        useSelectedAnnotationsFilter();
+    // This grid shows one annotation source, its own collection. Its ticked pairs are the
+    // classes of that source.
+    const { pairs: annotationPairs } = $derived(useAnnotationPairFilter(collection_id));
+    const selectedAnnotationFilterIds = $derived(
+        $annotationPairs
+            .filter((pair) => pair.collection_id === collection_id)
+            .map((pair) => pair.annotation_label_id)
+    );
 
     const { sortByFor } = useAnnotationSortBy();
 
@@ -94,7 +100,7 @@
     const queryParams = $derived({
         collection_id: collection_id,
         annotation_label_ids:
-            $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
+            selectedAnnotationFilterIds.length > 0 ? selectedAnnotationFilterIds : undefined,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         // Embedding plot lasso selection narrows the grid to annotations inside the region.
         embedding_region: plotSelectedRegion ?? undefined,
@@ -107,7 +113,7 @@
 
     const { annotations: infiniteAnnotations } = useAnnotationsInfinite(() => queryParams);
     let infiniteLoaderIdentifier = $derived(
-        $selectedAnnotationFilterIds.join(',') +
+        selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
             ($hasEmbedding !== undefined ? `embedded:${$hasEmbedding}` : '') +

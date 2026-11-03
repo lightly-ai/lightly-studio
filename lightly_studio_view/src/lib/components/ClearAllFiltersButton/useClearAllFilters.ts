@@ -8,6 +8,7 @@ import {
     useVideoFramesBounds
 } from '$lib/hooks';
 import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+import { useAnnotationPairFilter } from '$lib/hooks/useAnnotationPairFilter/useAnnotationPairFilter';
 import { useUnannotatedImagesFilter } from '$lib/hooks/useUnannotatedImagesFilter/useUnannotatedImagesFilter';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
@@ -67,7 +68,11 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
     if (isCaptions) {
         return [useTagAndLabelFilters(collectionId, false), useMetadataFilterGroup()];
     }
-    const groups = [useTagAndLabelFilters(collectionId), useEmbeddingPlotFilter(collectionId)];
+    const groups = [
+        useTagAndLabelFilters(collectionId),
+        useEmbeddingPlotFilter(collectionId),
+        useAnnotationPairGroup(collectionId)
+    ];
     if (isImages || isVideos || isVideoFrames) groups.push(useMetadataFilterGroup());
     if (isImages) {
         groups.push(useDimensionsFilter(), useAnnotationSourcesFilter());
@@ -152,6 +157,11 @@ function useAnnotationSourcesFilter(): FilterGroup {
         ),
         clear: () => setSelectedCollectionIds(Object.keys(get(collectionIdToName)))
     };
+}
+
+function useAnnotationPairGroup(collectionId: string): FilterGroup {
+    const { pairs, clear } = useAnnotationPairFilter(collectionId);
+    return { isActive: derived(pairs, ($pairs) => $pairs.length > 0), clear };
 }
 
 function useEmbeddingPlotFilter(collectionId: string): FilterGroup {
