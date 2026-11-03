@@ -9,16 +9,7 @@
 
     type Hsl = ReturnType<typeof hexToHsl>;
 
-    let {
-        hsl,
-        hex,
-        alpha,
-        onHslChange,
-        onHexChange,
-        onAlphaChange,
-        onApply,
-        onCancel
-    }: {
+    interface Props {
         hsl: Hsl;
         hex: string;
         alpha: number;
@@ -27,7 +18,10 @@
         onAlphaChange: (alpha: number) => void;
         onApply: () => void;
         onCancel: () => void;
-    } = $props();
+    }
+
+    let { hsl, hex, alpha, onHslChange, onHexChange, onAlphaChange, onApply, onCancel }: Props =
+        $props();
 
     function handleHexInput(e: Event): void {
         const value = (e.target as HTMLInputElement).value;

@@ -1,8 +1,12 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn.js';
 
-    let { selectedColor, onSelect }: { selectedColor: string; onSelect: (color: string) => void } =
-        $props();
+    interface Props {
+        selectedColor: string;
+        onSelect: (color: string) => void;
+    }
+
+    let { selectedColor, onSelect }: Props = $props();
 
     const PRESET_COLORS = [
         '#ff0000',

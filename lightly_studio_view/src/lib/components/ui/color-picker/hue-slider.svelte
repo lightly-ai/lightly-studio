@@ -1,7 +1,12 @@
 <script lang="ts">
     import { Slider as SliderPrimitive } from 'bits-ui';
 
-    let { hue, onHueChange }: { hue: number; onHueChange: (hue: number) => void } = $props();
+    interface Props {
+        hue: number;
+        onHueChange: (hue: number) => void;
+    }
+
+    let { hue, onHueChange }: Props = $props();
 </script>
 
 <SliderPrimitive.Root
