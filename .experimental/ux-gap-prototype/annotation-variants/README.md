@@ -6,11 +6,11 @@ data, 8 annotation sources).
 | Column | What picks the source | URL param |
 |---|---|---|
 | main today | "Adding to" pill on the canvas, preset to the first source | none, `main` build |
-| prototype: pencil | A pencil on each source group in the Annotations panel | `?annotateVariant=pencil` (default) |
-| variant C: radio | A radio on each source group, "New annotations go here" on the picked one | `?annotateVariant=radio` |
+| prototype: pencil | A pencil on each source group in the Annotations panel | `?annotateVariant=pencil` |
+| variant C: radio | A radio on each source group, "New annotations go here" on the picked one | `?annotateVariant=radio` (default) |
 
-The switch keeps the last value in localStorage. To go back, open a URL with
-`?annotateVariant=pencil`.
+The switch keeps the last value in localStorage. To go back to the radio, open a URL with
+`?annotateVariant=radio`.
 
 ## Files
 

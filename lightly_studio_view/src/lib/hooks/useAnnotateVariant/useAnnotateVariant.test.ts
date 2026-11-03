@@ -10,8 +10,8 @@ import {
 import { getTargetBlockedReason } from '$lib/hooks/useAnnotationTarget/resolveTargetSource';
 
 describe('resolveAnnotateVariant', () => {
-    it('shows the pencil when nothing is set', () => {
-        expect(resolveAnnotateVariant(null, null)).toBe('pencil');
+    it('shows the radio when nothing is set', () => {
+        expect(resolveAnnotateVariant(null, null)).toBe('radio');
     });
 
     it('takes the URL param over the stored variant', () => {
@@ -24,8 +24,8 @@ describe('resolveAnnotateVariant', () => {
     });
 
     it('ignores unknown values', () => {
-        expect(resolveAnnotateVariant('b', 'radio')).toBe('radio');
-        expect(resolveAnnotateVariant('b', 'garbage')).toBe('pencil');
+        expect(resolveAnnotateVariant('b', 'pencil')).toBe('pencil');
+        expect(resolveAnnotateVariant('b', 'garbage')).toBe('radio');
     });
 });
 
@@ -44,9 +44,9 @@ describe('useAnnotateVariant', () => {
     });
 
     it('shows the stored variant on a page without the param', () => {
-        localStorage.setItem(ANNOTATE_VARIANT_STORAGE_KEY, 'radio');
+        localStorage.setItem(ANNOTATE_VARIANT_STORAGE_KEY, 'pencil');
 
-        expect(get(useAnnotateVariant().annotateVariant)).toBe('radio');
+        expect(get(useAnnotateVariant().annotateVariant)).toBe('pencil');
     });
 });
 

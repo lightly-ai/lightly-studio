@@ -8,13 +8,13 @@ export const ANNOTATE_VARIANT_PARAM = 'annotateVariant';
 export const ANNOTATE_VARIANT_STORAGE_KEY = 'lightly-studio.annotate-variant';
 
 /**
- * - `pencil`: a pencil on each source group in the Annotations panel (the prototype as shown).
- * - `radio`: a radio on each source group, the picked one says "New annotations go here".
+ * - `radio` (default): a radio on each source group, the picked one says "New annotations go here".
+ * - `pencil`: a pencil on each source group in the Annotations panel (the first prototype).
  */
 export const ANNOTATE_VARIANTS = ['pencil', 'radio'] as const;
 export type AnnotateVariant = (typeof ANNOTATE_VARIANTS)[number];
 
-export const DEFAULT_ANNOTATE_VARIANT: AnnotateVariant = 'pencil';
+export const DEFAULT_ANNOTATE_VARIANT: AnnotateVariant = 'radio';
 
 /** What the "no source picked" toast tells the user to do, in the words of each variant. */
 export const TARGET_PICK_MESSAGES: Record<AnnotateVariant, string> = {
