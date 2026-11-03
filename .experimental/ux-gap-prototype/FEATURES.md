@@ -29,8 +29,8 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 - **Move annotations to another source.** One annotation from the sample details panel (folder
   icon), many from the selection pill on the Annotations grid (Annotate, "Move to annotation
   source…"). IDs, tags and embeddings stay. If the move fails, the annotations stay where they
-  were. Rows 22, 23. Try: Annotations grid, edit mode, select tiles, Annotate, "Move to
-  annotation source…".
+  were. Rows 22, 23. Try: Annotations grid, select tiles, Annotate, "Move to annotation
+  source…".
   Commits: 3f7cd598f, d127a1dd4.
 - **Drag annotations between sources.** In edit mode each annotation row in sample details has a
   grip; drop it on another source group. Row 23. Try: open a sample with two sources, edit mode,
@@ -57,10 +57,13 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 
 ## Selection pill
 
-- **Selection edits live in the pill.** In edit mode the "N selected" pill shows Tag and
-  Annotate; outside edit mode it shows only the count and clear. The side panels for selected
-  images and selected annotations and the "Assign tag to selection" input in the tag filter are
-  gone. Rows 22, 23. Try: Images grid, edit mode, select tiles.
+- **Selection edits live in the pill.** With a selection the "N selected" pill shows Tag and
+  Annotate, in or out of edit mode. The side panels for selected images and selected annotations
+  and the "Assign tag to selection" input in the tag filter are gone. Rows 22, 23. Try: Images
+  grid, select tiles.
+- **Hint when nothing is selected.** A dashed pill in the same spot says "Select images to tag
+  T or annotate L" (no annotate on grids without an Annotate menu). × hides it for good; stored in
+  localStorage.
 - **Tag popover.** One field finds or creates a tag; each row shows "k/N" with + and × on hover.
   Toasts say "Added 'a' to 9 items" and "Removed 'b' from 3 items". Images and Annotations grids.
   Commits: 23ea42cc4, 9eb0543af.
@@ -71,11 +74,11 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 - **Annotate popover, Annotations grid.** "All N selected", one row per class with its count and
   a trash that deletes those annotations after a confirm, "Relabel all to…" (undo with Ctrl+Z),
   and "Move to annotation source…". Commits: a02c00bd7.
-- **T and L open the pill menus.** In edit mode with a selection, T opens Tag and L opens
-  Annotate; the pill shows both keys. They do nothing while a text field has focus or outside a
-  collection grid. Settings > Shortcuts > Selection rebinds them ("Open tag menu", "Open annotate
-  menu"); a key another shortcut uses is refused. Stored in localStorage. Try: Images grid, edit
-  mode, select tiles, press T.
+- **T and L open the pill menus.** With a selection, T opens Tag and L opens Annotate, in or
+  out of edit mode; the pill shows both keys. They do nothing while a text field has focus or
+  outside a collection grid. Settings > Shortcuts > Selection rebinds them ("Open tag menu",
+  "Open annotate menu"); a key another shortcut uses is refused. Stored in localStorage. Try:
+  Images grid, select tiles, press T.
 
 ## Filter panel
 
