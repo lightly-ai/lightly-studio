@@ -19,12 +19,13 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
   warns that evaluation runs using the annotations go out of date. A rename moves the custom
   color and keeps the source the pencil target. Changes save at once. Rows 20, 22. Try: header
   menu, Settings, Annotation sources, type "review_round_2", Enter.
-- **Rename a source.** The "..." menu on a source in the filter panel has Rename, as for tags,
-  with an inline input. Rows 20, 22. Try: Images tab, source list, "...", Rename.
-  Commits: 7c3501e6e, 405b4ab41.
-- **Delete a source.** Delete in the same menu says how many annotations go, then removes the
-  source and its annotations, metadata included. The SDK can delete a source too. Rows 20, 22.
-  Try: source list, "...", Delete. Commits: c007c8c28, 7c3501e6e, 405b4ab41, 7f07a5c11.
+- **Rename a source.** In Settings > Annotation sources, inline. Rows 20, 22. Try: gear on the
+  source list, click a name. Commits: 7c3501e6e, 405b4ab41 (first in a filter-panel "..." menu,
+  moved to Settings).
+- **Delete a source.** The trash in Settings > Annotation sources says how many annotations go,
+  then removes the source and its annotations, metadata included. The SDK can delete a source
+  too. Rows 20, 22. Try: gear on the source list, trash on a row.
+  Commits: c007c8c28, 7c3501e6e, 405b4ab41, 7f07a5c11.
 - **Move annotations to another source.** One annotation from the sample details panel (folder
   icon), many from the selection pill on the Annotations grid (Annotate, "Move to annotation
   source…"). IDs, tags and embeddings stay. If the move fails, the annotations stay where they
@@ -92,6 +93,11 @@ Branch `claude/ux-gap-prototype-d56092`, based on `main` at 6d8579dac. Rows refe
 - **"No annotations" filter.** A pinned row in the class filter matches images without
   annotations in the selected sources, with a count lined up with the class counts. Row 29.
   Try: class filter, tick "No annotations". Commits: ccb8f9f48, fed8a60b0.
+- **Filters only.** Source rows have a checkbox and a read-only color dot; class rows have a
+  checkbox, a read-only color dot and the eye. Renaming, deleting and coloring sources moved to
+  Settings > Annotation sources, opened by the gear in the source list header ("Manage
+  annotation sources"). Class colors are set in Settings > Annotation classes. Tags keep their
+  "..." menu. Rows 20, 22. Try: Images tab, gear next to "Annotation Sources".
 - **Pinned filter panel header.** "Hide filters" stays reachable while the panel scrolls.
   Row 30. Try: scroll the filter panel down, hide it. Commits: b8c3dc7a4.
 

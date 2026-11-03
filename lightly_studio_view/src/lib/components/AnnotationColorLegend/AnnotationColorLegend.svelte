@@ -8,12 +8,15 @@
         labelName,
         className,
         selected = false,
-        testId
+        testId,
+        enableColorPicker = true
     }: {
         labelName: string;
         className: string;
         selected: boolean;
         testId?: string;
+        /** When false, the swatch only shows the color. */
+        enableColorPicker?: boolean;
     } = $props();
 
     const { getCustomColor, hasCustomColor, customLabelColorsStore } = useCustomLabelColors();
@@ -51,16 +54,10 @@
     });
 </script>
 
-<div class="color-picker-container" data-testid={testId}>
-    <ColorPicker
-        initialColor={getInitialColor(labelName)}
-        initialAlpha={getInitialAlpha(labelName)}
-        onChange={picker.setColor}
-        onClose={picker.finishColorChange}
-    >
-        <div
-            class={`${className} cursor-pointer rounded-sm border`}
-            style={`
+{#snippet swatch(pickerClass: string)}
+    <div
+        class={`${className} ${pickerClass} rounded-sm border`}
+        style={`
                                     border-color: ${
                                         colorInfos[labelName]?.borderColor ??
                                         getColorByLabel(labelName).color
@@ -70,6 +67,20 @@
                                         getColorByLabel(labelName, selected ? 1 : 0.4).color
                                     };
                                 `}
-        ></div>
-    </ColorPicker>
+    ></div>
+{/snippet}
+
+<div class="color-picker-container" data-testid={testId}>
+    {#if enableColorPicker}
+        <ColorPicker
+            initialColor={getInitialColor(labelName)}
+            initialAlpha={getInitialAlpha(labelName)}
+            onChange={picker.setColor}
+            onClose={picker.finishColorChange}
+        >
+            {@render swatch('cursor-pointer')}
+        </ColorPicker>
+    {:else}
+        {@render swatch('')}
+    {/if}
 </div>

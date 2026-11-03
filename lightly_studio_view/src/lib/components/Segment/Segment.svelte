@@ -11,11 +11,14 @@
     let {
         title,
         icon: Icon,
-        children
+        children,
+        headerAction
     }: {
         title: string;
         icon?: Component;
         children: Snippet;
+        /** A control next to the title, outside the collapse trigger. */
+        headerAction?: Snippet;
     } = $props();
 
     let open = $state(true);
@@ -24,24 +27,29 @@
 </script>
 
 <Collapsible bind:open>
-    <CollapsibleTrigger class="w-full">
-        <h2 class="py-2 text-base font-semibold">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center space-x-2">
-                    {#if Icon}
-                        <Icon />
-                    {/if}
-                    <span>{title}</span>
+    <div class="flex items-center gap-1">
+        <CollapsibleTrigger class="min-w-0 flex-1">
+            <h2 class="py-2 text-base font-semibold">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-2">
+                        {#if Icon}
+                            <Icon />
+                        {/if}
+                        <span>{title}</span>
+                    </div>
+                    <div>
+                        <ChevronDown
+                            class="transition-transform duration-{duration}"
+                            style={`transform: ${open ? 'rotate(-180deg)' : 'rotate(0deg)'}`}
+                        />
+                    </div>
                 </div>
-                <div>
-                    <ChevronDown
-                        class="transition-transform duration-{duration}"
-                        style={`transform: ${open ? 'rotate(-180deg)' : 'rotate(0deg)'}`}
-                    />
-                </div>
-            </div>
-        </h2>
-    </CollapsibleTrigger>
+            </h2>
+        </CollapsibleTrigger>
+        {#if headerAction}
+            {@render headerAction()}
+        {/if}
+    </div>
     <CollapsibleContent forceMount>
         {#if open}
             <div class="mt-2" transition:slide={{ duration }}>

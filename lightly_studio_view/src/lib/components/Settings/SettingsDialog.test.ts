@@ -206,6 +206,19 @@ describe('SettingsDialog', () => {
         expect(screen.queryByRole('switch')).not.toBeInTheDocument();
     });
 
+    it('opens on the requested tab', async () => {
+        render(SettingsDialog);
+
+        openSettingsDialog('annotation-sources');
+
+        await waitFor(() =>
+            expect(screen.getByRole('tab', { name: 'Annotation sources' })).toHaveAttribute(
+                'aria-selected',
+                'true'
+            )
+        );
+    });
+
     it('should keep unsaved changes across tabs and stop recording on tab switch', async () => {
         render(SettingsDialog);
         await openDialog();

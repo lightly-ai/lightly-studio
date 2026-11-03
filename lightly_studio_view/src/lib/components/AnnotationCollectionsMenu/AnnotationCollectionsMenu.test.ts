@@ -1,7 +1,8 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { type Writable } from 'svelte/store';
+import { get, type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AnnotationCollectionsMenu from './AnnotationCollectionsMenu.svelte';
+import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
 
 const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
 vi.mock('$lib/hooks', async (importOriginal) => {
@@ -13,7 +14,6 @@ vi.mock('$lib/hooks', async (importOriginal) => {
 });
 
 const mocks = vi.hoisted(() => ({
-    rename: vi.fn(),
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: null as unknown as Writable<string[]>,
     setSelectedCollectionIds: vi.fn(),
@@ -37,21 +37,6 @@ vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilte
             setSelectedCollectionIds: mocks.setSelectedCollectionIds,
             multipleSourcesVisible
         }))
-    };
-});
-
-vi.mock('./DeleteAnnotationSource/useDeleteAnnotationSource.svelte', () => ({
-    useDeleteAnnotationSource: () => ({
-        mutation: { isPending: false },
-        remove: vi.fn(),
-        annotationCount: () => undefined
-    })
-}));
-
-vi.mock('./useRenameAnnotationSource/useRenameAnnotationSource', async () => {
-    const { readable } = await import('svelte/store');
-    return {
-        useRenameAnnotationSource: () => ({ rename: mocks.rename, renamingId: readable(null) })
     };
 });
 
@@ -83,37 +68,32 @@ describe('AnnotationCollectionsMenu', () => {
         expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
     });
 
-    it('renders a lone source with an actions menu', () => {
-        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
+    it('renders sources with only a checkbox and a read-only color dot', () => {
+        mocks.collections = [
+            { collection_id: 'c1', name: 'Ground Truth' },
+            { collection_id: 'c2', name: 'Predictions' }
+        ];
+        mocks.selectedCollectionIds.set(['c1', 'c2']);
         render(AnnotationCollectionsMenu, defaultProps);
-        expect(screen.getByText('Annotation Sources')).toBeInTheDocument();
-        expect(screen.getAllByRole('checkbox')).toHaveLength(1);
+
+        expect(screen.getAllByRole('checkbox')).toHaveLength(2);
         expect(
-            screen.getByRole('button', { name: 'Open actions for annotation source Ground Truth' })
-        ).toBeInTheDocument();
+            screen.queryByRole('button', { name: /Open actions for annotation source/ })
+        ).not.toBeInTheDocument();
+        // The color picker wraps its swatch in a button; a read-only dot has none.
+        expect(screen.getByTestId('color-marker-Ground Truth').closest('button')).toBeNull();
     });
 
-    it('renames a source inline from the actions menu', async () => {
+    it('opens Settings on Annotation sources from the gear', async () => {
         mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
+        const { isSettingsDialogOpen, initialTab, closeSettingsDialog } = useSettingsDialog();
         render(AnnotationCollectionsMenu, defaultProps);
 
-        await fireEvent.click(screen.getByTestId('annotation-source-actions-trigger-c1'));
-        await fireEvent.click(await screen.findByTestId('rename-annotation-source-c1'));
-        const input = await screen.findByTestId('rename-annotation-source-input-c1');
-        await fireEvent.input(input, { target: { value: ' Reviewed ' } });
-        await fireEvent.click(screen.getByTestId('save-annotation-source-rename-c1'));
+        await fireEvent.click(screen.getByRole('button', { name: 'Manage annotation sources' }));
 
-        expect(mocks.rename).toHaveBeenCalledWith({ id: 'c1', name: 'Ground Truth' }, 'Reviewed');
-    });
-
-    it('asks for confirmation before deleting a source', async () => {
-        mocks.collections = [{ collection_id: 'c1', name: 'Ground Truth' }];
-        render(AnnotationCollectionsMenu, defaultProps);
-
-        await fireEvent.click(screen.getByTestId('annotation-source-actions-trigger-c1'));
-        await fireEvent.click(await screen.findByTestId('delete-annotation-source-c1'));
-
-        expect(await screen.findByText('Delete annotation source?')).toBeInTheDocument();
+        expect(get(isSettingsDialogOpen)).toBe(true);
+        expect(get(initialTab)).toBe('annotation-sources');
+        closeSettingsDialog();
     });
 
     it('renders a menu item for each collection when there are two or more', () => {

@@ -59,7 +59,7 @@ For the baseline, run the same command from the main worktree's `lightly_studio`
 | 27 | Set a class filter on Annotations, go to Images and back; type a query, close and reopen Query; pick Percentage in Distr, open a sample | Each tab keeps its own filters; query text, plot color-by, eval run and Distr settings stay |
 | 28 | Open an image, switch to Annotations, open an annotation, switch back | The same image is open |
 | 19 | Annotations tab, no evaluation, open "Sort by" | Message: "Run an evaluation to sort by its metrics." |
-| 20, 22 | Source list: "..." menu, Rename, then Delete | Compact menu; source renamed; delete says how many annotations go, then the source is gone |
+| 20, 22 | Source list: gear ("Manage annotation sources"); in Settings > Annotation sources rename a source, then delete it; type "review_round_2", Enter | Settings opens on Annotation sources; no "..." or color picker on filter rows; source renamed; delete says how many annotations go and warns about evaluation runs, then the source is gone; the new source is highlighted |
 
 ### Step b: curate
 

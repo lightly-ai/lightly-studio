@@ -9,7 +9,8 @@
     import { SettingsTabs } from './SettingsTabs';
 
     const { settingsStore, saveSettings } = useSettings();
-    const { isSettingsDialogOpen, openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
+    const { isSettingsDialogOpen, initialTab, openSettingsDialog, closeSettingsDialog } =
+        useSettingsDialog();
 
     const pillShortcuts = usePillShortcuts();
     const dialogState = new SettingsDialogState();
@@ -23,14 +24,14 @@
                 tagKey: get(pillShortcuts.tagKey),
                 annotateKey: get(pillShortcuts.annotateKey)
             });
-            activeTab = 'shortcuts';
+            activeTab = get(initialTab);
         }
         wasDialogOpen = $isSettingsDialogOpen;
     });
 
     function setOpen(isOpen: boolean) {
         if (isOpen) {
-            openSettingsDialog();
+            openSettingsDialog(activeTab);
         } else {
             closeSettingsDialog();
             dialogState.clearRecording();

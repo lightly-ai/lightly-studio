@@ -105,6 +105,7 @@
                         className="h-3 w-3"
                         selected={item.selected}
                         testId="label-color-legend"
+                        enableColorPicker={false}
                     />
                 {/if}
             {/snippet}

@@ -9,10 +9,9 @@
     import { resolveEffectiveColorBySource } from '$lib/utils';
     import { get } from 'svelte/store';
     import { handleAnnotationSourceFilterChange } from './handleAnnotationSourceFilterChange';
-    import { ItemActionMenu } from '$lib/components/ItemActionMenu';
-    import { ItemRenameInput } from '$lib/components/ItemRenameInput';
-    import DeleteAnnotationSource from './DeleteAnnotationSource/DeleteAnnotationSource.svelte';
-    import { useRenameAnnotationSource } from './useRenameAnnotationSource/useRenameAnnotationSource';
+    import { Button } from '$lib/components';
+    import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import { Settings } from '@lucide/svelte';
 
     interface Props {
         collectionId: string;
@@ -29,17 +28,9 @@
         useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { trackEvent } = usePostHog();
+    const { openSettingsDialog } = useSettingsDialog();
 
-    let openActionsSourceId = $state<string | null>(null);
-    let editingSourceId = $state<string | null>(null);
-    let deletingSource = $state<{ id: string; name: string } | null>(null);
-    const { rename, renamingId } = useRenameAnnotationSource(() => ({
-        collectionId,
-        sources: items,
-        onRenamed: () => (editingSourceId = null)
-    }));
-
-    // A single source is listed too, so that it can be renamed or deleted. The selection itself is filled by
+    // A single source is listed too. The selection itself is filled by
     // useSeedAnnotationSourceFilter in the collection layout, which runs for every collection.
     const isEnabled = $derived(items.length > 0);
 
@@ -77,68 +68,34 @@
 
 {#if isEnabled}
     <Segment title="Annotation Sources">
+        {#snippet headerAction()}
+            <Button
+                variant="ghost"
+                icon={Settings}
+                ariaLabel="Manage annotation sources"
+                buttonProps={{
+                    type: 'button',
+                    size: 'icon',
+                    class: 'size-7 text-muted-foreground',
+                    onclick: () => openSettingsDialog('annotation-sources')
+                }}
+            />
+        {/snippet}
         <FilterList
             items={filterItems}
             onToggle={toggleItem}
             onSelectionChange={handleChangeSelectedItems}
             testId="annotation-sources-menu"
             searchPlaceholder="Search annotation sources…"
-            customRowId={editingSourceId}
         >
             {#snippet leading(item)}
                 {#if showColorMarker}
                     <ColorMarker
                         label={item.label}
-                        enableColorPicker
                         markerProps={{ 'data-testid': `color-marker-${item.label}` }}
                     />
                 {/if}
             {/snippet}
-            {#snippet trailing(item)}
-                {@const source = { id: item.id, name: item.label }}
-                <ItemActionMenu
-                    id={source.id}
-                    name={source.name}
-                    kind="annotation source"
-                    open={openActionsSourceId === source.id}
-                    deletingId={deletingSource?.id ?? null}
-                    renamingId={$renamingId}
-                    onOpenChange={(open) => (openActionsSourceId = open ? source.id : null)}
-                    onCloseAutoFocus={(event) => {
-                        // Keep the focus in the rename input.
-                        if (editingSourceId === source.id) event.preventDefault();
-                    }}
-                    onRename={(event) => {
-                        event.stopPropagation();
-                        openActionsSourceId = null;
-                        editingSourceId = source.id;
-                    }}
-                    onDelete={(event) => {
-                        event.stopPropagation();
-                        openActionsSourceId = null;
-                        deletingSource = source;
-                    }}
-                />
-            {/snippet}
-            {#snippet customRow(item)}
-                <ItemRenameInput
-                    id={item.id}
-                    name={item.label}
-                    kind="annotation source"
-                    renamingId={$renamingId}
-                    checked={item.selected}
-                    onCheckedChange={() => toggleItem(item.id)}
-                    onSave={(newName) => rename({ id: item.id, name: item.label }, newName)}
-                    onCancel={() => (editingSourceId = null)}
-                />
-            {/snippet}
         </FilterList>
     </Segment>
-{/if}
-{#if deletingSource}
-    <DeleteAnnotationSource
-        {collectionId}
-        source={deletingSource}
-        onClose={() => (deletingSource = null)}
-    />
 {/if}

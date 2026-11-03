@@ -97,6 +97,14 @@ describe('LabelsMenu', () => {
         expect(screen.getAllByTestId('label-color-legend')).toHaveLength(2);
     });
 
+    it('shows the class colors without a color picker', () => {
+        mocks.selectedCollectionIds.set(['col-a']);
+        render(LabelsMenu, defaultProps);
+        for (const legend of screen.getAllByTestId('label-color-legend')) {
+            expect(legend.querySelector('button')).toBeNull();
+        }
+    });
+
     it('hides class color legends when multiple sources are selected and enforce is disabled', () => {
         mocks.selectedCollectionIds.set(['col-a', 'col-b']);
         mocks.enforceColoringByClassStore.set(false);

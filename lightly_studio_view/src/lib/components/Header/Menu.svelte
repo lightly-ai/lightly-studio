@@ -127,7 +127,7 @@
             label: 'Settings',
             icon: SettingsIcon,
             testId: 'menu-settings',
-            onSelect: openSettingsDialog
+            onSelect: () => openSettingsDialog()
         });
 
         addAction(items, showTour && !!onShowTour, {
