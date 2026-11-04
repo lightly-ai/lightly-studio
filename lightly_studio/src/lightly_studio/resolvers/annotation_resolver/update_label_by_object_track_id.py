@@ -36,7 +36,6 @@ def update_label_by_object_track_id(
     a single follow-up transaction; if that transaction fails, the child rows are
     restored from the captured data.
 
-
     Evaluation metrics that reference the updated annotations are not reinserted because
     a label change invalidates them.
 
