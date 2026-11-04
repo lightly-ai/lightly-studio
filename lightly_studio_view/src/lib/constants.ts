@@ -10,3 +10,9 @@ export const ANNOTATION_TYPES: Record<Annotation['annotation_type'], string> = {
 } as const;
 
 export const AUTHENTICATION_SESSION_STORAGE_KEY = 'lightlyEnterprise';
+
+export const IMAGE_ADJUSTMENT_DEFAULTS = {
+    brightness: 1,
+    contrast: 1,
+    maskOpacity: 0.6
+} as const;

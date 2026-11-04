@@ -29,6 +29,10 @@ vi.mock('$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences', () => ({
     useAdjacentMcapSequences: () => ({ query: adjacentSequences, refetch: vi.fn() })
 }));
 
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidClass', () => ({
+    useUpdateCuboidClass: () => ({ handleLabelChange: vi.fn() })
+}));
+
 vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation', async () => {
     const { writable } = await import('svelte/store');
     return {

@@ -13,6 +13,7 @@ import {
     isComparisonExpression,
     isFieldReference,
     isFunctionCall,
+    isSampleEvaluationQuery,
     isImageDateTimeFieldName,
     isImageIntFieldName,
     isImageStringFieldName,
@@ -35,6 +36,7 @@ import {
     type Expression,
     type Query
 } from './generated/ast.js';
+import { translateSampleEvaluation } from './sampleEvaluationQueryTranslation';
 
 export interface QueryParseError {
     message: string;
@@ -138,6 +140,9 @@ function visit(expr: Expression, table: QueryScope): QueryExpr['match_expr'] {
             type,
             subexpr: visit(expr.args[0], subTable)
         };
+    }
+    if (isSampleEvaluationQuery(expr)) {
+        return translateSampleEvaluation(expr);
     }
     throw new Error(`Unsupported expression type: ${expr.$type}`);
 }

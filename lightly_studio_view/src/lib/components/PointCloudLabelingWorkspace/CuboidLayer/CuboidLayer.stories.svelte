@@ -157,3 +157,30 @@
     }}
     template={scene}
 />
+
+<Story
+    name="Orthographic rotation"
+    args={{
+        cuboids: multipleCuboids,
+        selectedAnnotationId: 'annotation-2',
+        activeTool: 'rotate',
+        cameraMode: 'top'
+    }}
+>
+    {#snippet template(args)}
+        {@const transforms = createStoryTransforms(args.cuboids ?? [])}
+        <div class="h-screen w-screen bg-black">
+            <Canvas>
+                <T.Color attach="background" args={['#10141c']} />
+                <T.OrthographicCamera makeDefault position={[0, 0, 20]} zoom={60} up={[0, 1, 0]}>
+                    <OrbitControls target={[0, 0, 1]} enableRotate={false} />
+                </T.OrthographicCamera>
+                <T.GridHelper
+                    args={[24, 24, '#344054', '#202938']}
+                    rotation={[Math.PI / 2, 0, 0]}
+                />
+                <CuboidLayer {...args} {transforms} />
+            </Canvas>
+        </div>
+    {/snippet}
+</Story>

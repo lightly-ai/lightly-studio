@@ -117,7 +117,7 @@ jobs:
         if: steps.cache-build.outputs.cache-hit != 'true'
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
+          version: "0.13.6"
           python-version: "3.10"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
@@ -338,7 +338,7 @@ jobs:
         if: steps.cache-success.outputs.cache-hit != 'true'
         uses: astral-sh/setup-uv@v10.0.1
         with:
-          version: "0.12.6"
+          version: "0.13.6"
           python-version: "3.10"
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}

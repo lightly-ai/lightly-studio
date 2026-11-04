@@ -1089,6 +1089,33 @@ def test_deep_copy__skips_class_metrics_of_deleted_labels(db_session: Session) -
     ]
 
 
+def test_deep_copy__annotation_label_color(db_session: Session) -> None:
+    # Arrange
+    dataset = create_collection(session=db_session, collection_name="original")
+    label = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    label.color = "#ff8040"
+    label.alpha = 0.5
+    db_session.add(label)
+    db_session.commit()
+
+    # Act
+    copied = dataset_resolver.deep_copy(
+        session=db_session,
+        dataset_id=dataset.dataset_id,
+        copy_name="copied",
+    )
+
+    # Assert
+    copied_label = annotation_label_resolver.get_by_label_name(
+        session=db_session, dataset_id=copied.dataset_id, label_name="cat"
+    )
+    assert copied_label is not None
+    assert copied_label.color == "#ff8040"
+    assert copied_label.alpha == 0.5
+
+
 def test_deep_copy__raises_for_nonexistent_dataset(db_session: Session) -> None:
     # Arrange
     nonexistent_id = uuid.uuid4()

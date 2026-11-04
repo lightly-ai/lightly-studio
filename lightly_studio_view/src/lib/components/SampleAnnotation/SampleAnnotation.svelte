@@ -6,10 +6,12 @@
         SampleAnnotationSegmentationRLE
     } from '$lib/components';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { useCustomSourceColors } from '$lib/hooks';
+    import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { Annotation } from '$lib/services/types';
     import type { BoundingBox } from '$lib/types';
-    import { getColorByLabel, withAlpha } from '$lib/utils';
+    import { getColorByLabel, getColorBySource, withAlpha } from '$lib/utils';
     import { getConstrainedCoordinates } from '$lib/utils/getConstrainedCoordinates';
     import ResizableRectangle from '../ResizableRectangle/ResizableRectangle.svelte';
     import { getBoundingBox, rleToSvgPath } from './utils';
@@ -27,7 +29,8 @@
         prerenderedDataUrl,
         prerenderedHeight,
         colorBySource,
-        isSelectable = false
+        isSelectable = false,
+        maskOpacity = IMAGE_ADJUSTMENT_DEFAULTS.maskOpacity
     }: {
         annotation: Annotation;
         showLabel?: boolean;
@@ -46,54 +49,63 @@
         // Renders a click target shaped like the mask when its bounding box is hidden.
         // Only set it inside a selectable parent, so other overlays stay click-through.
         isSelectable?: boolean;
+        // Opacity of the segmentation mask before the custom label alpha is applied.
+        maskOpacity?: number;
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { customSourceColorsStore } = useCustomSourceColors();
     const { multipleSourcesVisible, collectionIdToName } = useAnnotationCollectionsFilter();
 
     const label = $derived(annotation.annotation_label.annotation_label_name);
 
-    const colorLabel = $derived.by(() => {
+    // The source name when coloring by source, otherwise undefined.
+    const colorSource: string | undefined = $derived.by(() => {
         const bySource = colorBySource ?? $multipleSourcesVisible;
-        if (!bySource) return label;
-        return $collectionIdToName[annotation.annotation_collection_id] ?? label;
+        if (!bySource) return undefined;
+        return $collectionIdToName[annotation.annotation_collection_id];
     });
+
+    const customColor = $derived(
+        colorSource !== undefined
+            ? $customSourceColorsStore[colorSource]
+            : $customLabelColorsStore[label]
+    );
+    const getColor = (alpha: number) =>
+        colorSource !== undefined
+            ? getColorBySource(colorSource, alpha)
+            : getColorByLabel(label, alpha);
 
     const segmentationMask = $derived(annotation?.segmentation_details?.segmentation_mask);
 
     const annotationId = $derived(annotation.sample_id);
 
-    const colorText = $derived(getColorByLabel(colorLabel, 1));
+    const colorText = $derived(getColor(1));
 
     const colorStroke = $derived.by(() => {
-        const color =
-            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 1).color;
+        const color = customColor?.color ?? getColor(1).color;
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         return color;
     });
 
     const colorFill = $derived.by(() => {
-        const color =
-            $customLabelColorsStore[colorLabel]?.color ?? getColorByLabel(colorLabel, 0.4).color;
-
+        const color = customColor?.color ?? getColor(0.4).color;
         if (highlight === 'disabled') return withAlpha(color, 0.1);
         if (highlight === 'active') return withAlpha(color, 0);
         return color;
     });
 
-    const segmentationMaskOpacity = $derived.by(() => {
+    const maskImageOpacity = $derived.by(() => {
         if (highlight === 'disabled') {
-            return 0.15;
+            return 0.25 * maskOpacity;
         }
 
-        const alpha = $customLabelColorsStore[colorLabel]?.alpha ?? 1.0;
-        return alpha * 0.6;
+        const alpha = customColor?.alpha ?? 1.0;
+        return alpha * maskOpacity;
     });
 
     // Do not fill the bounding box if the annotation contains a segmentation mask.
-    const boundingBoxOpacity = $derived(
-        segmentationMask ? 0 : ($customLabelColorsStore[colorLabel]?.alpha ?? 1.0) * 0.4
-    );
+    const boundingBoxOpacity = $derived(segmentationMask ? 0 : (customColor?.alpha ?? 1.0) * 0.4);
 
     let boundingBox = $state<BoundingBox>(untrack(() => getBoundingBox(annotation)));
 
@@ -152,7 +164,7 @@
             segmentation={segmentationMask}
             width={imageWidth}
             {colorFill}
-            opacity={segmentationMaskOpacity}
+            opacity={maskImageOpacity}
             {prerenderedDataUrl}
             {prerenderedHeight}
         />

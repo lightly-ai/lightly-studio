@@ -832,6 +832,78 @@ describe('DatasetDistributionPanel', () => {
         expect(orientationToggle).toHaveAccessibleName('Switch to horizontal bars');
     });
 
+    describe('selected source and group', () => {
+        const categorical = (label: string) => ({
+            selectedValues: [],
+            buckets: [{ id: label, kind: 'value' as const, value: label, label, count: 1 }]
+        });
+        const sources: DistributionSource[] = [
+            { id: 'classes', label: 'Classes', data: balanced },
+            {
+                id: 'metadata',
+                label: 'Metadata',
+                groupLabel: 'Metadata key',
+                groups: [
+                    { id: 'city', label: 'city', categorical: categorical('Zurich') },
+                    { id: 'weather', label: 'weather', categorical: categorical('rainy') }
+                ]
+            }
+        ];
+
+        it('opens on the given source and group', () => {
+            const onGroupChange = vi.fn();
+            render(DatasetDistributionPanel, {
+                props: {
+                    sources,
+                    selectedSourceId: 'metadata',
+                    selectedGroupId: 'weather',
+                    onGroupChange
+                }
+            });
+
+            expect(screen.getByTestId('dataset-distribution-source-select')).toHaveTextContent(
+                'Metadata'
+            );
+            expect(screen.getByTestId('dataset-distribution-group-select')).toHaveTextContent(
+                'weather'
+            );
+            expect(onGroupChange).toHaveBeenLastCalledWith('metadata', 'weather');
+        });
+
+        it('falls back to the default source for an unknown ID', () => {
+            const onGroupChange = vi.fn();
+            render(DatasetDistributionPanel, {
+                props: { sources, selectedSourceId: 'removed', onGroupChange }
+            });
+
+            expect(screen.getByTestId('dataset-distribution-source-select')).toHaveTextContent(
+                'Classes'
+            );
+            expect(onGroupChange).toHaveBeenLastCalledWith('classes', undefined);
+        });
+
+        it('keeps a picked group that is missing while its groups load', async () => {
+            const onGroupChange = vi.fn();
+            const [loading] = sources;
+            const { rerender } = render(DatasetDistributionPanel, {
+                props: {
+                    sources: [{ ...sources[1], groups: [] }, loading],
+                    selectedSourceId: 'metadata',
+                    selectedGroupId: 'weather',
+                    onGroupChange
+                }
+            });
+            expect(onGroupChange).toHaveBeenLastCalledWith('metadata', undefined);
+
+            await rerender({ sources });
+
+            expect(screen.getByTestId('dataset-distribution-group-select')).toHaveTextContent(
+                'weather'
+            );
+            expect(onGroupChange).toHaveBeenLastCalledWith('metadata', 'weather');
+        });
+    });
+
     it('configures, reorients, and expands categorical values', async () => {
         const sources: DistributionSource[] = [
             {
@@ -1323,6 +1395,30 @@ describe('DatasetDistributionPanel', () => {
             ]
         }
     ];
+
+    it('lists the groups of a source under their section headings', async () => {
+        const user = userEvent.setup();
+        const histogram = { binEdges: [0, 1], counts: [1] };
+        render(DatasetDistributionPanel, {
+            props: {
+                sources: [
+                    {
+                        ...histogramSources[0],
+                        groups: [
+                            { id: 'image:width', label: 'width', section: 'Image', histogram },
+                            { id: 'width', label: 'width', section: 'Custom', histogram }
+                        ]
+                    }
+                ]
+            }
+        });
+
+        await user.click(screen.getByTestId('dataset-distribution-group-select'));
+
+        expect(await screen.findByText('Image')).toBeInTheDocument();
+        expect(screen.getByText('Custom')).toBeInTheDocument();
+        expect(screen.getAllByRole('option', { name: 'width' })).toHaveLength(2);
+    });
 
     it('renders numerical metadata as comparable histogram tag series', () => {
         const sources: DistributionSource[] = [

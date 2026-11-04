@@ -9,7 +9,7 @@
     import { onDestroy, onMount } from 'svelte';
     import { page } from '$app/state';
     import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
-    import { useAnnotationSortBy } from '$lib/hooks';
+    import { useAnnotationSortBy, useBulkRelabelAnnotations } from '$lib/hooks';
     import { afterNavigate, goto } from '$app/navigation';
     import SelectedAnnotations from './SelectedAnnotations/SelectedAnnotations.svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
@@ -23,6 +23,8 @@
     import { useAnnotationCropPreview } from './useAnnotationCropPreview/useAnnotationCropPreview.svelte';
     import { useAnnotationTileSelection } from './useAnnotationTileSelection/useAnnotationTileSelection';
     import AnnotationTile from './AnnotationTile/AnnotationTile.svelte';
+    import { get } from 'svelte/store';
+    import { toast } from 'svelte-sonner';
 
     type AnnotationsProps = {
         collection_id: string;
@@ -106,12 +108,8 @@
         sort_by: searchEmbedding ? undefined : ($sortByFor(collection_id) ?? undefined)
     });
 
-    const {
-        annotations: infiniteAnnotations,
-        updateAnnotations,
-        refresh,
-        isPending
-    } = useAnnotationsInfinite(() => queryParams);
+    const { annotations: infiniteAnnotations, refresh } = useAnnotationsInfinite(() => queryParams);
+    const { relabelAnnotations, isPending } = useBulkRelabelAnnotations();
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         getCollectionId: () => collection_id
@@ -144,7 +142,8 @@
     const {
         selectedSampleAnnotationCropIds: pickedAnnotationIds,
         toggleSampleAnnotationCropSelection,
-        clearSelectedSampleAnnotationCrops
+        clearSelectedSampleAnnotationCrops,
+        getSelectAllAnnotationSnapshot
     } = useGlobalStorage();
 
     const annotations: AnnotationWithPayloadView[] = $derived(
@@ -182,28 +181,35 @@
         }
     }
 
-    const selectedAnnotations = $derived(
-        annotations
-            .map((annotation) => annotation.annotation)
-            .filter((annotation) => $pickedAnnotationIds[collection_id]?.has(annotation.sample_id))
-    );
+    const selectedCount = $derived($pickedAnnotationIds[collection_id]?.size ?? 0);
 
     const handleSelectLabel = async (item: { value: string; label: string }) => {
+        const snapshot = get(getSelectAllAnnotationSnapshot(collection_id));
+        const { data, error } = await relabelAnnotations({
+            collectionId: collection_id,
+            selectedIds: $pickedAnnotationIds[collection_id] ?? new Set<string>(),
+            selectAllSnapshot:
+                snapshot?.filter.filter_type === 'annotations'
+                    ? { filter: snapshot.filter, size: snapshot.size }
+                    : null,
+            labelName: item.value
+        });
+        if (!data) {
+            toast.error('Failed to update annotations: ' + JSON.stringify(error));
+            return;
+        }
+
         addAnnotationLabelChangeToUndoStack({
-            annotations: selectedAnnotations.map((annotation) => annotation),
+            annotations: data.previous_labels.map((previousLabel) => ({
+                sample_id: previousLabel.annotation_id,
+                annotation_label: { annotation_label_name: previousLabel.label_name }
+            })),
             collectionId: collection_id,
             addReversibleAction,
             updateAnnotations: updateAnnotationsRaw,
             refresh
         });
-
-        await updateAnnotations(
-            selectedAnnotations.map((annotation) => ({
-                annotation_id: annotation.sample_id,
-                label_name: item.value,
-                collection_id: collection_id
-            }))
-        );
+        toast.success('Annotations updated successfully');
         clearSelectedSampleAnnotationCrops(collection_id);
     };
 
@@ -284,8 +290,8 @@
     {#if $isEditingMode && !hideSelectedAnnotationsPanel}
         <div class="min-w-[250px] max-w-[30%] flex-1">
             <SelectedAnnotations
-                {selectedAnnotations}
-                disabled={selectedAnnotations.length === 0}
+                {selectedCount}
+                disabled={selectedCount === 0}
                 isLoading={$isPending}
                 onSelect={handleSelectLabel}
                 collectionId={collection_id}

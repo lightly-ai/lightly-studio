@@ -522,10 +522,13 @@
         $activePanel === 'distribution' && supportsDistribution
     );
 
-    // The distribution settings live here, so they stay when the panel closes and opens again.
+    // The distribution settings live here, so they stay when the panel closes and opens again,
+    // and when a sample opens and the grid comes back.
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
     let distributionSampleTagIds = $state<string[]>([]);
     let histogramBinCount = $state(20);
+    let distributionSourceId = $state<string | undefined>(undefined);
+    let distributionGroupId = $state<string | undefined>(undefined);
 
     const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
         const selected = $categoricalMetadataValues[metadataKey] ?? [];
@@ -602,40 +605,39 @@
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        <h2
+                            class="flex items-center justify-between px-4 py-2 text-lg font-semibold"
                         >
-                            <h2
-                                class="flex items-center justify-between py-2 text-lg font-semibold"
-                            >
-                                <span class="flex items-center space-x-2">
-                                    <Filter class="size-5" />
-                                    <span>Filters</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <ClearAllFiltersButton
-                                        collectionId={metadataCollectionId}
-                                        {isCaptions}
-                                        {isImages}
-                                        {isVideos}
-                                        {isVideoFrames}
+                            <span class="flex items-center space-x-2">
+                                <Filter class="size-5" />
+                                <span>Filters</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <ClearAllFiltersButton
+                                    collectionId={metadataCollectionId}
+                                    {isCaptions}
+                                    {isImages}
+                                    {isVideos}
+                                    {isVideoFrames}
+                                />
+                                <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                    <Button
+                                        variant="ghost"
+                                        icon={PanelLeftClose}
+                                        ariaLabel="Hide filters"
+                                        buttonProps={{
+                                            onclick: toggleFilterPanelCollapsed,
+                                            'aria-expanded': true,
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
+                                        }}
                                     />
-                                    <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                        <Button
-                                            variant="ghost"
-                                            icon={PanelLeftClose}
-                                            ariaLabel="Hide filters"
-                                            buttonProps={{
-                                                onclick: toggleFilterPanelCollapsed,
-                                                'aria-expanded': true,
-                                                'data-testid': 'filter-panel-collapse',
-                                                class: 'size-6 p-0'
-                                            }}
-                                        />
-                                    </Tooltip>
-                                </span>
-                            </h2>
-
+                                </Tooltip>
+                            </span>
+                        </h2>
+                        <div
+                            class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        >
                             {#if isImages}
                                 <QueryControl
                                     onOpen={() => {
@@ -802,6 +804,8 @@
                                             onClassBarClick={handleClassBarClick}
                                             onClose={() => setActivePanel('none')}
                                             bind:histogramBinCount
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}
@@ -820,6 +824,8 @@
                                             bind:countMode={distributionCountMode}
                                             bind:histogramBinCount
                                             bind:comparisonTagIds={distributionSampleTagIds}
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}

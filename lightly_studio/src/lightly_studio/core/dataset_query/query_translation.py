@@ -11,6 +11,7 @@ from typing import Protocol, TypeVar, Union
 
 from typing_extensions import assert_never
 
+from lightly_studio.core.dataset_query import evaluation_query_translation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import (
     ClassificationField,
@@ -39,9 +40,12 @@ from lightly_studio.errors import QueryExprError
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
+    ConfusionMatchExpr,
     DatetimeExpr,
     EqualityComparisonOperator,
     EqualityFloatExpr,
+    FalseNegativeMatchExpr,
+    FalsePositiveMatchExpr,
     FieldRef,
     IntegerExpr,
     MatchExpr,
@@ -51,6 +55,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    SampleEvaluationMatchExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
@@ -287,6 +292,16 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PL
         return ObjectDetectionQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
         return SegmentationMaskQuery(to_match_expression(expr=expr.subexpr))
+    if isinstance(
+        expr,
+        (
+            SampleEvaluationMatchExpr,
+            ConfusionMatchExpr,
+            FalsePositiveMatchExpr,
+            FalseNegativeMatchExpr,
+        ),
+    ):
+        return evaluation_query_translation.to_match_expression(expr=expr)
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):

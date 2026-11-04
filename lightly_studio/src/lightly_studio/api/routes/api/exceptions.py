@@ -22,7 +22,7 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import NotFoundError, QueryExprError, UnknownImageSizeError
+from lightly_studio.errors import ExportError, NotFoundError, QueryExprError, UnknownImageSizeError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -38,7 +38,7 @@ def _report_error(
     tracking.track_exception(exc)
 
 
-def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
+def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
     """Register exception handlers for the FastAPI app."""
 
     @app.exception_handler(IntegrityError)
@@ -159,6 +159,15 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
         )
+
+    @app.exception_handler(ExportError)
+    async def _export_error_handler(_request: Request, _exc: ExportError) -> JSONResponse:
+        """Handle an export that cannot be written."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_BAD_REQUEST,
+        )
+        return JSONResponse(status_code=HTTP_STATUS_BAD_REQUEST, content={"error": str(_exc)})
 
     @app.exception_handler(QueryEmbedderError)
     async def _query_embedder_error_handler(
