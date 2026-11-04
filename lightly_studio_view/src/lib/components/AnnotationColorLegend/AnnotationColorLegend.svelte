@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useColorPicker } from '$lib/hooks';
+    import { useClassColorPicker } from '$lib/hooks';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { getColorByLabel } from '$lib/utils';
     import { ColorPicker } from '../ui/color-picker';
@@ -17,7 +17,7 @@
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const picker = useColorPicker(() => labelName, { kind: 'class' });
+    const picker = useClassColorPicker(() => labelName);
 
     const colorInfos = $derived.by(() => {
         const colors = $customLabelColorsStore;

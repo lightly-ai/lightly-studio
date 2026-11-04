@@ -11,7 +11,7 @@ afterEach(() => {
     useCustomSourceColors().clearCustomColors();
 });
 
-describe('useColorPicker', () => {
+describe('useClassColorPicker and useSourceColorPicker', () => {
     describe('without a custom color', () => {
         test('uses getColorByLabel for border (alpha 1) and background (alpha 0.35)', () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });

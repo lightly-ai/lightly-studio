@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useColorPicker } from '$lib/hooks';
+    import { useSourceColorPicker } from '$lib/hooks';
     import type { HTMLAttributes } from 'svelte/elements';
     import { ColorPicker } from '$lib/components/ui/color-picker';
 
@@ -12,7 +12,7 @@
 
     let { label, markerProps, enableColorPicker = false }: Props = $props();
 
-    const picker = useColorPicker(() => label, { kind: 'source' });
+    const picker = useSourceColorPicker(() => label);
 </script>
 
 {#if enableColorPicker}
