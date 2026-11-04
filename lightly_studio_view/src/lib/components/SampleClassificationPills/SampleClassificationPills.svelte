@@ -1,9 +1,8 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-    import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-    import { useSettings } from '$lib/hooks';
+    import { useCustomSourceColors, useSettings } from '$lib/hooks';
     import { getColorByLabel, getColorBySource } from '$lib/utils';
     import { getColorPair } from '$lib/utils/getColorPair';
     import {

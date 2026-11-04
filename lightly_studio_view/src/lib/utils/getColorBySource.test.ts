@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test } from 'vitest';
-import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { useCustomSourceColors } from '$lib/hooks';
 import { getColorBySource } from './getColorBySource';
 import { getDefaultColor } from './getColorByLabel';
 

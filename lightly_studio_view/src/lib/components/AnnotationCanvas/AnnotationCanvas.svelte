@@ -15,7 +15,7 @@
 <script lang="ts">
     import { onDestroy, onMount, untrack } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
-    import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+    import { useCustomSourceColors } from '$lib/hooks';
     import { getColorByLabel, getColorBySource } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
     import {
@@ -130,7 +130,10 @@
     };
 
     type CustomLabelColorMap = Record<string, CustomColor>;
-    type CustomColorMaps = { label: CustomLabelColorMap; source: CustomLabelColorMap };
+    interface CustomColorMaps {
+        label: CustomLabelColorMap;
+        source: CustomLabelColorMap;
+    }
 
     interface ContextOptions {
         willReadFrequently?: boolean;

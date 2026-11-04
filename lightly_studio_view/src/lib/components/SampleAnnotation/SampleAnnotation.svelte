@@ -6,7 +6,7 @@
         SampleAnnotationSegmentationRLE
     } from '$lib/components';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-    import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+    import { useCustomSourceColors } from '$lib/hooks';
     import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { Annotation } from '$lib/services/types';

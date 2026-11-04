@@ -3,7 +3,7 @@ import { afterEach, expect, it } from 'vitest';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { useCustomSourceColors } from '$lib/hooks';
 import SampleClassificationPills from './SampleClassificationPills.svelte';
 
 const { setSelectedCollectionIds, setCollectionIdToName } = useAnnotationCollectionsFilter();
