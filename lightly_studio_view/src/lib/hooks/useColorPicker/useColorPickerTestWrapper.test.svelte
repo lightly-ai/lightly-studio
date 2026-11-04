@@ -13,3 +13,6 @@
 <button data-testid="set-color" type="button" onclick={() => picker.setColor('#abcdef', 0.5)}
     >set</button
 >
+<button data-testid="cancel" type="button" onclick={() => picker.finishColorChange(false)}
+    >cancel</button
+>
