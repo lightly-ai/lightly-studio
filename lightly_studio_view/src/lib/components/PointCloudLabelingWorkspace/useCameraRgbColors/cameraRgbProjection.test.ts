@@ -71,6 +71,17 @@ describe('samplePixel', () => {
         samplePixel(camera, 2, 2, colors, 0); // floor(2)=2 clamps to width-1=1
         expect(Array.from(colors)).toEqual([0, 1, 0]);
     });
+
+    it('converts sRGB pixel values to linear RGB', () => {
+        // The renderer encodes linear vertex colors to sRGB on output, so sampling must decode.
+        const camera = makeCamera({ pixels: fillPixels(4, 4, [128, 10, 255]) });
+
+        const colors = new Float32Array(3);
+        samplePixel(camera, 0, 0, colors, 0);
+        expect(colors[0]).toBeCloseTo(0.2158605, 6); // ((128/255 + 0.055) / 1.055) ** 2.4
+        expect(colors[1]).toBeCloseTo(10 / 255 / 12.92, 6); // below the linear threshold
+        expect(colors[2]).toBe(1);
+    });
 });
 
 describe('computeCameraRgbColors', () => {
