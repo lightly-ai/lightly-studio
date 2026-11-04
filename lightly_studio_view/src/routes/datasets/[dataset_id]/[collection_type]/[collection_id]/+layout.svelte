@@ -192,7 +192,19 @@
     let lastCollectionId: string | null = null;
 
     // Select-all hook
-    let selectAllHandle = $derived(useSelectAll(collectionId, gridType));
+    // On the Annotations grid, select all follows the tree ticks of the tab source.
+    const flatTreeFilter = useTreeAnnotationsFilter(() => ({
+        collectionId: flatTreeImagesCollectionId ?? '',
+        sourceId: collectionId,
+        enabled: Boolean(flatTreeImagesCollectionId)
+    }));
+    let selectAllHandle = $derived(
+        useSelectAll(collectionId, gridType, () =>
+            flatTreeImagesCollectionId
+                ? { annotation_pairs: flatTreeFilter.current?.annotation_pairs }
+                : undefined
+        )
+    );
 
     function handleSelectAllKeydown(event: KeyboardEvent) {
         if (isEditableTarget(event.target) || !isSelectAllShortcut(event)) return;
@@ -658,6 +670,12 @@
                                     {isImages}
                                     {isVideos}
                                     {isVideoFrames}
+                                    treeCollectionId={showAnnotationTree
+                                        ? collectionId
+                                        : flatTreeImagesCollectionId}
+                                    treeFilterActive={(showAnnotationTree
+                                        ? treeFilter.current
+                                        : flatTreeFilter.current) !== undefined}
                                 />
                                 <Tooltip content="Hide filters" position="bottom" class="w-max">
                                     <Button
