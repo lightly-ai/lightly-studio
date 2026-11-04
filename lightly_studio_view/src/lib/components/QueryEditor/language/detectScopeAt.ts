@@ -15,13 +15,15 @@ export function detectScopeAt(text: string, offset: number): Scope {
         );
     type Frame = Scope | 'paren';
     const stack: Frame[] = [];
-    const re = /\b(object_detection|classification|segmentation_mask)\s*\(|\(|\)/g;
+    const re =
+        /\b(object_detection|classification|segmentation_mask|sample_evaluation)\s*\(|\(|\)/g;
     let match: RegExpExecArray | null;
     while ((match = re.exec(upTo))) {
         if (
             match[1] === 'object_detection' ||
             match[1] === 'classification' ||
-            match[1] === 'segmentation_mask'
+            match[1] === 'segmentation_mask' ||
+            match[1] === 'sample_evaluation'
         ) {
             stack.push(match[1]);
         } else if (match[0] === '(') {
@@ -36,7 +38,8 @@ export function detectScopeAt(text: string, offset: number): Scope {
         if (
             frame === 'object_detection' ||
             frame === 'classification' ||
-            frame === 'segmentation_mask'
+            frame === 'segmentation_mask' ||
+            frame === 'sample_evaluation'
         ) {
             return frame;
         }

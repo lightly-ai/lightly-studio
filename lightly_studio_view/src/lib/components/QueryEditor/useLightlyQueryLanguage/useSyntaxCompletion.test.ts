@@ -145,6 +145,63 @@ describe('useSyntaxCompletion', () => {
         expect(triggerCharacters).toEqual([' ', '(', ':']);
     });
 
+    it.each([
+        ['"tp"', 4],
+        ["'tp'", 4],
+        ['"tp"', 2],
+        ['"t', 2],
+        ["'t", 2],
+        ['"custom\\"score"', 15]
+    ] as const)('replaces the whole metric %s at offset %s', async (metric, offset) => {
+        const { provideCompletionItems } = await loadAndAttach([{ label: '"fp"' }]);
+        const prefix = 'sample_evaluation(name = "run1" AND ';
+        const suffix = metric.endsWith('"') || metric.endsWith("'") ? ' > 0)' : '';
+        const text = `${prefix}${metric}${suffix}`;
+        const column = prefix.length + offset + 1;
+        const result = await provideCompletionItems(
+            makeModel(text, { startColumn: column, endColumn: column }) as never,
+            { lineNumber: 1, column } as never
+        );
+        const suggestion = result.suggestions.find((item) => item.label === '"fp"');
+        expect(suggestion).toBeDefined();
+        const range = suggestion?.range as monaco.IRange;
+        const completed =
+            text.slice(0, range.startColumn - 1) +
+            suggestion?.insertText +
+            text.slice(range.endColumn - 1);
+        expect(completed).toBe(`${prefix}"fp"${suffix}`);
+    });
+
+    it('corrects a language-service insertion range inside a quoted metric', async () => {
+        const prefix = 'sample_evaluation(name = "run1" AND ';
+        const text = `${prefix}"tp" > 0)`;
+        const column = prefix.length + 3;
+        const { provideCompletionItems } = await loadAndAttach([
+            {
+                label: '"fp"',
+                textEdit: {
+                    newText: '"fp"',
+                    range: {
+                        start: { line: 0, character: column - 1 },
+                        end: { line: 0, character: column - 1 }
+                    }
+                }
+            }
+        ]);
+        const result = await provideCompletionItems(
+            makeModel(text, { startColumn: column, endColumn: column }) as never,
+            { lineNumber: 1, column } as never
+        );
+        const suggestions = result.suggestions.filter((item) => item.label === '"fp"');
+        expect(suggestions).toHaveLength(1);
+        expect(suggestions[0].range).toEqual({
+            startLineNumber: 1,
+            endLineNumber: 1,
+            startColumn: prefix.length + 1,
+            endColumn: prefix.length + 5
+        });
+    });
+
     it('registers completion provider only once per language id', async () => {
         const { useSyntaxCompletion } = await import('./useSyntaxCompletion');
         useSyntaxCompletion({ languageId: 'lightly-query' });

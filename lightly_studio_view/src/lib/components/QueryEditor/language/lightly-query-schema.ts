@@ -14,6 +14,12 @@
 import type { FieldDoc, KeywordDoc, Scope, ScopeDoc } from './types';
 
 export const SCOPES: Record<Scope, ScopeDoc> = {
+    sample_evaluation: {
+        scope: 'sample_evaluation',
+        title: 'Sample evaluation',
+        description: 'Metrics for a sample in the selected evaluation run.',
+        fields: []
+    },
     image: {
         scope: 'image',
         title: 'Image',

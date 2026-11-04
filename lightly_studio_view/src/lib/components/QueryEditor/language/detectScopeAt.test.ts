@@ -50,3 +50,9 @@ describe('detectScopeAt', () => {
         expect(detectScopeAt(text, text.length)).toBe(scope);
     });
 });
+
+it('tracks evaluation scope through nested parentheses and returns to sample scope', () => {
+    const text = 'sample_evaluation(name = "run(1)" AND ("tp" > 0 OR "fn" > 0)) AND width > 1';
+    expect(detectScopeAt(text, text.indexOf('fn'))).toBe('sample_evaluation');
+    expect(detectScopeAt(text, text.indexOf('width'))).toBe('image');
+});
