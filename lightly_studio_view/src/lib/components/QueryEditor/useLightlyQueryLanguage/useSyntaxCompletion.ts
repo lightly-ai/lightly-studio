@@ -103,12 +103,7 @@ async function getCompletions(
               })
             : undefined;
     const metricQuote = metricRange
-        ? model.getValue()[
-              model.getOffsetAt({
-                  lineNumber: metricRange.startLineNumber,
-                  column: metricRange.startColumn
-              })
-          ]
+        ? model.getValue()[model.getOffsetAt(position) - column + metricRange.startColumn]
         : undefined;
     return {
         suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported).map((item) =>
