@@ -88,8 +88,11 @@
 {/snippet}
 
 {#snippet childRows(children: readonly AnnotationTreeNode[])}
-    {#each children as child (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
-        <div class="pl-4">
+    {#each children as child, i (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
+        {@const isLast = i === children.length - 1}
+        <div class="relative mt-1 pl-4">
+            <div class="absolute -top-1 left-2 w-px bg-border {isLast ? 'h-6' : '-bottom-1'}"></div>
+            <div class="absolute left-2 top-5 h-px w-2 bg-border"></div>
             {@render annotationNode(child)}
         </div>
     {/each}
@@ -97,12 +100,14 @@
 
 {#snippet annotationNode(node: AnnotationTreeNode)}
     {#if node.cuboid && node.children.length > 0}
-        <div class="space-y-1">
-            {@render annotationItem(node.cuboid)}
-            {@render childRows(node.children)}
-        </div>
-    {:else if !node.cuboid && node.children.length > 0}
+        {@render annotationItem(node.cuboid)}
         {@render childRows(node.children)}
+    {:else if !node.cuboid && node.children.length > 0}
+        {#each node.children as child (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
+            <div class="pl-4">
+                {@render annotationNode(child)}
+            </div>
+        {/each}
     {:else if node.cuboid}
         {@render annotationItem(node.cuboid)}
     {/if}
