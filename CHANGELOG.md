@@ -34,6 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The browser no longer freezes when a collection has an integer metadata field with a very wide range, such as an ID.
 - The previous and next buttons of a point cloud sequence now follow the tags, the embedding plot selection, and the text search of the point clouds grid.
 - Smart select stays active when you select a segmentation mask or change its class in the sample details sidebar.
+- The value counts of categorical metadata now match the filters of the images grid.
 
 ### Security
 
