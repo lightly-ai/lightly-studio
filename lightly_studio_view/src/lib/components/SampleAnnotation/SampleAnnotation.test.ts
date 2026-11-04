@@ -3,7 +3,7 @@ import type { ComponentProps } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-import { getColorByLabel } from '$lib/utils';
+import { getColorByLabel, getColorBySource } from '$lib/utils';
 import SampleAnnotation from './SampleAnnotation.svelte';
 import SelectableSampleAnnotationHarness from './SelectableSampleAnnotationHarness.svelte';
 
@@ -183,7 +183,7 @@ describe('SampleAnnotation', () => {
 
         // The factory annotation belongs to 'collection-1' (named "Predictions" below)
         // and has the label 'car'.
-        const sourceColor = getColorByLabel('Predictions', 1).color;
+        const sourceColor = getColorBySource('Predictions', 1).color;
         const labelColor = getColorByLabel('car', 1).color;
 
         afterEach(() => {

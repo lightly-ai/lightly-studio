@@ -277,6 +277,13 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
 
+**Deviations (implemented):**
+- `AnnotationCanvas` passes one `CustomColorMaps` object (`{ label, source }`) down the render path, and `resolveNamedColor` picks the map by the flag. This keeps the call sites short.
+- Source pills look up custom colors by `pill.colorKey`. Visible change: a source pill whose class has a custom color now shows the source color, not the class color.
+- `lib/utils/getColorBySource.ts` imports `useCustomSourceColors` by its deep path; the `$lib/hooks` barrel would be a circular import. Other callers use the barrel.
+- The enforce-class test in `SampleAnnotations/index.test.ts` asserts the rendered stroke colors instead of a `getColorBySource` spy (Codex review).
+- Size: ~227 changed lines instead of ~145, ~70 of them tests.
+
 ## PR 8: Keep annotation source colors in their own store
 
 **Files:**
