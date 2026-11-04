@@ -443,6 +443,19 @@ export const useGlobalStorage = () => {
                 return value;
             });
         },
+        // Keeps the class for new annotations right when Settings renames or deletes the class.
+        renameLastAnnotationLabel: (collectionId: string, oldName: string, newName: string) => {
+            lastAnnotationLabel.update((value) => {
+                if (value[collectionId] === oldName) value[collectionId] = newName;
+                return value;
+            });
+        },
+        removeLastAnnotationLabel: (collectionId: string, name: string) => {
+            lastAnnotationLabel.update((value) => {
+                if (value[collectionId] === name) delete value[collectionId];
+                return value;
+            });
+        },
         lastAnnotationSource,
         updateLastAnnotationSource: (collectionId: string, source: string) => {
             lastAnnotationSource.update((value) => {

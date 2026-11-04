@@ -308,6 +308,34 @@ describe('useGlobalStorage', () => {
             expect(stored[testCollectionId]).toBe('deer');
             expect(sessionStorage.getItem('lightlyStudio_last_annotation_label')).toBeNull();
         });
+
+        it('follows a class rename in its collection only', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'deer');
+            storage.updateLastAnnotationLabel(testCollectionId2, 'deer');
+
+            storage.renameLastAnnotationLabel(testCollectionId, 'deer', 'roe deer');
+
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('roe deer');
+            expect(get(storage.lastAnnotationLabel)[testCollectionId2]).toBe('deer');
+        });
+
+        it('keeps another class on a rename', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'fox');
+
+            storage.renameLastAnnotationLabel(testCollectionId, 'deer', 'roe deer');
+
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('fox');
+        });
+
+        it('forgets a deleted class', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'deer');
+
+            storage.removeLastAnnotationLabel(testCollectionId, 'fox');
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('deer');
+
+            storage.removeLastAnnotationLabel(testCollectionId, 'deer');
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBeUndefined();
+        });
     });
 
     describe('Last annotation source', () => {

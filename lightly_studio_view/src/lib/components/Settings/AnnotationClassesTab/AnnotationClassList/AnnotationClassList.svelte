@@ -21,7 +21,7 @@
         highlightedId: string | null;
         onAdd: () => void;
         onRename: (labelId: string, oldName: string, name: string) => Promise<unknown>;
-        onDelete: (labelId: string) => Promise<unknown>;
+        onDelete: (labelId: string, name: string) => Promise<unknown>;
     }
 
     const {
@@ -65,7 +65,8 @@
                     annotationClass.annotation_label_name,
                     name
                 )}
-            onDelete={() => onDelete(annotationClass.annotation_label_id!)}
+            onDelete={() =>
+                onDelete(annotationClass.annotation_label_id!, annotationClass.annotation_label_name)}
         />
     {/each}
     {#if addName && !isAddEnterTarget}

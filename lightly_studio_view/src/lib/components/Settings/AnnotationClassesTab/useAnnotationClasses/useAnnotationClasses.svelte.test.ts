@@ -8,7 +8,11 @@ const mocks = vi.hoisted(() => ({
     createQuery: vi.fn(),
     getCustomColor: vi.fn(),
     setCustomColor: vi.fn(),
-    deleteCustomColor: vi.fn()
+    deleteCustomColor: vi.fn(),
+    renameLastAnnotationLabel: vi.fn(),
+    removeLastAnnotationLabel: vi.fn(),
+    renameRecentClass: vi.fn(),
+    removeRecentClass: vi.fn()
 }));
 
 type MutationOptions = { onSettled?: () => unknown };
@@ -37,6 +41,18 @@ vi.mock('$lib/hooks/useCustomLabelColors', () => ({
         getCustomColor: mocks.getCustomColor,
         setCustomColor: mocks.setCustomColor,
         deleteCustomColor: mocks.deleteCustomColor
+    })
+}));
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        renameLastAnnotationLabel: mocks.renameLastAnnotationLabel,
+        removeLastAnnotationLabel: mocks.removeLastAnnotationLabel
+    })
+}));
+vi.mock('$lib/hooks/useRecentClasses/useRecentClasses', () => ({
+    useRecentClasses: () => ({
+        renameRecentClass: mocks.renameRecentClass,
+        removeRecentClass: mocks.removeRecentClass
     })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
@@ -116,8 +132,46 @@ describe('useAnnotationClasses', () => {
     it('deleteClass refreshes all queries', async () => {
         const classes = setup();
 
-        await classes.deleteClass('label-1');
+        await classes.deleteClass('label-1', 'cat');
 
         expect(mocks.invalidateQueries).toHaveBeenCalledWith();
+    });
+
+    it('renameClass renames the sticky class and the recent classes', async () => {
+        const classes = setup();
+
+        await classes.renameClass('label-1', 'cat', 'kitty');
+
+        expect(mocks.renameLastAnnotationLabel).toHaveBeenCalledWith('collection-1', 'cat', 'kitty');
+        expect(mocks.renameRecentClass).toHaveBeenCalledWith('collection-1', 'cat', 'kitty');
+    });
+
+    it('renameClass keeps the sticky class when the rename fails', async () => {
+        mocks.mutateAsync.mockRejectedValue(new Error('boom'));
+        const classes = setup();
+
+        await expect(classes.renameClass('label-1', 'cat', 'kitty')).rejects.toThrow('boom');
+
+        expect(mocks.renameLastAnnotationLabel).not.toHaveBeenCalled();
+        expect(mocks.renameRecentClass).not.toHaveBeenCalled();
+    });
+
+    it('deleteClass forgets the class as sticky and recent class', async () => {
+        const classes = setup();
+
+        await classes.deleteClass('label-1', 'cat');
+
+        expect(mocks.removeLastAnnotationLabel).toHaveBeenCalledWith('collection-1', 'cat');
+        expect(mocks.removeRecentClass).toHaveBeenCalledWith('collection-1', 'cat');
+    });
+
+    it('deleteClass keeps the sticky class when the delete fails', async () => {
+        mocks.mutateAsync.mockRejectedValue(new Error('boom'));
+        const classes = setup();
+
+        await expect(classes.deleteClass('label-1', 'cat')).rejects.toThrow('boom');
+
+        expect(mocks.removeLastAnnotationLabel).not.toHaveBeenCalled();
+        expect(mocks.removeRecentClass).not.toHaveBeenCalled();
     });
 });
