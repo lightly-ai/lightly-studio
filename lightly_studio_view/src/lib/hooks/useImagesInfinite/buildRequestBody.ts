@@ -30,6 +30,8 @@ export const buildRequestBody = (
                 tag_ids: f.tag_ids,
                 annotation_label_ids: f.annotation_label_ids,
                 annotation_collection_ids: f.collection_ids,
+                annotation_pairs: f.annotation_pairs,
+                unannotated_collection_ids: f.unannotated_collection_ids,
                 confusion_cell: f.confusion_cell,
                 // Lasso/rectangle selection sent as geometry; the backend resolves it to sample
                 // ids server-side so the request body stays small at scale (see LIG-9903).

@@ -11,7 +11,7 @@
         isImages: boolean;
         isVideos: boolean;
         isVideoFrames: boolean;
-        treeCollectionId?: string;
+        treeStateKey?: string;
         treeFilterActive?: boolean;
     }
 
@@ -21,7 +21,7 @@
         isImages,
         isVideos,
         isVideoFrames,
-        treeCollectionId,
+        treeStateKey,
         treeFilterActive = false
     }: Props = $props();
 
@@ -32,7 +32,7 @@
             isImages,
             isVideos,
             isVideoFrames,
-            treeCollectionId,
+            treeStateKey,
             treeFilterActive: toStore(() => treeFilterActive)
         })
     );

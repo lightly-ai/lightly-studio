@@ -15,7 +15,7 @@
     setQueryClientContext(untrack(() => client));
 
     // Mirrors the Images grid: the tree filter is merged into the images request.
-    const treeFilter = useTreeAnnotationsFilter(() => ({ collectionId, enabled: true }));
+    const treeFilter = useTreeAnnotationsFilter(() => ({ collectionId }));
     useImagesInfinite(
         () => ({
             collection_id: collectionId,

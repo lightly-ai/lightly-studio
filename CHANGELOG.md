@@ -13,17 +13,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
 - Every filter list in the filter panel has a search, "Select all" and "Clear".
 - The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
+- An annotation tree in the filter panel of the Images and Annotations grids. Filter by annotation source and class, and hide annotations with the eye icons.
 
 ### Changed
 
 - Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
-- The annotation color setting now stores a choice between coloring by annotation class and by annotation source. Existing databases are set to coloring by class.
+- Annotations are colored by annotation class by default. Use "Color by" in the filter panel or in Settings > Annotations to color them by annotation source.
 
 ### Deprecated
 
 ### Removed
 
 - BREAKING: Dropped Python 3.10 support. Upgrade to Python 3.11–3.15.
+- The "Always color by class" setting. Use "Color by" in the filter panel or in Settings > Annotations instead.
 
 ### Fixed
 

@@ -1,11 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 import { pressButton, waitForRequestsToSettle } from '../utils';
+import { AnnotationTree } from './annotation-tree';
 
 type SamplingStrategy = 'diversity' | 'typicality' | 'similarity';
 
 export class SamplesPage {
+    readonly annotationTree: AnnotationTree;
+
     constructor(public readonly page: Page) {
         this.page = page;
+        this.annotationTree = new AnnotationTree(page);
     }
 
     async goto() {
@@ -54,7 +58,7 @@ export class SamplesPage {
     }
 
     getLabelsMenuItem(labelName: string) {
-        return this.page.getByTestId('labels-menu-name').getByText(labelName, { exact: true });
+        return this.annotationTree.root.getByText(labelName, { exact: true }).first();
     }
 
     getTagsMenuItem(tagName: string) {
@@ -67,8 +71,7 @@ export class SamplesPage {
             { timeout: 15000 }
         );
 
-        const labelMenuItem = this.getLabelsMenuItem(label);
-        await labelMenuItem.click();
+        await this.annotationTree.toggleClass(label);
 
         await responsePromise;
 

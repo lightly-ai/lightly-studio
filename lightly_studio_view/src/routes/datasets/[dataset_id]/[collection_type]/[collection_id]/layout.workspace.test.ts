@@ -89,13 +89,11 @@ vi.mock('$lib/components/Header/MenuDialogHost.svelte', async () => ({
 vi.mock('$lib/components/QueryControl/QueryControl.svelte', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
-vi.mock('$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte', async () => ({
-    default: (await import('./LayoutStub.test.svelte')).default
-}));
 vi.mock('$lib/components/AnnotationTree', async () => ({
     AnnotationTree: (await import('./AnnotationTreeStub.test.svelte')).default,
-    setAnnotationTreeEnabled: vi.fn(),
+    setSampleDetailsFollowTree: vi.fn(),
     setFlatAnnotationTreeCollectionId: vi.fn(),
+    setFlatAnnotationTreeFilter: vi.fn(),
     useTreeAnnotationsFilter: vi.fn(() => ({
         get current() {
             return mocks.treeFilter;
@@ -480,8 +478,7 @@ describe('+layout.svelte collection-grid workspace', () => {
             return vi.mocked(buildImageFilter).mock.lastCall?.[0].annotationFilter;
         };
 
-        it('puts the tree filter into the counts filter while the flag is on', async () => {
-            mocks.featureFlags = ['annotation_tree'];
+        it('puts the tree filter into the counts filter', async () => {
             mocks.treeFilter = { annotation_pairs: pairs };
             setPageRoute(APP_ROUTES.images);
 
@@ -492,16 +489,6 @@ describe('+layout.svelte collection-grid workspace', () => {
                 filter_type: 'annotations',
                 annotation_pairs: pairs
             });
-        });
-
-        it('keeps the pairs out of the counts filter while the flag is off', async () => {
-            mocks.treeFilter = { annotation_pairs: pairs };
-            setPageRoute(APP_ROUTES.images);
-
-            render(LayoutWorkspaceTestWrapper, { props: defaultProps });
-            await tick();
-
-            expect(lastCountsAnnotationFilter()?.annotation_pairs).toBeUndefined();
         });
     });
 
@@ -515,7 +502,6 @@ describe('+layout.svelte collection-grid workspace', () => {
         };
 
         it('shows the flat tree of the tab source on the images collection tree', async () => {
-            mocks.featureFlags = ['annotation_tree'];
             mockRetrieveParentCollection.mockReturnValue(imagesParent);
 
             await renderAnnotations();
@@ -531,16 +517,7 @@ describe('+layout.svelte collection-grid workspace', () => {
             expect(screen.getByTestId('annotation-tree-stub')).toHaveAttribute('data-flat', 'true');
         });
 
-        it('keeps the old menus while the flag is off', async () => {
-            mockRetrieveParentCollection.mockReturnValue(imagesParent);
-
-            await renderAnnotations();
-
-            expect(screen.queryByTestId('annotation-tree-stub')).not.toBeInTheDocument();
-        });
-
         it('keeps the old menus for annotations of video frames', async () => {
-            mocks.featureFlags = ['annotation_tree'];
             mockRetrieveParentCollection.mockReturnValue({
                 sampleType: SampleType.VIDEO_FRAME,
                 collectionId: 'frames-1'

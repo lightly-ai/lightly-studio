@@ -1,7 +1,10 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
-    import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
+    import {
+        treeStateKey,
+        useAnnotationTreeState
+    } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useSettings } from '$lib/hooks/useSettings';
     import CollapseAllButton from './CollapseAllButton.svelte';
@@ -50,7 +53,7 @@
         filter: $imageFilter,
         enabled: !flat
     }));
-    const tree = $derived(useAnnotationTreeState(collectionId));
+    const tree = $derived(useAnnotationTreeState(treeStateKey(collectionId, sourceId)));
     const { untickedPairs, untickedUnannotated, hiddenPairs, groupBy, openGroups } = $derived(tree);
 
     const sources = $derived(
@@ -136,9 +139,10 @@
         />
         <div class="space-y-1 pl-4">
             {#each flatLeaves as leaf (leaf.id)}
+                <!-- A flat list has no "Color by" switch, so it shows class colors. -->
                 <TreeChildRow
                     {leaf}
-                    colorMode={$annotationColorModeStore}
+                    colorMode="class"
                     {find}
                     onToggle={() => actions.setTicked([leaf], !leaf.ticked)}
                     onOnly={() => actions.only([leaf])}

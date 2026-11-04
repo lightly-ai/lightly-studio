@@ -1,10 +1,12 @@
 export { default as AnnotationTree } from './AnnotationTree.svelte';
 export {
-    getAnnotationTreeEnabled,
     getFlatAnnotationTreeCollectionId,
+    getFlatAnnotationTreeFilter,
+    getSampleDetailsFollowTree,
     getTreeAnnotationVisibility,
-    setAnnotationTreeEnabled,
     setFlatAnnotationTreeCollectionId,
+    setFlatAnnotationTreeFilter,
+    setSampleDetailsFollowTree,
     setTreeAnnotationVisibility
 } from './annotationTreeContext';
 export { useTreeAnnotationsFilter } from './useTreeAnnotationsFilter.svelte';

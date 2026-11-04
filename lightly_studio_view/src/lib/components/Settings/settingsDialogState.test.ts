@@ -51,7 +51,7 @@ describe('createSettingsDialogFormState', () => {
             showAnnotationTextLabels: false,
             showSampleFilenames: false,
             showBoundingBoxesForSegmentation: true,
-            enforceColoringByClass: false
+            annotationColorMode: 'source'
         });
     });
 });
@@ -77,7 +77,7 @@ describe('createSettingsSavePayload', () => {
                 showAnnotationTextLabels: true,
                 showSampleFilenames: true,
                 showBoundingBoxesForSegmentation: false,
-                enforceColoringByClass: true
+                annotationColorMode: 'source'
             })
         ).toEqual({
             key_hide_annotations: 'h',
@@ -88,7 +88,7 @@ describe('createSettingsSavePayload', () => {
             show_annotation_text_labels: true,
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: false,
-            annotation_color_mode: 'class',
+            annotation_color_mode: 'source',
             key_toolbar_selection: 'a',
             key_toolbar_drag: 'g',
             key_toolbar_bounding_box: 'q',
@@ -126,8 +126,7 @@ describe('SettingsDialogState', () => {
             key_hide_annotations: 'h',
             image_interpolation: false,
             grid_view_sample_rendering: 'cover',
-            show_annotation_text_labels: true,
-            annotation_color_mode: 'class'
+            show_annotation_text_labels: true
         };
 
         state.hydrate(customSettings);
@@ -136,7 +135,6 @@ describe('SettingsDialogState', () => {
         expect(state.imageInterpolation).toBe(false);
         expect(state.gridViewRendering).toBe('cover');
         expect(state.showAnnotationTextLabels).toBe(true);
-        expect(state.enforceColoringByClass).toBe(true);
     });
 
     it('clears recording state on clearRecording', () => {
@@ -208,7 +206,6 @@ describe('SettingsDialogState', () => {
         state.shortcuts.hideAnnotations = 'z';
         state.showSampleFilenames = true;
         state.imageInterpolation = false;
-        state.enforceColoringByClass = true;
 
         const payload = state.getSavePayload();
 
@@ -217,7 +214,6 @@ describe('SettingsDialogState', () => {
                 key_hide_annotations: 'z',
                 show_sample_filenames: true,
                 image_interpolation: false,
-                annotation_color_mode: 'class',
                 grid_view_sample_rendering: 'contain'
             })
         );

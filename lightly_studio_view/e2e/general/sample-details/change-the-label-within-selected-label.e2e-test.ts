@@ -28,9 +28,9 @@ test('user can change label within the selected label', async ({
     await sampleDetailsPage.setFirstAnnotationLabel(newLabel);
     await expect(sampleDetailsPage.getAnnotationBoxByLabel(newLabel)).toBeVisible();
 
-    // Check what changes are reflected withing the label selection
+    // Check what changes are reflected withing the label selection. The annotation tree keeps
+    // its ticks for the session, so the bear filter is still on.
     await samplesPage.goto();
-    await samplesPage.clickLabel(oldLabel);
     await expect(samplesPage.getSamples()).toHaveCount(bearSamplesCount - 1);
     await samplesPage.clickLabel(oldLabel);
     await samplesPage.clickLabel(newLabel);
@@ -46,7 +46,6 @@ test('user can change label within the selected label', async ({
 
     // Check what changes are reverted withing the label selection
     await samplesPage.goto();
-    await samplesPage.clickLabel(newLabel);
     await expect(samplesPage.getSamples()).toHaveCount(baseballBatSamplesCount);
     await samplesPage.clickLabel(newLabel);
     await samplesPage.clickLabel(oldLabel);

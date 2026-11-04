@@ -2,7 +2,7 @@
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
     import {
-        getAnnotationTreeEnabled,
+        getSampleDetailsFollowTree,
         useTreeAnnotationVisibility,
         useTreeColorMode
     } from '$lib/components/AnnotationTree';
@@ -63,11 +63,11 @@
     const { enforceColoringByClassStore } = useSettings();
     const setTargetSource = useSetTargetSource(() => collectionId);
     const targetSource = $derived(annotationLabelContext.annotationSource ?? null);
-    const isTreeEnabled = getAnnotationTreeEnabled();
-    const treeColorMode = useTreeColorMode(isTreeEnabled);
+    const followsTree = getSampleDetailsFollowTree();
+    const treeColorMode = useTreeColorMode(followsTree);
     const treeVisibility = useTreeAnnotationVisibility(() => ({
         collectionId,
-        enabled: isTreeEnabled()
+        enabled: followsTree()
     }));
 
     const annotationsSort = $derived.by(() => {

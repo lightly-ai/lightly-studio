@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { QueryClient } from '@tanstack/svelte-query';
+import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationPairCount } from '$lib/api/lightly_studio_local';
 import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
@@ -9,6 +10,18 @@ const mocks = vi.hoisted(() => ({
     readAnnotations: vi.fn(),
     countPairs: vi.fn()
 }));
+
+vi.mock('$lib/hooks/useSettings', async (importOriginal) => {
+    const { readable } = await import('svelte/store');
+    const original = await importOriginal<typeof import('$lib/hooks/useSettings')>();
+    return {
+        ...original,
+        useSettings: () => ({
+            ...original.useSettings(),
+            annotationColorModeStore: readable('source')
+        })
+    };
+});
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
@@ -32,9 +45,12 @@ const pair = (sourceId: string, labelId: string, name: string): AnnotationPairCo
 
 let testCount = 0;
 
+// The Annotations tab keeps its tree state under its annotation source.
+const tabTree = useAnnotationTreeState('src-labels');
+
 const renderGridTree = (setUp?: (tree: ReturnType<typeof useAnnotationTreeState>) => void) => {
     testCount += 1;
-    setUp?.(useAnnotationTreeState(`images-${testCount}`));
+    setUp?.(tabTree);
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(AnnotationsFlatTreeTestWrapper, {
         client,
@@ -55,6 +71,7 @@ describe('AnnotationTree on the Annotations grid', () => {
                 pair('src-model', 'lbl-car', 'car')
             ]
         });
+        tabTree.resetTicks();
         mocks.readAnnotations.mockReset();
         mocks.readAnnotations.mockResolvedValue({
             data: { data: [], total_count: 0, nextCursor: null }
@@ -72,6 +89,14 @@ describe('AnnotationTree on the Annotations grid', () => {
         expect(screen.queryByRole('group', { name: 'Color by' })).not.toBeInTheDocument();
         expect(screen.queryByText('No annotations')).not.toBeInTheDocument();
         expect(screen.getByPlaceholderText('Search classes…')).toBeInTheDocument();
+    });
+
+    it('shows class dots although the saved Color by mode is Source', async () => {
+        renderGridTree();
+
+        await screen.findByRole('checkbox', { name: 'car in labels' });
+
+        expect(screen.getAllByTestId('annotation-tree-class-dot')).toHaveLength(2);
     });
 
     it('sends no pair filter while everything is ticked', async () => {
@@ -110,6 +135,19 @@ describe('AnnotationTree on the Annotations grid', () => {
         );
     });
 
+    it('keeps the ticks of the Images grid when a class is unticked', async () => {
+        renderGridTree();
+
+        await fireEvent.click(await screen.findByRole('checkbox', { name: 'car in labels' }));
+
+        await waitFor(() =>
+            expect(get(tabTree.untickedPairs)).toEqual([
+                { collection_id: 'src-labels', annotation_label_id: 'lbl-car' }
+            ])
+        );
+        expect(get(useAnnotationTreeState(`images-${testCount}`).untickedPairs)).toEqual([]);
+    });
+
     it('sends an empty pair list when every class is unticked', async () => {
         renderGridTree();
 
@@ -118,10 +156,12 @@ describe('AnnotationTree on the Annotations grid', () => {
         await waitFor(() => expect(lastBody().annotation_pairs).toEqual([]));
     });
 
-    it('holds the request back while the pair counts load', async () => {
+    it('holds the request back while the pair counts load with a class unticked', async () => {
         mocks.countPairs.mockReturnValue(new Promise(() => {}));
 
-        renderGridTree();
+        renderGridTree((tree) =>
+            tree.setTicked([{ collection_id: 'src-labels', annotation_label_id: 'lbl-car' }], false)
+        );
 
         await new Promise((resolve) => setTimeout(resolve, 20));
         expect(mocks.readAnnotations).not.toHaveBeenCalled();

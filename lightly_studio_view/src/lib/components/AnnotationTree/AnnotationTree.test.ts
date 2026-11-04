@@ -5,7 +5,9 @@ import { setAnnotationClasses, useCustomLabelColors } from '$lib/hooks/useCustom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationPairCount } from '$lib/api/lightly_studio_local';
 import { writable } from 'svelte/store';
+import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
 import AnnotationTreeTestWrapper from './AnnotationTreeTestWrapper.test.svelte';
+import type { PairKey } from './pairRows';
 
 const mocks = vi.hoisted(() => ({
     sources: [] as { collection_id: string; name: string }[],
@@ -59,12 +61,16 @@ const pair = (sourceId: string, labelId: string, name: string): AnnotationPairCo
 
 let testCount = 0;
 
-const renderTree = () => {
+const renderTree = ({ untickedPairs = [] as PairKey[] } = {}) => {
     testCount += 1;
+    const collectionId = `images-${testCount}`;
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     // The tree state lives in session storage per collection, so each test gets its own.
-    render(AnnotationTreeTestWrapper, { client, collectionId: `images-${testCount}` });
+    useAnnotationTreeState(collectionId).setTicked(untickedPairs, false);
+    render(AnnotationTreeTestWrapper, { client, collectionId });
 };
+
+const UNTICKED_CAR = [{ collection_id: 'src-labels', annotation_label_id: 'lbl-car' }];
 
 const groupNamed = async (name: string) => {
     const groups = await screen.findAllByTestId('annotation-tree-group');
@@ -198,17 +204,26 @@ describe('AnnotationTree', () => {
         );
     });
 
-    it('holds the images request back while the pair counts load', async () => {
+    it('holds the images request back while the pair counts load with a row unticked', async () => {
         mocks.pairsResponse = new Promise(() => {});
-        renderTree();
+        renderTree({ untickedPairs: UNTICKED_CAR });
 
         await screen.findAllByTestId('annotation-tree-group');
         expect(mocks.readImages).not.toHaveBeenCalled();
     });
 
+    it('sends the images request at once while the pair counts load with nothing unticked', async () => {
+        mocks.pairsResponse = new Promise(() => {});
+        renderTree();
+
+        await waitFor(() => expect(mocks.readImages).toHaveBeenCalled());
+        const [request] = mocks.readImages.mock.calls[0];
+        expect(request.body.filters.sample_filter.annotations_filter).toBeUndefined();
+    });
+
     it('sends the images request without a tree filter when the pair counts fail', async () => {
         mocks.pairsResponse = Promise.reject(new Error('count failed'));
-        renderTree();
+        renderTree({ untickedPairs: UNTICKED_CAR });
 
         await waitFor(() => expect(mocks.readImages).toHaveBeenCalled());
         const [request] = mocks.readImages.mock.calls[0];
