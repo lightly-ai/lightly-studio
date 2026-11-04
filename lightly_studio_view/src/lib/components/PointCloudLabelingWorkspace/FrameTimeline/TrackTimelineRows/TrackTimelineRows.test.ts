@@ -67,4 +67,21 @@ describe('TrackTimelineRows', () => {
 
         expect(onStartTrack).toHaveBeenCalledOnce();
     });
+
+    it('offers to add a track while editing and shows a hint once armed', async () => {
+        const onAddTrack = vi.fn();
+        const { rerender } = render(TrackTimelineRows, {
+            props: { ...defaultProps, tracks: [] }
+        });
+        expect(screen.queryByText('Add object track')).toBeNull();
+
+        await rerender({ ...defaultProps, tracks: [], onAddTrack });
+        await fireEvent.click(screen.getByText('Add object track'));
+        expect(onAddTrack).toHaveBeenCalledOnce();
+        expect(screen.queryByText(/place the first cuboid/)).toBeNull();
+
+        await rerender({ ...defaultProps, tracks: [], onAddTrack, isAddingTrack: true });
+        expect(screen.getByText('Cancel')).toBeTruthy();
+        expect(screen.getByText(/place the first cuboid/)).toBeTruthy();
+    });
 });

@@ -12,6 +12,8 @@
         onSelectTick: (seqNumber: number) => void;
         onSelectAnnotation: (annotationId: string) => void;
         onStartTrack?: () => void;
+        onAddTrack?: () => void;
+        isAddingTrack?: boolean;
         onSeekStart?: () => void;
         onSeekEnd?: () => void;
     }
@@ -25,6 +27,8 @@
         onSelectTick,
         onSelectAnnotation,
         onStartTrack,
+        onAddTrack,
+        isAddingTrack = false,
         onSeekStart,
         onSeekEnd
     }: Props = $props();
@@ -50,6 +54,8 @@
         {onSelectAnnotation}
         {onSelectTick}
         {onStartTrack}
+        {onAddTrack}
+        {isAddingTrack}
     />
     {#if activeIndex >= 0 && ticks.length > 0}
         {@const position = (activeIndex + 0.5) / ticks.length}

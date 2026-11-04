@@ -11,6 +11,9 @@
         onSelectTick: (seqNumber: number) => void;
         /** Starts a track from the selected cuboid; set only while that is possible. */
         onStartTrack?: () => void;
+        /** Arms or cancels adding a new track; set only while editing. */
+        onAddTrack?: () => void;
+        isAddingTrack?: boolean;
     }
 
     let {
@@ -19,7 +22,9 @@
         selectedAnnotationId,
         onSelectAnnotation,
         onSelectTick,
-        onStartTrack
+        onStartTrack,
+        onAddTrack,
+        isAddingTrack = false
     }: Props = $props();
     const selectedTrackKey = $derived(
         tracks.find((track) =>
@@ -45,12 +50,31 @@
     };
 </script>
 
-{#if tracks.length > 0 || onStartTrack}
+{#if tracks.length > 0 || onStartTrack || onAddTrack}
     <div class="border-t px-2 py-1" data-testid="object-track-rows">
-        {#if onStartTrack}
-            <Button variant="outline" size="sm" class="mb-1 h-6 text-xs" onclick={onStartTrack}>
-                Start track from selected cuboid
-            </Button>
+        {#if onAddTrack || onStartTrack}
+            <div class="mb-1 flex items-center gap-2">
+                {#if onAddTrack}
+                    <Button
+                        variant={isAddingTrack ? 'default' : 'outline'}
+                        size="sm"
+                        class="h-6 text-xs"
+                        onclick={onAddTrack}
+                    >
+                        {isAddingTrack ? 'Cancel' : 'Add object track'}
+                    </Button>
+                    {#if isAddingTrack}
+                        <span class="text-xs text-muted-foreground">
+                            Click in the 3D scene to place the first cuboid.
+                        </span>
+                    {/if}
+                {/if}
+                {#if onStartTrack}
+                    <Button variant="outline" size="sm" class="h-6 text-xs" onclick={onStartTrack}>
+                        Start track from selected cuboid
+                    </Button>
+                {/if}
+            </div>
         {/if}
         {#each tracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}
             <TrackTimelineRow

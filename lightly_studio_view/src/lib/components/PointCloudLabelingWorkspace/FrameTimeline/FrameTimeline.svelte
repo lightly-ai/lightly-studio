@@ -38,6 +38,9 @@
         onSelectAnnotation?: (annotationId: string) => void;
         /** Starts a track from the selected cuboid; set only while that is possible. */
         onStartTrack?: () => void;
+        /** Arms or cancels adding a new track; set only while editing. */
+        onAddTrack?: () => void;
+        isAddingTrack?: boolean;
         /** Called when the user starts dragging the slider. */
         onSeekStart?: () => void;
         /** Called when the user releases the slider. */
@@ -65,6 +68,8 @@
         onSelectTick,
         onSelectAnnotation = () => {},
         onStartTrack,
+        onAddTrack,
+        isAddingTrack = false,
         onSeekStart,
         onSeekEnd,
         onPreviousSequence,
@@ -96,6 +101,8 @@
         {onSelectTick}
         {onSelectAnnotation}
         {onStartTrack}
+        {onAddTrack}
+        {isAddingTrack}
         {onSeekStart}
         {onSeekEnd}
     />

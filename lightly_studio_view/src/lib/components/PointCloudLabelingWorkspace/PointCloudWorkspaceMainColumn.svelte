@@ -125,6 +125,8 @@
         onPlaybackIntervalChange={layout.onPlaybackIntervalChange}
         onSelectTick={layout.onSelectTick}
         onSelectAnnotation={layout.onSelect}
+        onAddTrack={layout.isEditingMode ? layout.onToggleAddTrack : undefined}
+        isAddingTrack={layout.isAddingTrack}
         onStartTrack={startableCuboidId ? () => layout.onStartTrack(startableCuboidId) : undefined}
         onSeekStart={layout.onSeekStart}
         onSeekEnd={layout.onSeekEnd}

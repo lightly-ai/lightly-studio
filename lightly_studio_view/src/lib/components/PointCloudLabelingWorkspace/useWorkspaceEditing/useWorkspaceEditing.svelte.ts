@@ -31,6 +31,8 @@ export function useWorkspaceEditing(
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
+    // The next cuboid placed with the create tool also starts a new object track.
+    let addingTrack = $state(false);
     const {
         handleCreateCuboid: createCuboidAnnotation,
         showSelectClassDialog,
@@ -111,11 +113,20 @@ export function useWorkspaceEditing(
     }
 
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
+        const asTrack = addingTrack;
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
             selectedCuboidId = annotationId;
             activeTool = 'select';
+            addingTrack = false;
+            // A failed attach leaves a plain cuboid, never an empty track.
+            if (asTrack) await handleStartTrack(annotationId);
         });
+    }
+
+    function toggleAddTrack(): void {
+        addingTrack = !addingTrack;
+        activeTool = addingTrack ? 'create-cuboid' : 'select';
     }
 
     const displayedAnnotations = fromStore(annotations);
@@ -145,7 +156,12 @@ export function useWorkspaceEditing(
         },
         set activeTool(value: WorkspaceTool) {
             activeTool = value;
+            addingTrack = false;
         },
+        get isAddingTrack() {
+            return addingTrack && activeTool === 'create-cuboid';
+        },
+        toggleAddTrack,
         get effectiveTool() {
             return getIsEditingMode() ? activeTool : ('select' as const);
         },
