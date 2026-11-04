@@ -59,3 +59,18 @@ class AnnotationPairCount:
     label_name: str
     current_count: int
     total_count: int
+
+
+@dataclass(frozen=True)
+class UnannotatedImageCount:
+    """Count of images without any annotation in one annotation source.
+
+    Attributes:
+        annotation_collection_id: ID of the annotation source collection.
+        current_count: Count with the filter applied.
+        total_count: Count without the filter.
+    """
+
+    annotation_collection_id: UUID
+    current_count: int
+    total_count: int
