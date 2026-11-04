@@ -288,15 +288,20 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 
 **Files:**
 - Modify: `lightly_studio_view/src/lib/hooks/useCustomSourceColors/useCustomSourceColors.ts` — its own `createCustomColorStore()`; remove the PR 7 comment.
-- Modify: `useColorPicker.svelte.ts`, `useColorPickerTestWrapper.test.svelte`, `useColorPicker.test.ts`, `AnnotationColorLegend.svelte` (`kind: 'class'`), `SideMenu/ColorMarker/ColorMarker.svelte` + `ColorMarker.test.ts` (`kind: 'source'`).
+- Modify: `useColorPicker.svelte.ts`, `useColorPickerTestWrapper.test.svelte`, `useColorPicker.test.ts`, `AnnotationColorLegend.svelte` (`useClassColorPicker`), `SideMenu/ColorMarker/ColorMarker.svelte` + `ColorMarker.test.ts` (`useSourceColorPicker`), `hooks/index.ts`.
 
 **Interfaces:**
-- Produces: `useColorPicker(getLabel: () => string, options: { kind: 'class' | 'source' })`. The union stays inline, not an exported type. `'class'` uses `useCustomLabelColors` + `getColorByLabel`; `'source'` uses `useCustomSourceColors` + `getColorBySource`.
+- Produces: `useClassColorPicker(getName: () => string)` (`useCustomLabelColors` + `getColorByLabel`) and `useSourceColorPicker(getName: () => string)` (`useCustomSourceColors` + `getColorBySource`), replacing `useColorPicker`. Both call the private `createColorPicker(getName, colorStore, getDefaultColor)`, which has no class/source branch.
 
 - [ ] **Step 1: Write failing tests:** `ColorMarker.test.ts` `'a source color does not change the class color with the same name'` (class `Predictions` = `#111111`, Apply `#0000ff` in `ColorMarker` → class store keeps `#111111`, source store has `#0000ff`; switch existing assertions to `useCustomSourceColors()`, and move the `getColorByLabel` spies and mocks to `getColorBySource`); `SampleAnnotation.test.ts` `'a class color does not recolor the source in source mode'`.
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
+
+**Deviations (implemented):**
+- Two hooks instead of a `kind` flag: each caller knows its kind statically (review).
+- `createColorPicker` reads `customColorsStore`. The partial `useCustomLabelColors` mocks in `LabelsMenu.test.ts` and `SampleDetailsClassificationSegment.test.ts` add it.
+- The `customLabelColorsStore` / `customSourceColorsStore` aliases stay: they name the store at call sites, and files that use both stores would have to rename on destructure.
 
 ## PR 9: Add "Reset to default" to the color picker
 
@@ -312,7 +317,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - `ColorPickerPanel` `Props` gets `onReset?: () => void`. When set, a `Button` (`variant="ghost"`, same size classes as Cancel, left side of the actions row, `class="mr-auto"`) shows `Reset to default`.
 - `createColorPickerState` `Options` gets `getOnReset: () => (() => void) | undefined` and returns `resetToDefault(): void`: `cancelScheduledPreview()`, `hasPreviewed = false`, `isOpen = false`, then `getOnReset()?.()`. It does not call `onChange` or `onClose`.
 - `ColorPicker` gets the prop `onReset?: () => void`, passes `getOnReset: () => onReset` to the state, and `onReset={onReset ? picker.resetToDefault : undefined}` to the panel.
-- `useColorPicker` adds `hasCustomColor: boolean` (reactive, from `hasSavedColor`) and `resetColor(): void` (ends any open session, clearing its preview, and deletes the saved entry).
+- `createColorPicker` adds `hasCustomColor: boolean` (reactive, from `hasSavedColor`) and `resetColor(): void` (ends any open session, clearing its preview, and deletes the saved entry).
 
 - [ ] **Step 1: Write failing tests:** panel `'shows Reset to default only when onReset is set'`; picker `'Reset to default calls onReset and closes without onClose'`; hook `'resetColor removes the custom color'` (border equals `getColorByLabel('cat', 1).color`).
 - [ ] **Step 2: Run** `npx vitest run src/lib/components/ui/color-picker src/lib/hooks/useColorPicker`. Expected: FAIL.
@@ -335,7 +340,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
   - `reset(): void` — clears the saved layer, the previews and the counters, and bumps the generation, so saves begun before it never apply. PR 12 calls it on dataset change.
   - `replaceSavedColors` keeps the counters and the generation.
   - `getGeneration(): number` — the current generation.
-- `useColorPicker(getLabel, options: { kind: 'class' | 'source'; onCommit?: (color: CustomColor | undefined) => Promise<void> })`:
+- `createColorPicker` gets `onCommit?: (color: CustomColor | undefined) => Promise<void>`; `useClassColorPicker(getName, options?: { onCommit? })` passes it through. `useSourceColorPicker` has no `onCommit`.
   - A session also records `getGeneration()` when it starts. If the generation changed by Apply (a dataset switch with the picker still open), Apply acts as Cancel and does not call `onCommit`.
   - `finishColorChange(applied: boolean): Promise<void>`. On Apply: capture `owner`, the preview value and `ticket = beginSave(label)`, end the session, await `onCommit?.(value)`, on success `setSavedColor(label, value, ticket)`, then always `clearPreviewColor(label, owner)`. A rejection is not rethrown; the `onCommit` owner shows the toast.
   - `resetColor(): Promise<void>`: same flow with a new owner, `setPreviewColor(label, null, owner)`, `value = undefined`.
@@ -353,7 +358,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - Modify: `lightly_studio_view/src/lib/hooks/useCustomLabelColors.ts` (name→ID map); Create `useCustomLabelColors.test.ts`.
 - Modify: `lightly_studio_view/src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+layout.svelte`, next to `annotationLabelsQuery`, two effects in this order: `$effect(() => resetAnnotationClasses(collection.dataset_id));` and `$effect(() => { if (annotationLabelsData) setAnnotationClasses(collection.dataset_id, annotationLabelsData); });`. Use `collection.dataset_id`, not the route's `datasetId`: the route param is the root collection ID, while `annotation_label.dataset_id` points to the `dataset` table. The reset runs as soon as the dataset changes, because `annotationLabelsData` is `undefined` while the new class list loads.
 - Create: `lightly_studio_view/src/lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte.ts` + `.svelte.test.ts`; export from `lib/hooks/index.ts`.
-- Modify: `AnnotationColorLegend.svelte`: `useColorPicker(() => labelName, { kind: 'class', onCommit: (color) => saveClassColor(labelName, color) })`.
+- Modify: `AnnotationColorLegend.svelte`: `useClassColorPicker(() => labelName, { onCommit: (color) => saveClassColor(labelName, color) })`.
 - Modify: `CHANGELOG.md`: `- Annotation class colors are saved in the dataset.` (or extend the "Annotation classes" tab entry).
 - Stub the save hook (`vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({ useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) }) }))`) in every suite that renders the legend: `AnnotationColorLegend.test.ts`, `LabelsMenu.test.ts`, `AnnotationClassRow.test.ts`, `AnnotationClassesTab.test.ts`, `SettingsDialog.test.ts`, `SampleDetailsClassificationSegment.test.ts`, `SampleDetailsSidePanelAnnotation.test.ts`, `SampleDetailsAnnotationSegment.test.ts`. Add it to any other suite that fails with "No QueryClient set".
 

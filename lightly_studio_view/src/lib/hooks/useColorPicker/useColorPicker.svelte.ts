@@ -1,5 +1,6 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { getColorByLabel, hexToRgba, rgbaToHex } from '$lib/utils';
+import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors';
+import { getColorByLabel, getColorBySource, hexToRgba, rgbaToHex } from '$lib/utils';
 import { onDestroy, untrack } from 'svelte';
 import { fromStore } from 'svelte/store';
 
@@ -7,22 +8,38 @@ type SessionColor = NonNullable<
     Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
 >;
 
+type ColorStore = Pick<
+    ReturnType<typeof useCustomLabelColors>,
+    'customColorsStore' | 'setCustomColor' | 'setPreviewColor' | 'clearPreviewColor'
+>;
+
+/** A color picker for an annotation class. See `createColorPicker`. */
+export const useClassColorPicker = (getName: () => string) =>
+    createColorPicker(getName, useCustomLabelColors(), getColorByLabel);
+
+/** A color picker for an annotation source. See `createColorPicker`. */
+export const useSourceColorPicker = (getName: () => string) =>
+    createColorPicker(getName, useCustomSourceColors(), getColorBySource);
+
 /**
- * Resolves the swatch colors for a label (with custom-color overrides applied),
+ * Resolves the swatch colors for a name (with custom-color overrides applied),
  * plus the initial values to seed a color picker, and a setter to persist picks.
  *
- * `getLabel` is a function so the hook stays reactive when the consumer's label changes.
+ * `getName` is a function so the hook stays reactive when the consumer's name changes.
  */
-export function useColorPicker(getLabel: () => string) {
-    const { setCustomColor, setPreviewColor, clearPreviewColor, customLabelColorsStore } =
-        useCustomLabelColors();
-    const colors = fromStore(customLabelColorsStore);
+function createColorPicker(
+    getName: () => string,
+    colorStore: ColorStore,
+    getDefaultColor: typeof getColorByLabel
+) {
+    const { setCustomColor, setPreviewColor, clearPreviewColor } = colorStore;
+    const colors = fromStore(colorStore.customColorsStore);
     // A session starts at the first setColor after a finished one. A rename can change the
-    // label while the picker stays open, so the session follows the label.
+    // name while the picker stays open, so the session follows the name.
     let session: { owner: symbol; name: string; color: SessionColor } | undefined;
 
     $effect.pre(() => {
-        const name = getLabel();
+        const name = getName();
         untrack(() => {
             if (!session || session.name === name) return;
             clearPreviewColor(session.name, session.owner);
@@ -35,9 +52,9 @@ export function useColorPicker(getLabel: () => string) {
         if (session) clearPreviewColor(session.name, session.owner);
     });
 
-    const customColor = $derived(colors.current[getLabel()]);
-    const defaultBorder = $derived(getColorByLabel(getLabel(), 1).color);
-    const defaultBackground = $derived(getColorByLabel(getLabel(), 0.35).color);
+    const customColor = $derived(colors.current[getName()]);
+    const defaultBorder = $derived(getDefaultColor(getName(), 1).color);
+    const defaultBackground = $derived(getDefaultColor(getName(), 0.35).color);
 
     const borderColor = $derived(customColor?.color ?? defaultBorder);
     const backgroundColor = $derived.by(() => {
@@ -62,7 +79,7 @@ export function useColorPicker(getLabel: () => string) {
             return initialAlpha;
         },
         setColor(color: string, alpha: number) {
-            session ??= { owner: Symbol(), name: getLabel(), color: { color, alpha } };
+            session ??= { owner: Symbol(), name: getName(), color: { color, alpha } };
             session.color = { color, alpha };
             setPreviewColor(session.name, session.color, session.owner);
         },

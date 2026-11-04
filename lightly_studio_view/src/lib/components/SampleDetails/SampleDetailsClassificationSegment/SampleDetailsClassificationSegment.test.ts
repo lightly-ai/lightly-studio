@@ -121,6 +121,7 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     const { writable } = await import('svelte/store');
     return {
         useCustomLabelColors: () => ({
+            customColorsStore: writable({}),
             customLabelColorsStore: writable({}),
             getCustomColor: () => undefined,
             setCustomColor: vi.fn(),

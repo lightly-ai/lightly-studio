@@ -1,9 +1,12 @@
 <script lang="ts">
-    import { useColorPicker } from './useColorPicker.svelte';
+    import { useClassColorPicker, useSourceColorPicker } from './useColorPicker.svelte';
 
-    let { label }: { label: string } = $props();
+    let { label, kind = 'class' }: { label: string; kind?: 'class' | 'source' } = $props();
 
-    const picker = useColorPicker(() => label);
+    // The kind is fixed per test, so reading it once is intended.
+    // svelte-ignore state_referenced_locally
+    const usePicker = kind === 'source' ? useSourceColorPicker : useClassColorPicker;
+    const picker = usePicker(() => label);
 </script>
 
 <div data-testid="border-color">{picker.borderColor}</div>
