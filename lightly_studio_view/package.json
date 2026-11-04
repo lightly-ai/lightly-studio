@@ -114,6 +114,7 @@
   "overrides": {
     "dompurify": "^3.4.17",
     "handlebars": "^4.7.10",
+    "js-yaml": "^4.3.2",
     "tinypool": "^2.2.0"
   }
 }
