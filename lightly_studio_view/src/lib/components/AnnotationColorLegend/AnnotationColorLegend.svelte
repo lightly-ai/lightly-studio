@@ -27,7 +27,7 @@
             const custom = colors[label];
             out[label] = {
                 borderColor: custom.color,
-                backgroundColor: getColorByLabel(label, 0.4).color
+                backgroundColor: getColorByLabel(label, selected ? 1 : 0.4).color
             };
         }
         return out;
