@@ -66,7 +66,10 @@
                     name
                 )}
             onDelete={() =>
-                onDelete(annotationClass.annotation_label_id!, annotationClass.annotation_label_name)}
+                onDelete(
+                    annotationClass.annotation_label_id!,
+                    annotationClass.annotation_label_name
+                )}
         />
     {/each}
     {#if addName && !isAddEnterTarget}

@@ -31,7 +31,11 @@ describe('getDrawerLabel', () => {
 
     it('has no class when nothing is selected and no class is sticky', () => {
         expect(
-            getDrawerLabel({ isAnnotationSelected: false, contextLabel: 'cat', stickyClass: undefined })
+            getDrawerLabel({
+                isAnnotationSelected: false,
+                contextLabel: 'cat',
+                stickyClass: undefined
+            })
         ).toBeNull();
     });
 

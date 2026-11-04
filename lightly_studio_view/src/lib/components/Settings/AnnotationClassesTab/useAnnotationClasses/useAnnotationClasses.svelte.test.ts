@@ -142,7 +142,11 @@ describe('useAnnotationClasses', () => {
 
         await classes.renameClass('label-1', 'cat', 'kitty');
 
-        expect(mocks.renameLastAnnotationLabel).toHaveBeenCalledWith('collection-1', 'cat', 'kitty');
+        expect(mocks.renameLastAnnotationLabel).toHaveBeenCalledWith(
+            'collection-1',
+            'cat',
+            'kitty'
+        );
         expect(mocks.renameRecentClass).toHaveBeenCalledWith('collection-1', 'cat', 'kitty');
     });
 
