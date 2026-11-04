@@ -52,4 +52,12 @@ describe('SelectedBoxPanel', () => {
 
         expect(mocks.remove).toHaveBeenCalledOnce();
     });
+
+    it('deletes the box on Delete', async () => {
+        render(SelectedBoxPanel, { collectionId: 'col-1', annotation, refetch: vi.fn() });
+
+        await fireEvent.keyDown(window, { key: 'Delete' });
+
+        expect(mocks.remove).toHaveBeenCalledOnce();
+    });
 });

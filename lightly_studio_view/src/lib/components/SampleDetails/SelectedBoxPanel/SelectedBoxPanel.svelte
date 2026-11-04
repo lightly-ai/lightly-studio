@@ -5,7 +5,10 @@
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import { FolderInput, Trash2 } from '@lucide/svelte';
-    import { placePanel } from './SelectedBoxPanel.helpers';
+    import {
+        isDeleteKey,
+        placePanel
+    } from '$lib/components/SampleDetails/AnnotationCard/annotationCard.helpers';
     import { useSelectedBoxActions } from './useSelectedBoxActions.svelte';
 
     interface Props {
@@ -60,6 +63,14 @@
         return () => cancelAnimationFrame(frame);
     });
 </script>
+
+<svelte:window
+    onkeydown={(event) => {
+        if (!isDeleteKey(event)) return;
+        event.preventDefault();
+        actions.remove();
+    }}
+/>
 
 <div
     bind:this={panel}
