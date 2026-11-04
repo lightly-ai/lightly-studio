@@ -20,11 +20,9 @@ class CollectionTransport(Protocol):
         Raises:
             ValueError: If a collection with the same name exists under the same parent.
         """
-        ...
 
     def get_by_id(self, collection_id: UUID) -> CollectionView | None:
         """Get a collection by ID, or None if it does not exist."""
-        ...
 
     def get_by_name(self, name: str, parent_collection_id: UUID | None) -> CollectionView | None:
         """Get a collection by name under a parent, or None if it does not exist.
@@ -33,7 +31,6 @@ class CollectionTransport(Protocol):
             name: The name of the collection.
             parent_collection_id: The ID of the parent. None finds a root collection.
         """
-        ...
 
     def get_or_create_child(
         self, collection_id: UUID, sample_type: SampleType, name: str | None
@@ -48,4 +45,3 @@ class CollectionTransport(Protocol):
         Returns:
             The ID of the child collection.
         """
-        ...

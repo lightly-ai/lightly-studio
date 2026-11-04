@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 import pytest
 
 from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.transport.collection_transport import CollectionTransport
 from lightly_studio.transport.local.local_collection_transport import LocalCollectionTransport
 
 
 @pytest.mark.usefixtures("patch_collection")
 class TestLocalCollectionTransport:
     def test_create(self) -> None:
-        transport = LocalCollectionTransport()
+        transport: CollectionTransport = LocalCollectionTransport()
 
         root = transport.create(
             collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
@@ -30,7 +31,7 @@ class TestLocalCollectionTransport:
         assert child.dataset_id == root.dataset_id
 
     def test_create__duplicate_name(self) -> None:
-        transport = LocalCollectionTransport()
+        transport: CollectionTransport = LocalCollectionTransport()
         collection = CollectionCreate(name="root", sample_type=SampleType.IMAGE)
         transport.create(collection=collection)
 
@@ -38,16 +39,16 @@ class TestLocalCollectionTransport:
             transport.create(collection=collection)
 
     def test_get_by_id(self) -> None:
-        transport = LocalCollectionTransport()
+        transport: CollectionTransport = LocalCollectionTransport()
         created = transport.create(
             collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
         )
 
         assert transport.get_by_id(collection_id=created.collection_id) == created
-        assert transport.get_by_id(collection_id=uuid4()) is None
+        assert transport.get_by_id(collection_id=uuid.uuid4()) is None
 
     def test_get_by_name(self) -> None:
-        transport = LocalCollectionTransport()
+        transport: CollectionTransport = LocalCollectionTransport()
         created = transport.create(
             collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
         )
@@ -56,7 +57,7 @@ class TestLocalCollectionTransport:
         assert transport.get_by_name(name="other", parent_collection_id=None) is None
 
     def test_get_or_create_child(self) -> None:
-        transport = LocalCollectionTransport()
+        transport: CollectionTransport = LocalCollectionTransport()
         root = transport.create(
             collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
         )
