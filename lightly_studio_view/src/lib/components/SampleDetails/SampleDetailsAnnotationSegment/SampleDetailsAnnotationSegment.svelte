@@ -16,6 +16,7 @@
     import { useAnnotationTarget } from '$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
+    import { Eye, EyeOff } from '@lucide/svelte';
     import { toast } from 'svelte-sonner';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -227,6 +228,24 @@
         rememberSourceVisibility(sourceId, sourceAnnotations);
     };
 
+    const areAllHidden = $derived(
+        annotationsSort.length > 0 && areAllAnnotationsHidden(annotationsSort, annotationsIdsToHide)
+    );
+
+    const onToggleAllVisibility = () => {
+        const next = new Set(annotationsIdsToHide);
+        for (const annotation of annotationsSort) {
+            if (areAllHidden) next.delete(annotation.sample_id);
+            else next.add(annotation.sample_id);
+        }
+        annotationsIdsToHide = next;
+        for (const group of allSourceGroups) {
+            if (group.annotations.length > 0) {
+                rememberSourceVisibility(group.id, group.annotations);
+            }
+        }
+    };
+
     const rememberSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
         setSourceGroupState(sourceId, {
             hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
@@ -275,6 +294,20 @@
 
 <Segment title="Annotations">
     {#snippet headerAction()}
+        {#if annotationsSort.length > 0}
+            {@const label = areAllHidden ? 'Show all' : 'Hide all'}
+            {@const VisibilityIcon = areAllHidden ? EyeOff : Eye}
+            <button
+                type="button"
+                class="shrink-0 px-1 text-muted-foreground hover:text-foreground"
+                title={label}
+                aria-label={label}
+                data-testid="toggle-all-visibility"
+                onclick={onToggleAllVisibility}
+            >
+                <VisibilityIcon class="size-3.5" />
+            </button>
+        {/if}
         <button
             type="button"
             class="shrink-0 px-1 text-xs text-muted-foreground hover:text-foreground"

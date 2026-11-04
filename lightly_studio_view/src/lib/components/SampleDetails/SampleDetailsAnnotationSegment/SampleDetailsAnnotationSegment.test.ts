@@ -1,6 +1,7 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
 import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
@@ -736,6 +737,53 @@ describe('SampleDetailsAnnotationSegment', () => {
             await waitFor(() =>
                 expect(screen.queryAllByTestId('mock-annotation-row')).toHaveLength(0)
             );
+        });
+    });
+
+    describe('hiding and showing all annotations', () => {
+        const annotations = [
+            createAnnotation('a1', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('a2', predictionsSource.collection_id, 'dog')
+        ];
+
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+        });
+
+        it('hides every source with Hide all and shows them with Show all', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByRole('button', { name: 'Hide all' }));
+
+            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(2);
+            expect(getRow('a1')).toHaveAttribute('data-hidden', 'true');
+            expect(getRow('a2')).toHaveAttribute('data-hidden', 'true');
+            expect(screen.queryByRole('button', { name: 'Hide all' })).not.toBeInTheDocument();
+
+            await user.click(screen.getByRole('button', { name: 'Show all' }));
+
+            expect(screen.queryByTestId('source-group-eye-off')).not.toBeInTheDocument();
+            expect(getRow('a1')).not.toHaveAttribute('data-hidden', 'true');
+            expect(screen.getByRole('button', { name: 'Hide all' })).toBeInTheDocument();
+        });
+
+        it('hides the rest when only some annotations are hidden, and remembers each source', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+            await user.click(screen.getAllByTestId('source-group-eye')[0]);
+
+            await user.click(screen.getByRole('button', { name: 'Hide all' }));
+
+            expect(screen.getAllByTestId('source-group-eye-off')).toHaveLength(2);
+            expect(get(useAnnotationSourceGroupState().sourceGroupStates)).toMatchObject({
+                [groundTruthSource.collection_id]: { hidden: true },
+                [predictionsSource.collection_id]: { hidden: true }
+            });
         });
     });
 
