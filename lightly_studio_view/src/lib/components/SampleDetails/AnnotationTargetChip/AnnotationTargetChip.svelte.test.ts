@@ -1,7 +1,8 @@
-import { render, screen } from '@testing-library/svelte';
+import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { getColorByLabel } from '$lib/utils';
 import AnnotationTargetChip from './AnnotationTargetChip.svelte';
 
@@ -178,5 +179,24 @@ describe('AnnotationTargetChip', () => {
             'bg-popover',
             'text-popover-foreground'
         );
+    });
+
+    it('follows a custom source and class color', async () => {
+        const { setCustomColor, deleteCustomColor } = useCustomLabelColors();
+        setup({ annotationSource: 'labels' });
+
+        setCustomColor('labels', '#112233');
+        setCustomColor('deer', '#445566');
+
+        await waitFor(() =>
+            expect(screen.getByTestId('annotation-target-source-dot')).toHaveStyle({
+                backgroundColor: '#112233'
+            })
+        );
+        expect(screen.getByTestId('annotation-target-class-dot')).toHaveStyle({
+            backgroundColor: '#445566'
+        });
+        deleteCustomColor('labels');
+        deleteCustomColor('deer');
     });
 });

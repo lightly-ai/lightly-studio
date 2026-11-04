@@ -9,7 +9,7 @@
     import { resolveTargetSource } from '$lib/hooks/useAnnotationTarget/resolveTargetSource';
     import { useSetTargetSource } from '$lib/hooks/useAnnotationTarget/useSetTargetSource';
     import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
-    import { getColorByLabel } from '$lib/utils';
+    import { getLabelColor } from '$lib/utils';
     import { getShortcutKeys, isSearchStartKey } from '../AnnotationCard/annotationCard.helpers';
     import ClassSearchList from '../ClassSearchList/ClassSearchList.svelte';
     import SourceSearchList from '../SourceSearchList/SourceSearchList.svelte';
@@ -37,11 +37,11 @@
     );
     const className = $derived($stickyClasses[collectionId]);
     // The same colors as the card header and the canvas.
-    const sourceColor = $derived(source ? getColorByLabel(source, 1).color : undefined);
+    const sourceColor = $derived(
+        source ? getLabelColor($customLabelColorsStore, source) : undefined
+    );
     const classColor = $derived(
-        className
-            ? ($customLabelColorsStore[className]?.color ?? getColorByLabel(className, 1).color)
-            : undefined
+        className ? getLabelColor($customLabelColorsStore, className) : undefined
     );
 
     let isSourceOpen = $state(false);

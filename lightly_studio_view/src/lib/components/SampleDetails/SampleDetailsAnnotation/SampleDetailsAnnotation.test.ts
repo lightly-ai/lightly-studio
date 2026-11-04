@@ -91,7 +91,7 @@ describe('SampleDetailsAnnotation', () => {
         expect(opacity).toBeCloseTo(0.3);
     });
 
-    it('marks the annotation as moving during a drag and clears it on destroy', async () => {
+    it('marks the annotation as moving during a drag and leaves the flag alone on destroy otherwise', async () => {
         const { unmount } = render(SampleDetailsAnnotation, { ...defaultProps, isResizable: true });
         const view = window;
         const mouse = (type: string, target: EventTarget) => {
@@ -108,6 +108,18 @@ describe('SampleDetailsAnnotation', () => {
 
         setIsMovingAnnotation.mockClear();
         unmount();
+        expect(setIsMovingAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('clears the moving flag when destroyed in the middle of a drag', async () => {
+        const { unmount } = render(SampleDetailsAnnotation, { ...defaultProps, isResizable: true });
+        const event = new MouseEvent('mousedown', { bubbles: true, button: 0 });
+        Object.defineProperty(event, 'view', { value: window });
+        (await screen.findByTestId('annotation_box')).dispatchEvent(event);
+        setIsMovingAnnotation.mockClear();
+
+        unmount();
+
         expect(setIsMovingAnnotation).toHaveBeenCalledWith(false);
     });
 });

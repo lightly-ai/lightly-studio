@@ -46,8 +46,14 @@
         annotationId
     }));
     const { setCurrentBoundingBox, setIsMovingAnnotation } = useAnnotationLabelContext();
-    // The box is remounted after an edit, so a drag can't be left marked as running.
-    onDestroy(() => setIsMovingAnnotation(false));
+    // The box is remounted after an edit, so a drag can't be left marked as running. Only the
+    // instance that started the drag resets it.
+    let isDragging = false;
+    const setDragging = (value: boolean) => {
+        isDragging = value;
+        setIsMovingAnnotation(value);
+    };
+    onDestroy(() => isDragging && setIsMovingAnnotation(false));
 
     let annotation = $derived(annotationResp.data);
 
@@ -101,8 +107,8 @@
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}
-                onDragStart={() => setIsMovingAnnotation(true)}
-                onDragStop={() => setIsMovingAnnotation(false)}
+                onDragStart={() => setDragging(true)}
+                onDragStop={() => setDragging(false)}
                 {highlight}
                 {scale}
                 {colorBySource}

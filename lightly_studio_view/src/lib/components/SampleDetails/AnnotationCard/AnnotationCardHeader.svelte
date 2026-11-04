@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Trash2, X } from '@lucide/svelte';
-    import { getColorByLabel } from '$lib/utils';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { getLabelColor } from '$lib/utils';
 
     interface Props {
         sourceName: string;
@@ -13,6 +14,7 @@
     }
 
     const { sourceName, confidence, title, onMove, onRemove, onClose }: Props = $props();
+    const { customLabelColorsStore } = useCustomLabelColors();
     const iconButtonClass =
         'inline-flex size-6 items-center justify-center rounded-md text-muted-foreground hover:text-foreground';
 </script>
@@ -29,7 +31,7 @@
         >
             <span
                 class="size-2 shrink-0 rounded-full"
-                style:background-color={getColorByLabel(sourceName, 1).color}
+                style:background-color={getLabelColor($customLabelColorsStore, sourceName)}
             ></span>
             <span class="truncate">{sourceName}</span>
         </button>

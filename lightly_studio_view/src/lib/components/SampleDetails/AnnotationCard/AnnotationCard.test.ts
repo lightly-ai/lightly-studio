@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { useRecentClasses } from '$lib/hooks';
+import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import AnnotationCard from './AnnotationCard.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -217,5 +218,21 @@ describe('AnnotationCard', () => {
         });
 
         expect(screen.getByText('Confidence 0.88')).toBeInTheDocument();
+    });
+
+    it('colors the source dot with the custom source color', async () => {
+        const { setCustomColor, deleteCustomColor } = useCustomLabelColors();
+        renderCard();
+
+        setCustomColor('predictions', '#112233');
+
+        await waitFor(() =>
+            expect(
+                screen.getByTitle('Move to another annotation source').firstElementChild
+            ).toHaveStyle({
+                backgroundColor: '#112233'
+            })
+        );
+        deleteCustomColor('predictions');
     });
 });
