@@ -7,6 +7,7 @@ import {
     TARGET_PICK_MESSAGES,
     useAnnotateVariant
 } from '$lib/hooks/useAnnotateVariant/useAnnotateVariant';
+import { useSetTargetSource } from './useSetTargetSource';
 import { getTargetBlockedReason, resolveTargetSource } from './resolveTargetSource';
 
 /**
@@ -23,7 +24,7 @@ export const useAnnotationTarget = ({
     getIsTargetHidden: () => boolean;
 }) => {
     const { context, setAnnotationSource } = useAnnotationLabelContext();
-    const { updateLastAnnotationSource, lastAnnotationSource } = useGlobalStorage();
+    const { lastAnnotationSource } = useGlobalStorage();
     // Fixed for the page load, so it is read once.
     const pickMessage = TARGET_PICK_MESSAGES[get(useAnnotateVariant().annotateVariant)];
     const annotationCollections = useAnnotationCollections(() => ({
@@ -59,12 +60,7 @@ export const useAnnotationTarget = ({
         })
     );
 
-    const setTargetSource = (name: string) => {
-        const trimmed = name.trim();
-        if (!trimmed) return;
-        setAnnotationSource(trimmed);
-        updateLastAnnotationSource(getCollectionId(), trimmed);
-    };
+    const setTargetSource = useSetTargetSource(getCollectionId);
 
     return {
         get targetSource() {

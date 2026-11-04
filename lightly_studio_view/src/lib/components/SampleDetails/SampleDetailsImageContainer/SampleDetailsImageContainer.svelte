@@ -32,6 +32,7 @@
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
+    import { AnnotationTargetChip } from '../AnnotationTargetChip';
     import AnnotationCard from '../AnnotationCard/AnnotationCard.svelte';
     import PendingBoxCard from '../AnnotationCard/PendingBoxCard.svelte';
     import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
@@ -276,6 +277,9 @@
                 showSegmentationTool={shouldShowSegmentationToolInToolbar}
                 isPending={$isPending}
             />
+            {#if !annotationLabelContext.isOnAnnotationDetailsView}
+                <AnnotationTargetChip {collectionId} />
+            {/if}
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
