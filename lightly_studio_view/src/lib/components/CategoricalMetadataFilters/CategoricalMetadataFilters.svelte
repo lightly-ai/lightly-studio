@@ -6,6 +6,7 @@
     import type { ImageFilter } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { CategoricalMetadataValue } from '$lib/services/types';
+    import { getErrorMessage } from '$lib/utils';
 
     interface Props {
         collectionId: string;
@@ -64,7 +65,7 @@
         selectedValues={$categoricalMetadataValues[field] ?? []}
         {loading}
         {updating}
-        error={categoricalQuery.error?.message}
+        error={getErrorMessage(categoricalQuery.error)}
         onRetry={() => categoricalQuery.refetch()}
         onToggle={(value) => onValueToggle(field, value)}
         onClear={() => onValuesClear(field)}

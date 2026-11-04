@@ -91,6 +91,7 @@
     import { isPanelVisible } from './panelVisibility';
     import { useOnboarding } from '$lib/hooks';
     import { getLightlyEnterpriseSession } from '$lib/hooks/useAuth/getLightlyEnterpriseSession/getLightlyEnterpriseSession';
+    import { getErrorMessage } from '$lib/utils';
     const { data, children } = $props();
     const {
         collection,
@@ -777,7 +778,7 @@
                                         onClose={() => setActivePanel('none')}
                                         {evaluationRuns}
                                         isLoading={evaluationRunsQuery.isLoading}
-                                        error={evaluationRunsQuery.error?.message}
+                                        error={getErrorMessage(evaluationRunsQuery.error)}
                                         datasetId={collection.dataset_id}
                                         {collectionId}
                                     />

@@ -148,7 +148,7 @@ describe('useVideo', () => {
         const { data, error, isLoading, loadById } = renderHook();
 
         const dataValues: (VideoView | undefined)[] = [];
-        const errorValues: (Error | null)[] = [];
+        const errorValues: unknown[] = [];
         const loadingValues: boolean[] = [];
 
         const unsubData = data.subscribe((value) => dataValues.push(value));

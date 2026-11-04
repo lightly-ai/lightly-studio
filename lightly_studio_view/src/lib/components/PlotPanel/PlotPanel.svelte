@@ -53,6 +53,7 @@
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable, get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
+    import { getErrorMessage } from '$lib/utils';
 
     let { collectionId }: { collectionId: string } = $props();
     const { trackEvent } = usePostHog();
@@ -503,7 +504,7 @@
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
-            return embeddingsData.error?.message ?? 'Unknown error';
+            return getErrorMessage(embeddingsData.error) ?? 'Unknown error';
         }
         if ($arrowError) {
             return $arrowError;

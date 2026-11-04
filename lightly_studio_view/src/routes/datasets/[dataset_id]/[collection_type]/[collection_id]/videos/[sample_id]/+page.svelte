@@ -12,6 +12,7 @@
     import VideoDetailsBreadcrumb from '$lib/components/VideoDetailsBreadcrumb/VideoDetailsBreadcrumb.svelte';
     import { useTrackSampleInspected } from '$lib/hooks';
     import { isVideosRoute } from '$lib/routes';
+    import { getErrorMessage } from '$lib/utils';
 
     const { data }: { data: PageData } = $props();
 
@@ -84,5 +85,5 @@
 {:else if $isLoading}
     <Spinner />
 {:else if $error}
-    <Alert title="Error loading video">{$error.message}</Alert>
+    <Alert title="Error loading video">{getErrorMessage($error)}</Alert>
 {/if}

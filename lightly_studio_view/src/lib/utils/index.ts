@@ -14,6 +14,7 @@ export * from './isTextInputTarget';
 export * from './isOverlayTarget';
 export * from './shouldShowBoundingBoxForAnnotation';
 export * from './navigation';
+export { getErrorMessage } from './getErrorMessage/getErrorMessage';
 export { isImageView } from './isImageView/isImageView';
 export { isVideoView } from './isVideoView/isVideoView';
 export { getImageURL as getImageURLById } from './getImageURL';

@@ -16,6 +16,7 @@ import {
     selectCategoricalMetadataKeys,
     selectNumericMetadataKeys
 } from '../metadataDistributionSource';
+import { getErrorMessage } from '$lib/utils';
 
 type MetadataFilter = (VideoFilter & { filter_type: 'video' }) | undefined;
 
@@ -118,7 +119,9 @@ export function useVideoMetadataDistributionSource(
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,
             // The filtered query draws the foreground bars, so its failure must show too.
-            categoricalError: (categoricalQuery.error ?? categoricalFilteredQuery.error)?.message
+            categoricalError: getErrorMessage(
+                categoricalQuery.error ?? categoricalFilteredQuery.error
+            )
         });
     });
 

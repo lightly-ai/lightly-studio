@@ -39,8 +39,8 @@ export async function fetchTickData(
         parseAs: 'arrayBuffer',
         signal
     });
-    if (!response.ok || !data) {
-        throw new Error(`Could not load tick ${seqNumber} (${response.status}).`);
+    if (!response?.ok || !data) {
+        throw new Error(`Could not load tick ${seqNumber} (${response?.status}).`);
     }
     // parseAs: 'arrayBuffer' makes data an ArrayBuffer at runtime, but the type is unknown.
     const payloads = decodeTickPayloads(data as ArrayBuffer);
