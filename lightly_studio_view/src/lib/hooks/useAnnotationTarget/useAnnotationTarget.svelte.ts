@@ -1,5 +1,5 @@
 import { untrack } from 'svelte';
-import { get } from 'svelte/store';
+import { fromStore, get } from 'svelte/store';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 import { useDefaultSource } from '$lib/hooks/useDefaultSource/useDefaultSource';
@@ -27,6 +27,7 @@ export const useAnnotationTarget = ({
     const { context, setAnnotationSource } = useAnnotationLabelContext();
     const { lastAnnotationSource } = useGlobalStorage();
     const { defaultSources } = useDefaultSource();
+    const defaultSourcesState = fromStore(defaultSources);
     const annotationCollections = useAnnotationCollections(() => ({
         collectionId: getCollectionId()
     }));
@@ -41,15 +42,30 @@ export const useAnnotationTarget = ({
         );
     });
 
-    // Seed the context with the default or the only source once the list has loaded. It does not
-    // write `lastAnnotationSource`, so a default never looks like a remembered pick.
+    // Seed the context with the default or the only source once the list has loaded, also when
+    // Settings sets a default later. It does not write `lastAnnotationSource`, so a default never
+    // looks like a remembered pick.
     $effect(() => {
         const initial = pickInitialSource({
             chosenSource: context.annotationSource,
             sourceNames,
-            defaultSource: get(defaultSources)[getCollectionId()]
+            defaultSource: defaultSourcesState.current[getCollectionId()]
         });
         if (initial) setAnnotationSource(initial);
+    });
+
+    // A seeded default is not a pick, so it follows when Settings renames or replaces the default.
+    $effect(() => {
+        let previous: string | undefined;
+        return defaultSources.subscribe((stored) => {
+            const collectionId = untrack(getCollectionId);
+            const next = stored[collectionId];
+            const isSeeded =
+                untrack(() => context.annotationSource) === previous &&
+                get(lastAnnotationSource)[collectionId] !== previous;
+            if (previous && next && isSeeded) setAnnotationSource(next);
+            previous = next;
+        });
     });
 
     // Settings can rename the target source while this page is open. The rename updates the
