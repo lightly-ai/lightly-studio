@@ -21,6 +21,7 @@ export type Scope =
 
 export interface FieldDoc {
     name: string;
+    insertText?: string;
     type: 'int' | 'float' | 'string' | 'datetime';
     description: string;
 }

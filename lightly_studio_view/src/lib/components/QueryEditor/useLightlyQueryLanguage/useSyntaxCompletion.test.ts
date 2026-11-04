@@ -230,6 +230,24 @@ describe('useSyntaxCompletion', () => {
         });
     });
 
+    it('replaces a quoted metric with a schema fallback suggestion', async () => {
+        const { provideCompletionItems } = await loadAndAttach([]);
+        const prefix = 'sample_evaluation(name = "run1" AND ';
+        const text = `${prefix}"tp" > 0)`;
+        const column = prefix.length + 5;
+        const result = await provideCompletionItems(
+            makeModel(text, { startColumn: column, endColumn: column }) as never,
+            { lineNumber: 1, column } as never
+        );
+        const suggestion = result.suggestions.find((item) => item.label === '"fp"');
+        const range = suggestion?.range as monaco.IRange;
+        const completed =
+            text.slice(0, range.startColumn - 1) +
+            suggestion?.insertText +
+            text.slice(range.endColumn - 1);
+        expect(completed).toBe(`${prefix}"fp" > 0)`);
+    });
+
     it('registers completion provider only once per language id', async () => {
         const { useSyntaxCompletion } = await import('./useSyntaxCompletion');
         useSyntaxCompletion({ languageId: 'lightly-query' });
@@ -661,4 +679,37 @@ describe('useSyntaxCompletion', () => {
             expect.arrayContaining([expect.stringMatching(/^(metadata|true|false)$/)])
         );
     });
+});
+
+it.each([
+    ['sample_evaluation(', true],
+    ['sample_evaluation(na', true],
+    ['sample_evaluation(name = "run1" AND ', false],
+    ['sample_evaluation(name = "run1" AND (NOT ', false],
+    ['sample_evaluation(# AND\n', true]
+])('filters evaluation suggestions at %s', async (text, selector) => {
+    const { provideCompletionItems } = await loadAndAttach([{ label: 'name' }, { label: '"tp"' }]);
+    const column = text.length + 1;
+    const result = await provideCompletionItems(
+        makeModel(text, { startColumn: column, endColumn: column }) as never,
+        { lineNumber: 1, column } as never
+    );
+    const labels = result.suggestions.map((item) => item.label);
+    expect(labels.includes('name')).toBe(selector);
+    expect(labels.includes('"tp"')).toBe(!selector);
+    expect(labels.includes('"fp"')).toBe(!selector);
+});
+
+it('offers AND after the run selector without field suggestions', async () => {
+    const { provideCompletionItems } = await loadAndAttach([{ label: 'name' }]);
+    const text = 'sample_evaluation(name = "run AND sample_evaluation(" ';
+    const column = text.length + 1;
+    const result = await provideCompletionItems(
+        makeModel(text, { startColumn: column, endColumn: column }) as never,
+        { lineNumber: 1, column } as never
+    );
+    const labels = result.suggestions.map((item) => item.label);
+    expect(labels).toContain('AND');
+    expect(labels).not.toContain('name');
+    expect(labels).not.toContain('"tp"');
 });
