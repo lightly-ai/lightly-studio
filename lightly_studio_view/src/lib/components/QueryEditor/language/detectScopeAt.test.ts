@@ -56,3 +56,11 @@ it('tracks evaluation scope through nested parentheses and returns to sample sco
     expect(detectScopeAt(text, text.indexOf('fn'))).toBe('sample_evaluation');
     expect(detectScopeAt(text, text.indexOf('width'))).toBe('image');
 });
+
+it.each(['"score)', "'score)", '"classification(', '"score\\")'])(
+    'ignores scope tokens in unfinished metric %s',
+    (metric) => {
+        const text = `sample_evaluation(name = "run1" AND ${metric}`;
+        expect(detectScopeAt(text, text.length)).toBe('sample_evaluation');
+    }
+);

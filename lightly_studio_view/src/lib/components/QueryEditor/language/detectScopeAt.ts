@@ -10,7 +10,7 @@ import type { Scope } from './types';
 export function detectScopeAt(text: string, offset: number): Scope {
     const upTo = text
         .slice(0, offset)
-        .replace(/"([^"\\]|\\.)*"|'([^'\\]|\\.)*'|#[^\n\r]*/g, (token) =>
+        .replace(/"([^"\\]|\\.)*"?|'([^'\\]|\\.)*'?|#[^\n\r]*/g, (token) =>
             token.startsWith('#') ? '' : '""'
         );
     type Frame = Scope | 'paren';

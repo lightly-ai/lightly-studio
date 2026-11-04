@@ -146,6 +146,8 @@ describe('useSyntaxCompletion', () => {
     });
 
     it.each([
+        ['"score)', 7],
+        ["'score)", 7],
         ['"tp"', 4],
         ["'tp'", 4],
         ['"tp"', 2],

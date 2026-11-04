@@ -4,6 +4,7 @@ import { getQuotedMetricRange } from './getQuotedMetricRange';
 describe('getQuotedMetricRange', () => {
     it.each([
         'sample_evaluation(name = "tp"',
+        'sample_evaluation(name = "run# AND" "tp"',
         'sample_evaluation(name = "run1" AND "tp" > 0 ',
         'sample_evaluation(name = "run1" AND # "tp"'
     ])('keeps ordinary completion ranges for %s', (text) => {
@@ -27,4 +28,16 @@ describe('getQuotedMetricRange', () => {
             })
         ).toEqual({ startLineNumber: 2, endLineNumber: 2, startColumn: 8, endColumn: 12 });
     });
+});
+
+it.each(['AND', 'OR', 'NOT', '('])('replaces metrics after a comment following %s', (operator) => {
+    const prefix = `sample_evaluation(name = "run#1" ${operator} # explanation "ignored"\n  `;
+    const text = `${prefix}"tp" > 0)`;
+    expect(
+        getQuotedMetricRange({
+            text,
+            offset: prefix.length + 3,
+            position: { lineNumber: 2, column: 6 }
+        })
+    ).toEqual({ startLineNumber: 2, endLineNumber: 2, startColumn: 3, endColumn: 7 });
 });
