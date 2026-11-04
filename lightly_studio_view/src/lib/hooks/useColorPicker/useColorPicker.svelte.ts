@@ -10,32 +10,16 @@ type SessionColor = NonNullable<
 
 type ColorStore = Pick<
     ReturnType<typeof useCustomLabelColors>,
-    'setCustomColor' | 'setPreviewColor' | 'clearPreviewColor'
-> & { colorsStore: ReturnType<typeof useCustomLabelColors>['customLabelColorsStore'] };
-
-// The hooks read the customLabelColorsStore / customSourceColorsStore aliases, because the
-// partial useCustomLabelColors mocks in LabelsMenu.test.ts and
-// SampleDetailsClassificationSegment.test.ts provide only those.
+    'customColorsStore' | 'setCustomColor' | 'setPreviewColor' | 'clearPreviewColor'
+>;
 
 /** A color picker for an annotation class. See `createColorPicker`. */
-export const useClassColorPicker = (getName: () => string) => {
-    const store = useCustomLabelColors();
-    return createColorPicker(
-        getName,
-        { ...store, colorsStore: store.customLabelColorsStore },
-        getColorByLabel
-    );
-};
+export const useClassColorPicker = (getName: () => string) =>
+    createColorPicker(getName, useCustomLabelColors(), getColorByLabel);
 
 /** A color picker for an annotation source. See `createColorPicker`. */
-export const useSourceColorPicker = (getName: () => string) => {
-    const store = useCustomSourceColors();
-    return createColorPicker(
-        getName,
-        { ...store, colorsStore: store.customSourceColorsStore },
-        getColorBySource
-    );
-};
+export const useSourceColorPicker = (getName: () => string) =>
+    createColorPicker(getName, useCustomSourceColors(), getColorBySource);
 
 /**
  * Resolves the swatch colors for a name (with custom-color overrides applied),
@@ -49,7 +33,7 @@ function createColorPicker(
     getDefaultColor: typeof getColorByLabel
 ) {
     const { setCustomColor, setPreviewColor, clearPreviewColor } = colorStore;
-    const colors = fromStore(colorStore.colorsStore);
+    const colors = fromStore(colorStore.customColorsStore);
     // A session starts at the first setColor after a finished one. A rename can change the
     // name while the picker stays open, so the session follows the name.
     let session: { owner: symbol; name: string; color: SessionColor } | undefined;
