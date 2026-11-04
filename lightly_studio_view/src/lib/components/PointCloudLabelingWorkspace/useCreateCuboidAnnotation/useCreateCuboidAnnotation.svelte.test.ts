@@ -40,7 +40,8 @@ vi.mock('$lib/hooks', async () => {
             requestLabel,
             handleConfirm,
             handleCancel
-        })
+        }),
+        useTracks: () => ({ data: [] })
     };
 });
 

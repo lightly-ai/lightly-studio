@@ -284,3 +284,52 @@ def test_create_annotation__marks_evaluation_run_stale(db_session: Session) -> N
     refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
     assert refreshed is not None
     assert refreshed.stale_since is not None
+
+
+def test_create_annotation__create_new_track_and_object_track_id_raises(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Setting both create_new_track and object_track_id is invalid."""
+    with pytest.raises(ValueError, match="Cannot set both create_new_track and object_track_id"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=collection.collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+                object_track_id=samples[0].sample_id,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__create_new_track_collection_not_found(
+    db_session: Session,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """create_new_track raises when the collection does not exist."""
+    fake_collection_id = UUID("00000000-0000-0000-0000-000000000099")
+    with pytest.raises(ValueError, match="not found"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=fake_collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )

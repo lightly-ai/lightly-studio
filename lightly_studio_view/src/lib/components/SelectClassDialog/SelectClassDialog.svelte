@@ -3,17 +3,36 @@
     import { Button } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
+    import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
+    import { TrackSelect } from '$lib/components/TrackSelect';
 
     type Props = {
         open: boolean;
         labels: string[];
-        onConfirm: (label: string) => void;
+        onConfirm: (
+            label: string,
+            track?: { objectTrackId: string | null; isNewTrack: boolean }
+        ) => void;
         onCancel: () => void;
+        showTrackSelect?: boolean;
+        tracks?: TrackWithClassNameView[];
     };
 
-    let { open = $bindable(false), labels, onConfirm, onCancel }: Props = $props();
+    type TrackSelection = NonNullable<Parameters<Props['onConfirm']>[1]>;
+
+    let {
+        open = $bindable(false),
+        labels,
+        onConfirm,
+        onCancel,
+        showTrackSelect = false,
+        tracks = []
+    }: Props = $props();
 
     let selectedItem = $state<ListItem | undefined>(undefined);
+    let previousClassValue = $state<string | undefined>(undefined);
+    let trackValue = $state('__no_track__');
+    let trackSelection = $state<TrackSelection>({ objectTrackId: null, isNewTrack: false });
     // Track close origin so the onOpenChange(false) that fires when we set
     // open = false from handleConfirm does not also invoke onCancel.
     let closedByConfirm = false;
@@ -22,26 +41,39 @@
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
 
+    function resetTrack() {
+        trackValue = '__no_track__';
+        trackSelection = { objectTrackId: null, isNewTrack: false };
+        previousClassValue = undefined;
+    }
+
+    function confirmWith(label: string) {
+        closedByConfirm = true;
+        if (showTrackSelect) {
+            onConfirm(label, trackSelection);
+        } else {
+            onConfirm(label);
+        }
+        open = false;
+        selectedItem = undefined;
+        resetTrack();
+    }
+
     const handleConfirm = () => {
         if (selectedItem) {
-            closedByConfirm = true;
-            onConfirm(selectedItem.value);
-            open = false;
-            selectedItem = undefined;
+            confirmWith(selectedItem.value);
         }
     };
 
     const handleKeyboardConfirm = (item: ListItem) => {
-        closedByConfirm = true;
-        onConfirm(item.value);
-        open = false;
-        selectedItem = undefined;
+        confirmWith(item.value);
     };
 
     const handleCancel = () => {
         onCancel();
         open = false;
         selectedItem = undefined;
+        resetTrack();
     };
 
     const handleOpenChange = (isOpen: boolean) => {
@@ -51,6 +83,17 @@
             return;
         }
         handleCancel();
+    };
+
+    const handleClassSelect = (item: ListItem) => {
+        if (previousClassValue !== item.value) {
+            resetTrack();
+        }
+        previousClassValue = item.value;
+    };
+
+    const handleTrackValueChange = (objectTrackId: string | null, isNewTrack: boolean) => {
+        trackSelection = { objectTrackId, isNewTrack };
     };
 </script>
 
@@ -73,8 +116,20 @@
                 autoOpen
                 autoFocus
                 onKeyboardConfirm={handleKeyboardConfirm}
+                onSelect={handleClassSelect}
             />
         </div>
+
+        {#if showTrackSelect}
+            <div class="min-w-0 space-y-1">
+                <span class="text-sm font-medium text-muted-foreground">Track</span>
+                <TrackSelect
+                    tracks={tracks ?? []}
+                    bind:value={trackValue}
+                    onValueChange={handleTrackValueChange}
+                />
+            </div>
+        {/if}
 
         <Dialog.Footer>
             <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>

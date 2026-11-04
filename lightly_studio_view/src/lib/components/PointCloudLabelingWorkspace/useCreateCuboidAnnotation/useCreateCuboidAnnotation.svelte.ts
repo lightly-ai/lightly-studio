@@ -3,7 +3,8 @@ import {
     useCreateAnnotation,
     useCreateLabel,
     useGlobalStorage,
-    useSelectClassDialog
+    useSelectClassDialog,
+    useTracks
 } from '$lib/hooks';
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
@@ -22,11 +23,16 @@ interface Params {
     getSceneFrame: () => SceneFrame | null;
 }
 
+type TrackSelection = NonNullable<
+    Parameters<ReturnType<typeof useSelectClassDialog>['handleConfirm']>[1]
+>;
+
 interface CreateCuboidParams {
     frame: SceneFrame | null;
     groundPosition: Vector3;
     labelId: string;
     sampleId: string;
+    track?: TrackSelection;
 }
 
 interface UseCreateCuboidAnnotationReturn {
@@ -38,6 +44,7 @@ interface UseCreateCuboidAnnotationReturn {
     handleClassSelected: ReturnType<typeof useSelectClassDialog>['handleConfirm'];
     handleClassDialogCancel: ReturnType<typeof useSelectClassDialog>['handleCancel'];
     labels: ReturnType<typeof useAnnotationLabels>;
+    tracks: ReturnType<typeof useTracks>;
 }
 
 const ZERO_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
@@ -55,13 +62,16 @@ function buildCuboidInput({
     frame,
     groundPosition,
     labelId,
-    sampleId
+    sampleId,
+    track
 }: CreateCuboidParams): AnnotationCreateInput {
     const size = computeDefaultCuboidSize(frame?.bounds ?? ZERO_BOUNDS);
     return {
         parent_sample_id: sampleId,
         annotation_type: 'cuboid_3d',
         annotation_label_id: labelId,
+        object_track_id: track?.objectTrackId ?? undefined,
+        create_new_track: track?.isNewTrack ?? false,
         cuboid_3d: {
             frame_id: frame?.frameId ?? '',
             px: groundPosition[0],
@@ -96,15 +106,18 @@ export function useCreateCuboidAnnotation({
         getCollectionId: () => getCollectionId() ?? ''
     });
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() ?? '' }));
+    const tracks = useTracks(() => getDatasetId());
     const { lastAnnotationLabel, updateLastAnnotationLabel } = useGlobalStorage();
 
-    async function selectAnnotationLabel(collectionId: string): Promise<string | null> {
+    async function selectAnnotationLabel(
+        collectionId: string
+    ): Promise<{ label: string; track?: TrackSelection } | null> {
         const stored = get(lastAnnotationLabel)[collectionId] ?? null;
-        if (stored) return stored;
+        if (stored) return { label: stored };
         const selection = await requestLabel();
         if (!selection?.label) return null;
         updateLastAnnotationLabel(collectionId, selection.label);
-        return selection.label;
+        return { label: selection.label, track: selection.track };
     }
 
     async function findOrCreateLabelId(labelName: string): Promise<string | null> {
@@ -135,9 +148,10 @@ export function useCreateCuboidAnnotation({
         groundPosition: Vector3,
         sampleId: string,
         labelId: string,
-        frame: SceneFrame | null
+        frame: SceneFrame | null,
+        track?: TrackSelection
     ): Promise<string> {
-        const input = buildCuboidInput({ frame, groundPosition, labelId, sampleId });
+        const input = buildCuboidInput({ frame, groundPosition, labelId, sampleId, track });
         const annotation = await createAnnotation(input);
         toast.success('Annotation created successfully');
         return annotation.sample_id;
@@ -151,17 +165,23 @@ export function useCreateCuboidAnnotation({
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
-        const labelName = await selectAnnotationLabel(collectionId);
-        if (!labelName) return;
+        const selection = await selectAnnotationLabel(collectionId);
+        if (!selection) return;
         // Cancel if the active tick changed while the class dialog was open.
         if (getTickSampleId() !== sampleId) return;
-        const labelId = await findOrCreateLabelId(labelName);
+        const labelId = await findOrCreateLabelId(selection.label);
         if (!labelId) return;
         // Cancel if the active sample or collection changed while finding/creating the label.
         if (getTickSampleId() !== sampleId || getCollectionId() !== collectionId) return;
         let annotationId: string;
         try {
-            annotationId = await saveCuboid(groundPosition, sampleId, labelId, capturedFrame);
+            annotationId = await saveCuboid(
+                groundPosition,
+                sampleId,
+                labelId,
+                capturedFrame,
+                selection.track
+            );
         } catch {
             toast.error('Failed to create annotation. Please try again.');
             return;
@@ -180,6 +200,7 @@ export function useCreateCuboidAnnotation({
         showSelectClassDialog,
         handleClassSelected,
         handleClassDialogCancel,
-        labels
+        labels,
+        tracks
     };
 }

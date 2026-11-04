@@ -13,7 +13,13 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
-from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    evaluation_run_resolver,
+    object_track_resolver,
+)
 
 
 class AnnotationCreateParams(BaseModel):
@@ -27,6 +33,8 @@ class AnnotationCreateParams(BaseModel):
     annotation_collection_name: str | None = None
     collection_id: UUID
     parent_sample_id: UUID
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
 
     x: int | None = None
     y: int | None = None
@@ -43,6 +51,10 @@ class AnnotationCreateParams(BaseModel):
 def create_annotation(session: Session, annotation: AnnotationCreateParams) -> AnnotationBaseTable:
     """Create a new annotation.
 
+    When ``create_new_track`` is set, a new :class:`ObjectTrackTable` row is
+    created atomically with the next available track number for the dataset,
+    and the annotation is linked to it.
+
     Args:
         session: Database session for executing the operation.
         annotation: Annotation data to create.
@@ -50,9 +62,33 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
     Returns:
         The retrieved annotation.
     """
-    annotation_create = AnnotationCreate(
-        **annotation.model_dump(),
-    )
+    if annotation.create_new_track and annotation.object_track_id is not None:
+        raise ValueError("Cannot set both create_new_track and object_track_id.")
+
+    object_track_id = annotation.object_track_id
+    if annotation.create_new_track:
+        collection = collection_resolver.get_by_id(
+            session=session, collection_id=annotation.collection_id
+        )
+        if collection is None:
+            raise ValueError(f"Collection {annotation.collection_id} not found.")
+        track_number = object_track_resolver.next_track_number(
+            session=session, dataset_id=collection.dataset_id
+        )
+        track_ids = object_track_resolver.create_many(
+            session=session,
+            tracks=[
+                ObjectTrackCreate(
+                    object_track_number=track_number,
+                    dataset_id=collection.dataset_id,
+                )
+            ],
+        )
+        object_track_id = track_ids[0]
+
+    dump = annotation.model_dump(exclude={"create_new_track"})
+    dump["object_track_id"] = object_track_id
+    annotation_create = AnnotationCreate(**dump)
     new_annotation_ids = annotation_resolver.create_many(
         session=session,
         parent_collection_id=annotation.collection_id,
