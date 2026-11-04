@@ -114,4 +114,34 @@ describe('SampleDetailsImageContainer', () => {
             getColorByLabel('Reference', 1).color
         );
     });
+
+    it('ignores classifications from a third source when counting visible sources', async () => {
+        enforceColoringByClassStore.set(false);
+        const classification = {
+            sample_id: 'tag',
+            parent_sample_id: 'image',
+            annotation_collection_id: 'review',
+            annotation_type: 'classification',
+            annotation_label: { annotation_label_name: 'car' },
+            created_at: new Date()
+        } as AnnotationView;
+        const props = {
+            ...defaultProps,
+            sample: { ...defaultProps.sample, annotations: [...annotations, classification] }
+        };
+        const { rerender } = render(SampleDetailsImageContainer, {
+            props,
+            context: new Map<string, unknown>([
+                ['annotation-label', {}],
+                ['sample-details-toolbar-type', { status: 'cursor' }]
+            ])
+        });
+
+        await rerender({ ...props, hideAnnotationsIds: new Set(['prediction']) });
+
+        expect(screen.getByTestId('annotation_box')).toHaveAttribute(
+            'stroke',
+            getColorByLabel('car', 1).color
+        );
+    });
 });

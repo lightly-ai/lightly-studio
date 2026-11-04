@@ -90,8 +90,14 @@
 
     let sampleId = $derived(sample.sampleId);
     // Hiding sources down to one brings class colors back; source names follow the same count.
+    // Classifications are neither drawn nor hideable, so they do not count (as in the panel).
     const showSourceLabels = $derived(
-        countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2
+        countVisibleSources(
+            sample.annotations.filter(
+                (annotation) => annotation.annotation_type !== AnnotationType.CLASSIFICATION
+            ),
+            hideAnnotationsIds
+        ) >= 2
     );
     const assistedLabeling = useAssistedLabelingTools(() => ({
         collectionId,
