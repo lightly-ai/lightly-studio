@@ -10,6 +10,7 @@
         collectionId: string;
         color: string;
         className: string;
+        trackNumber: number | null;
         isSelected: boolean;
         editable: boolean;
         onToggle: () => void;
@@ -21,6 +22,7 @@
         collectionId,
         color,
         className,
+        trackNumber,
         isSelected,
         editable,
         onToggle,
@@ -54,6 +56,9 @@
                     onSelect={(className) => onLabelChange?.(className)}
                 />
             </div>
+            {#if trackNumber != null}
+                <Typography variant="body2" className="shrink-0 text-muted-foreground">#{trackNumber}</Typography>
+            {/if}
         </div>
     {:else}
         <button
@@ -65,6 +70,9 @@
         >
             {@render colorSwatch()}
             <Typography variant="body2" className="flex-1 truncate">{className}</Typography>
+            {#if trackNumber != null}
+                <Typography variant="body2" className="shrink-0 text-muted-foreground">#{trackNumber}</Typography>
+            {/if}
         </button>
     {/if}
     {#if onDelete}

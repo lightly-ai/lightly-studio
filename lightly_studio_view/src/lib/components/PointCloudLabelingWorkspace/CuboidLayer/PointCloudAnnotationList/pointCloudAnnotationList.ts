@@ -5,7 +5,6 @@ import type {
 } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 export const UNKNOWN_SOURCE_NAME = 'Unknown source';
-export const NO_PARENT_TRACK_GROUP_LABEL = 'No parent track';
 
 interface AnnotationGroup {
     readonly sourceId: string;
@@ -207,10 +206,10 @@ function groupOrphansUnderAbsentParents({
 /**
  * Converts a flat, pre-sorted list of cuboids into a forest of annotation trees.
  *
- * Parent roots (with children) become top-level tree nodes.
+ * All roots (with or without children) become individual top-level tree nodes,
+ * sorted by trackNumber ascending with nulls last.
  * Orphans whose parent is absent from the frame are grouped under a virtual
- * parent node (cuboid: null). Standalone roots (no children) are collected
- * into a "No parent track" group at the end.
+ * parent node (cuboid: null) and appended after the roots.
  */
 export function buildAnnotationForest({
     cuboids
@@ -253,30 +252,14 @@ export function buildAnnotationForest({
         };
     }
 
-    const parentRoots: CuboidAnnotation[] = [];
-    const standaloneRoots: CuboidAnnotation[] = [];
-
-    for (const root of roots) {
-        if (
-            root.trackNumber !== null &&
-            (childrenByParentTrack.get(root.trackNumber)?.length ?? 0) > 0
-        ) {
-            parentRoots.push(root);
-        } else {
-            standaloneRoots.push(root);
-        }
-    }
+    roots.sort(byTrackNumber);
 
     const absentParentGroups = groupOrphansUnderAbsentParents({
         orphans,
         buildNode
     });
 
-    const noParentTrackChildren = standaloneRoots.map(buildNode);
-    const noParentTrackGroup: AnnotationTreeNode[] =
-        noParentTrackChildren.length > 0 ? [buildVirtualGroupNode(noParentTrackChildren)] : [];
-
-    return [...parentRoots.map(buildNode), ...absentParentGroups, ...noParentTrackGroup];
+    return [...roots.map(buildNode), ...absentParentGroups];
 }
 
 /** Returns true when the subtree rooted at {@link node} contains a cuboid with the given ID. */
