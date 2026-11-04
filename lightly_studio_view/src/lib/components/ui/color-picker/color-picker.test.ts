@@ -27,6 +27,12 @@ describe('ColorPicker', () => {
         } as typeof PointerEvent;
     });
 
+    it('sets the trigger aria-label from triggerLabel', () => {
+        render(ColorPicker, { props: { ...defaultProps, triggerLabel: 'Change the color of cat' } });
+
+        expect(screen.getByRole('button', { name: 'Change the color of cat' })).toBeInTheDocument();
+    });
+
     it('previews the selected color while dragging', async () => {
         const onChange = vi.fn();
         render(ColorPicker, { props: { ...defaultProps, onChange } });

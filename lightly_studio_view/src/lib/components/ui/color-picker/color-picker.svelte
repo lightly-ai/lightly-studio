@@ -11,6 +11,7 @@
         onChange,
         onClose,
         position = 'right',
+        triggerLabel,
         class: className,
         children
     }: {
@@ -19,6 +20,7 @@
         onChange?: (color: string, alpha: number) => void;
         onClose?: (applied: boolean) => void;
         position?: 'top' | 'bottom' | 'left' | 'right';
+        triggerLabel?: string;
         class?: string;
         children: Snippet;
     } = $props();
@@ -37,7 +39,11 @@
 </script>
 
 <Popover.Root bind:open={picker.isOpen} onOpenChange={picker.handleOpenChange}>
-    <Popover.Trigger class="m-0 border-0 bg-transparent p-0" onclick={stopPropagation}>
+    <Popover.Trigger
+        class="m-0 border-0 bg-transparent p-0"
+        aria-label={triggerLabel}
+        onclick={stopPropagation}
+    >
         {@render children()}
     </Popover.Trigger>
     <Popover.Content
