@@ -1,4 +1,4 @@
-import { derived, get, writable } from 'svelte/store';
+import { derived, get, writable, type Readable, type Writable } from 'svelte/store';
 
 // Type for storing custom colors
 export type CustomColor = {
@@ -6,7 +6,22 @@ export type CustomColor = {
     alpha: number;
 };
 
-export const createCustomColorStore = () => {
+interface CustomColorStore {
+    customColorsStore: Readable<Record<string, CustomColor>>;
+    colorVersion: Writable<number>;
+    getCustomColor: (name: string) => CustomColor | undefined;
+    setCustomColor: (name: string, color: string, alpha?: number) => void;
+    hasCustomColor: (name: string) => boolean;
+    deleteCustomColor: (name: string) => void;
+    clearCustomColors: () => void;
+    setPreviewColor: (name: string, color: CustomColor | null, owner: symbol) => void;
+    clearPreviewColor: (name: string, owner: symbol) => void;
+    getSavedColor: (name: string) => CustomColor | undefined;
+    hasSavedColor: (name: string) => boolean;
+    replaceSavedColors: (colors: Record<string, CustomColor>) => void;
+}
+
+export const createCustomColorStore = (): CustomColorStore => {
     // Saved layer: colors that are persisted.
     const savedColors = writable<Record<string, CustomColor>>({});
 

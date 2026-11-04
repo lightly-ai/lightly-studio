@@ -16,3 +16,6 @@
 <button data-testid="cancel" type="button" onclick={() => picker.finishColorChange(false)}
     >cancel</button
 >
+<button data-testid="apply" type="button" onclick={() => picker.finishColorChange(true)}
+    >apply</button
+>

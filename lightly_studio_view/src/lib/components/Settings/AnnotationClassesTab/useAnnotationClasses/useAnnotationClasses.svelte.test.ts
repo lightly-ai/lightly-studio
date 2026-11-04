@@ -1,7 +1,7 @@
 import { flushSync } from 'svelte';
 import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createCustomColorStore } from '$lib/hooks/createCustomColorStore/createCustomColorStore';
+import { createCustomColorStore } from '$lib/hooks/createCustomColorStore';
 import { useAnnotationClasses } from './useAnnotationClasses.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
     invalidateQueries: vi.fn(),
     createQuery: vi.fn(),
     colors: undefined as unknown as ReturnType<
-        typeof import('$lib/hooks/createCustomColorStore/createCustomColorStore').createCustomColorStore
+        typeof import('$lib/hooks/createCustomColorStore').createCustomColorStore
     >
 }));
 

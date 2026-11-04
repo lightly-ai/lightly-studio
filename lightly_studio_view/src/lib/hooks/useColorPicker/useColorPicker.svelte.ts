@@ -1,6 +1,6 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { getColorByLabel, hexToRgba, rgbaToHex } from '$lib/utils';
-import { onDestroy } from 'svelte';
+import { onDestroy, untrack } from 'svelte';
 import { fromStore } from 'svelte/store';
 
 type SessionColor = NonNullable<
@@ -17,9 +17,19 @@ export function useColorPicker(getLabel: () => string) {
     const { setCustomColor, setPreviewColor, clearPreviewColor, customLabelColorsStore } =
         useCustomLabelColors();
     const colors = fromStore(customLabelColorsStore);
-    // A session starts at the first setColor after a finished one. It keeps the name it
-    // started with, because a rename can change the label while the picker stays mounted.
+    // A session starts at the first setColor after a finished one. A rename can change the
+    // label while the picker stays open, so the session follows the label.
     let session: { owner: symbol; name: string; color: SessionColor } | undefined;
+
+    $effect.pre(() => {
+        const name = getLabel();
+        untrack(() => {
+            if (!session || session.name === name) return;
+            clearPreviewColor(session.name, session.owner);
+            session.name = name;
+            setPreviewColor(name, session.color, session.owner);
+        });
+    });
 
     onDestroy(() => {
         if (session) clearPreviewColor(session.name, session.owner);
