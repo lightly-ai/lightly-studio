@@ -1,5 +1,6 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { getColorByLabel, hexToRgba, rgbaToHex } from '$lib/utils';
+import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { getColorByLabel, getColorBySource, hexToRgba, rgbaToHex } from '$lib/utils';
 import { onDestroy } from 'svelte';
 import { fromStore } from 'svelte/store';
 
@@ -8,15 +9,23 @@ type SessionColor = NonNullable<
 >;
 
 /**
- * Resolves the swatch colors for a label (with custom-color overrides applied),
+ * Resolves the swatch colors for a class or source (with custom-color overrides applied),
  * plus the initial values to seed a color picker, and a setter to persist picks.
  *
  * `getLabel` is a function so the hook stays reactive when the consumer's label changes.
  */
-export function useColorPicker(getLabel: () => string) {
-    const { setCustomColor, setPreviewColor, clearPreviewColor, customLabelColorsStore } =
-        useCustomLabelColors();
-    const colors = fromStore(customLabelColorsStore);
+export function useColorPicker(getLabel: () => string, options: { kind: 'class' | 'source' }) {
+    const isSource = options.kind === 'source';
+    const classColors = useCustomLabelColors();
+    const sourceColors = useCustomSourceColors();
+    const { setCustomColor, setPreviewColor, clearPreviewColor } = isSource
+        ? sourceColors
+        : classColors;
+    const colorsStore = isSource
+        ? sourceColors.customSourceColorsStore
+        : classColors.customLabelColorsStore;
+    const getColor = isSource ? getColorBySource : getColorByLabel;
+    const colors = fromStore(colorsStore);
     // A session starts at the first setColor after a finished one. It keeps the name it
     // started with, because a rename can change the label while the picker stays mounted.
     let session: { owner: symbol; name: string; color: SessionColor } | undefined;
@@ -26,8 +35,8 @@ export function useColorPicker(getLabel: () => string) {
     });
 
     const customColor = $derived(colors.current[getLabel()]);
-    const defaultBorder = $derived(getColorByLabel(getLabel(), 1).color);
-    const defaultBackground = $derived(getColorByLabel(getLabel(), 0.35).color);
+    const defaultBorder = $derived(getColor(getLabel(), 1).color);
+    const defaultBackground = $derived(getColor(getLabel(), 0.35).color);
 
     const borderColor = $derived(customColor?.color ?? defaultBorder);
     const backgroundColor = $derived.by(() => {

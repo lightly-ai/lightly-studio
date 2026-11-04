@@ -1,9 +1,13 @@
 <script lang="ts">
     import { useColorPicker } from './useColorPicker.svelte';
 
-    let { label }: { label: string } = $props();
+    let { label, kind = 'class' }: { label: string; kind?: 'class' | 'source' } = $props();
 
-    const picker = useColorPicker(() => label);
+    const picker = useColorPicker(() => label, {
+        get kind() {
+            return kind;
+        }
+    });
 </script>
 
 <div data-testid="border-color">{picker.borderColor}</div>

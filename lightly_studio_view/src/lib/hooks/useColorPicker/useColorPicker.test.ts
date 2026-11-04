@@ -2,11 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, test } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
 import { getColorByLabel, rgbaToHex } from '$lib/utils';
 import UseColorPickerTestWrapper from './useColorPickerTestWrapper.test.svelte';
 
 afterEach(() => {
     useCustomLabelColors().clearCustomColors();
+    useCustomSourceColors().clearCustomColors();
 });
 
 describe('useColorPicker', () => {
@@ -75,6 +77,22 @@ describe('useColorPicker', () => {
 
         const stored = useCustomLabelColors().getCustomColor('cat');
         expect(stored).toEqual({ color: '#abcdef', alpha: 0.5 });
+    });
+
+    test('a source picker reads and writes the source store only', async () => {
+        useCustomLabelColors().setCustomColor('cat', '#112233');
+        render(UseColorPickerTestWrapper, { props: { label: 'cat', kind: 'source' } });
+        await tick();
+        expect(screen.getByTestId('initial-alpha').textContent).toBe('1');
+        expect(screen.getByTestId('border-color').textContent).not.toBe('#112233');
+
+        await fireEvent.click(screen.getByTestId('set-color'));
+
+        expect(useCustomSourceColors().getCustomColor('cat')).toEqual({
+            color: '#abcdef',
+            alpha: 0.5
+        });
+        expect(useCustomLabelColors().getCustomColor('cat')?.color).toBe('#112233');
     });
 
     describe('previews', () => {

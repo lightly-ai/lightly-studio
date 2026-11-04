@@ -12,7 +12,7 @@
 
     let { label, markerProps, enableColorPicker = false }: Props = $props();
 
-    const picker = useColorPicker(() => label);
+    const picker = useColorPicker(() => label, { kind: 'source' });
 </script>
 
 {#if enableColorPicker}

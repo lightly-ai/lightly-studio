@@ -17,7 +17,7 @@
     } = $props();
 
     const { customLabelColorsStore } = useCustomLabelColors();
-    const picker = useColorPicker(() => labelName);
+    const picker = useColorPicker(() => labelName, { kind: 'class' });
 
     const colorInfos = $derived.by(() => {
         const colors = $customLabelColorsStore;
