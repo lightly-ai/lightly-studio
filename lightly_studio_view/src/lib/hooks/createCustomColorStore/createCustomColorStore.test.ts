@@ -71,3 +71,18 @@ describe('createCustomColorStore previews', () => {
         expect(store.getSavedColor('dog')).toBeUndefined();
     });
 });
+
+describe('createCustomColorStore', () => {
+    test('keeps state independent between instances', () => {
+        const first = createCustomColorStore();
+        const second = createCustomColorStore();
+
+        first.setCustomColor('cat', '#ff0000', 0.5);
+
+        expect(first.getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
+        expect(get(first.colorVersion)).toBe(1);
+        expect(second.getCustomColor('cat')).toBeUndefined();
+        expect(get(second.customColorsStore)).toEqual({});
+        expect(get(second.colorVersion)).toBe(0);
+    });
+});
