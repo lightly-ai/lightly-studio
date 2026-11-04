@@ -97,11 +97,7 @@
                 if (colorBySource) {
                     const collectionName = idToName[annotation.annotation_collection_id];
                     if (collectionName) {
-                        return {
-                            ...canvas,
-                            annotation_label_name: collectionName,
-                            colorBySource: true
-                        };
+                        return { ...canvas, sourceName: collectionName };
                     }
                 }
                 return canvas;
