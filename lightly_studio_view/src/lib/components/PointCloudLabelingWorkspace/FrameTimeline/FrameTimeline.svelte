@@ -36,6 +36,8 @@
         onPlaybackIntervalChange: (intervalMs: number) => void;
         onSelectTick: (seqNumber: number) => void;
         onSelectAnnotation?: (annotationId: string) => void;
+        /** Starts a track from the selected cuboid; set only while that is possible. */
+        onStartTrack?: () => void;
         /** Called when the user starts dragging the slider. */
         onSeekStart?: () => void;
         /** Called when the user releases the slider. */
@@ -62,6 +64,7 @@
         onPlaybackIntervalChange,
         onSelectTick,
         onSelectAnnotation = () => {},
+        onStartTrack,
         onSeekStart,
         onSeekEnd,
         onPreviousSequence,
@@ -92,6 +95,7 @@
         {bufferedRanges}
         {onSelectTick}
         {onSelectAnnotation}
+        {onStartTrack}
         {onSeekStart}
         {onSeekEnd}
     />

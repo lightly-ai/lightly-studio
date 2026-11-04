@@ -1,5 +1,6 @@
 <script lang="ts">
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import { Button } from '$lib/components/ui/button';
     import TrackTimelineRow from './TrackTimelineRow/TrackTimelineRow.svelte';
 
     interface Props {
@@ -8,9 +9,18 @@
         selectedAnnotationId: string | null;
         onSelectAnnotation: (annotationId: string) => void;
         onSelectTick: (seqNumber: number) => void;
+        /** Starts a track from the selected cuboid; set only while that is possible. */
+        onStartTrack?: () => void;
     }
 
-    let { ticks, tracks, selectedAnnotationId, onSelectAnnotation, onSelectTick }: Props = $props();
+    let {
+        ticks,
+        tracks,
+        selectedAnnotationId,
+        onSelectAnnotation,
+        onSelectTick,
+        onStartTrack
+    }: Props = $props();
     const selectedTrackKey = $derived(
         tracks.find((track) =>
             track.annotations.some(
@@ -35,8 +45,13 @@
     };
 </script>
 
-{#if tracks.length > 0}
+{#if tracks.length > 0 || onStartTrack}
     <div class="border-t px-2 py-1" data-testid="object-track-rows">
+        {#if onStartTrack}
+            <Button variant="outline" size="sm" class="mb-1 h-6 text-xs" onclick={onStartTrack}>
+                Start track from selected cuboid
+            </Button>
+        {/if}
         {#each tracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}
             <TrackTimelineRow
                 {ticks}

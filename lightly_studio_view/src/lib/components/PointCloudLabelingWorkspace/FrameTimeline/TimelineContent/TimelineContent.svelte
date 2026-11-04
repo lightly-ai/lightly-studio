@@ -11,6 +11,7 @@
         bufferedRanges: ReadonlyArray<{ startIndex: number; endIndex: number }>;
         onSelectTick: (seqNumber: number) => void;
         onSelectAnnotation: (annotationId: string) => void;
+        onStartTrack?: () => void;
         onSeekStart?: () => void;
         onSeekEnd?: () => void;
     }
@@ -23,6 +24,7 @@
         bufferedRanges,
         onSelectTick,
         onSelectAnnotation,
+        onStartTrack,
         onSeekStart,
         onSeekEnd
     }: Props = $props();
@@ -47,6 +49,7 @@
         {selectedAnnotationId}
         {onSelectAnnotation}
         {onSelectTick}
+        {onStartTrack}
     />
     {#if activeIndex >= 0 && ticks.length > 0}
         {@const position = (activeIndex + 0.5) / ticks.length}

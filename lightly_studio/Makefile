@@ -320,7 +320,7 @@ else
 		mkdir -p src/lightly_studio/dist_lightly_studio_view_app; \
 		touch src/lightly_studio/dist_lightly_studio_view_app/index.html; \
 		echo "Exporting schema for API..."; \
-		uv run src/lightly_studio/export_schema.py; \
+		uv run src/lightly_studio/export_schema.py || { rm -rf src/lightly_studio/dist_lightly_studio_view_app; exit 1; }; \
 		rm -rf src/lightly_studio/dist_lightly_studio_view_app; \
 		echo "$$CURRENT_HASH" > $(SCHEMA_CACHE_FILE); \
 	else \

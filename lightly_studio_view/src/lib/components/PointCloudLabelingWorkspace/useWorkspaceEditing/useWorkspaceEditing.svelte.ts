@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/svelte-query';
 import { fromStore } from 'svelte/store';
 import type { PointCloudWorkspaceContext } from '../provider/types';
 import type { WorkspaceOptions } from '../workspaceOptions';
@@ -5,7 +6,9 @@ import type { useWorkspaceSceneData } from '../useWorkspaceSceneData/useWorkspac
 import { useCreateCuboidAnnotation } from '../useCreateCuboidAnnotation';
 import { useDeleteCuboidAnnotation } from '../useDeleteCuboidAnnotation';
 import { useUpdateCuboidAnnotation } from '../useUpdateCuboidAnnotation';
+import { useStartSequenceTrack } from '../useStartSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
+import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 import type { Vector3, WorkspaceTool } from '../domain';
 
@@ -16,6 +19,15 @@ export function useWorkspaceEditing(
     getData: () => ReturnType<typeof useWorkspaceSceneData>,
     getIsEditingMode: () => boolean
 ) {
+    const queryClient = useQueryClient();
+    // Track bars show which ticks have annotations, so refresh them when that changes.
+    const refreshTracks = () =>
+        queryClient.invalidateQueries({
+            queryKey: getSequenceTracksSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            })
+        });
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
@@ -57,7 +69,16 @@ export function useWorkspaceEditing(
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         getDatasetId: () => getOptions().datasetId,
         getSequenceId: () => getOptions().sequenceId,
-        onUpdated: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+        onUpdated: async () => {
+            void refreshTracks();
+            await getWorkspace().tickDetails.refetch({ throwOnError: true });
+        }
+    });
+
+    const { handleStartTrack } = useStartSequenceTrack({
+        getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
+        onStarted: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
     });
 
     const transforms = createCuboidTransformState({
@@ -82,6 +103,7 @@ export function useWorkspaceEditing(
     async function handleDeleteCuboid(cuboidId: string): Promise<void> {
         const deleted = await deleteCuboidAnnotation(cuboidId);
         if (!deleted) return;
+        void refreshTracks();
         await getWorkspace().tickDetails.refetch();
         if (selectedCuboidId === cuboidId) {
             selectedCuboidId = null;
@@ -129,6 +151,7 @@ export function useWorkspaceEditing(
         },
         handleCreateCuboid,
         handleDeleteCuboid,
+        handleStartTrack,
         handleLabelChange,
         panelCuboidTransform
     };

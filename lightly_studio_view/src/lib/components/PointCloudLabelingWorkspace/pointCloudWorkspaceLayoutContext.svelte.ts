@@ -92,6 +92,8 @@ export interface PointCloudWorkspaceLayoutState {
     onHover: (annotationId: string | null) => void;
     /** Creates an annotation at a world-space placement point. */
     onCreateCuboid: (position: Vector3) => void | Promise<void>;
+    /** Starts an object track from an untracked cuboid. */
+    onStartTrack: (annotationId: string) => void | Promise<unknown>;
     /** Navigates to the previous tick. */
     onPreviousFrame: () => void;
     /** Navigates to the next tick. */

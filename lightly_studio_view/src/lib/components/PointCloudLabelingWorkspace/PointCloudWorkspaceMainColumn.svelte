@@ -20,6 +20,15 @@
         displayFrameId: layout.workspace.referenceFrameId || undefined
     }));
 
+    // Only an untracked cuboid of the loaded tick can start a track, and only while editing.
+    const startableCuboidId = $derived.by(() => {
+        if (!layout.isEditingMode) return null;
+        const cuboid = layout.snapshotAnnotations.find(
+            ({ sample_id }) => sample_id === layout.selectedCuboidId
+        );
+        return cuboid?.cuboid_3d_details && !cuboid.object_track_id ? cuboid.sample_id : null;
+    });
+
     const { tickDetails } = useTickDetails({
         getDatasetId: () => layout.datasetId,
         getSequenceId: () => layout.sequenceId,
@@ -116,6 +125,7 @@
         onPlaybackIntervalChange={layout.onPlaybackIntervalChange}
         onSelectTick={layout.onSelectTick}
         onSelectAnnotation={layout.onSelect}
+        onStartTrack={startableCuboidId ? () => layout.onStartTrack(startableCuboidId) : undefined}
         onSeekStart={layout.onSeekStart}
         onSeekEnd={layout.onSeekEnd}
         onPreviousSequence={layout.onPreviousSequence}

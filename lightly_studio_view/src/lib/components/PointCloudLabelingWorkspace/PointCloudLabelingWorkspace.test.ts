@@ -45,6 +45,10 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails })
 }));
 
+vi.mock('./useStartSequenceTrack', () => ({
+    useStartSequenceTrack: () => ({ handleStartTrack: vi.fn() })
+}));
+
 vi.mock('./FrameTimeline/useSequenceTracks.svelte', () => ({
     useSequenceTracks: () => ({ query: { data: { tracks: [] } } })
 }));

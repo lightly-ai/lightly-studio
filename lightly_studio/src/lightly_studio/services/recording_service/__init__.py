@@ -7,6 +7,7 @@ from lightly_studio.services.recording_service.get_tick_details import get_tick_
 from lightly_studio.services.recording_service.get_ticks import (
     get_ticks,
 )
+from lightly_studio.services.recording_service.start_sequence_track import start_sequence_track
 
 __all__ = [
     "get_mcap_sequence_summary",
@@ -14,4 +15,5 @@ __all__ = [
     "get_tick_data",
     "get_tick_details",
     "get_ticks",
+    "start_sequence_track",
 ]
