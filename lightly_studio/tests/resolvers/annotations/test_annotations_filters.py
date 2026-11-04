@@ -322,6 +322,107 @@ def test_annotation_pairs__parent_sample_query(db_session: Session) -> None:
     assert _matching_images(car.annotation_label_id) == [image.sample_id]
 
 
+@pytest.fixture
+def unannotated_data(db_session: Session) -> tuple[UUID, UUID, UUID, UUID, UUID, UUID]:
+    """Image A has car in labels; image B has nothing. Returns ids."""
+    collection = create_collection(session=db_session)
+    image_a = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/a.jpg"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/b.jpg"
+    )
+    car = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    labels_annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image_a.sample_id,
+        annotation_label_id=car.annotation_label_id,
+        annotation_collection_name="labels",
+    )
+    model_annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image_b.sample_id,
+        annotation_label_id=car.annotation_label_id,
+        annotation_collection_name="model_v1",
+    )
+    # model_v1 annotates only B, so it is unannotated on A.
+    return (
+        collection.collection_id,
+        image_a.sample_id,
+        image_b.sample_id,
+        car.annotation_label_id,
+        labels_annotation.sample.collection_id,
+        model_annotation.sample.collection_id,
+    )
+
+
+def _images_matching(
+    db_session: Session, collection_id: UUID, annotations_filter: AnnotationsFilter
+) -> set[UUID]:
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(annotations_filter=annotations_filter)),
+    )
+    return {i.sample_id for i in result.samples}
+
+
+def test_unannotated_collection_ids__any_source(
+    db_session: Session, unannotated_data: tuple[UUID, UUID, UUID, UUID, UUID, UUID]
+) -> None:
+    collection_id, image_a, image_b, _, labels_id, model_id = unannotated_data
+
+    only_labels = AnnotationsFilter(annotation_pairs=[], unannotated_collection_ids=[labels_id])
+    only_model = AnnotationsFilter(annotation_pairs=[], unannotated_collection_ids=[model_id])
+    both = AnnotationsFilter(annotation_pairs=[], unannotated_collection_ids=[labels_id, model_id])
+
+    assert _images_matching(db_session, collection_id, only_labels) == {image_b}
+    assert _images_matching(db_session, collection_id, only_model) == {image_a}
+    assert _images_matching(db_session, collection_id, both) == {image_a, image_b}
+
+
+def test_unannotated_collection_ids__or_with_pairs(
+    db_session: Session, unannotated_data: tuple[UUID, UUID, UUID, UUID, UUID, UUID]
+) -> None:
+    collection_id, image_a, image_b, car_id, labels_id, _ = unannotated_data
+
+    annotations_filter = AnnotationsFilter(
+        annotation_pairs=[AnnotationPair(collection_id=labels_id, annotation_label_id=car_id)],
+        unannotated_collection_ids=[labels_id],
+    )
+
+    assert _images_matching(db_session, collection_id, annotations_filter) == {image_a, image_b}
+
+
+def test_unannotated_collection_ids__only_field_set(
+    db_session: Session, unannotated_data: tuple[UUID, UUID, UUID, UUID, UUID, UUID]
+) -> None:
+    collection_id, _, image_b, _, labels_id, _ = unannotated_data
+
+    annotations_filter = AnnotationsFilter(unannotated_collection_ids=[labels_id])
+
+    assert _images_matching(db_session, collection_id, annotations_filter) == {image_b}
+
+
+def test_unannotated_collection_ids__ignored_by_annotation_query(
+    db_session: Session, unannotated_data: tuple[UUID, UUID, UUID, UUID, UUID, UUID]
+) -> None:
+    _, _, _, _, labels_id, _ = unannotated_data
+    unfiltered = annotations_resolver.get_all(session=db_session).annotations
+
+    annotations = annotations_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(unannotated_collection_ids=[labels_id]),
+    ).annotations
+
+    assert len(unfiltered) == 2
+    assert {a.sample_id for a in annotations} == {a.sample_id for a in unfiltered}
+
+
 def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:
     """Count how many times ``sample`` is joined in the compiled query."""
     sql = str(query.compile(compile_kwargs={"literal_binds": True})).lower()
