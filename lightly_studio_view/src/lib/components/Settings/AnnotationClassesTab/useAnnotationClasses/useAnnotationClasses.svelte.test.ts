@@ -7,10 +7,7 @@ import { useAnnotationClasses } from './useAnnotationClasses.svelte';
 const mocks = vi.hoisted(() => ({
     mutateAsync: vi.fn(),
     invalidateQueries: vi.fn(),
-    createQuery: vi.fn(),
-    colors: undefined as unknown as ReturnType<
-        typeof import('$lib/hooks/createCustomColorStore').createCustomColorStore
-    >
+    createQuery: vi.fn()
 }));
 
 type MutationOptions = { onSettled?: () => unknown };
@@ -35,8 +32,9 @@ vi.mock('@tanstack/svelte-query', () => ({
     useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries })
 }));
 // A real color store, so the tests check where colors end up.
+let colors: ReturnType<typeof createCustomColorStore>;
 vi.mock('$lib/hooks/useCustomLabelColors', () => ({
-    useCustomLabelColors: () => mocks.colors
+    useCustomLabelColors: () => colors
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
@@ -54,53 +52,53 @@ const setup = (collectionId = 'collection-1') => {
 describe('useAnnotationClasses', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.colors = createCustomColorStore();
+        colors = createCustomColorStore();
         mocks.mutateAsync.mockResolvedValue({});
     });
 
     afterEach(() => cleanup());
 
     it('renameClass moves the custom color to the new name', async () => {
-        mocks.colors.setCustomColor('cat', '#ff0000', 0.5);
+        colors.setCustomColor('cat', '#ff0000', 0.5);
         const classes = setup();
 
         await classes.renameClass('label-1', 'cat', 'kitty');
 
-        expect(mocks.colors.getCustomColor('kitty')).toEqual({ color: '#ff0000', alpha: 0.5 });
-        expect(mocks.colors.getCustomColor('cat')).toBeUndefined();
+        expect(colors.getCustomColor('kitty')).toEqual({ color: '#ff0000', alpha: 0.5 });
+        expect(colors.getCustomColor('cat')).toBeUndefined();
     });
 
     it('renameClass keeps the custom color when the name is unchanged', async () => {
-        mocks.colors.setCustomColor('cat', '#ff0000', 0.5);
+        colors.setCustomColor('cat', '#ff0000', 0.5);
         const classes = setup();
 
         await classes.renameClass('label-1', 'cat', 'cat');
 
-        expect(mocks.colors.getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
+        expect(colors.getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
     });
 
     it('renameClass keeps colors when the rename fails', async () => {
-        mocks.colors.setCustomColor('cat', '#ff0000', 0.5);
+        colors.setCustomColor('cat', '#ff0000', 0.5);
         mocks.mutateAsync.mockRejectedValue(new Error('boom'));
         const classes = setup();
 
         await expect(classes.renameClass('label-1', 'cat', 'kitty')).rejects.toThrow('boom');
 
-        expect(mocks.colors.getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
-        expect(mocks.colors.getCustomColor('kitty')).toBeUndefined();
+        expect(colors.getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
+        expect(colors.getCustomColor('kitty')).toBeUndefined();
     });
 
     it('renameClass does not save an open picker preview', async () => {
         const owner = Symbol();
-        mocks.colors.setCustomColor('cat', '#112233', 1);
-        mocks.colors.setPreviewColor('cat', { color: '#abcdef', alpha: 1 }, owner);
+        colors.setCustomColor('cat', '#112233', 1);
+        colors.setPreviewColor('cat', { color: '#abcdef', alpha: 1 }, owner);
         const classes = setup();
 
         await classes.renameClass('label-1', 'cat', 'kitty');
-        mocks.colors.clearPreviewColor('cat', owner);
+        colors.clearPreviewColor('cat', owner);
 
-        expect(mocks.colors.getCustomColor('kitty')?.color).toBe('#112233');
-        expect(JSON.stringify(get(mocks.colors.customColorsStore))).not.toContain('#abcdef');
+        expect(colors.getCustomColor('kitty')?.color).toBe('#112233');
+        expect(JSON.stringify(get(colors.customColorsStore))).not.toContain('#abcdef');
     });
 
     it('query is disabled without a collection', () => {
