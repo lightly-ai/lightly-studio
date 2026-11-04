@@ -8,13 +8,15 @@ interface Options {
     getInitialAlpha: () => number;
     getOnChange: () => ((color: string, alpha: number) => void) | undefined;
     getOnClose: () => ((applied: boolean) => void) | undefined;
+    getOnReset: () => (() => void) | undefined;
 }
 
 export function createColorPickerState({
     getInitialColor,
     getInitialAlpha,
     getOnChange,
-    getOnClose
+    getOnClose,
+    getOnReset
 }: Options) {
     let isOpen = $state(false);
     let alpha = $state(getInitialAlpha());
@@ -94,6 +96,14 @@ export function createColorPickerState({
         isOpen = false;
     }
 
+    // Reset drops the open preview here; the caller deletes the saved color.
+    function resetToDefault(): void {
+        cancelScheduledPreview();
+        hasPreviewed = false;
+        isOpen = false;
+        getOnReset()?.();
+    }
+
     // bits-ui calls this only for user actions: the trigger, Escape or a click outside.
     function handleOpenChange(open: boolean): void {
         if (open) {
@@ -124,6 +134,7 @@ export function createColorPickerState({
         setAlpha,
         applyChanges,
         cancelChanges,
+        resetToDefault,
         handleOpenChange
     };
 }

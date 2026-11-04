@@ -13,6 +13,8 @@
 <div data-testid="background-color">{picker.backgroundColor}</div>
 <div data-testid="initial-color">{picker.initialColor}</div>
 <div data-testid="initial-alpha">{picker.initialAlpha}</div>
+<div data-testid="has-custom-color">{picker.hasCustomColor}</div>
+<button data-testid="reset" type="button" onclick={() => picker.resetColor()}>reset</button>
 <button data-testid="set-color" type="button" onclick={() => picker.setColor('#abcdef', 0.5)}
     >set</button
 >

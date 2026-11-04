@@ -10,7 +10,13 @@ type SessionColor = NonNullable<
 
 type ColorStore = Pick<
     ReturnType<typeof useCustomLabelColors>,
-    'customColorsStore' | 'setCustomColor' | 'setPreviewColor' | 'clearPreviewColor'
+    | 'customColorsStore'
+    | 'colorVersion'
+    | 'setCustomColor'
+    | 'deleteCustomColor'
+    | 'hasSavedColor'
+    | 'setPreviewColor'
+    | 'clearPreviewColor'
 >;
 
 /** A color picker for an annotation class. See `createColorPicker`. */
@@ -32,8 +38,10 @@ function createColorPicker(
     colorStore: ColorStore,
     getDefaultColor: typeof getColorByLabel
 ) {
-    const { setCustomColor, setPreviewColor, clearPreviewColor } = colorStore;
+    const { setCustomColor, deleteCustomColor, hasSavedColor, setPreviewColor, clearPreviewColor } =
+        colorStore;
     const colors = fromStore(colorStore.customColorsStore);
+    const version = fromStore(colorStore.colorVersion);
     // A session starts at the first setColor after a finished one. A rename can change the
     // name while the picker stays open, so the session follows the name.
     let session: { owner: symbol; name: string; color: SessionColor } | undefined;
@@ -55,6 +63,12 @@ function createColorPicker(
     const customColor = $derived(colors.current[getName()]);
     const defaultBorder = $derived(getDefaultColor(getName(), 1).color);
     const defaultBackground = $derived(getDefaultColor(getName(), 0.35).color);
+
+    // The saved layer only. hasSavedColor is not reactive, so re-read it on every version bump.
+    const hasCustomColor = $derived.by(() => {
+        void version.current;
+        return hasSavedColor(getName());
+    });
 
     const borderColor = $derived(customColor?.color ?? defaultBorder);
     const backgroundColor = $derived.by(() => {
@@ -78,6 +92,9 @@ function createColorPicker(
         get initialAlpha() {
             return initialAlpha;
         },
+        get hasCustomColor() {
+            return hasCustomColor;
+        },
         setColor(color: string, alpha: number) {
             session ??= { owner: Symbol(), name: getName(), color: { color, alpha } };
             session.color = { color, alpha };
@@ -90,6 +107,14 @@ function createColorPicker(
             session = undefined;
             if (applied) setCustomColor(name, color.color, color.alpha);
             clearPreviewColor(name, owner);
+        },
+        resetColor() {
+            const name = session?.name ?? getName();
+            if (session) {
+                clearPreviewColor(session.name, session.owner);
+                session = undefined;
+            }
+            deleteCustomColor(name);
         }
     };
 }

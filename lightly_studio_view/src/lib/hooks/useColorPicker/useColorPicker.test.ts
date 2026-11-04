@@ -95,6 +95,41 @@ describe('useClassColorPicker and useSourceColorPicker', () => {
         expect(useCustomLabelColors().getCustomColor('cat')?.color).toBe('#112233');
     });
 
+    describe('resetColor', () => {
+        test('resetColor removes the custom color', async () => {
+            useCustomLabelColors().setCustomColor('cat', '#112233');
+            render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+            await tick();
+            expect(screen.getByTestId('has-custom-color').textContent).toBe('true');
+
+            await fireEvent.click(screen.getByTestId('reset'));
+
+            expect(screen.getByTestId('border-color').textContent).toBe(
+                getColorByLabel('cat', 1).color
+            );
+            expect(screen.getByTestId('has-custom-color').textContent).toBe('false');
+        });
+
+        test('hasCustomColor ignores a preview', async () => {
+            render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+
+            expect(screen.getByTestId('has-custom-color').textContent).toBe('false');
+        });
+
+        test('resetColor ends an open preview', async () => {
+            useCustomLabelColors().setCustomColor('cat', '#112233');
+            render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await fireEvent.click(screen.getByTestId('reset'));
+            await fireEvent.click(screen.getByTestId('apply'));
+
+            expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+        });
+    });
+
     describe('previews', () => {
         test('cancel keeps a saved color written during the preview', async () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });

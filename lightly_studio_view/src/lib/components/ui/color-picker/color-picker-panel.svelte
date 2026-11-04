@@ -18,10 +18,20 @@
         onAlphaChange: (alpha: number) => void;
         onApply: () => void;
         onCancel: () => void;
+        onReset?: () => void;
     }
 
-    let { hsl, hex, alpha, onHslChange, onHexChange, onAlphaChange, onApply, onCancel }: Props =
-        $props();
+    let {
+        hsl,
+        hex,
+        alpha,
+        onHslChange,
+        onHexChange,
+        onAlphaChange,
+        onApply,
+        onCancel,
+        onReset
+    }: Props = $props();
 
     function handleHexInput(e: Event): void {
         const value = (e.target as HTMLInputElement).value;
@@ -77,6 +87,16 @@
     </div>
 
     <div class="mt-3 flex justify-end gap-2">
+        {#if onReset}
+            <Button
+                size="sm"
+                variant="ghost"
+                class="mr-auto h-7 px-2 py-0 text-xs"
+                onclick={onReset}
+            >
+                Reset to default
+            </Button>
+        {/if}
         <Button size="sm" variant="outline" class="h-7 px-2 py-0 text-xs" onclick={onCancel}>
             Cancel
         </Button>

@@ -52,4 +52,16 @@ describe('ColorPickerPanel', () => {
             'false'
         );
     });
+
+    it('shows Reset to default only when onReset is set', async () => {
+        const onReset = vi.fn();
+        const { unmount } = render(ColorPickerPanel, { props: defaultProps });
+        expect(screen.queryByRole('button', { name: 'Reset to default' })).not.toBeInTheDocument();
+        unmount();
+
+        render(ColorPickerPanel, { props: { ...defaultProps, onReset } });
+        await fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
+
+        expect(onReset).toHaveBeenCalledTimes(1);
+    });
 });
