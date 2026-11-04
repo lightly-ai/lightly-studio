@@ -20,7 +20,7 @@ const TEST_SETTINGS: SettingView = {
     show_annotation_text_labels: false,
     show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
-    enforce_coloring_by_class: false,
+    annotation_color_mode: 'source',
     created_at: new Date(),
     updated_at: new Date(),
     key_toolbar_selection: 's',
@@ -88,7 +88,7 @@ describe('createSettingsSavePayload', () => {
             show_annotation_text_labels: true,
             show_sample_filenames: true,
             show_bounding_boxes_for_segmentation: false,
-            enforce_coloring_by_class: true,
+            annotation_color_mode: 'class',
             key_toolbar_selection: 'a',
             key_toolbar_drag: 'g',
             key_toolbar_bounding_box: 'q',
@@ -127,7 +127,7 @@ describe('SettingsDialogState', () => {
             image_interpolation: false,
             grid_view_sample_rendering: 'cover',
             show_annotation_text_labels: true,
-            enforce_coloring_by_class: true
+            annotation_color_mode: 'class'
         };
 
         state.hydrate(customSettings);
@@ -217,7 +217,7 @@ describe('SettingsDialogState', () => {
                 key_hide_annotations: 'z',
                 show_sample_filenames: true,
                 image_interpolation: false,
-                enforce_coloring_by_class: true,
+                annotation_color_mode: 'class',
                 grid_view_sample_rendering: 'contain'
             })
         );

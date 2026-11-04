@@ -24,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved labeling tool names, layout, and buttons.
 - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
 - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
+- The annotation color setting now stores a choice between coloring by annotation class and by annotation source. Existing databases are set to coloring by class.
 
 ### Deprecated
 

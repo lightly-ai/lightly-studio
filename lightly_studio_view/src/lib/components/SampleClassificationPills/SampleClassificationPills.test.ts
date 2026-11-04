@@ -1,5 +1,5 @@
 import { render } from '@testing-library/svelte';
-import { afterEach, expect, it } from 'vitest';
+import { afterEach, expect, it, vi } from 'vitest';
 import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
@@ -7,6 +7,18 @@ import { useCustomSourceColors } from '$lib/hooks';
 import SampleClassificationPills from './SampleClassificationPills.svelte';
 
 const { setSelectedCollectionIds, setCollectionIdToName } = useAnnotationCollectionsFilter();
+
+vi.mock('$lib/hooks/useSettings', async (importOriginal) => {
+    const { readable } = await import('svelte/store');
+    const original = await importOriginal<typeof import('$lib/hooks/useSettings')>();
+    return {
+        ...original,
+        useSettings: () => ({
+            ...original.useSettings(),
+            enforceColoringByClassStore: readable(false)
+        })
+    };
+});
 
 afterEach(() => {
     useCustomLabelColors().clearCustomColors();
