@@ -21,7 +21,8 @@ classifiers = [
 # An HTTP server, numpy and Pillow. This package installs next to the CUDA and torch pins of
 # the customer. A heavier dependency can conflict with those pins.
 dependencies = [
-    "fastapi>=0.115.5",
+    # FastAPI 0.133.0 is the first version that allows starlette 1.x.
+    "fastapi>=0.133.0",
     # `EmbeddingResult.embeddings` is a numpy array. `lightly-studio` imports that class
     # from here and indexes the array.
     "numpy>=1.26.4",
@@ -33,8 +34,8 @@ dependencies = [
     "python-multipart>=0.0.31",
     # `lightly_studio_serve.middleware` is ASGI middleware, so it imports the ASGI types
     # from starlette directly. FastAPI installs starlette, but a direct import needs a
-    # floor of its own. This is the floor that the `fastapi` floor above resolves.
-    "starlette>=0.40.0",
+    # floor of its own. The floor holds the fixes for the form limit and StaticFiles advisories.
+    "starlette>=1.3.1",
     "uvicorn>=0.32.1",
 ]
 
