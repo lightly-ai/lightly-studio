@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+import { getColorByLabel } from '$lib/utils';
 import AnnotationTargetChip from './AnnotationTargetChip.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -132,14 +133,50 @@ describe('AnnotationTargetChip', () => {
     it.each([
         ['source', 'Annotation source', 'Pick a source'],
         ['class', 'Class for new annotations', 'Pick a class']
-    ])('closes the %s popover on Esc with the focus outside the input', async (_n, title, placeholder) => {
-        const { user } = setup({ annotationSource: 'labels' });
-        await user.click(screen.getByTitle(title));
-        const input = await screen.findByPlaceholderText(placeholder);
-        input.blur();
+    ])(
+        'closes the %s popover on Esc with the focus outside the input',
+        async (_n, title, placeholder) => {
+            const { user } = setup({ annotationSource: 'labels' });
+            await user.click(screen.getByTitle(title));
+            const input = await screen.findByPlaceholderText(placeholder);
+            input.blur();
 
-        await user.keyboard('{Escape}');
+            await user.keyboard('{Escape}');
 
-        expect(screen.queryByPlaceholderText(placeholder)).not.toBeInTheDocument();
+            expect(screen.queryByPlaceholderText(placeholder)).not.toBeInTheDocument();
+        }
+    );
+
+    it('colors the source dot like the card and the side panel', () => {
+        setup({ annotationSource: 'labels' });
+
+        expect(screen.getByTestId('annotation-target-source-dot')).toHaveStyle({
+            backgroundColor: getColorByLabel('labels', 1).color
+        });
+    });
+
+    it('shows a class dot in the class color', () => {
+        setup({ annotationSource: 'labels' });
+
+        expect(screen.getByTestId('annotation-target-class-dot')).toHaveStyle({
+            backgroundColor: getColorByLabel('deer', 1).color
+        });
+    });
+
+    it('shows no dots while the source and the class are unset', () => {
+        mocks.sticky = {};
+        setup();
+
+        expect(screen.queryByTestId('annotation-target-source-dot')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('annotation-target-class-dot')).not.toBeInTheDocument();
+    });
+
+    it('uses the solid card surface', () => {
+        setup();
+
+        expect(screen.getByTestId('annotation-target-chip')).toHaveClass(
+            'bg-popover',
+            'text-popover-foreground'
+        );
     });
 });

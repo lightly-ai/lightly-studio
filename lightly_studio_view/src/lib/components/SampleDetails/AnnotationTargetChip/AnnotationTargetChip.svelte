@@ -3,11 +3,13 @@
     import * as Popover from '$lib/components/ui/popover';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useRecentClasses, useSettings, useStickyClass } from '$lib/hooks';
+    import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { resolveTargetSource } from '$lib/hooks/useAnnotationTarget/resolveTargetSource';
     import { useSetTargetSource } from '$lib/hooks/useAnnotationTarget/useSetTargetSource';
     import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
+    import { getColorByLabel } from '$lib/utils';
     import { getShortcutKeys, isSearchStartKey } from '../AnnotationCard/annotationCard.helpers';
     import ClassSearchList from '../ClassSearchList/ClassSearchList.svelte';
     import SourceSearchList from '../SourceSearchList/SourceSearchList.svelte';
@@ -17,6 +19,7 @@
     const { stickyClasses, pickClass } = useStickyClass();
     const { recentClasses } = useRecentClasses();
     const { settingsStore } = useSettings();
+    const { customLabelColorsStore } = useCustomLabelColors();
     const { request: pendingBox } = usePendingBoxClass();
     const setTargetSource = useSetTargetSource(() => collectionId);
     const sources = useAnnotationCollections(() => ({ collectionId }));
@@ -33,6 +36,13 @@
         )
     );
     const className = $derived($stickyClasses[collectionId]);
+    // The same colors as the card header and the canvas.
+    const sourceColor = $derived(source ? getColorByLabel(source, 1).color : undefined);
+    const classColor = $derived(
+        className
+            ? ($customLabelColorsStore[className]?.color ?? getColorByLabel(className, 1).color)
+            : undefined
+    );
 
     let isSourceOpen = $state(false);
     let isClassOpen = $state(false);
@@ -54,13 +64,17 @@
 <svelte:window onkeydowncapture={handleKeydown} />
 
 <div
-    class="pointer-events-auto absolute left-14 top-1 z-20 inline-flex divide-x overflow-hidden rounded-md border bg-background/90 shadow-md"
+    class="pointer-events-auto absolute left-14 top-1 z-20 inline-flex divide-x overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md"
     data-testid="annotation-target-chip"
 >
     <Popover.Root bind:open={isSourceOpen}>
         <Popover.Trigger class={partClass(source !== null)} title="Annotation source">
             {#if source}
-                <span class="size-2 rounded-full bg-primary"></span>{source}
+                <span
+                    class="size-2 shrink-0 rounded-full"
+                    style:background-color={sourceColor}
+                    data-testid="annotation-target-source-dot"
+                ></span>{source}
             {:else}
                 Pick a source
             {/if}
@@ -79,7 +93,15 @@
     </Popover.Root>
     <Popover.Root bind:open={isClassOpen} onOpenChange={(open) => !open && (query = '')}>
         <Popover.Trigger class={partClass(!!className)} title="Class for new annotations">
-            {className ?? 'Pick a class'}
+            {#if className}
+                <span
+                    class="size-2 shrink-0 rounded-full"
+                    style:background-color={classColor}
+                    data-testid="annotation-target-class-dot"
+                ></span>{className}
+            {:else}
+                Pick a class
+            {/if}
             <ChevronDown class="size-3" />
         </Popover.Trigger>
         <Popover.Content class="w-64 p-0" align="start">
