@@ -1,11 +1,11 @@
+import { untrack } from 'svelte';
 import { fromStore } from 'svelte/store';
 import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-import { formatFloat, formatInteger } from '$lib/utils';
 import { useFiltersClearedSignal, usePostHog } from '$lib/hooks';
 import type { CategoricalMetadataValue } from '$lib/services/types';
+import { useRangeChips } from './useRangeChips.svelte';
 
-type Range = { min: number; max: number };
-type BoundsMap = Record<string, Range>;
+type Range = Parameters<Parameters<typeof useRangeChips>[0]['setRange']>[1];
 
 export interface MetadataFilterChip {
     key: string;
@@ -30,64 +30,53 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
     const valuesStore = fromStore(metadataValues);
     const categoricalStore = fromStore(categoricalMetadataValues);
 
-    let lastRanges = $state<BoundsMap>({});
-    let lastCategoricalValues = $state<Record<string, CategoricalMetadataValue[]>>({});
-
-    // Forget all remembered filters when all filters are cleared at once.
-    $effect(() => {
-        void filtersCleared.current;
-        lastRanges = {};
-        lastCategoricalValues = {};
-    });
-
-    const isNarrowed = (key: string): boolean => {
-        const bound = boundsStore.current[key];
-        const value = valuesStore.current[key];
-        return !!bound && !!value && (value.min > bound.min || value.max < bound.max);
+    const trackFilterChanged = (key: string, action: 'enabled' | 'disabled') => {
+        if (!collectionId) return;
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: key,
+            action
+        });
     };
 
-    // Remember the latest narrowed range of every key.
+    const numeric = useRangeChips({
+        getBounds: () => boundsStore.current,
+        getValues: () => valuesStore.current,
+        setRange: (key, range) => updateMetadataValues({ ...valuesStore.current, [key]: range }),
+        onChanged: trackFilterChanged
+    });
+
+    let lastCategoricalValues = $state<Record<string, CategoricalMetadataValue[]>>({});
+
+    let handledClears = untrack(() => filtersCleared.current);
+    let ignoredCategoricalValues: Record<string, CategoricalMetadataValue[]> = {};
+    const sameValues = (a: CategoricalMetadataValue[] = [], b: CategoricalMetadataValue[]) =>
+        a.length === b.length && a.every((value, index) => Object.is(value, b[index]));
+
+    // Forget all remembered selections when all filters are cleared at once. Selections that
+    // are still set at that moment must not be remembered again before they change.
     $effect(() => {
-        for (const key of Object.keys(valuesStore.current)) {
-            if (!isNarrowed(key)) continue;
-            const value = valuesStore.current[key];
-            const last = lastRanges[key];
-            if (!last || last.min !== value.min || last.max !== value.max) {
-                lastRanges = { ...lastRanges, [key]: { min: value.min, max: value.max } };
-            }
-        }
+        const clears = filtersCleared.current;
+        if (clears === handledClears) return;
+        handledClears = clears;
+        ignoredCategoricalValues = untrack(() => ({ ...categoricalStore.current }));
+        lastCategoricalValues = {};
     });
 
     $effect(() => {
         for (const [key, values] of Object.entries(categoricalStore.current)) {
             if (values.length === 0) continue;
-            const previous = lastCategoricalValues[key] ?? [];
-            const unchanged =
-                previous.length === values.length &&
-                previous.every((value, index) => Object.is(value, values[index]));
-            if (!unchanged) {
+            if (sameValues(ignoredCategoricalValues[key], values)) continue;
+            delete ignoredCategoricalValues[key];
+            if (!sameValues(lastCategoricalValues[key], values)) {
                 lastCategoricalValues = { ...lastCategoricalValues, [key]: [...values] };
             }
         }
     });
 
-    // One chip per key that is narrowed now or has a remembered range: active
-    // chips show the current range, disabled ones the remembered range.
+    // Active chips show the current filter, disabled ones the remembered filter.
     const chips = $derived.by<MetadataFilterChip[]>(() => {
-        const keys = new Set([
-            ...Object.keys(lastRanges),
-            ...Object.keys(valuesStore.current).filter(isNarrowed)
-        ]);
-        const numericChips = [...keys]
-            .filter((key) => boundsStore.current[key])
-            .map((key) => {
-                const active = isNarrowed(key);
-                const range: Range | undefined = active
-                    ? valuesStore.current[key]
-                    : lastRanges[key];
-                return range ? { key, active, range, kind: 'numeric' as const } : null;
-            })
-            .filter((chip): chip is NonNullable<typeof chip> => chip !== null);
+        const numericChips = numeric.chips.map((chip) => ({ ...chip, kind: 'numeric' as const }));
         const categoricalKeys = new Set([
             ...Object.keys(lastCategoricalValues),
             ...Object.entries(categoricalStore.current)
@@ -106,59 +95,28 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         return [...numericChips, ...categoricalChips];
     });
 
-    const setRange = (key: string, range: Range) => {
-        updateMetadataValues({ ...valuesStore.current, [key]: range });
-    };
-
-    const trackFilterChanged = (key: string, action: 'enabled' | 'disabled') => {
-        if (!collectionId) return;
-        trackEvent('metadata_filter_changed', {
-            collection_id: collectionId,
-            field_name: key,
-            action
+    const handleToggle = (key: string, checked: boolean | 'indeterminate') => {
+        if (!lastCategoricalValues[key]) {
+            numeric.handleToggle(key, checked);
+            return;
+        }
+        updateCategoricalMetadataValues({
+            ...categoricalStore.current,
+            [key]: checked ? lastCategoricalValues[key] : []
         });
     };
 
-    const handleToggle = (key: string, checked: boolean | 'indeterminate') => {
-        if (lastCategoricalValues[key]) {
-            updateCategoricalMetadataValues({
-                ...categoricalStore.current,
-                [key]: checked ? lastCategoricalValues[key] : []
-            });
-            return;
-        }
-        const bound = boundsStore.current[key];
-        if (!bound) return;
-        if (checked && lastRanges[key]) {
-            setRange(key, lastRanges[key]);
-        } else {
-            setRange(key, { min: bound.min, max: bound.max });
-        }
-        trackFilterChanged(key, checked ? 'enabled' : 'disabled');
-    };
-
     const handleClear = (key: string) => {
-        if (lastCategoricalValues[key]) {
-            const next = { ...categoricalStore.current };
-            delete next[key];
-            updateCategoricalMetadataValues(next);
-            lastCategoricalValues = Object.fromEntries(
-                Object.entries(lastCategoricalValues).filter(([valueKey]) => valueKey !== key)
-            );
+        if (!lastCategoricalValues[key]) {
+            numeric.handleClear(key);
             return;
         }
-        const bound = boundsStore.current[key];
-        if (bound) setRange(key, { min: bound.min, max: bound.max });
-        lastRanges = Object.fromEntries(
-            Object.entries(lastRanges).filter(([rangeKey]) => rangeKey !== key)
+        const next = { ...categoricalStore.current };
+        delete next[key];
+        updateCategoricalMetadataValues(next);
+        lastCategoricalValues = Object.fromEntries(
+            Object.entries(lastCategoricalValues).filter(([valueKey]) => valueKey !== key)
         );
-        trackFilterChanged(key, 'disabled');
-    };
-
-    const formatValue = (key: string, value: number): string => {
-        const bound = boundsStore.current[key];
-        const isInteger = !!bound && Number.isInteger(bound.min) && Number.isInteger(bound.max);
-        return isInteger ? formatInteger(value) : formatFloat(value);
     };
 
     const formatCategoricalValues = (values: CategoricalMetadataValue[] = []): string => {
@@ -180,7 +138,7 @@ export function useMetadataFilterChips(collectionId: string | undefined) {
         },
         handleToggle,
         handleClear,
-        formatValue,
+        formatValue: numeric.formatValue,
         formatCategoricalValues
     };
 }
