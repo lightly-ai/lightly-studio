@@ -141,10 +141,10 @@ describe('useClearAllFilters', () => {
     });
 
     describe('annotation tree', () => {
-        const treeCollectionId = 'tree-images';
+        const treeStateKey = 'tree-images';
         const car = { collection_id: 'source-1', annotation_label_id: 'car' };
         const person = { collection_id: 'source-1', annotation_label_id: 'person' };
-        const tree = useAnnotationTreeState(treeCollectionId);
+        const tree = useAnnotationTreeState(treeStateKey);
 
         beforeEach(() => {
             tree.resetTicks();
@@ -160,7 +160,7 @@ describe('useClearAllFilters', () => {
 
             const { hasActiveFilters, clearAllFilters } = useClearAllFilters({
                 ...imagesGrid,
-                treeCollectionId,
+                treeStateKey,
                 // Stands in for the grid filter, which is active while a pair is unticked.
                 treeFilterActive: derived(tree.untickedPairs, (pairs) => pairs.length > 0)
             });
@@ -180,7 +180,7 @@ describe('useClearAllFilters', () => {
 
             const { hasActiveFilters } = useClearAllFilters({
                 ...imagesGrid,
-                treeCollectionId,
+                treeStateKey,
                 treeFilterActive: readable(false)
             });
 

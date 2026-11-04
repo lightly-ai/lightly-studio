@@ -93,6 +93,24 @@ describe('useAdjacentAnnotations', () => {
         });
     });
 
+    it('sends the annotation tree pairs instead of the selected labels', () => {
+        selectedAnnotationFilterIds.set(new Set(['label-1']));
+        const pairs = [{ collection_id: 'col-9', annotation_label_id: 'label-2' }];
+
+        useAdjacentAnnotations({
+            sampleId: 'ann-123',
+            collectionId: 'col-9',
+            treeFilter: { annotation_pairs: pairs }
+        });
+
+        expect(useAdjacentSamplesMock.mock.lastCall?.[0].params.body.filters).toEqual({
+            filter_type: 'annotations',
+            collection_ids: ['col-9'],
+            annotation_pairs: pairs,
+            tag_ids: undefined
+        });
+    });
+
     it('passes annotation_sort_by to useAdjacentSamples when a sort is active', () => {
         const sort: AnnotationEvaluationMetricSortExpr = {
             evaluation_run_id: 'run-1',

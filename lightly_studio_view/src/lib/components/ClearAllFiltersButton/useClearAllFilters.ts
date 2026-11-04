@@ -31,8 +31,8 @@ interface UseClearAllFiltersParams {
     isImages: boolean;
     isVideos: boolean;
     isVideoFrames: boolean;
-    /** The collection of the annotation tree. Set only while the tree is on. */
-    treeCollectionId?: string;
+    /** The key of the annotation tree state of the grid. Set only on grids that show the tree. */
+    treeStateKey?: string;
     /** Whether the tree filters this grid, which is not the case for ticks of other sources. */
     treeFilterActive?: Readable<boolean>;
 }
@@ -91,15 +91,15 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
             )
         );
     }
-    if (params.treeCollectionId) groups.push(useTreeTicksFilter(params));
+    if (params.treeStateKey) groups.push(useTreeTicksFilter(params));
     return groups;
 }
 
 // Clearing ticks everything again. The eyes and the group choice stay.
-function useTreeTicksFilter({ treeCollectionId, treeFilterActive }: UseClearAllFiltersParams) {
+function useTreeTicksFilter({ treeStateKey, treeFilterActive }: UseClearAllFiltersParams) {
     return {
         isActive: treeFilterActive ?? readable(false),
-        clear: useAnnotationTreeState(treeCollectionId ?? '').resetTicks
+        clear: useAnnotationTreeState(treeStateKey ?? '').resetTicks
     };
 }
 

@@ -4,7 +4,6 @@ import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinit
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
-    AnnotationsFilter,
     ConfusionCell,
     EmbeddingRegion,
     ImageFilter,
@@ -12,6 +11,7 @@ import type {
     SampleFilter
 } from '$lib/api/lightly_studio_local';
 import type { ImageSortExpr } from '../useImagesInfinite/types';
+import { getAnnotationsFilter } from '../useImagesInfinite/getAnnotationsFilter';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
@@ -85,12 +85,15 @@ const imageFilter = derived(
             sampleFilter.embedding_region = embeddingRegion;
         }
 
-        const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
-        if (annotationLabelIds && annotationLabelIds.length > 0) {
-            sampleFilter.annotations_filter = {
-                filter_type: 'annotations',
-                annotation_label_ids: annotationLabelIds
-            } satisfies AnnotationsFilter;
+        const { annotation_label_ids, annotation_pairs, unannotated_collection_ids } =
+            $filterParams.filters ?? {};
+        const annotationsFilter = getAnnotationsFilter({
+            annotation_label_ids,
+            annotation_pairs,
+            unannotated_collection_ids
+        });
+        if (annotationsFilter) {
+            sampleFilter.annotations_filter = annotationsFilter;
         }
 
         const tagIds = $filterParams.filters?.tag_ids;

@@ -18,7 +18,7 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
     import {
-        getAnnotationTreeEnabled,
+        getSampleDetailsFollowTree,
         useTreeAnnotationVisibility,
         useTreeColorMode
     } from '$lib/components/AnnotationTree';
@@ -89,11 +89,11 @@
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { isSourceVisible } = useAnnotationCollectionsFilter();
-    const isTreeEnabled = getAnnotationTreeEnabled();
-    const treeColorMode = useTreeColorMode(isTreeEnabled);
+    const followsTree = getSampleDetailsFollowTree();
+    const treeColorMode = useTreeColorMode(followsTree);
     const treeVisibility = useTreeAnnotationVisibility(() => ({
         collectionId,
-        enabled: isTreeEnabled()
+        enabled: followsTree()
     }));
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);

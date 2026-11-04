@@ -1,3 +1,4 @@
+import { AnnotationTree } from '../pages';
 import { expect, gotoFirstPage, test } from '../utils';
 
 const ALL_SAMPLES_EVALUATION_RUN_NAME = 'evaluation-example-all-samples';
@@ -6,9 +7,10 @@ const ALL_SAMPLES_EVALUATION_RUN_TEST_ID = 'evaluation-run-item-evaluation-examp
 test('shows evaluation run details from indexed backend data', async ({ page }) => {
     await gotoFirstPage(page);
 
-    await expect(page.getByRole('button', { name: 'Annotation Sources' })).toBeVisible();
-    await expect(page.getByRole('checkbox', { name: 'COCO annotations' })).toBeChecked();
-    await expect(page.getByRole('checkbox', { name: 'YOLOv8-m inferences' })).toBeChecked();
+    const annotationTree = new AnnotationTree(page);
+    await expect(annotationTree.root).toBeVisible();
+    await expect(annotationTree.getSourceCheckbox('COCO annotations')).toBeChecked();
+    await expect(annotationTree.getSourceCheckbox('YOLOv8-m inferences')).toBeChecked();
 
     await expect(page.getByTestId('side-panel-tabs-eval')).toBeVisible();
     await page.getByTestId('side-panel-tabs-eval').click();

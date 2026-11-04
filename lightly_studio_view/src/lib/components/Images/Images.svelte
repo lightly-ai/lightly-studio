@@ -12,7 +12,6 @@
         createMetadataFilters
     } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
@@ -44,13 +43,8 @@
         collection_id: string;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding | undefined>;
-        /** The annotation tree replaces the class filter on this grid. */
-        showAnnotationTree?: boolean;
     };
-    const { collection_id, textEmbedding, showAnnotationTree = false }: ImagesProps = $props();
-
-    const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
-        useSelectedAnnotationsFilter();
+    const { collection_id, textEmbedding }: ImagesProps = $props();
 
     const { tagsSelected } = $derived.by(() =>
         useTags({
@@ -76,27 +70,18 @@
     const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy, imageFilter } =
         useImageFilters();
 
-    const treeEnabled = $derived(showAnnotationTree);
     const treeFilter = useTreeAnnotationsFilter(() => ({
         collectionId: collection_id,
-        filter: $imageFilter,
-        enabled: treeEnabled
+        filter: $imageFilter
     }));
-    const treeVisibility = useTreeAnnotationVisibility(() => ({
-        collectionId: collection_id,
-        enabled: treeEnabled
-    }));
+    const treeVisibility = useTreeAnnotationVisibility(() => ({ collectionId: collection_id }));
 
-    const treeColorMode = useTreeColorMode(() => treeEnabled);
+    const treeColorMode = useTreeColorMode();
 
     const samplesParams = $derived({
         collection_id,
         mode: 'normal' as const,
         filters: {
-            annotation_label_ids:
-                !treeEnabled && $selectedAnnotationFilterIds?.length
-                    ? $selectedAnnotationFilterIds
-                    : undefined,
             ...treeFilter.current,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
@@ -193,7 +178,6 @@
 
     const filterHash = $derived.by(() => {
         const parts = [
-            treeEnabled ? '' : $selectedAnnotationFilterIds.join(','),
             treeFilter.current ? JSON.stringify(treeFilter.current) : '',
             $imageQueryExpression?.query_expr_str || '',
             Array.from($tagsSelected).join(','),
