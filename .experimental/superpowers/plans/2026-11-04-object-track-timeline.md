@@ -11,7 +11,7 @@ and cuboid editing flows.
 
 ## Reference implementation
 
-Use `kondrat-lig-11157-object-track-timeline.all` as a reference once the previous
+Use `kondrat-lig-11157-object-track-timeline` as a reference once the previous
 implementation is located. At planning time, the local branch points to the same
 commit as the working branch and exposes no additional diff. Locate the intended
 reference before porting any changes; do not restore it wholesale.
