@@ -70,11 +70,11 @@ export class AnnotationsPage {
     }
 
     async clickTag(tag: string) {
-        await this.page.getByTestId('tag-menu-item').getByText(tag, { exact: true }).click();
+        await this.page.getByTestId('tags-menu-item').getByText(tag, { exact: true }).click();
     }
 
     getTagsMenuItem(tagName: string) {
-        return this.page.getByTestId('tags-menu-label').getByText(tagName, { exact: true });
+        return this.page.getByTestId('tags-menu-name').getByText(tagName, { exact: true });
     }
 
     async clickAnnotation(index: number) {
