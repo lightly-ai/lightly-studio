@@ -22,6 +22,24 @@ Also checked: the pending card ignores shortcut letters typed into it (typing `d
 box tool on and edit mode open). With nothing selected, `k` opens the chip's class list with `k`
 in a focused input.
 
+## Feedback round recheck
+
+After the user's six feedback points (and the final-review fix wave), rebuilt at `eb189f9bb`.
+"Always color by class" was on in this DB (set during the user's session); it was turned off for
+check 2 and turned back on afterwards.
+
+| # | Feedback | Result | Screenshots |
+|---|---|---|---|
+| 1 | Hide all / Show all in the Annotations header | Pass: Hide all clears the canvas and every source eye; Show all restores. | `f1a`, `f1b` |
+| 2 | Hiding sources gives class colors | Pass: 6 sources visible → source colors; only `labels` visible → class colors (bobcat green, deer purple). | `f2a`, `f2b` |
+| 3 | Esc leaves the class search, move list and chip popovers | Pass: with focus on `body`, Esc returns the card's search to compact (card stays) and closes the chip's class popover. "Esc to go back" shows under the list. | `f3a`, `f3b` |
+| 4 | Confidence is labelled | Pass: "Confidence 0.72". The header is tight: a long source name truncates (`sam_a…`) and the label wraps. | `f4` |
+| 5 | Chip colors | Pass: solid card surface; source dot in the source color, class dot in the class color. | `f5` |
+| 6 | Card hides while moving the box | Pass: card `visibility` visible → hidden mid-drag → visible after drop. | (DOM check) |
+
+Not checked in the GUI: the drawer stroke color now following the sticky class (final-review M6),
+and the classification-count fix (unit-tested).
+
 ## Observations
 
 - One `labels` box (`a751a3ad`, created as `deer`) later read `car` and was then deleted. The
