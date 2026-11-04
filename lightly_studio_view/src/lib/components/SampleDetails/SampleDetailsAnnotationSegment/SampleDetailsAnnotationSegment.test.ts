@@ -539,29 +539,23 @@ describe('SampleDetailsAnnotationSegment', () => {
             ];
         });
 
-        it('preserves source colors when hiding a source or an individual annotation', async () => {
+        it('brings class colors back when hiding a source leaves one, and source colors on show', async () => {
             const user = userEvent.setup();
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
-            // Both sources visible: source color markers in the headers, no label
-            // legends in the rows.
-            let headers = screen.getAllByTestId('annotation-source-group-header');
-            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
-            expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
+            const headers = () => screen.getAllByTestId('annotation-source-group-header');
+            expect(getSourceColorMarker(headers()[0])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
 
-            // Hiding a source keeps its identity and the remaining source colors stable.
             await user.click(screen.getAllByTestId('source-group-eye')[1]);
 
-            headers = screen.getAllByTestId('annotation-source-group-header');
-            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
-            expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
-            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
-            expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'true');
+            expect(getSourceColorMarker(headers()[0])).not.toBeInTheDocument();
+            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
+            expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'false');
 
-            await user.click(within(getRow('gt-1')).getByTestId('mock-annotation-row-toggle'));
-            expect(getRow('gt-1')).toHaveAttribute('data-hidden', 'true');
-            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
+            await user.click(screen.getByTestId('source-group-eye-off'));
+
+            expect(getSourceColorMarker(headers()[0])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
         });
 

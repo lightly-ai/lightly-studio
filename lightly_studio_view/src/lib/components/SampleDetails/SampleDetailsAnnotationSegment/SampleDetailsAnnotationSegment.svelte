@@ -125,11 +125,11 @@
         })
     );
 
-    // Keep source markers and row layout stable when annotations are hidden, matching
-    // the details canvas. The explicit class-color preference still takes priority.
+    // Matches the details canvas: only visible sources count. The explicit class-color
+    // preference still takes priority.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: countVisibleSources(annotationsSort) >= 2,
+            multipleSourcesVisible: countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );

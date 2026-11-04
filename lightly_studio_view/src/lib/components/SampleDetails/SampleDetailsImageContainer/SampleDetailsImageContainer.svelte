@@ -89,8 +89,10 @@
     const { request: pendingBoxRequest } = usePendingBoxClass();
 
     let sampleId = $derived(sample.sampleId);
-    // Source identity stays stable when annotations are temporarily hidden.
-    const showSourceLabels = $derived(countVisibleSources(sample.annotations) >= 2);
+    // Hiding sources down to one brings class colors back; source names follow the same count.
+    const showSourceLabels = $derived(
+        countVisibleSources(sample.annotations, hideAnnotationsIds) >= 2
+    );
     const assistedLabeling = useAssistedLabelingTools(() => ({
         collectionId,
         sampleId,
@@ -108,7 +110,6 @@
             });
     });
 
-    // Use all sources in this sample so visibility changes do not recolor annotations.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: showSourceLabels,
