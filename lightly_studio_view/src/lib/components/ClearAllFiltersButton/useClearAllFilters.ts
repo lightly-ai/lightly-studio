@@ -7,6 +7,7 @@ import {
     useTags,
     useVideoFramesBounds
 } from '$lib/hooks';
+import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
 import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 import { useEmbeddingFilterForImages } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForImages';
@@ -30,6 +31,10 @@ interface UseClearAllFiltersParams {
     isImages: boolean;
     isVideos: boolean;
     isVideoFrames: boolean;
+    /** The collection of the annotation tree. Set only while the tree is on. */
+    treeCollectionId?: string;
+    /** Whether the tree filters this grid, which is not the case for ticks of other sources. */
+    treeFilterActive?: Readable<boolean>;
 }
 
 interface UseClearAllFiltersReturn {
@@ -86,7 +91,16 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
             )
         );
     }
+    if (params.treeCollectionId) groups.push(useTreeTicksFilter(params));
     return groups;
+}
+
+// Clearing ticks everything again. The eyes and the group choice stay.
+function useTreeTicksFilter({ treeCollectionId, treeFilterActive }: UseClearAllFiltersParams) {
+    return {
+        isActive: treeFilterActive ?? readable(false),
+        clear: useAnnotationTreeState(treeCollectionId ?? '').resetTicks
+    };
 }
 
 function useTagAndLabelFilters(collectionId: string, includeLabels = true): FilterGroup {

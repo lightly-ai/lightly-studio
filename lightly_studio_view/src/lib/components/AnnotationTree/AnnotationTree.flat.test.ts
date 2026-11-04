@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { QueryClient } from '@tanstack/svelte-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationPairCount } from '$lib/api/lightly_studio_local';
+import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
 import AnnotationsFlatTreeTestWrapper from './AnnotationsFlatTreeTestWrapper.test.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -31,8 +32,9 @@ const pair = (sourceId: string, labelId: string, name: string): AnnotationPairCo
 
 let testCount = 0;
 
-const renderGridTree = () => {
+const renderGridTree = (setUp?: (tree: ReturnType<typeof useAnnotationTreeState>) => void) => {
     testCount += 1;
+    setUp?.(useAnnotationTreeState(`images-${testCount}`));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(AnnotationsFlatTreeTestWrapper, {
         client,
@@ -74,6 +76,22 @@ describe('AnnotationTree on the Annotations grid', () => {
 
     it('sends no pair filter while everything is ticked', async () => {
         renderGridTree();
+
+        await waitFor(() => expect(mocks.readAnnotations).toHaveBeenCalled());
+
+        expect(lastBody().annotation_pairs).toBeUndefined();
+    });
+
+    it('ignores unticked pairs of other sources and of classes that are gone', async () => {
+        renderGridTree((tree) =>
+            tree.setTicked(
+                [
+                    { collection_id: 'src-model', annotation_label_id: 'lbl-car' },
+                    { collection_id: 'src-labels', annotation_label_id: 'lbl-gone' }
+                ],
+                false
+            )
+        );
 
         await waitFor(() => expect(mocks.readAnnotations).toHaveBeenCalled());
 

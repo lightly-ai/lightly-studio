@@ -1,4 +1,4 @@
-import { get } from 'svelte/store';
+import { derived, get, readable } from 'svelte/store';
 import { beforeEach, describe, expect, it } from 'vitest';
 import {
     useAnnotationCollectionsFilter,
@@ -7,6 +7,7 @@ import {
     useVideoFramesBounds
 } from '$lib/hooks';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
+import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
 import { useClearAllFilters } from './useClearAllFilters';
 
 describe('useClearAllFilters', () => {
@@ -137,5 +138,63 @@ describe('useClearAllFilters', () => {
 
         expect(get(hasActiveFilters)).toBe(false);
         expect(get(sources.selectedCollectionIds)).toEqual(['source-1', 'source-2']);
+    });
+
+    describe('annotation tree', () => {
+        const treeCollectionId = 'tree-images';
+        const car = { collection_id: 'source-1', annotation_label_id: 'car' };
+        const person = { collection_id: 'source-1', annotation_label_id: 'person' };
+        const tree = useAnnotationTreeState(treeCollectionId);
+
+        beforeEach(() => {
+            tree.resetTicks();
+            tree.setVisible([person], true);
+            tree.setGroupBy('source');
+        });
+
+        it('ticks everything again and keeps the eyes and the group choice', () => {
+            tree.setTicked([car], false);
+            tree.setUnannotatedTicked(['source-1'], false);
+            tree.setVisible([person], false);
+            tree.setGroupBy('class');
+
+            const { hasActiveFilters, clearAllFilters } = useClearAllFilters({
+                ...imagesGrid,
+                treeCollectionId,
+                // Stands in for the grid filter, which is active while a pair is unticked.
+                treeFilterActive: derived(tree.untickedPairs, (pairs) => pairs.length > 0)
+            });
+            expect(get(hasActiveFilters)).toBe(true);
+
+            clearAllFilters();
+
+            expect(get(hasActiveFilters)).toBe(false);
+            expect(get(tree.untickedPairs)).toEqual([]);
+            expect(get(tree.untickedUnannotated)).toEqual([]);
+            expect(get(tree.hiddenPairs)).toEqual([person]);
+            expect(get(tree.groupBy)).toBe('class');
+        });
+
+        it('shows no active filter for ticks that the grid does not apply', () => {
+            tree.setTicked([{ collection_id: 'gone', annotation_label_id: 'old' }], false);
+
+            const { hasActiveFilters } = useClearAllFilters({
+                ...imagesGrid,
+                treeCollectionId,
+                treeFilterActive: readable(false)
+            });
+
+            expect(get(hasActiveFilters)).toBe(false);
+        });
+
+        it('leaves the ticks alone without a tree collection', () => {
+            tree.setTicked([car], false);
+
+            const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
+            expect(get(hasActiveFilters)).toBe(false);
+            clearAllFilters();
+
+            expect(get(tree.untickedPairs)).toEqual([car]);
+        });
     });
 });
