@@ -28,34 +28,24 @@ export const useDeleteAnnotation = ({ getCollectionId }: { getCollectionId: () =
         invalidateEvaluationRunsQueries();
     };
 
-    const deleteAnnotation = (
+    const deleteAnnotation = async (
         annotationId: string,
         annotationType: string,
         collectionId = getCollectionId()
-    ) =>
-        new Promise<void>((resolve, reject) => {
-            mutation.mutate(
-                {
-                    path: {
-                        collection_id: collectionId,
-                        annotation_id: annotationId
-                    }
-                },
-                {
-                    onSuccess: () => {
-                        refetch(collectionId);
-                        trackEvent('annotation_deleted', {
-                            collection_id: collectionId,
-                            annotation_type: annotationType
-                        });
-                        resolve();
-                    },
-                    onError: (error) => {
-                        reject(error);
-                    }
-                }
-            );
+    ): Promise<void> => {
+        // No per-call callbacks: TanStack drops them when the observer unmounts.
+        await mutation.mutateAsync({
+            path: {
+                collection_id: collectionId,
+                annotation_id: annotationId
+            }
         });
+        refetch(collectionId);
+        trackEvent('annotation_deleted', {
+            collection_id: collectionId,
+            annotation_type: annotationType
+        });
+    };
 
     return {
         deleteAnnotation

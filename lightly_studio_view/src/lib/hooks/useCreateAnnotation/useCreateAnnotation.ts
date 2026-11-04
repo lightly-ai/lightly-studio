@@ -35,36 +35,27 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
     };
 
     // Pass `skipRefetch` to create many annotations and call `refetch` once at the end.
-    const createAnnotation = (
+    const createAnnotation = async (
         inputs: AnnotationCreateInput,
         { skipRefetch = false }: { skipRefetch?: boolean } = {}
-    ) =>
-        new Promise<CreateAnnotationResponse>((resolve, reject) => {
-            const collectionId = getCollectionId();
-            mutation.mutate(
-                {
-                    path: {
-                        collection_id: collectionId
-                    },
-                    body: inputs
-                },
-                {
-                    onSuccess: (data) => {
-                        if (!skipRefetch) refetch(collectionId);
-                        trackEvent('annotation_created', {
-                            collection_id: collectionId,
-                            annotation_type: data.annotation_type,
-                            parent_sample_type: page.params.collection_type,
-                            label_name: data.annotation_label.annotation_label_name
-                        });
-                        resolve(data);
-                    },
-                    onError: (error) => {
-                        reject(error);
-                    }
-                }
-            );
+    ): Promise<CreateAnnotationResponse> => {
+        const collectionId = getCollectionId();
+        // No per-call callbacks: TanStack drops them when the observer unmounts.
+        const data = await mutation.mutateAsync({
+            path: {
+                collection_id: collectionId
+            },
+            body: inputs
         });
+        if (!skipRefetch) refetch(collectionId);
+        trackEvent('annotation_created', {
+            collection_id: collectionId,
+            annotation_type: data.annotation_type,
+            parent_sample_type: page.params.collection_type,
+            label_name: data.annotation_label.annotation_label_name
+        });
+        return data;
+    };
 
     return {
         createAnnotation,
