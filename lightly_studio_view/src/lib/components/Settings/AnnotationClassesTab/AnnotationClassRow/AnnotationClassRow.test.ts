@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/sve
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AnnotationClassRow from './AnnotationClassRow.svelte';
 
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
+
 interface RenderRowOptions {
     annotationCount?: number;
     onRename?: (name: string) => Promise<unknown>;
