@@ -67,24 +67,32 @@ export const useAnnotationCardActions = (getParams: () => Params) => {
         return moved;
     };
 
+    // A second Delete while the first request runs would delete twice and add two undo entries.
+    let isDeleting = false;
     const remove = async () => {
         const { annotation, refetch } = getParams();
-        if (!labels.data) return;
-        addAnnotationDeleteToUndoStack({
-            annotation,
-            labels: labels.data,
-            sources: sources.data ?? [],
-            addReversibleAction,
-            createAnnotation,
-            refetch
-        });
+        if (!labels.data || isDeleting) return;
+        // Read before the request: undo recreates the annotation as it was.
+        const undoLabels = labels.data;
+        const undoSources = sources.data ?? [];
+        isDeleting = true;
         try {
             await deleteAnnotation(annotation.sample_id, annotation.annotation_type);
+            addAnnotationDeleteToUndoStack({
+                annotation,
+                labels: undoLabels,
+                sources: undoSources,
+                addReversibleAction,
+                createAnnotation,
+                refetch
+            });
             toast.success('Annotation deleted successfully');
             setAnnotationId(null);
             refetch();
         } catch {
             toast.error('Failed to delete annotation. Please try again.');
+        } finally {
+            isDeleting = false;
         }
     };
 
