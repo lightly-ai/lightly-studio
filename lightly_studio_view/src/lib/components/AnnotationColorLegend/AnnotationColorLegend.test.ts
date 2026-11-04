@@ -26,4 +26,20 @@ describe('AnnotationColorLegend', () => {
 
         expect(getCustomColor(defaultProps.labelName)).toBeUndefined();
     });
+
+    it('keeps full opacity when Apply is clicked without changes', async () => {
+        const { getCustomColor } = useCustomLabelColors();
+        render(AnnotationColorLegend, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Change the color of cat' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+        expect(getCustomColor(defaultProps.labelName)?.alpha).toBe(1);
+    });
+
+    it('names the picker button after the class', () => {
+        render(AnnotationColorLegend, { props: defaultProps });
+
+        expect(screen.getByRole('button', { name: 'Change the color of cat' })).toBeInTheDocument();
+    });
 });
