@@ -9,10 +9,15 @@
     } from './pointCloudWorkspaceLayoutContext.svelte';
     import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
     import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
+    import { useSequenceTracks } from './FrameTimeline/useSequenceTracks.svelte';
 
     const { cameraPane } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
+    const tracksQuery = useSequenceTracks(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId
+    }));
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => layout.datasetId,
@@ -96,6 +101,8 @@
 <div class="flex-none">
     <FrameTimeline
         ticks={layout.workspace.ticks}
+        tracks={tracksQuery.query.data?.tracks ?? []}
+        selectedAnnotationId={layout.selectedCuboidId}
         currentTick={layout.workspace.currentTick}
         isPlaying={layout.workspace.isPlaying}
         playbackIntervalMs={layout.workspace.playbackIntervalMs}
@@ -107,6 +114,7 @@
         onPlayToggle={layout.onPlayToggle}
         onPlaybackIntervalChange={layout.onPlaybackIntervalChange}
         onSelectTick={layout.onSelectTick}
+        onSelectAnnotation={layout.onSelect}
         onSeekStart={layout.onSeekStart}
         onSeekEnd={layout.onSeekEnd}
         onPreviousSequence={layout.onPreviousSequence}
