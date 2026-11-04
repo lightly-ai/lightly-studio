@@ -3,7 +3,8 @@
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import {
         getAnnotationTreeEnabled,
-        useTreeAnnotationVisibility
+        useTreeAnnotationVisibility,
+        useTreeColorMode
     } from '$lib/components/AnnotationTree';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
@@ -71,6 +72,7 @@
     const { enforceColoringByClassStore } = useSettings();
     const { sourceGroupStates, setSourceGroupState } = useAnnotationSourceGroupState();
     const isTreeEnabled = getAnnotationTreeEnabled();
+    const treeColorMode = useTreeColorMode(isTreeEnabled);
     const treeVisibility = useTreeAnnotationVisibility(() => ({
         collectionId,
         enabled: isTreeEnabled()
@@ -123,7 +125,8 @@
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: countVisibleSources(annotationsSort) >= 2,
-            enforceColoringByClass: $enforceColoringByClassStore
+            enforceColoringByClass: $enforceColoringByClassStore,
+            colorMode: treeColorMode.current
         })
     );
 

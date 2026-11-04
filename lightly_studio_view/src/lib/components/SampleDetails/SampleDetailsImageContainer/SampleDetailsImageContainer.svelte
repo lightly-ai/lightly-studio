@@ -4,6 +4,7 @@
     import { ZoomableContainer } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { getAnnotationTreeEnabled, useTreeColorMode } from '$lib/components/AnnotationTree';
     import { afterNavigate } from '$app/navigation';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import SampleDetailsAnnotation from '../SampleDetailsAnnotation/SampleDetailsAnnotation.svelte';
@@ -76,6 +77,7 @@
     const filterIntercept = $derived(0.5 - 0.5 * $imageContrast);
     const { isHidden } = useHideAnnotations();
     const { enforceColoringByClassStore } = useSettings();
+    const treeColorMode = useTreeColorMode(getAnnotationTreeEnabled());
 
     let resetZoomTransform: (() => void) | undefined = $state();
     let mousePosition = $state<{ x: number; y: number } | null>(null);
@@ -107,7 +109,8 @@
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: showSourceLabels,
-            enforceColoringByClass: $enforceColoringByClassStore
+            enforceColoringByClass: $enforceColoringByClassStore,
+            colorMode: treeColorMode.current
         })
     );
 

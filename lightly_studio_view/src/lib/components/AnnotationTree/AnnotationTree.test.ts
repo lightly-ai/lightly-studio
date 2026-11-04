@@ -1,15 +1,39 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/svelte';
 import { QueryClient } from '@tanstack/svelte-query';
+import { getColorBySource } from '$lib/utils';
+import { setAnnotationClasses, useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationPairCount } from '$lib/api/lightly_studio_local';
+import { writable } from 'svelte/store';
 import AnnotationTreeTestWrapper from './AnnotationTreeTestWrapper.test.svelte';
 
 const mocks = vi.hoisted(() => ({
     sources: [] as { collection_id: string; name: string }[],
     pairs: [] as AnnotationPairCount[],
     pairsResponse: null as Promise<unknown> | null,
-    readImages: vi.fn()
+    readImages: vi.fn(),
+    colorMode: null as unknown as ReturnType<typeof writable<'class' | 'source'>>,
+    setAnnotationColorMode: vi.fn()
 }));
+
+vi.mock('$lib/hooks/useSettings', async (importOriginal) => {
+    const { writable } = await import('svelte/store');
+    const original = await importOriginal<typeof import('$lib/hooks/useSettings')>();
+    mocks.colorMode = writable<'class' | 'source'>('class');
+    // The real hook saves to the backend, which updates the store the same way.
+    mocks.setAnnotationColorMode.mockImplementation(async (mode: 'class' | 'source') => {
+        mocks.colorMode.set(mode);
+        return { success: true };
+    });
+    return {
+        ...original,
+        useSettings: () => ({
+            ...original.useSettings(),
+            annotationColorModeStore: mocks.colorMode,
+            setAnnotationColorMode: mocks.setAnnotationColorMode
+        })
+    };
+});
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
@@ -68,6 +92,8 @@ describe('AnnotationTree', () => {
             pair('src-model', 'lbl-car', 'car')
         ];
         mocks.pairsResponse = null;
+        mocks.colorMode?.set('class');
+        mocks.setAnnotationColorMode.mockClear();
         mocks.readImages.mockReset();
         mocks.readImages.mockResolvedValue({
             data: { data: [], total_count: 0, nextCursor: null }
@@ -421,6 +447,90 @@ describe('AnnotationTree', () => {
             expect(
                 await screen.findByRole('checkbox', { name: 'person in labels' })
             ).toHaveAttribute('aria-checked', 'true');
+        });
+    });
+
+    describe('color marks', () => {
+        const sourceIconOf = (group: HTMLElement) =>
+            within(group).getAllByTestId('annotation-tree-source-icon')[0];
+
+        it('shows neutral source icons and class dots "By class" in the Class mode', async () => {
+            renderTree();
+
+            const labels = await groupNamed('labels');
+            expect(sourceIconOf(labels)).not.toHaveAttribute('data-color');
+            await waitFor(() =>
+                expect(within(labels).getAllByTestId('annotation-tree-class-dot')).toHaveLength(2)
+            );
+        });
+
+        it('colors the class dots with the class colors saved in the dataset', async () => {
+            setAnnotationClasses('ds-1', [
+                {
+                    annotation_label_id: 'lbl-car',
+                    annotation_label_name: 'car',
+                    dataset_id: 'ds-1',
+                    color: '#123456',
+                    alpha: 1
+                }
+            ]);
+            renderTree();
+
+            try {
+                const labels = await groupNamed('labels');
+                await waitFor(() =>
+                    expect(
+                        within(labels).getAllByTestId('annotation-tree-class-dot')[0]
+                    ).toHaveStyle({ backgroundColor: '#123456' })
+                );
+            } finally {
+                useCustomLabelColors().clearCustomColors();
+            }
+        });
+
+        it('calls setAnnotationColorMode from the Color by switch', async () => {
+            renderTree();
+
+            await fireEvent.click(await screen.findByRole('button', { name: 'Source' }));
+
+            expect(mocks.setAnnotationColorMode).toHaveBeenCalledWith('source');
+            await waitFor(() =>
+                expect(screen.getByRole('button', { name: 'Source' })).toHaveAttribute(
+                    'aria-pressed',
+                    'true'
+                )
+            );
+        });
+
+        it('tints the source icon in the source color and drops the class dots in the Source mode', async () => {
+            mocks.colorMode?.set('source');
+            renderTree();
+
+            const labels = await groupNamed('labels');
+            const expected = getColorBySource('labels', 1).color;
+            expect(sourceIconOf(labels)).toHaveAttribute('data-color', expected);
+            expect(within(labels).queryByTestId('annotation-tree-class-dot')).toBeNull();
+        });
+
+        it('opens the color picker from the source color mark in the Source mode', async () => {
+            mocks.colorMode?.set('source');
+            renderTree();
+
+            await groupNamed('labels');
+            await fireEvent.click(
+                (await screen.findAllByRole('img', { name: 'Change color of labels' }))[0]
+            );
+
+            expect(await screen.findByRole('dialog', { name: 'Color picker' })).toBeInTheDocument();
+        });
+
+        it('does not open a picker from the neutral source icon in the Class mode', async () => {
+            renderTree();
+
+            const labels = await groupNamed('labels');
+            await fireEvent.click(sourceIconOf(labels));
+
+            expect(screen.queryByRole('dialog', { name: 'Color picker' })).toBeNull();
         });
     });
 });
