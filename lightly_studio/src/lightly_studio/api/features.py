@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_ANALYTICS_ENABLED,
+    LIGHTLY_STUDIO_ANNOTATION_TREE,
 )
 
 # The GUI reads this back to decide whether to start PostHog, so that
 # LIGHTLY_STUDIO_ANALYTICS_ENABLED switches off tracking on both sides.
 ANALYTICS_FEATURE = "analytics"
 ONBOARDING_FEATURE = "onboarding"
+ANNOTATION_TREE_FEATURE = "annotation_tree"
 
 
 def _get_active_features() -> list[str]:
@@ -18,6 +20,8 @@ def _get_active_features() -> list[str]:
     if LIGHTLY_STUDIO_ANALYTICS_ENABLED:
         features.append(ANALYTICS_FEATURE)
     features.append(ONBOARDING_FEATURE)
+    if LIGHTLY_STUDIO_ANNOTATION_TREE:
+        features.append(ANNOTATION_TREE_FEATURE)
     return features
 
 
