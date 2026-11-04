@@ -29,7 +29,7 @@ export class VideosPage {
     }
 
     getLabelsMenuItem(labelName: string) {
-        return this.page.getByTestId('label-menu-label-name').getByText(labelName, { exact: true });
+        return this.page.getByTestId('labels-menu-name').getByText(labelName, { exact: true });
     }
 
     async clickLabel(label: string) {

@@ -36,7 +36,7 @@
     const [before, match, after] = $derived(splitMatch(item.label, highlight));
 </script>
 
-<div class="flex w-full items-center gap-2" title={item.label} data-testid="{testId}-item">
+<div class="group flex w-full items-center gap-2" title={item.label} data-testid="{testId}-item">
     <Checkbox
         id={rowId}
         {checked}
