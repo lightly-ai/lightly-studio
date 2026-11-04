@@ -1,9 +1,10 @@
 <script lang="ts">
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+    import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks';
-    import { getColorByLabel } from '$lib/utils';
+    import { getColorByLabel, getColorBySource } from '$lib/utils';
     import { getColorPair } from '$lib/utils/getColorPair';
     import {
         getSampleClassificationPills,
@@ -35,6 +36,7 @@
     const { isSourceVisible, multipleSourcesVisible, collectionIdToName } =
         useAnnotationCollectionsFilter();
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { customSourceColorsStore } = useCustomSourceColors();
     const { enforceColoringByClassStore } = useSettings();
 
     const pills = $derived(
@@ -51,9 +53,13 @@
     const visiblePills = $derived(overflowCount > 0 ? pills.slice(0, 1) : pills);
 
     const getPillColor = (pill: SampleClassificationPill, alpha: number) => {
-        const customColor = $customLabelColorsStore[pill.label];
+        const customColors = pill.colorBySource
+            ? $customSourceColorsStore
+            : $customLabelColorsStore;
+        const customColor = customColors[pill.colorKey];
         if (!customColor) {
-            return getColorByLabel(pill.colorKey, alpha);
+            const getColor = pill.colorBySource ? getColorBySource : getColorByLabel;
+            return getColor(pill.colorKey, alpha);
         }
 
         const hex = customColor.color.slice(1);

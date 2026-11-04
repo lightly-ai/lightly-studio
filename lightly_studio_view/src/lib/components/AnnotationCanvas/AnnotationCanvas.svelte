@@ -15,7 +15,8 @@
 <script lang="ts">
     import { onDestroy, onMount, untrack } from 'svelte';
     import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
-    import { getColorByLabel } from '$lib/utils';
+    import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+    import { getColorByLabel, getColorBySource } from '$lib/utils';
     import type { BoundingBox } from '$lib/types';
     import {
         acquireMaskRendererWorker,
@@ -35,6 +36,7 @@
         object_detection_details?: BoundingBox;
         color?: string;
         opacity?: number;
+        colorBySource?: boolean;
     }
 
     interface ObjectDetectionAnnotation {
@@ -44,6 +46,7 @@
         segmentation_mask?: undefined;
         color?: string;
         opacity?: number;
+        colorBySource?: boolean;
     }
 
     type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
@@ -78,6 +81,7 @@
     const canvasHeight = $derived(Math.max(1, Math.round(outputHeight ?? sourceHeight)));
 
     const { customLabelColorsStore } = useCustomLabelColors();
+    const { customSourceColorsStore } = useCustomSourceColors();
 
     let canvasEl: HTMLCanvasElement | null = null;
     let worker: Worker | null = null;
@@ -148,11 +152,13 @@
     const resolveLabelColor = (
         labelName: string,
         colorAlpha: number,
-        customLabelColors: CustomLabelColorMap
+        customColors: CustomLabelColorMap,
+        colorBySource: boolean
     ): [number, number, number, number] => {
-        const customColor = customLabelColors[labelName];
+        const customColor = customColors[labelName];
         if (!customColor) {
-            return rgbaParser(getColorByLabel(labelName, colorAlpha).color);
+            const getColor = colorBySource ? getColorBySource : getColorByLabel;
+            return rgbaParser(getColor(labelName, colorAlpha).color);
         }
 
         const [r, g, b] = rgbaParser(customColor.color);
@@ -163,13 +169,16 @@
     const resolveAnnotationColor = (
         annotation: AnnotationCanvasAnnotation,
         colorAlpha: number,
-        customLabelColors: CustomLabelColorMap
+        customLabelColors: CustomLabelColorMap,
+        customSourceColors: CustomLabelColorMap
     ): [number, number, number, number] => {
         if (!annotation.color) {
+            const colorBySource = annotation.colorBySource ?? false;
             return resolveLabelColor(
                 annotation.annotation_label_name || 'label',
                 colorAlpha,
-                customLabelColors
+                colorBySource ? customSourceColors : customLabelColors,
+                colorBySource
             );
         }
 
@@ -192,7 +201,8 @@
 
     // Collect mask RLEs and any available bounding boxes in image space.
     const buildRenderPayload = (
-        customLabelColors: CustomLabelColorMap
+        customLabelColors: CustomLabelColorMap,
+        customSourceColors: CustomLabelColorMap
     ): { masks: MaskPayload[]; boxes: BoxPayload[] } => {
         const masks: MaskPayload[] = [];
         const boxes: BoxPayload[] = [];
@@ -202,7 +212,12 @@
             if (rle.length) {
                 masks.push({
                     rle,
-                    color: resolveAnnotationColor(annotation, alpha, customLabelColors)
+                    color: resolveAnnotationColor(
+                        annotation,
+                        alpha,
+                        customLabelColors,
+                        customSourceColors
+                    )
                 });
             }
 
@@ -214,7 +229,12 @@
                     y: Math.round(bbox.y),
                     width: Math.round(bbox.width),
                     height: Math.round(bbox.height),
-                    color: resolveAnnotationColor(annotation, 1, customLabelColors)
+                    color: resolveAnnotationColor(
+                        annotation,
+                        1,
+                        customLabelColors,
+                        customSourceColors
+                    )
                 });
             }
         }
@@ -222,8 +242,11 @@
         return { masks, boxes };
     };
 
-    const render = (customLabelColors: CustomLabelColorMap = $customLabelColorsStore) => {
-        const payload = buildRenderPayload(customLabelColors);
+    const render = (
+        customLabelColors: CustomLabelColorMap = $customLabelColorsStore,
+        customSourceColors: CustomLabelColorMap = $customSourceColorsStore
+    ) => {
+        const payload = buildRenderPayload(customLabelColors, customSourceColors);
         const geometry: RenderGeometry = {
             sourceWidth,
             sourceHeight,
@@ -357,7 +380,8 @@
 
     $effect(() => {
         const customLabelColors = $customLabelColorsStore;
-        render(customLabelColors);
+        const customSourceColors = $customSourceColorsStore;
+        render(customLabelColors, customSourceColors);
     });
 </script>
 

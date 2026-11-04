@@ -306,7 +306,7 @@ describe('SampleAnnotations', () => {
         });
 
         it('colors by source name when multiple sources are selected and enforce is disabled', async () => {
-            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+            const colorBySourceSpy = vi.spyOn(utils, 'getColorBySource');
 
             setSelectedCollectionIds(['col-a', 'col-b']);
             setCollectionIdToName({ 'col-a': 'GroundTruth', 'col-b': 'Predictions' });
@@ -315,16 +315,17 @@ describe('SampleAnnotations', () => {
             render(SampleAnnotations, { props: { sample: createTwoSourceSample() } });
 
             await waitFor(() => {
-                const calledNames = colorByLabelSpy.mock.calls.map(([name]) => name);
+                const calledNames = colorBySourceSpy.mock.calls.map(([name]) => name);
                 expect(calledNames).toContain('GroundTruth');
                 expect(calledNames).toContain('Predictions');
             });
 
-            colorByLabelSpy.mockRestore();
+            colorBySourceSpy.mockRestore();
         });
 
         it('colors by class when multiple sources are selected and enforce is enabled', async () => {
             const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+            const colorBySourceSpy = vi.spyOn(utils, 'getColorBySource');
 
             setSelectedCollectionIds(['col-a', 'col-b']);
             setCollectionIdToName({ 'col-a': 'GroundTruth', 'col-b': 'Predictions' });
@@ -337,9 +338,11 @@ describe('SampleAnnotations', () => {
                 expect(calledNames).toContain('car');
                 expect(calledNames).not.toContain('GroundTruth');
                 expect(calledNames).not.toContain('Predictions');
+                expect(colorBySourceSpy).not.toHaveBeenCalled();
             });
 
             colorByLabelSpy.mockRestore();
+            colorBySourceSpy.mockRestore();
         });
     });
 });
