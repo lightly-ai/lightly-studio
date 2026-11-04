@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { URI } from 'langium';
 import { createLightlyQueryServices } from './lightly-query-module';
 import { parseLightlyQuery } from './query-expr-translation';
 
@@ -18,10 +19,41 @@ const parse = (source: string) => parseLightlyQuery(parser, source);
 const ok = (match_expr: unknown) => ({ status: 'ok', queryExpr: { match_expr } });
 
 describe('sample evaluation query translation', () => {
-    it('preserves video fps filters alongside bare fp metrics', () => {
+    it('suggests quoted built-in metric keywords', async () => {
+        const services = createLightlyQueryServices();
+        const source = 'sample_evaluation(name = "run1" AND ';
+        const document = services.shared.workspace.LangiumDocumentFactory.fromString(
+            source,
+            URI.parse('inmemory:///evaluation-completion.lql')
+        );
+        await services.shared.workspace.DocumentBuilder.build([document]);
+        const completions = await services.LightlyQuery.lsp.CompletionProvider?.getCompletion(
+            document,
+            {
+                textDocument: { uri: document.uri.toString() },
+                position: { line: 0, character: source.length }
+            }
+        );
+        expect(completions?.items.map((item) => item.label)).toEqual(
+            expect.arrayContaining(['"tp"', '"fp"', '"fn"', '"disagreement"', '"miou"'])
+        );
+    });
+
+    it.each(['tp', 'fp', 'fn', 'disagreement', 'miou'])(
+        'preserves built-in keyword %s as an ordinary string',
+        (name) => {
+            expect(parse(`sample_evaluation(name = "${name}")`)).toEqual(
+                ok({ ...evaluation(), run_name: name })
+            );
+            expect(parse(`file_name = "${name}"`).status).toBe('ok');
+            expect(parse(`"${name}" IN tags`).status).toBe('ok');
+        }
+    );
+
+    it('preserves video fps filters alongside quoted fp metrics', () => {
         expect(parse('video: fps = 30').status).toBe('ok');
         expect(
-            parse('video: fps = 30 AND sample_evaluation(name = "run1" AND fp = 0)').status
+            parse('video: fps = 30 AND sample_evaluation(name = "run1" AND "fp" = 0)').status
         ).toBe('ok');
     });
 
@@ -142,18 +174,32 @@ describe('sample evaluation query translation', () => {
         expect(parse(`sample_evaluation(${body})`).status).toBe('error');
     });
 
-    it.each(['custom_score', 'width', 'name', 'tp_score', 'fp_extra', 'fn_count'])(
-        'rejects unquoted metric %s',
+    it.each([
+        'tp',
+        'fp',
+        'fn',
+        'disagreement',
+        'miou',
+        'custom_score',
+        'width',
+        'name',
+        'tp_score',
+        'fp_extra',
+        'fn_count',
+        'disagreement_score',
+        'miou_extra'
+    ])('rejects unquoted metric %s', (name) => {
+        expect(parse(`sample_evaluation(name = "run1" AND ${name} > 0)`).status).toBe('error');
+    });
+
+    it.each(['tp', 'fp', 'fn', 'disagreement', 'miou'])(
+        'accepts quoted built-in metric %s',
         (name) => {
-            expect(parse(`sample_evaluation(name = "run1" AND ${name} > 0)`).status).toBe('error');
+            const expected = ok(evaluation([metric(name, '>', 1)]));
+            expect(parse(`sample_evaluation(name = "run1" AND "${name}" > 1)`)).toEqual(expected);
+            expect(parse(`sample_evaluation(name = "run1" AND '${name}' > 1)`)).toEqual(expected);
         }
     );
-
-    it.each(['tp', 'fp', 'fn'])('accepts bare and quoted built-in metric %s', (name) => {
-        const expected = ok(evaluation([metric(name, '>', 1)]));
-        expect(parse(`sample_evaluation(name = "run1" AND ${name} > 1)`)).toEqual(expected);
-        expect(parse(`sample_evaluation(name = "run1" AND "${name}" > 1)`)).toEqual(expected);
-    });
 
     it('accepts single-quoted metric names', () => {
         expect(parse("sample_evaluation(name = 'run1' AND 'custom_score' > 1)")).toEqual(

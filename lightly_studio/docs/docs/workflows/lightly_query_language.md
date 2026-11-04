@@ -182,8 +182,8 @@ width >= 640 AND classification(class_name = "approved")
 Use `sample_evaluation(...)` to filter samples by metrics from a named evaluation run:
 
 ```mysql
-sample_evaluation(name = "eval-tagged-samples" AND tp >= 1 AND fn >= 5 AND fp = 0)
-sample_evaluation(name = "eval-tagged-samples" AND (tp > 0 OR fn > 0) AND NOT fp > 2)
+sample_evaluation(name = "eval-tagged-samples" AND "tp" >= 1 AND "fn" >= 5 AND "fp" = 0)
+sample_evaluation(name = "eval-tagged-samples" AND ("tp" > 0 OR "fn" > 0) AND NOT "fp" > 2)
 sample_evaluation(name = "eval-tagged-samples" AND "custom-score" < -0.5)
 ```
 
@@ -192,8 +192,9 @@ A name-only query matches all samples evaluated by that run. Metric criteria sup
 parentheses, `NOT`, `AND`, and `OR` (in that precedence order), and numeric comparisons
 with `=`, `!=`, `<`, `<=`, `>`, and `>=`.
 
-The built-in metric names `tp`, `fp`, and `fn` can be written with or without quotes.
-All other metric names require double or single quotes, such as `"custom_score"`.
+All metric names require single or double quotes, including the built-in keywords
+`"tp"`, `"fp"`, `"fn"`, `"disagreement"`, and `"miou"`. Custom metric names are also
+quoted, such as `"custom_score"`.
 Metric thresholds must be finite numbers, including decimals.
 
 Missing metrics do not match comparisons, including `!=`. An inner `NOT` can match a
