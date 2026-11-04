@@ -228,6 +228,9 @@ def test_set_annotation_label_color__not_found(test_client: TestClient) -> None:
         {"color": "#ff8040", "alpha": 1.5},
         {"color": "#ff8040", "alpha": None},
         {"color": None, "alpha": 0.5},
+        {},
+        {"color": "#ff8040"},
+        {"alpha": 0.5},
     ],
 )
 def test_set_annotation_label_color__invalid(

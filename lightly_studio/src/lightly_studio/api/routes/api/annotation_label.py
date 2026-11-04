@@ -40,8 +40,8 @@ class AnnotationLabelColorRequest(BaseModel):
     Both fields are set to choose a color, or both are null to restore the default color.
     """
 
-    color: str | None = pydantic.Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")
-    alpha: float | None = pydantic.Field(default=None, ge=0, le=1)
+    color: str | None = pydantic.Field(pattern=r"^#[0-9a-fA-F]{6}$")
+    alpha: float | None = pydantic.Field(ge=0, le=1)
 
     @pydantic.model_validator(mode="after")
     def validate_color_and_alpha_are_set_together(self) -> AnnotationLabelColorRequest:  # noqa: N804
