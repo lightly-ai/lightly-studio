@@ -265,8 +265,11 @@ def _average_precision(records: list[tuple[float, bool]], ground_truth_count: in
     false_positives = np.cumsum([0 if is_tp else 1 for _, is_tp in ranked])
     recalls = true_positives / ground_truth_count
     precisions = true_positives / np.maximum(true_positives + false_positives, 1)
-    interpolated = [
-        precisions[recalls >= recall].max() if np.any(recalls >= recall) else 0.0
-        for recall in _RECALL_GRID
-    ]
+    # Best precision at this recall or at any higher recall.
+    envelope = np.maximum.accumulate(precisions[::-1])[::-1]
+    # First ranked prediction that reaches each recall point.
+    indices = np.searchsorted(recalls, _RECALL_GRID, side="left")
+    interpolated = np.zeros_like(_RECALL_GRID)
+    reached = indices < len(envelope)
+    interpolated[reached] = envelope[indices[reached]]
     return float(np.mean(interpolated))
