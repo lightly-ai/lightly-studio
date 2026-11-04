@@ -29,7 +29,7 @@ const {
 
     const sampleIds: string[] = [];
     const brushHookMock = vi.fn((params: { sampleId: string }) => ({
-        finishBrush: vi.fn(() => {
+        finishBrush: vi.fn((): void | Promise<void> => {
             sampleIds.push(params.sampleId);
         })
     }));
