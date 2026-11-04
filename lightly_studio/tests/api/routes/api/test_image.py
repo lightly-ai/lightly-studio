@@ -695,3 +695,42 @@ def test_get_image_sample_ids(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [str(image.sample_id)]
+
+
+def test_count_image_annotations_by_pair(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/a.png"
+    )
+    car_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    source = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image.sample_id, annotation_label_id=car_label.annotation_label_id
+            )
+        ],
+        collection_name="source_a",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count_by_pair",
+        json={"count_mode": "samples"},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [
+        {
+            "annotation_collection_id": str(source[0].annotation_collection_id),
+            "annotation_label_id": str(car_label.annotation_label_id),
+            "label_name": "car",
+            "current_count": 1,
+            "total_count": 1,
+        }
+    ]

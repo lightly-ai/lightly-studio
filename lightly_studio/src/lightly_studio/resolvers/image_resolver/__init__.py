@@ -3,6 +3,9 @@
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
     count_image_annotations_by_collection,
 )
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_pair import (
+    count_image_annotations_by_pair,
+)
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_sample_tags import (
     count_image_annotations_by_sample_tags,
 )
@@ -40,6 +43,7 @@ __all__ = [
     "ImageField",
     "build_sample_ids_query",
     "count_image_annotations_by_collection",
+    "count_image_annotations_by_pair",
     "count_image_annotations_by_sample_tags",
     "create_many",
     "delete",
