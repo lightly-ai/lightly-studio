@@ -47,7 +47,6 @@
               : `${selectedValues.length} selected`
     );
     const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
-    let search = $state('');
 </script>
 
 <MetadataCategoricalFilterLayout
@@ -58,7 +57,6 @@
     {loading}
     {updating}
     {onRemove}
-    onOpenChange={(open) => !open && (search = '')}
 >
     {#snippet children()}
         <MetadataCategoricalFilterOptions
@@ -67,8 +65,6 @@
             {loading}
             {error}
             listMode={layout === 'list'}
-            {search}
-            onSearchChange={(value) => (search = value)}
             {onToggle}
             {onClear}
         />
