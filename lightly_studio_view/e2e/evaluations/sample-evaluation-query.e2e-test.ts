@@ -20,16 +20,10 @@ async function applyQuery(page: Page): Promise<void> {
     await response;
 }
 
-async function getEvaluatedSampleCount(page: Page): Promise<number> {
+async function applyRunQuery(page: Page): Promise<void> {
     await typeQuery(page, RUN_QUERY);
     await applyQuery(page);
-    const samples = page.getByTestId('sample-grid-item');
-    await expect.poll(() => samples.count()).toBeLessThanOrEqual(TAGGED_SAMPLE_COUNT);
-    await expect(samples.first()).toBeVisible();
-    const count = await samples.count();
-    // Annotation edits in other tests invalidate individual samples' cached metrics.
-    expect(count).toBeLessThanOrEqual(TAGGED_SAMPLE_COUNT);
-    return count;
+    await expect(page.getByTestId('sample-grid-item')).toHaveCount(TAGGED_SAMPLE_COUNT);
 }
 
 test.beforeEach(async ({ page }) => {
@@ -47,11 +41,11 @@ test('run membership returns the evaluated samples', async ({ page }) => {
         items.map((item) => item.getAttribute('data-sample-name'))
     );
 
-    await getEvaluatedSampleCount(page);
+    await applyRunQuery(page);
     const evaluatedNames = await samples.evaluateAll((items) =>
         items.map((item) => item.getAttribute('data-sample-name'))
     );
-    expect(names).toEqual(expect.arrayContaining(evaluatedNames));
+    expect(evaluatedNames.sort()).toEqual(names.sort());
     await expect(page.getByTestId('query-filter-chip')).toBeVisible();
 });
 
@@ -60,7 +54,7 @@ for (const quote of ['"', "'"]) {
         page
     }) => {
         // The fixture uses identical ground truth and predictions: fp and fn are zero.
-        const count = await getEvaluatedSampleCount(page);
+        await applyRunQuery(page);
         const metric = (name: string) => `${quote}${name}${quote}`;
         await typeQuery(
             page,
@@ -68,7 +62,7 @@ for (const quote of ['"', "'"]) {
                 `(${metric('tp')} >= 0 OR ${metric('fn')} > 0) AND NOT ${metric('fp')} != 0)`
         );
         await applyQuery(page);
-        await expect(page.getByTestId('sample-grid-item')).toHaveCount(count);
+        await expect(page.getByTestId('sample-grid-item')).toHaveCount(TAGGED_SAMPLE_COUNT);
 
         await typeQuery(page, `sample_evaluation(name = "${RUN_NAME}" AND ${metric('fn')} > 0)`);
         await applyQuery(page);
@@ -78,7 +72,7 @@ for (const quote of ['"', "'"]) {
     test(`autocomplete replaces a partially quoted metric starting with ${quote}`, async ({
         page
     }) => {
-        const count = await getEvaluatedSampleCount(page);
+        await applyRunQuery(page);
         await typeQuery(page, `sample_evaluation(name = "${RUN_NAME}" AND ${quote}t`);
         await page.keyboard.press('Control+Space');
         const suggestion = page.getByRole('option', { name: /^"tp",/ });
@@ -87,16 +81,16 @@ for (const quote of ['"', "'"]) {
         await page.keyboard.type(' >= 0)');
         await page.keyboard.press('Escape');
         await applyQuery(page);
-        await expect(page.getByTestId('sample-grid-item')).toHaveCount(count);
+        await expect(page.getByTestId('sample-grid-item')).toHaveCount(TAGGED_SAMPLE_COUNT);
     });
 }
 
 test('unquoted metrics show an error and preserve the applied filter', async ({ page }) => {
-    const count = await getEvaluatedSampleCount(page);
+    await applyRunQuery(page);
 
     await typeQuery(page, `sample_evaluation(name = "${RUN_NAME}" AND tp > 0)`);
     await page.getByTestId('query-editor-apply-button').click();
     await expect(page.getByText(/Failed to translate query/)).toBeVisible();
-    await expect(page.getByTestId('sample-grid-item')).toHaveCount(count);
+    await expect(page.getByTestId('sample-grid-item')).toHaveCount(TAGGED_SAMPLE_COUNT);
     await expect(page.getByTestId('query-editor-apply-button')).toBeEnabled();
 });
