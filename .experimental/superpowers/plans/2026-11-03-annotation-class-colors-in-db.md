@@ -308,7 +308,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 
 ## PR 8b: Pass the source name to AnnotationCanvas in its own field
 
-**Purpose:** PR 7 made `SampleAnnotations` overwrite `annotation_label_name` with the source name and set `colorBySource: true` so the canvas knows how to read it. The field meant two things. Now the canvas gets the source name in its own field. No behavior change.
+**Purpose:** Before this stack, `SampleAnnotations` overwrote `annotation_label_name` with the source name; PR 7 added `colorBySource` so the canvas knows how to read it. The field meant two things. Now the canvas gets the source name in its own field. No behavior change.
 
 **Files:**
 - Modify: `lightly_studio_view/src/lib/components/AnnotationCanvas/AnnotationCanvas.svelte` — in both annotation interfaces replace `colorBySource?: boolean` with `sourceName?: string` (comment: if set, color by this source instead of by class). `resolveAnnotationColor` colors by `sourceName` with the source map and `getColorBySource` when set, else by `annotation_label_name` with the label map and `getColorByLabel`. `resolveNamedColor` takes the default color function instead of a boolean.
