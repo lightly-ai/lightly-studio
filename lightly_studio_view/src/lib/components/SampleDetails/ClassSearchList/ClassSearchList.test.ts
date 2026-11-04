@@ -74,4 +74,11 @@ describe('ClassSearchList', () => {
         expect(onCancel).toHaveBeenCalledTimes(1);
         expect(onWindowKey).not.toHaveBeenCalled();
     });
+
+    it('hints how to go back, outside the options', () => {
+        setup();
+        const hint = screen.getByText('Esc to go back');
+        expect(hint).toBeInTheDocument();
+        expect(hint.closest('[role="option"]')).toBeNull();
+    });
 });

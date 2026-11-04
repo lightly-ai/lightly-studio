@@ -58,4 +58,5 @@
             </Command.Item>
         {/each}
     </Command.List>
+    <div class="px-2 py-1.5 text-xs text-muted-foreground">Esc to go back</div>
 </Command.Root>

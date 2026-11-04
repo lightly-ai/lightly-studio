@@ -128,4 +128,18 @@ describe('AnnotationTargetChip', () => {
 
         expect(screen.queryByPlaceholderText('Pick a class')).not.toBeInTheDocument();
     });
+
+    it.each([
+        ['source', 'Annotation source', 'Pick a source'],
+        ['class', 'Class for new annotations', 'Pick a class']
+    ])('closes the %s popover on Esc with the focus outside the input', async (_n, title, placeholder) => {
+        const { user } = setup({ annotationSource: 'labels' });
+        await user.click(screen.getByTitle(title));
+        const input = await screen.findByPlaceholderText(placeholder);
+        input.blur();
+
+        await user.keyboard('{Escape}');
+
+        expect(screen.queryByPlaceholderText(placeholder)).not.toBeInTheDocument();
+    });
 });

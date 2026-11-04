@@ -49,7 +49,18 @@
     const pickSource = async (name: string) => {
         if (await actions.moveTo(name)) view = 'compact';
     };
+    // The lists handle Esc only while their input has focus. Capture phase, so it also wins
+    // over the card's close and the panel's tool switch.
+    const handleWindowKeydown = (event: KeyboardEvent) => {
+        if (view === 'compact' || event.key !== 'Escape' || event.repeat) return;
+        if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+        event.preventDefault();
+        event.stopPropagation();
+        view = 'compact';
+    };
 </script>
+
+<svelte:window onkeydowncapture={handleWindowKeydown} />
 
 <AnnotationCardFrame bbox={getBoundingBox(annotation)} {getLayer} testId="annotation-card">
     <AnnotationCardHeader

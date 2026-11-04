@@ -180,4 +180,28 @@ describe('AnnotationCard', () => {
         expect(screen.queryByPlaceholderText('Pick a class')).not.toBeInTheDocument();
         expect(screen.getByText('Type to relabel · Del delete · Esc close')).toBeInTheDocument();
     });
+
+    it.each([
+        ['search', async () => fireEvent.keyDown(document.body, { key: 'k' })],
+        [
+            'move',
+            async () => fireEvent.click(screen.getByTitle('Move to another annotation source'))
+        ]
+    ])(
+        'leaves the %s view on Esc with the focus outside the input, without closing',
+        async (_name, open) => {
+            renderCard();
+            await open();
+            const input = await screen.findByPlaceholderText(/^Pick a (class|source)$/);
+            input.blur();
+            expect(input).not.toHaveFocus();
+
+            await fireEvent.keyDown(document.body, { key: 'Escape' });
+
+            expect(
+                screen.getByText('Type to relabel · Del delete · Esc close')
+            ).toBeInTheDocument();
+            expect(mocks.close).not.toHaveBeenCalled();
+        }
+    );
 });
