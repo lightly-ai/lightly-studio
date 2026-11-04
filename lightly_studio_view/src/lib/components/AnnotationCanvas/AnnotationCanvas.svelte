@@ -130,6 +130,7 @@
     };
 
     type CustomLabelColorMap = Record<string, CustomColor>;
+    type CustomColorMaps = { label: CustomLabelColorMap; source: CustomLabelColorMap };
 
     interface ContextOptions {
         willReadFrequently?: boolean;
@@ -149,16 +150,16 @@
 
     const clampAlpha = (value: number): number => Math.max(0, Math.min(value, 1));
 
-    const resolveLabelColor = (
-        labelName: string,
+    const resolveNamedColor = (
+        name: string,
         colorAlpha: number,
         customColors: CustomLabelColorMap,
         colorBySource: boolean
     ): [number, number, number, number] => {
-        const customColor = customColors[labelName];
+        const customColor = customColors[name];
         if (!customColor) {
             const getColor = colorBySource ? getColorBySource : getColorByLabel;
-            return rgbaParser(getColor(labelName, colorAlpha).color);
+            return rgbaParser(getColor(name, colorAlpha).color);
         }
 
         const [r, g, b] = rgbaParser(customColor.color);
@@ -169,15 +170,14 @@
     const resolveAnnotationColor = (
         annotation: AnnotationCanvasAnnotation,
         colorAlpha: number,
-        customLabelColors: CustomLabelColorMap,
-        customSourceColors: CustomLabelColorMap
+        customColorMaps: CustomColorMaps
     ): [number, number, number, number] => {
         if (!annotation.color) {
             const colorBySource = annotation.colorBySource ?? false;
-            return resolveLabelColor(
+            return resolveNamedColor(
                 annotation.annotation_label_name || 'label',
                 colorAlpha,
-                colorBySource ? customSourceColors : customLabelColors,
+                colorBySource ? customColorMaps.source : customColorMaps.label,
                 colorBySource
             );
         }
@@ -201,8 +201,7 @@
 
     // Collect mask RLEs and any available bounding boxes in image space.
     const buildRenderPayload = (
-        customLabelColors: CustomLabelColorMap,
-        customSourceColors: CustomLabelColorMap
+        customColorMaps: CustomColorMaps
     ): { masks: MaskPayload[]; boxes: BoxPayload[] } => {
         const masks: MaskPayload[] = [];
         const boxes: BoxPayload[] = [];
@@ -212,12 +211,7 @@
             if (rle.length) {
                 masks.push({
                     rle,
-                    color: resolveAnnotationColor(
-                        annotation,
-                        alpha,
-                        customLabelColors,
-                        customSourceColors
-                    )
+                    color: resolveAnnotationColor(annotation, alpha, customColorMaps)
                 });
             }
 
@@ -229,12 +223,7 @@
                     y: Math.round(bbox.y),
                     width: Math.round(bbox.width),
                     height: Math.round(bbox.height),
-                    color: resolveAnnotationColor(
-                        annotation,
-                        1,
-                        customLabelColors,
-                        customSourceColors
-                    )
+                    color: resolveAnnotationColor(annotation, 1, customColorMaps)
                 });
             }
         }
@@ -243,10 +232,12 @@
     };
 
     const render = (
-        customLabelColors: CustomLabelColorMap = $customLabelColorsStore,
-        customSourceColors: CustomLabelColorMap = $customSourceColorsStore
+        customColorMaps: CustomColorMaps = {
+            label: $customLabelColorsStore,
+            source: $customSourceColorsStore
+        }
     ) => {
-        const payload = buildRenderPayload(customLabelColors, customSourceColors);
+        const payload = buildRenderPayload(customColorMaps);
         const geometry: RenderGeometry = {
             sourceWidth,
             sourceHeight,
@@ -379,9 +370,7 @@
     });
 
     $effect(() => {
-        const customLabelColors = $customLabelColorsStore;
-        const customSourceColors = $customSourceColorsStore;
-        render(customLabelColors, customSourceColors);
+        render({ label: $customLabelColorsStore, source: $customSourceColorsStore });
     });
 </script>
 
