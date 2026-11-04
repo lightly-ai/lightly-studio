@@ -31,7 +31,8 @@
         highlighted?: boolean;
         /** A short line under the name, e.g. "New annotations go here". */
         subtitle?: string;
-        /** Hides the rows and shows the chevron closed. The group's own open state is kept. */
+        /** Hides the rows and shows the chevron closed until the header is clicked. The group's
+         * own open state is kept. */
         collapsed?: boolean;
         children: Snippet;
     }
@@ -72,10 +73,25 @@
     // Collapse animation duration in ms, matching the parent Segment component.
     const duration = 168;
 
-    const showRows = $derived(open && !collapsed);
+    // A header click after Collapse all shows that group alone. Its own open state is kept, so
+    // Expand all restores it, and the next Collapse all hides it again.
+    let isShownWhileCollapsed = $state(false);
+    $effect(() => {
+        if (collapsed) isShownWhileCollapsed = false;
+    });
+
+    const showRows = $derived(collapsed ? isShownWhileCollapsed : open);
+    const setShowRows = (next: boolean) => {
+        if (collapsed) {
+            isShownWhileCollapsed = next;
+            return;
+        }
+        open = next;
+        onOpenChange?.(next);
+    };
 </script>
 
-<Collapsible bind:open {onOpenChange}>
+<Collapsible bind:open={() => showRows, setShowRows}>
     <div
         class={cn(
             '-mx-1 flex items-center gap-2 rounded-md px-1',

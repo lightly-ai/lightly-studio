@@ -13,7 +13,8 @@ const mocks = vi.hoisted(() => ({
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
     userRole: 'labeler' as string | undefined,
     annotationSource: null as string | null,
-    setAnnotationSource: vi.fn()
+    setAnnotationSource: vi.fn(),
+    pickClass: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -76,6 +77,10 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
         setLastCreatedAnnotationId: vi.fn(),
         setLockedAnnotationIds: vi.fn()
     }))
+}));
+
+vi.mock('$lib/hooks/useStickyClass/useStickyClass', () => ({
+    useStickyClass: () => ({ pickClass: mocks.pickClass })
 }));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
@@ -554,7 +559,7 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
             expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'true');
 
-            await user.click(within(getRow('gt-1')).getByRole('button'));
+            await user.click(within(getRow('gt-1')).getByTestId('mock-annotation-row-toggle'));
             expect(getRow('gt-1')).toHaveAttribute('data-hidden', 'true');
             expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
@@ -738,5 +743,20 @@ describe('SampleDetailsAnnotationSegment', () => {
                 expect(screen.queryAllByTestId('mock-annotation-row')).toHaveLength(0)
             );
         });
+    });
+
+    it('makes a side-panel relabel an explicit class pick', async () => {
+        mocks.collections = [groundTruthSource];
+        const user = userEvent.setup();
+        render(SampleDetailsAnnotationSegment, {
+            props: {
+                ...defaultProps,
+                annotations: [createAnnotation('a1', groundTruthSource.collection_id, 'cat')]
+            }
+        });
+
+        await user.click(screen.getByTestId('mock-annotation-row-relabel'));
+
+        expect(mocks.pickClass).toHaveBeenCalledWith('collection-1', 'dog');
     });
 });

@@ -6,9 +6,16 @@
         isHidden?: boolean;
         colorBySource?: boolean;
         onToggleShowAnnotation: (e: MouseEvent) => void;
+        onChangeAnnotationLabel?: (label: string) => void;
     }
 
-    let { annotation, isHidden = false, colorBySource, onToggleShowAnnotation }: Props = $props();
+    let {
+        annotation,
+        isHidden = false,
+        colorBySource,
+        onToggleShowAnnotation,
+        onChangeAnnotationLabel
+    }: Props = $props();
 </script>
 
 <div
@@ -20,5 +27,12 @@
     <span>{annotation.annotation_label.annotation_label_name}</span>
     <button type="button" data-testid="mock-annotation-row-toggle" onclick={onToggleShowAnnotation}>
         {isHidden ? 'hidden' : 'visible'}
+    </button>
+    <button
+        type="button"
+        data-testid="mock-annotation-row-relabel"
+        onclick={() => onChangeAnnotationLabel?.('dog')}
+    >
+        relabel to dog
     </button>
 </div>

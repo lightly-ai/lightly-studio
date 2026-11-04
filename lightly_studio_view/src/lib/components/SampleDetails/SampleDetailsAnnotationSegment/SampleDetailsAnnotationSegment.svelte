@@ -7,7 +7,8 @@
     import {
         useAnnotationCollections,
         useAnnotationCollectionsFilter,
-        useSettings
+        useSettings,
+        useStickyClass
     } from '$lib/hooks';
     import AnnotationTargetRadio from '../AnnotationTargetRadio/AnnotationTargetRadio.svelte';
     import AnnotationTargetHint from '../AnnotationTargetHint/AnnotationTargetHint.svelte';
@@ -50,14 +51,14 @@
         refetch
     }: SampleDetailsAnnotationSegmentProps = $props();
 
-    const { addReversibleAction, updateLastAnnotationLabel, isEditingMode } = useGlobalStorage();
+    const { addReversibleAction, isEditingMode } = useGlobalStorage();
+    const { pickClass } = useStickyClass();
     const { user } = useAuth();
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const {
         context: annotationLabelContext,
         setAnnotationId,
-        setAnnotationLabel,
         setLastCreatedAnnotationId,
         setLockedAnnotationIds
     } = useAnnotationLabelContext();
@@ -252,9 +253,8 @@
         }}
         onUpdate={refetch}
         onChangeAnnotationLabel={(newLabel) => {
-            // The annotation label is always the last selected label.
-            setAnnotationLabel(newLabel);
-            updateLastAnnotationLabel(collectionId, newLabel);
+            // A relabel is an explicit class pick: it becomes the class for new annotations.
+            pickClass(collectionId, newLabel);
 
             setLastCreatedAnnotationId(null);
 

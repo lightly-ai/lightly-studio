@@ -193,4 +193,45 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
         await rerender({ ...defaultProps, initiallyOpen: false, sampleId: 'sample-1' });
         expect(screen.getByTestId('group-content')).toBeInTheDocument();
     });
+
+    describe('after Collapse all', () => {
+        it('shows a group when its header is clicked', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSourceGroup, {
+                props: { ...defaultProps, collapsed: true }
+            });
+
+            await user.click(screen.getByText('Ground truth'));
+
+            expect(screen.getByTestId('group-content')).toBeInTheDocument();
+        });
+
+        it('hides the shown group on the next Collapse all', async () => {
+            const user = userEvent.setup();
+            const { rerender } = render(SampleDetailsAnnotationSourceGroup, {
+                props: { ...defaultProps, collapsed: true }
+            });
+            await user.click(screen.getByText('Ground truth'));
+
+            await rerender({ ...defaultProps, collapsed: false });
+            await rerender({ ...defaultProps, collapsed: true });
+
+            expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+        });
+
+        it('restores a closed group as closed on Expand all, without reporting a toggle', async () => {
+            const user = userEvent.setup();
+            const onOpenChange = vi.fn();
+            const props = { ...defaultProps, initiallyOpen: false, onOpenChange };
+            const { rerender } = render(SampleDetailsAnnotationSourceGroup, {
+                props: { ...props, collapsed: true }
+            });
+            await user.click(screen.getByText('Ground truth'));
+
+            await rerender({ ...props, collapsed: false });
+
+            expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+            expect(onOpenChange).not.toHaveBeenCalled();
+        });
+    });
 });
