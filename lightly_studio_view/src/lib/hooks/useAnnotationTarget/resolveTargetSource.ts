@@ -34,9 +34,9 @@ export const pickInitialSource = ({
     return sourceNames.length === 1 ? sourceNames[0] : null;
 };
 
-/** What to do when no source is picked, for the pencil picker in the Annotations panel. */
-export const PENCIL_PICK_MESSAGE =
-    'Pick a source with the pencil in the Annotations panel before adding annotations.';
+/** What to tell the user when no source is picked. */
+export const PICK_SOURCE_MESSAGE =
+    'Choose where new annotations go: pick a source in the Annotations panel.';
 
 /**
  * Returns why new annotations must not be created, or null when they may. A hidden target is
@@ -46,7 +46,7 @@ export const PENCIL_PICK_MESSAGE =
 export const getTargetBlockedReason = (
     targetSource: string | null,
     isTargetHidden: boolean,
-    pickMessage: string = PENCIL_PICK_MESSAGE
+    pickMessage: string = PICK_SOURCE_MESSAGE
 ): string | null => {
     if (targetSource === null) {
         return pickMessage;

@@ -2,8 +2,7 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { cn } from '$lib/utils';
 
-    // Variant "radio" of the annotation source picker: one radio per source group. Same props
-    // as AnnotationTargetButton, so the two can be swapped.
+    // The annotation source picker: one radio per source group.
     interface Props {
         sourceName: string;
         /** Whether new annotations are written to this source. */

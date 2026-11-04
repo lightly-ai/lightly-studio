@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     DEFAULT_SOURCE_NAME,
     getTargetBlockedReason,
+    PICK_SOURCE_MESSAGE,
     pickInitialSource,
     resolveTargetSource
 } from './resolveTargetSource';
@@ -28,7 +29,7 @@ describe('resolveTargetSource', () => {
 
 describe('getTargetBlockedReason', () => {
     it('blocks while no source is picked', () => {
-        expect(getTargetBlockedReason(null, false)).toContain('Pick a source');
+        expect(getTargetBlockedReason(null, false)).toBe(PICK_SOURCE_MESSAGE);
     });
 
     it('blocks a hidden target', () => {

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import { page } from '$app/state';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
@@ -75,24 +75,10 @@ describe('SampleDetailsSidePanelAnnotation', () => {
         expect(screen.getByText('Bounding box')).toBeInTheDocument();
     });
 
-    it('offers a drag handle in edit mode that carries the annotation ID', async () => {
+    it('offers no drag handle in edit mode', () => {
         page.data.globalStorage.isEditingMode.set(true);
-        const onDragStart = vi.fn();
-        render(SampleDetailsSidePanelAnnotation, { ...defaultProps, onDragStart });
+        render(SampleDetailsSidePanelAnnotation, defaultProps);
 
-        const dataTransfer = { setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' };
-        await fireEvent.dragStart(screen.getByTestId('annotation-drag-handle'), { dataTransfer });
-
-        expect(dataTransfer.setData).toHaveBeenCalledWith(
-            'application/x-lightly-annotation-id',
-            annotation.sample_id
-        );
-        expect(onDragStart).toHaveBeenCalled();
-    });
-
-    it('hides the drag handle outside edit mode', () => {
-        page.data.globalStorage.isEditingMode.set(false);
-        render(SampleDetailsSidePanelAnnotation, { ...defaultProps, onDragStart: vi.fn() });
-        expect(screen.queryByTestId('annotation-drag-handle')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('annotation-drag-handle')).toBeNull();
     });
 });

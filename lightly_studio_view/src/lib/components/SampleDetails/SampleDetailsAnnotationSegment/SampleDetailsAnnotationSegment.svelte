@@ -2,17 +2,14 @@
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useAnnotateVariant } from '$lib/hooks';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import {
         useAnnotationCollections,
         useAnnotationCollectionsFilter,
-        useMoveAnnotationsToSource,
         useSettings
     } from '$lib/hooks';
-    import AnnotationSourceDropZone from '../AnnotationSourceDropZone/AnnotationSourceDropZone.svelte';
-    import AnnotationTargetControl from '../AnnotationTargetControl/AnnotationTargetControl.svelte';
+    import AnnotationTargetRadio from '../AnnotationTargetRadio/AnnotationTargetRadio.svelte';
     import AnnotationTargetHint from '../AnnotationTargetHint/AnnotationTargetHint.svelte';
     import NewAnnotationSourceInput from '../NewAnnotationSourceInput/NewAnnotationSourceInput.svelte';
     import { useAnnotationTarget } from '$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte';
@@ -34,11 +31,6 @@
         toggleSourceVisibility
     } from './SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
-    import {
-        findDropSource,
-        getSourceDropMove,
-        type DraggedAnnotation
-    } from './annotationSourceDrop';
 
     type SampleDetailsAnnotationSegmentProps = {
         annotationsIdsToHide: Set<string>;
@@ -59,7 +51,6 @@
     }: SampleDetailsAnnotationSegmentProps = $props();
 
     const { addReversibleAction, updateLastAnnotationLabel, isEditingMode } = useGlobalStorage();
-    const { annotateVariant } = useAnnotateVariant();
     const { user } = useAuth();
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
@@ -80,7 +71,6 @@
     const { isSourceVisible } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { sourceGroupStates, setSourceGroupState } = useAnnotationSourceGroupState();
-    const { moveToSource } = useMoveAnnotationsToSource();
     // `isTargetHidden` is declared below; the getter only runs once the component is set up.
     const annotationTarget = useAnnotationTarget({
         getCollectionId: () => collectionId,
@@ -122,21 +112,6 @@
 
     // Hides every group's rows (and the flat list) without changing which groups are open.
     let rowsCollapsed = $state(false);
-
-    // The annotation row that is being dragged to another source, if any.
-    let draggedAnnotation = $state<DraggedAnnotation | null>(null);
-    const canDropOn = (sourceId: string) =>
-        getSourceDropMove(draggedAnnotation, findDropSource(annotationSources, sourceId)) !== null;
-
-    const dropDraggedAnnotationOn = async (sourceId: string) => {
-        const move = getSourceDropMove(
-            draggedAnnotation,
-            findDropSource(annotationSources, sourceId)
-        );
-        draggedAnnotation = null;
-        if (!move) return;
-        if (await moveToSource({ collectionId, ...move })) refetch();
-    };
 
     // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
     // the effect-written `annotationsIdsToHide`); drives the initial collapse.
@@ -262,14 +237,6 @@
     <SampleDetailsSidePanelAnnotation
         {annotation}
         {colorBySource}
-        onDragStart={isGrouped
-            ? () =>
-                  (draggedAnnotation = {
-                      annotationId: annotation.sample_id,
-                      sourceId: annotation.annotation_collection_id
-                  })
-            : undefined}
-        onDragEnd={() => (draggedAnnotation = null)}
         isSelected={annotationLabelContext.annotationId === annotation.sample_id}
         onClick={() => toggleAnnotationSelection(annotation.sample_id)}
         onDeleteAnnotation={() => handleDeleteAnnotation(annotation.sample_id)}
@@ -323,67 +290,56 @@
         <div class="flex flex-col gap-3">
             {#each sourceGroups as group (group.id)}
                 {@const isTarget = group.name === annotationTarget.targetSource}
-                <AnnotationSourceDropZone
-                    canDrop={canDropOn(group.id)}
-                    sourceName={group.name}
-                    onDrop={() => dropDraggedAnnotationOn(group.id)}
+                <SampleDetailsAnnotationSourceGroup
+                    name={group.name}
+                    count={group.annotations.length}
+                    {sampleId}
+                    initiallyOpen={group.annotations.length > 0 &&
+                        isSourceGroupInitiallyOpen(
+                            group.annotations,
+                            gridHiddenIds,
+                            annotationLabelContext.lastCreatedAnnotationId,
+                            $sourceGroupStates[group.id]?.open
+                        )}
+                    showColorMarker={colorBySource}
+                    collapsed={rowsCollapsed}
+                    highlighted={isTarget && canEdit}
+                    subtitle={isTarget && canEdit && $isEditingMode
+                        ? 'New annotations go here'
+                        : undefined}
+                    allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
+                    onToggleVisibility={group.annotations.length > 0
+                        ? (e) => {
+                              e.stopPropagation();
+                              onToggleSourceVisibility(group.id, group.annotations);
+                          }
+                        : undefined}
+                    onOpenChange={(open) => setSourceGroupState(group.id, { open })}
                 >
-                    <SampleDetailsAnnotationSourceGroup
-                        name={group.name}
-                        count={group.annotations.length}
-                        {sampleId}
-                        initiallyOpen={group.annotations.length > 0 &&
-                            isSourceGroupInitiallyOpen(
-                                group.annotations,
-                                gridHiddenIds,
-                                annotationLabelContext.lastCreatedAnnotationId,
-                                $sourceGroupStates[group.id]?.open
-                            )}
-                        showColorMarker={colorBySource}
-                        collapsed={rowsCollapsed}
-                        highlighted={isTarget && canEdit}
-                        subtitle={isTarget &&
-                        canEdit &&
-                        $isEditingMode &&
-                        $annotateVariant === 'radio'
-                            ? 'New annotations go here'
-                            : undefined}
-                        allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
-                        onToggleVisibility={group.annotations.length > 0
-                            ? (e) => {
-                                  e.stopPropagation();
-                                  onToggleSourceVisibility(group.id, group.annotations);
-                              }
-                            : undefined}
-                        onOpenChange={(open) => setSourceGroupState(group.id, { open })}
-                    >
-                        {#snippet leading()}
-                            {#if canEdit}
-                                <AnnotationTargetControl
-                                    sourceName={group.name}
-                                    {isTarget}
-                                    isSourceHidden={areAllAnnotationsHidden(
-                                        group.annotations,
-                                        annotationsIdsToHide
-                                    )}
-                                    needsPick={annotationTarget.targetSource === null}
-                                    onSetTarget={() => annotationTarget.setTargetSource(group.name)}
-                                />
-                            {/if}
-                        {/snippet}
-                        {#if group.annotations.length === 0}
-                            <p class="text-sm text-muted-foreground">
-                                No annotations on this sample.
-                            </p>
-                        {:else}
-                            <div class="flex flex-col gap-2">
-                                {#each group.annotations as annotation (annotation.sample_id)}
-                                    {@render annotationRow(annotation)}
-                                {/each}
-                            </div>
+                    {#snippet leading()}
+                        {#if canEdit && $isEditingMode}
+                            <AnnotationTargetRadio
+                                sourceName={group.name}
+                                {isTarget}
+                                isSourceHidden={areAllAnnotationsHidden(
+                                    group.annotations,
+                                    annotationsIdsToHide
+                                )}
+                                needsPick={annotationTarget.targetSource === null}
+                                onSetTarget={() => annotationTarget.setTargetSource(group.name)}
+                            />
                         {/if}
-                    </SampleDetailsAnnotationSourceGroup>
-                </AnnotationSourceDropZone>
+                    {/snippet}
+                    {#if group.annotations.length === 0}
+                        <p class="text-sm text-muted-foreground">No annotations on this sample.</p>
+                    {:else}
+                        <div class="flex flex-col gap-2">
+                            {#each group.annotations as annotation (annotation.sample_id)}
+                                {@render annotationRow(annotation)}
+                            {/each}
+                        </div>
+                    {/if}
+                </SampleDetailsAnnotationSourceGroup>
             {/each}
         </div>
     {:else if annotationsSort.length === 0}

@@ -8,8 +8,7 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { Trash2, Eye, EyeOff, Lock, Unlock, GripVertical } from '@lucide/svelte';
-    import { ANNOTATION_DRAG_TYPE } from '$lib/components/SampleDetails/SampleDetailsAnnotationSegment/annotationSourceDrop';
+    import { Trash2, Eye, EyeOff, Lock, Unlock } from '@lucide/svelte';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
@@ -31,9 +30,7 @@
         onClickSelectList,
         isLocked = false,
         onToggleLock,
-        colorBySource,
-        onDragStart,
-        onDragEnd
+        colorBySource
     }: {
         annotation: AnnotationView;
         isSelected: boolean;
@@ -51,21 +48,7 @@
         // When undefined, falls back to the global rule (2+ sources selected in the
         // grid).
         colorBySource?: boolean;
-        /** When set, edit mode shows a handle that drags the row to another annotation source. */
-        onDragStart?: () => void;
-        onDragEnd?: () => void;
     } = $props();
-
-    let rowElement = $state<HTMLDivElement>();
-
-    function handleDragStart(event: DragEvent) {
-        if (!event.dataTransfer) return;
-        event.dataTransfer.setData(ANNOTATION_DRAG_TYPE, annotation.sample_id);
-        event.dataTransfer.effectAllowed = 'move';
-        // Drag the whole row, not only the handle.
-        if (rowElement) event.dataTransfer.setDragImage(rowElement, 12, 12);
-        onDragStart?.();
-    }
 
     const formatAnnotationType = (annotationType: string) => {
         switch (annotationType) {
@@ -129,7 +112,6 @@
 </script>
 
 <div
-    bind:this={rowElement}
     class={cn(
         'relative flex items-center gap-2 rounded-sm px-4 py-2 text-left align-baseline transition-colors',
         isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
@@ -143,21 +125,6 @@
         data-annotation-id={annotation.sample_id}
         onclick={onClick}
     ></button>
-    {#if $isEditingMode && onDragStart}
-        <div
-            class="relative -ml-2 flex shrink-0 cursor-grab items-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
-            draggable="true"
-            role="button"
-            tabindex="-1"
-            aria-label="Drag to another annotation source"
-            title="Drag to another annotation source"
-            data-testid="annotation-drag-handle"
-            ondragstart={handleDragStart}
-            ondragend={onDragEnd}
-        >
-            <GripVertical class="size-4" />
-        </div>
-    {/if}
     <div
         class="pointer-events-none relative flex w-full min-w-0 items-stretch justify-between text-left"
     >

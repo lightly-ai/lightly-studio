@@ -4,10 +4,6 @@ import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 import { useDefaultSource } from '$lib/hooks/useDefaultSource/useDefaultSource';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import {
-    TARGET_PICK_MESSAGES,
-    useAnnotateVariant
-} from '$lib/hooks/useAnnotateVariant/useAnnotateVariant';
 import { useSetTargetSource } from './useSetTargetSource';
 import {
     getTargetBlockedReason,
@@ -31,8 +27,6 @@ export const useAnnotationTarget = ({
     const { context, setAnnotationSource } = useAnnotationLabelContext();
     const { lastAnnotationSource } = useGlobalStorage();
     const { defaultSources } = useDefaultSource();
-    // Fixed for the page load, so it is read once.
-    const pickMessage = TARGET_PICK_MESSAGES[get(useAnnotateVariant().annotateVariant)];
     const annotationCollections = useAnnotationCollections(() => ({
         collectionId: getCollectionId()
     }));
@@ -43,8 +37,7 @@ export const useAnnotationTarget = ({
     $effect(() => {
         context.annotationSourceBlockedReason = getTargetBlockedReason(
             targetSource,
-            getIsTargetHidden(),
-            pickMessage
+            getIsTargetHidden()
         );
     });
 

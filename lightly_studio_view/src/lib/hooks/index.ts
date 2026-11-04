@@ -114,7 +114,6 @@ export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
 export { usePillShortcuts } from '$lib/hooks/usePillShortcuts/usePillShortcuts';
-export { useAnnotateVariant } from '$lib/hooks/useAnnotateVariant/useAnnotateVariant';
 export { useWebStorage } from '$lib/hooks/useWebStorage/useWebStorage';
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
