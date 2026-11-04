@@ -35,7 +35,7 @@
         </button>
     {/if}
     {#if confidence != null}
-        <span class="text-xs text-muted-foreground">{confidence.toFixed(2)}</span>
+        <span class="text-xs text-muted-foreground">Confidence {confidence.toFixed(2)}</span>
     {/if}
     <span class="flex-1"></span>
     <button

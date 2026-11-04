@@ -204,4 +204,18 @@ describe('AnnotationCard', () => {
             expect(mocks.close).not.toHaveBeenCalled();
         }
     );
+
+    it('labels the confidence', () => {
+        render(AnnotationCard, {
+            props: {
+                collectionId: 'col-1',
+                annotation: { ...annotation, confidence: 0.876 } as AnnotationView,
+                refetch: vi.fn(),
+                getLayer: () => null
+            },
+            context: new Map<string, unknown>([['annotation-label', {}]])
+        });
+
+        expect(screen.getByText('Confidence 0.88')).toBeInTheDocument();
+    });
 });
