@@ -7,6 +7,7 @@ import {
 } from '../language/lightly-query-module';
 import { detectScopeAt } from '../language/lightly-query-schema';
 import { getMetadataQueryContext } from '$lib/components/QueryEditor/language';
+import { getQuotedMetricRange } from './getQuotedMetricRange';
 import {
     buildSchemaCompletions,
     lspToMonacoCompletion,
@@ -93,7 +94,28 @@ async function getCompletions(
         includeBooleanLiterals: metadataContext === 'boolean'
     }).filter((suggestion) => !seen.has(completionLabel(suggestion)));
 
-    return { suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported) };
+    const metricRange =
+        scope === 'sample_evaluation'
+            ? getQuotedMetricRange({
+                  text: model.getValue(),
+                  offset: model.getOffsetAt(position),
+                  position
+              })
+            : undefined;
+    const metricQuote = metricRange
+        ? model.getValue()[model.getOffsetAt(position) - column + metricRange.startColumn]
+        : undefined;
+    return {
+        suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported).map((item) =>
+            metricRange && completionLabel(item).startsWith('"')
+                ? {
+                      ...item,
+                      range: metricRange,
+                      filterText: `${metricQuote}${completionLabel(item).slice(1, -1)}${metricQuote}`
+                  }
+                : item
+        )
+    };
 }
 
 /**
