@@ -112,8 +112,7 @@ describe('useAnnotationSelection', () => {
         expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         expect(mockAnnotationLabelContext.lastCreatedAnnotationId).toBeNull();
 
-        expect(updateLastAnnotationLabelMock).toHaveBeenCalledOnce();
-        expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Car');
+        expect(updateLastAnnotationLabelMock).not.toHaveBeenCalled();
     });
 
     it('sets cursor for non-instance annotations', () => {
@@ -138,8 +137,7 @@ describe('useAnnotationSelection', () => {
         expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
         expect(mockAnnotationLabelContext.annotationId).toBe('a2');
 
-        expect(updateLastAnnotationLabelMock).toHaveBeenCalledOnce();
-        expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Car');
+        expect(updateLastAnnotationLabelMock).not.toHaveBeenCalled();
     });
 
     it('toggles annotationId when selecting the same annotation twice', () => {
@@ -165,8 +163,7 @@ describe('useAnnotationSelection', () => {
 
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
 
-        expect(updateLastAnnotationLabelMock).toHaveBeenCalledOnce();
-        expect(updateLastAnnotationLabelMock).toHaveBeenCalledWith('collection-1', 'Car');
+        expect(updateLastAnnotationLabelMock).not.toHaveBeenCalled();
     });
 
     it('does nothing if annotation is not found', () => {

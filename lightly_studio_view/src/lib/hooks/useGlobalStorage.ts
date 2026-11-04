@@ -5,6 +5,7 @@ import { derived, get, writable } from 'svelte/store';
 import type { TagView as Tag } from '$lib/services/types';
 import type { ClassifierInfo } from '$lib/services/types';
 import { useSessionStorage } from './useSessionStorage/useSessionStorage';
+import { useWebStorage } from './useWebStorage/useWebStorage';
 import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
@@ -68,8 +69,9 @@ const categoricalMetadataValues = useSessionStorage<CategoricalMetadataValues>(
 );
 const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_info', []);
 
-// Store the most recently selected annotation label.
-const lastAnnotationLabel = useSessionStorage<Record<string, string>>(
+// Store the class for the next annotation, kept across sessions.
+const lastAnnotationLabel = useWebStorage<Record<string, string>>(
+    'localStorage',
     'lightlyStudio_last_annotation_label',
     {}
 );

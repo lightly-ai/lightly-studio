@@ -298,6 +298,18 @@ describe('useGlobalStorage', () => {
         });
     });
 
+    describe('Last annotation label', () => {
+        it('is stored in localStorage, not sessionStorage', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'deer');
+
+            const stored = JSON.parse(
+                localStorage.getItem('lightlyStudio_last_annotation_label')!
+            ) as Record<string, string>;
+            expect(stored[testCollectionId]).toBe('deer');
+            expect(sessionStorage.getItem('lightlyStudio_last_annotation_label')).toBeNull();
+        });
+    });
+
     describe('Last annotation source', () => {
         it('stores the selected source per collection', () => {
             storage.updateLastAnnotationSource(testCollectionId, 'ground_truth');

@@ -10,7 +10,9 @@ import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
+import { get } from 'svelte/store';
 import { useGlobalStorage } from './useGlobalStorage';
+import { useStickyClass } from './useStickyClass/useStickyClass';
 import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
 import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
@@ -43,7 +45,8 @@ export function useSegmentationMaskBrush({
 }) {
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { addReversibleAction } = useGlobalStorage();
+    const { stickyClasses, pickClass } = useStickyClass();
     const {
         context: annotationLabelContext,
         setIsDrawing,
@@ -82,16 +85,12 @@ export function useSegmentationMaskBrush({
             return;
         }
 
-        let annotationLabelName = annotationLabelContext.annotationLabel;
+        let annotationLabelName = get(stickyClasses)[collectionId];
         if (!selectedAnnotation && !annotationLabelName) {
             const result = requestLabel ? await requestLabel() : null;
-            if (!result?.label) {
-                toast.error('Please select a class before creating an annotation');
-                return;
-            }
+            if (!result?.label) return;
             annotationLabelName = result.label;
-            setAnnotationLabel(annotationLabelName);
-            updateLastAnnotationLabel(collectionId, annotationLabelName);
+            pickClass(collectionId, annotationLabelName);
         }
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({
