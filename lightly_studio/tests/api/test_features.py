@@ -17,3 +17,16 @@ def test_get_active_features__with_analytics_disabled(mocker: MockerFixture) -> 
     mocker.patch.object(features, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
 
     assert features._get_active_features() == [features.ONBOARDING_FEATURE]
+
+
+def test_features__annotation_tree_flag(mocker: MockerFixture) -> None:
+    mocker.patch.object(features, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
+
+    mocker.patch.object(features, "LIGHTLY_STUDIO_ANNOTATION_TREE", False)
+    assert features.ANNOTATION_TREE_FEATURE not in features._get_active_features()
+
+    mocker.patch.object(features, "LIGHTLY_STUDIO_ANNOTATION_TREE", True)
+    assert features._get_active_features() == [
+        features.ONBOARDING_FEATURE,
+        features.ANNOTATION_TREE_FEATURE,
+    ]
