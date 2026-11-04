@@ -193,8 +193,8 @@ parentheses, `NOT`, `AND`, and `OR` (in that precedence order), and numeric comp
 with `=`, `!=`, `<`, `<=`, `>`, and `>=`.
 
 The built-in metric names `tp`, `fp`, and `fn` can be written with or without quotes.
-All other metric names require double or single quotes, such as `"custom_score"`,
-`"custom-score"`, `"width"`, or `"name"`. Metric thresholds must be finite numbers.
+All other metric names require double or single quotes, such as `"custom_score"`.
+Metric thresholds must be integers.
 
 Missing metrics do not match comparisons, including `!=`. An inner `NOT` can match a
 missing metric, but still requires the sample to belong to the selected run. An outer

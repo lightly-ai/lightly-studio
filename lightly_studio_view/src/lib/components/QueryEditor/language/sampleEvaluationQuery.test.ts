@@ -149,8 +149,8 @@ describe('sample evaluation query translation', () => {
     });
 
     it('accepts single-quoted metric names', () => {
-        expect(parse("sample_evaluation(name = 'run1' AND 'tp' > 1)")).toEqual(
-            ok(evaluation([metric('tp', '>', 1)]))
+        expect(parse("sample_evaluation(name = 'run1' AND 'custom_score' > 1)")).toEqual(
+            ok(evaluation([metric('custom_score', '>', 1)]))
         );
     });
 
