@@ -134,3 +134,26 @@ def test_update__unknown_label(db_session: Session) -> None:
     )
 
     assert updated is None
+
+
+def test_update__keeps_color(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="boat"
+    )
+    annotation_label_resolver.set_color(
+        session=db_session, label_id=label.annotation_label_id, color="#ff0000", alpha=0.5
+    )
+
+    updated = annotation_label_resolver.update(
+        session=db_session,
+        label_id=label.annotation_label_id,
+        label_data=AnnotationLabelCreate(
+            dataset_id=collection.dataset_id, annotation_label_name="ship"
+        ),
+    )
+
+    assert updated is not None
+    assert updated.annotation_label_name == "ship"
+    assert updated.color == "#ff0000"
+    assert updated.alpha == 0.5
