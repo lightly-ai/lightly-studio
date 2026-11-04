@@ -6,6 +6,8 @@ import {
     type CompletionList as LspCompletionList
 } from 'vscode-languageserver-types';
 import type * as monaco from 'monaco-editor';
+// @ts-expect-error Monaco's internal matcher has no declarations in the published package.
+import { fuzzyScore } from 'monaco-editor/esm/vs/base/common/filters.js';
 
 const mocks = vi.hoisted(() => ({
     registerCompletionItemProvider: vi.fn(),
@@ -173,6 +175,30 @@ describe('useSyntaxCompletion', () => {
             text.slice(range.endColumn - 1);
         expect(completed).toBe(`${prefix}"fp"${suffix}`);
     });
+
+    it.each(["'t", "'tp'", '"tp"'])(
+        'keeps metric suggestions visible when filtering %s',
+        async (metric) => {
+            const { provideCompletionItems } = await loadAndAttach([{ label: '"tp"' }]);
+            const prefix = 'sample_evaluation(name = "run1" AND ';
+            const text = `${prefix}${metric}`;
+            const column = text.length + 1;
+            const result = await provideCompletionItems(
+                makeModel(text, { startColumn: column, endColumn: column }) as never,
+                { lineNumber: 1, column } as never
+            );
+            const suggestion = result.suggestions.find((item) => item.label === '"tp"')!;
+            const range = suggestion.range as monaco.IRange;
+            const word = text.slice(range.startColumn - 1, column - 1);
+            const filterText = suggestion.filterText!;
+            expect(
+                fuzzyScore(word, word.toLowerCase(), 0, filterText, filterText.toLowerCase(), 0)
+            ).toBeDefined();
+            expect(text.slice(0, range.startColumn - 1) + suggestion.insertText).toBe(
+                `${prefix}"tp"`
+            );
+        }
+    );
 
     it('corrects a language-service insertion range inside a quoted metric', async () => {
         const prefix = 'sample_evaluation(name = "run1" AND ';

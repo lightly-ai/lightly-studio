@@ -102,14 +102,24 @@ async function getCompletions(
                   position
               })
             : undefined;
+    const metricQuote = metricRange
+        ? model.getValue()[
+              model.getOffsetAt({
+                  lineNumber: metricRange.startLineNumber,
+                  column: metricRange.startColumn
+              })
+          ]
+        : undefined;
     return {
-        suggestions: [...lspSuggestions, ...schemaSuggestions]
-            .filter(isSupported)
-            .map((item) =>
-                metricRange && completionLabel(item).startsWith('"')
-                    ? { ...item, range: metricRange }
-                    : item
-            )
+        suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported).map((item) =>
+            metricRange && completionLabel(item).startsWith('"')
+                ? {
+                      ...item,
+                      range: metricRange,
+                      filterText: `${metricQuote}${completionLabel(item).slice(1, -1)}${metricQuote}`
+                  }
+                : item
+        )
     };
 }
 
