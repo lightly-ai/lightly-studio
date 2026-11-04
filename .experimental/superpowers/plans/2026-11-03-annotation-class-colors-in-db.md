@@ -251,6 +251,11 @@ Delete `getInitialColor`, `getInitialAlpha` and the destructured `getCustomColor
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. If the partial `useCustomLabelColors` mocks in `LabelsMenu.test.ts` or `SampleDetailsClassificationSegment.test.ts` fail, add `setPreviewColor`/`clearPreviewColor: vi.fn()`. Commit on request.
 
+**Deviations (implemented):**
+- `clearCustomColors` also clears previews, so tests and a later dataset reset start clean.
+- Added `getSavedColor(name)` (saved layer only); `hasSavedColor` uses it. `renameClass` in `useAnnotationClasses` reads `getSavedColor`, so a rename while a preview is open does not save the preview (Codex review).
+- `useColorPickerTestWrapper.test.svelte` got a Cancel button for the new hook tests.
+
 ## PR 7: Color annotations by source through getColorBySource
 
 **Purpose:** Readers that color by source say so. The source store is still an alias of the class store, so behavior does not change; PR 8 splits them.
