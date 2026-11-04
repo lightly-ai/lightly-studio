@@ -17,7 +17,7 @@
         getColorByLabel,
         resolveEffectiveColorBySource
     } from '$lib/utils';
-    import { useSettings } from '$lib/hooks';
+    import { useSettings, useStickyClass } from '$lib/hooks';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
     import SlicToolPopUp from '../SlicToolPopUp/SlicToolPopUp.svelte';
@@ -30,7 +30,7 @@
     import AssistedLabelingPopUps from '$lib/components/SampleDetails/AssistedLabelingPopUps/AssistedLabelingPopUps.svelte';
     import AssistedLabelingOverlays from '$lib/components/SampleDetails/AssistedLabelingOverlays/AssistedLabelingOverlays.svelte';
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
-    import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
+    import { getDrawerLabel, isPanEnabled } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
     import { AnnotationTargetChip } from '../AnnotationTargetChip';
     import AnnotationCard from '../AnnotationCard/AnnotationCard.svelte';
@@ -116,13 +116,21 @@
         })
     );
 
+    const { stickyClasses } = useStickyClass();
+    const drawerLabel = $derived(
+        getDrawerLabel({
+            isAnnotationSelected: !!selectedAnnotationId,
+            contextLabel: annotationLabel,
+            stickyClass: $stickyClasses[collectionId]
+        })
+    );
     const drawerCustomColor = $derived(
-        annotationLabel ? $customLabelColorsStore[annotationLabel] : undefined
+        drawerLabel ? $customLabelColorsStore[drawerLabel] : undefined
     );
     const drawerStrokeColor = $derived(
         drawerCustomColor?.color ??
-            (annotationLabel !== 'default' && annotationLabel
-                ? getColorByLabel(annotationLabel, 1).color
+            (drawerLabel !== 'default' && drawerLabel
+                ? getColorByLabel(drawerLabel, 1).color
                 : 'rgb(0, 0, 255)')
     );
     // Matches the opacity of the saved mask, see SampleAnnotation.
