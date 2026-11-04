@@ -12,6 +12,7 @@ import {
     readAnnotationLabels
 } from '$lib/api/lightly_studio_local/sdk.gen';
 import { useAnnotationCollectionsFilter, useGlobalStorage } from '$lib/hooks';
+import { PICK_SOURCE_MESSAGE } from '$lib/hooks/useAnnotationTarget/resolveTargetSource';
 import ImagesAnnotatePopoverHarness from './ImagesAnnotatePopoverHarness.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -105,7 +106,7 @@ describe('ImagesAnnotatePopover', () => {
             'Choose source'
         );
         await fireEvent.click(await screen.findByLabelText('Add fox to selection'));
-        expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Pick a source'));
+        expect(toast.error).toHaveBeenCalledWith(PICK_SOURCE_MESSAGE);
         expect(bulkCreateClassifications).not.toHaveBeenCalled();
     });
 
