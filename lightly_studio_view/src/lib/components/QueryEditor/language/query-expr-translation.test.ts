@@ -39,7 +39,7 @@ const parser = createParser();
 
 describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
-        const result = parseLightlyQuery(parser, 'invalid_query');
+        const result = parseLightlyQuery(parser, '@');
 
         expect(result.status).toBe('error');
         if (result.status !== 'error') return;
@@ -53,6 +53,7 @@ describe('parseLightlyQuery error handling', () => {
     const PARSE_FAILURE_CASES: Array<{ name: string; source: string }> = [
         { name: 'empty input', source: '' },
         { name: 'unknown field', source: 'x = 1' },
+        { name: 'metric outside evaluation', source: 'custom_score > 0' },
         { name: 'double equals operator', source: 'height == 400' },
         { name: 'unterminated string literal', source: 'file_name = "cat' },
         { name: 'unmatched opening paren', source: '(height > 400' },
