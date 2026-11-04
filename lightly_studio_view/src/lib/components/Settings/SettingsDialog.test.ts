@@ -18,7 +18,7 @@ vi.mock('$lib/hooks/useSettings', () => {
         show_annotation_text_labels: false,
         show_sample_filenames: true,
         show_bounding_boxes_for_segmentation: true,
-        enforce_coloring_by_class: false,
+        annotation_color_mode: 'source',
         key_toolbar_selection: 's',
         key_toolbar_drag: 'd',
         key_toolbar_bounding_box: 'b',
@@ -202,7 +202,7 @@ describe('SettingsDialog', () => {
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
-            expect.objectContaining({ key_hide_annotations: 'v', enforce_coloring_by_class: true })
+            expect.objectContaining({ key_hide_annotations: 'v', annotation_color_mode: 'class' })
         );
     });
 
@@ -239,7 +239,7 @@ describe('SettingsDialog', () => {
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({
-                enforce_coloring_by_class: true
+                annotation_color_mode: 'class'
             })
         );
     });

@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
+- The annotation color setting now stores a choice between coloring by annotation class and by annotation source. Existing databases are set to coloring by class.
 
 ### Deprecated
 
