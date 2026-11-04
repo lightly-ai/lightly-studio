@@ -2,6 +2,7 @@
     import { untrack } from 'svelte';
     import { type AnnotationWithPayloadView } from '$lib/api/lightly_studio_local';
     import { useSettings } from '$lib/hooks';
+    import { getTreeAnnotationVisibility } from '$lib/components/AnnotationTree';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
     import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
@@ -33,6 +34,7 @@
     }: Props = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
+    const treeVisibility = getTreeAnnotationVisibility();
 
     // Stable id captured at init — same pattern as AnnotationItem (avoids re-reading
     // the annotation prop during effect cleanup after the grid array shrinks).
@@ -79,6 +81,7 @@
         sample={{ annotations: [annotation.annotation] }}
         hasRightOverlay={hasValueBadge(orderValue)}
         showAllSources
+        isAnnotationVisible={treeVisibility()}
     />
     <SampleValueBadge {orderValue} />
 </div>

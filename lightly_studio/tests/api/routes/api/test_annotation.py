@@ -224,6 +224,55 @@ def test_read_annotations_with_payload(
     assert result["data"][0]["parent_sample_data"]["sample_id"] == str(image_2.sample_id)
 
 
+def test_read_annotations_with_payload__annotation_pairs(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    car_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    person_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="person"
+    )
+    image = create_image(session=db_session, collection_id=collection_id)
+    car = create_annotation(
+        session=db_session,
+        sample_id=image.sample_id,
+        annotation_label_id=car_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    create_annotation(
+        session=db_session,
+        sample_id=image.sample_id,
+        annotation_label_id=person_label.annotation_label_id,
+        collection_id=collection_id,
+    )
+    source_id = car.sample.collection_id
+    url = f"/api/collections/{source_id}/annotations/payload"
+    pagination = {"cursor": 0, "limit": 10}
+
+    only_car = test_client.post(
+        url,
+        json={
+            "pagination": pagination,
+            "annotation_pairs": [
+                {
+                    "collection_id": str(source_id),
+                    "annotation_label_id": str(car_label.annotation_label_id),
+                }
+            ],
+        },
+    ).json()
+    none = test_client.post(url, json={"pagination": pagination, "annotation_pairs": []}).json()
+    everything = test_client.post(url, json={"pagination": pagination}).json()
+
+    assert [a["annotation"]["sample_id"] for a in only_car["data"]] == [str(car.sample_id)]
+    assert none["data"] == []
+    assert len(everything["data"]) == 2
+
+
 def test_get_annotation_with_payload(
     test_client: TestClient,
     db_session: Session,

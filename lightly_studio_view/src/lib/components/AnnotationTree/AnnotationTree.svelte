@@ -31,14 +31,20 @@
         collectionId: string;
         /** A flat class list without groups and "No annotations", for one annotation source. */
         flat?: boolean;
+        /** The annotation source of a flat list. Other sources are left out. */
+        sourceId?: string;
     }
 
-    let { collectionId, flat = false }: Props = $props();
+    let { collectionId, flat = false, sourceId }: Props = $props();
 
     const { imageFilter } = useImageFilters();
     const { annotationColorModeStore, setAnnotationColorMode } = useSettings();
     const sourcesQuery = useAnnotationCollections(() => ({ collectionId }));
-    const pairsQuery = useAnnotationPairCounts(() => ({ collectionId, filter: $imageFilter }));
+    // The Annotations grid has its own filters, so a flat list counts without the images filter.
+    const pairsQuery = useAnnotationPairCounts(() => ({
+        collectionId,
+        filter: flat ? undefined : $imageFilter
+    }));
     const unannotatedQuery = useUnannotatedImageCounts(() => ({
         collectionId,
         filter: $imageFilter,
@@ -48,7 +54,9 @@
     const { untickedPairs, untickedUnannotated, hiddenPairs, groupBy, openGroups } = $derived(tree);
 
     const sources = $derived(
-        (sourcesQuery.data ?? []).map((source) => ({ id: source.collection_id, name: source.name }))
+        (sourcesQuery.data ?? [])
+            .filter((source) => !sourceId || source.collection_id === sourceId)
+            .map((source) => ({ id: source.collection_id, name: source.name }))
     );
     const rows = $derived(
         buildPairRows(sources, pairsQuery.data ?? [], $untickedPairs, $hiddenPairs)
@@ -97,10 +105,13 @@
 
 <Segment title="Annotations">
     <div class="space-y-1" data-testid="annotation-tree">
-        <div class="mb-2">
-            <ColorBySwitch value={$annotationColorModeStore} onChange={setAnnotationColorMode} />
-        </div>
         {#if !flat}
+            <div class="mb-2">
+                <ColorBySwitch
+                    value={$annotationColorModeStore}
+                    onChange={setAnnotationColorMode}
+                />
+            </div>
             <div class="mb-2 flex items-center gap-1">
                 <div class="min-w-0 flex-1">
                     <GroupBySwitch value={$groupBy} onChange={tree.setGroupBy} />
