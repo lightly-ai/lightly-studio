@@ -112,9 +112,11 @@
     "vscode-languageserver": "^9.0.1"
   },
   "overrides": {
+    "@hey-api/openapi-ts": {
+      "js-yaml": "^4.3.2"
+    },
     "dompurify": "^3.4.17",
     "handlebars": "^4.7.10",
-    "js-yaml": "^4.3.2",
     "tinypool": "^2.2.0"
   }
 }
