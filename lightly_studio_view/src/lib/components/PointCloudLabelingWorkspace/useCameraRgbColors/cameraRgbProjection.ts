@@ -4,6 +4,19 @@ export const NEUTRAL_GRAY = 0.5;
 /** Points nearer than this (in camera space) are treated as behind the camera. */
 const NEAR_PLANE = 1e-6;
 
+/** The sRGB component below which the transfer function is linear. */
+const SRGB_LINEAR_THRESHOLD = 0.04045;
+
+/**
+ * Maps an 8-bit sRGB channel value to linear RGB in [0, 1]. The renderer treats vertex colors as
+ * linear and encodes them to sRGB on output, so camera pixels must be decoded first or they are
+ * gamma-encoded twice and look washed out. Mirrors the backend `srgb_to_linear`.
+ */
+const SRGB_TO_LINEAR = Float32Array.from({ length: 256 }, (_, value) => {
+    const srgb = value / 255;
+    return srgb <= SRGB_LINEAR_THRESHOLD ? srgb / 12.92 : ((srgb + 0.055) / 1.055) ** 2.4;
+});
+
 /** One camera's decoded image data and projection matrices. */
 export interface CameraData {
     /** Row-major 3×4 scene-to-camera transform (first 12 values of the 4×4 matrix). */
@@ -70,9 +83,9 @@ export function samplePixel(
     const x = Math.min(Math.floor(screenX * scaleX), camera.width - 1);
     const y = Math.min(Math.floor(screenY * scaleY), camera.height - 1);
     const idx = (y * camera.width + x) * 4;
-    colors[offset] = camera.pixels[idx] / 255;
-    colors[offset + 1] = camera.pixels[idx + 1] / 255;
-    colors[offset + 2] = camera.pixels[idx + 2] / 255;
+    colors[offset] = SRGB_TO_LINEAR[camera.pixels[idx]];
+    colors[offset + 1] = SRGB_TO_LINEAR[camera.pixels[idx + 1]];
+    colors[offset + 2] = SRGB_TO_LINEAR[camera.pixels[idx + 2]];
 }
 
 /**

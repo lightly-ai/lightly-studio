@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest';
 import { writable } from 'svelte/store';
 import type { AnnotationWithPayloadView, AnnotationView } from '$lib/api/lightly_studio_local';
 import { useAnnotationTileSelection } from './useAnnotationTileSelection';
@@ -19,7 +19,7 @@ function buildAnnotation(sampleId: string): AnnotationWithPayloadView {
 
 describe('useAnnotationTileSelection', () => {
     let pickedAnnotationIds: ReturnType<typeof writable<Record<string, Set<string>>>>;
-    let toggleSelection: ReturnType<typeof vi.fn>;
+    let toggleSelection: Mock<(collectionId: string, annotationId: string) => void>;
     let annotations: AnnotationWithPayloadView[];
 
     beforeEach(() => {
