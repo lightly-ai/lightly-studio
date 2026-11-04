@@ -8,13 +8,17 @@ type SessionColor = NonNullable<
     Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
 >;
 
+interface UseColorPickerOptions {
+    kind: 'class' | 'source';
+}
+
 /**
  * Resolves the swatch colors for a class or source (with custom-color overrides applied),
  * plus the initial values to seed a color picker, and a setter to persist picks.
  *
  * `getLabel` is a function so the hook stays reactive when the consumer's label changes.
  */
-export function useColorPicker(getLabel: () => string, options: { kind: 'class' | 'source' }) {
+export function useColorPicker(getLabel: () => string, options: UseColorPickerOptions) {
     const isSource = options.kind === 'source';
     const classColors = useCustomLabelColors();
     const sourceColors = useCustomSourceColors();

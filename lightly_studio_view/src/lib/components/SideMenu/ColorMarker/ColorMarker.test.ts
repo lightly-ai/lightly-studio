@@ -1,6 +1,6 @@
 import { ColorMarker } from '../';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { useCustomSourceColors } from '$lib/hooks';
 import * as utils from '$lib/utils';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { useCustomSourceColors } from '$lib/hooks';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 import { getColorByLabel, getColorBySource } from '$lib/utils';
 import SampleAnnotation from './SampleAnnotation.svelte';
@@ -190,6 +190,8 @@ describe('SampleAnnotation', () => {
         afterEach(() => {
             setSelectedCollectionIds([]);
             setCollectionIdToName({});
+            useCustomLabelColors().clearCustomColors();
+            useCustomSourceColors().clearCustomColors();
         });
 
         it('uses distinct colors for the source and the label', () => {
@@ -239,8 +241,6 @@ describe('SampleAnnotation', () => {
             });
 
             expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', sourceColor);
-            useCustomLabelColors().clearCustomColors();
-            useCustomSourceColors().clearCustomColors();
         });
 
         it('falls back to the global selection rule when colorBySource is omitted', () => {
