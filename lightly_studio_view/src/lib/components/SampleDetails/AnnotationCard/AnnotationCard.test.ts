@@ -4,7 +4,12 @@ import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { useRecentClasses } from '$lib/hooks';
 import AnnotationCard from './AnnotationCard.svelte';
 
-const mocks = vi.hoisted(() => ({ changeClass: vi.fn(), remove: vi.fn(), close: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+    changeClass: vi.fn(),
+    moveTo: vi.fn(),
+    remove: vi.fn(),
+    close: vi.fn()
+}));
 
 vi.mock('$lib/hooks/useSettings', async () => {
     const { writable } = await import('svelte/store');
@@ -15,11 +20,21 @@ vi.mock('./useAnnotationCardActions.svelte', async () => {
     const { readable } = await import('svelte/store');
     return {
         useAnnotationCardActions: () => ({
-            labels: { data: [{ annotation_label_id: 'l1', annotation_label_name: 'bobcat' }] },
-            sources: { data: [{ collection_id: 's1', name: 'predictions' }] },
+            labels: {
+                data: [
+                    { annotation_label_id: 'l1', annotation_label_name: 'bobcat' },
+                    { annotation_label_id: 'l2', annotation_label_name: 'coyote' }
+                ]
+            },
+            sources: {
+                data: [
+                    { collection_id: 's1', name: 'predictions' },
+                    { collection_id: 's2', name: 'labels' }
+                ]
+            },
             isMoving: readable(false),
             changeClass: mocks.changeClass,
-            moveTo: vi.fn(),
+            moveTo: mocks.moveTo,
             remove: mocks.remove,
             close: mocks.close
         })
@@ -34,10 +49,10 @@ const annotation = {
     object_detection_details: { x: 1, y: 2, width: 10, height: 20 }
 } as unknown as AnnotationView;
 
-const renderCard = () =>
+const renderCard = (isDrawing = false) =>
     render(AnnotationCard, {
         props: { collectionId: 'col-1', annotation, refetch: vi.fn(), getLayer: () => null },
-        context: new Map<string, unknown>([['annotation-label', { isDrawing: false }]])
+        context: new Map<string, unknown>([['annotation-label', { isDrawing }]])
     });
 
 describe('AnnotationCard', () => {
@@ -98,12 +113,71 @@ describe('AnnotationCard', () => {
         expect(mocks.close).toHaveBeenCalledOnce();
     });
 
+    it('ignores Delete while a stroke is drawn', async () => {
+        renderCard(true);
+
+        await fireEvent.keyDown(document.body, { key: 'Delete' });
+
+        expect(mocks.remove).not.toHaveBeenCalled();
+    });
+
+    it('opens the class search with the typed key', async () => {
+        renderCard();
+
+        await fireEvent.keyDown(document.body, { key: 'k' });
+
+        expect(await screen.findByPlaceholderText('Pick a class')).toHaveValue('k');
+        expect(screen.getByPlaceholderText('Pick a class')).toHaveFocus();
+    });
+
+    it('relabels from the class field search', async () => {
+        renderCard();
+
+        await fireEvent.click(screen.getByTitle('Change class'));
+        const input = await screen.findByPlaceholderText('Pick a class');
+        expect(input).toHaveValue('');
+        await fireEvent.input(input, { target: { value: 'coy' } });
+        await fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(mocks.changeClass).toHaveBeenCalledWith('coyote');
+        expect(screen.getByText('Type to relabel · Del delete · Esc close')).toBeInTheDocument();
+    });
+
+    it('moves from the source list', async () => {
+        mocks.moveTo.mockResolvedValue(true);
+        renderCard();
+
+        await fireEvent.click(screen.getByTitle('Move to another annotation source'));
+        const input = await screen.findByPlaceholderText('Pick a source');
+        expect(screen.getByText('Move to…')).toBeInTheDocument();
+        expect(input).toHaveFocus();
+        await fireEvent.input(input, { target: { value: 'lab' } });
+        await fireEvent.keyDown(input, { key: 'Enter' });
+
+        expect(mocks.moveTo).toHaveBeenCalledWith('labels');
+        expect(
+            await screen.findByText('Type to relabel · Del delete · Esc close')
+        ).toBeInTheDocument();
+    });
+
+    it('returns to the compact view on Esc in the move list without closing', async () => {
+        renderCard();
+
+        await fireEvent.click(screen.getByTitle('Move to another annotation source'));
+        await fireEvent.keyDown(await screen.findByPlaceholderText('Pick a source'), {
+            key: 'Escape'
+        });
+
+        expect(screen.getByText('Type to relabel · Del delete · Esc close')).toBeInTheDocument();
+        expect(mocks.close).not.toHaveBeenCalled();
+    });
+
     it('keeps the compact view on a shortcut key', async () => {
         renderCard();
 
         await fireEvent.keyDown(document.body, { key: 'v' });
 
-        expect(screen.queryByRole('textbox', { hidden: true })).not.toBeInTheDocument();
+        expect(screen.queryByPlaceholderText('Pick a class')).not.toBeInTheDocument();
         expect(screen.getByText('Type to relabel · Del delete · Esc close')).toBeInTheDocument();
     });
 });

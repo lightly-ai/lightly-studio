@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useSettings } from '$lib/hooks/useSettings';
     import { getColorByLabel, isOverlayTarget, isTextInputTarget } from '$lib/utils';
@@ -18,12 +19,15 @@
     const { className, recentClasses, onPickClass, onSearch, onRemove, onClose }: Props = $props();
     const { customLabelColorsStore } = useCustomLabelColors();
     const { settingsStore } = useSettings();
+    const { context: annotationLabelContext } = useAnnotationLabelContext();
     const classColor = (name: string) =>
         $customLabelColorsStore[name]?.color ?? getColorByLabel(name, 1).color;
 
     // Mounted only in the compact view, so the keys act only there. Capture phase, so Esc
     // closes the card before the panel's own Esc handler switches the tool.
     const handleKeydown = (event: KeyboardEvent) => {
+        // The card is hidden while a stroke is drawn, so its keys must not act on the selection.
+        if (annotationLabelContext.isDrawing) return;
         const inFieldOrMenu = isTextInputTarget(event.target) || isOverlayTarget(event.target);
         if (event.key === 'Escape' && !inFieldOrMenu) {
             event.preventDefault();
