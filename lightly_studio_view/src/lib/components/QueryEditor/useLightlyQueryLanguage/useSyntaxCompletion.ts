@@ -7,6 +7,7 @@ import {
 } from '../language/lightly-query-module';
 import { detectScopeAt } from '../language/lightly-query-schema';
 import { getMetadataQueryContext } from '$lib/components/QueryEditor/language';
+import { getEvaluationCompletionContext } from './getEvaluationCompletionContext';
 import { getQuotedMetricRange } from './getQuotedMetricRange';
 import {
     buildSchemaCompletions,
@@ -75,8 +76,22 @@ async function getCompletions(
         text: model.getValue(),
         offset: model.getOffsetAt(position) - (position.column - word.startColumn)
     });
-    const isSupported = (item: monaco.languages.CompletionItem) =>
-        shouldShowSuggestion(item, metadataContext);
+    const evaluationContext =
+        scope === 'sample_evaluation'
+            ? getEvaluationCompletionContext({
+                  text: model.getValue(),
+                  offset: model.getOffsetAt(position)
+              })
+            : undefined;
+    const isSupported = (item: monaco.languages.CompletionItem) => {
+        const label = completionLabel(item);
+        if (evaluationContext === 'selector') {
+            if (label.startsWith('"') || ['AND', 'OR', 'NOT'].includes(label)) return false;
+        }
+        if (evaluationContext === 'run' && label.startsWith('"')) return false;
+        if (evaluationContext && evaluationContext !== 'selector' && label === 'name') return false;
+        return shouldShowSuggestion(item, metadataContext);
+    };
     const lspSuggestions = (result?.items ?? [])
         .map((item) => lspToMonacoCompletion(item, fallbackRange, scope))
         // Use the schema snippet instead of Langium's bare metadata keyword.

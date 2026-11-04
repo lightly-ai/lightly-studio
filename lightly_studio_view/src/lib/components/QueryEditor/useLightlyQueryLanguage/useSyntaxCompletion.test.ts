@@ -680,3 +680,36 @@ describe('useSyntaxCompletion', () => {
         );
     });
 });
+
+it.each([
+    ['sample_evaluation(', true],
+    ['sample_evaluation(na', true],
+    ['sample_evaluation(name = "run1" AND ', false],
+    ['sample_evaluation(name = "run1" AND (NOT ', false],
+    ['sample_evaluation(# AND\n', true]
+])('filters evaluation suggestions at %s', async (text, selector) => {
+    const { provideCompletionItems } = await loadAndAttach([{ label: 'name' }, { label: '"tp"' }]);
+    const column = text.length + 1;
+    const result = await provideCompletionItems(
+        makeModel(text, { startColumn: column, endColumn: column }) as never,
+        { lineNumber: 1, column } as never
+    );
+    const labels = result.suggestions.map((item) => item.label);
+    expect(labels.includes('name')).toBe(selector);
+    expect(labels.includes('"tp"')).toBe(!selector);
+    expect(labels.includes('"fp"')).toBe(!selector);
+});
+
+it('offers AND after the run selector without field suggestions', async () => {
+    const { provideCompletionItems } = await loadAndAttach([{ label: 'name' }]);
+    const text = 'sample_evaluation(name = "run AND sample_evaluation(" ';
+    const column = text.length + 1;
+    const result = await provideCompletionItems(
+        makeModel(text, { startColumn: column, endColumn: column }) as never,
+        { lineNumber: 1, column } as never
+    );
+    const labels = result.suggestions.map((item) => item.label);
+    expect(labels).toContain('AND');
+    expect(labels).not.toContain('name');
+    expect(labels).not.toContain('"tp"');
+});
