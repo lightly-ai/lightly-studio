@@ -1,7 +1,11 @@
-import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
+import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { getColorByLabel, hexToRgba, rgbaToHex } from '$lib/utils';
 import { onDestroy } from 'svelte';
 import { fromStore } from 'svelte/store';
+
+type SessionColor = NonNullable<
+    Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
+>;
 
 /**
  * Resolves the swatch colors for a label (with custom-color overrides applied),
@@ -15,7 +19,7 @@ export function useColorPicker(getLabel: () => string) {
     const colors = fromStore(customLabelColorsStore);
     // A session starts at the first setColor after a finished one. It keeps the name it
     // started with, because a rename can change the label while the picker stays mounted.
-    let session: { owner: symbol; name: string; color: CustomColor } | undefined;
+    let session: { owner: symbol; name: string; color: SessionColor } | undefined;
 
     onDestroy(() => {
         if (session) clearPreviewColor(session.name, session.owner);

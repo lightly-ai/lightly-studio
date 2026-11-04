@@ -59,4 +59,15 @@ describe('createCustomColorStore previews', () => {
         expect(store.hasSavedColor('cat')).toBe(false);
         expect(store.hasSavedColor('dog')).toBe(true);
     });
+
+    test('getSavedColor ignores previews', () => {
+        const store = createCustomColorStore();
+        store.setCustomColor('cat', '#111111', 1);
+        store.setPreviewColor('cat', { color: '#222222', alpha: 1 }, Symbol());
+        store.setPreviewColor('dog', { color: '#333333', alpha: 1 }, Symbol());
+
+        expect(store.getCustomColor('cat')?.color).toBe('#222222');
+        expect(store.getSavedColor('cat')?.color).toBe('#111111');
+        expect(store.getSavedColor('dog')).toBeUndefined();
+    });
 });

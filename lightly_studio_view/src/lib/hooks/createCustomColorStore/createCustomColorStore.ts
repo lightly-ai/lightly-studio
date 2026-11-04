@@ -75,8 +75,11 @@ export const createCustomColorStore = () => {
         colorVersion.update((v) => v + 1);
     };
 
+    // Get a color from the saved layer only
+    const getSavedColor = (name: string): CustomColor | undefined => get(savedColors)[name];
+
     // Check the saved layer only
-    const hasSavedColor = (name: string): boolean => !!get(savedColors)[name];
+    const hasSavedColor = (name: string): boolean => !!getSavedColor(name);
 
     // Replace the saved layer; previews stay
     const replaceSavedColors = (colors: Record<string, CustomColor>) => {
@@ -102,6 +105,7 @@ export const createCustomColorStore = () => {
         clearCustomColors,
         setPreviewColor,
         clearPreviewColor,
+        getSavedColor,
         hasSavedColor,
         replaceSavedColors
     };

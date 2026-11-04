@@ -1,14 +1,16 @@
 import { flushSync } from 'svelte';
+import { get } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createCustomColorStore } from '$lib/hooks/createCustomColorStore/createCustomColorStore';
 import { useAnnotationClasses } from './useAnnotationClasses.svelte';
 
 const mocks = vi.hoisted(() => ({
     mutateAsync: vi.fn(),
     invalidateQueries: vi.fn(),
     createQuery: vi.fn(),
-    getCustomColor: vi.fn(),
-    setCustomColor: vi.fn(),
-    deleteCustomColor: vi.fn()
+    colors: undefined as unknown as ReturnType<
+        typeof import('$lib/hooks/createCustomColorStore/createCustomColorStore').createCustomColorStore
+    >
 }));
 
 type MutationOptions = { onSettled?: () => unknown };
@@ -32,12 +34,9 @@ vi.mock('@tanstack/svelte-query', () => ({
     },
     useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries })
 }));
+// A real color store, so the tests check where colors end up.
 vi.mock('$lib/hooks/useCustomLabelColors', () => ({
-    useCustomLabelColors: () => ({
-        getCustomColor: mocks.getCustomColor,
-        setCustomColor: mocks.setCustomColor,
-        deleteCustomColor: mocks.deleteCustomColor
-    })
+    useCustomLabelColors: () => mocks.colors
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
@@ -55,40 +54,53 @@ const setup = (collectionId = 'collection-1') => {
 describe('useAnnotationClasses', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        mocks.colors = createCustomColorStore();
         mocks.mutateAsync.mockResolvedValue({});
     });
 
     afterEach(() => cleanup());
 
     it('renameClass moves the custom color to the new name', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
+        mocks.colors.setCustomColor('cat', '#ff0000', 0.5);
         const classes = setup();
 
         await classes.renameClass('label-1', 'cat', 'kitty');
 
-        expect(mocks.setCustomColor).toHaveBeenCalledWith('kitty', '#ff0000', 0.5);
-        expect(mocks.deleteCustomColor).toHaveBeenCalledWith('cat');
+        expect(mocks.colors.getCustomColor('kitty')).toEqual({ color: '#ff0000', alpha: 0.5 });
+        expect(mocks.colors.getCustomColor('cat')).toBeUndefined();
     });
 
     it('renameClass keeps the custom color when the name is unchanged', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
+        mocks.colors.setCustomColor('cat', '#ff0000', 0.5);
         const classes = setup();
 
         await classes.renameClass('label-1', 'cat', 'cat');
 
-        expect(mocks.setCustomColor).not.toHaveBeenCalled();
-        expect(mocks.deleteCustomColor).not.toHaveBeenCalled();
+        expect(mocks.colors.getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
     });
 
     it('renameClass keeps colors when the rename fails', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
+        mocks.colors.setCustomColor('cat', '#ff0000', 0.5);
         mocks.mutateAsync.mockRejectedValue(new Error('boom'));
         const classes = setup();
 
         await expect(classes.renameClass('label-1', 'cat', 'kitty')).rejects.toThrow('boom');
 
-        expect(mocks.setCustomColor).not.toHaveBeenCalled();
-        expect(mocks.deleteCustomColor).not.toHaveBeenCalled();
+        expect(mocks.colors.getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
+        expect(mocks.colors.getCustomColor('kitty')).toBeUndefined();
+    });
+
+    it('renameClass does not save an open picker preview', async () => {
+        const owner = Symbol();
+        mocks.colors.setCustomColor('cat', '#112233', 1);
+        mocks.colors.setPreviewColor('cat', { color: '#abcdef', alpha: 1 }, owner);
+        const classes = setup();
+
+        await classes.renameClass('label-1', 'cat', 'kitty');
+        mocks.colors.clearPreviewColor('cat', owner);
+
+        expect(mocks.colors.getCustomColor('kitty')?.color).toBe('#112233');
+        expect(JSON.stringify(get(mocks.colors.customColorsStore))).not.toContain('#abcdef');
     });
 
     it('query is disabled without a collection', () => {
