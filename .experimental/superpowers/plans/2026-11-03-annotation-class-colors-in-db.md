@@ -298,6 +298,10 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
 
+**Deviations (implemented):**
+- `useColorPicker` reads the `customLabelColorsStore` / `customSourceColorsStore` aliases, because the partial `useCustomLabelColors` mocks in `LabelsMenu.test.ts` and `SampleDetailsClassificationSegment.test.ts` provide only those.
+- The options are a non-exported `interface UseColorPickerOptions { kind: 'class' | 'source' }`; the union stays inline (Codex review).
+
 ## PR 9: Add "Reset to default" to the color picker
 
 **Files:**
