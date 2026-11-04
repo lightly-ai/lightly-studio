@@ -38,8 +38,11 @@ def build_point_cloud_columns(
     Returns:
         A map of column name to its Arrow float32 array.
     """
+    # Select the valid points once and lay out each coordinate contiguously, so each
+    # column converts to Arrow without another pass over the mask.
+    kept_xyz = np.compress(valid, xyz, axis=0).T.copy()
     columns: dict[str, pa.Array] = {
-        name: pa.array(xyz[valid, index], type=pa.float32())
+        name: pa.array(kept_xyz[index], type=pa.float32())
         for index, name in enumerate(("x", "y", "z"))
     }
     reflectivity_field = fields.get("reflectivity") or fields.get("intensity")

@@ -30,4 +30,35 @@ describe('prefetchSession', () => {
         expect(session.queued).toEqual([]);
         expect(session.pending).toEqual(new Map());
     });
+
+    it('runs two tick-data requests at once', async () => {
+        const session = createPrefetchSession('request-1');
+        let started = 0;
+        const request = () => {
+            started += 1;
+            return new Promise<void>(() => {});
+        };
+
+        for (let index = 0; index < 3; index += 1) void session.dataLimiter.run(request);
+        await Promise.resolve();
+
+        expect(started).toBe(2);
+    });
+
+    it('rejects waiting tick-data requests when discarded', async () => {
+        const session = createPrefetchSession('request-1');
+        let started = 0;
+        const request = () => {
+            started += 1;
+            return new Promise<void>(() => {});
+        };
+        void session.dataLimiter.run(request);
+        void session.dataLimiter.run(request);
+        const waiting = session.dataLimiter.run(request);
+
+        discardPrefetchSession(session);
+
+        await expect(waiting).rejects.toThrow('discarded');
+        expect(started).toBe(2);
+    });
 });

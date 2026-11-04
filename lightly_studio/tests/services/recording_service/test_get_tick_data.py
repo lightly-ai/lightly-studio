@@ -13,13 +13,17 @@ from pyarrow import ipc
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY
 from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.services.recording_service import (
+    camera_jpeg_cache,
     get_camera_frame,
     get_tick_data,
     reader_cache,
     video_decoder_cache,
 )
+from lightly_studio.services.recording_service.camera_jpeg_cache import JpegId
 from lightly_studio.services.recording_service.get_tick_data import TickPayloadKind
 from tests.core.mcap import helpers as mcap_helpers
 from tests.services.recording_service import tick_data_helpers
@@ -98,6 +102,56 @@ def test_get_tick_data__decodes_each_channel_in_its_window(
         tick.lidar_channel_id: (1_050_000_000, 1_050_000_000),
         tick.camera_channel_id: (1_000_000_000, 1_100_000_000),
     }
+
+
+def test_get_tick_data__reserves_the_camera_jpegs_while_it_reads(
+    db_session: Session, tmp_path: Path, mocker: MockerFixture
+) -> None:
+    tick = tick_data_helpers.create_tick(session=db_session, tmp_path=tmp_path)
+    uri = str(tmp_path / "recording.mcap")
+    read = McapFileReader.get_decoded_messages_in_windows
+    reserved_during_read: list[JpegId] = []
+
+    def read_and_record(
+        self: McapFileReader, windows_ns: dict[int, tuple[int, int]]
+    ) -> dict[int, list[DecodedMessage]]:
+        reserved_during_read.extend(
+            camera_jpeg_cache.reserved_at(
+                uri=uri,
+                channel_id=tick.camera_channel_id,
+                log_time_ns=tick_data_helpers.CAMERA_LOG_TIME_NS,
+            )
+        )
+        return read(self, windows_ns=windows_ns)
+
+    mocker.patch.object(McapFileReader, "get_decoded_messages_in_windows", read_and_record)
+
+    get_tick_data.get_tick_data(
+        session=db_session,
+        dataset_id=tick.dataset_id,
+        sequence_id=tick.sequence_id,
+        seq_number=0,
+        camera_height=8,
+    )
+
+    assert reserved_during_read == [
+        JpegId(
+            uri=uri,
+            channel_id=tick.camera_channel_id,
+            log_time_ns=tick_data_helpers.CAMERA_LOG_TIME_NS,
+            width=None,
+            height=8,
+            quality=JPEG_QUALITY,
+        )
+    ]
+    assert (
+        camera_jpeg_cache.reserved_at(
+            uri=uri,
+            channel_id=tick.camera_channel_id,
+            log_time_ns=tick_data_helpers.CAMERA_LOG_TIME_NS,
+        )
+        == []
+    )
 
 
 def test_get_tick_data__skips_a_cached_camera_jpeg(

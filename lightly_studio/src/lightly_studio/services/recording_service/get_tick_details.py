@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from uuid import UUID
 
 import numpy as np
@@ -19,6 +20,7 @@ from lightly_studio.models.mcap_sequence_ticks import (
     TickChannelView,
     TickDetailView,
 )
+from lightly_studio.models.sensor_calibration import SensorCalibrationTable
 from lightly_studio.models.tag import TagView
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -35,6 +37,16 @@ from lightly_studio.services.recording_service import (
     resolve_tick,
     transform_to_target_frame,
 )
+
+
+@dataclass(frozen=True)
+class _CalibratedCamera:
+    """A camera of a tick that can be projected into the scene frame."""
+
+    group_component_name: str
+    frame_id: str
+    timestamp_ns: int
+    calibration: SensorCalibrationTable
 
 
 def get_tick_details(
@@ -76,18 +88,32 @@ def get_tick_details(
         return None
     link = tick.link
 
-    camera_timestamps = {
-        name: mcap.capture_timestamp_ns
-        for name, (mcap, data_type) in tick.channels.items()
-        if data_type is McapDataType.VIDEO_FRAME
-    }
-    projections = _camera_projections(
-        session=session,
-        sequence_id=sequence_id,
-        recording_id=tick.recording_id,
-        target_frame_id=target_frame_id,
-        camera_timestamps=camera_timestamps,
-    )
+    annotations = [
+        AnnotationView.from_annotation_table(annotation=annotation)
+        for annotation in annotation_resolver.get_all_by_parent_sample_ids(
+            session=session, parent_sample_ids=[link.sample_id], load_view_relationships=True
+        )
+    ]
+    projections: dict[str, CameraProjectionView] = {}
+    if target_frame_id is not None:
+        cameras = _calibrated_cameras(
+            session=session,
+            sequence_id=sequence_id,
+            recording_id=tick.recording_id,
+            camera_timestamps={
+                name: mcap.capture_timestamp_ns
+                for name, (mcap, data_type) in tick.channels.items()
+                if data_type is McapDataType.VIDEO_FRAME
+            },
+        )
+        projections, annotations = _in_target_frame(
+            session=session,
+            recording_id=tick.recording_id,
+            target_frame_id=target_frame_id,
+            timestamp_ns=link.timestamp_ns,
+            cameras=cameras,
+            annotations=annotations,
+        )
     camera_channels: dict[str, TickChannelView] = {}
     lidar_channels: dict[str, TickChannelView] = {}
     for name, (mcap, data_type) in tick.channels.items():
@@ -96,20 +122,6 @@ def get_tick_details(
             lidar_channels[name] = channel
         elif data_type is McapDataType.VIDEO_FRAME:
             camera_channels[name] = channel.model_copy(update={"projection": projections.get(name)})
-    annotations = [
-        AnnotationView.from_annotation_table(annotation=annotation)
-        for annotation in annotation_resolver.get_all_by_parent_sample_ids(
-            session=session, parent_sample_ids=[link.sample_id]
-        )
-    ]
-    if target_frame_id is not None:
-        annotations = cuboids_in_frame.cuboids_in_frame(
-            session=session,
-            recording_id=tick.recording_id,
-            annotations=annotations,
-            target_frame_id=target_frame_id,
-            timestamp_ns=link.timestamp_ns,
-        )
     tick_sample = sample_resolver.get_by_id(session=session, sample_id=link.sample_id)
     assert tick_sample is not None
     return TickDetailView(
@@ -125,76 +137,125 @@ def get_tick_details(
     )
 
 
-def _camera_projections(
+def _calibrated_cameras(
     session: Session,
     sequence_id: UUID,
     recording_id: UUID,
-    target_frame_id: str | None,
     camera_timestamps: Mapping[str, int],
-) -> dict[str, CameraProjectionView]:
-    """Build projection metadata for cameras in the requested scene frame."""
-    if target_frame_id is None or not camera_timestamps:
-        return {}
-
+) -> list[_CalibratedCamera]:
+    """Returns the cameras of a tick that have a frame, a calibration and a timestamp."""
+    if not camera_timestamps:
+        return []
     info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
     if info is None:
-        return {}
+        return []
     calibrations = {
-        calibration.collection_id: calibration
-        for calibration in sensor_calibration_resolver.get_all_by_recording_id(
+        row.collection_id: row
+        for row in sensor_calibration_resolver.get_all_by_recording_id(
             session=session, recording_id=recording_id
         )
     }
-    components = [
-        component
-        for component in info.components
-        if component.mcap_data_type is McapDataType.VIDEO_FRAME
-        and component.frame_id is not None
-        and component.collection_id in calibrations
-    ]
-    if not components:
-        return {}
+    cameras = []
+    for component in info.components:
+        timestamp_ns = camera_timestamps.get(component.group_component_name)
+        camera_calibration = calibrations.get(component.collection_id)
+        if (
+            component.mcap_data_type is not McapDataType.VIDEO_FRAME
+            or component.frame_id is None
+            or camera_calibration is None
+            or timestamp_ns is None
+        ):
+            continue
+        cameras.append(
+            _CalibratedCamera(
+                group_component_name=component.group_component_name,
+                frame_id=component.frame_id,
+                timestamp_ns=timestamp_ns,
+                calibration=camera_calibration,
+            )
+        )
+    return cameras
+
+
+def _in_target_frame(  # noqa: PLR0913
+    session: Session,
+    recording_id: UUID,
+    target_frame_id: str,
+    timestamp_ns: int | None,
+    cameras: Sequence[_CalibratedCamera],
+    annotations: Sequence[AnnotationView],
+) -> tuple[dict[str, CameraProjectionView], list[AnnotationView]]:
+    """Builds the camera projections and maps the cuboids to the target frame.
+
+    The recording, its static transforms and its dynamic transforms near every
+    timestamp of the tick are read once, and one reader serves all lookups. A camera
+    without a transform to the target frame gets no projection.
+
+    Raises:
+        McapAccessError: If a cuboid must be mapped but the tick has no timestamp or
+            the recording does not exist.
+        TransformNotFoundError: If no chain of transforms connects a cuboid frame to
+            the target frame.
+    """
+    cuboid_frame_ids = cuboids_in_frame.source_frame_ids(
+        annotations=annotations, target_frame_id=target_frame_id
+    )
+    if cuboid_frame_ids and timestamp_ns is None:
+        raise McapAccessError(
+            f"The tick has no timestamp, so its cuboids in frames {sorted(cuboid_frame_ids)} "
+            f"cannot be mapped to frame '{target_frame_id}'."
+        )
+    if not cameras and not cuboid_frame_ids:
+        return {}, list(annotations)
     recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
     if recording is None:
-        return {}
+        if cuboid_frame_ids:
+            raise McapAccessError(f"Recording {recording_id} was not found.")
+        return {}, list(annotations)
+    cuboid_timestamp_ns = timestamp_ns if cuboid_frame_ids else None
+    timestamps_ns = [camera.timestamp_ns for camera in cameras]
+    if cuboid_timestamp_ns is not None:
+        timestamps_ns.append(cuboid_timestamp_ns)
     static_transforms = load_static_transforms.load_static_transforms(
         session=session, recording_id=recording_id
     )
+    dynamic_transforms = load_dynamic_transforms.load_dynamic_transforms_near_times(
+        session=session, recording_id=recording_id, timestamps_ns=timestamps_ns
+    )
     projections: dict[str, CameraProjectionView] = {}
-    dynamic_transforms_by_timestamp: dict[int, Sequence[StaticTransform] | None] = {}
     with reader_cache.borrow_reader(uri=recording.uri) as reader:
-        for component in components:
-            calibration = calibrations.get(component.collection_id)
-            if calibration is None or component.frame_id is None:
-                continue
-            projection_timestamp_ns = camera_timestamps.get(component.group_component_name)
-            if projection_timestamp_ns is None:
-                continue
-            if projection_timestamp_ns not in dynamic_transforms_by_timestamp:
-                dynamic_transforms_by_timestamp[projection_timestamp_ns] = (
-                    load_dynamic_transforms.load_dynamic_transforms_near(
-                        session=session,
-                        recording_id=recording_id,
-                        timestamp_ns=projection_timestamp_ns,
-                    )
-                )
+        for camera in cameras:
             matrix = _get_camera_projection_matrix(
                 reader=reader,
                 source_frame_id=target_frame_id,
-                target_frame_id=component.frame_id,
-                timestamp_ns=projection_timestamp_ns,
+                target_frame_id=camera.frame_id,
+                timestamp_ns=camera.timestamp_ns,
                 static_transforms=static_transforms,
-                dynamic_transforms=dynamic_transforms_by_timestamp[projection_timestamp_ns],
+                dynamic_transforms=load_dynamic_transforms.select_near(
+                    dynamic_transforms=dynamic_transforms, timestamp_ns=camera.timestamp_ns
+                ),
             )
             if matrix is None:
                 continue
-            projections[component.group_component_name] = CameraProjectionView(
-                width=calibration.width,
-                height=calibration.height,
-                camera_matrix=calibration.k,
+            projections[camera.group_component_name] = CameraProjectionView(
+                width=camera.calibration.width,
+                height=camera.calibration.height,
+                camera_matrix=camera.calibration.k,
                 scene_to_camera=[float(value) for value in matrix.reshape(-1)],
             )
-    return projections
+        if cuboid_timestamp_ns is None:
+            return projections, list(annotations)
+        mapped = cuboids_in_frame.map_cuboids(
+            reader=reader,
+            annotations=annotations,
+            target_frame_id=target_frame_id,
+            timestamp_ns=cuboid_timestamp_ns,
+            static_transforms=static_transforms,
+            dynamic_transforms=load_dynamic_transforms.select_near(
+                dynamic_transforms=dynamic_transforms, timestamp_ns=cuboid_timestamp_ns
+            ),
+        )
+    return projections, mapped
 
 
 def _get_camera_projection_matrix(  # noqa: PLR0913

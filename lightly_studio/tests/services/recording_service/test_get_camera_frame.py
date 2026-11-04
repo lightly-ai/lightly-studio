@@ -12,19 +12,22 @@ import pytest
 from pytest_mock import MockerFixture, MockType
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.compressed_video import VideoDecoder
+from lightly_studio.core.mcap import compressed_video
+from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY, VideoDecoder
 from lightly_studio.core.mcap.errors import ChannelNotFoundError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import collection_resolver, recording_resolver
 from lightly_studio.services.recording_service import (
-    get_camera_frame as get_camera_frame_module,
-)
-from lightly_studio.services.recording_service import (
+    camera_jpeg_cache,
     reader_cache,
     video_decoder_cache,
 )
+from lightly_studio.services.recording_service import (
+    get_camera_frame as get_camera_frame_module,
+)
+from lightly_studio.services.recording_service.camera_jpeg_cache import JpegId
 from lightly_studio.services.recording_service.get_camera_frame import (
     CameraFrame,
     get_camera_frame,
@@ -206,7 +209,38 @@ def test_get_camera_frame__same_frame_again(
     assert second.data == first.data
 
 
-def test_get_camera_frame__earlier_frame_comes_from_the_cache(
+def test_get_camera_frame__encodes_only_the_target_frame(
+    db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
+) -> None:
+    to_jpeg_spy = mocker.spy(compressed_video, "to_jpeg")
+
+    _get_frame(session=db_session, recording=video_recording, log_time_ns=WHITE_FRAME_NS)
+
+    assert to_jpeg_spy.call_count == 1
+    assert (
+        camera_jpeg_cache.get_jpeg(
+            jpeg_id=_jpeg_id(
+                session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS
+            )
+        )
+        is None
+    )
+
+
+def test_get_camera_frame__encodes_a_reserved_frame_on_the_way(
+    db_session: Session, video_recording: RecordingFixture
+) -> None:
+    gray_id = _jpeg_id(session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS)
+
+    with camera_jpeg_cache.reserve(jpeg_ids=[gray_id]):
+        _get_frame(session=db_session, recording=video_recording, log_time_ns=WHITE_FRAME_NS)
+
+    gray = camera_jpeg_cache.get_jpeg(jpeg_id=gray_id)
+    assert gray is not None
+    assert 96 < helpers.jpeg_mean_gray_level(gray) < 160
+
+
+def test_get_camera_frame__earlier_frame_decodes_from_the_keyframe(
     db_session: Session, video_recording: RecordingFixture, mocker: MockerFixture
 ) -> None:
     decode_spy = mocker.spy(VideoDecoder, "decode")
@@ -217,7 +251,7 @@ def test_get_camera_frame__earlier_frame_comes_from_the_cache(
         session=db_session, recording=video_recording, log_time_ns=GRAY_FRAME_NS
     )
 
-    assert _decoded_log_times_ns(decode_spy=decode_spy) == []
+    assert _decoded_log_times_ns(decode_spy=decode_spy) == [KEYFRAME_NS, GRAY_FRAME_NS]
     assert 96 < helpers.jpeg_mean_gray_level(gray_frame.data) < 160
 
 
@@ -439,6 +473,18 @@ def _recording_uri(session: Session, recording: RecordingFixture) -> str:
     table = recording_resolver.get_by_id(session=session, recording_id=recording.recording_id)
     assert table is not None
     return table.uri
+
+
+def _jpeg_id(session: Session, recording: RecordingFixture, log_time_ns: int) -> JpegId:
+    """Returns the id of a full-size JPEG as `_get_frame` requests it."""
+    return JpegId(
+        uri=_recording_uri(session=session, recording=recording),
+        channel_id=recording.channel_id,
+        log_time_ns=log_time_ns,
+        width=None,
+        height=None,
+        quality=JPEG_QUALITY,
+    )
 
 
 def _decoded_log_times_ns(decode_spy: MockType) -> list[int]:

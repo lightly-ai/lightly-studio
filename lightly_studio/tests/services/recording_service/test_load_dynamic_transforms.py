@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.mcap.type_definitions import StaticTransform
@@ -36,6 +37,42 @@ class TestDynamicTransformsByTime:
             1_000_000_000 - WINDOW_NS,
             1_000_000_000 + WINDOW_NS,
         ]
+
+
+def test_load_dynamic_transforms_near_times(db_session: Session, mocker: MockerFixture) -> None:
+    recording_id = create_recording(session=db_session)
+    # The times are 500 ms apart, more than twice the window.
+    _store_edges(
+        session=db_session,
+        recording_id=recording_id,
+        timestamps_ns=[1_000_000_000, 1_500_000_000, 3_000_000_000],
+    )
+    get_near = mocker.spy(dynamic_transform_resolver, "get_near")
+
+    result = load_dynamic_transforms.load_dynamic_transforms_near_times(
+        session=db_session,
+        recording_id=recording_id,
+        timestamps_ns=[1_500_000_000, 1_000_000_000],
+    )
+
+    assert result is not None
+    assert get_near.call_count == 1
+    assert [edge.timestamp_ns for edge in result.near(timestamp_ns=1_000_000_000)] == [
+        1_000_000_000
+    ]
+    assert [edge.timestamp_ns for edge in result.near(timestamp_ns=1_500_000_000)] == [
+        1_500_000_000
+    ]
+
+
+def test_load_dynamic_transforms_near_times__no_stored_edges(db_session: Session) -> None:
+    recording_id = create_recording(session=db_session)
+
+    result = load_dynamic_transforms.load_dynamic_transforms_near_times(
+        session=db_session, recording_id=recording_id, timestamps_ns=[1_000_000_000]
+    )
+
+    assert result is None
 
 
 def test_load_dynamic_transforms_between(db_session: Session) -> None:

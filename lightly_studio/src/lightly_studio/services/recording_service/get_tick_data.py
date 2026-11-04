@@ -11,18 +11,23 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY
+from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.core.mcap.type_definitions import DecodedMessage, StaticTransform
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service import (
+    camera_jpeg_cache,
     encode_point_cloud_message,
     get_camera_frame,
+    load_dynamic_transforms,
     load_static_transforms,
     reader_cache,
     resolve_tick,
 )
+from lightly_studio.services.recording_service.camera_jpeg_cache import JpegId
 
 logger = logging.getLogger(__name__)
 
@@ -108,9 +113,44 @@ def get_tick_data(  # noqa: PLR0913
     if not lidars and not cameras:
         return []
 
+    # Reserve the camera JPEGs before the read, so that a request for a later tick that
+    # gets the decoder first also encodes the frames of this tick.
+    jpeg_ids = [
+        JpegId(
+            uri=recording.uri,
+            channel_id=camera.channel_id,
+            log_time_ns=camera.log_time_ns,
+            width=None,
+            height=camera_height,
+            quality=JPEG_QUALITY,
+        )
+        for camera in cameras
+    ]
+    with camera_jpeg_cache.reserve(jpeg_ids=jpeg_ids):
+        return _read_and_decode_payloads(
+            session=session,
+            recording_id=tick.recording_id,
+            uri=recording.uri,
+            lidars=lidars,
+            cameras=cameras,
+            target_frame_id=target_frame_id,
+            camera_height=camera_height,
+        )
+
+
+def _read_and_decode_payloads(  # noqa: PLR0913
+    session: Session,
+    recording_id: UUID,
+    uri: str,
+    lidars: Sequence[McapTable],
+    cameras: Sequence[McapTable],
+    target_frame_id: str | None,
+    camera_height: int | None,
+) -> list[TickPayload]:
+    """Reads the messages of all channels with one read and encodes the payloads."""
     camera_starts_ns = {
         camera.channel_id: get_camera_frame.camera_read_start_ns(
-            uri=recording.uri,
+            uri=uri,
             channel_id=camera.channel_id,
             keyframe_log_time_ns=_keyframe_ns(camera=camera),
             target_time_ns=camera.log_time_ns,
@@ -120,7 +160,7 @@ def get_tick_data(  # noqa: PLR0913
     }
     # Keep the reader until the payloads are encoded. A point cloud can read dynamic
     # transforms from the file, and a camera whose decoder moved on reads again.
-    with reader_cache.borrow_reader(uri=recording.uri) as reader:
+    with reader_cache.borrow_reader(uri=uri) as reader:
         messages = reader.get_decoded_messages_in_windows(
             windows_ns=_read_windows_ns(
                 lidars=lidars, cameras=cameras, camera_starts_ns=camera_starts_ns
@@ -129,8 +169,8 @@ def get_tick_data(  # noqa: PLR0913
         return _decode_payloads(
             session=session,
             reader=reader,
-            recording_id=tick.recording_id,
-            uri=recording.uri,
+            recording_id=recording_id,
+            uri=uri,
             lidars=lidars,
             cameras=cameras,
             camera_starts_ns=camera_starts_ns,
@@ -221,13 +261,12 @@ def _point_cloud_payloads(  # noqa: PLR0913
     messages: Mapping[int, Sequence[DecodedMessage]],
     target_frame_id: str | None,
 ) -> list[TickPayload]:
-    """Encodes the message of each lidar at its locator log time."""
-    static_transforms: list[StaticTransform] = []
-    if target_frame_id is not None and lidars:
-        static_transforms = load_static_transforms.load_static_transforms(
-            session=session, recording_id=recording_id
-        )
-    payloads = []
+    """Encodes the message of each lidar at its locator log time.
+
+    The transforms of all lidars are loaded once, with one query for the dynamic
+    transforms near all their capture times.
+    """
+    lidar_messages: list[tuple[McapTable, DecodedMessage]] = []
     for lidar in lidars:
         message = _message_at(messages=messages[lidar.channel_id], log_time_ns=lidar.log_time_ns)
         if message is None:
@@ -235,22 +274,46 @@ def _point_cloud_payloads(  # noqa: PLR0913
                 "Point cloud channel %s has no message at %s.", lidar.channel_id, lidar.log_time_ns
             )
             continue
-        payloads.append(
-            TickPayload(
-                channel_id=lidar.channel_id,
-                kind=TickPayloadKind.POINT_CLOUD,
-                log_time_ns=lidar.log_time_ns,
-                data=encode_point_cloud_message.encode_point_cloud_message(
-                    session=session,
-                    reader=reader,
-                    recording_id=recording_id,
-                    message=message,
-                    target_frame_id=target_frame_id,
-                    static_transforms=static_transforms,
-                ),
-            )
+        lidar_messages.append((lidar, message))
+    static_transforms: list[StaticTransform] = []
+    dynamic_transforms: load_dynamic_transforms.DynamicTransformsByTime | None = None
+    timestamps_ns = _transform_timestamps_ns(messages=[message for _, message in lidar_messages])
+    if target_frame_id is not None and timestamps_ns:
+        static_transforms = load_static_transforms.load_static_transforms(
+            session=session, recording_id=recording_id
         )
-    return payloads
+        dynamic_transforms = load_dynamic_transforms.load_dynamic_transforms_near_times(
+            session=session, recording_id=recording_id, timestamps_ns=timestamps_ns
+        )
+    return [
+        TickPayload(
+            channel_id=lidar.channel_id,
+            kind=TickPayloadKind.POINT_CLOUD,
+            log_time_ns=lidar.log_time_ns,
+            data=encode_point_cloud_message.encode_point_cloud_message(
+                reader=reader,
+                message=message,
+                target_frame_id=target_frame_id,
+                static_transforms=static_transforms,
+                dynamic_transforms=dynamic_transforms,
+            ),
+        )
+        for lidar, message in lidar_messages
+    ]
+
+
+def _transform_timestamps_ns(messages: Sequence[DecodedMessage]) -> list[int]:
+    """Returns the transform times of the messages, skipping messages without one.
+
+    A message without a capture time fails later only if its points must be mapped.
+    """
+    timestamps_ns = []
+    for message in messages:
+        try:
+            timestamps_ns.append(encode_point_cloud_message.transform_timestamp_ns(message=message))
+        except McapAccessError:
+            continue
+    return timestamps_ns
 
 
 def _camera_payloads(  # noqa: PLR0913

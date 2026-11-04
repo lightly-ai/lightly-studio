@@ -247,6 +247,82 @@ def test_get_all_by_parent_sample_ids__annotation_types_empty_returns_empty(
     assert result == []
 
 
+def test_get_all_by_parent_sample_ids__load_view_relationships(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="label",
+    )
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            cuboid_create(
+                parent_sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            )
+        ],
+        collection_name="ground_truth",
+    )
+    db_session.expire_all()
+
+    result = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_session,
+        parent_sample_ids=[image.sample_id],
+        load_view_relationships=True,
+    )
+
+    assert len(result) == 1
+    state = inspect(result[0])
+    assert state is not None
+    assert {
+        "annotation_label",
+        "object_detection_details",
+        "cuboid_3d_details",
+        "segmentation_details",
+        "object_track",
+    }.isdisjoint(state.unloaded)
+    sample_state = inspect(result[0].sample)
+    assert sample_state is not None
+    assert "tags" not in sample_state.unloaded
+
+
+def test_get_all_by_parent_sample_ids__default_does_not_load_view_relationships(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection.collection_id,
+        label_name="label",
+    )
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection.collection_id,
+        annotations=[
+            cuboid_create(
+                parent_sample_id=image.sample_id,
+                annotation_label_id=label.annotation_label_id,
+            )
+        ],
+        collection_name="ground_truth",
+    )
+    db_session.expire_all()
+
+    result = annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_session,
+        parent_sample_ids=[image.sample_id],
+    )
+
+    assert len(result) == 1
+    state = inspect(result[0])
+    assert state is not None
+    assert {"annotation_label", "cuboid_3d_details", "segmentation_details"} <= state.unloaded
+
+
 def test_get_all_by_parent_sample_ids__eager_loads_parent_object_track(
     db_session: Session,
 ) -> None:

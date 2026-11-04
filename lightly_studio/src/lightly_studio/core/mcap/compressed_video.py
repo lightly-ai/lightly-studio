@@ -6,18 +6,19 @@ a delta frame. A delta frame can only be decoded after the frames it depends on,
 `VideoDecoder` is fed every message from the preceding keyframe up to the target
 frame, e.g. as read by `McapFileReader.get_decoded_messages_in_range`.
 
-The frame is decoded with PyAV (libav). The JPEG is scaled in YUV and encoded with
-libav, so a preview does not convert the full picture to RGB first.
+The frame is decoded with PyAV (libav). The JPEG is scaled and converted to RGB in one
+libav pass at the output size, and encoded with Pillow. Pillow releases the GIL while
+it encodes, so the cameras of a tick encode in parallel.
 """
 
 from __future__ import annotations
 
+import io
 from typing import Any
 
 import av
 from av import CodecContext, VideoFrame
 from av.codec.context import ThreadType
-from av.video.codeccontext import VideoCodecContext
 from av.video.reformatter import Interpolation
 from PIL import Image
 
@@ -259,8 +260,8 @@ def to_jpeg(
 ) -> bytes:
     """Encodes a decoded video frame as JPEG.
 
-    The picture is scaled in YUV. 4:2:0 chroma needs an even width and height, so an
-    odd output size uses 4:4:4.
+    The picture is scaled to the output size in RGB and encoded with Pillow, which
+    releases the GIL while it encodes.
 
     Args:
         frame: The decoded frame, e.g. from `VideoDecoder.frame`.
@@ -273,17 +274,12 @@ def to_jpeg(
     Returns:
         JPEG-encoded bytes of the frame.
     """
-    picture = _scaled_jpeg_frame(frame=frame, width=width, height=height)
-    codec = av.CodecContext.create("mjpeg", "w")
-    assert isinstance(codec, VideoCodecContext)
-    codec.width = picture.width
-    codec.height = picture.height
-    codec.pix_fmt = picture.format.name
-    codec.qmin = _qscale(quality=quality)
-    codec.qmax = codec.qmin
-    packets = codec.encode(picture)
-    packets.extend(codec.encode(None))
-    return b"".join(bytes(packet) for packet in packets)
+    picture = _scaled_rgb_frame(frame=frame, width=width, height=height)
+    buffer = io.BytesIO()
+    Image.fromarray(picture.to_ndarray(format="rgb24")).save(
+        buffer, format="JPEG", quality=min(95, max(1, quality))
+    )
+    return buffer.getvalue()
 
 
 def _decode_single_message(decoded_message: Any) -> VideoFrame:
@@ -381,20 +377,6 @@ def _scaled_rgb_frame(frame: VideoFrame, width: int | None, height: int | None) 
     )
 
 
-def _scaled_jpeg_frame(frame: VideoFrame, width: int | None, height: int | None) -> VideoFrame:
-    """Scales a frame in YUV to the output size, in a pixel format the JPEG encoder accepts."""
-    out_width, out_height = _output_size(frame=frame, width=width, height=height)
-    pix_fmt = "yuvj420p" if out_width % 2 == 0 and out_height % 2 == 0 else "yuvj444p"
-    interpolation = (
-        Interpolation.AREA
-        if out_width <= frame.width and out_height <= frame.height
-        else Interpolation.BILINEAR
-    )
-    return frame.reformat(
-        width=out_width, height=out_height, format=pix_fmt, interpolation=interpolation
-    )
-
-
 def _output_size(frame: VideoFrame, width: int | None, height: int | None) -> tuple[int, int]:
     """Returns the output size, preserving aspect ratio when one side is omitted."""
     if width is None and height is None:
@@ -405,9 +387,3 @@ def _output_size(frame: VideoFrame, width: int | None, height: int | None) -> tu
     if height is None:
         return width, max(1, round(frame.height * width / frame.width))
     return width, height
-
-
-def _qscale(quality: int) -> int:
-    """Maps a JPEG quality (higher is better) to a libav qscale (lower is better)."""
-    clamped = min(95, max(1, quality))
-    return min(31, max(1, round((100 - clamped) * 31 / 100)))

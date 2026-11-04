@@ -33,6 +33,26 @@ describe('prefetchMcapTick', () => {
         expect(client.ensureQueryData).toHaveBeenCalledWith({ queryKey: ['tick-data'] });
     });
 
+    it('starts the tick details at once and the tick data through the data runner', async () => {
+        const client = { ensureQueryData: vi.fn().mockResolvedValue({}) } as unknown as QueryClient;
+        let startData!: () => void;
+        let dataRuns = 0;
+        const runDataRequest = <T>(request: () => Promise<T>) => {
+            dataRuns += 1;
+            return new Promise<T>((resolve) => (startData = () => resolve(request())));
+        };
+
+        const promise = prefetchMcapTick(client, params, runDataRequest);
+
+        expect(client.ensureQueryData).toHaveBeenCalledTimes(1);
+        expect(client.ensureQueryData).toHaveBeenCalledWith({ queryKey: ['tick-details'] });
+        startData();
+        await promise;
+        expect(dataRuns).toBe(1);
+        expect(client.ensureQueryData).toHaveBeenCalledTimes(2);
+        expect(client.ensureQueryData).toHaveBeenLastCalledWith({ queryKey: ['tick-data'] });
+    });
+
     it('propagates errors so a failed tick cannot be marked buffered', async () => {
         const error = new Error('Tick data unavailable');
         const client = {

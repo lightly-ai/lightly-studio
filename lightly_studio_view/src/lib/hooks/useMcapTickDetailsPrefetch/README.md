@@ -45,8 +45,11 @@ finish in the background, but their results are ignored by the old session.
 </script>
 ```
 
-The executor limits work to four concurrent tick requests. Use the scheduler when chunks and
-delays are part of the behavior.
+The executor limits work to four concurrent ticks. The tick-details request of a tick starts at
+once, but at most two tick-data requests run at once, in tick order. The server decodes the camera
+frames of one video GOP in order, so more parallel tick-data requests only wait for each other.
+Discarding a session cancels its tick-data requests that have not started. Use the scheduler when
+chunks and delays are part of the behavior.
 
 ## Using the scheduler
 
