@@ -16,13 +16,17 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, image_resolver
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
+    AnnotationPair,
     AnnotationsFilter,
 )
+from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
+    create_annotation,
     create_annotation_label,
     create_collection,
     create_image,
@@ -230,6 +234,92 @@ def test_filter_delegates_region_filtering_to_mixin(
     assert all(call.kwargs["sample_id_column"].key == "sample_id" for call in spy.call_args_list)
     assert len(filtered_annotations) == 1
     assert filtered_annotations[0].sample_id == annotation1.sample_id
+
+
+def test_annotation_pairs__keeps_same_class_in_other_source(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    car = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    labels_annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=car.annotation_label_id,
+        annotation_collection_name="labels",
+    )
+    model_annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=car.annotation_label_id,
+        annotation_collection_name="model_v1",
+    )
+
+    annotations = annotations_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(
+            annotation_pairs=[
+                AnnotationPair(
+                    collection_id=model_annotation.sample.collection_id,
+                    annotation_label_id=car.annotation_label_id,
+                )
+            ]
+        ),
+    ).annotations
+
+    assert labels_annotation.sample.collection_id != model_annotation.sample.collection_id
+    assert [a.sample_id for a in annotations] == [model_annotation.sample_id]
+
+
+def test_annotation_pairs__empty_list_matches_nothing(
+    db_session: Session,
+    filter_test_data: tuple[AnnotationBaseTable, AnnotationBaseTable],  # noqa: ARG001
+) -> None:
+    annotations = annotations_resolver.get_all(
+        session=db_session, filters=AnnotationsFilter(annotation_pairs=[])
+    ).annotations
+
+    assert annotations == []
+
+
+def test_annotation_pairs__parent_sample_query(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    car = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    person = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="person"
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=car.annotation_label_id,
+        annotation_collection_name="labels",
+    )
+    source_id = annotation.sample.collection_id
+
+    def _matching_images(label_id: UUID) -> list[UUID]:
+        result = image_resolver.get_all_by_collection_id(
+            session=db_session,
+            collection_id=collection.collection_id,
+            filters=ImageFilter(
+                sample_filter=SampleFilter(
+                    annotations_filter=AnnotationsFilter(
+                        annotation_pairs=[
+                            AnnotationPair(collection_id=source_id, annotation_label_id=label_id)
+                        ]
+                    )
+                )
+            ),
+        )
+        return [i.sample_id for i in result.samples]
+
+    assert _matching_images(person.annotation_label_id) == []
+    assert _matching_images(car.annotation_label_id) == [image.sample_id]
 
 
 def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:
