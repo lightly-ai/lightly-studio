@@ -58,15 +58,25 @@ describe('filterGroups', () => {
     const groups = groupPairRows(rows, 'source', SOURCES);
 
     it('keeps all rows of a group that matches by name', () => {
-        const result = filterGroups(groups, buildMatcher('^ground', true)!.find);
+        const result = filterGroups(groups, buildMatcher('^ground', true)!.find, 'source');
         expect(result).toHaveLength(1);
         expect(result[0].rows).toHaveLength(2);
     });
 
     it('keeps only matching rows otherwise and drops empty groups', () => {
-        const result = filterGroups(groups, buildMatcher('person', false)!.find);
+        const result = filterGroups(groups, buildMatcher('person', false)!.find, 'source');
         expect(result.map((group) => group.id)).toEqual(['s1']);
         expect(result[0].rows.map((row) => row.className)).toEqual(['person']);
+    });
+});
+
+describe('filterGroups by class', () => {
+    const groups = groupPairRows(rows, 'class', SOURCES);
+
+    it('matches the source name of the children', () => {
+        const result = filterGroups(groups, buildMatcher('^model', true)!.find, 'class');
+        expect(result.map((group) => group.name)).toEqual(['car']);
+        expect(result[0].rows.map((row) => row.sourceName)).toEqual(['model']);
     });
 });
 
@@ -77,7 +87,7 @@ describe('rowsInScope', () => {
 
     it('excludes rows outside the search', () => {
         const groups = groupPairRows(rows, 'source', SOURCES);
-        const scoped = rowsInScope(filterGroups(groups, buildMatcher('^ca', true)!.find));
+        const scoped = rowsInScope(filterGroups(groups, buildMatcher('^ca', true)!.find, 'source'));
         expect(scoped.map((row) => row.className)).toEqual(['car', 'car']);
     });
 });
