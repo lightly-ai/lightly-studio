@@ -32,6 +32,7 @@
     import {
         AnnotationTree,
         setAnnotationTreeEnabled,
+        setFlatAnnotationTreeCollectionId,
         useTreeAnnotationsFilter
     } from '$lib/components/AnnotationTree';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
@@ -178,6 +179,14 @@
     const showAnnotationTree = $derived(isImages && isAnnotationTreeOn);
     // Image sample details draw by the tree eyes of the Images grid.
     setAnnotationTreeEnabled(() => (isImages || isSampleDetails) && isAnnotationTreeOn);
+    // The Annotations grid of an images collection shows the flat tree of its source. It shares
+    // ticks and eyes with the Images grid, so the tree state is that of the images collection.
+    const flatTreeImagesCollectionId = $derived(
+        isAnnotations && isAnnotationTreeOn && parentCollection?.sampleType === SampleType.IMAGE
+            ? parentCollection.collectionId
+            : undefined
+    );
+    setFlatAnnotationTreeCollectionId(() => flatTreeImagesCollectionId);
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
@@ -698,6 +707,12 @@
                             {/if}
                             {#if showAnnotationTree}
                                 <AnnotationTree {collectionId} />
+                            {:else if flatTreeImagesCollectionId}
+                                <AnnotationTree
+                                    collectionId={flatTreeImagesCollectionId}
+                                    sourceId={collectionId}
+                                    flat
+                                />
                             {:else}
                                 {#if isImages}
                                     <AnnotationCollectionsMenu {collectionId} />

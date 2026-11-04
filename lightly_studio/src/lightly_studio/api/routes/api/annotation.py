@@ -41,6 +41,7 @@ from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
 from lightly_studio.resolvers.annotations import annotation_metric_sort
 from lightly_studio.resolvers.annotations.annotations_filter import (
+    AnnotationPair,
     AnnotationsFilter,
 )
 from lightly_studio.services import annotations_service
@@ -96,6 +97,8 @@ class ReadAnnotationsWithPayloadRequest(BaseModel):
 
     pagination: PaginatedWithCursor
     annotation_label_ids: list[UUID] | None = None
+    # Exact (source, class) pairs. None applies no pair filter, an empty list matches nothing.
+    annotation_pairs: list[AnnotationPair] | None = None
     tag_ids: list[UUID] | None = None
     sample_ids: list[UUID] | None = None
     # Embedding-plot lasso/rectangle selection sent as geometry (a few KB) instead of the full
@@ -183,6 +186,7 @@ def read_annotations_with_payload(
         filters=AnnotationsFilter(
             collection_ids=[collection_id],
             annotation_label_ids=body.annotation_label_ids,
+            annotation_pairs=body.annotation_pairs,
             tag_ids=body.tag_ids,
             sample_ids=body.sample_ids,
             embedding_region=body.embedding_region,

@@ -25,17 +25,38 @@
     import AnnotationTile from './AnnotationTile/AnnotationTile.svelte';
     import { get } from 'svelte/store';
     import { toast } from 'svelte-sonner';
+    import {
+        setTreeAnnotationVisibility,
+        useTreeAnnotationVisibility,
+        useTreeAnnotationsFilter
+    } from '$lib/components/AnnotationTree';
 
     type AnnotationsProps = {
         collection_id: string;
         itemWidth: number;
+        /** The images collection of the annotation tree. Without it the old class filter applies. */
+        treeCollectionId?: string;
     };
-    const { collection_id, itemWidth }: AnnotationsProps = $props();
+    const { collection_id, itemWidth, treeCollectionId }: AnnotationsProps = $props();
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
 
     const { sortByFor } = useAnnotationSortBy();
+
+    const treeEnabled = $derived(Boolean(treeCollectionId));
+    const treeFilter = useTreeAnnotationsFilter(() => ({
+        collectionId: treeCollectionId ?? '',
+        sourceId: collection_id,
+        enabled: treeEnabled
+    }));
+    const treeVisibility = useTreeAnnotationVisibility(() => ({
+        collectionId: treeCollectionId ?? '',
+        enabled: treeEnabled
+    }));
+    setTreeAnnotationVisibility(() => treeVisibility.current);
+    const treePairs = $derived(treeFilter.current?.annotation_pairs);
+    const classFilterIds = $derived(treeEnabled ? [] : $selectedAnnotationFilterIds);
 
     // Use the collection_id for tags - tags should use the specific collection, not root
     const { tagsSelected } = $derived(
@@ -97,8 +118,9 @@
 
     const queryParams = $derived({
         collection_id: collection_id,
-        annotation_label_ids:
-            $selectedAnnotationFilterIds.length > 0 ? $selectedAnnotationFilterIds : undefined,
+        annotation_label_ids: classFilterIds.length > 0 ? classFilterIds : undefined,
+        annotation_pairs: treePairs,
+        enabled: treeFilter.ready,
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         // Embedding plot lasso selection narrows the grid to annotations inside the region.
         embedding_region: plotSelectedRegion ?? undefined,
@@ -115,7 +137,8 @@
         getCollectionId: () => collection_id
     });
     let infiniteLoaderIdentifier = $derived(
-        $selectedAnnotationFilterIds.join(',') +
+        classFilterIds.join(',') +
+            (treePairs ? JSON.stringify(treePairs) : '') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
             (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +

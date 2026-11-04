@@ -12,6 +12,7 @@ import {
     type AnnotationView
 } from '$lib/api/lightly_studio_local';
 import AnnotationClassificationGridItem from './AnnotationClassificationGridItem.svelte';
+import AnnotationClassificationGridItemTreeTestWrapper from './AnnotationClassificationGridItemTreeTestWrapper.test.svelte';
 
 const mocks = vi.hoisted(() => ({
     selectedCollectionIds: null as unknown as Writable<string[]>
@@ -134,6 +135,19 @@ describe('AnnotationClassificationGridItem', () => {
         // The badge is the primary visual indicator for classification — it shows unconditionally,
         // unlike OD where the bounding box can be shown without the text label.
         expect(screen.getAllByText('cat').length).toBeGreaterThan(0);
+    });
+
+    it('hides the classification pill when the tree eye of its class is off', async () => {
+        const itemProps = { annotation: buildAnnotation(), ...defaultProps };
+        const { rerender } = render(AnnotationClassificationGridItemTreeTestWrapper, {
+            props: { itemProps, isAnnotationVisible: () => true }
+        });
+        await tick();
+        expect(screen.getAllByText('cat').length).toBeGreaterThan(0);
+
+        await rerender({ itemProps, isAnnotationVisible: () => false });
+
+        expect(screen.queryAllByText('cat')).toHaveLength(0);
     });
 
     it('passes only the single annotation label to SampleClassificationPills', async () => {

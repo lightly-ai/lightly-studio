@@ -9,9 +9,15 @@ import { useAnnotationPairCounts } from './useAnnotationPairCounts.svelte';
 /**
  * The annotation filter from the tree ticks of the collection, for the grid request.
  * `current` is undefined when nothing is unticked; `ready` says whether it is known yet.
+ * With a `sourceId`, as on the Annotations grid, only the pairs of that annotation source count.
  */
 export const useTreeAnnotationsFilter = (
-    getParams: () => { collectionId: string; filter?: ImageFilter | null; enabled: boolean }
+    getParams: () => {
+        collectionId: string;
+        filter?: ImageFilter | null;
+        enabled: boolean;
+        sourceId?: string;
+    }
 ) => {
     const sourcesQuery = useAnnotationCollections(() => {
         const { collectionId, enabled } = getParams();
@@ -22,17 +28,27 @@ export const useTreeAnnotationsFilter = (
     const untickedPairs = $derived(fromStore(treeState.untickedPairs));
     const untickedUnannotated = $derived(fromStore(treeState.untickedUnannotated));
 
+    const isInScope = (id: string) => {
+        const { sourceId } = getParams();
+        return !sourceId || id === sourceId;
+    };
+
     const loaded = $derived(Boolean(pairsQuery.data && sourcesQuery.data));
     // A failed query lets the grid load without the tree filter, as if everything were ticked.
     const failed = $derived(pairsQuery.status === 'error' || sourcesQuery.status === 'error');
     const ready = $derived(!getParams().enabled || loaded || failed);
     const allPairs = $derived(
-        (pairsQuery.data ?? []).map((count) => ({
-            collection_id: count.annotation_collection_id,
-            annotation_label_id: count.annotation_label_id
-        }))
+        (pairsQuery.data ?? [])
+            .filter((count) => isInScope(count.annotation_collection_id))
+            .map((count) => ({
+                collection_id: count.annotation_collection_id,
+                annotation_label_id: count.annotation_label_id
+            }))
     );
-    const sourceIds = $derived((sourcesQuery.data ?? []).map((source) => source.collection_id));
+    // "No annotations" rows exist only in the tree of the Images grid.
+    const sourceIds = $derived(
+        getParams().sourceId ? [] : (sourcesQuery.data ?? []).map((source) => source.collection_id)
+    );
 
     const filter = $derived.by(() => {
         if (!getParams().enabled || !loaded) return undefined;
