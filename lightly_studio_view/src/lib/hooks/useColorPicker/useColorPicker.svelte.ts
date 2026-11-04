@@ -1,5 +1,5 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors';
 import { getColorByLabel, getColorBySource, hexToRgba, rgbaToHex } from '$lib/utils';
 import { onDestroy, untrack } from 'svelte';
 import { fromStore } from 'svelte/store';

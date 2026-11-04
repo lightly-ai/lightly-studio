@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, test } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
-import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors';
 import { getColorByLabel, rgbaToHex } from '$lib/utils';
 import UseColorPickerTestWrapper from './useColorPickerTestWrapper.test.svelte';
 
