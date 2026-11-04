@@ -3,19 +3,21 @@
     import { cn } from '$lib/utils/shadcn';
     import HighlightedText from './HighlightedText.svelte';
     import OnlyButton from './OnlyButton.svelte';
+    import TreeColorMark from './TreeColorMark.svelte';
     import TreeEye from './TreeEye.svelte';
     import type { TreeLeaf } from './treeBranches';
     import type { MatchRange } from './treeSearch';
 
     interface Props {
         leaf: TreeLeaf;
+        colorMode: 'class' | 'source';
         find?: ((text: string) => MatchRange | null) | null;
         onToggle: () => void;
         onOnly: () => void;
         onToggleEye: (visible: boolean) => void;
     }
 
-    let { leaf, find = null, onToggle, onOnly, onToggleEye }: Props = $props();
+    let { leaf, colorMode, find = null, onToggle, onOnly, onToggleEye }: Props = $props();
 
     const rowId = $props.id();
     // "No annotations" rows are not searched.
@@ -33,6 +35,9 @@
         aria-label={leaf.ariaLabel}
         onCheckedChange={onToggle}
     />
+    {#if leaf.mark}
+        <TreeColorMark mark={leaf.mark} {colorMode} />
+    {/if}
     <label
         for={rowId}
         class={cn(

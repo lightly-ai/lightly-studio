@@ -11,6 +11,8 @@ interface GetSampleClassificationPillsParams {
     multipleSourcesVisible: boolean;
     collectionIdToName: Record<string, string>;
     enforceColoringByClass: boolean;
+    /** The saved "Color by" mode. When set, it decides in place of the automatic rule. */
+    colorMode?: 'class' | 'source';
 }
 
 interface CreateSampleClassificationPillParams {
@@ -81,11 +83,13 @@ export function getSampleClassificationPills({
     isAnnotationVisible,
     multipleSourcesVisible,
     collectionIdToName,
-    enforceColoringByClass
+    enforceColoringByClass,
+    colorMode
 }: GetSampleClassificationPillsParams): SampleClassificationPill[] {
     const showSourceColors = resolveEffectiveColorBySource({
         multipleSourcesVisible,
-        enforceColoringByClass
+        enforceColoringByClass,
+        colorMode
     });
     const isVisible =
         isAnnotationVisible ??

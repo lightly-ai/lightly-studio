@@ -25,7 +25,8 @@
         objectFit = 'contain',
         outputWidth = sample.width,
         outputHeight = sample.height,
-        isAnnotationVisible
+        isAnnotationVisible,
+        colorMode
     }: {
         sample: SampleView;
         objectFit?: SampleImageObjectFit;
@@ -33,6 +34,8 @@
         outputHeight?: number;
         /** The tree eyes. When set, they decide in place of the source filter and class eye. */
         isAnnotationVisible?: (annotation: AnnotationView) => boolean;
+        /** The saved "Color by" mode. When set, it decides in place of the automatic rule. */
+        colorMode?: 'class' | 'source';
     } = $props();
 
     const { isHidden } = useHideAnnotations();
@@ -86,7 +89,8 @@
                 !hiddenClasses.includes(annotation.annotation_label.annotation_label_name));
         const colorBySource = resolveEffectiveColorBySource({
             multipleSourcesVisible: $multipleSourcesVisible,
-            enforceColoringByClass: $enforceColoringByClassStore
+            enforceColoringByClass: $enforceColoringByClassStore,
+            colorMode
         });
 
         return sample.annotations

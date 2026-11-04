@@ -22,6 +22,8 @@
         showAllSources?: boolean;
         /** The tree eyes. When set, they decide in place of the source filter. */
         isAnnotationVisible?: (annotation: AnnotationView) => boolean;
+        /** The saved "Color by" mode. When set, it decides in place of the automatic rule. */
+        colorMode?: 'class' | 'source';
     }
 
     let {
@@ -29,7 +31,8 @@
         hasBottomOverlay = false,
         hasRightOverlay = false,
         showAllSources = false,
-        isAnnotationVisible
+        isAnnotationVisible,
+        colorMode
     }: Props = $props();
 
     let containerWidth = $state(0);
@@ -46,6 +49,7 @@
             annotations: sample.annotations,
             isSourceVisible: showAllSources ? () => true : $isSourceVisible,
             isAnnotationVisible,
+            colorMode,
             multipleSourcesVisible: showAllSources ? false : $multipleSourcesVisible,
             collectionIdToName: $collectionIdToName,
             enforceColoringByClass: $enforceColoringByClassStore

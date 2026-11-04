@@ -19,6 +19,12 @@ export interface UnannotatedRow {
     count?: string;
 }
 
+/** What the color mark of a row stands for. */
+export interface TreeMark {
+    kind: 'class' | 'source';
+    name: string;
+}
+
 /** A checkbox row under a group. Ticking it ticks its pairs and its "No annotations" sources. */
 export interface TreeLeaf {
     id: string;
@@ -28,6 +34,8 @@ export interface TreeLeaf {
     /** The eye. "No annotations" rows have none. */
     visible?: boolean;
     count?: string;
+    /** Absent on "No annotations" rows under a source, which have no color. */
+    mark?: TreeMark;
     pairs: PairKey[];
     unannotatedIds: string[];
 }
@@ -36,6 +44,8 @@ export interface TreeBranch {
     id: string;
     name: string;
     isSource: boolean;
+    /** Absent on the "No annotations" group. */
+    mark?: TreeMark;
     count?: string;
     leaves: TreeLeaf[];
 }
@@ -68,9 +78,10 @@ export const buildUnannotatedRows = (
         };
     });
 
-export const pairLeaf = (row: PairRow, label: string): TreeLeaf => ({
+export const pairLeaf = (row: PairRow, label: string, kind: TreeMark['kind']): TreeLeaf => ({
     id: `${row.sourceId}:${row.labelId}`,
     label,
+    mark: { kind, name: label },
     ariaLabel: `${row.className} in ${row.sourceName}`,
     ticked: row.ticked,
     visible: row.visible,
@@ -94,9 +105,10 @@ export const leafTargets = (leaves: TreeLeaf[]) => ({
     unannotatedIds: leaves.flatMap((leaf) => leaf.unannotatedIds)
 });
 
-const unannotatedLeaf = (row: UnannotatedRow, label: string): TreeLeaf => ({
+const unannotatedLeaf = (row: UnannotatedRow, label: string, mark?: TreeMark): TreeLeaf => ({
     id: `unannotated:${row.sourceId}`,
     label,
+    mark,
     ariaLabel: `${NO_ANNOTATIONS} in ${row.sourceName}`,
     ticked: row.ticked,
     count: row.count,
@@ -117,10 +129,11 @@ const bySource = (groups: TreeGroup[], unannotated: UnannotatedRow[]): TreeBranc
             id: group.id,
             name: group.name,
             isSource: true,
+            mark: { kind: 'source', name: group.name },
             count: summedCount(group.rows),
             leaves: [
                 ...(none ? [unannotatedLeaf(none, NO_ANNOTATIONS)] : []),
-                ...group.rows.map((row) => pairLeaf(row, row.className))
+                ...group.rows.map((row) => pairLeaf(row, row.className, 'class'))
             ]
         };
     });
@@ -131,15 +144,18 @@ const byClass = (groups: TreeGroup[], unannotated: UnannotatedRow[]): TreeBranch
         id: group.id,
         name: group.name,
         isSource: false,
+        mark: { kind: 'class' as const, name: group.name },
         count: summedCount(group.rows),
-        leaves: group.rows.map((row) => pairLeaf(row, row.sourceName))
+        leaves: group.rows.map((row) => pairLeaf(row, row.sourceName, 'source'))
     }));
     if (unannotated.length === 0) return classBranches;
     const noneBranch = {
         id: 'unannotated',
         name: NO_ANNOTATIONS,
         isSource: false,
-        leaves: unannotated.map((row) => unannotatedLeaf(row, row.sourceName))
+        leaves: unannotated.map((row) =>
+            unannotatedLeaf(row, row.sourceName, { kind: 'source', name: row.sourceName })
+        )
     };
     return [noneBranch, ...classBranches];
 };

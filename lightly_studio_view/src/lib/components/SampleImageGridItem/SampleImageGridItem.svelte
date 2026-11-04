@@ -14,7 +14,8 @@
         tileWidth,
         tileHeight,
         displayTextOnImage,
-        isAnnotationVisible
+        isAnnotationVisible,
+        colorMode
     }: {
         sample: ImageView;
         objectFit?: SampleImageObjectFit;
@@ -22,6 +23,7 @@
         tileHeight: number;
         displayTextOnImage?: string;
         isAnnotationVisible?: (annotation: AnnotationView) => boolean;
+        colorMode?: 'class' | 'source';
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
@@ -46,6 +48,7 @@
     hasBottomOverlay={Boolean(displayTextOnImage)}
     hasRightOverlay={showMissingValue || hasValueBadge(sample.order_value, sample.similarity_score)}
     {isAnnotationVisible}
+    {colorMode}
 />
 <SampleAnnotations
     {sample}
@@ -53,6 +56,7 @@
     outputWidth={tileWidth}
     outputHeight={tileHeight}
     {isAnnotationVisible}
+    {colorMode}
 />
 
 <SampleValueBadge

@@ -21,6 +21,7 @@ vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
 vi.mock('$lib/hooks/useSettings', () => ({
     useSettings: () => ({
         enforceColoringByClassStore,
+        annotationColorModeStore: writable('class'),
         settingsStore: writable({ key_hide_annotations: 'v' }),
         showAnnotationTextLabelsStore: writable(false),
         showBoundingBoxesForSegmentationStore: writable(true)

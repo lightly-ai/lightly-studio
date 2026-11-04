@@ -1,16 +1,18 @@
 <script lang="ts">
-    import { ChevronRight, Database } from '@lucide/svelte';
+    import { ChevronRight } from '@lucide/svelte';
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { cn } from '$lib/utils/shadcn';
     import HighlightedText from './HighlightedText.svelte';
     import OnlyButton from './OnlyButton.svelte';
     import TreeChildRow from './TreeChildRow.svelte';
+    import TreeColorMark from './TreeColorMark.svelte';
     import TreeEye from './TreeEye.svelte';
     import type { MatchRange } from './treeSearch';
     import { eyeState, tickState, type TreeBranch, type TreeLeaf } from './treeBranches';
 
     interface Props {
         branch: TreeBranch;
+        colorMode: 'class' | 'source';
         find?: ((text: string) => MatchRange | null) | null;
         open: boolean;
         onToggleOpen: () => void;
@@ -21,6 +23,7 @@
 
     let {
         branch,
+        colorMode,
         find = null,
         open,
         onToggleOpen,
@@ -56,8 +59,8 @@
             disabled={isEmpty}
             onCheckedChange={() => onSetTicked(branch.leaves, tick !== 'on')}
         />
-        {#if branch.isSource}
-            <Database class="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+        {#if branch.mark}
+            <TreeColorMark mark={branch.mark} {colorMode} />
         {/if}
         <span
             class={cn(
@@ -102,6 +105,7 @@
             {#each branch.leaves as leaf (leaf.id)}
                 <TreeChildRow
                     {leaf}
+                    {colorMode}
                     {find}
                     onToggle={() => onSetTicked([leaf], !leaf.ticked)}
                     onOnly={() => onOnly([leaf])}

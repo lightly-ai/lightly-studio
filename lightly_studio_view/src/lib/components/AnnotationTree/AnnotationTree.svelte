@@ -3,7 +3,9 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useSettings } from '$lib/hooks/useSettings';
     import CollapseAllButton from './CollapseAllButton.svelte';
+    import ColorBySwitch from './ColorBySwitch.svelte';
     import GroupBySwitch from './GroupBySwitch.svelte';
     import TreeChildRow from './TreeChildRow.svelte';
     import TreeGroupRow from './TreeGroupRow.svelte';
@@ -34,6 +36,7 @@
     let { collectionId, flat = false }: Props = $props();
 
     const { imageFilter } = useImageFilters();
+    const { annotationColorModeStore, setAnnotationColorMode } = useSettings();
     const sourcesQuery = useAnnotationCollections(() => ({ collectionId }));
     const pairsQuery = useAnnotationPairCounts(() => ({ collectionId, filter: $imageFilter }));
     const unannotatedQuery = useUnannotatedImageCounts(() => ({
@@ -67,7 +70,9 @@
     const branches = $derived(
         flat ? [] : buildTreeBranches(shownGroups, $groupBy, shownUnannotated)
     );
-    const flatLeaves = $derived(flat ? shownRows.map((row) => pairLeaf(row, row.className)) : []);
+    const flatLeaves = $derived(
+        flat ? shownRows.map((row) => pairLeaf(row, row.className, 'class')) : []
+    );
     const allLeaves = $derived([...flatLeaves, ...branches.flatMap((branch) => branch.leaves)]);
     const total = $derived(summarizeRows(rows));
     // The root eye acts on the rows in scope, which a search narrows.
@@ -92,6 +97,9 @@
 
 <Segment title="Annotations">
     <div class="space-y-1" data-testid="annotation-tree">
+        <div class="mb-2">
+            <ColorBySwitch value={$annotationColorModeStore} onChange={setAnnotationColorMode} />
+        </div>
         {#if !flat}
             <div class="mb-2 flex items-center gap-1">
                 <div class="min-w-0 flex-1">
@@ -119,6 +127,7 @@
             {#each flatLeaves as leaf (leaf.id)}
                 <TreeChildRow
                     {leaf}
+                    colorMode={$annotationColorModeStore}
                     {find}
                     onToggle={() => actions.setTicked([leaf], !leaf.ticked)}
                     onOnly={() => actions.only([leaf])}
@@ -128,6 +137,7 @@
             {#each branches as branch (`${$groupBy}:${branch.id}`)}
                 <TreeGroupRow
                     {branch}
+                    colorMode={$annotationColorModeStore}
                     {find}
                     open={isOpen(branch.id)}
                     onToggleOpen={() => tree.toggleOpen(branch.id, isOpen(branch.id))}
