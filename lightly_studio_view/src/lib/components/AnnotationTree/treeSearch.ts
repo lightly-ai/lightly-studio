@@ -1,5 +1,5 @@
 import type { PairRow } from './pairRows';
-import type { TreeGroup } from './groupPairRows';
+import type { GroupBy, TreeGroup } from './groupPairRows';
 
 export type MatchRange = { start: number; end: number };
 
@@ -39,14 +39,18 @@ export const buildMatcher = (
     }
 };
 
+/** The name a child row shows: its class under a source, its source under a class. */
+export const childLabel = (row: PairRow, groupBy: GroupBy): string =>
+    groupBy === 'source' ? row.className : row.sourceName;
+
 /**
  * The groups that match. A group matching by name keeps all its rows, otherwise only the rows
- * whose class name matches are kept.
+ * whose child label matches are kept.
  */
-export const filterGroups = (groups: TreeGroup[], find: Find): TreeGroup[] =>
+export const filterGroups = (groups: TreeGroup[], find: Find, groupBy: GroupBy): TreeGroup[] =>
     groups.flatMap((group) => {
         if (find(group.name)) return [group];
-        const rows = group.rows.filter((row) => find(row.className));
+        const rows = group.rows.filter((row) => find(childLabel(row, groupBy)));
         return rows.length > 0 ? [{ ...group, rows }] : [];
     });
 

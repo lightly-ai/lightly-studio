@@ -298,4 +298,129 @@ describe('AnnotationTree', () => {
         }
         expect(screen.queryAllByTestId('annotation-tree-row-name')).toHaveLength(0);
     });
+    describe('search', () => {
+        const typeQuery = async (query: string) =>
+            fireEvent.input(screen.getByRole('textbox', { name: /^Search/ }), {
+                target: { value: query }
+            });
+
+        it('shows only matching rows with the match highlighted and opens their groups', async () => {
+            mocks.sources = ['a', 'b', 'c', 'd'].map((name) => ({
+                collection_id: `src-${name}`,
+                name
+            }));
+            mocks.pairs = [
+                pair('src-a', 'lbl-car', 'car'),
+                pair('src-a', 'lbl-person', 'person'),
+                pair('src-b', 'lbl-person', 'person')
+            ];
+            renderTree();
+            await screen.findAllByTestId('annotation-tree-group');
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Use regular expression' }));
+            await typeQuery('^ca');
+
+            await waitFor(() =>
+                expect(screen.getAllByTestId('annotation-tree-group')).toHaveLength(1)
+            );
+            const group = await groupNamed('a');
+            expect(childNames(group)).toEqual(['car']);
+            expect(within(group).getByText('ca').tagName).toBe('MARK');
+        });
+
+        it('turns the field red and shows "Invalid pattern" for a broken regex', async () => {
+            renderTree();
+            await screen.findAllByTestId('annotation-tree-group');
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Use regular expression' }));
+            await typeQuery('(');
+
+            expect(await screen.findByText('Invalid pattern')).toBeInTheDocument();
+            expect(screen.getByRole('textbox', { name: /^Search/ })).toHaveAttribute(
+                'aria-invalid',
+                'true'
+            );
+        });
+
+        it('restores the stored open state when the search is cleared', async () => {
+            mocks.sources = ['a', 'b', 'c', 'd'].map((name) => ({
+                collection_id: `src-${name}`,
+                name
+            }));
+            mocks.pairs = mocks.sources.map((source) =>
+                pair(source.collection_id, 'lbl-car', 'car')
+            );
+            renderTree();
+            await screen.findAllByTestId('annotation-tree-group');
+
+            await typeQuery('car');
+            await waitFor(() =>
+                expect(screen.queryAllByTestId('annotation-tree-row-name').length).toBeGreaterThan(
+                    0
+                )
+            );
+            await typeQuery('');
+
+            await waitFor(() =>
+                expect(screen.queryAllByTestId('annotation-tree-row-name')).toHaveLength(0)
+            );
+        });
+
+        it('matches source names "By class" and drops the other children', async () => {
+            renderTree();
+            await fireEvent.click(await screen.findByRole('button', { name: 'By class' }));
+            await screen.findByRole('checkbox', { name: 'car in labels' });
+
+            await typeQuery('labels');
+
+            await waitFor(() =>
+                expect(screen.getAllByTestId('annotation-tree-group')).toHaveLength(2)
+            );
+            for (const name of ['car', 'person']) {
+                const group = await groupNamed(name);
+                expect(childNames(group)).toEqual(['labels']);
+                expect(within(group).getByText('labels').tagName).toBe('MARK');
+            }
+
+            await fireEvent.click(screen.getByRole('checkbox', { name: 'All annotations' }));
+
+            await waitFor(() =>
+                expect(screen.getByRole('checkbox', { name: 'car in labels' })).toHaveAttribute(
+                    'aria-checked',
+                    'false'
+                )
+            );
+            expect(screen.getByRole('checkbox', { name: 'person in labels' })).toHaveAttribute(
+                'aria-checked',
+                'false'
+            );
+            await typeQuery('');
+            expect(
+                await screen.findByRole('checkbox', { name: 'car in model_v1' })
+            ).toHaveAttribute('aria-checked', 'true');
+        });
+
+        it('unticks only the matches with "All annotations" while searching', async () => {
+            renderTree();
+            await screen.findByRole('checkbox', { name: 'car in labels' });
+
+            await typeQuery('car');
+            await fireEvent.click(await screen.findByRole('checkbox', { name: 'All annotations' }));
+
+            await waitFor(() =>
+                expect(screen.getByRole('checkbox', { name: 'car in labels' })).toHaveAttribute(
+                    'aria-checked',
+                    'false'
+                )
+            );
+            expect(screen.getByRole('checkbox', { name: 'car in model_v1' })).toHaveAttribute(
+                'aria-checked',
+                'false'
+            );
+            await typeQuery('');
+            expect(
+                await screen.findByRole('checkbox', { name: 'person in labels' })
+            ).toHaveAttribute('aria-checked', 'true');
+        });
+    });
 });

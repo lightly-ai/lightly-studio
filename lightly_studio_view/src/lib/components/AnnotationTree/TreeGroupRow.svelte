@@ -2,13 +2,16 @@
     import { ChevronRight, Database } from '@lucide/svelte';
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { cn } from '$lib/utils/shadcn';
+    import HighlightedText from './HighlightedText.svelte';
     import OnlyButton from './OnlyButton.svelte';
     import TreeChildRow from './TreeChildRow.svelte';
     import TreeEye from './TreeEye.svelte';
+    import type { MatchRange } from './treeSearch';
     import { eyeState, tickState, type TreeBranch, type TreeLeaf } from './treeBranches';
 
     interface Props {
         branch: TreeBranch;
+        find?: ((text: string) => MatchRange | null) | null;
         open: boolean;
         onToggleOpen: () => void;
         onSetTicked: (leaves: TreeLeaf[], ticked: boolean) => void;
@@ -16,8 +19,17 @@
         onSetVisible: (leaves: TreeLeaf[], visible: boolean) => void;
     }
 
-    let { branch, open, onToggleOpen, onSetTicked, onOnly, onSetVisible }: Props = $props();
+    let {
+        branch,
+        find = null,
+        open,
+        onToggleOpen,
+        onSetTicked,
+        onOnly,
+        onSetVisible
+    }: Props = $props();
 
+    const range = $derived(find ? find(branch.name) : null);
     const tick = $derived(tickState(branch.leaves));
     const eye = $derived(eyeState(branch.leaves));
     const isEmpty = $derived(branch.leaves.length === 0);
@@ -53,7 +65,8 @@
                 tick === 'off' && 'text-muted-foreground'
             )}
             title={branch.name}
-            data-testid="annotation-tree-group-name">{branch.name}</span
+            data-testid="annotation-tree-group-name"
+            ><HighlightedText text={branch.name} {range} /></span
         >
         {#if !expanded && tick === 'partial'}
             <span
@@ -89,6 +102,7 @@
             {#each branch.leaves as leaf (leaf.id)}
                 <TreeChildRow
                     {leaf}
+                    {find}
                     onToggle={() => onSetTicked([leaf], !leaf.ticked)}
                     onOnly={() => onOnly([leaf])}
                     onToggleEye={(visible) => onSetVisible([leaf], visible)}
