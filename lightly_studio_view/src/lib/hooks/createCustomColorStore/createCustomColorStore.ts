@@ -6,6 +6,9 @@ export type CustomColor = {
     alpha: number;
 };
 
+// Identifies one save request. A newer save, or a reset, makes older tickets stale.
+export type SaveTicket = { seq: number; generation: number };
+
 interface CustomColorStore {
     customColorsStore: Readable<Record<string, CustomColor>>;
     colorVersion: Writable<number>;
@@ -19,6 +22,10 @@ interface CustomColorStore {
     getSavedColor: (name: string) => CustomColor | undefined;
     hasSavedColor: (name: string) => boolean;
     replaceSavedColors: (colors: Record<string, CustomColor>) => void;
+    beginSave: (name: string) => SaveTicket;
+    setSavedColor: (name: string, color: CustomColor | undefined, ticket: SaveTicket) => void;
+    reset: () => void;
+    getGeneration: () => number;
 }
 
 export const createCustomColorStore = (): CustomColorStore => {
@@ -102,6 +109,48 @@ export const createCustomColorStore = (): CustomColorStore => {
         colorVersion.update((v) => v + 1);
     };
 
+    // Save bookkeeping. A reset bumps the generation, so saves begun before it never apply.
+    let generation = 0;
+    let lastBegun: Record<string, number> = {};
+    let lastApplied: Record<string, number> = {};
+
+    // Start a save for a name. Later saves of the same name get a higher seq.
+    const beginSave = (name: string): SaveTicket => {
+        const seq = (lastBegun[name] ?? 0) + 1;
+        lastBegun[name] = seq;
+        return { seq, generation };
+    };
+
+    // Apply a finished save to the saved layer, unless a newer save or a reset came first.
+    // An undefined color deletes the saved entry.
+    const setSavedColor = (name: string, color: CustomColor | undefined, ticket: SaveTicket) => {
+        if (ticket.generation !== generation) return;
+        if (ticket.seq <= (lastApplied[name] ?? 0)) return;
+        lastApplied[name] = ticket.seq;
+        if (color) {
+            savedColors.update((colors) => ({ ...colors, [name]: color }));
+        } else {
+            savedColors.update((colors) => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { [name]: _, ...rest } = colors;
+                return rest;
+            });
+        }
+        colorVersion.update((v) => v + 1);
+    };
+
+    // Clear the saved layer, previews and counters, and drop saves still in flight
+    const reset = () => {
+        generation += 1;
+        lastBegun = {};
+        lastApplied = {};
+        savedColors.set({});
+        previews.set({});
+        colorVersion.update((v) => v + 1);
+    };
+
+    const getGeneration = (): number => generation;
+
     // Clear all custom colors
     const clearCustomColors = () => {
         savedColors.set({});
@@ -122,6 +171,10 @@ export const createCustomColorStore = (): CustomColorStore => {
         clearPreviewColor,
         getSavedColor,
         hasSavedColor,
-        replaceSavedColors
+        replaceSavedColors,
+        beginSave,
+        setSavedColor,
+        reset,
+        getGeneration
     };
 };

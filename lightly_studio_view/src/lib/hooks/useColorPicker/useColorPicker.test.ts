@@ -1,13 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors';
 import { getColorByLabel, rgbaToHex } from '$lib/utils';
 import UseColorPickerTestWrapper from './useColorPickerTestWrapper.test.svelte';
 
 afterEach(() => {
-    useCustomLabelColors().clearCustomColors();
+    useCustomLabelColors().reset();
     useCustomSourceColors().clearCustomColors();
 });
 
@@ -95,6 +95,112 @@ describe('useClassColorPicker and useSourceColorPicker', () => {
         expect(useCustomLabelColors().getCustomColor('cat')?.color).toBe('#112233');
     });
 
+    describe('onCommit', () => {
+        const deferred = () => {
+            let resolve!: () => void;
+            let reject!: (error: Error) => void;
+            const promise = new Promise<void>((res, rej) => {
+                resolve = res;
+                reject = rej;
+            });
+            return { promise, resolve, reject };
+        };
+        const colors = () => useCustomLabelColors();
+
+        test('apply calls onCommit with the applied color', async () => {
+            const onCommit = vi.fn().mockResolvedValue(undefined);
+            render(UseColorPickerTestWrapper, { props: { label: 'cat', onCommit } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await fireEvent.click(screen.getByTestId('apply'));
+            await tick();
+
+            expect(onCommit).toHaveBeenCalledExactlyOnceWith({ color: '#abcdef', alpha: 0.5 });
+            expect(colors().getSavedColor('cat')).toEqual({ color: '#abcdef', alpha: 0.5 });
+        });
+
+        test('shows the preview until onCommit settles', async () => {
+            const save = deferred();
+            render(UseColorPickerTestWrapper, {
+                props: { label: 'cat', onCommit: () => save.promise }
+            });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await fireEvent.click(screen.getByTestId('apply'));
+
+            expect(colors().getCustomColor('cat')?.color).toBe('#abcdef');
+            expect(colors().getSavedColor('cat')).toBeUndefined();
+
+            save.resolve();
+            await tick();
+
+            expect(colors().getSavedColor('cat')?.color).toBe('#abcdef');
+        });
+
+        test('reverts to the saved color when onCommit rejects', async () => {
+            colors().setCustomColor('cat', '#112233');
+            render(UseColorPickerTestWrapper, {
+                props: { label: 'cat', onCommit: () => Promise.reject(new Error('fail')) }
+            });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await fireEvent.click(screen.getByTestId('apply'));
+            await tick();
+
+            expect(colors().getCustomColor('cat')?.color).toBe('#112233');
+            expect(colors().getSavedColor('cat')?.color).toBe('#112233');
+        });
+
+        test('reopening while a save is pending keeps the new preview', async () => {
+            const save = deferred();
+            render(UseColorPickerTestWrapper, {
+                props: { label: 'cat', onCommit: () => save.promise }
+            });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await fireEvent.click(screen.getByTestId('apply'));
+            await fireEvent.click(screen.getByTestId('set-other-color'));
+            save.resolve();
+            await tick();
+
+            expect(colors().getCustomColor('cat')?.color).toBe('#bbbbbb');
+            expect(colors().getSavedColor('cat')?.color).toBe('#abcdef');
+        });
+
+        test('an older save that resolves late does not overwrite a newer one', async () => {
+            const first = deferred();
+            const second = deferred();
+            const promises = [first.promise, second.promise];
+            render(UseColorPickerTestWrapper, {
+                props: { label: 'cat', onCommit: () => promises.shift()! }
+            });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await fireEvent.click(screen.getByTestId('apply'));
+            await fireEvent.click(screen.getByTestId('set-other-color'));
+            await fireEvent.click(screen.getByTestId('apply'));
+            second.resolve();
+            await tick();
+            first.resolve();
+            await tick();
+
+            expect(colors().getSavedColor('cat')?.color).toBe('#bbbbbb');
+        });
+
+        test('apply after a store reset acts as cancel', async () => {
+            const onCommit = vi.fn().mockResolvedValue(undefined);
+            render(UseColorPickerTestWrapper, { props: { label: 'cat', onCommit } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            colors().reset();
+            await fireEvent.click(screen.getByTestId('apply'));
+            await tick();
+
+            expect(onCommit).not.toHaveBeenCalled();
+            expect(colors().getCustomColor('cat')).toBeUndefined();
+        });
+    });
+
     describe('previews', () => {
         test('cancel keeps a saved color written during the preview', async () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
@@ -132,6 +238,7 @@ describe('useClassColorPicker and useSourceColorPicker', () => {
             await rerender({ label: 'kitty' });
             expect(useCustomLabelColors().getCustomColor('kitty')?.color).toBe('#abcdef');
             await fireEvent.click(screen.getByTestId('apply'));
+            await tick();
 
             expect(useCustomLabelColors().getSavedColor('kitty')?.color).toBe('#abcdef');
             expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();

@@ -72,6 +72,61 @@ describe('createCustomColorStore previews', () => {
     });
 });
 
+describe('createCustomColorStore saves', () => {
+    const red = { color: '#ff0000', alpha: 1 };
+    const blue = { color: '#0000ff', alpha: 1 };
+
+    test('setSavedColor ignores an older sequence', () => {
+        const store = createCustomColorStore();
+        const older = store.beginSave('cat');
+        const newer = store.beginSave('cat');
+
+        store.setSavedColor('cat', blue, newer);
+        store.setSavedColor('cat', red, older);
+
+        expect(store.getSavedColor('cat')).toEqual(blue);
+    });
+
+    test('setSavedColor with undefined deletes the saved color', () => {
+        const store = createCustomColorStore();
+        store.setCustomColor('cat', '#ff0000', 1);
+
+        store.setSavedColor('cat', undefined, store.beginSave('cat'));
+
+        expect(store.hasSavedColor('cat')).toBe(false);
+    });
+
+    test('reset clears saved colors and previews', () => {
+        const store = createCustomColorStore();
+        store.setCustomColor('cat', '#ff0000', 1);
+        store.setPreviewColor('dog', blue, Symbol());
+
+        store.reset();
+
+        expect(get(store.customColorsStore)).toEqual({});
+    });
+
+    test('setSavedColor ignores a save begun before reset', () => {
+        const store = createCustomColorStore();
+        const ticket = store.beginSave('cat');
+
+        store.reset();
+        store.setSavedColor('cat', red, ticket);
+
+        expect(store.getSavedColor('cat')).toBeUndefined();
+        expect(store.getGeneration()).toBe(ticket.generation + 1);
+    });
+
+    test('replaceSavedColors keeps the generation', () => {
+        const store = createCustomColorStore();
+        const generation = store.getGeneration();
+
+        store.replaceSavedColors({ cat: red });
+
+        expect(store.getGeneration()).toBe(generation);
+    });
+});
+
 describe('createCustomColorStore', () => {
     test('keeps state independent between instances', () => {
         const first = createCustomColorStore();
