@@ -32,6 +32,7 @@ def get_all(
             col(SampleSequenceLinkTable.seq_number),
             col(AnnotationBaseTable.sample_id),
             col(SampleTable.collection_id),
+            col(Cuboid3DAnnotationTable.frame_id),
             col(Cuboid3DAnnotationTable.interpolated),
             col(AnnotationLabelTable.annotation_label_name),
             col(CollectionTable.name),
@@ -74,6 +75,7 @@ def get_all(
         seq_number,
         annotation_id,
         source_id,
+        frame_id,
         interpolated,
         label_name,
         source_name,
@@ -93,6 +95,7 @@ def get_all(
                 seq_number=seq_number,
                 annotation_id=annotation_id,
                 annotation_source_id=source_id,
+                frame_id=frame_id,
                 interpolated=interpolated,
             )
         )

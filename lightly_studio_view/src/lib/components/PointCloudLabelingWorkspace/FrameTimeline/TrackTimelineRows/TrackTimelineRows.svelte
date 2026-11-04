@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
-    import { getColorByLabel } from '$lib/utils';
+    import TrackTimelineRow from './TrackTimelineRow/TrackTimelineRow.svelte';
 
     interface Props {
         ticks: TickView[];
@@ -38,26 +38,13 @@
 {#if tracks.length > 0}
     <div class="border-t px-2 py-1" data-testid="object-track-rows">
         {#each tracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}
-            <div class="py-1" data-track-id={track.object_track_id}>
-                <div
-                    class="truncate pb-0.5 text-[10px] {selectedTrackKey?.object_track_id ===
-                        track.object_track_id &&
-                    selectedTrackKey.annotation_source_id === track.annotation_source_id
-                        ? 'font-semibold text-primary'
-                        : 'text-muted-foreground'}"
-                    title={`${track.annotation_label_name} · Track ${track.object_track_number} · ${track.annotation_source_name}`}
-                >
-                    {track.annotation_label_name} · Track {track.object_track_number} · {track.annotation_source_name}
-                </div>
-                <button
-                    type="button"
-                    class="block h-2 w-full cursor-pointer rounded-sm"
-                    style:background-color={getColorByLabel(track.annotation_label_name, 0.24)
-                        .color}
-                    aria-label={`Select ${track.annotation_label_name} track ${track.object_track_number} position`}
-                    onclick={(event) => selectTrackPosition(event, track)}
-                ></button>
-            </div>
+            <TrackTimelineRow
+                {ticks}
+                {track}
+                isSelected={selectedTrackKey?.object_track_id === track.object_track_id &&
+                    selectedTrackKey.annotation_source_id === track.annotation_source_id}
+                onSelectPosition={selectTrackPosition}
+            />
         {/each}
     </div>
 {/if}

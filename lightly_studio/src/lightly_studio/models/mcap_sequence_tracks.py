@@ -11,6 +11,7 @@ class TrackAnnotationView(BaseModel):
     seq_number: int
     annotation_id: UUID
     annotation_source_id: UUID
+    frame_id: str
     interpolated: bool
 
 

@@ -16,7 +16,8 @@
     const layout = $derived(getLayout());
     const tracksQuery = useSequenceTracks(() => ({
         datasetId: layout.datasetId,
-        sequenceId: layout.sequenceId
+        sequenceId: layout.sequenceId,
+        displayFrameId: layout.workspace.referenceFrameId || undefined
     }));
 
     const { tickDetails } = useTickDetails({

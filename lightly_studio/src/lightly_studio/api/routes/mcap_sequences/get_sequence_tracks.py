@@ -24,6 +24,15 @@ def get_sequence_tracks(
         UUID | None,
         Query(description="Only return track annotations from this annotation source."),
     ] = None,
+    target_frame_id: Annotated[
+        str | None,
+        Query(
+            description=(
+                "The coordinate frame the scene is shown in. Annotations at ticks whose "
+                "cuboids cannot be mapped to this frame are left out."
+            )
+        ),
+    ] = None,
 ) -> SequenceTrackListView:
     """Return tracked cuboid coverage for one sequence."""
     result = recording_service.get_sequence_tracks(
@@ -31,6 +40,7 @@ def get_sequence_tracks(
         dataset_id=dataset_id,
         sequence_id=sequence_id,
         annotation_source_id=annotation_source_id,
+        target_frame_id=target_frame_id,
     )
     if result is None:
         raise NotFoundError(f"MCAP sequence {sequence_id} not found in dataset {dataset_id}.")
