@@ -3,7 +3,7 @@ import { AnnotationType } from '$lib/api/lightly_studio_local';
 import { useAnnotationSelection } from './useAnnotationSelection';
 
 const mockSampleDetailsToolbarContext = {
-    status: 'cursor' as 'cursor' | 'brush' | 'slic'
+    status: 'cursor' as 'cursor' | 'brush' | 'slic' | 'smart-select'
 };
 
 const mockAnnotationLabelContext = {
@@ -16,7 +16,7 @@ const mockAnnotationLabelContext = {
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
     useSampleDetailsToolbarContext: () => ({
         context: mockSampleDetailsToolbarContext,
-        setStatus(status: 'cursor' | 'brush' | 'slic') {
+        setStatus(status: 'cursor' | 'brush' | 'slic' | 'smart-select') {
             mockSampleDetailsToolbarContext.status = status;
         }
     })
@@ -60,31 +60,36 @@ describe('useAnnotationSelection', () => {
         updateLastAnnotationLabelMock.mockClear();
     });
 
-    it('keeps slic mode when selecting an existing segmentation annotation from the list', () => {
-        mockSampleDetailsToolbarContext.status = 'slic';
+    it.each(['slic', 'smart-select'] as const)(
+        'keeps %s mode when selecting an existing segmentation annotation from the list',
+        (status) => {
+            mockSampleDetailsToolbarContext.status = status;
 
-        const annotations = [
-            {
-                sample_id: 'a-slic',
-                annotation_type: AnnotationType.SEGMENTATION_MASK,
-                annotation_label: {
-                    annotation_label_name: 'Plane'
+            const annotations = [
+                {
+                    sample_id: 'a-mask',
+                    annotation_type: AnnotationType.SEGMENTATION_MASK,
+                    annotation_label: {
+                        annotation_label_name: 'Plane'
+                    }
                 }
-            }
-        ];
+            ];
 
-        const { selectAnnotation } = useAnnotationSelection();
+            const { selectAnnotation } = useAnnotationSelection();
 
-        selectAnnotation({
-            annotationId: 'a-slic',
-            collectionId: 'collection-1',
-            annotations
-        });
+            selectAnnotation({
+                annotationId: 'a-mask',
+                collectionId: 'collection-1',
+                annotations
+            });
 
-        expect(mockSampleDetailsToolbarContext.status).toBe('slic');
-        expect(mockAnnotationLabelContext.annotationId).toBe('a-slic');
-        expect(mockAnnotationLabelContext.annotationType).toBe(AnnotationType.SEGMENTATION_MASK);
-    });
+            expect(mockSampleDetailsToolbarContext.status).toBe(status);
+            expect(mockAnnotationLabelContext.annotationId).toBe('a-mask');
+            expect(mockAnnotationLabelContext.annotationType).toBe(
+                AnnotationType.SEGMENTATION_MASK
+            );
+        }
+    );
 
     it('selects segmentation mask annotation and enables brush', () => {
         const annotations = [
