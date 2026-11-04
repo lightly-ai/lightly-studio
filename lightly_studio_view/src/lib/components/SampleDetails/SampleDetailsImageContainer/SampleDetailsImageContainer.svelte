@@ -33,6 +33,8 @@
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
     import AnnotationCard from '../AnnotationCard/AnnotationCard.svelte';
+    import PendingBoxCard from '../AnnotationCard/PendingBoxCard.svelte';
+    import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -83,6 +85,7 @@
     let interactionRect: SVGRectElement | null = $state(null);
     let annotationLayer: SVGGElement | null = $state(null);
     const { isPending, handlePendingChange } = usePendingState();
+    const { request: pendingBoxRequest } = usePendingBoxClass();
 
     let sampleId = $derived(sample.sampleId);
     // Source identity stays stable when annotations are temporarily hidden.
@@ -426,7 +429,9 @@
         {/if}
     {/snippet}
 </ZoomableContainer>
-{#if selectedAnnotation}
+{#if $pendingBoxRequest}
+    <PendingBoxCard {collectionId} getLayer={() => annotationLayer} />
+{:else if selectedAnnotation}
     {#key selectedAnnotation.sample_id}
         <AnnotationCard
             {collectionId}

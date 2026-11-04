@@ -1,7 +1,6 @@
 <script lang="ts">
     import { isAnnotationSourceBlocked } from '$lib/contexts/annotationSourceGuard';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { BoundingBox } from '$lib/types';
@@ -19,11 +18,12 @@
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
-    import { usePostHog } from '$lib/hooks';
+    import { usePostHog, useStickyClass } from '$lib/hooks';
+    import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
     import { usePendingBbox } from './usePendingBbox';
+    import { resolveNewBoxClass } from './resolveNewBoxClass';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -61,17 +61,13 @@
     const { trackEvent } = usePostHog();
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
-    const {
-        open: showSelectClassDialog,
-        requestLabel,
-        handleConfirm: handleClassSelected,
-        handleCancel: handleClassDialogCancel
-    } = useSelectClassDialog();
+    const { stickyClasses } = useStickyClass();
+    const { requestClass, cancel: cancelPendingBoxClass } = usePendingBoxClass();
 
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { addReversibleAction } = useGlobalStorage();
 
     const {
         startPending: startCreateBoundingBoxPending,
@@ -106,8 +102,9 @@
         // Setup D3 drag behavior for annotation creation
         const dragBehavior = drag<SVGRectElement, unknown>()
             .on('start', (event: D3Event) => {
-                // Remove focus from any selected annotation.
+                // Remove focus from any selected annotation, and drop a box that waits for a class.
                 setAnnotationId(null);
+                cancelPendingBoxClass();
                 setIsDrawing(true);
                 if (!drawStartFired) {
                     trackEvent('annotation_draw_started', {
@@ -154,23 +151,21 @@
             .on('end', () => {
                 if (!temporaryBbox || !annotationLabelContext.isDrawing) return;
 
-                // Only create annotation if the rectangle has meaningful size (> 10px in both dimensions)
-                if (
-                    temporaryBbox.width > BOX_MIN_SIZE_PX &&
-                    temporaryBbox.height > BOX_MIN_SIZE_PX
-                ) {
-                    pendingBbox.start(temporaryBbox);
-                    createObjectDetectionAnnotation({
-                        x: temporaryBbox.x,
-                        y: temporaryBbox.y,
-                        width: temporaryBbox.width,
-                        height: temporaryBbox.height
-                    });
-                }
-
+                const drawn = temporaryBbox;
+                // End the drag first: the card that asks for the class hides while drawing.
                 cancelDrag();
                 startPoint = null;
-                drawStartFired = false;
+
+                // Only create annotation if the rectangle has meaningful size in both dimensions
+                if (drawn.width > BOX_MIN_SIZE_PX && drawn.height > BOX_MIN_SIZE_PX) {
+                    pendingBbox.start(drawn);
+                    createObjectDetectionAnnotation({
+                        x: drawn.x,
+                        y: drawn.y,
+                        width: drawn.width,
+                        height: drawn.height
+                    });
+                }
             });
 
         rectSelection.call(dragBehavior);
@@ -195,22 +190,19 @@
             pendingBbox.clear();
             return;
         }
+        // With no sticky class, the box waits for a class picked at the box. Null drops it.
+        const selectedLabelName = await resolveNewBoxClass({
+            stickyClass: $stickyClasses[collectionId],
+            bbox: { x, y, width, height },
+            requestClass
+        });
+        if (!selectedLabelName) {
+            pendingBbox.clear();
+            return;
+        }
         const pendingOperation = startCreateBoundingBoxPending();
 
         try {
-            let selectedLabelName = annotationLabelContext.annotationLabel;
-            if (!selectedLabelName) {
-                const result = await requestLabel();
-                if (!result?.label) {
-                    pendingBbox.clear();
-                    toast.error('Please select a class before creating an annotation');
-                    return;
-                }
-                selectedLabelName = result.label;
-                setAnnotationLabel(selectedLabelName);
-                updateLastAnnotationLabel(collectionId, selectedLabelName);
-            }
-
             let label = labels.data?.find(
                 (label) => label.annotation_label_name === selectedLabelName
             );
@@ -273,8 +265,7 @@
         setLastCreatedAnnotationId,
         setAnnotationId,
         setIsDrawing,
-        setCurrentBoundingBox,
-        setAnnotationLabel
+        setCurrentBoundingBox
     } = useAnnotationLabelContext();
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
@@ -354,7 +345,7 @@
 
     onDestroy(() => {
         resetCreateBoundingBoxPending();
-        handleClassDialogCancel();
+        cancelPendingBoxClass();
         detachSvgListeners?.();
     });
 
@@ -365,7 +356,10 @@
     // A pending box belongs to one sample; drop it when the view moves to another.
     $effect(() => {
         void sampleId;
-        return () => pendingBbox.clear();
+        return () => {
+            pendingBbox.clear();
+            cancelPendingBoxClass();
+        };
     });
 
     // Setup drag behavior when rect becomes available or mode changes
@@ -398,11 +392,4 @@
     cursor={'crosshair'}
     pointerEvents={interactionPointerEvents}
     {sample}
-/>
-
-<SelectClassDialog
-    bind:open={$showSelectClassDialog}
-    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
-    onConfirm={handleClassSelected}
-    onCancel={handleClassDialogCancel}
 />

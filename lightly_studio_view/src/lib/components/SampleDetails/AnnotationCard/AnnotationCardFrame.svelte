@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { Snippet } from 'svelte';
+    import { untrack, type Snippet } from 'svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import type { BoundingBox } from '$lib/types';
@@ -11,10 +11,12 @@
         /** The annotation layer of the canvas, whose screen matrix includes pan and zoom. */
         getLayer: () => SVGGraphicsElement | null;
         testId: string;
+        /** Runs each time the card becomes visible. A hidden card can't take focus. */
+        onShow?: () => void;
         children: Snippet;
     }
 
-    const { bbox, getLayer, testId, children }: Props = $props();
+    const { bbox, getLayer, testId, onShow, children }: Props = $props();
     const { isHidden } = useHideAnnotations();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
 
@@ -24,6 +26,10 @@
     const isVisible = $derived(
         position !== null && !$isHidden && !annotationLabelContext.isDrawing
     );
+
+    $effect(() => {
+        if (isVisible) untrack(() => onShow?.());
+    });
 
     // Follow the annotation on screen. Pan, zoom and edits all move it, so place the card every
     // frame instead of listening to each of them.
