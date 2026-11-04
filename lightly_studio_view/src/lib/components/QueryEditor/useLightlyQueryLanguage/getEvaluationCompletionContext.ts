@@ -2,7 +2,6 @@ interface EvaluationCompletionContextParams {
     text: string;
     offset: number;
 }
-
 /** Distinguish the required run selector from criteria, ignoring strings and comments. */
 export function getEvaluationCompletionContext({
     text,
