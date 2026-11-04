@@ -1,5 +1,6 @@
 <script lang="ts">
     import ColorMarker from '$lib/components/SideMenu/ColorMarker/ColorMarker.svelte';
+    import { Switch } from '$lib/components/ui/switch';
     import { Input } from '$lib/components/ui/input';
     import { cn, formatInteger } from '$lib/utils';
     import { AnnotationClassRowActions } from '../../AnnotationClassesTab/AnnotationClassRowActions';
@@ -8,11 +9,21 @@
         name: string;
         annotationCount: number;
         isHighlighted?: boolean;
+        isDefault: boolean;
+        onToggleDefault: () => void;
         onRename: (name: string) => Promise<unknown>;
         onDelete: () => void;
     }
 
-    const { name, annotationCount, isHighlighted = false, onRename, onDelete }: Props = $props();
+    const {
+        name,
+        annotationCount,
+        isHighlighted = false,
+        isDefault,
+        onToggleDefault,
+        onRename,
+        onDelete
+    }: Props = $props();
 
     let row = $state<HTMLLIElement>();
 
@@ -81,6 +92,14 @@
             {formatInteger(annotationCount)}
             {annotationCount === 1 ? 'annotation' : 'annotations'}
         </span>
+        <label class="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
+            Default
+            <Switch
+                checked={isDefault}
+                onCheckedChange={onToggleDefault}
+                aria-label={`Use ${name} as the default annotation source`}
+            />
+        </label>
         <AnnotationClassRowActions {name} onRename={startRename} {onDelete} />
     {/if}
 </li>

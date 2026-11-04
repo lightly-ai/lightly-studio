@@ -3,6 +3,7 @@ import { get, type Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as appState from '$app/state';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+import { useDefaultSource } from '$lib/hooks/useDefaultSource/useDefaultSource';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import AnnotationSourcesTab from './AnnotationSourcesTab.svelte';
 
@@ -71,6 +72,7 @@ describe('AnnotationSourcesTab', () => {
         mockParams({ dataset_id: 'd', collection_id: COLLECTION_ID });
         useCustomLabelColors().clearCustomColors();
         useGlobalStorage().lastAnnotationSource.set({});
+        useDefaultSource().setDefaultSource(COLLECTION_ID, null);
     });
 
     const input = () => screen.getByLabelText('Find or add an annotation source');
@@ -166,6 +168,39 @@ describe('AnnotationSourcesTab', () => {
 
         await vi.waitFor(() => expect(get(lastAnnotationSource)[COLLECTION_ID]).toBe('model_v2'));
         expect(get(lastAnnotationSource).other).toBe('model_v1');
+    });
+
+    const defaultSwitch = (name: string) =>
+        screen.getByRole('switch', { name: `Use ${name} as the default annotation source` });
+
+    it('switches a source on as the default', async () => {
+        render(AnnotationSourcesTab);
+
+        await fireEvent.click(defaultSwitch('model_v1'));
+
+        expect(defaultSwitch('model_v1')).toBeChecked();
+        expect(defaultSwitch('ground_truth')).not.toBeChecked();
+    });
+
+    it('moves the default to the source switched on last', async () => {
+        render(AnnotationSourcesTab);
+        await fireEvent.click(defaultSwitch('model_v1'));
+
+        await fireEvent.click(defaultSwitch('ground_truth'));
+
+        expect(defaultSwitch('ground_truth')).toBeChecked();
+        expect(defaultSwitch('model_v1')).not.toBeChecked();
+    });
+
+    it('keeps a renamed default as the default', async () => {
+        render(AnnotationSourcesTab);
+        await fireEvent.click(defaultSwitch('model_v1'));
+
+        await rename('model_v1', 'model_v2');
+
+        await vi.waitFor(() =>
+            expect(get(useDefaultSource().defaultSources)[COLLECTION_ID]).toBe('model_v2')
+        );
     });
 
     it('confirms a delete with the annotation count and the evaluation warning', async () => {

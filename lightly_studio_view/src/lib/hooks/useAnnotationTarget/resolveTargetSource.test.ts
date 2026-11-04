@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     DEFAULT_SOURCE_NAME,
     getTargetBlockedReason,
+    pickInitialSource,
     resolveTargetSource
 } from './resolveTargetSource';
 
@@ -38,5 +39,47 @@ describe('getTargetBlockedReason', () => {
 
     it('allows a shown target', () => {
         expect(getTargetBlockedReason('model_v1', false)).toBeNull();
+    });
+});
+
+describe('pickInitialSource', () => {
+    const two = ['labels', 'predictions'];
+
+    it('leaves a chosen source alone', () => {
+        expect(
+            pickInitialSource({
+                chosenSource: 'labels',
+                sourceNames: two,
+                defaultSource: 'predictions'
+            })
+        ).toBeNull();
+    });
+
+    it('seeds the only source', () => {
+        expect(
+            pickInitialSource({ chosenSource: null, sourceNames: ['a'], defaultSource: undefined })
+        ).toBe('a');
+    });
+
+    it('seeds the default', () => {
+        expect(
+            pickInitialSource({
+                chosenSource: null,
+                sourceNames: two,
+                defaultSource: 'predictions'
+            })
+        ).toBe('predictions');
+    });
+
+    it('ignores a default that was deleted', () => {
+        expect(
+            pickInitialSource({ chosenSource: null, sourceNames: two, defaultSource: 'gone' })
+        ).toBeNull();
+    });
+
+    it('picks nothing with two sources and no default', () => {
+        expect(
+            pickInitialSource({ chosenSource: null, sourceNames: two, defaultSource: undefined })
+        ).toBeNull();
     });
 });

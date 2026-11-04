@@ -17,9 +17,11 @@
         // The add row is the only match, so it comes first and Enter adds the source.
         isAddEnterTarget: boolean;
         highlightedId: string | null;
+        defaultName: string | null;
         onAdd: () => void;
         onRename: (source: AnnotationSourceItem, name: string) => Promise<unknown>;
         onDelete: (source: AnnotationSourceItem) => void;
+        onToggleDefault: (source: AnnotationSourceItem) => void;
     }
 
     const {
@@ -29,9 +31,11 @@
         addName,
         isAddEnterTarget,
         highlightedId,
+        defaultName,
         onAdd,
         onRename,
-        onDelete
+        onDelete,
+        onToggleDefault
     }: Props = $props();
     const kind = 'annotation source';
 </script>
@@ -52,6 +56,8 @@
             name={source.name}
             annotationCount={source.annotation_count}
             isHighlighted={source.collection_id === highlightedId}
+            isDefault={source.name === defaultName}
+            onToggleDefault={() => onToggleDefault(source)}
             onRename={(name) => onRename(source, name)}
             onDelete={() => onDelete(source)}
         />

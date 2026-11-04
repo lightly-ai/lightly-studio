@@ -2,13 +2,18 @@ import { untrack } from 'svelte';
 import { get } from 'svelte/store';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
+import { useDefaultSource } from '$lib/hooks/useDefaultSource/useDefaultSource';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import {
     TARGET_PICK_MESSAGES,
     useAnnotateVariant
 } from '$lib/hooks/useAnnotateVariant/useAnnotateVariant';
 import { useSetTargetSource } from './useSetTargetSource';
-import { getTargetBlockedReason, resolveTargetSource } from './resolveTargetSource';
+import {
+    getTargetBlockedReason,
+    pickInitialSource,
+    resolveTargetSource
+} from './resolveTargetSource';
 
 /**
  * The annotation source new annotations are written to, and the action that changes it.
@@ -25,6 +30,7 @@ export const useAnnotationTarget = ({
 }) => {
     const { context, setAnnotationSource } = useAnnotationLabelContext();
     const { lastAnnotationSource } = useGlobalStorage();
+    const { defaultSources } = useDefaultSource();
     // Fixed for the page load, so it is read once.
     const pickMessage = TARGET_PICK_MESSAGES[get(useAnnotateVariant().annotateVariant)];
     const annotationCollections = useAnnotationCollections(() => ({
@@ -42,11 +48,15 @@ export const useAnnotationTarget = ({
         );
     });
 
-    // Seed the context with the only source once the list has loaded.
+    // Seed the context with the default or the only source once the list has loaded. It does not
+    // write `lastAnnotationSource`, so a default never looks like a remembered pick.
     $effect(() => {
-        if (!context.annotationSource && sourceNames.length === 1) {
-            setAnnotationSource(sourceNames[0]);
-        }
+        const initial = pickInitialSource({
+            chosenSource: context.annotationSource,
+            sourceNames,
+            defaultSource: get(defaultSources)[getCollectionId()]
+        });
+        if (initial) setAnnotationSource(initial);
     });
 
     // Settings can rename the target source while this page is open. The rename updates the

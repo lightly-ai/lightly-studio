@@ -5,6 +5,7 @@ import {
 import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 import { useRenameAnnotationSource } from '$lib/components/AnnotationCollectionsMenu/useRenameAnnotationSource/useRenameAnnotationSource';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+import { useDefaultSource } from '$lib/hooks/useDefaultSource/useDefaultSource';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { toast } from 'svelte-sonner';
 
@@ -36,6 +37,7 @@ export const useAnnotationSources = (getParams: () => UseAnnotationSourcesParams
     // Custom colors and the pencil target are stored by name, so a rename moves them.
     const { getCustomColor, setCustomColor, deleteCustomColor } = useCustomLabelColors();
     const { renameLastAnnotationSource } = useGlobalStorage();
+    const { renameDefaultSource } = useDefaultSource();
     const { rename, renamingId } = useRenameAnnotationSource(() => ({
         collectionId: getParams().collectionId,
         sources: (query.data ?? []).map((s) => ({ id: s.collection_id, name: s.name })),
@@ -46,6 +48,7 @@ export const useAnnotationSources = (getParams: () => UseAnnotationSourcesParams
                 deleteCustomColor(source.name);
             }
             renameLastAnnotationSource(getParams().collectionId, source.name, newName);
+            renameDefaultSource(getParams().collectionId, source.name, newName);
         }
     }));
 

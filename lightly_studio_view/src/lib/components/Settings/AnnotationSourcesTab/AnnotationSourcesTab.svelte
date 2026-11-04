@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useDefaultSource } from '$lib/hooks/useDefaultSource/useDefaultSource';
     import { page } from '$app/state';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { AnnotationSourceList } from './AnnotationSourceList';
@@ -16,6 +17,9 @@
 
     const collectionId = $derived(page.params.collection_id ?? '');
     const sources = useAnnotationSources(() => ({ collectionId }));
+
+    const { defaultSources, setDefaultSource } = useDefaultSource();
+    const defaultName = $derived($defaultSources[collectionId] ?? null);
 
     let query = $state('');
     const trimmedQuery = $derived(query.trim());
@@ -75,6 +79,12 @@
                 addName={canAdd ? trimmedQuery : ''}
                 isAddEnterTarget={canAddWithEnter}
                 highlightedId={addedId}
+                {defaultName}
+                onToggleDefault={(source) =>
+                    setDefaultSource(
+                        collectionId,
+                        source.name === defaultName ? null : source.name
+                    )}
                 onAdd={add}
                 onRename={(source, name) =>
                     sources.renameSource({ id: source.collection_id, name: source.name }, name)}

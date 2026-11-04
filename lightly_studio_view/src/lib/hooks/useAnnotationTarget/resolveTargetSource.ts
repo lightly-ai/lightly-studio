@@ -16,6 +16,24 @@ export const resolveTargetSource = (
     return null;
 };
 
+/**
+ * The source to seed when the user has not picked one yet, or null to leave it unpicked. A
+ * default that no longer exists (deleted) is ignored, so the user must pick.
+ */
+export const pickInitialSource = ({
+    chosenSource,
+    sourceNames,
+    defaultSource
+}: {
+    chosenSource: string | null | undefined;
+    sourceNames: string[];
+    defaultSource: string | undefined;
+}): string | null => {
+    if (chosenSource) return null;
+    if (defaultSource && sourceNames.includes(defaultSource)) return defaultSource;
+    return sourceNames.length === 1 ? sourceNames[0] : null;
+};
+
 /** What to do when no source is picked, for the pencil picker in the Annotations panel. */
 export const PENCIL_PICK_MESSAGE =
     'Pick a source with the pencil in the Annotations panel before adding annotations.';
