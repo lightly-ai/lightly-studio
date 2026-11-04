@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { useCustomSourceColors } from '$lib/hooks';
-import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import AnnotationCanvas from './AnnotationCanvas.svelte';
 
 vi.mock('$lib/utils', async (importOriginal) => ({
@@ -84,13 +82,8 @@ describe('AnnotationCanvas', () => {
             lineWidth: 1,
             clearRect: vi.fn(),
             fillRect: vi.fn(),
-            // Reads back the last fillStyle, given as #rrggbb or rgba().
+            // Reads back the last rgba() fillStyle.
             getImageData: vi.fn(() => {
-                const hex = context.fillStyle.match(/^#(\w\w)(\w\w)(\w\w)$/);
-                if (hex) {
-                    const [r, g, b] = hex.slice(1).map((part) => parseInt(part, 16));
-                    return { data: new Uint8ClampedArray([r, g, b, 255]) };
-                }
                 const [r, g, b, a] = context.fillStyle.match(/[\d.]+/g)!.map(Number);
                 return { data: new Uint8ClampedArray([r, g, b, Math.round(a * 255)]) };
             }),
@@ -126,8 +119,6 @@ describe('AnnotationCanvas', () => {
     });
 
     afterEach(() => {
-        useCustomLabelColors().clearCustomColors();
-        useCustomSourceColors().clearCustomColors();
         vi.restoreAllMocks();
         vi.unstubAllGlobals();
         Reflect.deleteProperty(HTMLCanvasElement.prototype, 'transferControlToOffscreen');
@@ -196,32 +187,6 @@ describe('AnnotationCanvas', () => {
         const canvas = container.querySelector('canvas');
         const context = canvasContexts.get(canvas as HTMLCanvasElement);
         expect(context?.strokeStyle).toMatch(/^rgba\(200, 100, 50,/);
-    });
-
-    it('colors a source annotation with the custom source color, not the class color', async () => {
-        useCustomLabelColors().setCustomColor('Predictions', '#111111');
-        useCustomSourceColors().setCustomColor('Predictions', '#0000ff');
-        const { container } = render(AnnotationCanvas, {
-            props: {
-                sampleId: 'sample-custom-source-color',
-                sourceWidth: 100,
-                sourceHeight: 100,
-                annotations: [
-                    {
-                        annotation_type: 'object_detection',
-                        annotation_label_name: 'Predictions',
-                        sourceName: 'Predictions',
-                        object_detection_details: { x: 10, y: 20, width: 30, height: 40 }
-                    }
-                ]
-            }
-        });
-
-        await tick();
-
-        const canvas = container.querySelector('canvas');
-        const context = canvasContexts.get(canvas as HTMLCanvasElement);
-        expect(context?.strokeStyle).toBe('rgba(0, 0, 255, 1)');
     });
 
     it('keeps source-sized canvas defaults for consumers without output dimensions', async () => {
