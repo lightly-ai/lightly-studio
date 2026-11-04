@@ -8,6 +8,10 @@ vi.mock('$lib/utils', async (importOriginal) => ({
     getColorByLabel: vi.fn(() => ({
         color: 'rgba(10, 20, 30, 0.5)',
         contrastColor: 'rgba(245, 235, 225, 1)'
+    })),
+    getColorBySource: vi.fn(() => ({
+        color: 'rgba(200, 100, 50, 1)',
+        contrastColor: 'rgba(55, 155, 205, 1)'
     }))
 }));
 
@@ -71,18 +75,25 @@ class MockImageData {
 
 describe('AnnotationCanvas', () => {
     let canvasContexts: WeakMap<HTMLCanvasElement, Mock2dContext>;
-    const createMockContext = (): Mock2dContext => ({
-        fillStyle: 'rgba(0, 0, 0, 0)',
-        strokeStyle: 'rgba(0, 0, 0, 0)',
-        lineWidth: 1,
-        clearRect: vi.fn(),
-        fillRect: vi.fn(),
-        getImageData: vi.fn(() => ({ data: new Uint8ClampedArray([10, 20, 30, 128]) })),
-        putImageData: vi.fn(),
-        save: vi.fn(),
-        restore: vi.fn(),
-        strokeRect: vi.fn()
-    });
+    const createMockContext = (): Mock2dContext => {
+        const context: Mock2dContext = {
+            fillStyle: 'rgba(0, 0, 0, 0)',
+            strokeStyle: 'rgba(0, 0, 0, 0)',
+            lineWidth: 1,
+            clearRect: vi.fn(),
+            fillRect: vi.fn(),
+            // Reads back the last fillStyle, like a real 1x1 canvas.
+            getImageData: vi.fn(() => {
+                const [r, g, b, a] = context.fillStyle.match(/[\d.]+/g)!.map(Number);
+                return { data: new Uint8ClampedArray([r, g, b, Math.round(a * 255)]) };
+            }),
+            putImageData: vi.fn(),
+            save: vi.fn(),
+            restore: vi.fn(),
+            strokeRect: vi.fn()
+        };
+        return context;
+    };
 
     beforeEach(() => {
         MockWorker.instances = [];
@@ -152,6 +163,30 @@ describe('AnnotationCanvas', () => {
         expect(canvas).toHaveAttribute('height', '200');
         expect(context?.clearRect).toHaveBeenCalledWith(0, 0, 200, 200);
         expect(context?.strokeRect).toHaveBeenCalledWith(25, 50, 75, 100);
+    });
+
+    it('colors an annotation by its source name when set', async () => {
+        const { container } = render(AnnotationCanvas, {
+            props: {
+                sampleId: 'sample-source-color',
+                sourceWidth: 100,
+                sourceHeight: 100,
+                annotations: [
+                    {
+                        annotation_type: 'object_detection',
+                        annotation_label_name: 'car',
+                        sourceName: 'Predictions',
+                        object_detection_details: { x: 10, y: 20, width: 30, height: 40 }
+                    }
+                ]
+            }
+        });
+
+        await tick();
+
+        const canvas = container.querySelector('canvas');
+        const context = canvasContexts.get(canvas as HTMLCanvasElement);
+        expect(context?.strokeStyle).toMatch(/^rgba\(200, 100, 50,/);
     });
 
     it('keeps source-sized canvas defaults for consumers without output dimensions', async () => {

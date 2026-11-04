@@ -120,6 +120,7 @@ previous one. Every PR leaves the app working.
 | 6 | Keep color previews in a separate layer | `michal-lig-11355-06-preview-layer` | ~170 |
 | 7 | Color annotations by source through getColorBySource | `michal-lig-11355-07-get-color-by-source` | ~145 |
 | 8 | Keep annotation source colors in their own store | `michal-lig-11355-08-source-color-store` | ~110 |
+| 8b | Pass the source name to AnnotationCanvas in its own field | `michal-lig-11355-08b-canvas-source-name` | ~90 |
 | 9 | Add "Reset to default" to the color picker | `michal-lig-11355-09-reset-to-default` | ~120 |
 | 10 | Let the color picker save changes asynchronously | `michal-lig-11355-10-async-color-save` | ~140 |
 
@@ -129,6 +130,8 @@ previous one. Every PR leaves the app working.
 |---|-------|--------|----------|
 | 11 | Save annotation class colors in the dataset | `michal-lig-11355-11-save-class-colors` | ~195 |
 | 12 | Load annotation class colors from the dataset | `michal-lig-11355-12-load-class-colors` | ~125 |
+
+PR 8b was added after PRs 1–8 were open; PR 9 will be based on it.
 
 PR 12 must come after PR 11: loading colors without saving them would wipe the colors set in
 the current session on every refetch.
@@ -302,6 +305,21 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - Two hooks instead of a `kind` flag: each caller knows its kind statically (review).
 - `createColorPicker` reads `customColorsStore`. The partial `useCustomLabelColors` mocks in `LabelsMenu.test.ts` and `SampleDetailsClassificationSegment.test.ts` add it.
 - The `customLabelColorsStore` / `customSourceColorsStore` aliases stay: they name the store at call sites, and files that use both stores would have to rename on destructure.
+
+## PR 8b: Pass the source name to AnnotationCanvas in its own field
+
+**Purpose:** PR 7 made `SampleAnnotations` overwrite `annotation_label_name` with the source name and set `colorBySource: true` so the canvas knows how to read it. The field meant two things. Now the canvas gets the source name in its own field. No behavior change.
+
+**Files:**
+- Modify: `lightly_studio_view/src/lib/components/AnnotationCanvas/AnnotationCanvas.svelte` — in both annotation interfaces replace `colorBySource?: boolean` with `sourceName?: string` (comment: if set, color by this source instead of by class). `resolveAnnotationColor` colors by `sourceName` with the source map and `getColorBySource` when set, else by `annotation_label_name` with the label map and `getColorByLabel`. `resolveNamedColor` takes the default color function instead of a boolean.
+- Modify: `SampleAnnotations/index.svelte` — set `sourceName: collectionName`; keep `annotation_label_name` as the class name.
+- Modify: `AnnotationCanvas.test.ts` — the mocked 2D context reads back its last `fillStyle` (it returned a fixed color before, so no color test could fail); new test `'colors an annotation by its source name when set'`.
+
+Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnnotation` and others (the name predates this stack). `AnnotationItem.svelte` never colors by source and stays unchanged.
+
+- [x] **Step 1: Write failing test.** Failed: stroke had the class color.
+- [x] **Step 2: Implement.**
+- [x] **Step 3: Verify** `make static-checks && make test` pass.
 
 ## PR 9: Add "Reset to default" to the color picker
 

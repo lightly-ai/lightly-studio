@@ -36,7 +36,8 @@
         object_detection_details?: BoundingBox;
         color?: string;
         opacity?: number;
-        colorBySource?: boolean;
+        // If set, color by this source instead of by class.
+        sourceName?: string;
     }
 
     interface ObjectDetectionAnnotation {
@@ -46,7 +47,8 @@
         segmentation_mask?: undefined;
         color?: string;
         opacity?: number;
-        colorBySource?: boolean;
+        // If set, color by this source instead of by class.
+        sourceName?: string;
     }
 
     type AnnotationCanvasAnnotation = InstanceAnnotation | ObjectDetectionAnnotation;
@@ -157,12 +159,11 @@
         name: string,
         colorAlpha: number,
         customColors: CustomLabelColorMap,
-        colorBySource: boolean
+        getDefaultColor: typeof getColorByLabel
     ): [number, number, number, number] => {
         const customColor = customColors[name];
         if (!customColor) {
-            const getColor = colorBySource ? getColorBySource : getColorByLabel;
-            return rgbaParser(getColor(name, colorAlpha).color);
+            return rgbaParser(getDefaultColor(name, colorAlpha).color);
         }
 
         const [r, g, b] = rgbaParser(customColor.color);
@@ -176,12 +177,19 @@
         customColorMaps: CustomColorMaps
     ): [number, number, number, number] => {
         if (!annotation.color) {
-            const colorBySource = annotation.colorBySource ?? false;
+            if (annotation.sourceName) {
+                return resolveNamedColor(
+                    annotation.sourceName,
+                    colorAlpha,
+                    customColorMaps.source,
+                    getColorBySource
+                );
+            }
             return resolveNamedColor(
                 annotation.annotation_label_name || 'label',
                 colorAlpha,
-                colorBySource ? customColorMaps.source : customColorMaps.label,
-                colorBySource
+                customColorMaps.label,
+                getColorByLabel
             );
         }
 
