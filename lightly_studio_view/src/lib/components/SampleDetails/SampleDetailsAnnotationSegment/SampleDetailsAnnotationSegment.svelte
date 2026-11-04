@@ -120,6 +120,9 @@
             areAllAnnotationsHidden(targetGroup.annotations, annotationsIdsToHide)
     );
 
+    // Hides every group's rows (and the flat list) without changing which groups are open.
+    let rowsCollapsed = $state(false);
+
     // The annotation row that is being dragged to another source, if any.
     let draggedAnnotation = $state<DraggedAnnotation | null>(null);
     const canDropOn = (sourceId: string) =>
@@ -304,6 +307,15 @@
 {/snippet}
 
 <Segment title="Annotations">
+    {#snippet headerAction()}
+        <button
+            type="button"
+            class="shrink-0 px-1 text-xs text-muted-foreground hover:text-foreground"
+            onclick={() => (rowsCollapsed = !rowsCollapsed)}
+        >
+            {rowsCollapsed ? 'Expand all' : 'Collapse all'}
+        </button>
+    {/snippet}
     {#if isGrouped}
         {#if canEdit}
             <AnnotationTargetHint needsPick={annotationTarget.targetSource === null} />
@@ -328,6 +340,7 @@
                                 $sourceGroupStates[group.id]?.open
                             )}
                         showColorMarker={colorBySource}
+                        collapsed={rowsCollapsed}
                         highlighted={isTarget && canEdit}
                         subtitle={isTarget &&
                         canEdit &&
@@ -383,7 +396,7 @@
                 No annotations.
             {/if}
         </p>
-    {:else}
+    {:else if !rowsCollapsed}
         <div class="flex flex-col gap-2">
             {#each annotationsSort as annotation (annotation.sample_id)}
                 {@render annotationRow(annotation)}

@@ -31,6 +31,8 @@
         highlighted?: boolean;
         /** A short line under the name, e.g. "New annotations go here". */
         subtitle?: string;
+        /** Hides the rows and shows the chevron closed. The group's own open state is kept. */
+        collapsed?: boolean;
         children: Snippet;
     }
 
@@ -46,6 +48,7 @@
         leading,
         highlighted = false,
         subtitle,
+        collapsed = false,
         children
     }: Props = $props();
 
@@ -68,6 +71,8 @@
 
     // Collapse animation duration in ms, matching the parent Segment component.
     const duration = 168;
+
+    const showRows = $derived(open && !collapsed);
 </script>
 
 <Collapsible bind:open {onOpenChange}>
@@ -101,7 +106,7 @@
                 <span class="text-xs text-muted-foreground">{count}</span>
                 <ChevronDown
                     class="size-4 transition-transform"
-                    style={`transform: ${open ? 'rotate(-180deg)' : 'rotate(0deg)'}; transition-duration: ${duration}ms`}
+                    style={`transform: ${showRows ? 'rotate(-180deg)' : 'rotate(0deg)'}; transition-duration: ${duration}ms`}
                 />
             </div>
         </CollapsibleTrigger>
@@ -137,7 +142,7 @@
         {/if}
     </div>
     <CollapsibleContent forceMount>
-        {#if open}
+        {#if showRows}
             <div class="mt-2" transition:slide={{ duration }}>
                 {@render children()}
             </div>

@@ -69,6 +69,12 @@ describe('SampleDetailsSidePanelAnnotation', () => {
         expect(screen.queryByText(/Confidence:/)).not.toBeInTheDocument();
     });
 
+    it('calls an object detection a bounding box', () => {
+        render(SampleDetailsSidePanelAnnotation, defaultProps);
+
+        expect(screen.getByText('Bounding box')).toBeInTheDocument();
+    });
+
     it('offers a drag handle in edit mode that carries the annotation ID', async () => {
         page.data.globalStorage.isEditingMode.set(true);
         const onDragStart = vi.fn();

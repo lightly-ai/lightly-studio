@@ -866,4 +866,60 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
         });
     });
+
+    describe('collapsing all sources', () => {
+        const annotations = [
+            createAnnotation('a1', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('a2', predictionsSource.collection_id, 'dog')
+        ];
+
+        it('hides every row, keeps headers and radios, and expands again', async () => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            mocks.selectedCollectionIds = [
+                groundTruthSource.collection_id,
+                predictionsSource.collection_id
+            ];
+            mocks.annotateVariant.set('radio');
+            mocks.isEditingMode.set(true);
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByRole('button', { name: 'Collapse all' }));
+
+            await waitFor(() =>
+                expect(screen.queryAllByTestId('mock-annotation-row')).toHaveLength(0)
+            );
+            expect(screen.getAllByTestId('annotation-source-group-header')).toHaveLength(2);
+            expect(
+                screen.getByTestId(`annotation-target-radio-${groundTruthSource.name}`)
+            ).toBeInTheDocument();
+            expect(
+                screen.getByTestId(`annotation-target-radio-${predictionsSource.name}`)
+            ).toBeInTheDocument();
+
+            await user.click(screen.getByRole('button', { name: 'Expand all' }));
+
+            await waitFor(() =>
+                expect(screen.getAllByTestId('mock-annotation-row')).toHaveLength(2)
+            );
+            expect(screen.getByRole('button', { name: 'Collapse all' })).toBeInTheDocument();
+        });
+
+        it('hides the rows with a single source', async () => {
+            mocks.collections = [groundTruthSource];
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, {
+                props: {
+                    ...defaultProps,
+                    annotations: [createAnnotation('a1', groundTruthSource.collection_id, 'cat')]
+                }
+            });
+
+            await user.click(screen.getByRole('button', { name: 'Collapse all' }));
+
+            await waitFor(() =>
+                expect(screen.queryAllByTestId('mock-annotation-row')).toHaveLength(0)
+            );
+        });
+    });
 });

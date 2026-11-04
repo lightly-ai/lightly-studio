@@ -70,7 +70,7 @@
     const formatAnnotationType = (annotationType: string) => {
         switch (annotationType) {
             case 'object_detection':
-                return 'Object Detection';
+                return 'Bounding box';
             case 'segmentation_mask':
                 return 'Segmentation Mask';
             case 'classification':

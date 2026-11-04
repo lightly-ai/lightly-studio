@@ -107,6 +107,28 @@ describe('SampleDetailsAnnotationSourceGroup', () => {
         expect(screen.getByTestId('group-content')).toBeInTheDocument();
     });
 
+    it('hides the children while collapsed and brings them back without touching open', async () => {
+        const { rerender } = render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, collapsed: true }
+        });
+
+        expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+
+        await rerender({ ...defaultProps, collapsed: false });
+
+        expect(screen.getByTestId('group-content')).toBeInTheDocument();
+    });
+
+    it('keeps a group that was closed by the user closed after expanding all', async () => {
+        const { rerender } = render(SampleDetailsAnnotationSourceGroup, {
+            props: { ...defaultProps, initiallyOpen: false, collapsed: true }
+        });
+
+        await rerender({ ...defaultProps, initiallyOpen: false, collapsed: false });
+
+        expect(screen.queryByTestId('group-content')).not.toBeInTheDocument();
+    });
+
     it('starts collapsed when initiallyOpen is false', () => {
         render(SampleDetailsAnnotationSourceGroup, {
             props: { ...defaultProps, initiallyOpen: false }
