@@ -23,6 +23,17 @@ interface FunctionCall extends Expression {
   args: Expression[];
 }
 
+interface SampleEvaluationQuery extends Expression {
+  runName: string;
+  criteria?: Expression;
+}
+
+interface EvaluationMetricComparison extends Expression {
+  metricName: string;
+  operator: '=' | '!=' | '<' | '>' | '<=' | '>=';
+  value: number;
+}
+
 interface FieldReference extends Expression {
   member: string;
 }
@@ -66,7 +77,28 @@ SampleUnary<isImage> returns Expression:
     | SampleComparison<isImage>
     | MetadataComparison
     | TagInExpression
-    | AnnotationQuery;
+    | AnnotationQuery
+    | SampleEvaluationQuery;
+
+// The run selector scopes every metric predicate, including OR and NOT.
+SampleEvaluationQuery returns SampleEvaluationQuery:
+  {SampleEvaluationQuery} SAMPLE_EVALUATION_FUNCTION '(' 'name' '=' runName=STRING
+    (AND criteria=EvaluationMetricOr)? ')';
+
+EvaluationMetricOr returns Expression:
+  EvaluationMetricAnd ({BooleanExpression.children+=current} operator=OR children+=EvaluationMetricAnd (OR children+=EvaluationMetricAnd)*)?;
+
+EvaluationMetricAnd returns Expression:
+  EvaluationMetricUnary ({BooleanExpression.children+=current} operator=AND children+=EvaluationMetricUnary (AND children+=EvaluationMetricUnary)*)?;
+
+EvaluationMetricUnary returns Expression:
+  '(' EvaluationMetricOr ')'
+    | {NotExpression} NOT expression=EvaluationMetricUnary
+    | EvaluationMetricComparison;
+
+EvaluationMetricComparison returns EvaluationMetricComparison:
+  {EvaluationMetricComparison} metricName=(STRING | 'tp' | 'fp' | 'fn')
+    operator=('=' | '!=' | '<' | '>' | '<=' | '>=') value=SignedNumber;
 
 SampleComparison<isImage> returns ComparisonExpression:
   SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
@@ -280,6 +312,7 @@ terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
+terminal SAMPLE_EVALUATION_FUNCTION returns string: /\bsample_evaluation\b/;
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;

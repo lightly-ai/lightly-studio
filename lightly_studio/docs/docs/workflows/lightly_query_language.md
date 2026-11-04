@@ -177,6 +177,33 @@ width >= 640 AND classification(class_name = "approved")
 "reviewed" IN tags AND segmentation_mask(class_name = "road")
 ```
 
+## Sample evaluation filtering
+
+Use `sample_evaluation(...)` to filter samples by metrics from a named evaluation run:
+
+```mysql
+sample_evaluation(name = "eval-tagged-samples" AND tp >= 1 AND fn >= 5 AND fp = 0)
+sample_evaluation(name = "eval-tagged-samples" AND (tp > 0 OR fn > 0) AND NOT fp > 2)
+sample_evaluation(name = "eval-tagged-samples" AND "custom-score" < -0.5)
+```
+
+Start with `name = "run-name"`, then optionally add `AND` followed by metric criteria.
+A name-only query matches all samples evaluated by that run. Metric criteria support
+parentheses, `NOT`, `AND`, and `OR` (in that precedence order), and numeric comparisons
+with `=`, `!=`, `<`, `<=`, `>`, and `>=`.
+
+The built-in metric names `tp`, `fp`, and `fn` can be written with or without quotes.
+All other metric names require double or single quotes, such as `"custom_score"`,
+`"custom-score"`, `"width"`, or `"name"`. Metric thresholds must be finite numbers.
+
+Missing metrics do not match comparisons, including `!=`. An inner `NOT` can match a
+missing metric, but still requires the sample to belong to the selected run. An outer
+`NOT sample_evaluation(...)` also matches samples outside that run.
+
+Combine evaluation functions with other sample conditions or separate evaluation functions
+using `AND`, `OR`, and `NOT`. Evaluation functions cannot be nested inside annotation functions.
+
+
 ## Complex examples
 
 ```mysql
