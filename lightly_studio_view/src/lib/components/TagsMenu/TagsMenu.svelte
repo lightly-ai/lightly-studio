@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { GridType } from '$lib/types';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Checkbox } from '$lib/components';
+    import { FilterList } from '$lib/components/FilterList';
     import type { TagView } from '$lib/services/types';
     import { useTags } from '$lib/hooks/useTags/useTags.js';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -33,9 +33,20 @@
 
     const isAnnotationGrid = $derived(gridType === 'annotations');
 
-    const { tags, tagsSelected, tagSelectionToggle, loadTags, clearTagSelected } = $derived(
-        useTags({ collection_id })
+    const { tags, tagsSelected, tagSelectionToggle, setTagSelected, loadTags, clearTagSelected } =
+        $derived(useTags({ collection_id }));
+
+    const tagById = $derived(new Map($tags.map((tag) => [tag.tag_id, tag])));
+    const tagItems = $derived(
+        $tags.map((tag) => ({
+            id: tag.tag_id,
+            label: tag.name,
+            selected: $tagsSelected.has(tag.tag_id)
+        }))
     );
+    const handleSelectionChange = (ids: string[]) => {
+        $tags.forEach((tag) => setTagSelected(tag.tag_id, ids.includes(tag.tag_id)));
+    };
 
     const {
         getSelectedSampleIds,
@@ -207,57 +218,51 @@
 </script>
 
 <Segment title="Tags">
-    <div class="mb-3 w-full space-y-1">
-        <div class="space-y-1">
-            {#each $tags as tag (tag.tag_id)}
-                <div
-                    class="flex items-center gap-2 py-0.5"
-                    data-testid="tag-menu-item"
-                    data-onboarding-tag
-                >
-                    <div class="min-w-0 flex-1">
-                        {#if editingTagId === tag.tag_id}
-                            <TagRenameInput
-                                {tag}
-                                {renamingTagId}
-                                tagsSelected={$tagsSelected}
-                                onTagSelectionToggle={tagSelectionToggle}
-                                onSave={handleRename}
-                                onCancel={cancelRename}
-                            />
-                        {:else}
-                            <Checkbox
-                                name={tag.tag_id}
-                                isChecked={$tagsSelected.has(tag.tag_id)}
-                                label={tag.name}
-                                onCheckedChange={() => tagSelectionToggle(tag.tag_id)}
-                            />
-                        {/if}
-                    </div>
-                    {#if canManageTags && editingTagId !== tag.tag_id}
-                        <TagActionMenu
-                            {tag}
-                            open={openActionsTagId === tag.tag_id}
-                            {deletingTagId}
-                            {renamingTagId}
-                            onOpenChange={(open) => {
-                                openActionsTagId = open ? tag.tag_id : null;
-                            }}
-                            onCloseAutoFocus={(event) => {
-                                if (suppressCloseAutoFocusTagId === tag.tag_id) {
-                                    event.preventDefault();
-                                    suppressCloseAutoFocusTagId = null;
-                                }
-                            }}
-                            onRename={openRename}
-                            onDelete={handleDeleteTag}
-                        />
-                    {/if}
-                </div>
-            {:else}
-                <p>No tags yet</p>
-            {/each}
-        </div>
+    <div class="mb-3 w-full space-y-2">
+        <FilterList
+            items={tagItems}
+            onToggle={tagSelectionToggle}
+            onSelectionChange={handleSelectionChange}
+            testId="tags-menu"
+            showSearch
+            searchPlaceholder="Search tags…"
+            emptyText="No tags yet"
+            customRowId={editingTagId}
+        >
+            {#snippet customRow(item)}
+                {@const tag = tagById.get(item.id)!}
+                <TagRenameInput
+                    {tag}
+                    {renamingTagId}
+                    tagsSelected={$tagsSelected}
+                    onTagSelectionToggle={tagSelectionToggle}
+                    onSave={handleRename}
+                    onCancel={cancelRename}
+                />
+            {/snippet}
+            {#snippet trailing(item)}
+                {@const tag = tagById.get(item.id)!}
+                {#if canManageTags}
+                    <TagActionMenu
+                        {tag}
+                        open={openActionsTagId === tag.tag_id}
+                        {deletingTagId}
+                        {renamingTagId}
+                        onOpenChange={(open) => {
+                            openActionsTagId = open ? tag.tag_id : null;
+                        }}
+                        onCloseAutoFocus={(event) => {
+                            if (suppressCloseAutoFocusTagId === tag.tag_id) {
+                                event.preventDefault();
+                                suppressCloseAutoFocusTagId = null;
+                            }
+                        }}
+                        onRename={openRename}
+                        onDelete={handleDeleteTag}
+                    />
+                {/if}
+            {/snippet}
+        </FilterList>
 
         {#if canManageTags && allowAssign}
             <TagAssignInput

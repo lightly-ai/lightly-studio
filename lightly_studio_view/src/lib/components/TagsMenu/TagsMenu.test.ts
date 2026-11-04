@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
     selectAllAnnotationSnapshotByCollection: {} as Record<string, SelectAllSnapshot | null>,
     loadTags: vi.fn(),
     tagSelectionToggle: vi.fn(),
+    setTagSelected: vi.fn(),
     clearTagSelected: vi.fn()
 }));
 
@@ -45,6 +46,7 @@ vi.mock('$lib/hooks/useTags/useTags.js', () => ({
         tags: readable(mocks.tags),
         tagsSelected: readable(mocks.tagsSelected),
         tagSelectionToggle: mocks.tagSelectionToggle,
+        setTagSelected: mocks.setTagSelected,
         loadTags: mocks.loadTags,
         clearTagSelected: mocks.clearTagSelected
     }))
@@ -145,6 +147,66 @@ describe('TagsMenu', () => {
         await fireEvent.input(input, { target: { value: query } });
         await fireEvent.click(screen.getByRole('button', { name: optionLabel }));
     }
+
+    it('shows the tag search for a single tag', () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        expect(screen.getByPlaceholderText('Search tags…')).toBeVisible();
+        expect(screen.getByTestId('tags-menu-item')).toBeVisible();
+        expect(screen.getByTestId('tags-menu-name')).toHaveTextContent('Vehicle');
+    });
+
+    it('toggles a tag from its row', async () => {
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'Vehicle' }));
+
+        expect(mocks.tagSelectionToggle).toHaveBeenCalledWith('tag-1');
+    });
+
+    it('selects all tags and clears the selection', async () => {
+        mocks.tags = [sampleTag, { ...sampleTag, tag_id: 'tag-2', name: 'Person' }];
+        mocks.tagsSelected = new Set(['tag-1']);
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+        expect(mocks.setTagSelected).toHaveBeenCalledWith('tag-1', true);
+        expect(mocks.setTagSelected).toHaveBeenCalledWith('tag-2', true);
+
+        mocks.setTagSelected.mockClear();
+        await fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        expect(mocks.setTagSelected).toHaveBeenCalledWith('tag-1', false);
+        expect(mocks.setTagSelected).toHaveBeenCalledWith('tag-2', false);
+    });
+
+    it('shows an empty message without tags', () => {
+        mocks.tags = [];
+
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
+
+        expect(screen.getByText('No tags yet')).toBeVisible();
+    });
 
     it('assigns an existing tag to the selected samples', async () => {
         mocks.selectedSampleIdsByCollection = {
