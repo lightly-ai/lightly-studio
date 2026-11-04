@@ -1,4 +1,4 @@
-import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors';
 import { hexToRgb } from './colorConvert';
 import { getDefaultColor } from './getColorByLabel';
 import { getColorPair } from './getColorPair';
