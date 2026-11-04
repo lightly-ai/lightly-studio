@@ -24,7 +24,10 @@
     let position = $state<{ left: number; top: number } | null>(null);
     // Stays mounted while hidden, so text typed into the card survives.
     const isVisible = $derived(
-        position !== null && !$isHidden && !annotationLabelContext.isDrawing
+        position !== null &&
+            !$isHidden &&
+            !annotationLabelContext.isDrawing &&
+            !annotationLabelContext.isMovingAnnotation
     );
 
     $effect(() => {

@@ -15,6 +15,8 @@
         scale = 1,
         onResize,
         onMove,
+        onDragStart,
+        onDragStop,
         onDragEnd
     }: {
         bbox: BoundingBox;
@@ -25,6 +27,10 @@
         handleSize?: number;
         onResize?: (newBbox: BoundingBox) => void;
         onMove?: (newBbox: BoundingBox) => void;
+        /** A move or resize drag starts. */
+        onDragStart?: () => void;
+        /** A drag ends, also when the box did not change. `onDragEnd` runs only on a change. */
+        onDragStop?: () => void;
         onDragEnd?: (newBbox: BoundingBox) => void;
     } = $props();
 
@@ -171,9 +177,11 @@
                         },
                         onInteractionStart: () => {
                             isInteracting = true;
+                            onDragStart?.();
                         },
                         onInteractionEnd: () => {
                             isInteracting = false;
+                            onDragStop?.();
                         }
                     })
                 );
@@ -205,9 +213,11 @@
                     },
                     onInteractionStart: () => {
                         isInteracting = true;
+                        onDragStart?.();
                     },
                     onInteractionEnd: () => {
                         isInteracting = false;
+                        onDragStop?.();
                     }
                 })
             );

@@ -24,6 +24,8 @@
         scale = 1,
         constraintBox,
         onBoundingBoxChanged,
+        onDragStart,
+        onDragStop,
         highlight = 'auto',
         prerenderedDataUrl,
         prerenderedHeight,
@@ -39,6 +41,9 @@
         scale?: number;
         constraintBox?: BoundingBox;
         onBoundingBoxChanged?: (newBbox: BoundingBox) => void;
+        // A move or resize of the box starts or stops.
+        onDragStart?: () => void;
+        onDragStop?: () => void;
         highlight?: 'active' | 'disabled' | 'auto';
         prerenderedDataUrl?: string;
         prerenderedHeight?: number;
@@ -173,6 +178,8 @@
                 {scale}
                 {onResize}
                 {onMove}
+                {onDragStart}
+                {onDragStop}
                 {onDragEnd}
             />
         {:else}

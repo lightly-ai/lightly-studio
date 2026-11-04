@@ -26,6 +26,8 @@ export type AnnotationLabelContext = {
     lastCreatedAnnotationId?: string | null;
 
     isDrawing?: boolean;
+    // The selected box is being moved or resized.
+    isMovingAnnotation?: boolean;
     isErasing?: boolean;
     isDragging?: boolean;
     isChangingBrushSize?: boolean;
@@ -58,6 +60,7 @@ export function useAnnotationLabelContext(): {
     setAnnotationType: (type: AnnotationType | null) => void;
     setLastCreatedAnnotationId: (id: string | null) => void;
     setIsDrawing: (value: boolean) => void;
+    setIsMovingAnnotation: (value: boolean) => void;
     setIsErasing: (value: boolean) => void;
     setIsDragging: (value: boolean) => void;
     setIsChangingBrushSize: (value: boolean) => void;
@@ -107,6 +110,10 @@ export function useAnnotationLabelContext(): {
         context.isDrawing = value;
     }
 
+    function setIsMovingAnnotation(value: boolean) {
+        context.isMovingAnnotation = value;
+    }
+
     function setIsErasing(value: boolean) {
         context.isErasing = value;
     }
@@ -128,6 +135,7 @@ export function useAnnotationLabelContext(): {
         setAnnotationType,
         setLastCreatedAnnotationId,
         setIsDrawing,
+        setIsMovingAnnotation,
         setIsErasing,
         setIsDragging,
         setLockedAnnotationIds,

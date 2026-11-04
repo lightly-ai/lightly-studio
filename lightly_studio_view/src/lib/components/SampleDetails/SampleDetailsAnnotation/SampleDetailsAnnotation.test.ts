@@ -22,6 +22,7 @@ const maskAnnotation = {
 };
 
 const mockAnnotation = vi.hoisted(() => ({ data: {} as Record<string, unknown> }));
+const setIsMovingAnnotation = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/hooks/useSettings', () => ({
     useSettings: () => ({
@@ -30,7 +31,7 @@ vi.mock('$lib/hooks/useSettings', () => ({
     })
 }));
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => ({ setCurrentBoundingBox: vi.fn() })
+    useAnnotationLabelContext: () => ({ setCurrentBoundingBox: vi.fn(), setIsMovingAnnotation })
 }));
 vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
     useAnnotation: () => ({ annotation: mockAnnotation, updateAnnotation: vi.fn() })
@@ -56,6 +57,7 @@ describe('SampleDetailsAnnotation', () => {
     const { maskOpacity } = useGlobalStorage();
 
     beforeEach(() => {
+        setIsMovingAnnotation.mockClear();
         mockAnnotation.data = predictionAnnotation;
         // jsdom does not implement SVG text measurements used to size the annotation label.
         Object.defineProperty(SVGElement.prototype, 'getBBox', {
@@ -87,5 +89,25 @@ describe('SampleDetailsAnnotation', () => {
 
         const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
         expect(opacity).toBeCloseTo(0.3);
+    });
+
+    it('marks the annotation as moving during a drag and clears it on destroy', async () => {
+        const { unmount } = render(SampleDetailsAnnotation, { ...defaultProps, isResizable: true });
+        const view = window;
+        const mouse = (type: string, target: EventTarget) => {
+            const event = new MouseEvent(type, { bubbles: true, button: 0 });
+            // d3-drag reads `event.view`, which jsdom does not fill in for dispatched events.
+            Object.defineProperty(event, 'view', { value: view });
+            target.dispatchEvent(event);
+        };
+
+        mouse('mousedown', await screen.findByTestId('annotation_box'));
+        expect(setIsMovingAnnotation).toHaveBeenLastCalledWith(true);
+        mouse('mouseup', view);
+        expect(setIsMovingAnnotation).toHaveBeenLastCalledWith(false);
+
+        setIsMovingAnnotation.mockClear();
+        unmount();
+        expect(setIsMovingAnnotation).toHaveBeenCalledWith(false);
     });
 });

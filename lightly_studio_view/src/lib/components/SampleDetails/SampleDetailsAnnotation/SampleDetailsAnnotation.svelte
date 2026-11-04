@@ -8,6 +8,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { onDestroy } from 'svelte';
     import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
 
     const {
@@ -44,7 +45,9 @@
         collectionId,
         annotationId
     }));
-    const { setCurrentBoundingBox } = useAnnotationLabelContext();
+    const { setCurrentBoundingBox, setIsMovingAnnotation } = useAnnotationLabelContext();
+    // The box is remounted after an edit, so a drag can't be left marked as running.
+    onDestroy(() => setIsMovingAnnotation(false));
 
     let annotation = $derived(annotationResp.data);
 
@@ -98,6 +101,8 @@
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}
+                onDragStart={() => setIsMovingAnnotation(true)}
+                onDragStop={() => setIsMovingAnnotation(false)}
                 {highlight}
                 {scale}
                 {colorBySource}
