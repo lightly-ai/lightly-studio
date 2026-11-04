@@ -106,5 +106,17 @@ describe('useColorPicker', () => {
 
             expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
         });
+
+        test('apply after a rename saves the color under the new name', async () => {
+            const { rerender } = render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await rerender({ label: 'kitty' });
+            expect(useCustomLabelColors().getCustomColor('kitty')?.color).toBe('#abcdef');
+            await fireEvent.click(screen.getByTestId('apply'));
+
+            expect(useCustomLabelColors().getSavedColor('kitty')?.color).toBe('#abcdef');
+            expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+        });
     });
 });
