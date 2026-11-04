@@ -5,7 +5,8 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import BaseModel, Field
+from sqlalchemy import ColumnElement, and_, false, or_
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -17,6 +18,13 @@ from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from lightly_studio.type_definitions import QueryType
+
+
+class AnnotationPair(BaseModel):
+    """An exact (annotation source, annotation class) pair."""
+
+    collection_id: UUID = Field(description="Annotation source collection UUID")
+    annotation_label_id: UUID = Field(description="Annotation class UUID")
 
 
 class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
@@ -34,6 +42,13 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
     sample_ids: list[UUID] | None = Field(
         default=None, description="List of annotation sample UUIDs to restrict to"
+    )
+    annotation_pairs: list[AnnotationPair] | None = Field(
+        default=None,
+        description=(
+            "Exact (source, class) pairs to match. None applies no pair filter, "
+            "an empty list matches no annotation."
+        ),
     )
 
     def apply(
@@ -92,6 +107,7 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
             or self.tag_ids
             or self.annotation_types
             or self.sample_ids
+            or self.annotation_pairs is not None
             or self.region_sample_ids is not None
         )
 
@@ -137,6 +153,9 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
                 )
             )
 
+        if self.annotation_pairs is not None:
+            query = query.where(self._annotation_pairs_condition(annotation_sample))
+
         # Filter by tags
         if self.tag_ids:
             query = query.where(
@@ -150,6 +169,23 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
             query = query.where(col(AnnotationBaseTable.annotation_type).in_(self.annotation_types))
 
         return query
+
+    def _annotation_pairs_condition(
+        self, annotation_sample: type[SampleTable]
+    ) -> ColumnElement[bool]:
+        """Match any (source, class) pair; no pairs match nothing."""
+        if not self.annotation_pairs:
+            return false()
+        # An OR of ANDs instead of tuple_().in_() keeps the query portable.
+        return or_(
+            *(
+                and_(
+                    col(annotation_sample.collection_id) == pair.collection_id,
+                    col(AnnotationBaseTable.annotation_label_id) == pair.annotation_label_id,
+                )
+                for pair in self.annotation_pairs
+            )
+        )
 
     def _select_sample_ids(self) -> SelectOfScalar[UUID]:
         return select(AnnotationBaseTable.sample_id).join(AnnotationBaseTable.sample)
