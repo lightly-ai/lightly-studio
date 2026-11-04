@@ -1,6 +1,19 @@
 import { describe, expect, it } from 'vitest';
 
 describe('enrichWithSchemaDocs', () => {
+    it.each(['tp', 'fp', 'fn', 'disagreement', 'miou'])(
+        'enriches quoted evaluation keyword %s with field documentation',
+        async (name) => {
+            const { enrichWithSchemaDocs } =
+                await import('./completionAdapterEnrichWithSchemaDocs');
+            const result = enrichWithSchemaDocs(
+                { label: `"${name}"` } as never,
+                'sample_evaluation'
+            );
+            expect(result.detail).toBe(`Sample evaluation.${name}: float`);
+            expect(result.documentation).toBeTruthy();
+        }
+    );
     it('keeps explicit documentation untouched', async () => {
         const { enrichWithSchemaDocs } = await import('./completionAdapterEnrichWithSchemaDocs');
         const item = { label: 'width', documentation: { value: 'custom' } };

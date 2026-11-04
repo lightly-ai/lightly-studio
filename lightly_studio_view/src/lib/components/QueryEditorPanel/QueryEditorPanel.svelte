@@ -65,6 +65,11 @@
                     <code>width</code>, <code>height</code>, <code>created_at</code>
                 </li>
                 <li>Metadata: <code>metadata["quality_score"] &gt;= 0.8</code></li>
+                <li>
+                    Sample evaluation: <code
+                        >sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code
+                    >
+                </li>
                 <li>Tag membership: <code>"tag_name" IN tags</code></li>
                 <li>
                     Annotation conditions: <code>segmentation_mask(…)</code>,
