@@ -183,7 +183,7 @@ LOC counts additions plus deletions, tests included, generated files excluded.
 **Interfaces:**
 - Consumes: `annotation_label_resolver.set_color` (PR 2).
 - Produces:
-  - `AnnotationLabelColorRequest(BaseModel)`: `color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")`, `alpha: float | None = Field(default=None, ge=0, le=1)`, and a `model_validator(mode="after")` that raises `PydanticCustomError` unless both are set or both are `None` (a plain `ValueError` makes the app's validation handler return 500).
+  - `AnnotationLabelColorRequest(BaseModel)`: `color: str | None = Field(pattern=r"^#[0-9a-fA-F]{6}$")`, `alpha: float | None = Field(ge=0, le=1)` (required but nullable, so an empty body does not clear the color), and a `model_validator(mode="after")` that raises `PydanticCustomError` unless both are set or both are `None` (a plain `ValueError` makes the app's validation handler return 500).
   - `PUT /annotation_labels/{label_id}/color` → `set_annotation_label_color(label_id: UUID, color_input: AnnotationLabelColorRequest, session: SessionDep) -> AnnotationLabelTable`; raises `NotFoundError("Annotation label not found")` for an unknown label.
   - Generated client: `setAnnotationLabelColor`, `setAnnotationLabelColorMutation`; `AnnotationLabelTable` gets `color?: string | null`, `alpha?: number | null`.
 
