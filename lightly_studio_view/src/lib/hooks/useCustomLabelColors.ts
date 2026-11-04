@@ -1,6 +1,6 @@
-import { createCustomColorStore } from './createCustomColorStore/createCustomColorStore';
+import { createCustomColorStore } from '$lib/hooks/createCustomColorStore/createCustomColorStore';
 
-export type { CustomColor } from './createCustomColorStore/createCustomColorStore';
+export type { CustomColor } from '$lib/hooks/createCustomColorStore/createCustomColorStore';
 
 // Singleton instance
 const store = createCustomColorStore();
