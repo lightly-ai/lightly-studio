@@ -30,8 +30,10 @@ Svelte 5, TanStack Query, hey-api generated client, vitest, pytest.
 **Behavior**
 - Colors are per dataset, not per user. `color`/`alpha` are nullable; null means the
   default (hashed palette) color.
-- A rename must not clear the color. Do not add color fields to `AnnotationLabelBase` or
-  `AnnotationLabelCreate`; `PUT /annotation_labels/{label_id}` keeps taking `AnnotationLabelCreate`.
+- A rename must not clear the color.
+- `color`/`alpha` live on `AnnotationLabelTable` and `AnnotationLabelView` only, not on
+  `AnnotationLabelBase` or `AnnotationLabelCreate`: a color is set later through its own
+  endpoint, not when a class is created. The `create_annotation_label` test helper does not take them either.
 - Class colors and source colors never share a map:
   - call sites that color by source use `getColorBySource` and the source store;
   - all others use `getColorByLabel` and the class store.
@@ -98,7 +100,7 @@ Cases that no single test covers end to end. Check them during review.
 
 ## PR stack
 
-PR 1 is based on `michal-lig-11481-refactor-color-picker-panel`. Each next PR is based on the
+PR 1 is based on `main`. Each next PR is based on the
 previous one. Every PR leaves the app working.
 
 **Backend**
@@ -176,12 +178,12 @@ LOC counts additions plus deletions, tests included, generated files excluded.
 **Files:**
 - Modify: `lightly_studio/src/lightly_studio/api/routes/api/annotation_label.py`
 - Test: `lightly_studio/tests/api/routes/api/test_annotation_label.py`
-- Generated: `lightly_studio_view/src/lib/api/lightly_studio_local/**`
+- Generated (gitignored, regenerate locally): `lightly_studio_view/src/lib/api/lightly_studio_local/**`
 
 **Interfaces:**
 - Consumes: `annotation_label_resolver.set_color` (PR 2).
 - Produces:
-  - `AnnotationLabelColorRequest(BaseModel)`: `color: str | None = Field(default=None, pattern=r"^#[0-9a-fA-F]{6}$")`, `alpha: float | None = Field(default=None, ge=0, le=1)`, and a `model_validator(mode="after")` that raises `ValueError` unless both are set or both are `None`.
+  - `AnnotationLabelColorRequest(BaseModel)`: `color: str | None = Field(pattern=r"^#[0-9a-fA-F]{6}$")`, `alpha: float | None = Field(ge=0, le=1)` (required but nullable, so an empty body does not clear the color), and a `model_validator(mode="after")` that raises `PydanticCustomError` unless both are set or both are `None` (a plain `ValueError` makes the app's validation handler return 500).
   - `PUT /annotation_labels/{label_id}/color` → `set_annotation_label_color(label_id: UUID, color_input: AnnotationLabelColorRequest, session: SessionDep) -> AnnotationLabelTable`; raises `NotFoundError("Annotation label not found")` for an unknown label.
   - Generated client: `setAnnotationLabelColor`, `setAnnotationLabelColorMutation`; `AnnotationLabelTable` gets `color?: string | null`, `alpha?: number | null`.
 
