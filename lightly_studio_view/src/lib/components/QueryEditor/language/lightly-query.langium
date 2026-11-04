@@ -97,7 +97,7 @@ EvaluationMetricUnary returns Expression:
     | EvaluationMetricComparison;
 
 EvaluationMetricComparison returns EvaluationMetricComparison:
-  {EvaluationMetricComparison} metricName=(STRING | 'tp' | 'fp' | 'fn')
+  {EvaluationMetricComparison} metricName=(STRING | EVALUATION_METRIC_NAME)
     operator=('=' | '!=' | '<' | '>' | '<=' | '>=') value=SignedNumber;
 
 SampleComparison<isImage> returns ComparisonExpression:
@@ -313,6 +313,8 @@ terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
 terminal SAMPLE_EVALUATION_FUNCTION returns string: /\bsample_evaluation\b/;
+
+terminal EVALUATION_METRIC_NAME returns string: /\b(tp|fp|fn)\b/;
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;

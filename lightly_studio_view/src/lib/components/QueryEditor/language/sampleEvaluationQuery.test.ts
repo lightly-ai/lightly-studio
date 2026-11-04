@@ -18,6 +18,13 @@ const parse = (source: string) => parseLightlyQuery(parser, source);
 const ok = (match_expr: unknown) => ({ status: 'ok', queryExpr: { match_expr } });
 
 describe('sample evaluation query translation', () => {
+    it('preserves video fps filters alongside bare fp metrics', () => {
+        expect(parse('video: fps = 30').status).toBe('ok');
+        expect(
+            parse('video: fps = 30 AND sample_evaluation(name = "run1" AND fp = 0)').status
+        ).toBe('ok');
+    });
+
     it('translates quoted metrics into run-scoped criteria', () => {
         expect(
             parse('sample_evaluation(name = "run1" AND "tp" >= 1 AND "fn" >= 5 AND "fp" = 0)')

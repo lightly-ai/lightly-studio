@@ -194,7 +194,7 @@ with `=`, `!=`, `<`, `<=`, `>`, and `>=`.
 
 The built-in metric names `tp`, `fp`, and `fn` can be written with or without quotes.
 All other metric names require double or single quotes, such as `"custom_score"`.
-Metric thresholds must be integers.
+Metric thresholds must be finite numbers, including decimals.
 
 Missing metrics do not match comparisons, including `!=`. An inner `NOT` can match a
 missing metric, but still requires the sample to belong to the selected run. An outer
