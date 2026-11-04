@@ -152,6 +152,24 @@ describe('useAnnotationsFilter', () => {
         ]);
     });
 
+    it('setAnnotationFilterSelection leaves only the given labels selected', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['cat']);
+
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+    });
+
+    it('setAnnotationFilterSelection with no labels clears the selection', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1', 'id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection([]);
+
+        expect(get(selectedAnnotationFilterIds).size).toBe(0);
+    });
+
     it('toggleAnnotationFilterSelection maps label name to id', () => {
         const { toggleAnnotationFilterSelection } = useAnnotationsFilter({
             annotationLabels

@@ -185,6 +185,19 @@ export function useAnnotationsFilter({
         });
     };
 
+    // Replace the selection with exactly these label names
+    const setAnnotationFilterSelection = (labelNames: string[]) => {
+        const labelsMap = get(annotationFilterLabels);
+        const wantedIds = new Set(labelNames.map((name) => labelsMap[name]).filter(Boolean));
+        const knownIds = new Set(Object.values(labelsMap));
+        Array.from(get(selectedAnnotationFilterIds)).forEach((id) => {
+            if (knownIds.has(id) && !wantedIds.has(id)) toggleSelectedAnnotationFilterId(id);
+        });
+        wantedIds.forEach((id) => {
+            if (!get(selectedAnnotationFilterIds).has(id)) toggleSelectedAnnotationFilterId(id);
+        });
+    };
+
     return {
         selectedAnnotationFilterIds,
         selectedAnnotationFilterIdsArray,
@@ -196,6 +209,7 @@ export function useAnnotationsFilter({
         setAnnotationCounts,
         pruneInvalidSelections,
         toggleAnnotationFilterSelection,
+        setAnnotationFilterSelection,
         toggleSelectedAnnotationFilterId,
         clearSelectedAnnotationFilterIds
     };
