@@ -1,6 +1,6 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-import { useAnnotationCollections, useMoveAnnotationsToSource } from '$lib/hooks';
+import { useAnnotationCollections, useMoveAnnotationsToSource, useStickyClass } from '$lib/hooks';
 import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
 import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
@@ -18,8 +18,11 @@ interface Params {
     refetch: () => void;
 }
 
-/** Class change, move and delete for the selected box, with the same undo as the side panel. */
-export const useSelectedBoxActions = (getParams: () => Params) => {
+/**
+ * Class change, move and delete for the selected annotation, with the same undo as the side
+ * panel. Call during component init: it reads the annotation label context.
+ */
+export const useAnnotationCardActions = (getParams: () => Params) => {
     const getCollectionId = () => getParams().collectionId;
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() }));
     const sources = useAnnotationCollections(() => ({ collectionId: getCollectionId() }));
@@ -32,10 +35,11 @@ export const useSelectedBoxActions = (getParams: () => Params) => {
     const { createAnnotation } = useCreateAnnotation({ getCollectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId });
     const { moveToSource, isPending: isMoving } = useMoveAnnotationsToSource();
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
-    const { setAnnotationId, setAnnotationLabel } = useAnnotationLabelContext();
+    const { addReversibleAction } = useGlobalStorage();
+    const { setAnnotationId } = useAnnotationLabelContext();
+    const { pickClass } = useStickyClass();
 
-    const changeClass = async (labelName: string) => {
+    const changeClass = async (className: string) => {
         const { annotation, collectionId, refetch } = getParams();
         addAnnotationLabelChangeToUndoStack({
             annotations: [annotation],
@@ -47,10 +51,9 @@ export const useSelectedBoxActions = (getParams: () => Params) => {
         await updateAnnotation({
             annotation_id: annotation.sample_id,
             collection_id: collectionId,
-            label_name: labelName
+            label_name: className
         });
-        setAnnotationLabel(labelName);
-        updateLastAnnotationLabel(collectionId, labelName);
+        pickClass(collectionId, className);
     };
 
     const moveTo = async (sourceName: string) => {
@@ -85,5 +88,7 @@ export const useSelectedBoxActions = (getParams: () => Params) => {
         }
     };
 
-    return { labels, sources, isMoving, changeClass, moveTo, remove };
+    const close = () => setAnnotationId(null);
+
+    return { labels, sources, isMoving, changeClass, moveTo, remove, close };
 };

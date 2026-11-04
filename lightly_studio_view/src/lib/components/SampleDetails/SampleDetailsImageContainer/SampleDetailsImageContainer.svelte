@@ -32,7 +32,7 @@
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
-    import SelectedBoxPanel from '../SelectedBoxPanel/SelectedBoxPanel.svelte';
+    import AnnotationCard from '../AnnotationCard/AnnotationCard.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -81,6 +81,7 @@
     let mousePosition = $state<{ x: number; y: number } | null>(null);
     let isHoveringBoundingBox = $state(false);
     let interactionRect: SVGRectElement | null = $state(null);
+    let annotationLayer: SVGGElement | null = $state(null);
     const { isPending, handlePendingChange } = usePendingState();
 
     let sampleId = $derived(sample.sampleId);
@@ -202,15 +203,15 @@
             ? (annotationLabelContext.annotationId ?? sample.annotations[0]?.sample_id)
             : undefined
     );
-    // The selected box gets a floating panel for class, source and delete.
-    const selectedBox = $derived(
-        $isEditingMode &&
-            !annotationLabelContext.isDrawing &&
-            !annotationLabelContext.isOnAnnotationDetailsView
+    // The selected box or mask gets a card for class, source and delete. The card hides itself
+    // while drawing.
+    const selectedAnnotation = $derived(
+        $isEditingMode && !annotationLabelContext.isOnAnnotationDetailsView
             ? actualAnnotationsToShow.find(
                   (annotation) =>
                       annotation.sample_id === selectedAnnotationId &&
-                      annotation.annotation_type === AnnotationType.OBJECT_DETECTION
+                      (annotation.annotation_type === AnnotationType.OBJECT_DETECTION ||
+                          annotation.annotation_type === AnnotationType.SEGMENTATION_MASK)
               )
             : undefined
     );
@@ -313,7 +314,7 @@
             <img src={imageUrl} alt="" draggable="false" style="height: 100%; width: 100%;" />
         </foreignObject>
 
-        <g class:invisible={$isHidden}>
+        <g bind:this={annotationLayer} class:invisible={$isHidden}>
             {#each actualAnnotationsToShow as annotation (annotation.sample_id)}
                 <!-- The SampleSegmentationMaskRect or SampleEraserRect component will render the preview while drawing a segmentation mask-->
                 <g
@@ -425,8 +426,15 @@
         {/if}
     {/snippet}
 </ZoomableContainer>
-{#if selectedBox}
-    <SelectedBoxPanel {collectionId} annotation={selectedBox} {refetch} />
+{#if selectedAnnotation}
+    {#key selectedAnnotation.sample_id}
+        <AnnotationCard
+            {collectionId}
+            annotation={selectedAnnotation}
+            {refetch}
+            getLayer={() => annotationLayer}
+        />
+    {/key}
 {/if}
 
 <style>
