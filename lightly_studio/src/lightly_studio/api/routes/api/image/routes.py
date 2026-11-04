@@ -31,6 +31,7 @@ from lightly_studio.resolvers.image_resolver import ImageField
 from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
     AnnotationPairCount,
+    UnannotatedImageCount,
 )
 
 # Default number of equal-width bins per image histogram.
@@ -218,6 +219,12 @@ class ReadCountImageAnnotationsByPairRequest(BaseModel):
     )
 
 
+class ReadCountUnannotatedImagesBySourceRequest(BaseModel):
+    """Request body for reading unannotated image counts per annotation source."""
+
+    filter: ImageFilter | None = None
+
+
 @image_router.post("/collections/{collection_id}/images/sample_ids", response_model=list[UUID])
 def get_image_sample_ids(
     session: SessionDep,
@@ -282,4 +289,22 @@ def count_image_annotations_by_pair(
         collection_id=collection.collection_id,
         image_filter=body.filter if body else None,
         count_mode=body.count_mode if body else AnnotationCountMode.OBJECTS,
+    )
+
+
+@image_router.post("/collections/{collection_id}/images/unannotated/count_by_source")
+def count_unannotated_images_by_source(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ReadCountUnannotatedImagesBySourceRequest | None = None,
+) -> list[UnannotatedImageCount]:
+    """Get the number of images without annotations per annotation source."""
+    return image_resolver.count_unannotated_images_by_source(
+        session=session,
+        collection_id=collection.collection_id,
+        image_filter=body.filter if body else None,
     )
