@@ -4,6 +4,7 @@ import {
     groupAnnotationsBySource,
     resolveAnnotationClassName,
     buildAnnotationForest,
+    subtreeContainsId,
     UNKNOWN_SOURCE_NAME
 } from './pointCloudAnnotationList';
 
@@ -479,6 +480,84 @@ describe('buildAnnotationForest', () => {
         expect(forest[1].children[0].cuboid).toBe(absentChild);
         expect(forest[2].cuboid).toBeNull();
         expect(forest[2].children[0].cuboid).toBe(standalone);
+    });
+});
+
+describe('subtreeContainsId', () => {
+    it('returns true when the node itself matches', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck] });
+
+        expect(subtreeContainsId(forest[0], 'truck')).toBe(true);
+    });
+
+    it('returns true when a direct child matches', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, cabin] });
+
+        expect(subtreeContainsId(forest[0], 'cabin')).toBe(true);
+    });
+
+    it('returns true when a grandchild matches', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+        const window = {
+            ...createAnnotationFixture(),
+            id: 'window',
+            trackNumber: 3,
+            parentTrackNumber: 2
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, cabin, window] });
+
+        expect(subtreeContainsId(forest[0], 'window')).toBe(true);
+    });
+
+    it('returns false when the ID is not in the subtree', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, cabin] });
+
+        expect(subtreeContainsId(forest[0], 'nonexistent')).toBe(false);
     });
 });
 

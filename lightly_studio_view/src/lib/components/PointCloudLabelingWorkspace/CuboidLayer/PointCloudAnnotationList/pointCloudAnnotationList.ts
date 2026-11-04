@@ -279,6 +279,12 @@ export function buildAnnotationForest({
     return [...parentRoots.map(buildNode), ...absentParentGroups, ...noParentTrackGroup];
 }
 
+/** Returns true when the subtree rooted at {@link node} contains a cuboid with the given ID. */
+export function subtreeContainsId(node: AnnotationTreeNode, id: string): boolean {
+    if (node.cuboid?.id === id) return true;
+    return node.children.some((child) => subtreeContainsId(child, id));
+}
+
 /**
  * Resolves the display name for a cuboid's annotation class.
  * Falls back to the raw class ID when the class is not found.

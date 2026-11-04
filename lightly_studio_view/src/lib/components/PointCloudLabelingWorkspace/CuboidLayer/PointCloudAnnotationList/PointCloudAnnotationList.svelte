@@ -10,6 +10,7 @@
         resolveAnnotationClassName,
         resolveAnnotationSourceName,
         buildAnnotationForest,
+        subtreeContainsId,
         NO_PARENT_TRACK_GROUP_LABEL
     } from './pointCloudAnnotationList';
     import { resolveCuboidColor } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
@@ -110,6 +111,9 @@
             })}
             trackNumber={node.cuboid.trackNumber}
             subtreeSize={node.subtreeSize}
+            autoExpandForId={selectedCuboidId && subtreeContainsId(node, selectedCuboidId)
+                ? selectedCuboidId
+                : null}
         >
             <div class="space-y-1">
                 {@render annotationItem(node.cuboid)}
@@ -123,6 +127,9 @@
                 className={firstChild.parentTrackClassName ?? NO_PARENT_TRACK_GROUP_LABEL}
                 trackNumber={firstChild.parentTrackClassName ? firstChild.parentTrackNumber : null}
                 subtreeSize={node.subtreeSize}
+                autoExpandForId={selectedCuboidId && subtreeContainsId(node, selectedCuboidId)
+                    ? selectedCuboidId
+                    : null}
             >
                 <div class="space-y-1">
                     {@render childRows(node.children)}
@@ -151,7 +158,14 @@
 {:else}
     <div class="space-y-2">
         {#each groups as group (group.sourceId)}
-            <PointCloudAnnotationListGroup name={group.sourceName} count={group.cuboids.length}>
+            <PointCloudAnnotationListGroup
+                name={group.sourceName}
+                count={group.cuboids.length}
+                autoExpandForId={selectedCuboidId &&
+                group.cuboids.some((c) => c.id === selectedCuboidId)
+                    ? selectedCuboidId
+                    : null}
+            >
                 <div class="space-y-1">
                     {@render annotationForest(group.cuboids)}
                 </div>
