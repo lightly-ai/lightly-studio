@@ -154,13 +154,6 @@ export const matchSources = <T extends { name: string }>({
     return ranked.map(({ source }) => source);
 };
 
-/** Moves the class to the front of the recent list and keeps at most `max` entries. */
-export const pushRecent = (list: string[], name: string, max = 5): string[] => {
-    const trimmed = name.trim();
-    if (!trimmed) return list;
-    return [trimmed, ...list.filter((item) => item !== trimmed)].slice(0, max);
-};
-
 /** The recent classes to show as chips, without the current class. */
 export const recentChips = (list: string[], current: string | null, max = 3): string[] =>
     list.filter((name) => name !== current).slice(0, max);

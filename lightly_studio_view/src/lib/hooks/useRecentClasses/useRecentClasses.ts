@@ -1,6 +1,6 @@
 import { derived, type Readable } from 'svelte/store';
-import { pushRecent } from '$lib/components/SampleDetails/AnnotationCard/annotationCard.helpers';
 import { useWebStorage } from '../useWebStorage/useWebStorage';
+import { pushRecent } from './pushRecent';
 
 const recentClasses = useWebStorage<Record<string, string[]>>(
     'localStorage',

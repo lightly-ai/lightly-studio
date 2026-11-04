@@ -8,7 +8,6 @@
     import { resolveTargetSource } from '$lib/hooks/useAnnotationTarget/resolveTargetSource';
     import { useSetTargetSource } from '$lib/hooks/useAnnotationTarget/useSetTargetSource';
     import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
-    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import { getShortcutKeys, isSearchStartKey } from '../AnnotationCard/annotationCard.helpers';
     import ClassSearchList from '../ClassSearchList/ClassSearchList.svelte';
     import SourceSearchList from '../SourceSearchList/SourceSearchList.svelte';
@@ -39,10 +38,10 @@
     let isClassOpen = $state(false);
     let query = $state('');
 
-    // The card owns the keys while an annotation is selected or a box is pending.
+    // The card owns the keys while an annotation is selected or a box is pending. The search
+    // key check also skips text fields and overlays.
     const handleKeydown = (event: KeyboardEvent) => {
         if (annotationLabelContext.annotationId || $pendingBox) return;
-        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
         if (!isSearchStartKey(event, getShortcutKeys($settingsStore))) return;
         event.preventDefault();
         query = event.key;
