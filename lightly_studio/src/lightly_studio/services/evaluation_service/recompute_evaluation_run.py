@@ -9,8 +9,8 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.evaluation import (
+    average_precision,
     classification_metric,
-    image_dataset_evaluate,
     instance_segmentation_metric,
     semantic_segmentation_metric,
     validators,
@@ -142,8 +142,12 @@ def _persist_metrics(session: Session, run: EvaluationRunTable, data: Evaluation
     """Compute and persist fresh metrics for the run's task type."""
     if run.task_type == EvaluationTaskType.OBJECT_DETECTION:
         config = ObjectDetectionEvaluationConfig.model_validate(run.config_json)
-        image_dataset_evaluate.create_and_persist_object_detection_metrics(
-            session=session, data=data, config=config
+        average_precision.create_and_persist_object_detection_metrics(
+            session=session,
+            data=data,
+            iou_threshold=config.iou_threshold,
+            classwise=config.classwise,
+            compute_average_precision=config.compute_average_precision,
         )
     elif run.task_type == EvaluationTaskType.CLASSIFICATION:
         ClassificationEvaluationConfig.model_validate(run.config_json)

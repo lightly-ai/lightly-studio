@@ -52,6 +52,44 @@ class ClassAveragePrecision:
     average_precision: float
 
 
+def create_and_persist_object_detection_metrics(
+    session: Session,
+    data: EvaluationData,
+    iou_threshold: float,
+    classwise: bool,
+    compute_average_precision: bool,
+) -> None:
+    """Create and persist the metrics of an object-detection run.
+
+    Writes the per-sample and per-annotation metrics, and the per-class average
+    precision if ``compute_average_precision`` is True.
+
+    Args:
+        session: Database session.
+        data: The run's selected samples and grouped annotations.
+        iou_threshold: Minimum IoU for a prediction to count as a TP.
+        classwise: If True, match only within the same class. If False, match
+            across all classes. Average precision always matches within the class.
+        compute_average_precision: If True, also compute and persist the per-class
+            average precision.
+    """
+    # Computed before the per-sample commits expire the loaded annotations, persisted after.
+    class_average_precision = compute_for_run(data=data) if compute_average_precision else []
+    object_detection_metric.create_and_persist_object_detection_metrics_per_sample(
+        session=session,
+        data=data,
+        iou_threshold=iou_threshold,
+        classwise=classwise,
+    )
+    persist(
+        session=session,
+        evaluation_run_id=data.evaluation_run_id,
+        results=class_average_precision,
+        iou_threshold=iou_threshold,
+        classwise=classwise,
+    )
+
+
 def compute_for_run(data: EvaluationData) -> list[ClassAveragePrecision]:
     """Compute the per-class average precision of a run at the COCO IoU thresholds.
 
