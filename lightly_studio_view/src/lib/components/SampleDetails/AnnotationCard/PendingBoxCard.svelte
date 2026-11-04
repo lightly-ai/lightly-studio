@@ -1,5 +1,6 @@
 <script lang="ts">
     import { X } from '@lucide/svelte';
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useRecentClasses, useStickyClass } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
@@ -14,6 +15,7 @@
 
     const { collectionId, getLayer }: Props = $props();
     const { request, resolve, cancel } = usePendingBoxClass();
+    const { context: toolbarContext } = useSampleDetailsToolbarContext();
     const { pickClass } = useStickyClass();
     const { recentClasses } = useRecentClasses();
     const labels = useAnnotationLabels(() => ({ collectionId }));
@@ -28,17 +30,25 @@
         pickClass(collectionId, className);
         resolve(className);
     };
-    // A click anywhere outside the card drops the box, like Esc.
+    // A click anywhere outside the card drops the box, like Esc. Right and middle clicks and
+    // Space-drag panning keep it.
     const handleWindowPointerDown = (event: PointerEvent) => {
+        if (event.button !== 0 || toolbarContext.status === 'drag') return;
         const card = body?.parentElement;
         if (card && event.target instanceof Node && card.contains(event.target)) return;
+        cancel();
+    };
+    // Esc drops the box wherever the focus is, before the panel's Esc switches the tool.
+    const handleWindowKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== 'Escape' || !$request) return;
+        event.stopPropagation();
         cancel();
     };
     // The card mounts hidden until it finds its place, and a hidden input can't take focus.
     const focusSearch = () => body?.querySelector('input')?.focus();
 </script>
 
-<svelte:window onpointerdown={handleWindowPointerDown} />
+<svelte:window onpointerdown={handleWindowPointerDown} onkeydowncapture={handleWindowKeyDown} />
 
 {#if $request}
     <AnnotationCardFrame
