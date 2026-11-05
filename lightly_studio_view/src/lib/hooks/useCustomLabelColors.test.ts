@@ -1,12 +1,22 @@
 import { describe, expect, it } from 'vitest';
-import { getAnnotationClassId, setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
+import {
+    getAnnotationClassId,
+    setAnnotationClasses,
+    useCustomLabelColors
+} from '$lib/hooks/useCustomLabelColors';
 
-const makeClass = (id: string, name: string, datasetId: string) => ({
+const makeClass = (
+    id: string,
+    name: string,
+    datasetId: string,
+    color: string | null = null,
+    alpha: number | null = null
+) => ({
     annotation_label_id: id,
     annotation_label_name: name,
     dataset_id: datasetId,
-    color: null,
-    alpha: null
+    color,
+    alpha
 });
 
 describe('annotation class IDs', () => {
@@ -33,5 +43,65 @@ describe('annotation class IDs', () => {
         setAnnotationClasses('dataset-d', [makeClass('id-1', 'cat', 'dataset-c')]);
 
         expect(getAnnotationClassId('cat')).toBeUndefined();
+    });
+});
+
+describe('annotation class colors', () => {
+    const { getCustomColor, setPreviewColor } = useCustomLabelColors();
+
+    it('loads saved colors', () => {
+        setAnnotationClasses('ds-colors-1', [
+            makeClass('id-1', 'cat', 'ds-colors-1', '#ff0000', 0.5),
+            makeClass('id-2', 'dog', 'ds-colors-1'),
+            makeClass('id-3', 'bird', 'ds-colors-1', '#00ff00')
+        ]);
+
+        expect(getCustomColor('cat')).toEqual({ color: '#ff0000', alpha: 0.5 });
+        expect(getCustomColor('dog')).toBeUndefined();
+        expect(getCustomColor('bird')).toEqual({ color: '#00ff00', alpha: 1 });
+    });
+
+    it('loads the saved color of a class named __proto__', () => {
+        setAnnotationClasses('ds-colors-proto', [
+            makeClass('id-1', '__proto__', 'ds-colors-proto', '#ff0000')
+        ]);
+
+        expect(getCustomColor('__proto__')).toEqual({ color: '#ff0000', alpha: 1 });
+    });
+
+    it('a reload without colors clears the saved colors', () => {
+        setAnnotationClasses('ds-colors-2', [makeClass('id-1', 'cat', 'ds-colors-2', '#ff0000')]);
+
+        setAnnotationClasses('ds-colors-2', [makeClass('id-1', 'cat', 'ds-colors-2')]);
+
+        expect(getCustomColor('cat')).toBeUndefined();
+    });
+
+    it('replaces the previous classes', () => {
+        setAnnotationClasses('ds-colors-3', [makeClass('id-1', 'cat', 'ds-colors-3', '#ff0000')]);
+
+        setAnnotationClasses('ds-colors-3', [makeClass('id-1', 'kitty', 'ds-colors-3', '#ff0000')]);
+
+        expect(getCustomColor('cat')).toBeUndefined();
+        expect(getCustomColor('kitty')?.color).toBe('#ff0000');
+    });
+
+    it('a refetch of the same dataset keeps an open preview', () => {
+        setAnnotationClasses('ds-1', [makeClass('id-1', 'cat', 'ds-1')]);
+        const owner = Symbol();
+        setPreviewColor('cat', { color: '#abcdef', alpha: 1 }, owner);
+
+        setAnnotationClasses('ds-1', [makeClass('id-1', 'cat', 'ds-1', '#112233')]);
+
+        expect(getCustomColor('cat')?.color).toBe('#abcdef');
+    });
+
+    it('switching datasets drops previews and colors', () => {
+        setAnnotationClasses('ds-1', [makeClass('id-1', 'cat', 'ds-1', '#112233')]);
+        setPreviewColor('cat', { color: '#abcdef', alpha: 1 }, Symbol());
+
+        setAnnotationClasses('ds-2', []);
+
+        expect(getCustomColor('cat')).toBeUndefined();
     });
 });
