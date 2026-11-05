@@ -1,6 +1,5 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
     import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import type { BoundingBox } from '$lib/types';
@@ -18,10 +17,15 @@
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
-    import { usePostHog } from '$lib/hooks';
+    import {
+        isAnnotationSourceBlocked,
+        usePendingBoxClass,
+        usePostHog,
+        useStickyClassName
+    } from '$lib/hooks';
+    import { usePendingBbox } from './usePendingBbox';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -54,20 +58,18 @@
     let temporaryBbox = $state<BoundingBox | null>(null);
     let shouldDisableInteraction = $state(false);
     let drawStartFired = false;
+    const pendingBbox = usePendingBbox();
+    const pendingBoxes = pendingBbox.boxes;
     const { trackEvent } = usePostHog();
     const labels = useAnnotationLabels(() => ({ collectionId }));
 
-    const {
-        open: showSelectClassDialog,
-        requestLabel,
-        handleConfirm: handleClassSelected,
-        handleCancel: handleClassDialogCancel
-    } = useSelectClassDialog();
+    const stickyClass = useStickyClassName(() => collectionId);
+    const { requestClass, cancel: cancelPendingBoxClass } = usePendingBoxClass();
 
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { addReversibleAction } = useGlobalStorage();
 
     const {
         startPending: startCreateBoundingBoxPending,
@@ -102,8 +104,9 @@
         // Setup D3 drag behavior for annotation creation
         const dragBehavior = drag<SVGRectElement, unknown>()
             .on('start', (event: D3Event) => {
-                // Remove focus from any selected annotation.
+                // Remove focus from any selected annotation, and drop a box that waits for a class.
                 setAnnotationId(null);
+                cancelPendingBoxClass();
                 setIsDrawing(true);
                 if (!drawStartFired) {
                     trackEvent('annotation_draw_started', {
@@ -149,22 +152,15 @@
             .on('end', () => {
                 if (!temporaryBbox || !annotationLabelContext.isDrawing) return;
 
-                // Only create annotation if the rectangle has meaningful size (> 10px in both dimensions)
-                if (
-                    temporaryBbox.width > BOX_MIN_SIZE_PX &&
-                    temporaryBbox.height > BOX_MIN_SIZE_PX
-                ) {
-                    createObjectDetectionAnnotation({
-                        x: temporaryBbox.x,
-                        y: temporaryBbox.y,
-                        width: temporaryBbox.width,
-                        height: temporaryBbox.height
-                    });
-                }
-
+                const drawn = temporaryBbox;
+                // End the drag first: the card that asks for the class hides while drawing.
                 cancelDrag();
                 startPoint = null;
-                drawStartFired = false;
+
+                // Only create annotation if the rectangle has meaningful size in both dimensions
+                if (drawn.width > BOX_MIN_SIZE_PX && drawn.height > BOX_MIN_SIZE_PX) {
+                    createObjectDetectionAnnotation(drawn, pendingBbox.start(drawn));
+                }
             });
 
         rectSelection.call(dragBehavior);
@@ -174,93 +170,77 @@
         };
     };
 
-    const createObjectDetectionAnnotation = async ({
-        x,
-        y,
-        width,
-        height
-    }: {
-        x: number;
-        y: number;
-        width: number;
-        height: number;
-    }) => {
+    // `pendingToken` is the drawn box that stays on screen until the annotation is loaded.
+    const createObjectDetectionAnnotation = async (bbox: BoundingBox, pendingToken: number) => {
+        const className = await getNewBoxClass(bbox);
+        if (!className) {
+            pendingBbox.clear(pendingToken);
+            return;
+        }
         const pendingOperation = startCreateBoundingBoxPending();
-
         try {
-            let selectedLabelName = annotationLabelContext.annotationLabel;
-            if (!selectedLabelName) {
-                const result = await requestLabel();
-                if (!result?.label) {
-                    toast.error('Please select a class before creating an annotation');
-                    return;
-                }
-                selectedLabelName = result.label;
-                setAnnotationLabel(selectedLabelName);
-                updateLastAnnotationLabel(collectionId, selectedLabelName);
-            }
-
-            let label = labels.data?.find(
-                (label) => label.annotation_label_name === selectedLabelName
-            );
-
-            // Create label if it does not exist yet
-            if (!label) {
-                label = await createLabel({
-                    dataset_id: datasetId,
-                    annotation_label_name: selectedLabelName
-                });
-            }
-
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: 'object_detection',
-                x: Math.round(x),
-                y: Math.round(y),
-                width: Math.round(width),
-                height: Math.round(height),
-                annotation_label_id: label.annotation_label_id!,
+                x: Math.round(bbox.x),
+                y: Math.round(bbox.y),
+                width: Math.round(bbox.width),
+                height: Math.round(bbox.height),
+                annotation_label_id: await getLabelId(className),
                 annotation_collection_name: annotationLabelContext.annotationSource ?? undefined
             });
-
-            if (sample.annotations.length == 0) {
-                refetchRootCollection();
-            }
-
-            addAnnotationCreateToUndoStack({
-                annotation: newAnnotation,
-                addReversibleAction,
-                deleteAnnotation,
-                refetch
-            });
-
-            refetch();
-
-            setLastCreatedAnnotationId(newAnnotation.sample_id);
-            setAnnotationId(newAnnotation.sample_id);
-            setCurrentBoundingBox(getBoundingBox(newAnnotation));
-
-            // Enable resizing immediately after creation
-            shouldDisableInteraction = true;
-            hoverbbox = true;
-
+            onBoxCreated(newAnnotation, pendingToken);
             toast.success('Annotation created successfully');
-            return newAnnotation;
         } catch (error) {
+            pendingBbox.clear(pendingToken);
             toast.error('Failed to create annotation. Please try again.');
             console.error('Error creating annotation:', error);
-            return;
         } finally {
             endCreateBoundingBoxPending(pendingOperation);
         }
+    };
+
+    // The class for a new box, or null to drop the box. Without a sticky class the box waits for
+    // a class picked at the box.
+    const getNewBoxClass = async (bbox: BoundingBox): Promise<string | null> => {
+        if (isAnnotationSourceBlocked(annotationLabelContext)) return null;
+        return stickyClass.current ?? requestClass(bbox);
+    };
+
+    // The ID of the class with the name. A new name creates the class.
+    const getLabelId = async (className: string): Promise<string> => {
+        const existing = labels.data?.find((label) => label.annotation_label_name === className);
+        const label =
+            existing ??
+            (await createLabel({ dataset_id: datasetId, annotation_label_name: className }));
+        return label.annotation_label_id!;
+    };
+
+    const onBoxCreated = (newAnnotation: AnnotationView, pendingToken: number) => {
+        if (sample.annotations.length == 0) refetchRootCollection();
+        pendingBbox.created(pendingToken, newAnnotation.sample_id);
+        addAnnotationCreateToUndoStack({
+            annotation: newAnnotation,
+            addReversibleAction,
+            deleteAnnotation,
+            refetch
+        });
+        refetch();
+        // A box drawn since then keeps the focus: selecting this one would pull it away.
+        if (!pendingBbox.isNewest(pendingToken) || annotationLabelContext.isDrawing) return;
+        setLastCreatedAnnotationId(newAnnotation.sample_id);
+        setAnnotationId(newAnnotation.sample_id);
+        setCurrentBoundingBox(getBoundingBox(newAnnotation));
+        // Enable resizing immediately after creation
+        shouldDisableInteraction = true;
+        hoverbbox = true;
     };
     const {
         context: annotationLabelContext,
         setLastCreatedAnnotationId,
         setAnnotationId,
         setIsDrawing,
-        setCurrentBoundingBox,
-        setAnnotationLabel
+        setCurrentBoundingBox
     } = useAnnotationLabelContext();
 
     const interactionPointerEvents = $derived(shouldDisableInteraction ? 'none' : 'all');
@@ -340,8 +320,21 @@
 
     onDestroy(() => {
         resetCreateBoundingBoxPending();
-        handleClassDialogCancel();
+        cancelPendingBoxClass();
         detachSvgListeners?.();
+    });
+
+    $effect(() => {
+        pendingBbox.sync(sample.annotations.map((annotation) => annotation.sample_id));
+    });
+
+    // A pending box belongs to one sample; drop it when the view moves to another.
+    $effect(() => {
+        void sampleId;
+        return () => {
+            pendingBbox.clearAll();
+            cancelPendingBoxClass();
+        };
     });
 
     // Setup drag behavior when rect becomes available or mode changes
@@ -361,16 +354,18 @@
         scale={1}
     />
 {/if}
+{#each $pendingBoxes as pending (pending.token)}
+    <ResizableRectangle
+        bbox={pending.bbox}
+        colorStroke={drawerStrokeColor}
+        colorFill="rgba(0, 123, 255, 0.1)"
+        opacity={0.8}
+        scale={1}
+    />
+{/each}
 <SampleAnnotationRect
     bind:interactionRect
     cursor={'crosshair'}
     pointerEvents={interactionPointerEvents}
     {sample}
-/>
-
-<SelectClassDialog
-    bind:open={$showSelectClassDialog}
-    labels={labels.data?.map((l) => l.annotation_label_name ?? '').filter(Boolean) ?? []}
-    onConfirm={handleClassSelected}
-    onCancel={handleClassDialogCancel}
 />

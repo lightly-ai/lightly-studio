@@ -25,6 +25,8 @@
         scale = 1,
         constraintBox,
         onBoundingBoxChanged,
+        onDragStart,
+        onDragStop,
         highlight = 'auto',
         prerenderedDataUrl,
         prerenderedHeight,
@@ -40,6 +42,9 @@
         scale?: number;
         constraintBox?: BoundingBox;
         onBoundingBoxChanged?: (newBbox: BoundingBox) => void;
+        // A move or resize of the box starts or stops.
+        onDragStart?: () => void;
+        onDragStop?: () => void;
         highlight?: 'active' | 'disabled' | 'auto';
         prerenderedDataUrl?: string;
         prerenderedHeight?: number;
@@ -121,7 +126,7 @@
             : newBbox;
     };
 
-    const onDragEnd = (newBbox: BoundingBox) => {
+    const onBboxCommit = (newBbox: BoundingBox) => {
         const finalBbox = constraintBox
             ? getConstrainedCoordinates(newBbox, constraintBox, true)
             : newBbox;
@@ -181,7 +186,9 @@
                 {scale}
                 {onResize}
                 {onMove}
-                {onDragEnd}
+                {onDragStart}
+                {onDragStop}
+                {onBboxCommit}
             />
         {:else}
             <SampleAnnotationBox
