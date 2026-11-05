@@ -325,7 +325,7 @@ Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnn
 
 ## PR 9: Add "Reset to default" to the color picker
 
-**Status:** Off the stack, under discussion (#3092, based on `main`). PRs 10–12 were rebuilt without it. If it lands after them, it also adds `resetColor` through `onCommit` (widen it to `CustomColor | undefined`, deleting on `undefined`), clearing in `saveClassColor` (`null` body), and their tests.
+**Status:** Off the stack, under discussion (#3092, based on `main`). PRs 10–12 were rebuilt without it. If it lands after them, it also adds `resetColor` through `onCommit` (widen it and `setSavedColor` to `CustomColor | undefined`, deleting on `undefined`), clearing in `saveClassColor` (`null` body), and their tests.
 
 **Files:**
 - Modify: `lightly_studio_view/src/lib/components/ui/color-picker/color-picker-panel.svelte`, `color-picker-panel.test.ts`
@@ -358,7 +358,7 @@ Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnn
 - Factory adds:
   - `type SaveTicket = { seq: number; generation: number }`.
   - `beginSave(name: string): SaveTicket` — next save sequence for `name`, plus the current generation.
-  - `setSavedColor(name: string, color: CustomColor | undefined, ticket: SaveTicket): void` — applies only if `ticket.generation` is current and `ticket.seq` is greater than the last applied for `name`; `undefined` deletes (unused until a reset exists).
+  - `setSavedColor(name: string, color: CustomColor, ticket: SaveTicket): void` — applies only if `ticket.generation` is current and `ticket.seq` is greater than the last applied for `name`.
   - `reset(): void` — clears the saved layer, the previews and the counters, and bumps the generation, so saves begun before it never apply. PR 12 calls it on dataset change.
   - `replaceSavedColors` keeps the counters and the generation.
   - `getGeneration(): number` — the current generation.
