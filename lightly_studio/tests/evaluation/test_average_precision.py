@@ -181,8 +181,12 @@ def test_by_label_and_threshold() -> None:
     rows = [
         *(
             _class_metric(label_id=label_id, iou_threshold=threshold, value=value)
-            for label_id, value in ((CAT, 0.8), (DOG, 0.2))
-            for threshold in (0.5, 0.75)
+            for label_id, threshold, value in (
+                (CAT, 0.5, 0.8),
+                (CAT, 0.75, 0.6),
+                (DOG, 0.5, 0.2),
+                (DOG, 0.75, 0.1),
+            )
         ),
         EvaluationClassMetricTable(
             evaluation_run_id=RUN_ID, annotation_label_id=CAT, metric_name="iou", value=0.3
@@ -194,7 +198,7 @@ def test_by_label_and_threshold() -> None:
     )
 
     # Rows of other metrics, such as "iou", are ignored.
-    assert grouped == {CAT: {0.5: 0.8, 0.75: 0.8}, DOG: {0.5: 0.2, 0.75: 0.2}}
+    assert grouped == {CAT: {0.5: 0.8, 0.75: 0.6}, DOG: {0.5: 0.2, 0.75: 0.1}}
 
 
 def test_by_label_and_threshold__row_without_override_has_the_run_threshold() -> None:
