@@ -77,6 +77,19 @@ describe('useWebStorage', () => {
         expect(get(store)).toEqual({});
     });
 
+    it('writes again after a failed write', () => {
+        const store = useWebStorage<Record<string, number>>('localStorage', 'k', {});
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
+            throw new Error('QuotaExceededError');
+        });
+        vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+        store.set({ a: 1 });
+        store.set({ a: 1 });
+
+        expect(JSON.parse(localStorage.getItem('k')!)).toEqual({ a: 1 });
+    });
+
     it('resets without writing back when another tab clears the storage', () => {
         const store = useWebStorage<Record<string, number>>('localStorage', 'k', {});
         store.set({ a: 1 });
