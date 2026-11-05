@@ -23,11 +23,13 @@ export const useSaveAnnotationClassColor = (): UseSaveAnnotationClassColorReturn
     const mutation = createMutation(() => ({
         ...setAnnotationLabelColorMutation(),
         onError: () => toast.error(ERROR_MESSAGE),
-        onSettled: () =>
-            client.invalidateQueries({
+        // Not awaited: the picker sets the saved color itself, so the save need not wait.
+        onSettled: () => {
+            void client.invalidateQueries({
                 predicate: (q) =>
                     CLASS_LIST_QUERY_IDS.includes((q.queryKey[0] as { _id?: string })?._id ?? '')
-            })
+            });
+        }
     }));
 
     const saveClassColor = async (name: string, color: CustomColor) => {
