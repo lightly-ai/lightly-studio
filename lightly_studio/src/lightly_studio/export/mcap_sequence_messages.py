@@ -27,7 +27,6 @@ from lightly_studio.resolvers import (
     sequence_resolver,
     tag_resolver,
 )
-from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.services.recording_service import (
     cuboids_in_frame,
     load_dynamic_transforms,
@@ -174,15 +173,8 @@ def _load_cuboid_views(
         annotation_types=[AnnotationType.CUBOID_3D],
         load_view_relationships=True,
     )
-    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
-        session=session, annotations=annotations
-    )
     views = [
-        AnnotationView.from_annotation_table(
-            annotation=annotation,
-            parent_track_class_names=parent_track_class_names,
-        )
-        for annotation in annotations
+        AnnotationView.from_annotation_table(annotation=annotation) for annotation in annotations
     ]
     _validate_cuboid_annotations(views=views)
     views_by_sample_id: dict[UUID, list[AnnotationView]] = {}

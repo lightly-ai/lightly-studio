@@ -125,7 +125,6 @@ def _reinsert_child_rows(
     seg_data: list[dict[str, Any]],
     cuboid_data: list[dict[str, Any]],
 ) -> None:
-
     for d in od_data:
         session.add(ObjectDetectionAnnotationTable(**d))
     for d in seg_data:

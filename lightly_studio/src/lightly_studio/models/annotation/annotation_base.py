@@ -209,6 +209,7 @@ class AnnotationView(BaseModel):
     object_track_number: Optional[int] = None
     parent_object_track_number: Optional[int] = None
     parent_object_track_class_name: Optional[str] = None
+    """Only populated for tick-details responses. ``None`` elsewhere."""
 
     tags: list[AnnotationViewTag] = []
 
