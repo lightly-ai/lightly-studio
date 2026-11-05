@@ -39,7 +39,7 @@ interface MetadataComparisonParams {
 interface MetadataQueryResult {
     data?: unknown;
     isFetching: boolean;
-    error: Error | null;
+    error: unknown;
 }
 
 export interface SampleTagMetadataDistributions {
@@ -147,7 +147,7 @@ const combineSampleTagResults = (
 ): {
     data: SampleTagMetadataDistributions[];
     isFetching: boolean;
-    error: Error | null;
+    error: unknown;
 } => ({
     data: sampleTags.flatMap((tag, index): SampleTagMetadataDistributions[] => {
         const response = results[index]?.data;

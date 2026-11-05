@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/utils';
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
@@ -503,7 +504,7 @@
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
-            return embeddingsData.error?.message ?? 'Unknown error';
+            return getErrorMessage(embeddingsData.error) ?? 'Unknown error';
         }
         if ($arrowError) {
             return $arrowError;

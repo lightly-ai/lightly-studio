@@ -3,9 +3,16 @@ import { defineConfig } from '@hey-api/openapi-ts';
 export default defineConfig({
     input: '../lightly_studio/openapi.json',
     output: {
-        format: 'prettier',
-        lint: 'eslint',
-        path: './src/lib/api/lightly_studio_local'
+        path: './src/lib/api/lightly_studio_local',
+        postProcess: ['prettier']
+    },
+    parser: {
+        hooks: {
+            operations: {
+                // Keep query options for POST operations, which >=0.82 generates only as mutations.
+                isQuery: (operation) => (operation.method === 'post' ? true : undefined)
+            }
+        }
     },
     plugins: [
         '@hey-api/schemas',
@@ -21,7 +28,7 @@ export default defineConfig({
             // The base URL is set at runtime from PUBLIC_LIGHTLY_STUDIO_API_URL.
             baseUrl: false,
             name: '@hey-api/client-fetch',
-            runtimeConfigPath: './src/lib/api/clientConfig.ts'
+            runtimeConfigPath: './src/lib/api/clientConfig'
         },
         {
             name: '@hey-api/sdk',
