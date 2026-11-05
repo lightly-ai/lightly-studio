@@ -6,25 +6,12 @@
     import { onMount } from 'svelte';
     import '../app.css';
     import { Toaster } from 'svelte-sonner';
-    import { client } from '$lib/api/lightly_studio_local/client.gen';
     import { PluginExecutingOverlay } from '$lib/components/PluginExecutingOverlay';
 
+    // The error interceptor in hooks.client.ts sets `status`.
     interface ApiErrorWithStatus {
-        error?: string;
         status?: number;
     }
-
-    // Add error interceptor to preserve HTTP status code on errors.
-    client.interceptors.error.use((error: unknown, response: Response | undefined) => {
-        // Throw network, abort and parse errors, so only HTTP errors become `{ error }`.
-        if (!response || response.ok) {
-            throw error;
-        }
-        if (typeof error === 'object' && error !== null) {
-            (error as ApiErrorWithStatus).status = response.status;
-        }
-        return error;
-    });
 
     const queryClient = new QueryClient({
         defaultOptions: {

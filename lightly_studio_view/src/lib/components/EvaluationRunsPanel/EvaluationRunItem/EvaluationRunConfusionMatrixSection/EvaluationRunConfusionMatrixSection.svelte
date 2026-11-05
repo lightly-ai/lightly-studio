@@ -10,6 +10,7 @@
     } from '$lib/components/ConfusionMatrix';
     import { useEvaluationConfusionMatrix, usePostHog } from '$lib/hooks';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { getErrorMessage } from '$lib/utils';
 
     interface Props {
         datasetId: string;
@@ -100,7 +101,7 @@
         {:else if query.isError}
             <div class="py-4 text-center" data-testid="confusion-matrix-error">
                 <Typography variant="body2" className="text-red-500">
-                    {query.error?.message ?? 'Failed to load confusion matrix.'}
+                    {getErrorMessage(query.error) ?? 'Failed to load confusion matrix.'}
                 </Typography>
             </div>
         {:else if query.data}

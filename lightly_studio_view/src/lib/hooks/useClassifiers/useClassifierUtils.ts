@@ -2,7 +2,7 @@ import type { AnnotatedSamples } from '$lib/services/types';
 import { page } from '$app/state';
 import { get, writable, type Readable } from 'svelte/store';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import { triggerDownloadBlob } from '$lib/utils';
+import { getErrorMessage, triggerDownloadBlob } from '$lib/utils';
 import {
     getNegativeSamples,
     saveClassifierToFile,
@@ -47,6 +47,9 @@ export function useClassifierUtils(): UseClassifierUtilsReturn {
                 path: { classifier_id: classifierId },
                 parseAs: 'blob'
             });
+            if (response.error) {
+                throw new Error(getErrorMessage(response.error));
+            }
 
             const contentDisposition = response.response?.headers.get('content-disposition');
             const filenameMatch = contentDisposition?.match(/filename="(.+)"/);

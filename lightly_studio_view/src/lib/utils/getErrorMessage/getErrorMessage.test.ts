@@ -11,6 +11,12 @@ describe('getErrorMessage', () => {
         ).toBe('Field required');
     });
 
+    test('reads a plain-text body', () => {
+        expect(getErrorMessage('Internal Server Error')).toBe('Internal Server Error');
+        expect(getErrorMessage({ error: 'Bad Gateway', status: 502 })).toBe('Bad Gateway');
+        expect(getErrorMessage({ error: '', status: 404 })).toBe('Unknown error');
+    });
+
     test('reads the message of an Error', () => {
         expect(getErrorMessage(new Error('Network failure'))).toBe('Network failure');
     });

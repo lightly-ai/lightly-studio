@@ -1,5 +1,6 @@
 import { exportCollectionStats, type ImageFilter } from '$lib/api/lightly_studio_local';
 import { writable, type Readable } from 'svelte/store';
+import { getErrorMessage } from '$lib/utils';
 
 interface UseExportSamplesCountProps {
     collection_id: string;
@@ -50,7 +51,7 @@ export function useExportSamplesCount(
             })
             .catch((_error) => {
                 if (!controller.signal.aborted) {
-                    error.set(_error.message);
+                    error.set(getErrorMessage(_error));
                 }
             })
             .finally(() => {

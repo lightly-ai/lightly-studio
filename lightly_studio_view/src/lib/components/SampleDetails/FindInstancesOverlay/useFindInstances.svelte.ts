@@ -115,7 +115,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             isEmptyResult = predictions.length === 0;
         } catch (error) {
             if (requestSequence !== sequence) return;
-            toast.error(`Find all instances failed: ${getErrorMessage(error)}`);
+            toast.error(`Find all instances failed: ${getErrorMessage(error) ?? 'Unknown error'}`);
         } finally {
             if (requestSequence === sequence) isGenerating = false;
         }
@@ -153,7 +153,9 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             });
             if (!isDisposed) onSaved();
         } catch (error) {
-            toast.error(`Could not save the annotations: ${getErrorMessage(error)}`);
+            toast.error(
+                `Could not save the annotations: ${getErrorMessage(error) ?? 'Unknown error'}`
+            );
         } finally {
             isSaving = false;
             if (isDropPending) dropPredictions();

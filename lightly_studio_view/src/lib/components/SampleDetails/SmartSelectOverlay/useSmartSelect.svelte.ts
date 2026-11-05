@@ -50,7 +50,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
             if (requestSequence === sequence) preview = result.prediction;
         } catch (error) {
             if (requestSequence !== sequence) return;
-            toast.error(`Smart select failed: ${getErrorMessage(error)}`);
+            toast.error(`Smart select failed: ${getErrorMessage(error) ?? 'Unknown error'}`);
         }
     };
 
@@ -108,7 +108,9 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
             });
             onSaved();
         } catch (error) {
-            toast.error(`Could not save the annotation: ${getErrorMessage(error)}`);
+            toast.error(
+                `Could not save the annotation: ${getErrorMessage(error) ?? 'Unknown error'}`
+            );
         } finally {
             isSaving = false;
         }
