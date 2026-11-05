@@ -34,7 +34,7 @@ class TestSamplingConfig:
                 strategies=[SamplingStrategy()],  # type: ignore[list-item]
             )
 
-    def test_model_validate__keeps_strategy_type(self) -> None:
+    def test_model_validate_json__keeps_strategy_type(self) -> None:
         config = SamplingConfig(
             collection_id=uuid4(),
             n_samples_to_select=4,
