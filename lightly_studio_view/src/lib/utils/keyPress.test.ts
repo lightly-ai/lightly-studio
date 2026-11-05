@@ -6,7 +6,8 @@ const plainPress = {
     repeat: false,
     altKey: false,
     ctrlKey: false,
-    metaKey: false
+    metaKey: false,
+    shiftKey: false
 };
 
 const listboxOption = () => {
@@ -33,6 +34,7 @@ describe('isDeleteKey', () => {
         expect(press({ metaKey: true })).toBe(false);
         expect(press({ ctrlKey: true })).toBe(false);
         expect(press({ altKey: true })).toBe(false);
+        expect(press({ shiftKey: true })).toBe(false);
     });
 
     it('ignores the keys while typing or inside an open menu', () => {
