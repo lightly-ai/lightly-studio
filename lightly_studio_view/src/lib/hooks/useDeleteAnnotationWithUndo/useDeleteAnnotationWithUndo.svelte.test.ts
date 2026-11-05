@@ -4,14 +4,15 @@ import { useDeleteAnnotationWithUndo } from './useDeleteAnnotationWithUndo.svelt
 
 const mocks = vi.hoisted(() => ({
     deleteAnnotation: vi.fn(),
-    addDeleteToUndoStack: vi.fn()
+    addDeleteToUndoStack: vi.fn(),
+    sources: [] as unknown[] | undefined
 }));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({ data: [{ annotation_label_id: 'l1' }] })
 }));
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
-    useAnnotationCollections: () => ({ data: [] })
+    useAnnotationCollections: () => ({ data: mocks.sources })
 }));
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
     useCreateAnnotation: () => ({ createAnnotation: vi.fn() })
@@ -30,7 +31,10 @@ vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } })
 const annotation = { sample_id: 'a1', annotation_type: 'object_detection' } as AnnotationView;
 
 describe('useDeleteAnnotationWithUndo', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        vi.clearAllMocks();
+        mocks.sources = [];
+    });
 
     it('adds the undo after the delete succeeded', async () => {
         const refetch = vi.fn();
@@ -63,5 +67,27 @@ describe('useDeleteAnnotationWithUndo', () => {
 
         expect(mocks.deleteAnnotation).toHaveBeenCalledOnce();
         expect(mocks.addDeleteToUndoStack).toHaveBeenCalledOnce();
+    });
+
+    it('deletes another annotation while a delete runs', async () => {
+        let finish = () => {};
+        mocks.deleteAnnotation.mockReturnValueOnce(new Promise<void>((r) => (finish = r)));
+        const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');
+
+        const first = deleteWithUndo(annotation, vi.fn());
+        expect(await deleteWithUndo({ ...annotation, sample_id: 'a2' }, vi.fn())).toBe(true);
+        finish();
+        await first;
+
+        expect(mocks.deleteAnnotation).toHaveBeenCalledTimes(2);
+    });
+
+    it('deletes nothing while the sources load', async () => {
+        mocks.sources = undefined;
+        const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');
+
+        expect(await deleteWithUndo(annotation, vi.fn())).toBe(false);
+
+        expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
     });
 });
