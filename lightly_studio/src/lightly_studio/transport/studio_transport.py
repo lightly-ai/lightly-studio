@@ -23,7 +23,7 @@ class StudioTransport(Protocol):
 
     @property
     def samples(self) -> SampleTransport:
-        """The transport for samples and captions."""
+        """The transport for samples."""
 
     @property
     def tags(self) -> TagTransport:
@@ -31,4 +31,4 @@ class StudioTransport(Protocol):
 
     @property
     def metadata(self) -> MetadataTransport:
-        """The transport for metadata."""
+        """The transport for metadata and captions."""

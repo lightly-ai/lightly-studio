@@ -20,7 +20,7 @@ class LocalTransport:
 
     @property
     def samples(self) -> SampleTransport:
-        """The transport for samples and captions."""
+        """The transport for samples."""
         raise NotImplementedError("The local sample transport does not exist yet.")
 
     @property
@@ -30,5 +30,5 @@ class LocalTransport:
 
     @property
     def metadata(self) -> MetadataTransport:
-        """The transport for metadata."""
+        """The transport for metadata and captions."""
         raise NotImplementedError("The local metadata transport does not exist yet.")
