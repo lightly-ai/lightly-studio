@@ -12,5 +12,6 @@ class TestLocalTransport:
 
     @pytest.mark.parametrize("area", ["samples", "tags", "metadata"])
     def test_area__not_implemented(self, area: str) -> None:
-        with pytest.raises(NotImplementedError):
+        with pytest.raises(AttributeError, match=r"does not exist yet"):
             getattr(LocalTransport(), area)
+        assert not hasattr(LocalTransport(), area)
