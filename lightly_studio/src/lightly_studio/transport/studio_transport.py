@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol
 
 from lightly_studio.transport.collection_transport import CollectionTransport
@@ -20,18 +21,21 @@ class StudioTransport(Protocol):
         """The transport for collections."""
 
 
-_transport: StudioTransport | None = None
+@dataclass
+class _ActiveTransport:
+    """Holds the transport that `get_transport` returns."""
+
+    transport: StudioTransport
+
+
+_active = _ActiveTransport(transport=LocalTransport())
 
 
 def get_transport() -> StudioTransport:
-    """Get the active transport. If no transport is set, set a `LocalTransport`."""
-    global _transport  # noqa: PLW0603
-    if _transport is None:
-        _transport = LocalTransport()
-    return _transport
+    """Get the active transport. The default is a `LocalTransport`."""
+    return _active.transport
 
 
 def set_transport(transport: StudioTransport) -> None:
     """Set the active transport."""
-    global _transport  # noqa: PLW0603
-    _transport = transport
+    _active.transport = transport
