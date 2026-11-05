@@ -440,7 +440,33 @@ git commit -m "feat: show class predictions after drawing a box or mask"
 
 ### Task 7: Manual check
 
-- [ ] **Step 1: Serve the COCO 10k box subset** (see memory `local-studio-datasets`) with a MobileCLIP collection, built from this branch (`make build-lightly_studio_view` first).
-- [ ] **Step 2: Draw 20 boxes** across 3 classes, accepting the right class with 1–3 each time.
-- [ ] **Step 3: Record** in the PR description: median predict latency from the browser network tab, and after how many labels per class the top 1 is right on most boxes.
-- [ ] **Step 4: If zero-shot dominates too long or never helps,** adjust `TEXT_ANCHOR_WEIGHT` and note the value tried.
+- [x] **Step 1: Serve the COCO 10k box subset** (see memory `local-studio-datasets`) with a MobileCLIP collection, built from this branch (`make build-lightly_studio_view` first).
+- [x] **Step 2: Draw 20 boxes** across 3 classes, accepting the right class with 1–3 each time.
+- [x] **Step 3: Record** in the PR description: median predict latency from the browser network tab, and after how many labels per class the top 1 is right on most boxes.
+- [x] **Step 4: If zero-shot dominates too long or never helps,** adjust `TEXT_ANCHOR_WEIGHT` and note the value tried.
+
+**Results (2026-11-05).** Built from `6b16f89`, MobileCLIP, raw COCO val2017 images with all 80 classes.
+Scripts and raw output: `.superpowers/sdd/2026-11-05-crop-class-prediction/manual/` (git-ignored).
+
+- Latency, service (120 calls): median 22 ms, p90 29 ms. First call 4.1 s (model load, 80 text anchors).
+- Latency, browser fetch (21 calls): median 30.5 ms. First call 3.85 s.
+- UI: a drawn box opened the class dialog (no last-used class), the strip showed the top 3, key 2
+  relabeled the box and pushed an undo entry.
+- Replay, 20 boxes per class, random order, top-1 by labels of the true class before the box
+  (n per bucket: 3, 3, 3, 6, 15, 30):
+
+  | Labels | car/truck/bus: blend λ=3 | zero-shot | KNN | dog/cat/horse: blend λ=3 | zero-shot | KNN |
+  |---|---|---|---|---|---|---|
+  | 0 | 33% | 100% | 0% | 33% | 67% | 0% |
+  | 1 | 33% | 67% | 33% | 33% | 67% | 33% |
+  | 2 | 67% | 67% | 33% | 33% | 100% | 33% |
+  | 3–4 | 33% | 83% | 33% | 83% | 100% | 83% |
+  | 5–9 | 73% | 73% | 67% | 93% | 87% | 93% |
+  | 10–19 | 83% | 67% | 83% | 100% | 83% | 100% |
+
+- KNN alone beats zero-shot from about 10 labels per class for car/truck/bus and about 5 for
+  dog/cat/horse. Small n below 5 labels.
+- Step 4: λ stays 3 (approved). Tried offline only: λ=10 and λ=30 keep zero-shot's cold start
+  (λ=30: 67% at 0 labels in both scenarios) and match λ=3 from 5 labels on.
+- Displayed percents are small (top-1 often 2–15%) because the scores are normalized over all
+  80 classes and each text anchor adds about 0.75 raw.
