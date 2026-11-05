@@ -284,7 +284,7 @@ git commit -m "feat: add annotation class prediction service"
 - Consumes: `predict_annotation_classes`, `AnnotationClassPrediction` (Task 3).
 - Produces: `predict_annotation_classes_router`; response model `AnnotationClassPredictionView` (`annotation_label_id: UUID`, `label_name: str`, `score: float`). The generated client exposes `predictAnnotationClasses` and `predictAnnotationClassesMutation`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_predict_annotation_classes__ok(test_client, mocker) -> None:
@@ -297,26 +297,26 @@ def test_predict_annotation_classes__not_croppable(test_client) -> None:
     # classification annotation → 400
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd lightly_studio && uv run pytest tests/api/routes/api/annotations/test_predict_annotation_classes.py -v`
 Expected: FAIL with 404 on every test (route missing).
 
-- [ ] **Step 3: Implement the route**
+- [x] **Step 3: Implement the route**
 
 `annotation_resolver.get_by_id` → `HTTPException(HTTP_STATUS_NOT_FOUND)`; type not in `CROPPABLE_ANNOTATION_TYPES` → `HTTPException(HTTP_STATUS_BAD_REQUEST)`; else call the service.
 
-- [ ] **Step 4: Run tests and static checks**
+- [x] **Step 4: Run tests and static checks**
 
 Run: `cd lightly_studio && uv run pytest tests/api/routes/api/annotations/test_predict_annotation_classes.py -v && make static-checks`
 Expected: 3 passed, static checks clean.
 
-- [ ] **Step 5: Regenerate the client**
+- [x] **Step 5: Regenerate the client**
 
 Run: `cd lightly_studio && make export-schema && make mock-webapp-dist && cd ../lightly_studio_view && npm run generate-api-client`
 Expected: `predictAnnotationClasses` appears in `src/lib/api/lightly_studio_local/sdk.gen.ts`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lightly_studio/src/lightly_studio/api/routes/api/ lightly_studio/tests/api/routes/api/annotations/test_predict_annotation_classes.py

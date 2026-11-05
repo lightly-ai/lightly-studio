@@ -13,6 +13,9 @@ from .bulk_relabel_annotations import (
 from .create_annotation import (
     create_annotation_router,
 )
+from .predict_annotation_classes import (
+    predict_annotation_classes_router,
+)
 
 __all__ = [
     "annotation_metrics_info_router",
@@ -20,4 +23,5 @@ __all__ = [
     "bulk_delete_annotations_router",
     "bulk_relabel_annotations_router",
     "create_annotation_router",
+    "predict_annotation_classes_router",
 ]
