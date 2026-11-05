@@ -1,13 +1,17 @@
 import { isOverlayTarget } from './isOverlayTarget';
 import { isTextInputTarget } from './isTextInputTarget';
 
-type KeyPress = Pick<KeyboardEvent, 'key' | 'target' | 'repeat' | 'altKey' | 'ctrlKey' | 'metaKey'>;
+type KeyPress = Pick<
+    KeyboardEvent,
+    'key' | 'target' | 'repeat' | 'altKey' | 'ctrlKey' | 'metaKey' | 'shiftKey'
+>;
 
 const isPlainPress = (event: KeyPress) =>
     !event.repeat &&
     !event.altKey &&
     !event.ctrlKey &&
     !event.metaKey &&
+    !event.shiftKey &&
     !isTextInputTarget(event.target) &&
     !isOverlayTarget(event.target);
 
