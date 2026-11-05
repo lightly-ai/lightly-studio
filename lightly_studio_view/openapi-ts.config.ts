@@ -2,7 +2,11 @@ import { defineConfig } from '@hey-api/openapi-ts';
 
 export default defineConfig({
     input: '../lightly_studio/openapi.json',
-    output: './src/lib/api/lightly_studio_local',
+    output: {
+        path: './src/lib/api/lightly_studio_local',
+        // tsconfig.json extends .svelte-kit/tsconfig.json, which a clean checkout does not have.
+        tsConfigPath: null
+    },
     plugins: [
         '@hey-api/schemas',
         {
