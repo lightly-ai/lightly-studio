@@ -163,6 +163,21 @@ describe('useAnnotationCardActions', () => {
         expect(mocks.addLabelChangeToUndoStack).toHaveBeenCalledOnce();
     });
 
+    it('refuses a move and a delete while a class change runs', async () => {
+        let finishUpdate!: () => void;
+        mocks.updateAnnotations.mockReturnValue(new Promise<void>((r) => (finishUpdate = r)));
+        const { changeClass, moveTo, remove } = setup();
+
+        const change = changeClass('coyote');
+        expect(await moveTo('gt')).toBe(false);
+        await remove();
+        finishUpdate();
+        await change;
+
+        expect(mocks.moveByCopy).not.toHaveBeenCalled();
+        expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+    });
+
     it('does nothing when the class is unchanged', async () => {
         const { changeClass } = setup();
 

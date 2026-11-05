@@ -12,8 +12,7 @@ const finish = (className: string | null) => {
     current?.(className);
 };
 
-/** A drawn box that waits for a class picked at the box before it is saved. */
-export function usePendingBoxClass(): {
+interface UsePendingBoxClassReturn {
     request: Readable<{ bbox: BoundingBox } | null>;
     /** Shows the pending-box card at `bbox`. Resolves with the picked class, or null.
      *  A new request resolves the previous one with null. */
@@ -22,7 +21,10 @@ export function usePendingBoxClass(): {
     resolve: (className: string) => void;
     /** No-op when nothing is pending. */
     cancel: () => void;
-} {
+}
+
+/** A drawn box that waits for a class picked at the box before it is saved. */
+export function usePendingBoxClass(): UsePendingBoxClassReturn {
     return {
         request: readonly(request),
         requestClass: (bbox) => {

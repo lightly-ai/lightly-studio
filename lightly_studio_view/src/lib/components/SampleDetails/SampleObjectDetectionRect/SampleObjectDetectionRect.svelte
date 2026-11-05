@@ -207,12 +207,20 @@
         return stickyClass.current ?? requestClass(bbox);
     };
 
+    // Classes created here, so the next box finds them before the class list refetches.
+    const createdLabelIds = new Map<string, string>();
+
     // The ID of the class with the name. A new name creates the class.
     const getLabelId = async (className: string): Promise<string> => {
-        const existing = labels.data?.find((label) => label.annotation_label_name === className);
-        const label =
-            existing ??
-            (await createLabel({ dataset_id: datasetId, annotation_label_name: className }));
+        const existing =
+            labels.data?.find((label) => label.annotation_label_name === className)
+                ?.annotation_label_id ?? createdLabelIds.get(className);
+        if (existing) return existing;
+        const label = await createLabel({
+            dataset_id: datasetId,
+            annotation_label_name: className
+        });
+        createdLabelIds.set(className, label.annotation_label_id!);
         return label.annotation_label_id!;
     };
 
