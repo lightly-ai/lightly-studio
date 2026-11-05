@@ -32,6 +32,7 @@ from sqlmodel import Session, SQLModel, create_engine
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.database import db_migrations, db_url
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
+from lightly_studio.transport import studio_transport
 
 
 class DatabaseBackend(str, Enum):
@@ -266,7 +267,8 @@ def connect(
 ) -> None:
     """Set up the database connection.
 
-    Helper function to set up the database engine. Supports both DuckDB (default)
+    Helper function to set up the database engine. It also sets the default transport, so
+    that the Python API uses the new database. Supports both DuckDB (default)
     and PostgreSQL via the db_url parameter or LIGHTLY_STUDIO_DATABASE_URL env var.
 
     Args:
@@ -290,6 +292,7 @@ def connect(
         must_exist=must_exist,
     )
     set_engine(engine=engine)
+    studio_transport.set_transport(transport=None)
 
 
 @contextmanager

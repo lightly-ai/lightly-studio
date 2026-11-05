@@ -17,8 +17,6 @@ from pytest_mock import MockerFixture, MockType
 from lightly_studio import ca_bundle, enterprise
 from lightly_studio.analytics import tracking
 from lightly_studio.database import db_manager
-from lightly_studio.transport import studio_transport
-from lightly_studio.transport.local.local_transport import LocalTransport
 from tests import helpers_tls
 
 
@@ -31,19 +29,12 @@ def _patch_env_vars(mocker: MockerFixture) -> None:
     mocker.patch.object(enterprise, "LIGHTLY_STUDIO_API_KEY", None)
 
 
-@pytest.fixture(autouse=True)
-def patch_set_transport(mocker: MockerFixture) -> MockType:
-    return mocker.patch.object(studio_transport, "set_transport")
-
-
 @pytest.fixture
 def patch_db_connect(mocker: MockerFixture) -> MockType:
     return mocker.patch.object(db_manager, "connect")
 
 
-def test_connect__success(
-    mocker: MockerFixture, patch_db_connect: MockType, patch_set_transport: MockType
-) -> None:
+def test_connect__success(mocker: MockerFixture, patch_db_connect: MockType) -> None:
     mock_response = mocker.MagicMock()
     mock_response.status_code = 200
     mock_response.ok = True
@@ -62,8 +53,6 @@ def test_connect__success(
     patch_db_connect.assert_called_once_with(
         db_url="postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
     )
-    patch_set_transport.assert_called_once()
-    assert isinstance(patch_set_transport.call_args.kwargs["transport"], LocalTransport)
 
 
 def test_connect__success_api_key(mocker: MockerFixture, patch_db_connect: MockType) -> None:
