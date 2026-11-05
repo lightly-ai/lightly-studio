@@ -127,6 +127,15 @@
         onSelectAnnotation={layout.onSelect}
         onAddTrack={layout.isEditingMode ? layout.onToggleAddTrack : undefined}
         isAddingTrack={layout.isAddingTrack}
+        onExtendTrack={layout.isEditingMode
+            ? (track, startSeqNumber, endSeqNumber) =>
+                  layout.onExtendTrack({
+                      trackId: track.object_track_id,
+                      annotationSourceId: track.annotation_source_id,
+                      startSeqNumber,
+                      endSeqNumber
+                  })
+            : undefined}
         onStartTrack={startableCuboidId ? () => layout.onStartTrack(startableCuboidId) : undefined}
         onSeekStart={layout.onSeekStart}
         onSeekEnd={layout.onSeekEnd}

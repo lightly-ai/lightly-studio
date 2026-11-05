@@ -41,6 +41,11 @@
         /** Arms or cancels adding a new track; set only while editing. */
         onAddTrack?: () => void;
         isAddingTrack?: boolean;
+        onExtendTrack?: (
+            track: SequenceTrackView,
+            startSeqNumber: number,
+            endSeqNumber: number
+        ) => void;
         /** Called when the user starts dragging the slider. */
         onSeekStart?: () => void;
         /** Called when the user releases the slider. */
@@ -70,6 +75,7 @@
         onStartTrack,
         onAddTrack,
         isAddingTrack = false,
+        onExtendTrack,
         onSeekStart,
         onSeekEnd,
         onPreviousSequence,
@@ -103,6 +109,7 @@
         {onStartTrack}
         {onAddTrack}
         {isAddingTrack}
+        {onExtendTrack}
         {onSeekStart}
         {onSeekEnd}
     />

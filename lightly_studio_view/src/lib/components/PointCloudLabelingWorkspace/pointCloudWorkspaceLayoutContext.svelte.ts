@@ -96,6 +96,13 @@ export interface PointCloudWorkspaceLayoutState {
     isAddingTrack: boolean;
     /** Arms or cancels creating a new object track with its first cuboid. */
     onToggleAddTrack: () => void;
+    /** Extends a track onto the ticks from `startSeqNumber` to `endSeqNumber`. */
+    onExtendTrack: (params: {
+        trackId: string;
+        annotationSourceId: string;
+        startSeqNumber: number;
+        endSeqNumber: number;
+    }) => void | Promise<unknown>;
     /** Starts an object track from an untracked cuboid. */
     onStartTrack: (annotationId: string) => void | Promise<unknown>;
     /** Navigates to the previous tick. */

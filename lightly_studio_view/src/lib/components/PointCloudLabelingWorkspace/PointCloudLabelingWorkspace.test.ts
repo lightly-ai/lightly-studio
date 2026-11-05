@@ -49,6 +49,10 @@ vi.mock('./useStartSequenceTrack', () => ({
     useStartSequenceTrack: () => ({ handleStartTrack: vi.fn() })
 }));
 
+vi.mock('./useExtendSequenceTrack', () => ({
+    useExtendSequenceTrack: () => ({ handleExtendTrack: vi.fn() })
+}));
+
 vi.mock('./FrameTimeline/useSequenceTracks.svelte', () => ({
     useSequenceTracks: () => ({ query: { data: { tracks: [] } } })
 }));

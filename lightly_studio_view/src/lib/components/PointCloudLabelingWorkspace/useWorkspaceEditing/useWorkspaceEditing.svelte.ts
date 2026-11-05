@@ -7,6 +7,7 @@ import { useCreateCuboidAnnotation } from '../useCreateCuboidAnnotation';
 import { useDeleteCuboidAnnotation } from '../useDeleteCuboidAnnotation';
 import { useUpdateCuboidAnnotation } from '../useUpdateCuboidAnnotation';
 import { useStartSequenceTrack } from '../useStartSequenceTrack';
+import { useExtendSequenceTrack } from '../useExtendSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
@@ -81,6 +82,12 @@ export function useWorkspaceEditing(
         getDatasetId: () => getOptions().datasetId,
         getSequenceId: () => getOptions().sequenceId,
         onStarted: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+    });
+
+    const { handleExtendTrack } = useExtendSequenceTrack({
+        getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
+        onExtended: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
     });
 
     const transforms = createCuboidTransformState({
@@ -168,6 +175,7 @@ export function useWorkspaceEditing(
         handleCreateCuboid,
         handleDeleteCuboid,
         handleStartTrack,
+        handleExtendTrack,
         handleLabelChange,
         panelCuboidTransform
     };

@@ -14,6 +14,11 @@
         onStartTrack?: () => void;
         onAddTrack?: () => void;
         isAddingTrack?: boolean;
+        onExtendTrack?: (
+            track: SequenceTrackView,
+            startSeqNumber: number,
+            endSeqNumber: number
+        ) => void;
         onSeekStart?: () => void;
         onSeekEnd?: () => void;
     }
@@ -29,6 +34,7 @@
         onStartTrack,
         onAddTrack,
         isAddingTrack = false,
+        onExtendTrack,
         onSeekStart,
         onSeekEnd
     }: Props = $props();
@@ -56,6 +62,9 @@
         {onStartTrack}
         {onAddTrack}
         {isAddingTrack}
+        {onExtendTrack}
+        onExtendStart={onSeekStart}
+        onExtendEnd={onSeekEnd}
     />
     {#if activeIndex >= 0 && ticks.length > 0}
         {@const position = (activeIndex + 0.5) / ticks.length}

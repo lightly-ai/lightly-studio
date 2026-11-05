@@ -109,6 +109,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         onCreateCuboid: editing.handleCreateCuboid,
         isAddingTrack: editing.isAddingTrack,
         onToggleAddTrack: editing.toggleAddTrack,
+        onExtendTrack: editing.handleExtendTrack,
         onStartTrack: editing.handleStartTrack,
         onPreviousFrame: playback.goToPreviousFrame,
         onNextFrame: playback.goToNextFrame,

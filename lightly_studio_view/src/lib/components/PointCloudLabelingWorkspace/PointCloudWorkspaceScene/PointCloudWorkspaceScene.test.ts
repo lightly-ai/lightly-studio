@@ -57,6 +57,7 @@ const defaultProps: Props = {
     onCreateCuboid: vi.fn(),
     isAddingTrack: false,
     onToggleAddTrack: vi.fn(),
+    onExtendTrack: vi.fn(),
     onStartTrack: vi.fn(),
     onPreviousFrame: vi.fn(),
     onNextFrame: vi.fn()

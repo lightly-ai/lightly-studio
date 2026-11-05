@@ -14,6 +14,14 @@
         /** Arms or cancels adding a new track; set only while editing. */
         onAddTrack?: () => void;
         isAddingTrack?: boolean;
+        /** Set while editing: extends a track onto the ticks from start to end (seq numbers). */
+        onExtendTrack?: (
+            track: SequenceTrackView,
+            startSeqNumber: number,
+            endSeqNumber: number
+        ) => void;
+        onExtendStart?: () => void;
+        onExtendEnd?: () => void;
     }
 
     let {
@@ -24,7 +32,10 @@
         onSelectTick,
         onStartTrack,
         onAddTrack,
-        isAddingTrack = false
+        isAddingTrack = false,
+        onExtendTrack,
+        onExtendStart,
+        onExtendEnd
     }: Props = $props();
     const selectedTrackKey = $derived(
         tracks.find((track) =>
@@ -83,6 +94,9 @@
                 isSelected={selectedTrackKey?.object_track_id === track.object_track_id &&
                     selectedTrackKey.annotation_source_id === track.annotation_source_id}
                 onSelectPosition={selectTrackPosition}
+                onExtend={onExtendTrack}
+                {onExtendStart}
+                {onExtendEnd}
             />
         {/each}
     </div>

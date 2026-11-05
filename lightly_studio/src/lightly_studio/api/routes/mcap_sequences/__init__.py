@@ -9,6 +9,9 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
+from lightly_studio.api.routes.mcap_sequences.extend_sequence_track import (
+    extend_sequence_track_router,
+)
 from lightly_studio.api.routes.mcap_sequences.get_sequence_tracks import get_sequence_tracks_router
 from lightly_studio.api.routes.mcap_sequences.get_summary import get_summary_router
 from lightly_studio.api.routes.mcap_sequences.get_tick_data import get_tick_data_router
@@ -28,5 +31,6 @@ mcap_sequences_router.include_router(get_tick_details_router)
 mcap_sequences_router.include_router(get_tick_data_router)
 mcap_sequences_router.include_router(get_sequence_tracks_router)
 mcap_sequences_router.include_router(start_sequence_track_router)
+mcap_sequences_router.include_router(extend_sequence_track_router)
 
 __all__ = ["mcap_sequences_router"]
