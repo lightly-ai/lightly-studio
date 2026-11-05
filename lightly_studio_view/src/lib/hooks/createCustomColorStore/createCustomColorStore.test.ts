@@ -76,15 +76,16 @@ describe('createCustomColorStore saves', () => {
     const red = { color: '#ff0000', alpha: 1 };
     const blue = { color: '#0000ff', alpha: 1 };
 
-    test('setSavedColor ignores an older sequence', () => {
+    // __proto__ is a valid class name and must not hit Object.prototype.
+    test.each(['cat', '__proto__'])('setSavedColor ignores an older sequence for %s', (name) => {
         const store = createCustomColorStore();
-        const older = store.beginSave('cat');
-        const newer = store.beginSave('cat');
+        const older = store.beginSave(name);
+        const newer = store.beginSave(name);
 
-        store.setSavedColor('cat', blue, newer);
-        store.setSavedColor('cat', red, older);
+        store.setSavedColor(name, blue, newer);
+        store.setSavedColor(name, red, older);
 
-        expect(store.getSavedColor('cat')).toEqual(blue);
+        expect(store.getSavedColor(name)).toEqual(blue);
     });
 
     test('setSavedColor with undefined deletes the saved color', () => {
