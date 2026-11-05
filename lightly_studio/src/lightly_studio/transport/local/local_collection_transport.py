@@ -7,8 +7,7 @@ from uuid import UUID
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import (
     CollectionCreate,
-    CollectionTable,
-    CollectionView,
+    CollectionWithoutChildrenView,
     SampleType,
 )
 from lightly_studio.resolvers import collection_resolver
@@ -17,28 +16,32 @@ from lightly_studio.resolvers import collection_resolver
 class LocalCollectionTransport:
     """Implements `CollectionTransport` with the persistent database session."""
 
-    def create(self, collection: CollectionCreate) -> CollectionView:
+    def create(self, collection: CollectionCreate) -> CollectionWithoutChildrenView:
         """Create a collection."""
         created = collection_resolver.create(
             session=db_manager.persistent_session(), collection=collection
         )
-        return _to_view(collection=created)
+        return CollectionWithoutChildrenView.model_validate(created)
 
-    def get_by_id(self, collection_id: UUID) -> CollectionView | None:
+    def get_by_id(self, collection_id: UUID) -> CollectionWithoutChildrenView | None:
         """Get a collection by ID, or None if it does not exist."""
         collection = collection_resolver.get_by_id(
             session=db_manager.persistent_session(), collection_id=collection_id
         )
-        return None if collection is None else _to_view(collection=collection)
+        return (
+            None if collection is None else CollectionWithoutChildrenView.model_validate(collection)
+        )
 
-    def get_by_name(self, name: str, parent_collection_id: UUID | None) -> CollectionView | None:
+    def get_by_name(
+        self, name: str, parent_collection_id: UUID | None
+    ) -> CollectionWithoutChildrenView | None:
         """Get a collection by name under a parent, or None if it does not exist."""
-        collection = collection_resolver.get_table_by_name(
+        collection_id = collection_resolver.get_by_name(
             session=db_manager.persistent_session(),
             name=name,
             parent_collection_id=parent_collection_id,
         )
-        return None if collection is None else _to_view(collection=collection)
+        return None if collection_id is None else self.get_by_id(collection_id=collection_id)
 
     def get_or_create_child(
         self, collection_id: UUID, sample_type: SampleType, name: str | None
@@ -50,13 +53,3 @@ class LocalCollectionTransport:
             sample_type=sample_type,
             name=name,
         )
-
-
-def _to_view(collection: CollectionTable) -> CollectionView:
-    """Convert a collection to a view without its child collections."""
-    return CollectionView.model_validate(
-        {
-            **collection.model_dump(),
-            "group_component_definition": collection.group_component_definition,
-        }
-    )

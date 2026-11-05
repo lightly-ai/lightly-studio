@@ -45,7 +45,6 @@ from lightly_studio.resolvers.collection_resolver.get_parent_collection_by_sampl
 from lightly_studio.resolvers.collection_resolver.get_parent_collection_id import (
     get_parent_collection_id,
 )
-from lightly_studio.resolvers.collection_resolver.get_table_by_name import get_table_by_name
 from lightly_studio.resolvers.collection_resolver.update import update
 
 __all__ = [
@@ -68,6 +67,5 @@ __all__ = [
     "get_parent_collection_by_sample_id",
     "get_parent_collection_id",
     "get_root_collection",
-    "get_table_by_name",
     "update",
 ]
