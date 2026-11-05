@@ -12,7 +12,8 @@ type StorageArea = 'localStorage' | 'sessionStorage';
 
 /**
  * Creates a writable store that syncs with localStorage or sessionStorage. A localStorage store
- * also follows writes from other tabs, so two tabs do not overwrite each other's values.
+ * also follows writes from other tabs, so two tabs do not overwrite each other's values. Call it
+ * once per key at module level: the listener for other tabs is never removed.
  * @param area The web storage area to use
  * @param key The storage key to use
  * @param initialValue The default value if nothing usable is in storage
@@ -43,11 +44,10 @@ export function useWebStorage<T extends JsonSerializable>(
     let storedJson: string | null = null;
 
     store.subscribe((value) => {
-        const storage = getStorage();
-        if (typeof storage === 'undefined') {
-            return;
-        }
         try {
+            // Reading the storage area can throw when the browser denies access.
+            const storage = getStorage();
+            if (typeof storage === 'undefined') return;
             const json = JSON.stringify(value);
             if (json === storedJson) return;
             storedJson = json;
@@ -60,9 +60,14 @@ export function useWebStorage<T extends JsonSerializable>(
     // Only localStorage is shared between tabs.
     if (area === 'localStorage' && typeof window !== 'undefined') {
         window.addEventListener('storage', (event) => {
-            if (event.key !== key || event.storageArea !== getStorage()) return;
-            storedJson = event.newValue;
-            store.set(parse(() => event.newValue));
+            // A null key is a clear() of the whole storage area.
+            if ((event.key !== null && event.key !== key) || event.storageArea !== getStorage()) {
+                return;
+            }
+            const value = parse(() => event.newValue);
+            // A removed or cleared key goes back to `initialValue` without writing it back.
+            storedJson = event.newValue ?? JSON.stringify(value);
+            store.set(value);
         });
     }
 
