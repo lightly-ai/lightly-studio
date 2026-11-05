@@ -33,6 +33,47 @@ Annotations are shown in sample detail view and in the annotation-focused views.
   ></iframe>
 </div>
 
+## Manage Annotation Classes
+
+To manage the annotation classes of a dataset, open `Menu` in the header and select `Settings`.
+Then open the `Annotation classes` tab. The tab shows each annotation class with its color and its
+number of annotations. The number includes all annotations of the class in the dataset.
+
+![Annotation classes tab](https://storage.googleapis.com/lightly-public/studio/docs/settings_annotation_classes_v1.2.1.png)
+
+In the tab, you can do these tasks:
+
+- Find a class: type a part of its name in `Find or add an annotation class`.
+- Add a class: type its name in the same field. If no class matches the name, press Enter.
+  Otherwise, click `Add new annotation class`.
+- Rename a class: click the pencil button in its row. All annotations of the class get the new
+  name.
+- Change the color of a class: click its color. See [Annotation Class Colors](#annotation-class-colors).
+- Delete a class: click the trash button in its row, then confirm.
+
+Changes in this tab save immediately. You do not have to click `Save changes`.
+
+You can also add a class when you edit annotations in the sample details view.
+
+!!! warning
+    Before you delete a class, make sure that you do not need its annotations. A delete also
+    deletes all annotations of the class, and you cannot undo it. Evaluation runs that use these annotations
+    become out of date.
+
+### Annotation Class Colors
+
+LightlyStudio saves the color of each annotation class in the dataset. All users of the dataset
+see the same colors, and the colors stay after a page reload.
+
+You can change the color of a class in these places:
+
+- The `Annotation classes` tab in `Settings`.
+- The `Annotation Classes` filter in the left sidebar.
+- The annotation list in the sample details view.
+
+LightlyStudio does not save the colors of annotation sources in the dataset. They stay in your
+browser only.
+
 ## Annotations in Python
 
 Use the [Python API](../api/annotation.md) to create annotations and predictions directly, add them from model
