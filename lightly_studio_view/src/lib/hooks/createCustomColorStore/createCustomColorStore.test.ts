@@ -72,6 +72,53 @@ describe('createCustomColorStore previews', () => {
     });
 });
 
+describe('createCustomColorStore saves', () => {
+    const red = { color: '#ff0000', alpha: 1 };
+    const blue = { color: '#0000ff', alpha: 1 };
+
+    // __proto__ is a valid class name and must not hit Object.prototype.
+    test.each(['cat', '__proto__'])('setSavedColor ignores an older sequence for %s', (name) => {
+        const store = createCustomColorStore();
+        const older = store.beginSave(name);
+        const newer = store.beginSave(name);
+
+        store.setSavedColor(name, blue, newer);
+        store.setSavedColor(name, red, older);
+
+        expect(store.getSavedColor(name)).toEqual(blue);
+    });
+
+    test('reset clears saved colors and previews', () => {
+        const store = createCustomColorStore();
+        store.setCustomColor('cat', '#ff0000', 1);
+        store.setPreviewColor('dog', blue, Symbol());
+
+        store.reset();
+
+        expect(get(store.customColorsStore)).toEqual({});
+    });
+
+    test('setSavedColor ignores a save begun before reset', () => {
+        const store = createCustomColorStore();
+        const ticket = store.beginSave('cat');
+
+        store.reset();
+        store.setSavedColor('cat', red, ticket);
+
+        expect(store.getSavedColor('cat')).toBeUndefined();
+        expect(store.getGeneration()).toBe(ticket.generation + 1);
+    });
+
+    test('replaceSavedColors keeps the generation', () => {
+        const store = createCustomColorStore();
+        const generation = store.getGeneration();
+
+        store.replaceSavedColors({ cat: red });
+
+        expect(store.getGeneration()).toBe(generation);
+    });
+});
+
 describe('createCustomColorStore', () => {
     test('keeps state independent between instances', () => {
         const first = createCustomColorStore();

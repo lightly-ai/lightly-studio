@@ -7,7 +7,7 @@
 ## Goal
 
 Save custom annotation class colors per dataset in the database, so all users of a dataset
-see them after a reload. Add "Reset to default" to the color picker.
+see them after a reload. "Reset to default" in the color picker (PR 9) is parked; see PR 9.
 
 ## Architecture
 
@@ -41,7 +41,6 @@ Svelte 5, TanStack Query, hey-api generated client, vitest, pytest.
   - Apply saves it, Cancel discards it.
   - A refetch of the same dataset keeps it; a dataset change clears it.
   - A failed save shows a toast and reverts to the saved color.
-- "Reset to default" shows only when the caller passes `onReset`. Only class colors pass it.
 - Existing DuckDB files are not upgraded (as in #2782). PR 1 adds a CHANGELOG note.
 - User-facing text says "annotation class" and "annotation source", never "label".
 
@@ -93,7 +92,7 @@ Cases that no single test covers end to end. Check them during review.
    new one. *Tests: PRs 10, 11, 12.*
 4. **An annotation source and an annotation class have the same name** (e.g. `"Predictions"`).
    Changing one never changes the other. *Tests: PRs 7, 8.*
-5. **A save or reset fails** (network error, class deleted meanwhile, class missing from the
+5. **A save fails** (network error, class deleted meanwhile, class missing from the
    loaded list). A toast shows, and the swatch shows the saved color. *Tests: PRs 10, 11.*
 
 ---
@@ -101,7 +100,7 @@ Cases that no single test covers end to end. Check them during review.
 ## PR stack
 
 PR 1 is based on `main`. Each next PR is based on the
-previous one. Every PR leaves the app working.
+previous one, except PR 9 (off the stack) and PR 10 (based on `main`). Every PR leaves the app working.
 
 **Backend**
 
@@ -111,7 +110,7 @@ previous one. Every PR leaves the app working.
 | 2 | Add a resolver to set an annotation class color | `michal-lig-11355-02-set-color-resolver` | ~115 |
 | 3 | Add an endpoint to set an annotation class color | `michal-lig-11355-03-set-color-endpoint` | ~110 (+ generated) |
 
-**Frontend prefactors** (no user-visible change, except the bug fix in PR 4 and the reset button in PR 9)
+**Frontend prefactors** (no user-visible change, except the bug fix in PR 4)
 
 | # | Title | Branch | Est. LOC |
 |---|-------|--------|----------|
@@ -121,7 +120,7 @@ previous one. Every PR leaves the app working.
 | 7 | Color annotations by source through getColorBySource | `michal-lig-11355-07-get-color-by-source` | ~145 |
 | 8 | Keep annotation source colors in their own store | `michal-lig-11355-08-source-color-store` | ~110 |
 | 8b | Pass the source name to AnnotationCanvas in its own field | `michal-lig-11355-08b-canvas-source-name` | ~90 |
-| 9 | Add "Reset to default" to the color picker | `michal-lig-11355-09-reset-to-default` | ~120 |
+| 9 | Add "Reset to default" to the color picker (off the stack) | `michal-lig-11355-09-reset-to-default` | ~120 |
 | 10 | Let the color picker save changes asynchronously | `michal-lig-11355-10-async-color-save` | ~140 |
 
 **Frontend feature**
@@ -131,7 +130,10 @@ previous one. Every PR leaves the app working.
 | 11 | Save annotation class colors in the dataset | `michal-lig-11355-11-save-class-colors` | ~195 |
 | 12 | Load annotation class colors from the dataset | `michal-lig-11355-12-load-class-colors` | ~125 |
 
-PR 8b was added after PRs 1–8 were open; PR 9 will be based on it.
+PR 8b was added after PRs 1–8 were open.
+
+PR 9 is off the stack while we decide whether we want the feature. It stays open on `main`;
+PR 10 is based on `main` and PRs 10–12 do not use it.
 
 PR 12 must come after PR 11: loading colors without saving them would wipe the colors set in
 the current session on every refetch.
@@ -323,6 +325,8 @@ Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnn
 
 ## PR 9: Add "Reset to default" to the color picker
 
+**Status:** Off the stack, under discussion (#3092, based on `main`). PRs 10–12 were rebuilt without it. If it lands after them, it also adds `resetColor` through `onCommit` (widen it and `setSavedColor` to `CustomColor | undefined`, deleting on `undefined`), clearing in `saveClassColor` (`null` body), and their tests.
+
 **Files:**
 - Modify: `lightly_studio_view/src/lib/components/ui/color-picker/color-picker-panel.svelte`, `color-picker-panel.test.ts`
 - Modify: `color-picker-state.svelte.ts`, `color-picker.svelte`, `color-picker.test.ts`
@@ -354,23 +358,23 @@ Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnn
 - Factory adds:
   - `type SaveTicket = { seq: number; generation: number }`.
   - `beginSave(name: string): SaveTicket` — next save sequence for `name`, plus the current generation.
-  - `setSavedColor(name: string, color: CustomColor | undefined, ticket: SaveTicket): void` — applies only if `ticket.generation` is current and `ticket.seq` is greater than the last applied for `name`; `undefined` deletes.
+  - `setSavedColor(name: string, color: CustomColor, ticket: SaveTicket): void` — applies only if `ticket.generation` is current and `ticket.seq` is greater than the last applied for `name`.
   - `reset(): void` — clears the saved layer, the previews and the counters, and bumps the generation, so saves begun before it never apply. PR 12 calls it on dataset change.
   - `replaceSavedColors` keeps the counters and the generation.
   - `getGeneration(): number` — the current generation.
-- `createColorPicker` gets `onCommit?: (color: CustomColor | undefined) => Promise<void>`; `useClassColorPicker(getName, options?: { onCommit? })` passes it through. `useSourceColorPicker` has no `onCommit`.
+- `createColorPicker` gets `onCommit?: (color: CustomColor) => Promise<void>`; `useClassColorPicker(getName, options?: { onCommit? })` passes it through. `useSourceColorPicker` has no `onCommit`.
   - A session also records `getGeneration()` when it starts. If the generation changed by Apply (a dataset switch with the picker still open), Apply acts as Cancel and does not call `onCommit`.
   - `finishColorChange(applied: boolean): Promise<void>`. On Apply: capture `owner`, the preview value and `ticket = beginSave(label)`, end the session, await `onCommit?.(value)`, on success `setSavedColor(label, value, ticket)`, then always `clearPreviewColor(label, owner)`. A rejection is not rethrown; the `onCommit` owner shows the toast.
-  - `resetColor(): Promise<void>`: same flow with a new owner, `setPreviewColor(label, null, owner)`, `value = undefined`.
+  - A `setColor` after the generation changed ends the old session and starts a new one.
 
-- [ ] **Step 1: Write failing tests:** `'apply calls onCommit with the applied color'`, `'shows the preview until onCommit settles'`, `'reverts to the saved color when onCommit rejects'`, `'keeps the saved color when a reset fails'`, `'reopening while a save is pending keeps the new preview'` (Apply `#aaaaaa` with deferred `onCommit`, `setColor('#bbbbbb')`, resolve → effective `#bbbbbb`, saved `#aaaaaa`), `'an older save that resolves late does not overwrite a newer one'` (Apply A, Apply B, resolve B then A → saved B), `'apply after a store reset acts as cancel'` (preview, `reset()`, Apply → `onCommit` not called); factory `'setSavedColor ignores an older sequence'`, `'reset clears saved colors and previews'`, `'setSavedColor ignores a save begun before reset'`.
+- [ ] **Step 1: Write failing tests:** `'apply calls onCommit with the applied color'`, `'shows the preview until onCommit settles'`, `'reverts to the saved color when onCommit rejects'`, `'reopening while a save is pending keeps the new preview'` (Apply `#aaaaaa` with deferred `onCommit`, `setColor('#bbbbbb')`, resolve → effective `#bbbbbb`, saved `#aaaaaa`), `'an older save that resolves late does not overwrite a newer one'` (Apply A, Apply B, resolve B then A → saved B), `'apply after a store reset acts as cancel'` (preview, `reset()`, Apply → `onCommit` not called), `'a color picked after a store reset starts a new session'`; factory `'setSavedColor ignores an older sequence'`, `'reset clears saved colors and previews'`, `'setSavedColor ignores a save begun before reset'`.
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
 
 ## PR 11: Save annotation class colors in the dataset
 
-**Purpose:** Apply and Reset in the class legend save to the server. Colors stay in the local saved layer as before; loading comes in PR 12.
+**Purpose:** Apply in the class legend saves to the server. Colors stay in the local saved layer as before; loading comes in PR 12.
 
 **Files:**
 - Modify: `lightly_studio_view/src/lib/hooks/useCustomLabelColors.ts` (name→ID map); Create `useCustomLabelColors.test.ts`.
@@ -386,9 +390,9 @@ Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnn
   - `resetAnnotationClasses(datasetId: string): void` — no-op if `datasetId` is the current one; otherwise records it and clears the name→ID map (PR 12 extends it).
   - `setAnnotationClasses(datasetId: string, classes: Pick<AnnotationLabelTable, 'annotation_label_id' | 'annotation_label_name' | 'dataset_id' | 'color' | 'alpha'>[]): void` — ignored unless `datasetId` is the current one; replaces the name→ID map with the classes whose `dataset_id` equals `datasetId` (PR 12 extends it).
   - `getAnnotationClassId(name: string): string | undefined`
-  - `useSaveAnnotationClassColor(): { saveClassColor: (name: string, color: CustomColor | undefined) => Promise<void> }`. Unknown name: `toast.error('Could not save the annotation class color.')` and throw. Otherwise `mutateAsync({ path: { label_id }, body: { color: color?.color ?? null, alpha: color?.alpha ?? null } })`; `onError` shows the same toast; `onSettled` invalidates queries whose `(q.queryKey[0] as { _id?: string })?._id` is `'readAnnotationLabels'` or `'readAnnotationLabelsWithCounts'`. Saves of the same class ID run one at a time: each chains on the previous save's promise for that ID (module-level `Map<string, Promise<unknown>>`), so the server stores the last applied color.
+  - `useSaveAnnotationClassColor(): { saveClassColor: (name: string, color: CustomColor) => Promise<void> }`. Unknown name: `toast.error('Could not save the annotation class color.')` and throw. Otherwise `mutateAsync({ path: { label_id }, body: { color: color.color, alpha: color.alpha } })`; `onError` shows the same toast; `onSettled` invalidates queries whose `(q.queryKey[0] as { _id?: string })?._id` is `'readAnnotationLabels'` or `'readAnnotationLabelsWithCounts'`. Saves of the same class ID run one at a time: each chains on the previous save's promise for that ID (module-level `Map<string, Promise<unknown>>`), so the server stores the last applied color.
 
-- [ ] **Step 1: Write failing tests** (mock `@tanstack/svelte-query` as in `useAnnotationClasses.svelte.test.ts`): `'saves the color for the class ID'`, `'clears the color on reset'`, `'rejects and toasts for an unknown class'`, `'invalidates only the class list queries'`, `'sends a second save of the same class only after the first settles'`; `useCustomLabelColors.test.ts`: `'setAnnotationClasses maps names to IDs'`, `'resetAnnotationClasses to another dataset clears the class IDs'`, `'setAnnotationClasses ignores classes of another dataset'`.
+- [ ] **Step 1: Write failing tests** (mock `@tanstack/svelte-query` as in `useAnnotationClasses.svelte.test.ts`): `'saves the color for the class ID'`, `'rejects and toasts for an unknown class'`, `'invalidates only the class list queries'`, `'sends a second save of the same class only after the first settles'`; `useCustomLabelColors.test.ts`: `'setAnnotationClasses maps names to IDs'`, `'resetAnnotationClasses to another dataset clears the class IDs'`, `'setAnnotationClasses ignores classes of another dataset'`.
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement** and add the stubs.
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
@@ -412,4 +416,4 @@ Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnn
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass.
-- [ ] **Step 5: Manual check** with `cd lightly_studio && make build-lightly_studio_view` and a fresh DuckDB file: set a class color and reload (kept); rename (kept); reset and reload (default); add a class with a legend picker open (preview stays); switch dataset with a picker open (nothing carries over); set a source color (class color unchanged). Commit on request.
+- [ ] **Step 5: Manual check** with `cd lightly_studio && make build-lightly_studio_view` and a fresh DuckDB file: set a class color and reload (kept); rename (kept); add a class with a legend picker open (preview stays); switch dataset with a picker open (nothing carries over); set a source color (class color unchanged). Commit on request.
