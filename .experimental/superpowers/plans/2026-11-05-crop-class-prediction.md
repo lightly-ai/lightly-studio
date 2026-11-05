@@ -218,7 +218,7 @@ def predict_annotation_classes(
 
 The caller (Task 4) has already checked that the annotation exists and is croppable.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Use the `patched_registry` pattern from `tests/embed/test_embed_samples.py` (a fresh `EmbedderRegistry` with `RandomEmbedder`, patched into `embedder_registry.get_registry`). `RandomEmbedder` embeds crops and text. Images need real files for cropping: write small PNGs to `tmp_path`.
 
@@ -240,16 +240,16 @@ def test_predict_annotation_classes__box_outside_image_returns_empty() -> None:
     # annotation x=10_000 on a 64×64 image → []  (Review Focus 2)
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd lightly_studio && uv run pytest tests/services/annotations_service/test_predict_annotation_classes.py -v`
 Expected: FAIL with `ImportError` for `predict_annotation_classes`.
 
-- [ ] **Step 3: Rename `_embed_annotation_chunk` to `embed_annotation_crops`**
+- [x] **Step 3: Rename `_embed_annotation_chunk` to `embed_annotation_crops`**
 
 Run `uv run pytest tests/embed/test_embed_samples.py` after the rename. Expected: unchanged pass count.
 
-- [ ] **Step 4: Implement `predict_annotation_classes`**
+- [x] **Step 4: Implement `predict_annotation_classes`**
 
 Order:
 1. Annotation collection = the annotation's `SampleTable.collection_id`. `resolve_default_embedder(..., embedder_type=ImageCropPathEmbedder)`; `None` → `[]`.
@@ -259,11 +259,11 @@ Order:
 5. Text: `resolve_query_embedder(..., embedder_type=TextEmbedder)`; catch `MissingCapabilityError` → no anchors. Embed only class names missing from a module-level `dict[tuple[UUID, str], NDArray[np.float32]]` cache, in one `embed_text` call. Similarity = dot product of L2-normalized vectors.
 6. `score_classes(...)`, map to `AnnotationClassPrediction`, sort descending by score, then by label name for ties.
 
-- [ ] **Step 5: Run tests to verify they pass**
+- [x] **Step 5: Run tests to verify they pass**
 
 Run: same as Step 2. Expected: 5 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lightly_studio/src/lightly_studio/embed/embed_samples.py lightly_studio/src/lightly_studio/services/annotations_service/ lightly_studio/tests/services/annotations_service/test_predict_annotation_classes.py

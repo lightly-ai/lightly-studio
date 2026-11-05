@@ -215,7 +215,7 @@ def embed_annotation_collection(session: Session, annotation_collection_id: UUID
         for sample_id_chunk in batching.batched(
             items=annotation_sample_ids, batch_size=_ANNOTATION_EMBED_BATCH_SIZE
         ):
-            embedded_count = _embed_annotation_chunk(
+            embedded_count = embed_annotation_crops(
                 session=session,
                 embedder=embedder,
                 model_id=model_id,
@@ -406,6 +406,47 @@ def has_frame_embedder(session: Session, collection_id: UUID) -> bool:
     )
 
 
+def embed_annotation_crops(
+    session: Session,
+    embedder: ImageCropPathEmbedder,
+    model_id: UUID,
+    annotation_sample_ids: list[UUID],
+) -> int:
+    """Resolve, embed and store one chunk of annotation crops.
+
+    Crops the embedder drops (see ``kept_indices``) are left out, so the stored sample
+    ids stay aligned with the returned embeddings.
+
+    Args:
+        session: Database session for resolver operations.
+        embedder: The crop embedder resolved for the collection.
+        model_id: The model id the embeddings are stored under.
+        annotation_sample_ids: The annotation ids in this chunk.
+
+    Returns:
+        The number of crops resolved from the chunk, for progress reporting.
+    """
+    annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
+        session=session, annotation_sample_ids=annotation_sample_ids
+    )
+    if not annotation_crops:
+        return 0
+
+    result = embedder.embed_image_crops(crops=[crop.image_crop for crop in annotation_crops])
+    crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
+    kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
+    # The collection-level bar in embed_annotation_collection tracks progress, so the
+    # per-chunk storage bar is disabled to avoid a redundant bar for every chunk.
+    embedding_storage.store_embeddings(
+        session=session,
+        model_id=model_id,
+        sample_ids=kept_sample_ids,
+        embeddings=result.embeddings,
+        show_progress=False,
+    )
+    return len(annotation_crops)
+
+
 def _pool_frame_embeddings(
     embedder: ImagePILEmbedder, frames: list[Image]
 ) -> NDArray[np.float32] | None:
@@ -462,44 +503,3 @@ def _embed_image_chunk(
         embeddings=result.embeddings,
         show_progress=False,
     )
-
-
-def _embed_annotation_chunk(
-    session: Session,
-    embedder: ImageCropPathEmbedder,
-    model_id: UUID,
-    annotation_sample_ids: list[UUID],
-) -> int:
-    """Resolve, embed and store one chunk of annotation crops.
-
-    Crops the embedder drops (see ``kept_indices``) are left out, so the stored sample
-    ids stay aligned with the returned embeddings.
-
-    Args:
-        session: Database session for resolver operations.
-        embedder: The crop embedder resolved for the collection.
-        model_id: The model id the embeddings are stored under.
-        annotation_sample_ids: The annotation ids in this chunk.
-
-    Returns:
-        The number of crops resolved from the chunk, for progress reporting.
-    """
-    annotation_crops = annotation_resolver.get_annotation_crops_for_ids(
-        session=session, annotation_sample_ids=annotation_sample_ids
-    )
-    if not annotation_crops:
-        return 0
-
-    result = embedder.embed_image_crops(crops=[crop.image_crop for crop in annotation_crops])
-    crop_sample_ids = [crop.annotation_sample_id for crop in annotation_crops]
-    kept_sample_ids = [crop_sample_ids[index] for index in result.kept_indices]
-    # The collection-level bar in embed_annotation_collection tracks progress, so the
-    # per-chunk storage bar is disabled to avoid a redundant bar for every chunk.
-    embedding_storage.store_embeddings(
-        session=session,
-        model_id=model_id,
-        sample_ids=kept_sample_ids,
-        embeddings=result.embeddings,
-        show_progress=False,
-    )
-    return len(annotation_crops)

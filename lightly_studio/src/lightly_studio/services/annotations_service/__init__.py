@@ -9,6 +9,10 @@ from lightly_studio.services.annotations_service.delete_annotation import (
 from lightly_studio.services.annotations_service.get_annotation_by_id import (
     get_annotation_by_id,
 )
+from lightly_studio.services.annotations_service.predict_annotation_classes import (
+    AnnotationClassPrediction,
+    predict_annotation_classes,
+)
 from lightly_studio.services.annotations_service.update_annotation import (
     update_annotation,
 )
@@ -32,9 +36,11 @@ from lightly_studio.services.annotations_service.update_temporal_span import (
 )
 
 __all__ = [
+    "AnnotationClassPrediction",
     "create_annotation",
     "delete_annotation",
     "get_annotation_by_id",
+    "predict_annotation_classes",
     "update_annotation",
     "update_annotation_bounding_box",
     "update_annotation_cuboid_3d",
