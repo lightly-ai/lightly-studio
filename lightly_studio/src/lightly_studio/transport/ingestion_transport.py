@@ -68,7 +68,8 @@ class IngestionTransport(Protocol):
             embed: If True, compute embeddings for the new images.
 
         Returns:
-            The sample ID of each new image, by its absolute path. Skipped files have no entry.
+            The sample ID of each new image, by its path as given in `paths`. Skipped files
+            have no entry.
         """
 
     def add_videos(
@@ -91,5 +92,6 @@ class IngestionTransport(Protocol):
             target_fps: The frame rate of the added frames. None adds all frames.
 
         Returns:
-            The sample ID of each new video, by its absolute path. Skipped files have no entry.
+            The sample ID of each new video, by its path as given in `paths`. Skipped files
+            have no entry.
         """
