@@ -2,29 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-from typing import Protocol, TypeAlias
+from typing import Protocol
 from uuid import UUID
 
-from lightly_studio.evaluation.image_dataset_evaluate import (
-    ClassificationEvaluationConfig,
-    EvaluationResult,
-    InstanceSegmentationEvaluationConfig,
-    ObjectDetectionEvaluationConfig,
-    SemanticSegmentationEvaluationConfig,
-)
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.sampling.sampling_config import SamplingConfig
 
-EvaluationConfig: TypeAlias = (
-    ClassificationEvaluationConfig
-    | InstanceSegmentationEvaluationConfig
-    | ObjectDetectionEvaluationConfig
-    | SemanticSegmentationEvaluationConfig
-)
 
-
+# TODO(Iunir, 11/2026): Add evaluation when its config and result models have no DB imports.
 class ComputeTransport(Protocol):
-    """Runs metadata computations, selection and evaluation."""
+    """Runs metadata computations and selection.
+
+    The server finds the matching samples, so a remote call sends no list of sample IDs.
+    """
 
     def compute_typicality(
         self, collection_id: UUID, embedding_model_name: str | None, metadata_name: str
@@ -56,23 +46,10 @@ class ComputeTransport(Protocol):
             The metadata key for the values.
         """
 
-    def select(self, config: SamplingConfig, sample_ids: Sequence[UUID]) -> None:
-        """Select samples from `sample_ids` and tag them with the tag of `config`."""
-
-    def evaluate(
-        self,
-        sample_ids: Sequence[UUID],
-        name: str,
-        gt_annotation_source: str,
-        pred_annotation_source: str,
-        config: EvaluationConfig,
-    ) -> EvaluationResult:
-        """Evaluate predictions against ground truth and store the metrics.
+    def select(self, config: SamplingConfig, query_expr: QueryExpr | None) -> None:
+        """Select samples and tag them with the tag of `config`.
 
         Args:
-            sample_ids: The samples to evaluate.
-            name: The name of the evaluation run.
-            gt_annotation_source: The annotation source with the ground truth.
-            pred_annotation_source: The annotation source with the predictions.
-            config: The evaluation config. Its type sets the evaluation task.
+            config: The sampling config. It also sets the collection.
+            query_expr: The samples to select from. None uses all samples of the collection.
         """
