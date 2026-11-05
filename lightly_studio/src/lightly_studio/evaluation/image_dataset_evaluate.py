@@ -12,9 +12,9 @@ from sqlmodel import Session
 
 from lightly_studio.evaluation import (
     aggregate_metrics,
+    average_precision,
     classification_metric,
     instance_segmentation_metric,
-    object_detection_metric,
     semantic_segmentation_metric,
     validators,
 )
@@ -45,10 +45,15 @@ class ObjectDetectionEvaluationConfig(BaseModel):
             Stored in the run config for reproducibility.
         classwise: If True, match predictions and ground truths only within the
             same annotation class. If False, match globally across all annotation classes.
+        compute_average_precision: If True, also store the per-class average
+            precision at the COCO IoU thresholds. Off by default, because it matches
+            the annotations once per threshold. Average precision always matches
+            predictions within their own class, even if ``classwise`` is False.
     """
 
     iou_threshold: float = Field(default=0.5, ge=0.0, le=1.0)
     classwise: bool = True
+    compute_average_precision: bool = False
 
 
 class EvaluationResult(BaseModel):
@@ -164,11 +169,12 @@ class ImageDatasetEvaluate:
             task_type=EvaluationTaskType.OBJECT_DETECTION,
             config_json=config.model_dump(),
         )
-        object_detection_metric.create_and_persist_object_detection_metrics_per_sample(
+        average_precision.create_and_persist_object_detection_metrics(
             session=self.session,
             data=data,
             iou_threshold=config.iou_threshold,
             classwise=config.classwise,
+            compute_average_precision=config.compute_average_precision,
         )
         return EvaluationResult.from_evaluation_data(data)
 

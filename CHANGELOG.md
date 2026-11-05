@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
 - Annotation class colors are saved in the dataset and shared by all users of it.
 - Filter samples by evaluation run and per-sample metrics in the GUI query filter using `sample_evaluation(...)`.
+- Python SDK: Store the per-class average precision of object-detection runs at each IoU threshold when `compute_average_precision=True` is set in `ObjectDetectionEvaluationConfig`.
 
 ### Changed
 
