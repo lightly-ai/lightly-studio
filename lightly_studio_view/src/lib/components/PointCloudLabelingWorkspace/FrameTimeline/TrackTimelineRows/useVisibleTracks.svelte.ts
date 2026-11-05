@@ -61,8 +61,8 @@ export function useVisibleTracks({ getTracks, getSelectedAnnotationId, getStorag
     });
 
     function setSelection(next: string[]) {
-        selection = next;
-        write(storageKey, next);
+        selection = [...new Set(next)];
+        write(storageKey, selection);
     }
 
     return {

@@ -22,8 +22,9 @@
             label: `${track.annotation_label_name} · Track ${track.object_track_number}`
         }))
     );
+    // Drop keys of deleted tracks and repeats, so the count never exceeds the track total.
     const existingKeys = $derived(
-        selectedKeys.filter((key) => items.some((item) => item.value === key))
+        items.map((item) => item.value).filter((key) => selectedKeys.includes(key))
     );
 </script>
 
