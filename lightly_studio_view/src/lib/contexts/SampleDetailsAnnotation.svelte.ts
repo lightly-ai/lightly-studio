@@ -25,9 +25,9 @@ export type AnnotationLabelContext = {
     // Set by useAnnotationTarget only.
     hiddenAnnotationSources?: string[];
 
-    // A new source name typed on this page. It may be the target before the source exists.
-    // Set by useSetTargetSource only.
-    typedAnnotationSource?: string | null;
+    // A new source name typed on this page, with its collection. It may be the target of that
+    // collection before the source exists. Set by useSetTargetSource only.
+    typedAnnotationSource?: { collectionId: string; name: string } | null;
 
     // The annotation type selected via toolbar.
     annotationType?: AnnotationType | null;

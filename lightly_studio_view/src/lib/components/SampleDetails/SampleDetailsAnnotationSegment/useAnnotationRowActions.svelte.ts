@@ -1,6 +1,5 @@
 import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
-import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-import { useDeleteAnnotationWithUndo, useStickyClass } from '$lib/hooks';
+import { useAnnotationLabelContext, useDeleteAnnotationWithUndo, useStickyClass } from '$lib/hooks';
 import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
 
 interface UseAnnotationRowActionsParams {
@@ -11,11 +10,23 @@ interface UseAnnotationRowActionsParams {
     refetch: () => void;
 }
 
+interface UseAnnotationRowActionsReturn {
+    select: (annotationId: string) => void;
+    /** A click on the row. A Space pan must not select. */
+    toggleSelection: (annotationId: string) => void;
+    toggleLock: (annotationId: string) => void;
+    remove: (annotation: AnnotationView) => Promise<void>;
+    /** A relabel is an explicit class pick: it becomes the class for new annotations. */
+    relabel: (annotation: AnnotationView, className: string) => void;
+}
+
 /**
  * What a row of the Annotations panel does: select, lock, delete with undo and relabel its
  * annotation. Call during component init: it reads the annotation label context.
  */
-export const useAnnotationRowActions = (params: UseAnnotationRowActionsParams) => {
+export const useAnnotationRowActions = (
+    params: UseAnnotationRowActionsParams
+): UseAnnotationRowActionsReturn => {
     const { getCollectionId, getAnnotations } = params;
     const {
         context,
@@ -37,7 +48,6 @@ export const useAnnotationRowActions = (params: UseAnnotationRowActionsParams) =
 
     return {
         select,
-        /** A click on the row. A Space pan must not select. */
         toggleSelection: (annotationId: string) => {
             if (!params.getIsPanModeEnabled()) select(annotationId);
         },
@@ -50,7 +60,6 @@ export const useAnnotationRowActions = (params: UseAnnotationRowActionsParams) =
             const isDeleted = await deleteWithUndo(annotation, params.refetch);
             if (isDeleted && context.annotationId === annotation.sample_id) setAnnotationId(null);
         },
-        // A relabel is an explicit class pick: it becomes the class for new annotations.
         relabel: (annotation: AnnotationView, className: string) => {
             pickClass(getCollectionId(), className);
             setLastCreatedAnnotationId(null);
