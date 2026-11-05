@@ -353,7 +353,7 @@ type AnnotationClassPredictionContext = {
 
 Context pattern as in `lib/contexts/SampleDetailsAnnotation.svelte.ts`.
 
-- [ ] **Step 1: Write the failing tests** (mock `predictAnnotationClasses`)
+- [x] **Step 1: Write the failing tests** (mock `predictAnnotationClasses`)
 
 ```ts
 it('goes loading → ready with the top 3 of the response');
@@ -363,20 +363,20 @@ it('drops a late response for an older annotation');     // Review Focus 3:
 // predict(A) pending, predict(B) resolves first, then A resolves → state stays B
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd lightly_studio_view && npx vitest run src/lib/hooks/useAnnotationClassPrediction`
 Expected: FAIL, module not found.
 
-- [ ] **Step 3: Implement the hook**
+- [x] **Step 3: Implement the hook**
 
 Track the latest requested annotation ID; ignore a resolution whose ID is not the latest.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: same as Step 2. Expected: 4 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lightly_studio_view/src/lib/hooks/useAnnotationClassPrediction/

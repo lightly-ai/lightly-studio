@@ -34,6 +34,10 @@ export { useFeatureFlags } from '$lib/hooks/useFeatureFlags/useFeatureFlags';
 export { useSelectAll } from '$lib/hooks/useSelectAll/useSelectAll';
 export { useTextEmbedding } from '$lib/hooks/useTextEmbedding/useTextEmbedding';
 export { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
+export {
+    createAnnotationClassPredictionContext,
+    useAnnotationClassPredictionContext
+} from '$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte';
 export { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
 export { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
 export { useSeedAnnotationSourceFilter } from '$lib/hooks/useSeedAnnotationSourceFilter/useSeedAnnotationSourceFilter.svelte';
