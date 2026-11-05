@@ -9,7 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Annotation class colors are saved in the dataset.
 - Python SDK: Added Python 3.15 support.
 - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
 - Filter samples by evaluation run and per-sample metrics in the GUI query filter using `sample_evaluation(...)`.
