@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- BREAKING: The GUI runs on PostgreSQL only on an enterprise server, which sets `LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise`. For a local run, use the default DuckDB database.
 - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
 - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
 

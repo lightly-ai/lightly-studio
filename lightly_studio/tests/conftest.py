@@ -21,6 +21,8 @@ from lightly_studio.api.app import app
 from lightly_studio.api.routes.api import analytics
 from lightly_studio.database import db_manager
 from lightly_studio.database.db_manager import DatabaseBackend, DatabaseEngine
+from lightly_studio.dataset import env
+from lightly_studio.deployment import DeploymentMode
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
@@ -84,6 +86,13 @@ def _disable_analytics(mocker: MockerFixture) -> None:
     mocker.patch.object(tracking, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
     mocker.patch.object(analytics, "LIGHTLY_STUDIO_ANALYTICS_ENABLED", False)
     mocker.patch.object(tracking, "_tracker", None)
+
+
+@pytest.fixture(autouse=True)
+def _match_deployment_mode(mocker: MockerFixture, _use_postgres: bool) -> None:
+    """Set the deployment mode that matches the test database backend, as on an installation."""
+    mode = DeploymentMode.ENTERPRISE if _use_postgres else DeploymentMode.LOCAL
+    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", mode.value)
 
 
 @pytest.fixture(scope="session")
