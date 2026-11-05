@@ -31,9 +31,18 @@ vi.mock('$lib/hooks/useInvalidateAnnotationGridQueries', () => ({
 
 describe('useCreateAnnotation', () => {
     const invalidateQueries = vi.fn();
+    const mockMutateAsync = vi.fn();
+    const created = {
+        sample_id: 'created-annotation',
+        annotation_type: 'object_detection',
+        annotation_label: { annotation_label_name: 'car' }
+    };
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.mocked(createMutation).mockReturnValue({
+            mutateAsync: mockMutateAsync
+        } as unknown as ReturnType<typeof createMutation>);
         useInvalidateAnnotationGridQueries.mockReturnValue(invalidateAnnotationGridQueries);
         vi.mocked(useQueryClient).mockReturnValue({
             invalidateQueries
@@ -41,15 +50,7 @@ describe('useCreateAnnotation', () => {
     });
 
     it('invalidates annotation-bearing grids, counts, and sources after a successful create', async () => {
-        vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: (data: unknown) => void }) => {
-                opts.onSuccess({
-                    sample_id: 'created-annotation',
-                    annotation_type: 'object_detection',
-                    annotation_label: { annotation_label_name: 'car' }
-                });
-            }
-        } as unknown as ReturnType<typeof createMutation>);
+        mockMutateAsync.mockResolvedValue(created);
 
         const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
         await createAnnotation({
@@ -72,15 +73,7 @@ describe('useCreateAnnotation', () => {
     });
 
     it('fires annotation_created with correct properties on success', async () => {
-        vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: (data: unknown) => void }) => {
-                opts.onSuccess({
-                    sample_id: 'created-annotation',
-                    annotation_type: 'object_detection',
-                    annotation_label: { annotation_label_name: 'car' }
-                });
-            }
-        } as unknown as ReturnType<typeof createMutation>);
+        mockMutateAsync.mockResolvedValue(created);
 
         const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
         await createAnnotation({
@@ -95,5 +88,37 @@ describe('useCreateAnnotation', () => {
             parent_sample_type: 'images',
             label_name: 'car'
         });
+    });
+
+    it('calls mutateAsync with only the variables and returns the response', async () => {
+        mockMutateAsync.mockResolvedValue(created);
+        const inputs = {
+            parent_sample_id: 's1',
+            annotation_type: 'object_detection',
+            annotation_label_id: 'l1'
+        } as AnnotationCreateInput;
+
+        const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
+        const result = await createAnnotation(inputs);
+
+        expect(result).toBe(created);
+        expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+        expect(mockMutateAsync.mock.calls[0]).toEqual([
+            { path: { collection_id: 'col-1' }, body: inputs }
+        ]);
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledTimes(1);
+        expect(trackEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects with the same error and does not refetch when mutateAsync rejects', async () => {
+        const error = new Error('boom');
+        mockMutateAsync.mockRejectedValue(error);
+
+        const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
+
+        await expect(createAnnotation({} as AnnotationCreateInput)).rejects.toBe(error);
+        expect(invalidateAnnotationGridQueries).not.toHaveBeenCalled();
+        expect(invalidateQueries).not.toHaveBeenCalled();
+        expect(trackEvent).not.toHaveBeenCalled();
     });
 });

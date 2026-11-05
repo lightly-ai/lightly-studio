@@ -1,0 +1,67 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import { useDeleteAnnotationWithUndo } from './useDeleteAnnotationWithUndo.svelte';
+
+const mocks = vi.hoisted(() => ({
+    deleteAnnotation: vi.fn(),
+    addDeleteToUndoStack: vi.fn()
+}));
+
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({ data: [{ annotation_label_id: 'l1' }] })
+}));
+vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
+    useAnnotationCollections: () => ({ data: [] })
+}));
+vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
+    useCreateAnnotation: () => ({ createAnnotation: vi.fn() })
+}));
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: () => ({ deleteAnnotation: mocks.deleteAnnotation })
+}));
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({ addReversibleAction: vi.fn() })
+}));
+vi.mock('$lib/services/addAnnotationDeleteToUndoStack', () => ({
+    addAnnotationDeleteToUndoStack: mocks.addDeleteToUndoStack
+}));
+vi.mock('svelte-sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+const annotation = { sample_id: 'a1', annotation_type: 'object_detection' } as AnnotationView;
+
+describe('useDeleteAnnotationWithUndo', () => {
+    beforeEach(() => vi.clearAllMocks());
+
+    it('adds the undo after the delete succeeded', async () => {
+        const refetch = vi.fn();
+        const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');
+
+        expect(await deleteWithUndo(annotation, refetch)).toBe(true);
+
+        expect(mocks.addDeleteToUndoStack).toHaveBeenCalledOnce();
+        expect(refetch).toHaveBeenCalled();
+    });
+
+    it('adds no undo when the delete fails', async () => {
+        mocks.deleteAnnotation.mockRejectedValueOnce(new Error('offline'));
+        const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');
+
+        expect(await deleteWithUndo(annotation, vi.fn())).toBe(false);
+
+        expect(mocks.addDeleteToUndoStack).not.toHaveBeenCalled();
+    });
+
+    it('deletes once while a delete runs', async () => {
+        let finish = () => {};
+        mocks.deleteAnnotation.mockReturnValueOnce(new Promise<void>((r) => (finish = r)));
+        const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');
+
+        const first = deleteWithUndo(annotation, vi.fn());
+        expect(await deleteWithUndo(annotation, vi.fn())).toBe(false);
+        finish();
+        await first;
+
+        expect(mocks.deleteAnnotation).toHaveBeenCalledOnce();
+        expect(mocks.addDeleteToUndoStack).toHaveBeenCalledOnce();
+    });
+});
