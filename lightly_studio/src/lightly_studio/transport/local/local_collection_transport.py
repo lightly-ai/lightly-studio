@@ -5,7 +5,12 @@ from __future__ import annotations
 from uuid import UUID
 
 from lightly_studio.database import db_manager
-from lightly_studio.models.collection import CollectionCreate, CollectionView, SampleType
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionTable,
+    CollectionView,
+    SampleType,
+)
 from lightly_studio.resolvers import collection_resolver
 
 
@@ -17,23 +22,23 @@ class LocalCollectionTransport:
         created = collection_resolver.create(
             session=db_manager.persistent_session(), collection=collection
         )
-        return CollectionView.model_validate(created)
+        return _to_view(collection=created)
 
     def get_by_id(self, collection_id: UUID) -> CollectionView | None:
         """Get a collection by ID, or None if it does not exist."""
         collection = collection_resolver.get_by_id(
             session=db_manager.persistent_session(), collection_id=collection_id
         )
-        return None if collection is None else CollectionView.model_validate(collection)
+        return None if collection is None else _to_view(collection=collection)
 
     def get_by_name(self, name: str, parent_collection_id: UUID | None) -> CollectionView | None:
         """Get a collection by name under a parent, or None if it does not exist."""
-        collection_id = collection_resolver.get_by_name(
+        collection = collection_resolver.get_table_by_name(
             session=db_manager.persistent_session(),
             name=name,
             parent_collection_id=parent_collection_id,
         )
-        return None if collection_id is None else self.get_by_id(collection_id=collection_id)
+        return None if collection is None else _to_view(collection=collection)
 
     def get_or_create_child(
         self, collection_id: UUID, sample_type: SampleType, name: str | None
@@ -45,3 +50,13 @@ class LocalCollectionTransport:
             sample_type=sample_type,
             name=name,
         )
+
+
+def _to_view(collection: CollectionTable) -> CollectionView:
+    """Convert a collection to a view without its child collections."""
+    return CollectionView.model_validate(
+        {
+            **collection.model_dump(),
+            "group_component_definition": collection.group_component_definition,
+        }
+    )

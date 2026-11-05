@@ -9,7 +9,10 @@ from lightly_studio.models.collection import CollectionCreate, CollectionView, S
 
 
 class CollectionTransport(Protocol):
-    """Creates and finds collections."""
+    """Creates and finds collections.
+
+    The returned views do not include the child collections.
+    """
 
     def create(self, collection: CollectionCreate) -> CollectionView:
         """Create a collection.

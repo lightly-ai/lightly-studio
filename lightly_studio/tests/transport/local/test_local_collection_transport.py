@@ -30,6 +30,24 @@ class TestLocalCollectionTransport:
         assert child.parent_collection_id == root.collection_id
         assert child.dataset_id == root.dataset_id
 
+    def test_get_by_id__no_children(self) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        root = transport.create(
+            collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
+        )
+        transport.create(
+            collection=CollectionCreate(
+                name="child",
+                sample_type=SampleType.ANNOTATION,
+                parent_collection_id=root.collection_id,
+            )
+        )
+
+        fetched = transport.get_by_id(collection_id=root.collection_id)
+
+        assert fetched is not None
+        assert fetched.children == []
+
     def test_create__duplicate_name(self) -> None:
         transport: CollectionTransport = LocalCollectionTransport()
         collection = CollectionCreate(name="root", sample_type=SampleType.IMAGE)
