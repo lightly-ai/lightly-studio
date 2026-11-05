@@ -68,13 +68,14 @@ export const useAnnotationClasses = (
             body: { annotation_label_name: name }
         });
     // Custom colors are stored by class name, so a rename moves the color to the new name.
-    const { getCustomColor, setCustomColor, deleteCustomColor } = useCustomLabelColors();
+    const { getSavedColor, setCustomColor, deleteCustomColor } = useCustomLabelColors();
     const renameClass = async (labelId: string, oldName: string, name: string) => {
         await updateMut.mutateAsync({
             path: { label_id: labelId },
             body: { dataset_id: getParams().datasetId, annotation_label_name: name }
         });
-        const customColor = getCustomColor(oldName);
+        // Read the saved color, so an open picker preview is not saved under the new name.
+        const customColor = getSavedColor(oldName);
         if (customColor && oldName !== name) {
             setCustomColor(name, customColor.color, customColor.alpha);
             deleteCustomColor(oldName);

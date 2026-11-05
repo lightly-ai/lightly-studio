@@ -26,4 +26,32 @@ describe('AnnotationColorLegend', () => {
 
         expect(getCustomColor(defaultProps.labelName)).toBeUndefined();
     });
+
+    it('keeps full opacity when Apply is clicked without changes', async () => {
+        const { getCustomColor } = useCustomLabelColors();
+        render(AnnotationColorLegend, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Change the color of cat' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+        expect(getCustomColor(defaultProps.labelName)?.alpha).toBe(1);
+    });
+
+    it('keeps the selected swatch background when Apply is clicked without changes', async () => {
+        render(AnnotationColorLegend, { props: { ...defaultProps, selected: true } });
+        const swatch = screen.getByRole('button', { name: 'Change the color of cat' })
+            .firstElementChild as HTMLElement;
+        const backgroundBefore = swatch.style.backgroundColor;
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Change the color of cat' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+        expect(swatch.style.backgroundColor).toBe(backgroundBefore);
+    });
+
+    it('names the picker button after the class', () => {
+        render(AnnotationColorLegend, { props: defaultProps });
+
+        expect(screen.getByRole('button', { name: 'Change the color of cat' })).toBeInTheDocument();
+    });
 });

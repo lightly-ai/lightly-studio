@@ -120,6 +120,7 @@ previous one. Every PR leaves the app working.
 | 6 | Keep color previews in a separate layer | `michal-lig-11355-06-preview-layer` | ~170 |
 | 7 | Color annotations by source through getColorBySource | `michal-lig-11355-07-get-color-by-source` | ~145 |
 | 8 | Keep annotation source colors in their own store | `michal-lig-11355-08-source-color-store` | ~110 |
+| 8b | Pass the source name to AnnotationCanvas in its own field | `michal-lig-11355-08b-canvas-source-name` | ~90 |
 | 9 | Add "Reset to default" to the color picker | `michal-lig-11355-09-reset-to-default` | ~120 |
 | 10 | Let the color picker save changes asynchronously | `michal-lig-11355-10-async-color-save` | ~140 |
 
@@ -129,6 +130,8 @@ previous one. Every PR leaves the app working.
 |---|-------|--------|----------|
 | 11 | Save annotation class colors in the dataset | `michal-lig-11355-11-save-class-colors` | ~195 |
 | 12 | Load annotation class colors from the dataset | `michal-lig-11355-12-load-class-colors` | ~125 |
+
+PR 8b was added after PRs 1–8 were open; PR 9 will be based on it.
 
 PR 12 must come after PR 11: loading colors without saving them would wipe the colors set in
 the current session on every refetch.
@@ -251,6 +254,11 @@ Delete `getInitialColor`, `getInitialAlpha` and the destructured `getCustomColor
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. If the partial `useCustomLabelColors` mocks in `LabelsMenu.test.ts` or `SampleDetailsClassificationSegment.test.ts` fail, add `setPreviewColor`/`clearPreviewColor: vi.fn()`. Commit on request.
 
+**Deviations (implemented):**
+- `clearCustomColors` also clears previews, so tests and a later dataset reset start clean.
+- Added `getSavedColor(name)` (saved layer only); `hasSavedColor` uses it. `renameClass` in `useAnnotationClasses` reads `getSavedColor`, so a rename while a preview is open does not save the preview (Codex review).
+- `useColorPickerTestWrapper.test.svelte` got a Cancel button for the new hook tests.
+
 ## PR 7: Color annotations by source through getColorBySource
 
 **Purpose:** Readers that color by source say so. The source store is still an alias of the class store, so behavior does not change; PR 8 splits them.
@@ -272,19 +280,46 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
 
+**Deviations (implemented):**
+- `AnnotationCanvas` passes one `CustomColorMaps` object (`{ label, source }`) down the render path, and `resolveNamedColor` picks the map by the flag. This keeps the call sites short.
+- Source pills look up custom colors by `pill.colorKey`. Visible change: a source pill whose class has a custom color now shows the source color, not the class color.
+- `lib/utils/getColorBySource.ts` imports `useCustomSourceColors` by its deep path; the `$lib/hooks` barrel would be a circular import. Other callers use the barrel.
+- The enforce-class test in `SampleAnnotations/index.test.ts` asserts the rendered stroke colors instead of a `getColorBySource` spy (Codex review).
+- Size: ~227 changed lines instead of ~145, ~70 of them tests.
+
 ## PR 8: Keep annotation source colors in their own store
 
 **Files:**
 - Modify: `lightly_studio_view/src/lib/hooks/useCustomSourceColors/useCustomSourceColors.ts` — its own `createCustomColorStore()`; remove the PR 7 comment.
-- Modify: `useColorPicker.svelte.ts`, `useColorPickerTestWrapper.test.svelte`, `useColorPicker.test.ts`, `AnnotationColorLegend.svelte` (`kind: 'class'`), `SideMenu/ColorMarker/ColorMarker.svelte` + `ColorMarker.test.ts` (`kind: 'source'`).
+- Modify: `useColorPicker.svelte.ts`, `useColorPickerTestWrapper.test.svelte`, `useColorPicker.test.ts`, `AnnotationColorLegend.svelte` (`useClassColorPicker`), `SideMenu/ColorMarker/ColorMarker.svelte` + `ColorMarker.test.ts` (`useSourceColorPicker`), `hooks/index.ts`.
 
 **Interfaces:**
-- Produces: `useColorPicker(getLabel: () => string, options: { kind: 'class' | 'source' })`. The union stays inline, not an exported type. `'class'` uses `useCustomLabelColors` + `getColorByLabel`; `'source'` uses `useCustomSourceColors` + `getColorBySource`.
+- Produces: `useClassColorPicker(getName: () => string)` (`useCustomLabelColors` + `getColorByLabel`) and `useSourceColorPicker(getName: () => string)` (`useCustomSourceColors` + `getColorBySource`), replacing `useColorPicker`. Both call the private `createColorPicker(getName, colorStore, getDefaultColor)`, which has no class/source branch.
 
 - [ ] **Step 1: Write failing tests:** `ColorMarker.test.ts` `'a source color does not change the class color with the same name'` (class `Predictions` = `#111111`, Apply `#0000ff` in `ColorMarker` → class store keeps `#111111`, source store has `#0000ff`; switch existing assertions to `useCustomSourceColors()`, and move the `getColorByLabel` spies and mocks to `getColorBySource`); `SampleAnnotation.test.ts` `'a class color does not recolor the source in source mode'`.
 - [ ] **Step 2: Run** them. Expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Verify** `make static-checks && make test` pass. Commit on request.
+
+**Deviations (implemented):**
+- Two hooks instead of a `kind` flag: each caller knows its kind statically (review).
+- `createColorPicker` reads `customColorsStore`. The partial `useCustomLabelColors` mocks in `LabelsMenu.test.ts` and `SampleDetailsClassificationSegment.test.ts` add it.
+- The `customLabelColorsStore` / `customSourceColorsStore` aliases stay: they name the store at call sites, and files that use both stores would have to rename on destructure.
+
+## PR 8b: Pass the source name to AnnotationCanvas in its own field
+
+**Purpose:** Before this stack, `SampleAnnotations` overwrote `annotation_label_name` with the source name; PR 7 added `colorBySource` so the canvas knows how to read it. The field meant two things. Now the canvas gets the source name in its own field. No behavior change.
+
+**Files:**
+- Modify: `lightly_studio_view/src/lib/components/AnnotationCanvas/AnnotationCanvas.svelte` — in both annotation interfaces replace `colorBySource?: boolean` with `sourceName?: string` (comment: if set, color by this source instead of by class). `resolveAnnotationColor` colors by `sourceName` with the source map and `getColorBySource` when set, else by `annotation_label_name` with the label map and `getColorByLabel`. `resolveNamedColor` takes the default color function instead of a boolean.
+- Modify: `SampleAnnotations/index.svelte` — set `sourceName: collectionName`; keep `annotation_label_name` as the class name.
+- Modify: `AnnotationCanvas.test.ts` — the mocked 2D context reads back its last `fillStyle` (it returned a fixed color before, so no color test could fail); new test `'colors an annotation by its source name when set'`.
+
+Out of scope: the `colorBySource` props on `SampleAnnotation`, `SampleDetailsAnnotation` and others (the name predates this stack). `AnnotationItem.svelte` never colors by source and stays unchanged.
+
+- [x] **Step 1: Write failing test.** Failed: stroke had the class color.
+- [x] **Step 2: Implement.**
+- [x] **Step 3: Verify** `make static-checks && make test` pass.
 
 ## PR 9: Add "Reset to default" to the color picker
 
@@ -300,7 +335,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - `ColorPickerPanel` `Props` gets `onReset?: () => void`. When set, a `Button` (`variant="ghost"`, same size classes as Cancel, left side of the actions row, `class="mr-auto"`) shows `Reset to default`.
 - `createColorPickerState` `Options` gets `getOnReset: () => (() => void) | undefined` and returns `resetToDefault(): void`: `cancelScheduledPreview()`, `hasPreviewed = false`, `isOpen = false`, then `getOnReset()?.()`. It does not call `onChange` or `onClose`.
 - `ColorPicker` gets the prop `onReset?: () => void`, passes `getOnReset: () => onReset` to the state, and `onReset={onReset ? picker.resetToDefault : undefined}` to the panel.
-- `useColorPicker` adds `hasCustomColor: boolean` (reactive, from `hasSavedColor`) and `resetColor(): void` (ends any open session, clearing its preview, and deletes the saved entry).
+- `createColorPicker` adds `hasCustomColor: boolean` (reactive, from `hasSavedColor`) and `resetColor(): void` (ends any open session, clearing its preview, and deletes the saved entry).
 
 - [ ] **Step 1: Write failing tests:** panel `'shows Reset to default only when onReset is set'`; picker `'Reset to default calls onReset and closes without onClose'`; hook `'resetColor removes the custom color'` (border equals `getColorByLabel('cat', 1).color`).
 - [ ] **Step 2: Run** `npx vitest run src/lib/components/ui/color-picker src/lib/hooks/useColorPicker`. Expected: FAIL.
@@ -323,7 +358,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
   - `reset(): void` — clears the saved layer, the previews and the counters, and bumps the generation, so saves begun before it never apply. PR 12 calls it on dataset change.
   - `replaceSavedColors` keeps the counters and the generation.
   - `getGeneration(): number` — the current generation.
-- `useColorPicker(getLabel, options: { kind: 'class' | 'source'; onCommit?: (color: CustomColor | undefined) => Promise<void> })`:
+- `createColorPicker` gets `onCommit?: (color: CustomColor | undefined) => Promise<void>`; `useClassColorPicker(getName, options?: { onCommit? })` passes it through. `useSourceColorPicker` has no `onCommit`.
   - A session also records `getGeneration()` when it starts. If the generation changed by Apply (a dataset switch with the picker still open), Apply acts as Cancel and does not call `onCommit`.
   - `finishColorChange(applied: boolean): Promise<void>`. On Apply: capture `owner`, the preview value and `ticket = beginSave(label)`, end the session, await `onCommit?.(value)`, on success `setSavedColor(label, value, ticket)`, then always `clearPreviewColor(label, owner)`. A rejection is not rethrown; the `onCommit` owner shows the toast.
   - `resetColor(): Promise<void>`: same flow with a new owner, `setPreviewColor(label, null, owner)`, `value = undefined`.
@@ -341,7 +376,7 @@ Only these color by source: `SampleAnnotation`, `SampleAnnotations` + `Annotatio
 - Modify: `lightly_studio_view/src/lib/hooks/useCustomLabelColors.ts` (name→ID map); Create `useCustomLabelColors.test.ts`.
 - Modify: `lightly_studio_view/src/routes/datasets/[dataset_id]/[collection_type]/[collection_id]/+layout.svelte`, next to `annotationLabelsQuery`, two effects in this order: `$effect(() => resetAnnotationClasses(collection.dataset_id));` and `$effect(() => { if (annotationLabelsData) setAnnotationClasses(collection.dataset_id, annotationLabelsData); });`. Use `collection.dataset_id`, not the route's `datasetId`: the route param is the root collection ID, while `annotation_label.dataset_id` points to the `dataset` table. The reset runs as soon as the dataset changes, because `annotationLabelsData` is `undefined` while the new class list loads.
 - Create: `lightly_studio_view/src/lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte.ts` + `.svelte.test.ts`; export from `lib/hooks/index.ts`.
-- Modify: `AnnotationColorLegend.svelte`: `useColorPicker(() => labelName, { kind: 'class', onCommit: (color) => saveClassColor(labelName, color) })`.
+- Modify: `AnnotationColorLegend.svelte`: `useClassColorPicker(() => labelName, { onCommit: (color) => saveClassColor(labelName, color) })`.
 - Modify: `CHANGELOG.md`: `- Annotation class colors are saved in the dataset.` (or extend the "Annotation classes" tab entry).
 - Stub the save hook (`vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({ useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) }) }))`) in every suite that renders the legend: `AnnotationColorLegend.test.ts`, `LabelsMenu.test.ts`, `AnnotationClassRow.test.ts`, `AnnotationClassesTab.test.ts`, `SettingsDialog.test.ts`, `SampleDetailsClassificationSegment.test.ts`, `SampleDetailsSidePanelAnnotation.test.ts`, `SampleDetailsAnnotationSegment.test.ts`. Add it to any other suite that fails with "No QueryClient set".
 
