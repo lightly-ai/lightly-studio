@@ -23,7 +23,7 @@ class SamplingConfig(BaseModel):
     n_samples_to_select: int
     sampling_result_tag_name: str
     preselected_tag_name: str | None = None
-    strategies: Sequence[SamplingStrategy]
+    strategies: Sequence[Strategy]
     selected_sequence_length: int | None = Field(
         default=None,
         ge=2,
