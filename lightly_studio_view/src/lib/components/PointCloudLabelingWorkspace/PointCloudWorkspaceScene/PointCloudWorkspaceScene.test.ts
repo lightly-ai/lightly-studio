@@ -58,6 +58,7 @@ const defaultProps: Props = {
     isAddingTrack: false,
     onToggleAddTrack: vi.fn(),
     onExtendTrack: vi.fn(),
+    onDeleteTrack: vi.fn(),
     onStartTrack: vi.fn(),
     onPreviousFrame: vi.fn(),
     onNextFrame: vi.fn()

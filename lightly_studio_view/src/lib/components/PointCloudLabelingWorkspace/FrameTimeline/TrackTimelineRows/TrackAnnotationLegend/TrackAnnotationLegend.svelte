@@ -9,6 +9,6 @@
     </span>
     <span class="flex items-center gap-1">
         <span class="h-2 w-4 rounded-[1px] bg-primary/30"></span>
-        Generated annotation
+        Interpolated annotation
     </span>
 </div>

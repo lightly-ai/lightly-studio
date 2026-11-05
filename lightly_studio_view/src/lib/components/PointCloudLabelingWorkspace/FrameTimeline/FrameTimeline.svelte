@@ -41,6 +41,8 @@
         /** Arms or cancels adding a new track; set only while editing. */
         onAddTrack?: () => void;
         isAddingTrack?: boolean;
+        onDeleteTrack?: (track: SequenceTrackView) => Promise<unknown>;
+        sequenceId?: string;
         onExtendTrack?: (
             track: SequenceTrackView,
             startSeqNumber: number,
@@ -76,6 +78,8 @@
         onAddTrack,
         isAddingTrack = false,
         onExtendTrack,
+        onDeleteTrack,
+        sequenceId,
         onSeekStart,
         onSeekEnd,
         onPreviousSequence,
@@ -110,6 +114,8 @@
         {onAddTrack}
         {isAddingTrack}
         {onExtendTrack}
+        {onDeleteTrack}
+        {sequenceId}
         {onSeekStart}
         {onSeekEnd}
     />

@@ -21,7 +21,7 @@ describe('buildTrackRuns', () => {
         ]);
     });
 
-    it('splits where drawn and generated annotations meet', () => {
+    it('splits where drawn and interpolated annotations meet', () => {
         expect(buildTrackRuns(ticks, annotations([0, 1, 2, 5, 6], [1, 2]))).toEqual([
             { startIndex: 0, endIndex: 0, interpolated: false },
             { startIndex: 1, endIndex: 2, interpolated: true },

@@ -127,6 +127,17 @@
         onSelectAnnotation={layout.onSelect}
         onAddTrack={layout.isEditingMode ? layout.onToggleAddTrack : undefined}
         isAddingTrack={layout.isAddingTrack}
+        sequenceId={layout.sequenceId}
+        onDeleteTrack={layout.isEditingMode
+            ? async (track) => {
+                  const deleted = await layout.onDeleteTrack({
+                      trackId: track.object_track_id,
+                      annotationSourceId: track.annotation_source_id,
+                      annotationIds: track.annotations.map(({ annotation_id }) => annotation_id)
+                  });
+                  if (!deleted) throw new Error('Track not deleted');
+              }
+            : undefined}
         onExtendTrack={layout.isEditingMode
             ? (track, startSeqNumber, endSeqNumber) =>
                   layout.onExtendTrack({

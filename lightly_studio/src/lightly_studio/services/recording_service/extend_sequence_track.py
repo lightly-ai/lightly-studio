@@ -68,7 +68,7 @@ def extend_sequence_track(  # noqa: PLR0913
         raise ValueError("The requested ticks do not exist in this sequence.")
 
     with _EXTEND_LOCK:
-        track = _find_track(
+        track = find_sequence_track(
             session=session,
             dataset_id=dataset_id,
             sequence_id=sequence_id,
@@ -95,13 +95,18 @@ def extend_sequence_track(  # noqa: PLR0913
         )
 
 
-def _find_track(
+def find_sequence_track(
     session: Session,
     dataset_id: UUID,
     sequence_id: UUID,
     track_id: UUID,
     annotation_source_id: UUID,
 ) -> SequenceTrackView:
+    """Return the track's annotations from one source of the sequence.
+
+    Raises:
+        ValueError: If the track has none.
+    """
     tracks = mcap_sequence_track_resolver.get_all(
         session=session,
         dataset_id=dataset_id,

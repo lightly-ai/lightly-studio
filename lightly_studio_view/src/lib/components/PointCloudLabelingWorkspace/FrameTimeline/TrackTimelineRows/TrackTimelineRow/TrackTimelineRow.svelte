@@ -16,6 +16,8 @@
         onExtend?: (track: SequenceTrackView, startSeqNumber: number, endSeqNumber: number) => void;
         onExtendStart?: () => void;
         onExtendEnd?: () => void;
+        /** Set while editing: asks to delete the track. */
+        onRequestDelete?: (track: SequenceTrackView) => void;
     }
 
     let {
@@ -25,7 +27,8 @@
         onSelectPosition,
         onExtend,
         onExtendStart = () => {},
-        onExtendEnd = () => {}
+        onExtendEnd = () => {},
+        onRequestDelete
     }: Props = $props();
     let bar = $state<HTMLElement | null>(null);
 
@@ -35,7 +38,7 @@
             run.startIndex === run.endIndex
                 ? `Frame ${run.startIndex + 1}`
                 : `Frames ${run.startIndex + 1}–${run.endIndex + 1}`;
-        return `${frames} · ${run.interpolated ? 'generated' : 'drawn'}`;
+        return `${frames} · ${run.interpolated ? 'interpolated' : 'drawn'}`;
     };
     const extent = $derived(getTrackExtent(runs));
     const drag = useTrackExtendDrag({
@@ -52,13 +55,26 @@
 </script>
 
 <div class="py-1" data-track-id={track.object_track_id}>
-    <div
-        class="truncate pb-0.5 text-[10px] {isSelected
-            ? 'font-semibold text-primary'
-            : 'text-muted-foreground'}"
-        title={label}
-    >
-        {label}
+    <div class="flex items-center justify-between gap-2 pb-0.5">
+        <div
+            class="truncate text-[10px] {isSelected
+                ? 'font-semibold text-primary'
+                : 'text-muted-foreground'}"
+            title={label}
+        >
+            {label}
+        </div>
+        {#if onRequestDelete}
+            <button
+                type="button"
+                class="shrink-0 rounded-sm px-1 text-xs leading-none text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
+                aria-label={`Delete ${track.annotation_label_name} track ${track.object_track_number}`}
+                title="Delete track"
+                onclick={() => onRequestDelete(track)}
+            >
+                ×
+            </button>
+        {/if}
     </div>
     <div class="relative" bind:this={bar}>
         <button

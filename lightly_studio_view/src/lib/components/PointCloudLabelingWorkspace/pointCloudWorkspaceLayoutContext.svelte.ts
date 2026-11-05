@@ -103,6 +103,12 @@ export interface PointCloudWorkspaceLayoutState {
         startSeqNumber: number;
         endSeqNumber: number;
     }) => void | Promise<unknown>;
+    /** Deletes a track with its cuboids; resolves to whether it was deleted. */
+    onDeleteTrack: (params: {
+        trackId: string;
+        annotationSourceId: string;
+        annotationIds: readonly string[];
+    }) => Promise<boolean>;
     /** Starts an object track from an untracked cuboid. */
     onStartTrack: (annotationId: string) => void | Promise<unknown>;
     /** Navigates to the previous tick. */

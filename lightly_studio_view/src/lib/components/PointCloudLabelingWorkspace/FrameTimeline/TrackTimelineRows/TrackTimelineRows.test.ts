@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import TrackTimelineRows from './TrackTimelineRows.svelte';
+import type { SequenceTrackView } from '$lib/api/lightly_studio_local/types.gen';
 
 const track = {
     object_track_id: 'track-1',
@@ -30,16 +31,16 @@ const pointer = (element: HTMLElement, type: string, clientX = 0) =>
     fireEvent(element, new MouseEvent(type, { bubbles: true, clientX }));
 
 describe('TrackTimelineRows', () => {
-    it('draws one run per stretch of drawn or generated annotations', () => {
+    it('draws one run per stretch of drawn or interpolated annotations', () => {
         render(TrackTimelineRows, { props: defaultProps });
 
         expect(screen.getByRole('group', { name: 'Track annotation legend' })).toBeTruthy();
         expect(screen.getByText('Drawn annotation')).toBeTruthy();
-        expect(screen.getByText('Generated annotation')).toBeTruthy();
+        expect(screen.getByText('Interpolated annotation')).toBeTruthy();
         const runs = screen.getAllByTitle(/^Frames? \d/);
         expect(runs.map((run) => run.getAttribute('title'))).toEqual([
             'Frame 1 · drawn',
-            'Frame 2 · generated',
+            'Frame 2 · interpolated',
             'Frame 4 · drawn'
         ]);
     });
@@ -176,6 +177,105 @@ describe('TrackTimelineRows', () => {
 
             expect(onExtendTrack).not.toHaveBeenCalled();
             expect(onExtendEnd).toHaveBeenCalledOnce();
+        });
+    });
+
+    describe('deleting a track', () => {
+        it('shows no close button unless deleting is enabled', () => {
+            render(TrackTimelineRows, { props: defaultProps });
+            expect(screen.queryByLabelText('Delete truck track 1')).toBeNull();
+        });
+
+        it('asks for confirmation with the cuboid count before deleting', async () => {
+            const onDeleteTrack = vi.fn().mockResolvedValue(undefined);
+            render(TrackTimelineRows, { props: { ...defaultProps, onDeleteTrack } });
+
+            await fireEvent.click(screen.getByLabelText('Delete truck track 1'));
+            expect(onDeleteTrack).not.toHaveBeenCalled();
+            expect(screen.getByText('3 cuboids')).toBeTruthy();
+
+            await fireEvent.click(screen.getByText('Delete track and 3 cuboids'));
+
+            expect(onDeleteTrack).toHaveBeenCalledWith(track);
+        });
+
+        it('does not delete when the dialog is cancelled', async () => {
+            const onDeleteTrack = vi.fn();
+            render(TrackTimelineRows, { props: { ...defaultProps, onDeleteTrack } });
+
+            await fireEvent.click(screen.getByLabelText('Delete truck track 1'));
+            await fireEvent.click(screen.getByText('Cancel'));
+
+            expect(onDeleteTrack).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('with many tracks', () => {
+        const manyTracks: SequenceTrackView[] = Array.from({ length: 14 }, (_, index) => ({
+            ...track,
+            object_track_id: `track-${index + 1}`,
+            object_track_number: index + 1
+        }));
+        const props = { ...defaultProps, tracks: manyTracks, sequenceId: 'sequence-1' };
+
+        it('lists the first ten tracks and says how many are shown', () => {
+            localStorage.clear();
+            const { container } = render(TrackTimelineRows, { props });
+
+            expect(container.querySelectorAll('[data-track-id]')).toHaveLength(10);
+            expect(screen.getByText(/Showing 10 of 14 tracks/)).toBeTruthy();
+        });
+
+        it('lists the track of the selected annotation even when it is not chosen', () => {
+            localStorage.clear();
+            const { container } = render(TrackTimelineRows, {
+                props: {
+                    ...props,
+                    tracks: manyTracks.map((item) => ({
+                        ...item,
+                        annotations: item.annotations.map((annotation) => ({
+                            ...annotation,
+                            annotation_id: `${item.object_track_id}-${annotation.annotation_id}`
+                        }))
+                    })),
+                    selectedAnnotationId: 'track-14-annotation-0'
+                }
+            });
+
+            expect(container.querySelectorAll('[data-track-id]')).toHaveLength(11);
+            expect(container.querySelector('[data-track-id="track-14"]')).toBeTruthy();
+        });
+
+        it('shows only the stored tracks for this sequence', () => {
+            localStorage.setItem(
+                'lightlyStudio_trackTimelineVisibleTracks_sequence-1',
+                JSON.stringify(['track-12-source', 'track-13-source'])
+            );
+            const { container } = render(TrackTimelineRows, { props });
+
+            expect(
+                [...container.querySelectorAll('[data-track-id]')].map((row) =>
+                    row.getAttribute('data-track-id')
+                )
+            ).toEqual(['track-12', 'track-13']);
+            expect(screen.getByText(/Showing 2 of 14 tracks/)).toBeTruthy();
+            localStorage.clear();
+        });
+
+        it('keeps a newly added track listed', async () => {
+            localStorage.clear();
+            const { container, rerender } = render(TrackTimelineRows, { props });
+
+            await rerender({
+                ...props,
+                tracks: [
+                    ...manyTracks,
+                    { ...track, object_track_id: 'track-15', object_track_number: 15 }
+                ]
+            });
+
+            expect(container.querySelector('[data-track-id="track-15"]')).toBeTruthy();
+            expect(container.querySelectorAll('[data-track-id]')).toHaveLength(11);
         });
     });
 });

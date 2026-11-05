@@ -1,6 +1,7 @@
 """Services for recording operations."""
 
 from lightly_studio.services.recording_service import get_tick_data
+from lightly_studio.services.recording_service.delete_sequence_track import delete_sequence_track
 from lightly_studio.services.recording_service.extend_sequence_track import extend_sequence_track
 from lightly_studio.services.recording_service.get_sequence_tracks import get_sequence_tracks
 from lightly_studio.services.recording_service.get_summary import get_mcap_sequence_summary
@@ -11,6 +12,7 @@ from lightly_studio.services.recording_service.get_ticks import (
 from lightly_studio.services.recording_service.start_sequence_track import start_sequence_track
 
 __all__ = [
+    "delete_sequence_track",
     "extend_sequence_track",
     "get_mcap_sequence_summary",
     "get_sequence_tracks",

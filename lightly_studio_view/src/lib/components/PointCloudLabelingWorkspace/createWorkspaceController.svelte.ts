@@ -110,6 +110,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         isAddingTrack: editing.isAddingTrack,
         onToggleAddTrack: editing.toggleAddTrack,
         onExtendTrack: editing.handleExtendTrack,
+        onDeleteTrack: editing.handleDeleteTrack,
         onStartTrack: editing.handleStartTrack,
         onPreviousFrame: playback.goToPreviousFrame,
         onNextFrame: playback.goToNextFrame,

@@ -1,8 +1,10 @@
 <script lang="ts">
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
-    import { Button } from '$lib/components/ui/button';
-    import TrackAnnotationLegend from './TrackAnnotationLegend/TrackAnnotationLegend.svelte';
+    import { DeleteTrackDialog } from './DeleteTrackDialog';
     import TrackTimelineRow from './TrackTimelineRow/TrackTimelineRow.svelte';
+    import { TrackRowsResizer, useTrackRowsHeight } from './TrackRowsResizer';
+    import { TrackTimelineToolbar } from './TrackTimelineToolbar';
+    import { useVisibleTracks } from './useVisibleTracks.svelte';
 
     interface Props {
         ticks: TickView[];
@@ -23,6 +25,10 @@
         ) => void;
         onExtendStart?: () => void;
         onExtendEnd?: () => void;
+        /** Set while editing: deletes a track and its cuboids once confirmed. */
+        onDeleteTrack?: (track: SequenceTrackView) => Promise<unknown>;
+        /** Identifies the sequence, so the chosen tracks are remembered per sequence. */
+        sequenceId?: string;
     }
 
     let {
@@ -36,8 +42,23 @@
         isAddingTrack = false,
         onExtendTrack,
         onExtendStart,
-        onExtendEnd
+        onExtendEnd,
+        onDeleteTrack,
+        sequenceId
     }: Props = $props();
+    const rowsHeight = useTrackRowsHeight();
+    const visible = useVisibleTracks({
+        getTracks: () => tracks,
+        getSelectedAnnotationId: () => selectedAnnotationId,
+        getStorageKey: () =>
+            sequenceId ? `lightlyStudio_trackTimelineVisibleTracks_${sequenceId}` : undefined
+    });
+    let trackToDelete = $state<SequenceTrackView | null>(null);
+    let isDeleteDialogOpen = $state(false);
+    const requestDelete = (track: SequenceTrackView) => {
+        trackToDelete = track;
+        isDeleteDialogOpen = true;
+    };
     const selectedTrackKey = $derived(
         tracks.find((track) =>
             track.annotations.some(
@@ -63,45 +84,49 @@
 </script>
 
 {#if tracks.length > 0 || onStartTrack || onAddTrack}
+    {#if tracks.length > 0}
+        <TrackRowsResizer {rowsHeight} />
+    {/if}
     <div class="border-t px-2 py-1" data-testid="object-track-rows">
-        {#if tracks.length > 0 || onAddTrack || onStartTrack}
-            <div class="mb-1 flex items-center gap-2">
-                {#if onAddTrack}
-                    <Button
-                        variant={isAddingTrack ? 'default' : 'outline'}
-                        size="sm"
-                        class="h-6 text-xs"
-                        onclick={onAddTrack}
-                    >
-                        {isAddingTrack ? 'Cancel' : 'Add object track'}
-                    </Button>
-                    {#if isAddingTrack}
-                        <span class="text-xs text-muted-foreground">
-                            Click in the 3D scene to place the first cuboid.
-                        </span>
-                    {/if}
-                {/if}
-                {#if onStartTrack}
-                    <Button variant="outline" size="sm" class="h-6 text-xs" onclick={onStartTrack}>
-                        Start track from selected cuboid
-                    </Button>
-                {/if}
-                {#if tracks.length > 0}
-                    <TrackAnnotationLegend />
-                {/if}
-            </div>
-        {/if}
-        {#each tracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}
-            <TrackTimelineRow
-                {ticks}
-                {track}
-                isSelected={selectedTrackKey?.object_track_id === track.object_track_id &&
-                    selectedTrackKey.annotation_source_id === track.annotation_source_id}
-                onSelectPosition={selectTrackPosition}
-                onExtend={onExtendTrack}
-                {onExtendStart}
-                {onExtendEnd}
-            />
-        {/each}
+        <TrackTimelineToolbar
+            visibility={tracks.length > 0
+                ? {
+                      tracks,
+                      visibleCount: visible.visibleTracks.length,
+                      selectedKeys: visible.selectedKeys,
+                      onChange: visible.setSelection
+                  }
+                : null}
+            {onAddTrack}
+            {isAddingTrack}
+            {onStartTrack}
+        />
+        <div
+            class="overflow-y-auto overscroll-contain"
+            style:max-height={`${rowsHeight.height}px`}
+            data-testid="object-track-list"
+        >
+            {#each visible.visibleTracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}
+                <TrackTimelineRow
+                    {ticks}
+                    {track}
+                    isSelected={selectedTrackKey?.object_track_id === track.object_track_id &&
+                        selectedTrackKey.annotation_source_id === track.annotation_source_id}
+                    onSelectPosition={selectTrackPosition}
+                    onExtend={onExtendTrack}
+                    {onExtendStart}
+                    {onExtendEnd}
+                    onRequestDelete={onDeleteTrack ? requestDelete : undefined}
+                />
+            {/each}
+        </div>
     </div>
+    {#if trackToDelete && onDeleteTrack}
+        <DeleteTrackDialog
+            bind:open={isDeleteDialogOpen}
+            trackLabel={`${trackToDelete.annotation_label_name} · Track ${trackToDelete.object_track_number}`}
+            annotationCount={trackToDelete.annotations.length}
+            onConfirm={() => onDeleteTrack(trackToDelete as SequenceTrackView)}
+        />
+    {/if}
 {/if}

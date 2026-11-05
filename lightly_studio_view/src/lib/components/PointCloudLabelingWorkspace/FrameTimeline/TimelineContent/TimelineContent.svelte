@@ -14,6 +14,8 @@
         onStartTrack?: () => void;
         onAddTrack?: () => void;
         isAddingTrack?: boolean;
+        onDeleteTrack?: (track: SequenceTrackView) => Promise<unknown>;
+        sequenceId?: string;
         onExtendTrack?: (
             track: SequenceTrackView,
             startSeqNumber: number,
@@ -35,6 +37,8 @@
         onAddTrack,
         isAddingTrack = false,
         onExtendTrack,
+        onDeleteTrack,
+        sequenceId,
         onSeekStart,
         onSeekEnd
     }: Props = $props();
@@ -63,6 +67,8 @@
         {onAddTrack}
         {isAddingTrack}
         {onExtendTrack}
+        {onDeleteTrack}
+        {sequenceId}
         onExtendStart={onSeekStart}
         onExtendEnd={onSeekEnd}
     />

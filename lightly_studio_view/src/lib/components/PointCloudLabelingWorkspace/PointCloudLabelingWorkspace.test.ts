@@ -49,6 +49,10 @@ vi.mock('./useStartSequenceTrack', () => ({
     useStartSequenceTrack: () => ({ handleStartTrack: vi.fn() })
 }));
 
+vi.mock('./useDeleteSequenceTrack', () => ({
+    useDeleteSequenceTrack: () => ({ handleDeleteTrack: vi.fn() })
+}));
+
 vi.mock('./useExtendSequenceTrack', () => ({
     useExtendSequenceTrack: () => ({ handleExtendTrack: vi.fn() })
 }));

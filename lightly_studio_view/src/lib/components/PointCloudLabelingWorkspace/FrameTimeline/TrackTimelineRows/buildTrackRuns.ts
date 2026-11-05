@@ -4,14 +4,14 @@ import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/
 export interface TrackRun {
     startIndex: number;
     endIndex: number;
-    /** Whether the annotations were generated, e.g. interpolated, rather than drawn. */
+    /** Whether the annotations were interpolated rather than drawn. */
     interpolated: boolean;
 }
 
 /**
  * Groups a track's annotations into runs of consecutive ticks of the same kind.
  *
- * A run ends at a tick without an annotation, or where drawn and generated annotations meet.
+ * A run ends at a tick without an annotation, or where drawn and interpolated annotations meet.
  * Adjacency follows the ordered tick list, so sparse seq numbers stay contiguous. Annotations
  * whose seq number is not in the tick list are ignored.
  */

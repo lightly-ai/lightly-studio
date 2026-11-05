@@ -8,6 +8,7 @@ import { useDeleteCuboidAnnotation } from '../useDeleteCuboidAnnotation';
 import { useUpdateCuboidAnnotation } from '../useUpdateCuboidAnnotation';
 import { useStartSequenceTrack } from '../useStartSequenceTrack';
 import { useExtendSequenceTrack } from '../useExtendSequenceTrack';
+import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
@@ -89,6 +90,24 @@ export function useWorkspaceEditing(
         getSequenceId: () => getOptions().sequenceId,
         onExtended: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
     });
+
+    const { handleDeleteTrack: deleteTrack } = useDeleteSequenceTrack({
+        getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
+        onDeleted: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+    });
+
+    async function handleDeleteTrack(params: {
+        trackId: string;
+        annotationSourceId: string;
+        annotationIds: readonly string[];
+    }): Promise<boolean> {
+        const deleted = await deleteTrack(params);
+        if (deleted && selectedCuboidId && params.annotationIds.includes(selectedCuboidId)) {
+            selectedCuboidId = null;
+        }
+        return deleted;
+    }
 
     const transforms = createCuboidTransformState({
         onTransform: (payload) => handleCuboidTransform(payload)
@@ -176,6 +195,7 @@ export function useWorkspaceEditing(
         handleDeleteCuboid,
         handleStartTrack,
         handleExtendTrack,
+        handleDeleteTrack,
         handleLabelChange,
         panelCuboidTransform
     };
