@@ -4,15 +4,21 @@
  * error says nothing usable.
  */
 export const getApiErrorMessage = (error: unknown, fallback = 'Unknown error'): string => {
-    if (error && typeof error === 'object') {
-        const body = error as { error?: unknown; detail?: unknown };
-        if (typeof body.error === 'string') return body.error;
-        if (typeof body.detail === 'string') return body.detail;
-        if (Array.isArray(body.detail)) {
-            const msg = (body.detail[0] as { msg?: unknown } | undefined)?.msg;
-            if (typeof msg === 'string') return msg;
-        }
-    }
-    if (error instanceof Error && error.message) return error.message;
-    return fallback;
+    const body = (error && typeof error === 'object' ? error : {}) as {
+        error?: unknown;
+        detail?: unknown;
+    };
+    const validationError = Array.isArray(body.detail)
+        ? (body.detail[0] as { msg?: unknown } | undefined)
+        : undefined;
+    const candidates = [
+        body.error,
+        body.detail,
+        validationError?.msg,
+        error instanceof Error ? error.message : undefined
+    ];
+    return candidates.find(isNonEmptyString) ?? fallback;
 };
+
+const isNonEmptyString = (value: unknown): value is string =>
+    typeof value === 'string' && value.length > 0;
