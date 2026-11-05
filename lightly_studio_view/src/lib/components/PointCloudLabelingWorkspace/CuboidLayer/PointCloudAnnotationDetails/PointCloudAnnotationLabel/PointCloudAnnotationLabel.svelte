@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { useAnnotationLabels } from '$lib/hooks';
     import { SelectList } from '$lib/components/SelectList';
     import type { ListItem } from '$lib/components/SelectList/types';

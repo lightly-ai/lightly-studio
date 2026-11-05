@@ -1,10 +1,9 @@
 <script lang="ts">
-    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
     import { useAnnotationLabels } from '$lib/hooks';
     import { SelectList } from '$lib/components/SelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import type { ListItem } from '$lib/components/SelectList/types';
-    import { cn } from '$lib/utils';
+    import { cn, trackClassCreatedInPicker } from '$lib/utils';
 
     interface Props {
         collectionId: string;

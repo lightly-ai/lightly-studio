@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';

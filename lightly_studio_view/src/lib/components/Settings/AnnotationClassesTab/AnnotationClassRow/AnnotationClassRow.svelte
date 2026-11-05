@@ -1,8 +1,7 @@
 <script lang="ts">
     import { AnnotationColorLegend } from '$lib/components/AnnotationColorLegend';
     import { Input } from '$lib/components/ui/input';
-    import { trackAnnotationClassEvent } from '$lib/utils/trackAnnotationClassEvent';
-    import { cn, formatInteger } from '$lib/utils';
+    import { cn, formatInteger, trackAnnotationClassEvent } from '$lib/utils';
     import { AnnotationClassRowActions } from '../AnnotationClassRowActions';
     import { DeleteAnnotationClassDialog } from '../DeleteAnnotationClassDialog';
 

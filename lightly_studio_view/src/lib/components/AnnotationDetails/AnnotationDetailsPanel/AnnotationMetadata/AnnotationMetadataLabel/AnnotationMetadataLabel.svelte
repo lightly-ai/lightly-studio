@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';

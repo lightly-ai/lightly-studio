@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
@@ -11,7 +10,8 @@
         cn,
         countVisibleSources,
         formatConfidence,
-        resolveEffectiveColorBySource
+        resolveEffectiveColorBySource,
+        trackClassCreatedInPicker
     } from '$lib/utils';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';

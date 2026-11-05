@@ -1,8 +1,7 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { formatInteger } from '$lib/utils';
-    import { trackAnnotationClassEvent } from '$lib/utils/trackAnnotationClassEvent';
+    import { formatInteger, trackAnnotationClassEvent } from '$lib/utils';
 
     interface Props {
         open: boolean;

@@ -1,6 +1,6 @@
 <script lang="ts">
+    import { trackAnnotationClassEvent } from '$lib/utils';
     import { page } from '$app/state';
-    import { trackAnnotationClassEvent } from '$lib/utils/trackAnnotationClassEvent';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { AnnotationClassList } from './AnnotationClassList';
     import { AnnotationClassSearchInput } from './AnnotationClassSearchInput';

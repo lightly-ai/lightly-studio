@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { Card, CardContent } from '$lib/components';
     import { Segment } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
