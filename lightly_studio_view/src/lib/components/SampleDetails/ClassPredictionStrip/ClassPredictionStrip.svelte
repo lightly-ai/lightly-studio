@@ -101,7 +101,6 @@
                 <span class={cn(entry.label_name === currentLabelName && 'font-semibold')}>
                     <kbd class="text-muted-foreground">{index + 1}</kbd>
                     {entry.label_name}
-                    {Math.round(entry.score * 100)}%
                 </span>
             {/each}
         {/if}

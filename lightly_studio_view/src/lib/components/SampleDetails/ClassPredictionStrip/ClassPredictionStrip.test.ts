@@ -91,13 +91,14 @@ describe('ClassPredictionStrip', () => {
         expect(screen.getByTestId('class-prediction-spinner')).toBeInTheDocument();
     });
 
-    it('shows the top 3 with key number, name and rounded percent', () => {
+    it('shows the top 3 with key number and name, without scores', () => {
         mocks.state = READY_STATE;
         render(ClassPredictionStrip, { props: defaultProps });
 
         expect(screen.getByTestId('class-prediction-strip')).toHaveTextContent(
-            '1 car 82% · 2 truck 11% · 3 bus 4%'
+            '1 car · 2 truck · 3 bus'
         );
+        expect(screen.getByTestId('class-prediction-strip')).not.toHaveTextContent('%');
     });
 
     it('relabels the annotation on key 2 and pushes an undo entry', async () => {
