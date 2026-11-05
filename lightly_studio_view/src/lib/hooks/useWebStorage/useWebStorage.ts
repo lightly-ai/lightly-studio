@@ -50,8 +50,9 @@ export function useWebStorage<T extends JsonSerializable>(
             if (typeof storage === 'undefined') return;
             const json = JSON.stringify(value);
             if (json === storedJson) return;
-            storedJson = json;
             storage.setItem(key, json);
+            // Only after the write: a failed write is tried again on the next update.
+            storedJson = json;
         } catch (e) {
             console.warn(`Failed to write ${key} to ${area}`, e);
         }
