@@ -199,6 +199,20 @@ describe('useClassColorPicker and useSourceColorPicker', () => {
             expect(onCommit).not.toHaveBeenCalled();
             expect(colors().getCustomColor('cat')).toBeUndefined();
         });
+
+        test('a color picked after a store reset starts a new session', async () => {
+            const onCommit = vi.fn().mockResolvedValue(undefined);
+            render(UseColorPickerTestWrapper, { props: { label: 'cat', onCommit } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            colors().reset();
+            await fireEvent.click(screen.getByTestId('set-other-color'));
+            await fireEvent.click(screen.getByTestId('apply'));
+            await tick();
+
+            expect(onCommit).toHaveBeenCalledExactlyOnceWith({ color: '#bbbbbb', alpha: 1 });
+            expect(colors().getSavedColor('cat')?.color).toBe('#bbbbbb');
+        });
     });
 
     describe('previews', () => {

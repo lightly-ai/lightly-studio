@@ -8,7 +8,7 @@ type SessionColor = NonNullable<
     Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
 >;
 
-export interface ClassColorPickerOptions {
+interface ClassColorPickerOptions {
     onCommit?: (color: SessionColor) => Promise<void>;
 }
 
@@ -106,6 +106,11 @@ function createColorPicker(
             return initialAlpha;
         },
         setColor(color: string, alpha: number) {
+            // A store reset (dataset switch) ends the session; later picks start a new one.
+            if (session && session.generation !== getGeneration()) {
+                clearPreviewColor(session.name, session.owner);
+                session = undefined;
+            }
             session ??= {
                 owner: Symbol(),
                 name: getName(),

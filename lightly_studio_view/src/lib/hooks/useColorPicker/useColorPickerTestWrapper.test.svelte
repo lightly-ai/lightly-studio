@@ -1,7 +1,7 @@
 <script lang="ts">
     import { useClassColorPicker, useSourceColorPicker } from './useColorPicker.svelte';
 
-    import type { ClassColorPickerOptions } from './useColorPicker.svelte';
+    type ClassColorPickerOptions = NonNullable<Parameters<typeof useClassColorPicker>[1]>;
 
     let {
         label,
