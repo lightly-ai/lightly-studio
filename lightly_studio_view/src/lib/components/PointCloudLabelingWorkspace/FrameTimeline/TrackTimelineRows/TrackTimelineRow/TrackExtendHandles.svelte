@@ -2,7 +2,7 @@
     import type { ExtendEdge } from '../trackExtension';
     import type { useTrackExtendDrag } from './useTrackExtendDrag.svelte';
 
-    /** Drag handles at both ends of a track bar, plus the preview of the proposed coverage. */
+    /** Drag handles for a track range, plus the preview of the proposed coverage. */
     interface Props {
         extent: { first: number; last: number };
         tickCount: number;
@@ -14,10 +14,23 @@
     let { extent, tickCount, drag, label, enabled }: Props = $props();
     const percent = (index: number) => `${(index / tickCount) * 100}%`;
     const displayedExtent = $derived(drag.proposed ?? extent);
-    const handles: { edge: ExtendEdge; index: number }[] = $derived([
-        { edge: 'start', index: displayedExtent.first },
-        { edge: 'end', index: displayedExtent.last + 1 }
-    ]);
+    const isPointExtent = $derived(extent.first === extent.last);
+    const pointIndex = $derived.by(() => {
+        if (drag.edge !== 'point' || !drag.proposed) return extent.first + 0.5;
+        if (drag.proposed.first < extent.first) return drag.proposed.first;
+        if (drag.proposed.last > extent.last) return drag.proposed.last + 1;
+        return extent.first + 0.5;
+    });
+    const handles: { edge: ExtendEdge; index: number; isEnd: boolean }[] = $derived.by(() => {
+        if (drag.edge === 'point') {
+            return [{ edge: 'point', index: pointIndex, isEnd: pointIndex > extent.first + 0.5 }];
+        }
+        if (isPointExtent) return [{ edge: 'point', index: pointIndex, isEnd: false }];
+        return [
+            { edge: 'start', index: displayedExtent.first, isEnd: false },
+            { edge: 'end', index: displayedExtent.last + 1, isEnd: true }
+        ];
+    });
     const activeHandle = $derived(handles.find(({ edge }) => edge === drag.edge));
     const proposedRange = $derived.by(() => {
         if (!drag.proposed) return null;
@@ -50,10 +63,11 @@
         <div
             role="slider"
             tabindex="-1"
-            aria-label={`Resize ${handle.edge} of ${label}`}
+            aria-label={handle.edge === 'point'
+                ? `Resize ${label}`
+                : `Resize ${handle.edge} of ${label}`}
             aria-valuenow={handle.index}
-            class="absolute -top-0.5 z-10 h-3 w-1.5 cursor-ew-resize touch-none rounded-sm bg-foreground/80 hover:bg-primary {handle.edge ===
-            'end'
+            class="absolute -top-0.5 z-10 h-3 w-1.5 cursor-ew-resize touch-none rounded-sm bg-foreground/80 hover:bg-primary {handle.isEnd
                 ? '-translate-x-full'
                 : ''}"
             style:left={percent(handle.index)}

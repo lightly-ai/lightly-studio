@@ -1,7 +1,7 @@
 import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import type { TrackRun } from './buildTrackRuns';
 
-export type ExtendEdge = 'start' | 'end';
+export type ExtendEdge = 'start' | 'end' | 'point';
 
 /** Inclusive tick indices a track currently covers, from its first to its last run. */
 export function getTrackExtent(runs: readonly TrackRun[]): { first: number; last: number } | null {
@@ -25,6 +25,9 @@ export function proposeExtent(
     edge: ExtendEdge,
     index: number
 ): { first: number; last: number } {
+    if (edge === 'point') {
+        return { first: Math.min(index, extent.first), last: Math.max(index, extent.last) };
+    }
     return edge === 'start'
         ? { first: Math.min(index, extent.last), last: extent.last }
         : { first: extent.first, last: Math.max(index, extent.first) };

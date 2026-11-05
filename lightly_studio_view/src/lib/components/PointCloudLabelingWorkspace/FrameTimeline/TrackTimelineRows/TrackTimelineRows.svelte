@@ -17,7 +17,7 @@
         /** Arms or cancels adding a new track; set only while editing. */
         onAddTrack?: () => void;
         isAddingTrack?: boolean;
-        /** Set while editing: extends a track onto the ticks from start to end (seq numbers). */
+        /** Set while editing: sets a track's coverage to the given tick range. */
         onExtendTrack?: (
             track: SequenceTrackView,
             startSeqNumber: number,

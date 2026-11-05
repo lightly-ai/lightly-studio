@@ -18,7 +18,7 @@ interface Params {
     onCommit: (range: { start: number; end: number }) => void;
 }
 
-/** Drags one end of a track bar outward, snapping to ticks and previewing the new coverage. */
+/** Drags a track range handle, snapping to ticks and previewing the new coverage. */
 export function useTrackExtendDrag({
     getTicks,
     getExtent,
