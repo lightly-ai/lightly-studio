@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The query editor now supports metadata and boolean values, with hover help and a metadata filter example.
 - Added the "Smart select" and "Find all instances" assisted labeling tools to the sample details view, which save results as segmentation masks or bounding boxes. The tools use SAM 3 on fal.ai, need the `fal` extra (`pip install "lightly-studio[fal]"`) and the `FAL_KEY` environment variable, and send images to fal.ai.
 - Introduce point cloud accumulation for point cloud details.
+- Python SDK: MCAP datasets can use cameras that record JPEG or PNG `CompressedImage` messages, not only H.264 or H.265 video. The camera frames show in the viewer and are used for embeddings.
 
 
 ### Changed

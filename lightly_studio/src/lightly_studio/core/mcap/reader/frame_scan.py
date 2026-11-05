@@ -32,6 +32,7 @@ class TopicScanRequest(NamedTuple):
 
     topics: Sequence[str]
     video_topics: set[str]
+    image_topics: set[str]
     start_time_ns: int | None
     end_time_ns: int | None
     static_transform_topic: str | None
@@ -91,7 +92,7 @@ class FrameScanner:
                 schema=schema,
                 channel=channel,
                 message=message,
-                video_topics=request.video_topics,
+                request=request,
                 keyframe_log_time_ns_by_topic=keyframe_log_time_ns_by_topic,
             )
             if locator is not None:
@@ -107,10 +108,14 @@ class FrameScanner:
         schema: Schema | None,
         channel: Channel,
         message: Message,
-        video_topics: set[str],
+        request: TopicScanRequest,
         keyframe_log_time_ns_by_topic: dict[str, int | None],
     ) -> FrameLocator | None:
-        """Builds a locator from a message, or `None` if its capture time cannot be read."""
+        """Builds a locator from a message, or `None` if its capture time cannot be read.
+
+        A video frame points at the latest keyframe of its topic. An image is its own
+        keyframe, because it decodes without the messages before it.
+        """
         decoded_message = self._decoder.decoded_payload(
             schema=schema, channel=channel, message=message
         )
@@ -125,7 +130,10 @@ class FrameScanner:
                 self._path,
             )
             return None
-        if channel.topic in video_topics and video_keyframe.is_keyframe_message(decoded_message):
+        if channel.topic in request.image_topics or (
+            channel.topic in request.video_topics
+            and video_keyframe.is_keyframe_message(decoded_message)
+        ):
             keyframe_log_time_ns_by_topic[channel.topic] = message.log_time
         return _frame_locator(
             schema=schema,
