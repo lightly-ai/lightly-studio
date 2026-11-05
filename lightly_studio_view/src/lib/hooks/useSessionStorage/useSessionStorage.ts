@@ -1,5 +1,5 @@
 import type { Writable } from 'svelte/store';
-import { useWebStorage, type JsonSerializable } from '$lib/hooks/useWebStorage/useWebStorage';
+import { useWebStorage, type JsonSerializable } from '$lib/hooks/useWebStorage';
 
 /**
  * Creates a writable store that syncs with sessionStorage

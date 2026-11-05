@@ -31,10 +31,16 @@ export const useAnnotationTarget = (params: UseAnnotationTargetParams) => {
     const hiddenSources = $derived(
         listHiddenSources(sources.data ?? [], params.getAnnotations(), params.getHiddenIds())
     );
+    // A name typed in another collection does not count here.
+    const typedSource = $derived(
+        context.typedAnnotationSource?.collectionId === getCollectionId()
+            ? context.typedAnnotationSource.name
+            : null
+    );
     const target = $derived(
         resolveTargetSource({
             pick: picks.current[getCollectionId()],
-            typedSource: context.typedAnnotationSource,
+            typedSource,
             sourceNames,
             isError: sources.isError,
             hiddenSources
