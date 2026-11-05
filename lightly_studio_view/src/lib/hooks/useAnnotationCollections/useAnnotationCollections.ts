@@ -1,13 +1,10 @@
 import { readAnnotationCollectionsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import type {
-    AnnotationCollectionView,
-    ReadAnnotationCollectionsError
-} from '$lib/api/lightly_studio_local/types.gen';
+import type { AnnotationCollectionView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
 
 export const useAnnotationCollections = (
     getParams: () => { collectionId?: string }
-): CreateQueryResult<AnnotationCollectionView[], ReadAnnotationCollectionsError> => {
+): CreateQueryResult<AnnotationCollectionView[], unknown> => {
     return createQuery(() => {
         const { collectionId } = getParams();
         const options = readAnnotationCollectionsOptions({

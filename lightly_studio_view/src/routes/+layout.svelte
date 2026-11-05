@@ -16,7 +16,11 @@
 
     // Add error interceptor to preserve HTTP status code on errors.
     client.interceptors.error.use((error: unknown, response: Response | undefined) => {
-        if (response && typeof error === 'object' && error !== null) {
+        // Throw network, abort and parse errors, so only HTTP errors become `{ error }`.
+        if (!response || response.ok) {
+            throw error;
+        }
+        if (typeof error === 'object' && error !== null) {
             (error as ApiErrorWithStatus).status = response.status;
         }
         return error;

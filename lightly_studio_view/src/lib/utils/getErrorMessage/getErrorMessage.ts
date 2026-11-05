@@ -1,14 +1,20 @@
 /**
- * Returns the `message` of an error, if it has one.
+ * Returns a message for an error from the API client, or `undefined` if there is no error.
  *
- * Query errors are typed as API error bodies, but a failed request can also throw an
- * `Error`, for example on a network failure. Values without a string `message` give
- * `undefined`.
+ * An HTTP error gives the parsed response body, for example `{ detail: 'Not found' }` or a
+ * validation error with a `detail` list. A network failure gives an `Error`.
  */
-export const getErrorMessage = (error: unknown): string | undefined =>
-    typeof error === 'object' &&
-    error !== null &&
-    'message' in error &&
-    typeof error.message === 'string'
-        ? error.message
-        : undefined;
+export const getErrorMessage = (error: unknown): string | undefined => {
+    if (error === null || error === undefined) return undefined;
+    if (typeof error === 'object') {
+        const body = error as { error?: unknown; detail?: unknown; message?: unknown };
+        if (typeof body.error === 'string') return body.error;
+        if (typeof body.detail === 'string') return body.detail;
+        if (Array.isArray(body.detail)) {
+            const msg = (body.detail[0] as { msg?: unknown } | undefined)?.msg;
+            if (typeof msg === 'string') return msg;
+        }
+        if (typeof body.message === 'string' && body.message) return body.message;
+    }
+    return 'Unknown error';
+};

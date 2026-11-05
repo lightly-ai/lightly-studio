@@ -3,10 +3,8 @@ import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInteractiveAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { useSaveAnnotationPreviews } from '$lib/hooks';
-import {
-    getAnnotationPreviewErrorMessage,
-    pickClassName
-} from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import { pickClassName } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import { getErrorMessage } from '$lib/utils';
 import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 import { page } from '$app/state';
 import { canInferFromPoints, type SmartSelectPoint } from './SmartSelectOverlay.helpers';
@@ -52,7 +50,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
             if (requestSequence === sequence) preview = result.prediction;
         } catch (error) {
             if (requestSequence !== sequence) return;
-            toast.error(`Smart select failed: ${getAnnotationPreviewErrorMessage(error)}`);
+            toast.error(`Smart select failed: ${getErrorMessage(error)}`);
         }
     };
 
@@ -110,9 +108,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
             });
             onSaved();
         } catch (error) {
-            toast.error(
-                `Could not save the annotation: ${getAnnotationPreviewErrorMessage(error)}`
-            );
+            toast.error(`Could not save the annotation: ${getErrorMessage(error)}`);
         } finally {
             isSaving = false;
         }

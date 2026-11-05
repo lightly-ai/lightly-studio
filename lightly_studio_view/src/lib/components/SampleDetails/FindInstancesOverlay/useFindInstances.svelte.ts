@@ -4,7 +4,7 @@ import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInstancesAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { useSaveAnnotationPreviews } from '$lib/hooks';
-import { getAnnotationPreviewErrorMessage } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import { getErrorMessage } from '$lib/utils';
 import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 import { page } from '$app/state';
 import { buildInstancesRequestBody, canGenerateInstances } from './FindInstancesOverlay.helpers';
@@ -115,7 +115,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             isEmptyResult = predictions.length === 0;
         } catch (error) {
             if (requestSequence !== sequence) return;
-            toast.error(`Find all instances failed: ${getAnnotationPreviewErrorMessage(error)}`);
+            toast.error(`Find all instances failed: ${getErrorMessage(error)}`);
         } finally {
             if (requestSequence === sequence) isGenerating = false;
         }
@@ -153,9 +153,7 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
             });
             if (!isDisposed) onSaved();
         } catch (error) {
-            toast.error(
-                `Could not save the annotations: ${getAnnotationPreviewErrorMessage(error)}`
-            );
+            toast.error(`Could not save the annotations: ${getErrorMessage(error)}`);
         } finally {
             isSaving = false;
             if (isDropPending) dropPredictions();

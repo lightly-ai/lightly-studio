@@ -1,8 +1,5 @@
 import { getEvaluationAnnotationMetricsInfoOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import type {
-    EvaluationRunAnnotationMetricsInfoView,
-    GetEvaluationAnnotationMetricsInfoError
-} from '$lib/api/lightly_studio_local/types.gen';
+import type { EvaluationRunAnnotationMetricsInfoView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, type CreateQueryResult } from '@tanstack/svelte-query';
 
 interface UseAnnotationEvaluationMetricsInfoParams {
@@ -14,7 +11,7 @@ export const useAnnotationEvaluationMetricsInfo = ({
     collectionId
 }: UseAnnotationEvaluationMetricsInfoParams): CreateQueryResult<
     EvaluationRunAnnotationMetricsInfoView[],
-    GetEvaluationAnnotationMetricsInfoError
+    unknown
 > => {
     return createQuery(() =>
         getEvaluationAnnotationMetricsInfoOptions({
