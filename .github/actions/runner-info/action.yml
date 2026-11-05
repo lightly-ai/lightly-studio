@@ -1,0 +1,27 @@
+name: Runner info
+description: >-
+  Logs the runner hardware at the start of a job and its memory use at the end.
+  Runners differ in speed, so job durations are only comparable with the hardware.
+inputs:
+  mode:
+    description: >-
+      `start`: log the hardware, right after the checkout.
+      `end`: log the memory use, as the last step with `if: always()`.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Log runner hardware
+      if: inputs.mode == 'start'
+      shell: bash
+      run: |
+        echo "RUNNER_INFO cpu=\"$(lscpu | sed -n 's/^Model name: *//p')\" vcpus=$(nproc) memory=$(free -h | awk '/^Mem:/ {print $2}')"
+
+    - name: Log runner memory use
+      if: inputs.mode == 'end'
+      shell: bash
+      # Pressure totals are microseconds since boot that processes waited for memory.
+      run: |
+        free -h
+        cat /proc/pressure/memory || true
+        grep -E '^pswp(in|out) ' /proc/vmstat

@@ -290,9 +290,9 @@ jobs:
           submodules: recursive
 
       - name: Log runner hardware
-        # Runners differ in speed, so durations are only comparable with the hardware.
-        run: |
-          echo "RUNNER_INFO cpu=\"$(lscpu | sed -n 's/^Model name: *//p')\" vcpus=$(nproc) memory=$(free -h | awk '/^Mem:/ {print $2}')"
+        uses: ./.github/actions/runner-info
+        with:
+          mode: start
 
       - name: Check e2e success cache
         id: cache-success
@@ -518,11 +518,9 @@ jobs:
 
       - name: Log runner memory use
         if: always()
-        # Pressure totals are microseconds since boot that processes waited for memory.
-        run: |
-          free -h
-          cat /proc/pressure/memory || true
-          grep -E '^pswp(in|out) ' /proc/vmstat
+        uses: ./.github/actions/runner-info
+        with:
+          mode: end
 
   # Runs after merge and on manual dispatch, not on pull requests.
   end-to-end-after-merge:
