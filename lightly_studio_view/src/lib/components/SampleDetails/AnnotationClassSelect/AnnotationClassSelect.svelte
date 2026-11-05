@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
     import { useAnnotationLabels } from '$lib/hooks';
     import { SelectList } from '$lib/components/SelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -29,6 +30,7 @@
 </script>
 
 <SelectList
+    onCreate={trackClassCreatedInPicker}
     {items}
     {selectedItem}
     name="annotation-class"

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -65,6 +66,7 @@
 
         <div class="min-w-0 space-y-1 py-2">
             <SelectList
+                onCreate={trackClassCreatedInPicker}
                 bind:selectedItem
                 {items}
                 label="Select a class..."

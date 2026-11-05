@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { cn, formatConfidence } from '$lib/utils';
     import { page } from '$app/state';
@@ -161,6 +162,7 @@
                                     }}
                                 >
                                     <SelectList
+                                        onCreate={trackClassCreatedInPicker}
                                         {items}
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { AnnotationColorLegend } from '$lib/components/AnnotationColorLegend';
     import { Input } from '$lib/components/ui/input';
+    import { trackAnnotationClassEvent } from '$lib/utils/trackAnnotationClassEvent';
     import { cn, formatInteger } from '$lib/utils';
     import { AnnotationClassRowActions } from '../AnnotationClassRowActions';
     import { DeleteAnnotationClassDialog } from '../DeleteAnnotationClassDialog';
@@ -36,6 +37,7 @@
         isRenaming = false;
         const trimmed = draft.trim();
         if (!trimmed || trimmed === name) return;
+        trackAnnotationClassEvent('renamed');
         try {
             await onRename(trimmed);
         } catch {

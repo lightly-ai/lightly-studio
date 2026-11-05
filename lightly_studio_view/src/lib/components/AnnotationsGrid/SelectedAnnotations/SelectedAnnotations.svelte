@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
     import { Card, CardContent } from '$lib/components';
     import { Segment } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -33,6 +34,7 @@
                         You can edit annotation classes for multiple annotations at once.
                     </div>
                     <SelectList
+                        onCreate={trackClassCreatedInPicker}
                         {items}
                         name="annotation-label"
                         placeholder="Select or create a class"

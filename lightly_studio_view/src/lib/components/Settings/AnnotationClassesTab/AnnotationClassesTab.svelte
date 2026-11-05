@@ -1,5 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
+    import { trackAnnotationClassEvent } from '$lib/utils/trackAnnotationClassEvent';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { AnnotationClassList } from './AnnotationClassList';
     import { AnnotationClassSearchInput } from './AnnotationClassSearchInput';
@@ -37,6 +38,7 @@
     const add = async () => {
         if (!canAdd || isAdding || dialogState?.isSaving) return;
         const name = trimmedQuery;
+        trackAnnotationClassEvent('created', { source: 'settings' });
         isAdding = true;
         try {
             const created = await classes.addClass(name);

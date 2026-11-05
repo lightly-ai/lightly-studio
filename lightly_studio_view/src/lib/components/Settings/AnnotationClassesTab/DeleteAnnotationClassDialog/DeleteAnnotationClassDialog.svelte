@@ -2,6 +2,7 @@
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
     import { formatInteger } from '$lib/utils';
+    import { trackAnnotationClassEvent } from '$lib/utils/trackAnnotationClassEvent';
 
     interface Props {
         open: boolean;
@@ -26,6 +27,7 @@
     };
 
     const confirm = async () => {
+        trackAnnotationClassEvent('deleted', { annotation_count: annotationCount });
         isDeleting = true;
         try {
             await onConfirm();

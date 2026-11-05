@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils/trackAnnotationClassEvent';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
@@ -257,6 +258,7 @@
                 <span class="flex min-w-0 flex-1 flex-col gap-1">
                     {#if $isEditingMode}
                         <SelectList
+                            onCreate={trackClassCreatedInPicker}
                             {items}
                             selectedItem={items.find(
                                 (i) => i.value === getLabelValue(annotation)?.value
@@ -364,6 +366,7 @@
                         <span class="flex min-w-0 flex-1 flex-col gap-1">
                             <span class="min-w-0 text-sm font-medium">
                                 <SelectList
+                                    onCreate={trackClassCreatedInPicker}
                                     {items}
                                     name="classification-label"
                                     placeholder="Select or create a class"
