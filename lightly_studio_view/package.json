@@ -28,7 +28,7 @@
     "build-storybook": "storybook build",
     "prestorybook": "npm run generate-language",
     "storybook": "storybook dev -p 6006",
-    "generate-api-client": "npx @hey-api/openapi-ts",
+    "generate-api-client": "svelte-kit sync && npx @hey-api/openapi-ts",
     "generate-language": "langium generate",
     "test:unit:changed": "vitest --run --changed"
   },
