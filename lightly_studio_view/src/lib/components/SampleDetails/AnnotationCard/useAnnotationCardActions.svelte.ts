@@ -23,6 +23,24 @@ export const useAnnotationCardActions = (getParams: () => Params) => {
     const { deleteWithUndo } = useDeleteAnnotationWithUndo(getCollectionId);
     const { setAnnotationId } = useAnnotationLabelContext();
 
+    // One card action at a time: a move must not copy an annotation that a class change or a
+    // delete is still changing.
+    let isBusy = false;
+    const exclusive =
+        <Args extends unknown[], Result>(
+            action: (...args: Args) => Promise<Result>,
+            busyResult: Result
+        ) =>
+        async (...args: Args): Promise<Result> => {
+            if (isBusy) return busyResult;
+            isBusy = true;
+            try {
+                return await action(...args);
+            } finally {
+                isBusy = false;
+            }
+        };
+
     // The move copies the annotation and deletes the original, so the card follows the copy.
     const moveTo = async (sourceName: string) => {
         const { annotation, refetch } = getParams();
@@ -42,9 +60,9 @@ export const useAnnotationCardActions = (getParams: () => Params) => {
 
     return {
         sources,
-        changeClass,
-        moveTo,
-        remove,
+        changeClass: exclusive(changeClass, undefined),
+        moveTo: exclusive(moveTo, false),
+        remove: exclusive(remove, undefined),
         close,
         get isMoving() {
             return moves.isMoving;

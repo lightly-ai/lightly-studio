@@ -16,7 +16,8 @@ export const useSetTargetSource = (
     return (name, options) => {
         const trimmed = name.trim();
         if (!trimmed || context.hiddenAnnotationSources?.includes(trimmed)) return;
-        if (options?.isNew) context.typedAnnotationSource = trimmed;
-        updateLastAnnotationSource(getCollectionId(), trimmed);
+        const collectionId = getCollectionId();
+        if (options?.isNew) context.typedAnnotationSource = { collectionId, name: trimmed };
+        updateLastAnnotationSource(collectionId, trimmed);
     };
 };

@@ -12,7 +12,8 @@ interface Params {
 
 /**
  * Where the card sits on screen, beside the box. It follows the box: pan, zoom, resizes and
- * edits of the box all move it. Null until the card is placed. Call during component init.
+ * edits of the box all move it. Null until the card is placed and while the layer or the card
+ * is missing. Call during component init.
  */
 export const useCardPlacement = (getParams: () => Params) => {
     let placement = $state<ReturnType<typeof placeCard> | null>(null);
@@ -28,7 +29,10 @@ export const useCardPlacement = (getParams: () => Params) => {
 
     $effect(() => {
         const { bbox, layer, card } = getParams();
-        if (!layer || !card) return;
+        if (!layer || !card) {
+            placement = null;
+            return;
+        }
         void [bbox.x, bbox.y, bbox.width, bbox.height];
         return followLayer(layer, card, () => place(layer, card));
     });

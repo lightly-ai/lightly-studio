@@ -7,6 +7,7 @@ from lightly_studio.models.annotation_collection_coverage import (
 )
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
+from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.models.tag import TagTable
 from lightly_studio.resolvers import annotation_collection_coverage_resolver, collection_resolver
 from tests.helpers_resolvers import (
@@ -37,6 +38,9 @@ def test_delete_dependent_rows(db_session: Session) -> None:
         )
         create_embedding_model(session=db_session, collection_id=source.collection_id)
         create_tag(session=db_session, collection_id=source.collection_id, tag_name="reviewed")
+        db_session.add(
+            ExportJobTable(collection_id=source.collection_id, export_path="/tmp/export.json")
+        )
 
     collection_resolver.delete_dependent_rows(
         session=db_session, collection_id=deleted.collection_id
@@ -49,3 +53,5 @@ def test_delete_dependent_rows(db_session: Session) -> None:
     assert [link.collection_id for link in links] == [kept.collection_id]
     tags = db_session.exec(select(TagTable)).all()
     assert [tag.collection_id for tag in tags] == [kept.collection_id]
+    export_jobs = db_session.exec(select(ExportJobTable)).all()
+    assert [job.collection_id for job in export_jobs] == [kept.collection_id]

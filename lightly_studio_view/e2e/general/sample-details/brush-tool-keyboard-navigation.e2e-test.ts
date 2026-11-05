@@ -103,15 +103,14 @@ test('brush stays effective across keyboard navigation while creating masks on 3
     await sampleDetailsPage.pageIsReady();
     const collectionId = getCollectionIdFromUrl(page);
 
-    // Set the last used annotation label in session storage, then reload so the Svelte store
-    // re-initialises from session storage and SampleDetailsPanel.onMount correctly
-    // populates annotationLabelContext.annotationLabel.
+    // Set the class for new annotations in local storage, then reload so the Svelte store
+    // re-initialises from local storage.
     await page.evaluate(
         ({ key, collectionId, labelName }) => {
-            const raw = sessionStorage.getItem(key);
+            const raw = localStorage.getItem(key);
             const value = raw ? JSON.parse(raw) : {};
             value[collectionId] = labelName;
-            sessionStorage.setItem(key, JSON.stringify(value));
+            localStorage.setItem(key, JSON.stringify(value));
         },
         {
             key: 'lightlyStudio_last_annotation_label',

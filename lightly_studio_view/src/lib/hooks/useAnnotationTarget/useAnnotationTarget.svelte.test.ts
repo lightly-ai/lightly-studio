@@ -126,6 +126,17 @@ describe('useAnnotationTarget', () => {
         expect(context.annotationSource).toBe('review');
     });
 
+    it('ignores a name typed in another collection', () => {
+        useGlobalStorage().updateLastAnnotationSource('col-1', 'review');
+        const { context } = setup();
+
+        context.typedAnnotationSource = { collectionId: 'col-2', name: 'review' };
+        flushSync();
+
+        expect(context.annotationSource).toBeNull();
+        expect(context.annotationSourceBlockedReason).toBe(PICK_SOURCE_MESSAGE);
+    });
+
     it('blocks a hidden target and refuses to pick a hidden source', () => {
         const annotations = [
             { sample_id: 'a1', annotation_collection_id: 's0', annotation_type: 'object_detection' }
