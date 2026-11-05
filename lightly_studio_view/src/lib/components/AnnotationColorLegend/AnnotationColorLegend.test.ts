@@ -1,7 +1,11 @@
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import AnnotationColorLegend from './AnnotationColorLegend.svelte';
+
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
 
 const defaultProps = {
     labelName: 'cat',
