@@ -228,14 +228,13 @@ Set `compute_average_precision=True` in the config when you create the run. It i
 default, because it matches the predictions and ground truths once per IoU threshold.
 
 ```python
-evaluator.object_detection(
+result = evaluator.object_detection(
     name="yolo-with-ap",
     gt_annotation_source="ground_truth",
     pred_annotation_source="predictions",
     config=ObjectDetectionEvaluationConfig(compute_average_precision=True),
 )
-run = next(run for run in evaluator.list_runs() if run.name == "yolo-with-ap")
-metrics = evaluator.metrics(run_id=run.id)
+metrics = evaluator.metrics(run_id=result.evaluation_run_id)
 print(metrics.mean_average_precision, metrics.mean_average_precision_by_iou_threshold[0.5])
 for entry in metrics.per_class:
     print(entry.label, entry.average_precision, entry.average_precision_by_iou_threshold)

@@ -7,7 +7,6 @@ from functools import cached_property
 from typing import Any
 from uuid import UUID
 
-import numpy as np
 from pydantic import BaseModel, Field
 from sqlmodel import Session
 
@@ -22,7 +21,7 @@ from lightly_studio.evaluation import (
 from lightly_studio.evaluation.evaluation_data import EvaluationData
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_confusion_matrix import ConfusionMatrix
-from lightly_studio.models.evaluation_metrics import ClassMetrics, EvaluationMetrics
+from lightly_studio.models.evaluation_metrics import EvaluationMetrics
 from lightly_studio.models.evaluation_run import (
     EvaluationRunCreate,
     EvaluationRunTable,
@@ -352,7 +351,7 @@ class ImageDatasetEvaluate:
         # Resolve names at read time, so renamed labels keep their values and deleted
         # labels are skipped.
         labels = annotation_label_resolver.get_by_ids(session=self.session, ids=list(by_label))
-        return _with_average_precision(
+        return average_precision.with_average_precision(
             metrics=metrics,
             by_class={
                 label.annotation_label_name: by_label[label.annotation_label_id] for label in labels
@@ -513,52 +512,3 @@ class ImageDatasetEvaluate:
         for annotation in annotations:
             grouped.setdefault(annotation.parent_sample_id, []).append(annotation)
         return grouped
-
-
-def _with_average_precision(
-    metrics: EvaluationMetrics, by_class: dict[str, dict[float, float]]
-) -> EvaluationMetrics:
-    """Return the metrics with the average precision of each class and their means.
-
-    Args:
-        metrics: The confusion-matrix metrics of the run.
-        by_class: The average precision per IoU threshold, by class name.
-
-    Returns:
-        The metrics with the average precision fields set. Classes without values, such as
-        classes without ground truth, keep ``None``. The metrics are returned unchanged
-        if the run has no stored average precision.
-    """
-    if not by_class:
-        return metrics
-    class_average = {
-        label: float(np.mean(list(values.values()))) for label, values in by_class.items()
-    }
-    per_class: list[ClassMetrics] = []
-    for entry in metrics.per_class:
-        values = by_class.get(entry.label)
-        per_class.append(
-            entry
-            if values is None
-            else entry.model_copy(
-                update={
-                    "average_precision": class_average[entry.label],
-                    "average_precision_by_iou_threshold": dict(sorted(values.items())),
-                }
-            )
-        )
-    thresholds = sorted({threshold for values in by_class.values() for threshold in values})
-    return metrics.model_copy(
-        update={
-            "per_class": per_class,
-            "mean_average_precision": float(np.mean(list(class_average.values()))),
-            "mean_average_precision_by_iou_threshold": {
-                threshold: float(
-                    np.mean(
-                        [values[threshold] for values in by_class.values() if threshold in values]
-                    )
-                )
-                for threshold in thresholds
-            },
-        }
-    )

@@ -24,6 +24,7 @@ from lightly_studio.models.evaluation_class_metric import (
     EvaluationClassMetricCreate,
     EvaluationClassMetricTable,
 )
+from lightly_studio.models.evaluation_metrics import ClassMetrics, EvaluationMetrics
 from lightly_studio.resolvers import evaluation_class_metric_resolver
 
 # COCO averages average precision over IoU 0.50, 0.55, ..., 0.95.
@@ -180,6 +181,55 @@ def by_label_and_threshold(
             threshold = float({**run_config, **row.config_override}["iou_threshold"])
             grouped.setdefault(row.annotation_label_id, {})[threshold] = row.value
     return grouped
+
+
+def with_average_precision(
+    metrics: EvaluationMetrics, by_class: dict[str, dict[float, float]]
+) -> EvaluationMetrics:
+    """Return the metrics with the average precision of each class and their means.
+
+    Args:
+        metrics: The confusion-matrix metrics of the run.
+        by_class: The average precision per IoU threshold, by class name.
+
+    Returns:
+        The metrics with the average precision fields set. Classes without values, such as
+        classes without ground truth, keep ``None``. The metrics are returned unchanged
+        if the run has no stored average precision.
+    """
+    if not by_class:
+        return metrics
+    class_average = {
+        label: float(np.mean(list(values.values()))) for label, values in by_class.items()
+    }
+    per_class: list[ClassMetrics] = []
+    for entry in metrics.per_class:
+        values = by_class.get(entry.label)
+        per_class.append(
+            entry
+            if values is None
+            else entry.model_copy(
+                update={
+                    "average_precision": class_average[entry.label],
+                    "average_precision_by_iou_threshold": dict(sorted(values.items())),
+                }
+            )
+        )
+    thresholds = sorted({threshold for values in by_class.values() for threshold in values})
+    return metrics.model_copy(
+        update={
+            "per_class": per_class,
+            "mean_average_precision": float(np.mean(list(class_average.values()))),
+            "mean_average_precision_by_iou_threshold": {
+                threshold: float(
+                    np.mean(
+                        [values[threshold] for values in by_class.values() if threshold in values]
+                    )
+                )
+                for threshold in thresholds
+            },
+        }
+    )
 
 
 def config_override(
