@@ -182,6 +182,27 @@ describe('SelectList', () => {
         expect(onSelect).toHaveBeenCalledWith(newItem);
     });
 
+    it.each([
+        ['without', undefined],
+        ['with', vi.fn()]
+    ])(
+        'does not create an item when pressing Enter on whitespace %s onKeyboardConfirm',
+        async (_, onKeyboardConfirm) => {
+            const user = userEvent.setup();
+            const onCreate = vi.fn();
+            const onSelect = vi.fn();
+            render(SelectList, {
+                props: { items: [...mockItems], onCreate, onSelect, onKeyboardConfirm }
+            });
+
+            await user.click(screen.getByTestId('select-list-trigger'));
+            await user.type(screen.getByTestId('select-list-input'), '   {Enter}');
+
+            expect(onCreate).not.toHaveBeenCalled();
+            expect(onSelect).not.toHaveBeenCalled();
+        }
+    );
+
     it('selects existing item when pressing Enter with case-insensitive match', async () => {
         const user = userEvent.setup();
         const onSelect = vi.fn();

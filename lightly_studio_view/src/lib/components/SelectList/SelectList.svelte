@@ -107,7 +107,7 @@
 
     const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue) {
+            if (event.key === 'Enter' && !highlightedValue && inputValue.trim()) {
                 handleOnSelect(getOrCreateItem(inputValue));
                 event.preventDefault();
                 event.stopPropagation();
@@ -121,7 +121,7 @@
 
         if (highlightedItem) {
             confirmWithKeyboard(highlightedItem);
-        } else if (inputValue) {
+        } else if (inputValue.trim()) {
             confirmWithKeyboard(getOrCreateItem(inputValue));
         } else {
             return;
