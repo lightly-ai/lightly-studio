@@ -9,6 +9,17 @@ vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
     getAnalyticsConfig: vi.fn().mockResolvedValue({ data: undefined })
 }));
 
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte',
+    () => ({
+        usePointCloudWorkspaceLayoutContext: () => () => ({ datasetId: 'ds-1' })
+    })
+);
+vi.mock('$lib/hooks', () => ({
+    useTracks: () => ({ data: [], refetch: vi.fn() }),
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
+}));
+
 const defaultAnnotation = {
     ...createAnnotationFixture(),
     center: [10, -2, 1.234] as [number, number, number],
@@ -213,5 +224,22 @@ describe('PointCloudAnnotationDetails - editable mode', () => {
                 rotation: expect.arrayContaining([expect.any(Number)])
             })
         );
+    });
+
+    it('shows TrackSelect instead of read-only track number', () => {
+        render(PointCloudAnnotationDetails, { props: defaultEditableProps });
+
+        expect(screen.getByTestId('track-select')).toBeInTheDocument();
+        expect(screen.queryByText('Track number:')).not.toBeInTheDocument();
+    });
+});
+
+describe('PointCloudAnnotationDetails - track display', () => {
+    it('shows read-only track number when not editable', () => {
+        render(PointCloudAnnotationDetails, { props: defaultProps });
+
+        expect(screen.getByText('Track number:')).toBeInTheDocument();
+        expect(screen.getByText('7')).toBeInTheDocument();
+        expect(screen.queryByTestId('track-select')).not.toBeInTheDocument();
     });
 });
