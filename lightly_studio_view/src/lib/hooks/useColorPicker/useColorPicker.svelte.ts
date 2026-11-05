@@ -1,4 +1,4 @@
-import { useCustomLabelColors, type CustomColor } from '$lib/hooks/useCustomLabelColors';
+import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors';
 import { getColorByLabel, getColorBySource, hexToRgba, rgbaToHex } from '$lib/utils';
 import { onDestroy, untrack } from 'svelte';
@@ -7,6 +7,10 @@ import { fromStore } from 'svelte/store';
 type SessionColor = NonNullable<
     Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
 >;
+
+export interface ClassColorPickerOptions {
+    onCommit?: (color: SessionColor) => Promise<void>;
+}
 
 type ColorStore = Pick<
     ReturnType<typeof useCustomLabelColors>,
@@ -19,10 +23,8 @@ type ColorStore = Pick<
 >;
 
 /** A color picker for an annotation class. See `createColorPicker`. */
-export const useClassColorPicker = (
-    getName: () => string,
-    options?: { onCommit?: (color: CustomColor) => Promise<void> }
-) => createColorPicker(getName, useCustomLabelColors(), getColorByLabel, options?.onCommit);
+export const useClassColorPicker = (getName: () => string, options?: ClassColorPickerOptions) =>
+    createColorPicker(getName, useCustomLabelColors(), getColorByLabel, options?.onCommit);
 
 /** A color picker for an annotation source. See `createColorPicker`. */
 export const useSourceColorPicker = (getName: () => string) =>
@@ -38,7 +40,7 @@ function createColorPicker(
     getName: () => string,
     colorStore: ColorStore,
     getDefaultColor: typeof getColorByLabel,
-    onCommit?: (color: CustomColor) => Promise<void>
+    onCommit?: (color: SessionColor) => Promise<void>
 ) {
     const { beginSave, setSavedColor, getGeneration, setPreviewColor, clearPreviewColor } =
         colorStore;
@@ -51,7 +53,7 @@ function createColorPicker(
 
     // Save a color through onCommit and show it meanwhile. The preview ends when the save
     // settles. A failed save leaves the saved color; the onCommit owner shows the toast.
-    const commit = async (name: string, owner: symbol, color: CustomColor) => {
+    const commit = async (name: string, owner: symbol, color: SessionColor) => {
         const ticket = beginSave(name);
         try {
             await onCommit?.(color);

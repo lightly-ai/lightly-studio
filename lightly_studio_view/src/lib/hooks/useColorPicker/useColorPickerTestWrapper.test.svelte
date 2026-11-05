@@ -1,7 +1,7 @@
 <script lang="ts">
     import { useClassColorPicker, useSourceColorPicker } from './useColorPicker.svelte';
 
-    import type { CustomColor } from '$lib/hooks/useCustomLabelColors';
+    import type { ClassColorPickerOptions } from './useColorPicker.svelte';
 
     let {
         label,
@@ -10,7 +10,7 @@
     }: {
         label: string;
         kind?: 'class' | 'source';
-        onCommit?: (color: CustomColor) => Promise<void>;
+        onCommit?: ClassColorPickerOptions['onCommit'];
     } = $props();
 
     // The kind is fixed per test, so reading it once is intended.

@@ -7,7 +7,7 @@ export type CustomColor = {
 };
 
 // Identifies one save request. A newer save, or a reset, makes older tickets stale.
-export type SaveTicket = { seq: number; generation: number };
+type SaveTicket = { seq: number; generation: number };
 
 interface CustomColorStore {
     customColorsStore: Readable<Record<string, CustomColor>>;
