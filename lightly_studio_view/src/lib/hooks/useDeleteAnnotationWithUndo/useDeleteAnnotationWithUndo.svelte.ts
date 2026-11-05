@@ -9,8 +9,9 @@ import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDelet
 
 /**
  * Returns the action that deletes an annotation and, once the delete succeeded, adds the undo
- * that re-creates it in its class and source. A second call while one runs is ignored, so a
- * double click deletes once and adds one undo entry. Call it during component init.
+ * that re-creates it in its class and source. A second call for an annotation whose delete runs
+ * is ignored, so a double click deletes once and adds one undo entry. Nothing is deleted while
+ * the classes or sources load, as the undo needs both. Call it during component init.
  */
 export const useDeleteAnnotationWithUndo = (getCollectionId: () => string) => {
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() }));
@@ -19,17 +20,18 @@ export const useDeleteAnnotationWithUndo = (getCollectionId: () => string) => {
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId });
     const { addReversibleAction } = useGlobalStorage();
 
-    let isDeleting = false;
+    // The annotations whose delete runs.
+    const deletingIds = new Set<string>();
     /** Resolves to whether the annotation was deleted. */
     const deleteWithUndo = async (
         annotation: AnnotationView,
         refetch: () => void
     ): Promise<boolean> => {
-        if (!labels.data || isDeleting) return false;
+        if (!labels.data || !sources.data || deletingIds.has(annotation.sample_id)) return false;
         // Read before the request: undo re-creates the annotation as it was.
         const undoLabels = labels.data;
-        const undoSources = sources.data ?? [];
-        isDeleting = true;
+        const undoSources = sources.data;
+        deletingIds.add(annotation.sample_id);
         try {
             await deleteAnnotation(annotation.sample_id, annotation.annotation_type);
             addAnnotationDeleteToUndoStack({
@@ -47,7 +49,7 @@ export const useDeleteAnnotationWithUndo = (getCollectionId: () => string) => {
             toast.error('Failed to delete annotation. Please try again.');
             return false;
         } finally {
-            isDeleting = false;
+            deletingIds.delete(annotation.sample_id);
         }
     };
 
