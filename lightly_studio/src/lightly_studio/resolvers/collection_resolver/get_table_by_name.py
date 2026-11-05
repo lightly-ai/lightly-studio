@@ -33,14 +33,17 @@ def get_table_by_name(
         ValueError:
             If the specified parent_collection_id does not exist.
     """
-    if parent_collection_id is not None:
-        parent = collection_resolver.get_by_id(session=session, collection_id=parent_collection_id)
-        if parent is None:
-            raise ValueError(f"Parent collection with id {parent_collection_id} not found.")
     statement = (
         select(CollectionTable)
         .where(CollectionTable.name == name)
         .where(col(CollectionTable.parent_collection_id) == parent_collection_id)
     )
-
-    return session.exec(statement).one_or_none()
+    collection = session.exec(statement).one_or_none()
+    if (
+        collection is None
+        and parent_collection_id is not None
+        and collection_resolver.get_by_id(session=session, collection_id=parent_collection_id)
+        is None
+    ):
+        raise ValueError(f"Parent collection with id {parent_collection_id} not found.")
+    return collection

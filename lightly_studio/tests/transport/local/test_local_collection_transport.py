@@ -30,6 +30,23 @@ class TestLocalCollectionTransport:
         assert child.parent_collection_id == root.collection_id
         assert child.dataset_id == root.dataset_id
 
+    def test_create__duplicate_name(self) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        collection = CollectionCreate(name="root", sample_type=SampleType.IMAGE)
+        transport.create(collection=collection)
+
+        with pytest.raises(ValueError, match=r"A dataset named 'root' already exists"):
+            transport.create(collection=collection)
+
+    def test_get_by_id(self) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        created = transport.create(
+            collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
+        )
+
+        assert transport.get_by_id(collection_id=created.collection_id) == created
+        assert transport.get_by_id(collection_id=uuid.uuid4()) is None
+
     def test_get_by_id__no_children(self) -> None:
         transport: CollectionTransport = LocalCollectionTransport()
         root = transport.create(
@@ -47,23 +64,6 @@ class TestLocalCollectionTransport:
 
         assert fetched is not None
         assert fetched.children == []
-
-    def test_create__duplicate_name(self) -> None:
-        transport: CollectionTransport = LocalCollectionTransport()
-        collection = CollectionCreate(name="root", sample_type=SampleType.IMAGE)
-        transport.create(collection=collection)
-
-        with pytest.raises(ValueError, match=r"A dataset named 'root' already exists"):
-            transport.create(collection=collection)
-
-    def test_get_by_id(self) -> None:
-        transport: CollectionTransport = LocalCollectionTransport()
-        created = transport.create(
-            collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
-        )
-
-        assert transport.get_by_id(collection_id=created.collection_id) == created
-        assert transport.get_by_id(collection_id=uuid.uuid4()) is None
 
     def test_get_by_name(self) -> None:
         transport: CollectionTransport = LocalCollectionTransport()
