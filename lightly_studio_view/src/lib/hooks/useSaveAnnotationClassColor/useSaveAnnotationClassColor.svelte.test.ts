@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { toast } from 'svelte-sonner';
-import { resetAnnotationClasses, setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
+import { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
 import { useSaveAnnotationClassColor } from './useSaveAnnotationClassColor.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -32,7 +32,6 @@ vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 const TOAST = 'Could not save the annotation class color.';
 
 const setup = () => {
-    resetAnnotationClasses('dataset-1');
     setAnnotationClasses('dataset-1', [
         {
             annotation_label_id: 'label-1',
@@ -51,7 +50,7 @@ describe('useSaveAnnotationClassColor', () => {
         mocks.mutateAsync.mockResolvedValue({});
     });
 
-    afterEach(() => resetAnnotationClasses('other'));
+    afterEach(() => setAnnotationClasses('dataset-1', []));
 
     it('saves the color for the class ID', async () => {
         const { saveClassColor } = setup();

@@ -25,7 +25,7 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { resetAnnotationClasses, setAnnotationClasses } from '$lib/hooks';
+    import { setAnnotationClasses } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -341,10 +341,7 @@
     }));
     const annotationLabelsData = $derived(annotationLabelsQuery?.data);
     // The route param is the root collection ID; classes point to the dataset table.
-    $effect(() => resetAnnotationClasses(collection.dataset_id));
-    $effect(() => {
-        if (annotationLabelsData) setAnnotationClasses(collection.dataset_id, annotationLabelsData);
-    });
+    $effect(() => setAnnotationClasses(collection.dataset_id, annotationLabelsData ?? []));
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
