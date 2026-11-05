@@ -15,8 +15,7 @@ import {
     useQueryClient,
     type CreateQueryResult
 } from '@tanstack/svelte-query';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-import { useRecentClasses } from '$lib/hooks';
+import { useGlobalStorage, useRecentClasses } from '$lib/hooks';
 import { toast } from 'svelte-sonner';
 
 interface UseAnnotationClassesParams {
