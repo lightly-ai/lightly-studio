@@ -1,9 +1,8 @@
 import { readonly, type Readable } from 'svelte/store';
-import { useWebStorage } from '$lib/hooks/useWebStorage/useWebStorage';
+import { useLocalStorage } from '$lib/hooks/useLocalStorage/useLocalStorage';
 import { pushRecent } from './pushRecent';
 
-const recentClasses = useWebStorage<Record<string, string[]>>(
-    'localStorage',
+const recentClasses = useLocalStorage<Record<string, string[]>>(
     'lightlyStudio_recent_annotation_classes',
     {}
 );
