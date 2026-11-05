@@ -4,17 +4,14 @@ import { getColorByLabel, getColorBySource, hexToRgba, rgbaToHex } from '$lib/ut
 import { onDestroy, untrack } from 'svelte';
 import { fromStore } from 'svelte/store';
 
-type SessionColor = NonNullable<
-    Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
->;
+// null is the default color: the preview hides the saved color, and applying deletes it.
+type SessionColor = Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1];
 
 type ColorStore = Pick<
     ReturnType<typeof useCustomLabelColors>,
     | 'customColorsStore'
-    | 'colorVersion'
     | 'setCustomColor'
     | 'deleteCustomColor'
-    | 'hasSavedColor'
     | 'setPreviewColor'
     | 'clearPreviewColor'
 >;
@@ -38,10 +35,8 @@ function createColorPicker(
     colorStore: ColorStore,
     getDefaultColor: typeof getColorByLabel
 ) {
-    const { setCustomColor, deleteCustomColor, hasSavedColor, setPreviewColor, clearPreviewColor } =
-        colorStore;
+    const { setCustomColor, deleteCustomColor, setPreviewColor, clearPreviewColor } = colorStore;
     const colors = fromStore(colorStore.customColorsStore);
-    const version = fromStore(colorStore.colorVersion);
     // A session starts at the first setColor after a finished one. A rename can change the
     // name while the picker stays open, so the session follows the name.
     let session: { owner: symbol; name: string; color: SessionColor } | undefined;
@@ -64,19 +59,14 @@ function createColorPicker(
     const defaultBorder = $derived(getDefaultColor(getName(), 1).color);
     const defaultBackground = $derived(getDefaultColor(getName(), 0.35).color);
 
-    // The saved layer only. hasSavedColor is not reactive, so re-read it on every version bump.
-    const hasCustomColor = $derived.by(() => {
-        void version.current;
-        return hasSavedColor(getName());
-    });
-
     const borderColor = $derived(customColor?.color ?? defaultBorder);
     const backgroundColor = $derived.by(() => {
         if (!customColor) return defaultBackground;
         return hexToRgba(customColor.color, customColor.alpha * 0.35);
     });
 
-    const initialColor = $derived(customColor?.color ?? rgbaToHex(defaultBorder) ?? '#ff0000');
+    const defaultColor = $derived(rgbaToHex(defaultBorder) ?? '#ff0000');
+    const initialColor = $derived(customColor?.color ?? defaultColor);
     const initialAlpha = $derived(customColor?.alpha ?? 1);
 
     return {
@@ -92,12 +82,14 @@ function createColorPicker(
         get initialAlpha() {
             return initialAlpha;
         },
-        get hasCustomColor() {
-            return hasCustomColor;
+        get defaultColor() {
+            return defaultColor;
         },
         setColor(color: string, alpha: number) {
-            session ??= { owner: Symbol(), name: getName(), color: { color, alpha } };
-            session.color = { color, alpha };
+            const isDefault = color.toLowerCase() === defaultColor && alpha === 1;
+            const sessionColor = isDefault ? null : { color, alpha };
+            session ??= { owner: Symbol(), name: getName(), color: sessionColor };
+            session.color = sessionColor;
             setPreviewColor(session.name, session.color, session.owner);
         },
         finishColorChange(applied: boolean) {
@@ -105,16 +97,9 @@ function createColorPicker(
 
             const { owner, name, color } = session;
             session = undefined;
-            if (applied) setCustomColor(name, color.color, color.alpha);
+            if (applied && color) setCustomColor(name, color.color, color.alpha);
+            if (applied && !color) deleteCustomColor(name);
             clearPreviewColor(name, owner);
-        },
-        resetColor() {
-            const name = session?.name ?? getName();
-            if (session) {
-                clearPreviewColor(session.name, session.owner);
-                session = undefined;
-            }
-            deleteCustomColor(name);
         }
     };
 }

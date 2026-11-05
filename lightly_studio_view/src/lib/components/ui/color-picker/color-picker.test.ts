@@ -90,19 +90,43 @@ describe('ColorPicker', () => {
         await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1));
     });
 
-    it('Reset to default calls onReset and closes without onClose', async () => {
-        const onReset = vi.fn();
-        const onClose = vi.fn();
-        const onChange = vi.fn();
-        render(ColorPicker, { props: { ...defaultProps, onReset, onClose, onChange } });
-        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+    describe('Reset to default', () => {
+        const resetProps = { ...defaultProps, initialColor: '#0000ff', defaultColor: '#ff0000' };
 
-        await fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
+        it('previews the default color and keeps the picker open', async () => {
+            const onChange = vi.fn();
+            render(ColorPicker, { props: { ...resetProps, onChange } });
+            await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
-        expect(onReset).toHaveBeenCalledTimes(1);
-        expect(onClose).not.toHaveBeenCalled();
-        expect(onChange).not.toHaveBeenCalled();
-        expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
+            await fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
+
+            await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#ff0000', 1));
+            expect(screen.getByRole('dialog', { name: 'Color picker' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Reset to default' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Apply' })).toHaveFocus();
+        });
+
+        it('applies the default color on Apply', async () => {
+            const onChange = vi.fn();
+            const onClose = vi.fn();
+            render(ColorPicker, { props: { ...resetProps, onChange, onClose } });
+            await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+            await fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }));
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+            expect(onChange).toHaveBeenLastCalledWith('#ff0000', 1);
+            expect(onClose).toHaveBeenCalledWith(true);
+        });
+
+        it('hides Reset without a defaultColor', async () => {
+            render(ColorPicker, { props: defaultProps });
+            await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+
+            expect(
+                screen.queryByRole('button', { name: 'Reset to default' })
+            ).not.toBeInTheDocument();
+        });
     });
 
     it('restores the original color when cancelling a preview', async () => {

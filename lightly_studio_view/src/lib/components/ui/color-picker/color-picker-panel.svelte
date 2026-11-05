@@ -20,6 +20,7 @@
         onApply: () => void;
         onCancel: () => void;
         onReset?: () => void;
+        isDefaultColor?: boolean;
     }
 
     let {
@@ -31,7 +32,8 @@
         onAlphaChange,
         onApply,
         onCancel,
-        onReset
+        onReset,
+        isDefaultColor = false
     }: Props = $props();
 
     function handleHexInput(e: Event): void {
@@ -87,5 +89,5 @@
         <PresetSwatches selectedColor={hex} onSelect={onHexChange} />
     </div>
 
-    <ColorPickerActions {onReset} {onCancel} {onApply} />
+    <ColorPickerActions {onReset} {isDefaultColor} {onCancel} {onApply} />
 </div>

@@ -47,7 +47,6 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
             getCustomColor: () => undefined,
             setCustomColor: vi.fn(),
             hasCustomColor: () => false,
-            hasSavedColor: () => false,
             deleteCustomColor: vi.fn(),
             clearCustomColors: vi.fn()
         })
