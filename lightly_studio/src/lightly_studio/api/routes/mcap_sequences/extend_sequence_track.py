@@ -1,4 +1,4 @@
-"""Route that extends an object track of an MCAP sequence onto more ticks."""
+"""Route that sets the extent of an object track on an MCAP sequence."""
 
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ def extend_sequence_track(
     track_id: Annotated[UUID, Path(title="Object track ID")],
     body: ExtendSequenceTrackInput,
 ) -> ExtendSequenceTrackView:
-    """Cover a tick range by copying the track's boundary cuboids outward.
+    """Set the track to cover a tick range, deleting cuboids outside it.
 
     Raises:
         NotFoundError: If the sequence does not belong to the dataset.

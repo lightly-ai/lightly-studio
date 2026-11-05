@@ -1,4 +1,4 @@
-"""Extend an object track of a sequence outward onto more ticks."""
+"""Set the extent of an object track on a sequence."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.services.recording_service.get_ticks import get_ticks
 
-# Serializes extensions in this process so a retry cannot add the same tick twice.
+# Serializes extent updates so a retry cannot add the same tick twice.
 _EXTEND_LOCK = threading.Lock()
 
 
@@ -33,19 +33,16 @@ def extend_sequence_track(  # noqa: PLR0913
     start_seq_number: int,
     end_seq_number: int,
 ) -> list[int] | None:
-    """Cover `[start_seq_number, end_seq_number]` by copying the track's boundary cuboids.
+    """Set the track extent to `[start_seq_number, end_seq_number]`.
 
-    Ticks before the track's first annotation get a copy of the first cuboid and ticks
-    after its last annotation get a copy of the last one, each kept in the cuboid's own
-    coordinate frame and marked as generated. Existing annotations are never touched, and
-    ticks that are already covered (or lie inside the track) are skipped, so repeating a
-    request creates nothing new. All new annotations are saved in one transaction.
+    Cuboids outside the requested range are deleted. Ticks before the first retained
+    annotation or after the last retained annotation get a copy of that boundary cuboid.
 
     Args:
         session: The database session.
         dataset_id: The dataset the sequence must belong to.
         sequence_id: The sequence sample ID.
-        track_id: The track to extend.
+        track_id: The track to update.
         annotation_source_id: The annotation source holding the track's cuboids.
         start_seq_number: First tick the track should cover.
         end_seq_number: Last tick the track should cover.
@@ -76,6 +73,19 @@ def extend_sequence_track(  # noqa: PLR0913
             annotation_source_id=annotation_source_id,
         )
         by_seq = {annotation.seq_number: annotation for annotation in track.annotations}
+        retained = {
+            seq_number: annotation
+            for seq_number, annotation in by_seq.items()
+            if start_seq_number <= seq_number <= end_seq_number
+        }
+        if not retained:
+            raise ValueError("The requested range must retain at least one track annotation.")
+        removed = [
+            annotation
+            for seq_number, annotation in by_seq.items()
+            if not start_seq_number <= seq_number <= end_seq_number
+        ]
+        by_seq = retained
         first, last = min(by_seq), max(by_seq)
         targets = [
             (seq_number, first if seq_number < first else last)
@@ -83,16 +93,20 @@ def extend_sequence_track(  # noqa: PLR0913
             if start_seq_number <= seq_number <= end_seq_number
             and (seq_number < first or seq_number > last)
         ]
-        if not targets:
-            return []
-        return _create_copies(
+        created = _create_copies(
             session=session,
             sequence_id=sequence_id,
             track=track,
             by_seq=by_seq,
             targets=targets,
             annotation_source_id=annotation_source_id,
-        )
+        ) if targets else []
+        if removed:
+            annotation_resolver.delete_annotations_by_ids(
+                session=session,
+                annotation_ids=[annotation.annotation_id for annotation in removed],
+            )
+        return created
 
 
 def find_sequence_track(

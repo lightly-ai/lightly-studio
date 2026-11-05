@@ -18,8 +18,7 @@ export function tickIndexAt(clientX: number, bar: { left: number; width: number 
 }
 
 /**
- * Where dragging a handle to `index` would put the track's coverage. Handles only extend
- * outward, so a drag inside the current coverage proposes no change.
+ * Where dragging a handle to `index` would put the track's coverage.
  */
 export function proposeExtent(
     extent: { first: number; last: number },
@@ -27,8 +26,8 @@ export function proposeExtent(
     index: number
 ): { first: number; last: number } {
     return edge === 'start'
-        ? { first: Math.min(index, extent.first), last: extent.last }
-        : { first: extent.first, last: Math.max(index, extent.last) };
+        ? { first: Math.min(index, extent.last), last: extent.last }
+        : { first: extent.first, last: Math.max(index, extent.first) };
 }
 
 /** The tick numbers a proposed extent covers, or null when it changes nothing. */

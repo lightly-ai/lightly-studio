@@ -12,7 +12,7 @@
         track: SequenceTrackView;
         isSelected: boolean;
         onSelectPosition: (event: MouseEvent, track: SequenceTrackView) => void;
-        /** Set while editing: shows handles that extend the track onto more ticks. */
+        /** Set while editing: shows handles to resize the track's covered tick range. */
         onExtend?: (track: SequenceTrackView, startSeqNumber: number, endSeqNumber: number) => void;
         onExtendStart?: () => void;
         onExtendEnd?: () => void;
