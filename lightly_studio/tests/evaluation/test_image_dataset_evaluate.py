@@ -36,6 +36,11 @@ from tests.helpers_resolvers import (
     create_image,
 )
 
+# The cat prediction is 3 px to the right of its ground truth, so their IoU is 17/23 (about 0.74).
+# It matches at the IoU thresholds 0.50 to 0.70 and not at 0.75 to 0.95.
+CAT_GT_BOX = {"x": 50, "y": 50, "width": 20, "height": 20}
+CAT_PRED_BOX = {"x": 53, "y": 50, "width": 20, "height": 20}
+
 
 def test_object_detection_evaluation(
     patch_collection: None,  # noqa: ARG001
@@ -1340,8 +1345,8 @@ def test_instance_segmentation_evaluation__raises_on_wrong_annotation_type(
 def _create_run_with_average_precision(dataset: ImageDataset) -> UUID:
     """Create a detection run with average precision.
 
-    The cat prediction has IoU 17/23 (about 0.74) with its ground truth, so it matches at the
-    IoU thresholds 0.50 to 0.70 only. The dog is missed and the bird is a false positive.
+    The cat has the boxes CAT_GT_BOX and CAT_PRED_BOX. The dog is missed and the bird is a
+    false positive.
     """
     labels = {
         name: create_annotation_label(
@@ -1351,13 +1356,13 @@ def _create_run_with_average_precision(dataset: ImageDataset) -> UUID:
     }
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    for source_name, x in (("gt", 50), ("pred", 53)):
+    for source_name, box in (("gt", CAT_GT_BOX), ("pred", CAT_PRED_BOX)):
         create_annotation(
             session=dataset.session,
             collection_id=dataset.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=labels["cat"].annotation_label_id,
-            annotation_data={"x": x, "y": 50, "width": 20, "height": 20},
+            annotation_data=box,
             annotation_collection_name=source_name,
         )
     create_annotation(
