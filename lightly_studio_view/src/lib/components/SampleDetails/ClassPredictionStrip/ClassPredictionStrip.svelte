@@ -6,6 +6,8 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { cn, isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import { useQueryClient } from '@tanstack/svelte-query';
+    import { isAnnotationQueryOf } from './ClassPredictionStrip.helpers';
 
     interface Props {
         collectionId: string;
@@ -18,6 +20,7 @@
     const classPrediction = useAnnotationClassPredictionContext();
     const { context: annotationLabelContext, setAnnotationLabel } = useAnnotationLabelContext();
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const queryClient = useQueryClient();
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         getCollectionId: () => collectionId
     });
@@ -39,24 +42,30 @@
     });
 
     const relabel = async (labelName: string) => {
-        if (!predictedAnnotation || labelName === currentLabelName) return;
+        const annotation = predictedAnnotation;
+        if (!annotation || labelName === currentLabelName) return;
+        // The side panel row and the box read the class from their own annotation query.
+        const refresh = () => {
+            queryClient.invalidateQueries({ predicate: isAnnotationQueryOf(annotation.sample_id) });
+            refetch();
+        };
         addAnnotationLabelChangeToUndoStack({
-            annotations: [predictedAnnotation],
+            annotations: [annotation],
             collectionId,
             addReversibleAction,
             updateAnnotations,
-            refresh: refetch
+            refresh
         });
         await updateAnnotations([
             {
-                annotation_id: predictedAnnotation.sample_id,
+                annotation_id: annotation.sample_id,
                 collection_id: collectionId,
                 label_name: labelName
             }
         ]);
         setAnnotationLabel(labelName);
         updateLastAnnotationLabel(collectionId, labelName);
-        refetch();
+        refresh();
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {

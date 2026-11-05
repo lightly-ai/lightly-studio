@@ -11,7 +11,13 @@ const mocks = vi.hoisted(() => ({
     updateLastAnnotationLabel: vi.fn(),
     addReversibleAction: vi.fn(),
     updateAnnotations: vi.fn(),
-    addAnnotationLabelChangeToUndoStack: vi.fn()
+    addAnnotationLabelChangeToUndoStack: vi.fn(),
+    invalidateQueries: vi.fn()
+}));
+
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries })
 }));
 
 vi.mock('$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte', () => ({
@@ -114,6 +120,47 @@ describe('ClassPredictionStrip', () => {
         expect(mocks.setAnnotationLabel).toHaveBeenCalledWith('truck');
         expect(mocks.updateLastAnnotationLabel).toHaveBeenCalledWith('col-1', 'truck');
         expect(refetch).toHaveBeenCalled();
+    });
+
+    it('refreshes the views that read the relabeled annotation', async () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: defaultProps });
+
+        await fireEvent.keyDown(window, { key: '2' });
+
+        expect(mocks.invalidateQueries).toHaveBeenCalledOnce();
+        const { predicate } = mocks.invalidateQueries.mock.calls[0][0];
+        const query = (key: unknown) => ({ queryKey: [key] });
+        expect(
+            predicate(
+                query({
+                    _id: 'getAnnotation',
+                    path: { annotation_id: 'ann-1', collection_id: 'x' }
+                })
+            )
+        ).toBe(true);
+        expect(
+            predicate(
+                query({
+                    _id: 'getAnnotation',
+                    path: { annotation_id: 'ann-2', collection_id: 'x' }
+                })
+            )
+        ).toBe(false);
+        expect(predicate(query({ _id: 'getImage', path: { annotation_id: 'ann-1' } }))).toBe(false);
+    });
+
+    it('refreshes the annotation views on undo', async () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: defaultProps });
+        await fireEvent.keyDown(window, { key: '2' });
+        mocks.invalidateQueries.mockClear();
+        refetch.mockClear();
+
+        mocks.addAnnotationLabelChangeToUndoStack.mock.calls[0][0].refresh();
+
+        expect(mocks.invalidateQueries).toHaveBeenCalledOnce();
+        expect(refetch).toHaveBeenCalledOnce();
     });
 
     it('ignores keys when the selected annotation is not the predicted one', async () => {
