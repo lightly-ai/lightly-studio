@@ -1,4 +1,4 @@
-<script module>
+<script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
     import ColorPicker from './color-picker.svelte';
@@ -42,7 +42,7 @@
 <Story name="Default">
     {#snippet template(args)}
         <ColorPicker {...args}>
-            <span class="block h-6 w-6 rounded border" style="background-color: {args.initialColor}"></span>
+            <span class="block h-6 w-6 rounded border" style="background-color: {args.initialColor}; opacity: {args.initialAlpha}"></span>
         </ColorPicker>
     {/snippet}
 </Story>
@@ -50,7 +50,7 @@
 <Story name="Semi-transparent" args={{ initialColor: '#22c55e', initialAlpha: 0.4 }}>
     {#snippet template(args)}
         <ColorPicker {...args}>
-            <span class="block h-6 w-6 rounded border" style="background-color: {args.initialColor}"></span>
+            <span class="block h-6 w-6 rounded border" style="background-color: {args.initialColor}; opacity: {args.initialAlpha}"></span>
         </ColorPicker>
     {/snippet}
 </Story>
@@ -58,7 +58,7 @@
 <Story name="Opens Below" args={{ position: 'bottom' }}>
     {#snippet template(args)}
         <ColorPicker {...args}>
-            <span class="block h-6 w-6 rounded border" style="background-color: {args.initialColor}"></span>
+            <span class="block h-6 w-6 rounded border" style="background-color: {args.initialColor}; opacity: {args.initialAlpha}"></span>
         </ColorPicker>
     {/snippet}
 </Story>
