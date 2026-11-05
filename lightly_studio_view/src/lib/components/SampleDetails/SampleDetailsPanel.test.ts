@@ -35,9 +35,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         lastAnnotationBrushSize: writable({}),
         imageBrightness: writable(0),
         imageContrast: writable(0),
-        maskOpacity: writable(0),
-        lastAnnotationLabel: writable({}),
-        lastAnnotationSource: writable({})
+        maskOpacity: writable(0)
     })
 }));
 
@@ -47,6 +45,10 @@ vi.mock('$lib/hooks/useHideAnnotations', () => ({
 
 vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
     useAnnotationSelection: () => ({ selectAnnotation: vi.fn() })
+}));
+
+vi.mock('$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte', () => ({
+    useAnnotationTarget: vi.fn()
 }));
 
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));

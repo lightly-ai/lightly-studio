@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/svelte-query', () => ({
     createMutation: () => ({ mutateAsync: mocks.mutateAsync })
 }));
-vi.mock('$lib/hooks', () => ({
+vi.mock('$lib/hooks', async () => ({
+    isAnnotationSourceBlocked: (
+        await import('$lib/hooks/useAnnotationTarget/annotationSourceGuard')
+    ).isAnnotationSourceBlocked,
     useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.toastError } }));
@@ -36,7 +39,7 @@ const deferred = () => {
 
 let cleanup = () => {};
 
-const setup = (initialPrompt = 'cars') => {
+const setup = (initialPrompt = 'cars', blockedReason: string | null = null) => {
     const params = $state<{ sampleId: string; prompt: string; annotationClass: string | null }>({
         sampleId: 'sample-1',
         prompt: initialPrompt,
@@ -53,6 +56,7 @@ const setup = (initialPrompt = 'cars') => {
             saveAs: 'box',
             annotationClass: params.annotationClass,
             annotationSource: 'source',
+            annotationSourceBlockedReason: blockedReason,
             onSaved
         }));
     });
@@ -206,6 +210,17 @@ describe('useFindInstances', () => {
         expect(instances.predictions).toEqual([]);
         expect(instances.isGenerating).toBe(false);
         expect(mocks.toastError).not.toHaveBeenCalled();
+    });
+
+    it('saves nothing while no annotation source can take new annotations', async () => {
+        const { instances } = setup('cars', 'Pick where new annotations go.');
+        await generateResults(instances);
+
+        await instances.save();
+
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+        expect(mocks.toastError).toHaveBeenCalledWith('Pick where new annotations go.');
+        expect(instances.predictions).toHaveLength(2);
     });
 
     it('saves the instances and removes each saved one', async () => {

@@ -3,7 +3,7 @@ import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInstancesAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useSaveAnnotationPreviews } from '$lib/hooks';
+import { isAnnotationSourceBlocked, useSaveAnnotationPreviews } from '$lib/hooks';
 import { getAnnotationPreviewErrorMessage } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 import { page } from '$app/state';
@@ -22,6 +22,7 @@ interface UseFindInstancesParams {
     saveAs: SaveAs;
     annotationClass: string | null | undefined;
     annotationSource: string | null | undefined;
+    annotationSourceBlockedReason?: string | null;
     onSaved: () => void;
 }
 
@@ -138,6 +139,12 @@ export const useFindInstances = (getParams: () => UseFindInstancesParams) => {
 
     const save = async () => {
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
+        if (
+            isAnnotationSourceBlocked({
+                annotationSourceBlockedReason: getParams().annotationSourceBlockedReason
+            })
+        )
+            return;
         if (!annotationClass || !canSave()) return;
         isSaving = true;
         try {

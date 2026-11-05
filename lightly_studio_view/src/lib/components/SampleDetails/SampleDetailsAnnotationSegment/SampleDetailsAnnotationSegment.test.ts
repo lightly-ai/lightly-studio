@@ -1,8 +1,10 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import type { Writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
+import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegmentTestWrapper.test.svelte';
 import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
 
 vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
@@ -16,6 +18,8 @@ const mocks = vi.hoisted(() => ({
     enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
     userRole: 'labeler' as string | undefined,
+    lastAnnotationSource: undefined as unknown as Writable<Record<string, string>>,
+    context: undefined as unknown as AnnotationLabelContext,
     pickClass: vi.fn(),
     addReversibleAction: vi.fn(),
     deleteAnnotation: vi.fn()
@@ -54,30 +58,21 @@ vi.mock('$lib/hooks/useAuth/useAuth', () => ({
 vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
     const isEditingMode = writable(false);
+    const lastAnnotationSource = writable<Record<string, string>>({});
     mocks.isEditingMode = isEditingMode;
+    mocks.lastAnnotationSource = lastAnnotationSource;
     return {
         useGlobalStorage: vi.fn(() => ({
             addReversibleAction: mocks.addReversibleAction,
             updateLastAnnotationLabel: vi.fn(),
+            lastAnnotationSource,
+            updateLastAnnotationSource: (collectionId: string, name: string) =>
+                lastAnnotationSource.update((value) => ({ ...value, [collectionId]: name })),
+            removeLastAnnotationSource: vi.fn(),
             isEditingMode
         }))
     };
 });
-
-vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: vi.fn(() => ({
-        context: {
-            annotationId: null,
-            lockedAnnotationIds: new Set<string>(),
-            lastCreatedAnnotationId: mocks.lastCreatedAnnotationId,
-            annotationType: null
-        },
-        setAnnotationId: vi.fn(),
-        setAnnotationLabel: vi.fn(),
-        setLastCreatedAnnotationId: vi.fn(),
-        setLockedAnnotationIds: vi.fn()
-    }))
-}));
 
 vi.mock('$lib/hooks/useStickyClass/useStickyClass', () => ({
     useStickyClass: () => ({ pickClass: mocks.pickClass })
@@ -132,7 +127,13 @@ const defaultProps = {
     sampleId: 'sample-1',
     annotations: [] as AnnotationView[],
     isPanModeEnabled: false,
-    refetch: vi.fn()
+    refetch: vi.fn(),
+    get initialContext(): AnnotationLabelContext {
+        return { lastCreatedAnnotationId: mocks.lastCreatedAnnotationId };
+    },
+    onContext: (context: AnnotationLabelContext) => {
+        mocks.context = context;
+    }
 };
 
 const getRow = (annotationId: string) => {
@@ -152,6 +153,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
+        mocks.lastAnnotationSource.set({});
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
 
@@ -209,9 +211,13 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
+        // Predictions is still listed, so it can be picked as the target, but with no annotation.
         const headers = screen.getAllByTestId('annotation-source-group-header');
-        expect(headers).toHaveLength(1);
+        expect(headers).toHaveLength(2);
         expect(headers[0]).toHaveTextContent(groundTruthSource.name);
+        expect(within(headers[0]).getByText('1')).toBeInTheDocument();
+        expect(headers[1]).toHaveTextContent(predictionsSource.name);
+        expect(within(headers[1]).getByText('0')).toBeInTheDocument();
         expect(screen.getAllByTestId('mock-annotation-row')).toHaveLength(1);
     });
 
@@ -450,8 +456,6 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         it('expands a collapsed source when the user creates its first annotation', async () => {
             const user = userEvent.setup();
-            // The mocked label context is read at mount, so the new annotation's ID is set now.
-            mocks.lastCreatedAnnotationId = 'pred-new';
             const { rerender } = render(SampleDetailsAnnotationSegment, {
                 props: { ...defaultProps, annotations: firstAnnotations }
             });
@@ -461,6 +465,7 @@ describe('SampleDetailsAnnotationSegment', () => {
                 createAnnotation('gt-2', groundTruthSource.collection_id, 'dog')
             ];
             await rerender({ ...defaultProps, annotations: groundTruthOnly, sampleId: 'sample-2' });
+            mocks.context.lastCreatedAnnotationId = 'pred-new';
             await rerender({
                 ...defaultProps,
                 annotations: [
@@ -475,14 +480,13 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         it('keeps an annotation drawn into a hidden source visible', async () => {
             const user = userEvent.setup();
-            // The mocked label context is read at mount, so the new annotation's ID is set now.
-            mocks.lastCreatedAnnotationId = 'pred-new';
             const { rerender } = render(SampleDetailsAnnotationSegment, {
                 props: { ...defaultProps, annotations: firstAnnotations }
             });
 
             await user.click(screen.getAllByTestId('source-group-eye')[1]);
             await rerender({ ...defaultProps, annotations: [], sampleId: 'sample-2' });
+            mocks.context.lastCreatedAnnotationId = 'pred-new';
             await rerender({
                 ...defaultProps,
                 annotations: [createAnnotation('pred-new', predictionsSource.collection_id, 'cat')],
@@ -536,29 +540,23 @@ describe('SampleDetailsAnnotationSegment', () => {
             ];
         });
 
-        it('preserves source colors when hiding a source or an individual annotation', async () => {
+        it('brings class colors back when hiding a source leaves one, and source colors on show', async () => {
             const user = userEvent.setup();
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
-            // Both sources visible: source color markers in the headers, no label
-            // legends in the rows.
-            let headers = screen.getAllByTestId('annotation-source-group-header');
-            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
-            expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
+            const headers = () => screen.getAllByTestId('annotation-source-group-header');
+            expect(getSourceColorMarker(headers()[0])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
 
-            // Hiding a source keeps its identity and the remaining source colors stable.
             await user.click(screen.getAllByTestId('source-group-eye')[1]);
 
-            headers = screen.getAllByTestId('annotation-source-group-header');
-            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
-            expect(getSourceColorMarker(headers[1])).toBeInTheDocument();
-            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
-            expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'true');
+            expect(getSourceColorMarker(headers()[0])).not.toBeInTheDocument();
+            expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'false');
+            expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'false');
 
-            await user.click(within(getRow('gt-1')).getByTestId('mock-annotation-row-toggle'));
-            expect(getRow('gt-1')).toHaveAttribute('data-hidden', 'true');
-            expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
+            await user.click(screen.getByTestId('source-group-eye-off'));
+
+            expect(getSourceColorMarker(headers()[0])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
         });
 
@@ -601,6 +599,108 @@ describe('SampleDetailsAnnotationSegment', () => {
             render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent('No annotations.');
+        });
+    });
+    describe('picking the target source', () => {
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource, predictionsSource];
+            mocks.selectedCollectionIds = [groundTruthSource.collection_id];
+            mocks.isEditingMode.set(true);
+        });
+
+        const annotations = [createAnnotation('a1', groundTruthSource.collection_id, 'cat')];
+        const radioId = (name: string) => `annotation-target-radio-${name}`;
+
+        it('shows a radio per source and asks for a pick', () => {
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.getByTestId(radioId(predictionsSource.name))).toHaveAttribute(
+                'aria-checked',
+                'false'
+            );
+            expect(screen.getByTestId('annotation-target-hint')).toHaveTextContent(
+                'Pick where new annotations go.'
+            );
+        });
+
+        it('makes a source the target with its radio, also without annotations', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId(radioId(predictionsSource.name)));
+
+            expect(screen.getByTestId(radioId(predictionsSource.name))).toHaveAttribute(
+                'aria-checked',
+                'true'
+            );
+            expect(screen.getByTestId('annotation-source-group-subtitle')).toHaveTextContent(
+                'New annotations go here'
+            );
+            expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
+        });
+
+        it('says new annotations go to the remembered pick', () => {
+            mocks.lastAnnotationSource.set({ [defaultProps.collectionId]: predictionsSource.name });
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.getByTestId(radioId(predictionsSource.name))).toHaveAttribute(
+                'aria-checked',
+                'true'
+            );
+            expect(screen.getByTestId('annotation-source-group-subtitle')).toHaveTextContent(
+                'New annotations go here'
+            );
+            expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
+        });
+
+        it('does not make a hidden source the target', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('source-group-eye'));
+            await user.click(screen.getByTestId(radioId(groundTruthSource.name)));
+
+            expect(screen.getByTestId(radioId(groundTruthSource.name))).toHaveAttribute(
+                'aria-checked',
+                'false'
+            );
+            expect(screen.getByTestId('annotation-target-hint')).toBeInTheDocument();
+        });
+
+        it('lists a typed new source as the target before it exists', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+            expect(screen.queryByTestId(radioId('Review'))).not.toBeInTheDocument();
+
+            await user.click(screen.getByTestId('new-annotation-source-button'));
+            await user.type(screen.getByTestId('new-annotation-source-input'), 'Review{Enter}');
+
+            expect(screen.getByTestId(radioId('Review'))).toHaveAttribute('aria-checked', 'true');
+            expect(screen.getByTestId(radioId(predictionsSource.name))).toHaveAttribute(
+                'aria-checked',
+                'false'
+            );
+        });
+
+        it('hides the radios and the new source input from viewers', () => {
+            mocks.userRole = 'viewer';
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.queryByTestId(radioId(groundTruthSource.name))).not.toBeInTheDocument();
+            expect(screen.queryByTestId('new-annotation-source-button')).not.toBeInTheDocument();
+        });
+
+        it('hides the radios and the new source input outside edit mode', () => {
+            mocks.isEditingMode.set(false);
+            mocks.lastAnnotationSource.set({ [defaultProps.collectionId]: groundTruthSource.name });
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            expect(screen.queryByTestId(radioId(groundTruthSource.name))).not.toBeInTheDocument();
+            expect(screen.queryByTestId('annotation-target-hint')).not.toBeInTheDocument();
+            expect(screen.queryByTestId('new-annotation-source-button')).not.toBeInTheDocument();
+            expect(
+                screen.queryByTestId('annotation-source-group-subtitle')
+            ).not.toBeInTheDocument();
         });
     });
 
