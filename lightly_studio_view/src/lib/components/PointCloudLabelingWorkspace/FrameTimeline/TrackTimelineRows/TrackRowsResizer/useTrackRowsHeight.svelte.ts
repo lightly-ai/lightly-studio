@@ -37,11 +37,18 @@ export function useTrackRowsHeight() {
             return dragStart !== null;
         },
         setHeight,
-        /** Dragging the handle up makes the rows taller. */
-        startDrag(event: PointerEvent) {
+        /**
+         * Dragging the handle up makes the rows taller. The drag starts from the height the
+         * rows really have, because a short list is smaller than the limit and shrinking the
+         * limit would otherwise show no change at first.
+         */
+        startDrag(event: PointerEvent, renderedHeight?: number) {
             event.preventDefault();
             (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
-            dragStart = { pointerY: event.clientY, height };
+            dragStart = {
+                pointerY: event.clientY,
+                height: clamp(Math.min(height, renderedHeight || height))
+            };
         },
         drag(event: PointerEvent) {
             if (dragStart) setHeight(dragStart.height + (dragStart.pointerY - event.clientY));

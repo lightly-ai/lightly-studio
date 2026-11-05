@@ -50,4 +50,15 @@ describe('TrackRowsResizer', () => {
 
         expect(rowsHeight.height).toBeGreaterThan(DEFAULT_TRACK_ROWS_HEIGHT);
     });
+
+    it('shrinks right away when the rows are shorter than the limit', async () => {
+        const rowsHeight = useTrackRowsHeight();
+        render(TrackRowsResizer, { props: { rowsHeight, getRenderedHeight: () => 100 } });
+        const handle = screen.getByTestId('track-rows-resizer');
+
+        await pointer(handle, 'pointerdown', 500);
+        await pointer(handle, 'pointermove', 520);
+
+        expect(rowsHeight.height).toBe(80);
+    });
 });

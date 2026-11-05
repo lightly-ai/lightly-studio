@@ -42,9 +42,9 @@ def get_sequence_tracks(
         dataset_id: The dataset the sequence must belong to.
         sequence_id: The sequence sample ID.
         annotation_source_id: Only return annotations from this annotation source.
-        target_frame_id: The coordinate frame the scene is shown in. A tick's
-            annotations are left out if its cuboids cannot be mapped to this frame,
-            because the scene cannot show them there either. `None` keeps every
+        target_frame_id: The coordinate frame the scene is shown in. If a tick's cuboids
+            cannot be mapped to this frame, the scene shows the sensor frames instead, so
+            only that tick's cuboids stored in a sensor frame are kept. `None` keeps every
             annotation.
 
     Returns:
@@ -78,13 +78,28 @@ def get_sequence_tracks(
     )
     if not hidden_seq_numbers:
         return tracks
+    # At these ticks the scene falls back to the sensor frames, so only cuboids stored in a
+    # sensor frame still show.
+    sensor_frame_ids = _sensor_frame_ids(session=session, sequence_id=sequence_id)
     for track in tracks.tracks:
         track.annotations = [
             annotation
             for annotation in track.annotations
             if annotation.seq_number not in hidden_seq_numbers
+            or annotation.frame_id in sensor_frame_ids
         ]
     return tracks
+
+
+def _sensor_frame_ids(session: Session, sequence_id: UUID) -> set[str]:
+    """Return the coordinate frames of the sequence's sensors."""
+    try:
+        info = mcap_group_sequence_resolver.get_info(session=session, sample_id=sequence_id)
+    except ValueError:
+        return set()
+    if info is None:
+        return set()
+    return {component.frame_id for component in info.components if component.frame_id}
 
 
 def _seq_numbers_outside_frame(

@@ -47,6 +47,7 @@
         sequenceId
     }: Props = $props();
     const rowsHeight = useTrackRowsHeight();
+    let listElement = $state<HTMLElement | null>(null);
     const visible = useVisibleTracks({
         getTracks: () => tracks,
         getSelectedAnnotationId: () => selectedAnnotationId,
@@ -85,7 +86,7 @@
 
 {#if tracks.length > 0 || onStartTrack || onAddTrack}
     {#if tracks.length > 0}
-        <TrackRowsResizer {rowsHeight} />
+        <TrackRowsResizer {rowsHeight} getRenderedHeight={() => listElement?.clientHeight ?? 0} />
     {/if}
     <div class="border-t px-2 py-1" data-testid="object-track-rows">
         <TrackTimelineToolbar
@@ -102,8 +103,9 @@
             {onStartTrack}
         />
         <div
-            class="overflow-y-auto overscroll-contain"
+            class="scrollbar-thin overflow-y-auto overflow-x-hidden overscroll-contain px-1"
             style:max-height={`${rowsHeight.height}px`}
+            bind:this={listElement}
             data-testid="object-track-list"
         >
             {#each visible.visibleTracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}

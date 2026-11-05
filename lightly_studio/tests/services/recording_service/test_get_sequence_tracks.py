@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import annotation_resolver, group_resolver, object_track_resolver
@@ -60,6 +62,26 @@ def test_get_sequence_tracks__hides_ticks_without_timestamp(db_session: Session)
     assert result.tracks[0].annotations == []
 
 
+def test_get_sequence_tracks__keeps_sensor_frame_cuboids_without_transform(
+    db_session: Session,
+) -> None:
+    # Without a timestamp the scene shows the sensor frames, so a cuboid drawn there stays
+    # visible while an "odom" one does not.
+    fixture = _create_tracked_sequence(
+        session=db_session, timestamps_ns=[None], frame_id="livox_front_left"
+    )
+
+    result = recording_service.get_sequence_tracks(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        target_frame_id="base_link",
+    )
+
+    assert result is not None
+    assert [annotation.seq_number for annotation in result.tracks[0].annotations] == [0]
+
+
 def test_get_sequence_tracks__unknown_sequence(db_session: Session) -> None:
     fixture = helpers.create_mcap_sequence(session=db_session)
 
@@ -73,7 +95,7 @@ def test_get_sequence_tracks__unknown_sequence(db_session: Session) -> None:
 
 
 def _create_tracked_sequence(
-    session: Session, timestamps_ns: list[int | None]
+    session: Session, timestamps_ns: list[int | None], frame_id: str = "odom"
 ) -> McapSequenceFixture:
     """Creates a sequence with one tracked "odom" cuboid per tick."""
     fixture = helpers.create_mcap_sequence(session=session)
@@ -108,10 +130,13 @@ def _create_tracked_sequence(
         session=session,
         parent_collection_id=fixture.group_collection.collection_id,
         annotations=[
-            cuboid_create(
-                parent_sample_id=group_id,
-                annotation_label_id=label.annotation_label_id,
-                object_track_id=track_id,
+            _cuboid_in_frame(
+                cuboid_create(
+                    parent_sample_id=group_id,
+                    annotation_label_id=label.annotation_label_id,
+                    object_track_id=track_id,
+                ),
+                frame_id=frame_id,
             )
             for group_id in group_ids
         ],
@@ -119,3 +144,11 @@ def _create_tracked_sequence(
     )
     session.commit()
     return fixture
+
+
+def _cuboid_in_frame(annotation: AnnotationCreate, frame_id: str) -> AnnotationCreate:
+    assert annotation.cuboid_3d is not None
+    annotation.cuboid_3d = Cuboid3DCreate(
+        **{**annotation.cuboid_3d.model_dump(), "frame_id": frame_id}
+    )
+    return annotation

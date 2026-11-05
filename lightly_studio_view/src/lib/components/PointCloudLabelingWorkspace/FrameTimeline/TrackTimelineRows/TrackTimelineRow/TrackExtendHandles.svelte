@@ -52,7 +52,10 @@
             tabindex="-1"
             aria-label={`Extend ${handle.edge} of ${label}`}
             aria-valuenow={handle.index}
-            class="absolute -top-0.5 z-10 h-3 w-1.5 -translate-x-1/2 cursor-ew-resize touch-none rounded-sm bg-foreground/80 hover:bg-primary"
+            class="absolute -top-0.5 z-10 h-3 w-1.5 cursor-ew-resize touch-none rounded-sm bg-foreground/80 hover:bg-primary {handle.edge ===
+            'end'
+                ? '-translate-x-full'
+                : ''}"
             style:left={percent(handle.index)}
             data-testid={`track-extend-${handle.edge}`}
             onpointerdown={(event) => drag.start(event, handle.edge)}

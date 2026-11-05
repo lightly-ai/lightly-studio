@@ -8,9 +8,11 @@
     /** A handle above the track rows: drag up for taller rows, down for shorter ones. */
     interface Props {
         rowsHeight: ReturnType<typeof useTrackRowsHeight>;
+        /** The height the rows currently have on screen. */
+        getRenderedHeight?: () => number;
     }
 
-    const { rowsHeight }: Props = $props();
+    const { rowsHeight, getRenderedHeight }: Props = $props();
     const KEYBOARD_STEP = 24;
 
     function handleKeydown(event: KeyboardEvent) {
@@ -31,7 +33,7 @@
     tabindex="0"
     class="group flex h-2 cursor-row-resize touch-none items-center justify-center bg-card"
     data-testid="track-rows-resizer"
-    onpointerdown={rowsHeight.startDrag}
+    onpointerdown={(event) => rowsHeight.startDrag(event, getRenderedHeight?.())}
     onpointermove={rowsHeight.drag}
     onpointerup={rowsHeight.endDrag}
     onpointercancel={rowsHeight.endDrag}
