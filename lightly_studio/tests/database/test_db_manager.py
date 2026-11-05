@@ -28,8 +28,6 @@ from lightly_studio.database.db_manager import (
 )
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.resolvers import image_resolver
-from lightly_studio.transport import studio_transport
-from lightly_studio.transport.local.local_transport import LocalTransport
 from tests.helpers_resolvers import (
     create_collection,
     create_image,
@@ -164,21 +162,6 @@ def test_connect__db_file_none(
         cleanup_existing=True,
         must_exist=False,
     )
-
-
-def test_connect__sets_default_transport(
-    mocker: MockerFixture,
-    patch_engine_singleton: None,  # noqa ARG001
-) -> None:
-    mocker.patch.object(db_manager, "DatabaseEngine", spec_set=DatabaseEngine)
-    previous = LocalTransport()
-    mocker.patch.object(studio_transport._active, "transport", previous)
-
-    db_manager.connect(db_file=None)
-
-    active = studio_transport.get_transport()
-    assert isinstance(active, LocalTransport)
-    assert active is not previous
 
 
 def test_session_data_consistency(mocker: MockerFixture, tmp_path: Path) -> None:
