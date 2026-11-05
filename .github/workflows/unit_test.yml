@@ -182,18 +182,23 @@ jobs:
           # behavior doesn't vary by Python version.
           - python: "3.10"
             database: DuckDB
-            make_target: test
+            make_target: test-without-build
           - python: "3.15"
             database: DuckDB
-            make_target: test
+            make_target: test-without-build
           - python: "3.15"
             database: Postgres
-            make_target: test-postgres
+            make_target: test-postgres-without-build
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
         with:
           submodules: recursive
+
+      - name: Log runner info
+        uses: ./.github/actions/runner-info
+        with:
+          mode: start
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
@@ -228,11 +233,34 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make migration-check-postgresql
 
+      - name: Build app
+        working-directory: lightly_studio
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: make build
+
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
         env:
           UV_PYTHON: ${{ matrix.python }}
+          # Lists the slowest tests and saves the time of every test.
+          PYTEST_ADDOPTS: --durations=30 --junitxml=pytest-report.xml
         run: make ${{ matrix.make_target }}
+
+      - name: Upload test timings
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Pytest Report (${{ matrix.python }}, ${{ matrix.database }})
+          path: lightly_studio/pytest-report.xml
+          if-no-files-found: ignore
+          retention-days: 30
+
+      - name: Report runner load
+        if: always()
+        uses: ./.github/actions/runner-info
+        with:
+          mode: report
 
   test-frontend:
     name: Frontend Tests
@@ -247,6 +275,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           submodules: recursive
+
+      - name: Log runner info
+        uses: ./.github/actions/runner-info
+        with:
+          mode: start
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -287,7 +320,16 @@ jobs:
 
       - name: Run Tests for lightly_studio_view
         working-directory: lightly_studio_view
-        run: make test
+        # Lists the slowest imports, they take most of the test time.
+        run: >-
+          make test VITEST_ARGS="--experimental.importDurations.print
+          --experimental.importDurations.limit=30"
+
+      - name: Report runner load
+        if: always()
+        uses: ./.github/actions/runner-info
+        with:
+          mode: report
 
   check-docs:
     name: Build Docs

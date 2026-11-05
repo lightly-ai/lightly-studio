@@ -289,6 +289,11 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Log runner info
+        uses: ./.github/actions/runner-info
+        with:
+          mode: start
+
       - name: Check e2e success cache
         id: cache-success
         uses: actions/cache@v6
@@ -510,6 +515,12 @@ jobs:
         if: always() && steps.cache-success.outputs.cache-hit != 'true'
         run: |
           kill ${{ env.SERVER_PID }} || true
+
+      - name: Report runner load
+        if: always()
+        uses: ./.github/actions/runner-info
+        with:
+          mode: report
 
   # Runs after merge and on manual dispatch, not on pull requests.
   end-to-end-after-merge:

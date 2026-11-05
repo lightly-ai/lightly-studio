@@ -1,0 +1,17 @@
+name: Runner info
+description: >-
+  Logs the runner hardware and samples CPU, memory and disk use during the job.
+  GitHub runners differ in speed, so job durations are only comparable together
+  with this information.
+inputs:
+  mode:
+    description: >-
+      `start`: log the hardware and start sampling. Use it right after the checkout.
+      `report`: summarize the samples. Use it as the last step, with `if: always()`.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Runner info (${{ inputs.mode }})
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/runner_info.sh" "${{ inputs.mode }}"
