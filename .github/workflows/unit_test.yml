@@ -195,10 +195,11 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Log runner info
-        uses: ./.github/actions/runner-info
-        with:
-          mode: start
+      - &log-runner-hardware
+        name: Log runner hardware
+        # Runners differ in speed, so durations are only comparable with the hardware.
+        run: |
+          echo "RUNNER_INFO cpu=\"$(lscpu | sed -n 's/^Model name: *//p')\" vcpus=$(nproc) memory=$(free -h | awk '/^Mem:/ {print $2}')"
 
       - name: Set Up uv
         uses: astral-sh/setup-uv@v10.0.1
@@ -256,11 +257,14 @@ jobs:
           if-no-files-found: ignore
           retention-days: 30
 
-      - name: Report runner load
+      - &log-runner-memory
+        name: Log runner memory use
         if: always()
-        uses: ./.github/actions/runner-info
-        with:
-          mode: report
+        # Pressure totals are microseconds since boot that processes waited for memory.
+        run: |
+          free -h
+          cat /proc/pressure/memory || true
+          grep -E '^pswp(in|out) ' /proc/vmstat
 
   test-frontend:
     name: Frontend Tests
@@ -276,10 +280,7 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Log runner info
-        uses: ./.github/actions/runner-info
-        with:
-          mode: start
+      - *log-runner-hardware
 
       - name: Set Up Python
         uses: actions/setup-python@v6
@@ -325,11 +326,7 @@ jobs:
           make test VITEST_ARGS="--experimental.importDurations.print
           --experimental.importDurations.limit=30"
 
-      - name: Report runner load
-        if: always()
-        uses: ./.github/actions/runner-info
-        with:
-          mode: report
+      - *log-runner-memory
 
   check-docs:
     name: Build Docs
