@@ -10,6 +10,7 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, Imag
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.embed import embedder_registry
 from lightly_studio.embed.embedder_registry import EmbedderRegistry
 from lightly_studio.embed.random_embedder import RandomEmbedder
@@ -46,6 +47,19 @@ class _CropOnlyEmbedder(ImageCropPathEmbedder):
             embeddings=np.random.rand(len(crops), EMBEDDING_DIMENSION).astype(np.float32),
             kept_indices=list(range(len(crops))),
         )
+
+
+class _UnreadableImageEmbedder(ImageCropPathEmbedder):
+    """Fails as a crop embedder does when no source image can be read."""
+
+    __slots__ = ()
+
+    def embedding_space_spec(self) -> EmbeddingSpaceSpec:
+        return EmbeddingSpaceSpec(space_key="random_model", dimension=EMBEDDING_DIMENSION)
+
+    def embed_image_crops(self, crops: list[ImageCrop]) -> EmbeddingResult:
+        del crops
+        raise AllInputFilesFailedError("All 1 input files failed.")
 
 
 @dataclass(frozen=True)
@@ -159,6 +173,19 @@ def test_predict_annotation_classes__box_outside_image_returns_empty(
         image_size=(64, 64),
         box={"x": 10_000, "y": 0, "width": 10, "height": 10},
     )
+
+    predictions = annotations_service.predict_annotation_classes(
+        session=db_session, annotation=setup.annotation
+    )
+
+    assert predictions == []
+
+
+def test_predict_annotation_classes__unreadable_image_returns_empty(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    _patch_registry(mocker=mocker, embedder=_UnreadableImageEmbedder())
+    setup = _create_setup(session=db_session, label_names=["cat", "dog"])
 
     predictions = annotations_service.predict_annotation_classes(
         session=db_session, annotation=setup.annotation

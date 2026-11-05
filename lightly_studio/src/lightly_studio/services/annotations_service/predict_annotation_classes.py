@@ -11,6 +11,7 @@ from lightly_studio_serve.embedder import ImageCropPathEmbedder, TextEmbedder
 from numpy.typing import NDArray
 from sqlmodel import Session
 
+from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.embed import default_embedder, embed_samples
 from lightly_studio.embed.errors import MissingCapabilityError
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -128,14 +129,18 @@ def _embed_crop(
     """Embed and store the crop of an annotation, and return its embedding.
 
     Returns:
-        The stored embedding, or None when the crop could not be embedded.
+        The stored embedding, or None when the crop could not be embedded, for example
+        because the source image is missing or broken.
     """
-    embed_samples.embed_annotation_crops(
-        session=session,
-        embedder=embedder,
-        model_id=embedding_model_id,
-        annotation_sample_ids=[annotation_id],
-    )
+    try:
+        embed_samples.embed_annotation_crops(
+            session=session,
+            embedder=embedder,
+            model_id=embedding_model_id,
+            annotation_sample_ids=[annotation_id],
+        )
+    except AllInputFilesFailedError:
+        return None
     rows = sample_embedding_resolver.get_by_sample_ids(
         session=session, sample_ids=[annotation_id], embedding_model_id=embedding_model_id
     )
