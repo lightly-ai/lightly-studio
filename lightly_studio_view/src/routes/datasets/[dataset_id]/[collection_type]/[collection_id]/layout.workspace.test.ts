@@ -184,6 +184,8 @@ vi.mock('$lib/hooks', async () => ({
     useFeatureFlags: vi.fn(() => ({ featureFlags: writable([]), ready: Promise.resolve() })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
+    resetAnnotationClasses: vi.fn(),
+    setAnnotationClasses: vi.fn(),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
         data: undefined,
         isFetching: false,

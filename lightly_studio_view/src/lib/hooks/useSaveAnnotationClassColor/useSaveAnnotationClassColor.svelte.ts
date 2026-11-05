@@ -14,7 +14,7 @@ interface UseSaveAnnotationClassColorReturn {
 const ERROR_MESSAGE = 'Could not save the annotation class color.';
 const CLASS_LIST_QUERY_IDS = ['readAnnotationLabels', 'readAnnotationLabelsWithCounts'];
 
-// The last save of each class ID, so saves of one class run one at a time.
+// The last pending save of each class ID, so saves of one class run one at a time.
 const pendingSaves = new Map<string, Promise<unknown>>();
 
 // Saves the color of an annotation class in the dataset. Rejects when the save fails.
@@ -46,7 +46,11 @@ export const useSaveAnnotationClassColor = (): UseSaveAnnotationClassColorReturn
                 })
             );
         pendingSaves.set(labelId, save);
-        await save;
+        try {
+            await save;
+        } finally {
+            if (pendingSaves.get(labelId) === save) pendingSaves.delete(labelId);
+        }
     };
 
     return { saveClassColor };

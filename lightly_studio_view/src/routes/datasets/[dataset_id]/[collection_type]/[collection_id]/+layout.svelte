@@ -25,7 +25,7 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { resetAnnotationClasses, setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
+    import { resetAnnotationClasses, setAnnotationClasses } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';

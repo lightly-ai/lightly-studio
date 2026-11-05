@@ -114,3 +114,4 @@ export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
 export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte';
+export { resetAnnotationClasses, setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
