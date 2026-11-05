@@ -38,7 +38,8 @@ export const createCustomColorStore = (): CustomColorStore => {
 
     // The saved layer overlaid with previews.
     const customColorsStore = derived([savedColors, previews], ([$saved, $previews]) => {
-        const merged = { ...$saved };
+        // No prototype: a class can be named `__proto__`.
+        const merged: Record<string, CustomColor> = Object.assign(Object.create(null), $saved);
         for (const [name, { color }] of Object.entries($previews)) {
             if (color) merged[name] = color;
             else delete merged[name];

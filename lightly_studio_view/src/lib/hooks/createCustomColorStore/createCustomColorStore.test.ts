@@ -12,6 +12,16 @@ describe('createCustomColorStore previews', () => {
         expect(get(store.customColorsStore).cat.color).toBe('#222222');
     });
 
+    // __proto__ is a valid class name and must not hit Object.prototype.
+    test('the merged colors list a preview of a class named __proto__', () => {
+        const store = createCustomColorStore();
+        store.setPreviewColor('__proto__', { color: '#222222', alpha: 1 }, Symbol());
+
+        expect(Object.entries(get(store.customColorsStore))).toEqual([
+            ['__proto__', { color: '#222222', alpha: 1 }]
+        ]);
+    });
+
     test('a null preview shows the default', () => {
         const store = createCustomColorStore();
         store.setCustomColor('cat', '#111111', 1);
