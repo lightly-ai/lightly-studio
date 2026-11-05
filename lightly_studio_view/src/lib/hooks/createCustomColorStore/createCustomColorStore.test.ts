@@ -88,15 +88,6 @@ describe('createCustomColorStore saves', () => {
         expect(store.getSavedColor(name)).toEqual(blue);
     });
 
-    test('setSavedColor with undefined deletes the saved color', () => {
-        const store = createCustomColorStore();
-        store.setCustomColor('cat', '#ff0000', 1);
-
-        store.setSavedColor('cat', undefined, store.beginSave('cat'));
-
-        expect(store.hasSavedColor('cat')).toBe(false);
-    });
-
     test('reset clears saved colors and previews', () => {
         const store = createCustomColorStore();
         store.setCustomColor('cat', '#ff0000', 1);

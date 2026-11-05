@@ -23,7 +23,7 @@ interface CustomColorStore {
     hasSavedColor: (name: string) => boolean;
     replaceSavedColors: (colors: Record<string, CustomColor>) => void;
     beginSave: (name: string) => SaveTicket;
-    setSavedColor: (name: string, color: CustomColor | undefined, ticket: SaveTicket) => void;
+    setSavedColor: (name: string, color: CustomColor, ticket: SaveTicket) => void;
     reset: () => void;
     getGeneration: () => number;
 }
@@ -123,20 +123,11 @@ export const createCustomColorStore = (): CustomColorStore => {
     };
 
     // Apply a finished save to the saved layer, unless a newer save or a reset came first.
-    // An undefined color deletes the saved entry.
-    const setSavedColor = (name: string, color: CustomColor | undefined, ticket: SaveTicket) => {
+    const setSavedColor = (name: string, color: CustomColor, ticket: SaveTicket) => {
         if (ticket.generation !== generation) return;
         if (ticket.seq <= (lastApplied.get(name) ?? 0)) return;
         lastApplied.set(name, ticket.seq);
-        if (color) {
-            savedColors.update((colors) => ({ ...colors, [name]: color }));
-        } else {
-            savedColors.update((colors) => {
-                // eslint-disable-next-line @typescript-eslint/no-unused-vars
-                const { [name]: _, ...rest } = colors;
-                return rest;
-            });
-        }
+        savedColors.update((colors) => ({ ...colors, [name]: color }));
         colorVersion.update((v) => v + 1);
     };
 
