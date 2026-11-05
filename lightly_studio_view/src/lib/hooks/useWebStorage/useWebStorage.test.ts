@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { useWebStorage } from './useWebStorage';
 
-const writeFromOtherTab = (key: string, newValue: string | null) => {
+const writeFromOtherTab = (key: string | null, newValue: string | null) => {
     window.dispatchEvent(new StorageEvent('storage', { key, newValue, storageArea: localStorage }));
 };
 
@@ -75,5 +75,16 @@ describe('useWebStorage', () => {
 
         writeFromOtherTab('k', null);
         expect(get(store)).toEqual({});
+    });
+
+    it('resets without writing back when another tab clears the storage', () => {
+        const store = useWebStorage<Record<string, number>>('localStorage', 'k', {});
+        store.set({ a: 1 });
+        const setItem = vi.spyOn(Storage.prototype, 'setItem');
+
+        writeFromOtherTab(null, null);
+
+        expect(get(store)).toEqual({});
+        expect(setItem).not.toHaveBeenCalled();
     });
 });
