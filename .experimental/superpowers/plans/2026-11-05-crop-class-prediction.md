@@ -70,7 +70,7 @@ def get_nearest_labeled_annotations(
 ) -> list[AnnotationNeighbour]: ...
 ```
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Build fixtures like `test_get_unembedded_annotation_ids.py`: one root collection, its annotation child collection, two labels, images, annotations, `create_embedding_model` on the annotation collection, `create_sample_embedding` per annotation with 3-dim vectors.
 
@@ -87,25 +87,25 @@ def test_get_nearest_labeled_annotations__ignores_other_model_and_other_collecti
     # annotation collection, both closer to the query → neither appears
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd lightly_studio && uv run pytest tests/resolvers/annotations/test_get_nearest_labeled_annotations.py -v`
 Expected: FAIL with `ImportError` / `AttributeError` for `get_nearest_labeled_annotations`.
 
-- [ ] **Step 3: Implement `get_nearest_labeled_annotations`**
+- [x] **Step 3: Implement `get_nearest_labeled_annotations`**
 
 One `select` of `AnnotationBaseTable.annotation_label_id` and `db_vector.cosine_distance(SampleEmbeddingTable.embedding, query_embedding)`, joined on `SampleTable` (filter `collection_id == annotation_collection_id`) and `SampleEmbeddingTable` (filter `embedding_model_id`), excluding `exclude_annotation_id`, ordered by distance, `limit`. Map distance with `similarity_utils.distance_to_similarity`.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: same as Step 2. Expected: 3 passed.
 
-- [ ] **Step 5: Run the Postgres variant**
+- [x] **Step 5: Run the Postgres variant**
 
 Run: `cd lightly_studio && uv run pytest --postgres tests/resolvers/annotations/test_get_nearest_labeled_annotations.py -v`
 Expected: 3 passed.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lightly_studio/src/lightly_studio/resolvers/annotation_resolver/ lightly_studio/tests/resolvers/annotations/test_get_nearest_labeled_annotations.py

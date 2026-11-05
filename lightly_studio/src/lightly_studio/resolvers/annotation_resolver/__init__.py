@@ -51,6 +51,10 @@ from lightly_studio.resolvers.annotation_resolver.get_cuboid_frame_ids_by_sequen
 from lightly_studio.resolvers.annotation_resolver.get_label_ids_by_sample_ids import (
     get_label_ids_by_sample_ids,
 )
+from lightly_studio.resolvers.annotation_resolver.get_nearest_labeled_annotations import (
+    AnnotationNeighbour,
+    get_nearest_labeled_annotations,
+)
 from lightly_studio.resolvers.annotation_resolver.get_sample_ids import (
     build_sample_ids_query,
     get_sample_ids,
@@ -79,6 +83,7 @@ from lightly_studio.resolvers.annotation_resolver.update_temporal_span import (
 
 __all__ = [
     "AnnotationCrop",
+    "AnnotationNeighbour",
     "AnnotationOrdering",
     "BulkCreateClassificationsResult",
     "build_sample_ids_query",
@@ -101,6 +106,7 @@ __all__ = [
     "get_by_ids",
     "get_cuboid_frame_ids_by_sequence_ids",
     "get_label_ids_by_sample_ids",
+    "get_nearest_labeled_annotations",
     "get_sample_ids",
     "get_unembedded_annotation_ids",
     "update_annotation_label",
