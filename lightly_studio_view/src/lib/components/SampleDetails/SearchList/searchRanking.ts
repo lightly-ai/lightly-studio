@@ -8,6 +8,11 @@ const matchTier = (name: string, query: string): number | null => {
     return lower.includes(query) ? 2 : null;
 };
 
+interface MatchClassesReturn {
+    matches: string[];
+    createName: string | null;
+}
+
 /**
  * Filters the class names by the query: exact match, then prefix, then substring. Within a tier
  * the current class comes first, then the recent classes, then alphabetical, so Enter on an empty
@@ -24,7 +29,7 @@ export const matchClasses = ({
     recent: string[];
     current?: string;
     query: string;
-}): { matches: string[]; createName: string | null } => {
+}): MatchClassesReturn => {
     const trimmed = query.trim();
     const lowered = trimmed.toLowerCase();
     const recentRank = (name: string) => {
