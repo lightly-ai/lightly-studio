@@ -20,4 +20,9 @@ describe('getApiErrorMessage', () => {
         expect(getApiErrorMessage(undefined)).toBe('Unknown error');
         expect(getApiErrorMessage({}, 'Could not move.')).toBe('Could not move.');
     });
+
+    it('skips empty messages', () => {
+        expect(getApiErrorMessage({ error: '', detail: 'Bad request' })).toBe('Bad request');
+        expect(getApiErrorMessage({ detail: [{ msg: '' }] })).toBe('Unknown error');
+    });
 });

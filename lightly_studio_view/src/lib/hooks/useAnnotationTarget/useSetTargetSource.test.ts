@@ -30,7 +30,10 @@ describe('useSetTargetSource', () => {
     it('lets a typed new name be the target before its source exists', () => {
         useSetTargetSource(() => 'col-1')('review', { isNew: true });
 
-        expect(mocks.context.typedAnnotationSource).toBe('review');
+        expect(mocks.context.typedAnnotationSource).toEqual({
+            collectionId: 'col-1',
+            name: 'review'
+        });
     });
 
     it('ignores a blank name and a hidden source', () => {
