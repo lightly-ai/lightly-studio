@@ -32,7 +32,8 @@ export const setAnnotationClasses = (datasetId: string, classes: AnnotationClass
         store.reset();
     }
     classIdsByName = new Map();
-    const savedColors: Record<string, CustomColor> = {};
+    // No prototype: a class can be named `__proto__`.
+    const savedColors: Record<string, CustomColor> = Object.create(null);
     for (const c of classes) {
         if (c.dataset_id !== datasetId) continue;
         if (c.annotation_label_id) {

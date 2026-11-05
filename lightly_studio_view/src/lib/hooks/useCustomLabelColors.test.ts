@@ -61,6 +61,14 @@ describe('annotation class colors', () => {
         expect(getCustomColor('bird')).toEqual({ color: '#00ff00', alpha: 1 });
     });
 
+    it('loads the saved color of a class named __proto__', () => {
+        setAnnotationClasses('ds-colors-proto', [
+            makeClass('id-1', '__proto__', 'ds-colors-proto', '#ff0000')
+        ]);
+
+        expect(getCustomColor('__proto__')).toEqual({ color: '#ff0000', alpha: 1 });
+    });
+
     it('a reload without colors clears the saved colors', () => {
         setAnnotationClasses('ds-colors-2', [makeClass('id-1', 'cat', 'ds-colors-2', '#ff0000')]);
 
