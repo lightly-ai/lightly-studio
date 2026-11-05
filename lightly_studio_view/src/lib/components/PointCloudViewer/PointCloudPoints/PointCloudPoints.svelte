@@ -19,6 +19,7 @@
         colorMode: ColorMode;
         pointSize: number;
         intensityRange?: [number, number];
+        highlightCuboid?: CuboidAnnotation;
         fitKey?: string;
         camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
@@ -35,6 +36,7 @@
         colorMode,
         pointSize,
         intensityRange,
+        highlightCuboid,
         fitKey = '',
         camera,
         controls,
@@ -68,10 +70,11 @@
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
+        const selectedCuboid = highlightCuboid;
         const cameraColors = mode === 'camera-rgb' ? (getCameraColors() ?? undefined) : undefined;
         if (!currentBatch.segments) void currentBatch.colors;
         untrack(() => {
-            prepared = frameBuffers.update(currentBatch, mode, range, cameraColors);
+            prepared = frameBuffers.update(currentBatch, mode, range, cameraColors, selectedCuboid);
             invalidate();
         });
     });
