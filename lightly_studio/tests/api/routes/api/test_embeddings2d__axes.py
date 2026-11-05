@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Any
 from uuid import UUID
 
@@ -74,3 +75,67 @@ def test_get_embeddings2d__axes__invalid(
     )
 
     assert response.status_code == 422
+
+
+def test_get_embeddings2d__marker_positions(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path="a.jpg"), [1.0, 0.0]),
+            (ImageStub(path="b.jpg"), [0.0, 1.0]),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/embeddings2d/default",
+        json={
+            "filters": {},
+            "axes": {"x": [2.0, 0.0], "y": [0.0, 3.0]},
+            "marker_embeddings": [[0.0, 1.0], [1.0, 0.0]],
+        },
+    )
+
+    assert response.status_code == 200
+    metadata = ipc.open_stream(pa.BufferReader(response.content)).schema.metadata
+    # 2 samples give 1 neighbor, so each marker is at the position of its nearest sample.
+    assert json.loads(metadata[b"marker_positions"]) == [[0.0, 3.0], [2.0, 0.0]]
+
+
+def test_get_embeddings2d__marker_positions__no_markers(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    helpers_resolvers.create_samples_with_embeddings(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[(ImageStub(path="a.jpg"), [1.0, 0.0])],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/embeddings2d/default",
+        json={"filters": {}, "axes": {"x": [1.0, 0.0], "y": [0.0, 1.0]}},
+    )
+
+    assert response.status_code == 200
+    metadata = ipc.open_stream(pa.BufferReader(response.content)).schema.metadata
+    assert json.loads(metadata[b"marker_positions"]) == []
