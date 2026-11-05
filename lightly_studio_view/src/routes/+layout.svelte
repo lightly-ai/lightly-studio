@@ -16,7 +16,11 @@
 
     // Add error interceptor to preserve HTTP status code on errors.
     client.interceptors.error.use((error: unknown, response: Response | undefined) => {
-        if (response && typeof error === 'object' && error !== null) {
+        // No response means a transport failure: reject, as the client did before 0.99.
+        if (!response) {
+            throw error;
+        }
+        if (typeof error === 'object' && error !== null) {
             (error as ApiErrorWithStatus).status = response.status;
         }
         return error;
