@@ -1,7 +1,15 @@
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
 import { setAnnotationLabelColorMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { getAnnotationClassId, type CustomColor } from '$lib/hooks/useCustomLabelColors';
+import { getAnnotationClassId, useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+
+type CustomColor = NonNullable<
+    ReturnType<ReturnType<typeof useCustomLabelColors>['getCustomColor']>
+>;
+
+interface UseSaveAnnotationClassColorReturn {
+    saveClassColor: (name: string, color: CustomColor) => Promise<void>;
+}
 
 const ERROR_MESSAGE = 'Could not save the annotation class color.';
 const CLASS_LIST_QUERY_IDS = ['readAnnotationLabels', 'readAnnotationLabelsWithCounts'];
@@ -10,7 +18,7 @@ const CLASS_LIST_QUERY_IDS = ['readAnnotationLabels', 'readAnnotationLabelsWithC
 const pendingSaves = new Map<string, Promise<unknown>>();
 
 // Saves the color of an annotation class in the dataset. Rejects when the save fails.
-export const useSaveAnnotationClassColor = () => {
+export const useSaveAnnotationClassColor = (): UseSaveAnnotationClassColorReturn => {
     const client = useQueryClient();
     const mutation = createMutation(() => ({
         ...setAnnotationLabelColorMutation(),
