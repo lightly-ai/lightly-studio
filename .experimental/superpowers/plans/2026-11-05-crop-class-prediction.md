@@ -140,7 +140,7 @@ def score_classes(
 
 Spec rule: `score(c) = Σ similarity of c's neighbours + text_anchor_weight · text_similarity(c)`, then divide by the total. Negative raw scores clip to 0 before normalizing.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_score_classes__knn_only() -> None:
@@ -159,18 +159,18 @@ def test_score_classes__returns_every_label() -> None:
     # 3 label_ids, neighbours only for one → 3 keys, others 0.0
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd lightly_studio && uv run pytest tests/services/annotations_service/test_class_prediction_scoring.py -v`
 Expected: FAIL (`NotImplementedError` from the `TODO(human)` stub).
 
-- [ ] **Step 3: User implements `score_classes`** (Learn by Doing)
+- [x] **Step 3: User implements `score_classes`** (Learn by Doing)
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: same as Step 2. Expected: 5 passed.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add lightly_studio/src/lightly_studio/services/annotations_service/class_prediction_scoring.py lightly_studio/tests/services/annotations_service/test_class_prediction_scoring.py
