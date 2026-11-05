@@ -33,6 +33,9 @@ describe('TrackTimelineRows', () => {
     it('draws one run per stretch of drawn or generated annotations', () => {
         render(TrackTimelineRows, { props: defaultProps });
 
+        expect(screen.getByRole('group', { name: 'Track annotation legend' })).toBeTruthy();
+        expect(screen.getByText('Drawn annotation')).toBeTruthy();
+        expect(screen.getByText('Generated annotation')).toBeTruthy();
         const runs = screen.getAllByTitle(/^Frames? \d/);
         expect(runs.map((run) => run.getAttribute('title'))).toEqual([
             'Frame 1 · drawn',
@@ -132,12 +135,15 @@ describe('TrackTimelineRows', () => {
             await pointer(handle, 'pointerdown', 400);
             await pointer(handle, 'pointermove', 590);
             expect(screen.getByTestId('track-extend-preview')).toBeTruthy();
+            expect(screen.getByRole('tooltip')).toHaveTextContent('Ticks 3–6');
+            expect(handle).toHaveStyle({ left: '100%' });
             await pointer(handle, 'pointerup');
 
             expect(onExtendStart).toHaveBeenCalledOnce();
             expect(onExtendEnd).toHaveBeenCalledOnce();
             expect(onExtendTrack).toHaveBeenCalledWith(wideTrack, 2, 5);
             expect(screen.queryByTestId('track-extend-preview')).toBeNull();
+            expect(screen.queryByRole('tooltip')).toBeNull();
         });
 
         it('commits nothing when the handle is dragged back inside the track', async () => {

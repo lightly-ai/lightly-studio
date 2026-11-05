@@ -13,10 +13,18 @@
 
     let { extent, tickCount, drag, label, enabled }: Props = $props();
     const percent = (index: number) => `${(index / tickCount) * 100}%`;
+    const displayedExtent = $derived(drag.proposed ?? extent);
     const handles: { edge: ExtendEdge; index: number }[] = $derived([
-        { edge: 'start', index: extent.first },
-        { edge: 'end', index: extent.last + 1 }
+        { edge: 'start', index: displayedExtent.first },
+        { edge: 'end', index: displayedExtent.last + 1 }
     ]);
+    const activeHandle = $derived(handles.find(({ edge }) => edge === drag.edge));
+    const proposedRange = $derived.by(() => {
+        if (!drag.proposed) return null;
+        const first = drag.proposed.first + 1;
+        const last = drag.proposed.last + 1;
+        return first === last ? `Tick ${first}` : `Ticks ${first}–${last}`;
+    });
 </script>
 
 {#if drag.proposed}
@@ -26,6 +34,16 @@
         style:width={`${((drag.proposed.last - drag.proposed.first + 1) / tickCount) * 100}%`}
         data-testid="track-extend-preview"
     ></span>
+{/if}
+{#if activeHandle && proposedRange}
+    <span
+        role="tooltip"
+        class="pointer-events-none absolute bottom-full z-20 mb-1 -translate-x-1/2 whitespace-nowrap rounded bg-popover px-2 py-1 text-[10px] text-popover-foreground shadow-md"
+        style:left={percent(activeHandle.index)}
+        data-testid="track-extend-tooltip"
+    >
+        {proposedRange}
+    </span>
 {/if}
 {#if enabled}
     {#each handles as handle (handle.edge)}

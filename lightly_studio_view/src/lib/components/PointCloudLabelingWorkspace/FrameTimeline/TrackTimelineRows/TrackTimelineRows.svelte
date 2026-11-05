@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
     import { Button } from '$lib/components/ui/button';
+    import TrackAnnotationLegend from './TrackAnnotationLegend/TrackAnnotationLegend.svelte';
     import TrackTimelineRow from './TrackTimelineRow/TrackTimelineRow.svelte';
 
     interface Props {
@@ -63,7 +64,7 @@
 
 {#if tracks.length > 0 || onStartTrack || onAddTrack}
     <div class="border-t px-2 py-1" data-testid="object-track-rows">
-        {#if onAddTrack || onStartTrack}
+        {#if tracks.length > 0 || onAddTrack || onStartTrack}
             <div class="mb-1 flex items-center gap-2">
                 {#if onAddTrack}
                     <Button
@@ -84,6 +85,9 @@
                     <Button variant="outline" size="sm" class="h-6 text-xs" onclick={onStartTrack}>
                         Start track from selected cuboid
                     </Button>
+                {/if}
+                {#if tracks.length > 0}
+                    <TrackAnnotationLegend />
                 {/if}
             </div>
         {/if}
