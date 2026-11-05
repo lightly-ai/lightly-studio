@@ -5,6 +5,9 @@ from lightly_studio.resolvers.evaluation_run_resolver.get_all_by_dataset_id impo
     get_all_by_dataset_id,
 )
 from lightly_studio.resolvers.evaluation_run_resolver.get_by_id import get_by_id
+from lightly_studio.resolvers.evaluation_run_resolver.get_names_by_collection_id import (
+    get_names_by_collection_id,
+)
 from lightly_studio.resolvers.evaluation_run_resolver.list_views_by_dataset_id import (
     list_views_by_dataset_id,
 )
@@ -18,6 +21,7 @@ __all__ = [
     "delete",
     "get_all_by_dataset_id",
     "get_by_id",
+    "get_names_by_collection_id",
     "list_views_by_dataset_id",
     "mark_stale_by_collection_id",
 ]

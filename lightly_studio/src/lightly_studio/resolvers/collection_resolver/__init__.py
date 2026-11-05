@@ -8,6 +8,9 @@ from lightly_studio.resolvers.collection_resolver.create_group_components import
     create_group_components,
 )
 from lightly_studio.resolvers.collection_resolver.delete import delete
+from lightly_studio.resolvers.collection_resolver.delete_dependent_rows import (
+    delete_dependent_rows,
+)
 from lightly_studio.resolvers.collection_resolver.export import (
     export,
     get_filtered_samples_count,
@@ -15,6 +18,9 @@ from lightly_studio.resolvers.collection_resolver.export import (
 from lightly_studio.resolvers.collection_resolver.get_all import get_all
 from lightly_studio.resolvers.collection_resolver.get_annotation_collections import (
     get_annotation_collections,
+)
+from lightly_studio.resolvers.collection_resolver.get_annotation_counts_by_collection_ids import (
+    get_annotation_counts_by_collection_ids,
 )
 from lightly_studio.resolvers.collection_resolver.get_annotation_types_by_collection_ids import (
     get_annotation_types_by_collection_ids,
@@ -52,9 +58,11 @@ __all__ = [
     "create",
     "create_group_components",
     "delete",
+    "delete_dependent_rows",
     "export",
     "get_all",
     "get_annotation_collections",
+    "get_annotation_counts_by_collection_ids",
     "get_annotation_types_by_collection_ids",
     "get_by_id",
     "get_by_name",
