@@ -1,10 +1,12 @@
 import type { AnnotationLabelTable } from '$lib/api/lightly_studio_local/types.gen';
-import { createCustomColorStore, type CustomColor } from '$lib/hooks/createCustomColorStore';
+import { createCustomColorStore } from '$lib/hooks/createCustomColorStore';
 
 export type { CustomColor } from '$lib/hooks/createCustomColorStore';
 
 // Singleton instance
 const store = createCustomColorStore();
+
+type CustomColor = NonNullable<ReturnType<typeof store.getSavedColor>>;
 
 export const useCustomLabelColors = () => ({
     ...store,
