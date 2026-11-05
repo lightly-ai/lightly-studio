@@ -1016,18 +1016,22 @@ def test_metrics__object_detection_average_precision(
     metrics = dataset.evaluate().metrics(run_id=run_id)
 
     by_label = {entry.label: entry for entry in metrics.per_class}
-    thresholds = average_precision.COCO_IOU_THRESHOLDS
-    assert by_label["cat"].average_precision == pytest.approx(1.0)
+    matched = [0.5, 0.55, 0.6, 0.65, 0.7]
+    unmatched = [0.75, 0.8, 0.85, 0.9, 0.95]
+    assert by_label["cat"].average_precision == pytest.approx(0.5)
     assert by_label["cat"].average_precision_by_iou_threshold == pytest.approx(
-        dict.fromkeys(thresholds, 1.0)
+        {**dict.fromkeys(matched, 1.0), **dict.fromkeys(unmatched, 0.0)}
     )
     assert by_label["dog"].average_precision == pytest.approx(0.0)
+    assert by_label["dog"].average_precision_by_iou_threshold == pytest.approx(
+        dict.fromkeys(matched + unmatched, 0.0)
+    )
     # The bird is only predicted, so it has no average precision and is not in the means.
     assert by_label["bird"].average_precision is None
     assert by_label["bird"].average_precision_by_iou_threshold is None
-    assert metrics.mean_average_precision == pytest.approx(0.5)
+    assert metrics.mean_average_precision == pytest.approx(0.25)
     assert metrics.mean_average_precision_by_iou_threshold == pytest.approx(
-        dict.fromkeys(thresholds, 0.5)
+        {**dict.fromkeys(matched, 0.5), **dict.fromkeys(unmatched, 0.0)}
     )
 
 
@@ -1053,8 +1057,8 @@ def test_metrics__object_detection_average_precision_after_label_rename(
     metrics = dataset.evaluate().metrics(run_id=run_id)
 
     by_label = {entry.label: entry for entry in metrics.per_class}
-    assert by_label["kitten"].average_precision == pytest.approx(1.0)
-    assert metrics.mean_average_precision == pytest.approx(0.5)
+    assert by_label["kitten"].average_precision == pytest.approx(0.5)
+    assert metrics.mean_average_precision == pytest.approx(0.25)
 
 
 def test_metrics__object_detection_average_precision_skips_unknown_labels(
@@ -1077,7 +1081,7 @@ def test_metrics__object_detection_average_precision_skips_unknown_labels(
 
     metrics = dataset.evaluate().metrics(run_id=run_id)
 
-    assert metrics.mean_average_precision == pytest.approx(0.5)
+    assert metrics.mean_average_precision == pytest.approx(0.25)
 
 
 def test_metrics__object_detection_without_average_precision(
@@ -1334,7 +1338,11 @@ def test_instance_segmentation_evaluation__raises_on_wrong_annotation_type(
 
 
 def _create_run_with_average_precision(dataset: ImageDataset) -> UUID:
-    """Create a detection run with average precision: an exact cat, a missed dog, a bird FP."""
+    """Create a detection run with average precision.
+
+    The cat prediction has IoU 17/23 (about 0.74) with its ground truth, so it matches at the
+    IoU thresholds 0.50 to 0.70 only. The dog is missed and the bird is a false positive.
+    """
     labels = {
         name: create_annotation_label(
             session=dataset.session, root_collection_id=dataset.collection_id, label_name=name
@@ -1343,12 +1351,13 @@ def _create_run_with_average_precision(dataset: ImageDataset) -> UUID:
     }
     image = create_image(session=dataset.session, collection_id=dataset.collection_id)
     _create_gt_and_pred_collections(session=dataset.session, collection_id=dataset.collection_id)
-    for source_name in ("gt", "pred"):
+    for source_name, x in (("gt", 50), ("pred", 53)):
         create_annotation(
             session=dataset.session,
             collection_id=dataset.collection_id,
             sample_id=image.sample_id,
             annotation_label_id=labels["cat"].annotation_label_id,
+            annotation_data={"x": x, "y": 50, "width": 20, "height": 20},
             annotation_collection_name=source_name,
         )
     create_annotation(
@@ -1367,10 +1376,10 @@ def _create_run_with_average_precision(dataset: ImageDataset) -> UUID:
         annotation_data={"x": 400, "y": 400, "width": 20, "height": 20},
         annotation_collection_name="pred",
     )
-    dataset.evaluate().object_detection(
+    result = dataset.evaluate().object_detection(
         name="run-1",
         gt_annotation_source="gt",
         pred_annotation_source="pred",
         config=ObjectDetectionEvaluationConfig(compute_average_precision=True),
     )
-    return dataset.evaluate().list_runs()[0].id
+    return result.evaluation_run_id
