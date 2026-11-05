@@ -8,9 +8,10 @@
 
     interface Props {
         onDownloadClick?: () => void;
+        onExportTriggered?: (success: boolean) => void;
     }
 
-    let { onDownloadClick }: Props = $props();
+    let { onDownloadClick, onExportTriggered }: Props = $props();
 
     const collectionId = page.params.collection_id!;
     const { imageFilter } = useImageFilters();
@@ -39,9 +40,10 @@
     <ExportDownloadButton
         isLoading={$exportIsLoading}
         errorMessage={$errorMessage}
-        onclick={() => {
+        onclick={async () => {
             onDownloadClick?.();
-            handleExport();
+            const success = await handleExport();
+            onExportTriggered?.(success);
         }}
         testId="submit-button-samples"
     />
