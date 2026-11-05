@@ -26,7 +26,7 @@
     };
 
     const confirm = async () => {
-        trackAnnotationClassEvent('deleted', { annotation_count: annotationCount });
+        trackAnnotationClassEvent('delete_clicked', { annotation_count: annotationCount });
         isDeleting = true;
         try {
             await onConfirm();

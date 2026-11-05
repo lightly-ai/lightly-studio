@@ -4,7 +4,7 @@ import { usePostHog } from '$lib/hooks/usePostHog';
 
 // Tracks how users manage annotation classes. Sends ids and counts, never class names.
 export const trackAnnotationClassEvent = (
-    action: 'created' | 'renamed' | 'deleted',
+    action: 'create_clicked' | 'rename_submitted' | 'delete_clicked',
     properties: Record<string, unknown> = {}
 ) =>
     usePostHog().trackEvent(`annotation_class_${action}`, {
@@ -15,4 +15,4 @@ export const trackAnnotationClassEvent = (
 
 // For the "Create: <name>" item in class pickers. The class is saved with the annotation.
 export const trackClassCreatedInPicker = () =>
-    trackAnnotationClassEvent('created', { source: 'class_picker' });
+    trackAnnotationClassEvent('create_clicked', { source: 'class_picker' });

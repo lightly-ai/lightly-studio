@@ -36,7 +36,7 @@
         isRenaming = false;
         const trimmed = draft.trim();
         if (!trimmed || trimmed === name) return;
-        trackAnnotationClassEvent('renamed');
+        trackAnnotationClassEvent('rename_submitted', { annotation_count: annotationCount });
         try {
             await onRename(trimmed);
         } catch {

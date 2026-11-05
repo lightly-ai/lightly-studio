@@ -38,7 +38,7 @@
     const add = async () => {
         if (!canAdd || isAdding || dialogState?.isSaving) return;
         const name = trimmedQuery;
-        trackAnnotationClassEvent('created', { source: 'settings' });
+        trackAnnotationClassEvent('create_clicked', { source: 'settings' });
         isAdding = true;
         try {
             const created = await classes.addClass(name);
