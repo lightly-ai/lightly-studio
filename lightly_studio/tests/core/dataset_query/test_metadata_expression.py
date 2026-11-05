@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import operator
 from collections.abc import Sequence
+from datetime import datetime, timezone
 from typing import Any, cast
 
 import pytest
@@ -164,6 +165,71 @@ class TestMetadataField:
             expression=field != "front",
             expected_samples=[images[1]],
         )
+
+    def test_as_timestamp(self, db_session: Session) -> None:
+        collection = create_collection(session=db_session)
+        images = [
+            create_image_with_metadata(
+                session=db_session,
+                collection_id=collection.collection_id,
+                file_path_abs=f"/image{index}.jpg",
+                metadata={"timestamp": value},
+            )
+            for index, value in enumerate(
+                [
+                    "2024-01-01T00:00:00+00:00",
+                    "2024-06-01T12:00:00Z",
+                    "2024-12-31T23:59:59+00:00",
+                    1717243200,
+                    None,
+                ]
+            )
+        ]
+        field = ImageSampleField.metadata["timestamp"].as_timestamp()
+        cutoff = datetime(2024, 6, 1, 12, 0, tzinfo=timezone.utc)
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=field == cutoff,
+            expected_samples=[images[1]],
+        )
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=field != cutoff,
+            expected_samples=[images[0], images[2]],
+        )
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=field < cutoff,
+            expected_samples=[images[0]],
+        )
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=field <= cutoff,
+            expected_samples=[images[0], images[1]],
+        )
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=field > cutoff,
+            expected_samples=[images[2]],
+        )
+        _assert_matching_ids(
+            session=db_session,
+            collection=collection,
+            expression=field >= cutoff,
+            expected_samples=[images[1], images[2]],
+        )
+
+    def test_as_timestamp__requires_datetime(self) -> None:
+        field = ImageSampleField.metadata["timestamp"].as_timestamp()
+        with pytest.raises(TypeError, match="require a datetime"):
+            _ = field == "2024-01-01T00:00:00Z"
+        with pytest.raises(TypeError, match="require a datetime"):
+            _ = field > 1
 
     def test_eq_ne__booleans(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
@@ -328,6 +394,18 @@ class TestMetadataComparisonExpression:
         assert "metadata.sample_id = sample.sample_id" in sql
         assert "->>" in sql
         assert {"odometry", "camera", "front"}.issubset(set(compiled.params.values()))
+
+    def test_get__postgres_casts_timestamp_only_for_strings(self) -> None:
+        expression = ImageSampleField.metadata["timestamp"].as_timestamp() > datetime(
+            2024, 1, 1, tzinfo=timezone.utc
+        )
+        query = select(SampleTable).where(expression.get())
+        compiled = query.compile(dialect=postgresql.dialect())  # type: ignore[no-untyped-call]
+        sql = str(compiled).lower()
+        assert "case when" in sql
+        assert "then cast(cast(" in sql
+        assert "string" in compiled.params.values()
+        assert "as timestamp with time zone) end >" in sql
 
 
 def _assert_matching_ids(

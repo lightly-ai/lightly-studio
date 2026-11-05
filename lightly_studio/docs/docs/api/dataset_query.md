@@ -24,6 +24,7 @@ Access metadata by key, for example `ImageSampleField.metadata["camera"]` or
 and brackets for array indices: `metadata["odometry.speed"]` selects the `speed` value inside
 `odometry`, and `metadata["odometry.acc[1]"]` selects the second element of its `acc` array. See
 [Metadata queries](../workflows/search_and_filter.md#metadata-queries) for examples and comparison rules.
+Call `metadata["timestamp"].as_timestamp()` to compare an ISO 8601 string with a `datetime` value.
 
 ::: lightly_studio.core.dataset_query.metadata_expression
     options:
