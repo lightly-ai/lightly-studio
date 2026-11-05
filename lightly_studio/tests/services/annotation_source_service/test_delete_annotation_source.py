@@ -19,16 +19,16 @@ from tests.helpers_resolvers import (
     create_embedding_model,
     create_image,
 )
-from tests.services.annotation_source_service.helpers import create_source_annotations
+from tests.services.annotation_source_service import helpers
 
 
 def test_delete_annotation_source(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (gt,) = create_source_annotations(
+    (gt,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="ground_truth", count=1
     )
-    pred = create_source_annotations(
+    pred = helpers.create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=2
     )
     pred_source_id = pred[0].annotation_collection_id
@@ -63,7 +63,7 @@ def test_delete_annotation_source(db_session: Session) -> None:
 def test_delete_annotation_source__empty_source(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = create_source_annotations(
+    (pred,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     pred_source_id = pred.annotation_collection_id
@@ -85,7 +85,7 @@ def test_delete_annotation_source__other_collection(db_session: Session) -> None
     collection = create_collection(session=db_session)
     other_collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = create_source_annotations(
+    (pred,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
 
@@ -111,10 +111,10 @@ def test_delete_annotation_source__not_an_annotation_source(db_session: Session)
 def test_delete_annotation_source__used_by_evaluation_run(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (gt,) = create_source_annotations(
+    (gt,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="ground_truth", count=1
     )
-    (pred,) = create_source_annotations(
+    (pred,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     evaluation_run_resolver.create(
@@ -143,7 +143,7 @@ def test_delete_annotation_source__used_by_evaluation_run(db_session: Session) -
 def test_delete_annotation_source__has_child_collection(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = create_source_annotations(
+    (pred,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     # A caption on an annotation creates the child collection 'caption' of the source.

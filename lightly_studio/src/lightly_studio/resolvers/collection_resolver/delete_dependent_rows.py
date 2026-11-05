@@ -11,11 +11,12 @@ from lightly_studio.models.annotation_collection_coverage import (
 )
 from lightly_studio.models.collection_embedding_model import CollectionEmbeddingModelTable
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
+from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.models.tag import TagTable
 
 
 def delete_dependent_rows(session: Session, collection_id: UUID) -> None:
-    """Delete the coverage, embedding model links, embedding plots and tags of a collection.
+    """Delete the coverage, embedding model links, embedding plots, export jobs and tags.
 
     Does not commit. Delete the samples and the tag links of the collection first.
 
@@ -36,4 +37,5 @@ def delete_dependent_rows(session: Session, collection_id: UUID) -> None:
     session.exec(
         delete(EmbeddingPlotTable).where(col(EmbeddingPlotTable.collection_id) == collection_id)
     )
+    session.exec(delete(ExportJobTable).where(col(ExportJobTable.collection_id) == collection_id))
     session.exec(delete(TagTable).where(col(TagTable.collection_id) == collection_id))
