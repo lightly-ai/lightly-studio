@@ -49,6 +49,16 @@ vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
     useAnnotationSelection: () => ({ selectAnnotation: vi.fn() })
 }));
 
+const { createAnnotationClassPredictionContext } = vi.hoisted(() => ({
+    createAnnotationClassPredictionContext: vi.fn(() => ({ state: { status: 'hidden' } }))
+}));
+vi.mock('$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte', () => ({
+    createAnnotationClassPredictionContext
+}));
+vi.mock('./ClassPredictionStrip/ClassPredictionStrip.svelte', async () => ({
+    default: (await import('./SampleDetailsPanel.stub.svelte')).default
+}));
+
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
 vi.mock('$app/state', () => ({ page: { data: {} } }));
 
@@ -136,5 +146,19 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         await fireEvent.keyUp(input, { key: ' ' });
         expect(mockToolbarContext.status).toBe('bounding-box');
         expect(mockAnnotationLabelContext.annotationType).toBe('object_detection');
+    });
+});
+
+describe('SampleDetailsPanel class prediction', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it('creates the class prediction context only when enabled', () => {
+        render(SampleDetailsPanel, { props: defaultProps });
+        expect(createAnnotationClassPredictionContext).not.toHaveBeenCalled();
+
+        render(SampleDetailsPanel, { props: { ...defaultProps, isClassPredictionEnabled: true } });
+        expect(createAnnotationClassPredictionContext).toHaveBeenCalledOnce();
     });
 });

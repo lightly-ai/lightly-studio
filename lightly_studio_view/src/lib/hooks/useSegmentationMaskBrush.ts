@@ -4,6 +4,7 @@ import {
     encodeBinaryMaskToRLE
 } from '$lib/components/SampleAnnotation/utils';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+import { useAnnotationClassPredictionContext } from '$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
@@ -24,7 +25,8 @@ export function useSegmentationMaskBrush({
     refetch,
     deleteAnnotation,
     onAnnotationCreated,
-    requestLabel
+    requestLabel,
+    predictClass = false
 }: {
     collectionId: string;
     datasetId: string;
@@ -39,6 +41,8 @@ export function useSegmentationMaskBrush({
     /** Called when no label is currently selected. Should show a class-picker and resolve with
      *  the chosen class, or null if the user cancelled. */
     requestLabel?: () => Promise<{ label: string } | null>;
+    /** Predict the class of each new mask. Strokes that update a selected mask predict nothing. */
+    predictClass?: boolean;
 }) {
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
@@ -54,6 +58,7 @@ export function useSegmentationMaskBrush({
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         getCollectionId: () => collectionId
     });
+    const classPrediction = predictClass ? useAnnotationClassPredictionContext() : undefined;
 
     const finishBrush = async (
         workingMask: Uint8Array | null,
@@ -195,6 +200,7 @@ export function useSegmentationMaskBrush({
         setAnnotationLabel(label.annotation_label_name!);
         setAnnotationId(newAnnotation.sample_id);
         setLastCreatedAnnotationId(newAnnotation.sample_id);
+        void classPrediction?.predict({ collectionId, annotationId: newAnnotation.sample_id });
 
         refetch();
         onAnnotationCreated?.();

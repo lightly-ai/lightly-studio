@@ -26,6 +26,8 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
+    import { createAnnotationClassPredictionContext } from '$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte';
+    import ClassPredictionStrip from './ClassPredictionStrip/ClassPredictionStrip.svelte';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
@@ -41,7 +43,8 @@
         sidePanelItem,
         isOnAnnotationDetailsView = false,
         selectableBox,
-        dataTestId
+        dataTestId,
+        isClassPredictionEnabled = false
     }: {
         sampleId: string;
         collectionId: string;
@@ -63,6 +66,8 @@
         selectableBox?: Snippet;
         dataTestId?: string;
         isOnAnnotationDetailsView?: boolean;
+        /** Predict the class of new boxes and masks. Only the image editor enables it. */
+        isClassPredictionEnabled?: boolean;
     } = $props();
 
     const {
@@ -90,6 +95,9 @@
         annotationLabelContext.isOnAnnotationDetailsView = isOnAnnotationDetailsView;
     });
     createSampleDetailsToolbarContext();
+    if (untrack(() => isClassPredictionEnabled)) {
+        createAnnotationClassPredictionContext();
+    }
 
     const { context: sampleDetailsToolbarContext, setStatus } = useSampleDetailsToolbarContext();
 
@@ -269,6 +277,13 @@
 
                                 {#if children}
                                     {@render children()}
+                                {/if}
+                                {#if isClassPredictionEnabled}
+                                    <ClassPredictionStrip
+                                        {collectionId}
+                                        annotations={sample.annotations ?? []}
+                                        {refetch}
+                                    />
                                 {/if}
                                 <SampleDetailsImageContainer
                                     sample={{

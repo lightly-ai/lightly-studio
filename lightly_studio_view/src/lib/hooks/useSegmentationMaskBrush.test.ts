@@ -47,6 +47,11 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     })
 }));
 
+const predict = vi.fn();
+vi.mock('$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte', () => ({
+    useAnnotationClassPredictionContext: () => ({ predict })
+}));
+
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
     computeBoundingBoxFromMask: vi.fn(),
     encodeBinaryMaskToRLE: vi.fn(),
@@ -506,5 +511,69 @@ describe('useSegmentationMaskBrush', () => {
         expect(deleteAnnotation).toHaveBeenCalledWith('new-annotation-id', 'segmentation_mask');
         expect(get(reversibleActions)).toHaveLength(0);
         expect(annotationLabelContext.annotationId).toBeNull();
+    });
+
+    describe('class prediction', () => {
+        const labels = [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }];
+
+        beforeEach(() => {
+            annotationLabelContext.annotationLabel = 'car';
+        });
+
+        it('predicts the class of a new mask when predictClass is set', async () => {
+            const { finishBrush } = useSegmentationMaskBrush({
+                collectionId: 'c1',
+                datasetId,
+                sampleId: 's1',
+                sample,
+                refetch: vi.fn(),
+                deleteAnnotation,
+                predictClass: true
+            });
+
+            await finishBrush(mask, null, labels);
+
+            expect(predict).toHaveBeenCalledWith({
+                collectionId: 'c1',
+                annotationId: 'new-annotation-id'
+            });
+        });
+
+        it('does not predict when predictClass is not set', async () => {
+            const { finishBrush } = useSegmentationMaskBrush({
+                collectionId: 'c1',
+                datasetId,
+                sampleId: 's1',
+                sample,
+                refetch: vi.fn(),
+                deleteAnnotation
+            });
+
+            await finishBrush(mask, null, labels);
+
+            expect(predict).not.toHaveBeenCalled();
+        });
+
+        it('does not predict when a stroke updates a selected mask', async () => {
+            annotationLabelContext.annotationId = 'existing-id';
+            const { finishBrush } = useSegmentationMaskBrush({
+                collectionId: 'c1',
+                datasetId,
+                sampleId: 's1',
+                sample,
+                refetch: vi.fn(),
+                deleteAnnotation,
+                predictClass: true
+            });
+
+            await finishBrush(
+                mask,
+                { sample_id: 'existing-id' } as AnnotationView,
+                labels,
+                vi.fn().mockResolvedValue(true)
+            );
+
+            expect(predict).not.toHaveBeenCalled();
+        });
     });
 });

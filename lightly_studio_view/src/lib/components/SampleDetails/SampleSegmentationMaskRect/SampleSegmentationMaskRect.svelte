@@ -105,6 +105,7 @@
             refetch,
             deleteAnnotation,
             requestLabel,
+            predictClass: true,
             onAnnotationCreated: () => {
                 // Only refresh root collection if there were no annotations before
                 if (sample.annotations.length === 0) {

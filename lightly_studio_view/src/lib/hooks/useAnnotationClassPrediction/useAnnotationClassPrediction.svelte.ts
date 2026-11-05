@@ -58,8 +58,9 @@ export function createAnnotationClassPredictionContext(): AnnotationClassPredict
     return setContext(CONTEXT_KEY, createAnnotationClassPrediction());
 }
 
-export function useAnnotationClassPredictionContext(): AnnotationClassPrediction {
-    return getContext<AnnotationClassPrediction>(CONTEXT_KEY);
+/** Returns undefined outside a view that enabled class prediction. */
+export function useAnnotationClassPredictionContext(): AnnotationClassPrediction | undefined {
+    return getContext<AnnotationClassPrediction | undefined>(CONTEXT_KEY);
 }
 
 async function fetchTop({

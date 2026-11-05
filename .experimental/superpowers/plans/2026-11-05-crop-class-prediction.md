@@ -400,7 +400,7 @@ git commit -m "feat: add annotation class prediction state"
 
 Rendering: `loading` → spinner + `Predicting class…`. `ready` → `1 car 82% · 2 truck 11% · 3 bus 4%`, the entry matching the annotation's current class highlighted. `hidden` → nothing.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it('shows a spinner and "Predicting class…" while loading');
@@ -411,25 +411,25 @@ it('ignores keys typed into an input or textarea');       // Review Focus 4
 it('hides on Escape');
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `cd lightly_studio_view && npx vitest run src/lib/components/SampleDetails/ClassPredictionStrip`
 Expected: FAIL, component not found.
 
-- [ ] **Step 3: Implement the strip**
+- [x] **Step 3: Implement the strip**
 
 `<svelte:window onkeydown>`; skip when `event.target` is an `input`, `textarea` or `contenteditable`, or when a modifier key is held. On relabel, also call `setAnnotationLabel` and `updateLastAnnotationLabel`, as `SampleDetailsAnnotationSegment.svelte:228-237` does after a side-panel change.
 
-- [ ] **Step 4: Wire the call sites and mount**
+- [x] **Step 4: Wire the call sites and mount**
 
 Brush strokes that update a selected mask do not call `predict`. Deselecting the annotation calls `hide`.
 
-- [ ] **Step 5: Run tests and static checks**
+- [x] **Step 5: Run tests and static checks**
 
 Run: `cd lightly_studio_view && npx vitest run src/lib/components/SampleDetails src/lib/hooks && make static-checks`
 Expected: all pass, no type errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add lightly_studio_view/src/lib/components/SampleDetails/ lightly_studio_view/src/lib/hooks/useSegmentationMaskBrush.ts

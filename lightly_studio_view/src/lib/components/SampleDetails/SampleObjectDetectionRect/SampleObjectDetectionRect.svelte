@@ -18,6 +18,7 @@
     import { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { useAnnotationClassPredictionContext } from '$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte';
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
@@ -68,6 +69,7 @@
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const classPrediction = useAnnotationClassPredictionContext();
 
     const {
         startPending: startCreateBoundingBoxPending,
@@ -239,6 +241,7 @@
             setLastCreatedAnnotationId(newAnnotation.sample_id);
             setAnnotationId(newAnnotation.sample_id);
             setCurrentBoundingBox(getBoundingBox(newAnnotation));
+            void classPrediction?.predict({ collectionId, annotationId: newAnnotation.sample_id });
 
             // Enable resizing immediately after creation
             shouldDisableInteraction = true;

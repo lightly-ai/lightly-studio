@@ -55,6 +55,7 @@
         }}
         {refetch}
         {handleEscape}
+        isClassPredictionEnabled
     >
         {#if children}
             {@render children()}
