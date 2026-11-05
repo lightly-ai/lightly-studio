@@ -6,6 +6,7 @@ import {
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type {
     CreateAnnotationLabelResponse,
+    ReadAnnotationLabelsWithCountsError,
     ReadAnnotationLabelsWithCountsResponse
 } from '$lib/api/lightly_studio_local/types.gen';
 import {
@@ -22,7 +23,10 @@ interface UseAnnotationClassesParams {
 }
 
 interface UseAnnotationClassesReturn {
-    query: CreateQueryResult<ReadAnnotationLabelsWithCountsResponse>;
+    query: CreateQueryResult<
+        ReadAnnotationLabelsWithCountsResponse,
+        ReadAnnotationLabelsWithCountsError
+    >;
     addClass: (name: string) => Promise<CreateAnnotationLabelResponse>;
     renameClass: (labelId: string, name: string) => Promise<void>;
     deleteClass: (labelId: string) => Promise<unknown>;
