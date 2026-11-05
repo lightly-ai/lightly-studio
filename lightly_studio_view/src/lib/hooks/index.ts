@@ -62,7 +62,11 @@ export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMut
 export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
+export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+export {
+    useClassColorPicker,
+    useSourceColorPicker
+} from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { usePostHog } from '$lib/hooks/usePostHog';
 export {

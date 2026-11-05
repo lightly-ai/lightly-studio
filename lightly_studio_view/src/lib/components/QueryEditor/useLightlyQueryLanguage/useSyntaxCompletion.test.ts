@@ -6,6 +6,8 @@ import {
     type CompletionList as LspCompletionList
 } from 'vscode-languageserver-types';
 import type * as monaco from 'monaco-editor';
+// @ts-expect-error Monaco's internal matcher has no declarations in the published package.
+import { fuzzyScore } from 'monaco-editor/esm/vs/base/common/filters.js';
 
 const mocks = vi.hoisted(() => ({
     registerCompletionItemProvider: vi.fn(),
@@ -143,6 +145,107 @@ describe('useSyntaxCompletion', () => {
         expect(mocks.registerCompletionItemProvider).toHaveBeenCalledOnce();
         expect(languageId).toBe('lightly-query');
         expect(triggerCharacters).toEqual([' ', '(', ':']);
+    });
+
+    it.each([
+        ['"score)', 7],
+        ["'score)", 7],
+        ['"tp"', 4],
+        ["'tp'", 4],
+        ['"tp"', 2],
+        ['"t', 2],
+        ["'t", 2],
+        ['"custom\\"score"', 15]
+    ] as const)('replaces the whole metric %s at offset %s', async (metric, offset) => {
+        const { provideCompletionItems } = await loadAndAttach([{ label: '"fp"' }]);
+        const prefix = 'sample_evaluation(name = "run1" AND ';
+        const suffix = metric.endsWith('"') || metric.endsWith("'") ? ' > 0)' : '';
+        const text = `${prefix}${metric}${suffix}`;
+        const column = prefix.length + offset + 1;
+        const result = await provideCompletionItems(
+            makeModel(text, { startColumn: column, endColumn: column }) as never,
+            { lineNumber: 1, column } as never
+        );
+        const suggestion = result.suggestions.find((item) => item.label === '"fp"');
+        expect(suggestion).toBeDefined();
+        const range = suggestion?.range as monaco.IRange;
+        const completed =
+            text.slice(0, range.startColumn - 1) +
+            suggestion?.insertText +
+            text.slice(range.endColumn - 1);
+        expect(completed).toBe(`${prefix}"fp"${suffix}`);
+    });
+
+    it.each(["'t", "'tp'", '"tp"'])(
+        'keeps metric suggestions visible when filtering %s',
+        async (metric) => {
+            const { provideCompletionItems } = await loadAndAttach([{ label: '"tp"' }]);
+            const prefix = 'sample_evaluation(name = "run1" AND ';
+            const text = `${prefix}${metric}`;
+            const column = text.length + 1;
+            const result = await provideCompletionItems(
+                makeModel(text, { startColumn: column, endColumn: column }) as never,
+                { lineNumber: 1, column } as never
+            );
+            const suggestion = result.suggestions.find((item) => item.label === '"tp"')!;
+            const range = suggestion.range as monaco.IRange;
+            const word = text.slice(range.startColumn - 1, column - 1);
+            const filterText = suggestion.filterText!;
+            expect(
+                fuzzyScore(word, word.toLowerCase(), 0, filterText, filterText.toLowerCase(), 0)
+            ).toBeDefined();
+            expect(text.slice(0, range.startColumn - 1) + suggestion.insertText).toBe(
+                `${prefix}"tp"`
+            );
+        }
+    );
+
+    it('corrects a language-service insertion range inside a quoted metric', async () => {
+        const prefix = 'sample_evaluation(name = "run1" AND ';
+        const text = `${prefix}"tp" > 0)`;
+        const column = prefix.length + 3;
+        const { provideCompletionItems } = await loadAndAttach([
+            {
+                label: '"fp"',
+                textEdit: {
+                    newText: '"fp"',
+                    range: {
+                        start: { line: 0, character: column - 1 },
+                        end: { line: 0, character: column - 1 }
+                    }
+                }
+            }
+        ]);
+        const result = await provideCompletionItems(
+            makeModel(text, { startColumn: column, endColumn: column }) as never,
+            { lineNumber: 1, column } as never
+        );
+        const suggestions = result.suggestions.filter((item) => item.label === '"fp"');
+        expect(suggestions).toHaveLength(1);
+        expect(suggestions[0].range).toEqual({
+            startLineNumber: 1,
+            endLineNumber: 1,
+            startColumn: prefix.length + 1,
+            endColumn: prefix.length + 5
+        });
+    });
+
+    it('replaces a quoted metric with a schema fallback suggestion', async () => {
+        const { provideCompletionItems } = await loadAndAttach([]);
+        const prefix = 'sample_evaluation(name = "run1" AND ';
+        const text = `${prefix}"tp" > 0)`;
+        const column = prefix.length + 5;
+        const result = await provideCompletionItems(
+            makeModel(text, { startColumn: column, endColumn: column }) as never,
+            { lineNumber: 1, column } as never
+        );
+        const suggestion = result.suggestions.find((item) => item.label === '"fp"');
+        const range = suggestion?.range as monaco.IRange;
+        const completed =
+            text.slice(0, range.startColumn - 1) +
+            suggestion?.insertText +
+            text.slice(range.endColumn - 1);
+        expect(completed).toBe(`${prefix}"fp" > 0)`);
     });
 
     it('registers completion provider only once per language id', async () => {
@@ -576,4 +679,37 @@ describe('useSyntaxCompletion', () => {
             expect.arrayContaining([expect.stringMatching(/^(metadata|true|false)$/)])
         );
     });
+});
+
+it.each([
+    ['sample_evaluation(', true],
+    ['sample_evaluation(na', true],
+    ['sample_evaluation(name = "run1" AND ', false],
+    ['sample_evaluation(name = "run1" AND (NOT ', false],
+    ['sample_evaluation(# AND\n', true]
+])('filters evaluation suggestions at %s', async (text, selector) => {
+    const { provideCompletionItems } = await loadAndAttach([{ label: 'name' }, { label: '"tp"' }]);
+    const column = text.length + 1;
+    const result = await provideCompletionItems(
+        makeModel(text, { startColumn: column, endColumn: column }) as never,
+        { lineNumber: 1, column } as never
+    );
+    const labels = result.suggestions.map((item) => item.label);
+    expect(labels.includes('name')).toBe(selector);
+    expect(labels.includes('"tp"')).toBe(!selector);
+    expect(labels.includes('"fp"')).toBe(!selector);
+});
+
+it('offers AND after the run selector without field suggestions', async () => {
+    const { provideCompletionItems } = await loadAndAttach([{ label: 'name' }]);
+    const text = 'sample_evaluation(name = "run AND sample_evaluation(" ';
+    const column = text.length + 1;
+    const result = await provideCompletionItems(
+        makeModel(text, { startColumn: column, endColumn: column }) as never,
+        { lineNumber: 1, column } as never
+    );
+    const labels = result.suggestions.map((item) => item.label);
+    expect(labels).toContain('AND');
+    expect(labels).not.toContain('name');
+    expect(labels).not.toContain('"tp"');
 });

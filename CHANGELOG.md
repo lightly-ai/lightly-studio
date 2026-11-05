@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python SDK: Added Python 3.15 support.
 - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
+- Filter samples by evaluation run and per-sample metrics in the GUI query filter using `sample_evaluation(...)`.
 
 ### Changed
 
@@ -26,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renaming an annotation class that has annotations no longer fails on DuckDB. If your DuckDB database was created before this version, re-index your data to get the fix.
 - The browser no longer freezes when a collection has an integer metadata field with a very wide range, such as an ID.
 - The previous and next buttons of a point cloud sequence now follow the tags, the embedding plot selection, and the text search of the point clouds grid.
+- Smart select stays active when you select a segmentation mask or change its class in the sample details sidebar.
 
 ### Security
 

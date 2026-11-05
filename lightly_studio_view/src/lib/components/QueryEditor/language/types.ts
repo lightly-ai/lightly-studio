@@ -11,10 +11,17 @@
  * providers attach human-friendly documentation without re-parsing the
  * grammar at runtime. Keep both in sync when the grammar changes. */
 
-export type Scope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
+export type Scope =
+    | 'image'
+    | 'video'
+    | 'object_detection'
+    | 'classification'
+    | 'segmentation_mask'
+    | 'sample_evaluation';
 
 export interface FieldDoc {
     name: string;
+    insertText?: string;
     type: 'int' | 'float' | 'string' | 'datetime';
     description: string;
 }

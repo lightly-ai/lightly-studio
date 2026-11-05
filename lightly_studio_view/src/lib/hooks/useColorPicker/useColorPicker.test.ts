@@ -2,14 +2,16 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import { tick } from 'svelte';
 import { afterEach, describe, expect, test } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+import { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors';
 import { getColorByLabel, rgbaToHex } from '$lib/utils';
 import UseColorPickerTestWrapper from './useColorPickerTestWrapper.test.svelte';
 
 afterEach(() => {
     useCustomLabelColors().clearCustomColors();
+    useCustomSourceColors().clearCustomColors();
 });
 
-describe('useColorPicker', () => {
+describe('useClassColorPicker and useSourceColorPicker', () => {
     describe('without a custom color', () => {
         test('uses getColorByLabel for border (alpha 1) and background (alpha 0.35)', () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
@@ -75,5 +77,64 @@ describe('useColorPicker', () => {
 
         const stored = useCustomLabelColors().getCustomColor('cat');
         expect(stored).toEqual({ color: '#abcdef', alpha: 0.5 });
+    });
+
+    test('a source picker reads and writes the source store only', async () => {
+        useCustomLabelColors().setCustomColor('cat', '#112233');
+        render(UseColorPickerTestWrapper, { props: { label: 'cat', kind: 'source' } });
+        await tick();
+        expect(screen.getByTestId('initial-alpha').textContent).toBe('1');
+        expect(screen.getByTestId('border-color').textContent).not.toBe('#112233');
+
+        await fireEvent.click(screen.getByTestId('set-color'));
+
+        expect(useCustomSourceColors().getCustomColor('cat')).toEqual({
+            color: '#abcdef',
+            alpha: 0.5
+        });
+        expect(useCustomLabelColors().getCustomColor('cat')?.color).toBe('#112233');
+    });
+
+    describe('previews', () => {
+        test('cancel keeps a saved color written during the preview', async () => {
+            render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            useCustomLabelColors().setCustomColor('cat', '#112233');
+            await fireEvent.click(screen.getByTestId('cancel'));
+
+            expect(useCustomLabelColors().getCustomColor('cat')?.color).toBe('#112233');
+        });
+
+        test('unmounting during a preview drops the preview', async () => {
+            const { unmount } = render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            unmount();
+
+            expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+        });
+
+        test('cancel after a rename drops the preview of the old name', async () => {
+            const { rerender } = render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await rerender({ label: 'kitty' });
+            await fireEvent.click(screen.getByTestId('cancel'));
+
+            expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+        });
+
+        test('apply after a rename saves the color under the new name', async () => {
+            const { rerender } = render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-color'));
+            await rerender({ label: 'kitty' });
+            expect(useCustomLabelColors().getCustomColor('kitty')?.color).toBe('#abcdef');
+            await fireEvent.click(screen.getByTestId('apply'));
+
+            expect(useCustomLabelColors().getSavedColor('kitty')?.color).toBe('#abcdef');
+            expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+        });
     });
 });
