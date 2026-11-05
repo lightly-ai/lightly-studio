@@ -3,6 +3,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 import PointCloudAnnotationDetails from './PointCloudAnnotationDetails.svelte';
 
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte',
+    () => ({
+        usePointCloudWorkspaceLayoutContext: () => () => ({ datasetId: 'ds-1' })
+    })
+);
+vi.mock('$lib/hooks', () => ({
+    useTracks: () => ({ data: [], refetch: vi.fn() }),
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
+}));
+
 const defaultAnnotation = {
     ...createAnnotationFixture(),
     center: [10, -2, 1.234] as [number, number, number],
@@ -77,11 +88,11 @@ describe('PointCloudAnnotationDetails - editable mode', () => {
         expect(screen.getByRole('spinbutton', { name: 'location z' })).toHaveValue(1.234);
     });
 
-    it('annotation source and track number remain visible', () => {
+    it('annotation source remains visible and shows TrackSelect', () => {
         render(PointCloudAnnotationDetails, { props: defaultEditableProps });
 
         expect(screen.getByText('Ground Truth')).toBeInTheDocument();
-        expect(screen.getByText('Track number:')).toBeInTheDocument();
+        expect(screen.getByTestId('track-select')).toBeInTheDocument();
     });
 
     it('fires onAnnotationChange with updated center on blur', () => {
@@ -205,5 +216,22 @@ describe('PointCloudAnnotationDetails - editable mode', () => {
                 rotation: expect.arrayContaining([expect.any(Number)])
             })
         );
+    });
+
+    it('shows TrackSelect instead of read-only track number', () => {
+        render(PointCloudAnnotationDetails, { props: defaultEditableProps });
+
+        expect(screen.getByTestId('track-select')).toBeInTheDocument();
+        expect(screen.queryByText('Track number:')).not.toBeInTheDocument();
+    });
+});
+
+describe('PointCloudAnnotationDetails - track display', () => {
+    it('shows read-only track number when not editable', () => {
+        render(PointCloudAnnotationDetails, { props: defaultProps });
+
+        expect(screen.getByText('Track number:')).toBeInTheDocument();
+        expect(screen.getByText('7')).toBeInTheDocument();
+        expect(screen.queryByTestId('track-select')).not.toBeInTheDocument();
     });
 });

@@ -28,6 +28,8 @@
             labelName: string,
             annotationSourceId: string
         ) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => void;
         /** Deletes this cuboid annotation. */
         onDelete?: (cuboidId: string) => void;
     }
@@ -42,6 +44,7 @@
         onToggle,
         onCuboidTransform,
         onLabelChange,
+        onTrackChange,
         onDelete
     }: Props = $props();
 
@@ -82,6 +85,7 @@
                 annotation={cuboid}
                 {editable}
                 onAnnotationChange={handleAnnotationChange}
+                {onTrackChange}
             />
         </div>
     {/if}
