@@ -188,6 +188,35 @@ describe('useArrowData', () => {
         );
     });
 
+    it('reads the marker positions from the metadata', async () => {
+        const mockData = {
+            x: [1],
+            y: [4],
+            fulfils_filter: [true],
+            color_categories: [[]],
+            sample_id: ['a']
+        };
+        const mockTable = {
+            schema: {
+                metadata: new Map([['marker_positions', '[[0.5, 1.5], [2, 3]]']])
+            },
+            getChild: createGetChild(mockData)
+        };
+        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+
+        const mockBlob = {
+            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
+        } as Blob;
+        const { markerPositions } = useArrowData({ blobData: mockBlob });
+
+        await new Promise((resolve) => setTimeout(resolve, 0));
+
+        expect(get(markerPositions)).toEqual([
+            [0.5, 1.5],
+            [2, 3]
+        ]);
+    });
+
     it('returns writable stores that can be subscribed to', () => {
         const mockBlob = new Blob([new ArrayBuffer(8)]);
         const { data, error } = useArrowData({ blobData: mockBlob });

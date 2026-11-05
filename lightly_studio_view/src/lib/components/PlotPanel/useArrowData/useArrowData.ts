@@ -19,17 +19,25 @@ export type ArrowData = Record<TableColumn, unknown>;
 type UseArrowDataReturn = {
     data: Writable<ArrowData>;
     colorLegend: Writable<Map<number, string>>;
+    markerPositions: Writable<[number, number][]>;
     error: Writable<string | undefined>;
 };
 
-const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined) => {
-    const rawLegend = metadata?.get('color_legend');
-    if (!rawLegend) {
+type ArrowMetadata = Map<string, string | Uint8Array> | undefined;
+
+const decodeMetadata = (metadata: ArrowMetadata, key: string): string | undefined => {
+    const raw = metadata?.get(key);
+    if (!raw) {
+        return undefined;
+    }
+    return raw instanceof Uint8Array ? new TextDecoder().decode(raw) : raw;
+};
+
+const parseColorLegend = (metadata: ArrowMetadata) => {
+    const legendText = decodeMetadata(metadata, 'color_legend');
+    if (!legendText) {
         return new Map<number, string>();
     }
-
-    const legendText =
-        rawLegend instanceof Uint8Array ? new TextDecoder().decode(rawLegend) : rawLegend;
 
     let parsedLegend: Record<string, string> = {};
     try {
@@ -41,6 +49,20 @@ const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined
     return new Map(
         Object.entries(parsedLegend).map(([key, value]) => [Number(key), value] as const)
     );
+};
+
+// The positions of the requested markers, in the order of the marker embeddings of the request.
+const parseMarkerPositions = (metadata: ArrowMetadata): [number, number][] => {
+    const positionsText = decodeMetadata(metadata, 'marker_positions');
+    if (!positionsText) {
+        return [];
+    }
+    try {
+        return JSON.parse(positionsText) as [number, number][];
+    } catch (error) {
+        console.warn('Invalid marker_positions metadata in Arrow data.', error);
+        return [];
+    }
 };
 
 /**
@@ -56,6 +78,7 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
 
     const data = writable<ArrowData>();
     const colorLegend = writable<Map<number, string>>(new Map());
+    const markerPositions = writable<[number, number][]>([]);
 
     const readData = async () => {
         try {
@@ -79,11 +102,12 @@ export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataRetu
             }
             data.set(Object.fromEntries(columnData) as Record<TableColumn, unknown>);
             colorLegend.set(parseColorLegend(table.schema?.metadata));
+            markerPositions.set(parseMarkerPositions(table.schema?.metadata));
         } catch (e) {
             error.set(`Error reading Arrow data: ${String(e)}`);
         }
     };
 
     readData();
-    return { data, colorLegend, error };
+    return { data, colorLegend, markerPositions, error };
 }
