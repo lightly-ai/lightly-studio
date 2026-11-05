@@ -18,19 +18,19 @@ type AnnotationClass = Pick<
     'annotation_label_id' | 'annotation_label_name' | 'dataset_id' | 'color' | 'alpha'
 >;
 
-// Class IDs of the current dataset by class name. Colors are keyed by name, the server by ID.
-let currentDatasetId: string | undefined;
+// Class IDs of the dataset by class name. Colors are keyed by name, the server by ID.
 let classIdsByName = new Map<string, string>();
 
-export const resetAnnotationClasses = (datasetId: string): void => {
-    if (datasetId === currentDatasetId) return;
-    currentDatasetId = datasetId;
-    classIdsByName = new Map();
-    store.reset();
-};
+// The dataset of the last call, to notice a dataset switch.
+let lastDatasetId: string | undefined;
 
+// Skips classes of other datasets, so a stale class list after a dataset switch clears the map.
+// A dataset switch also drops previews and saves in flight; a refetch of the same dataset keeps them.
 export const setAnnotationClasses = (datasetId: string, classes: AnnotationClass[]): void => {
-    if (datasetId !== currentDatasetId) return;
+    if (datasetId !== lastDatasetId) {
+        lastDatasetId = datasetId;
+        store.reset();
+    }
     classIdsByName = new Map();
     const savedColors: Record<string, CustomColor> = {};
     for (const c of classes) {

@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
     getAnnotationClassId,
-    useCustomLabelColors,
-    resetAnnotationClasses,
-    setAnnotationClasses
+    setAnnotationClasses,
+    useCustomLabelColors
 } from '$lib/hooks/useCustomLabelColors';
 
 const makeClass = (
@@ -22,34 +21,28 @@ const makeClass = (
 
 describe('annotation class IDs', () => {
     it('setAnnotationClasses maps names to IDs', () => {
-        resetAnnotationClasses('dataset-a');
         setAnnotationClasses('dataset-a', [makeClass('id-1', 'cat', 'dataset-a')]);
 
         expect(getAnnotationClassId('cat')).toBe('id-1');
         expect(getAnnotationClassId('dog')).toBeUndefined();
     });
 
-    it('resetAnnotationClasses to another dataset clears the class IDs', () => {
-        resetAnnotationClasses('dataset-b');
-        setAnnotationClasses('dataset-b', [makeClass('id-1', 'cat', 'dataset-b')]);
-
-        resetAnnotationClasses('dataset-c');
-
-        expect(getAnnotationClassId('cat')).toBeUndefined();
-    });
-
     it('setAnnotationClasses ignores classes of another dataset', () => {
-        resetAnnotationClasses('dataset-d');
-
-        setAnnotationClasses('dataset-other', [makeClass('id-1', 'cat', 'dataset-other')]);
-        setAnnotationClasses('dataset-d', [
-            makeClass('id-2', 'dog', 'dataset-d'),
-            makeClass('id-3', 'bird', 'dataset-other')
+        setAnnotationClasses('dataset-b', [
+            makeClass('id-1', 'cat', 'dataset-b'),
+            makeClass('id-2', 'dog', 'dataset-other')
         ]);
 
+        expect(getAnnotationClassId('cat')).toBe('id-1');
+        expect(getAnnotationClassId('dog')).toBeUndefined();
+    });
+
+    it('setAnnotationClasses with stale classes of another dataset clears the class IDs', () => {
+        setAnnotationClasses('dataset-c', [makeClass('id-1', 'cat', 'dataset-c')]);
+
+        setAnnotationClasses('dataset-d', [makeClass('id-1', 'cat', 'dataset-c')]);
+
         expect(getAnnotationClassId('cat')).toBeUndefined();
-        expect(getAnnotationClassId('dog')).toBe('id-2');
-        expect(getAnnotationClassId('bird')).toBeUndefined();
     });
 });
 
@@ -57,8 +50,6 @@ describe('annotation class colors', () => {
     const { getCustomColor, setPreviewColor } = useCustomLabelColors();
 
     it('loads saved colors', () => {
-        resetAnnotationClasses('ds-colors-1');
-
         setAnnotationClasses('ds-colors-1', [
             makeClass('id-1', 'cat', 'ds-colors-1', '#ff0000', 0.5),
             makeClass('id-2', 'dog', 'ds-colors-1'),
@@ -71,7 +62,6 @@ describe('annotation class colors', () => {
     });
 
     it('a reload without colors clears the saved colors', () => {
-        resetAnnotationClasses('ds-colors-2');
         setAnnotationClasses('ds-colors-2', [makeClass('id-1', 'cat', 'ds-colors-2', '#ff0000')]);
 
         setAnnotationClasses('ds-colors-2', [makeClass('id-1', 'cat', 'ds-colors-2')]);
@@ -80,7 +70,6 @@ describe('annotation class colors', () => {
     });
 
     it('replaces the previous classes', () => {
-        resetAnnotationClasses('ds-colors-3');
         setAnnotationClasses('ds-colors-3', [makeClass('id-1', 'cat', 'ds-colors-3', '#ff0000')]);
 
         setAnnotationClasses('ds-colors-3', [makeClass('id-1', 'kitty', 'ds-colors-3', '#ff0000')]);
@@ -90,23 +79,20 @@ describe('annotation class colors', () => {
     });
 
     it('a refetch of the same dataset keeps an open preview', () => {
-        resetAnnotationClasses('ds-1');
         setAnnotationClasses('ds-1', [makeClass('id-1', 'cat', 'ds-1')]);
         const owner = Symbol();
         setPreviewColor('cat', { color: '#abcdef', alpha: 1 }, owner);
 
-        resetAnnotationClasses('ds-1');
         setAnnotationClasses('ds-1', [makeClass('id-1', 'cat', 'ds-1', '#112233')]);
 
         expect(getCustomColor('cat')?.color).toBe('#abcdef');
     });
 
     it('switching datasets drops previews and colors', () => {
-        resetAnnotationClasses('ds-1');
         setAnnotationClasses('ds-1', [makeClass('id-1', 'cat', 'ds-1', '#112233')]);
         setPreviewColor('cat', { color: '#abcdef', alpha: 1 }, Symbol());
 
-        resetAnnotationClasses('ds-2');
+        setAnnotationClasses('ds-2', []);
 
         expect(getCustomColor('cat')).toBeUndefined();
     });
