@@ -1,6 +1,8 @@
 import { QueryClient, useQueryClient, type QueryKey } from '@tanstack/svelte-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+    countVideoFrameAnnotationsByVideoCollectionQueryKey,
+    countVideoFrameAnnotationsQueryKey,
     readAnnotationCollectionsQueryKey,
     readAnnotationCollectionsWithCountsQueryKey,
     readCollectionHierarchyQueryKey,
@@ -34,7 +36,16 @@ describe('useInvalidateAnnotationSourceQueries', () => {
             readAnnotationCollectionsWithCountsQueryKey(path('owner')),
             [...getImagesInfiniteQueryKeyPrefix('owner'), 'normal'],
             [...getAnnotationsInfiniteQueryKeyPrefix('source-1'), {}],
-            readImageQueryKey({ path: { sample_id: 'sample-1' } })
+            readImageQueryKey({ path: { sample_id: 'sample-1' } }),
+            readCollectionHierarchyQueryKey(path('owner')),
+            countVideoFrameAnnotationsQueryKey({
+                path: { video_frame_collection_id: 'frames-1' },
+                body: {}
+            }),
+            countVideoFrameAnnotationsByVideoCollectionQueryKey({
+                ...path('videos-1'),
+                body: {}
+            })
         ];
         affected.forEach(seed);
 
@@ -46,7 +57,6 @@ describe('useInvalidateAnnotationSourceQueries', () => {
     it('leaves queries that do not show annotation sources alone', () => {
         const unaffected = [
             readTagsQueryKey(path('owner')),
-            readCollectionHierarchyQueryKey(path('owner')),
             [...getImagesInfiniteQueryKeyPrefix('other-dataset'), 'normal']
         ];
         unaffected.forEach(seed);
