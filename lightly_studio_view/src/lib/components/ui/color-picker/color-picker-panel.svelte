@@ -2,6 +2,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Slider } from '$lib/components/ui/slider';
     import { X } from '@lucide/svelte';
+    import ColorPickerActions from './color-picker-actions.svelte';
     import { hexToHsl, isHexColor } from './color-picker.helpers';
     import HueSlider from './hue-slider.svelte';
     import PresetSwatches from './preset-swatches.svelte';
@@ -18,10 +19,22 @@
         onAlphaChange: (alpha: number) => void;
         onApply: () => void;
         onCancel: () => void;
+        onReset?: () => void;
+        isDefaultColor?: boolean;
     }
 
-    let { hsl, hex, alpha, onHslChange, onHexChange, onAlphaChange, onApply, onCancel }: Props =
-        $props();
+    let {
+        hsl,
+        hex,
+        alpha,
+        onHslChange,
+        onHexChange,
+        onAlphaChange,
+        onApply,
+        onCancel,
+        onReset,
+        isDefaultColor = false
+    }: Props = $props();
 
     function handleHexInput(e: Event): void {
         const value = (e.target as HTMLInputElement).value;
@@ -76,10 +89,5 @@
         <PresetSwatches selectedColor={hex} onSelect={onHexChange} />
     </div>
 
-    <div class="mt-3 flex justify-end gap-2">
-        <Button size="sm" variant="outline" class="h-7 px-2 py-0 text-xs" onclick={onCancel}>
-            Cancel
-        </Button>
-        <Button size="sm" class="h-7 px-2 py-0 text-xs" onclick={onApply}>Apply</Button>
-    </div>
+    <ColorPickerActions {onReset} {isDefaultColor} {onCancel} {onApply} />
 </div>

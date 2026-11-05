@@ -4,13 +4,16 @@ import { getColorByLabel, getColorBySource, hexToRgba, rgbaToHex } from '$lib/ut
 import { onDestroy, untrack } from 'svelte';
 import { fromStore } from 'svelte/store';
 
-type SessionColor = NonNullable<
-    Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
->;
+// null is the default color: the preview hides the saved color, and applying deletes it.
+type SessionColor = Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1];
 
 type ColorStore = Pick<
     ReturnType<typeof useCustomLabelColors>,
-    'customColorsStore' | 'setCustomColor' | 'setPreviewColor' | 'clearPreviewColor'
+    | 'customColorsStore'
+    | 'setCustomColor'
+    | 'deleteCustomColor'
+    | 'setPreviewColor'
+    | 'clearPreviewColor'
 >;
 
 /** A color picker for an annotation class. See `createColorPicker`. */
@@ -32,7 +35,7 @@ function createColorPicker(
     colorStore: ColorStore,
     getDefaultColor: typeof getColorByLabel
 ) {
-    const { setCustomColor, setPreviewColor, clearPreviewColor } = colorStore;
+    const { setCustomColor, deleteCustomColor, setPreviewColor, clearPreviewColor } = colorStore;
     const colors = fromStore(colorStore.customColorsStore);
     // A session starts at the first setColor after a finished one. A rename can change the
     // name while the picker stays open, so the session follows the name.
@@ -62,7 +65,8 @@ function createColorPicker(
         return hexToRgba(customColor.color, customColor.alpha * 0.35);
     });
 
-    const initialColor = $derived(customColor?.color ?? rgbaToHex(defaultBorder) ?? '#ff0000');
+    const defaultColor = $derived(rgbaToHex(defaultBorder) ?? '#ff0000');
+    const initialColor = $derived(customColor?.color ?? defaultColor);
     const initialAlpha = $derived(customColor?.alpha ?? 1);
 
     return {
@@ -78,9 +82,14 @@ function createColorPicker(
         get initialAlpha() {
             return initialAlpha;
         },
+        get defaultColor() {
+            return defaultColor;
+        },
         setColor(color: string, alpha: number) {
-            session ??= { owner: Symbol(), name: getName(), color: { color, alpha } };
-            session.color = { color, alpha };
+            const isDefault = color.toLowerCase() === defaultColor && alpha === 1;
+            const sessionColor = isDefault ? null : { color, alpha };
+            session ??= { owner: Symbol(), name: getName(), color: sessionColor };
+            session.color = sessionColor;
             setPreviewColor(session.name, session.color, session.owner);
         },
         finishColorChange(applied: boolean) {
@@ -88,7 +97,8 @@ function createColorPicker(
 
             const { owner, name, color } = session;
             session = undefined;
-            if (applied) setCustomColor(name, color.color, color.alpha);
+            if (applied && color) setCustomColor(name, color.color, color.alpha);
+            if (applied && !color) deleteCustomColor(name);
             clearPreviewColor(name, owner);
         }
     };

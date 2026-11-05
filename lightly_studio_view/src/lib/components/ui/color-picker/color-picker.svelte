@@ -10,6 +10,7 @@
         initialAlpha = 1,
         onChange,
         onClose,
+        defaultColor,
         position = 'right',
         triggerLabel,
         class: className,
@@ -19,6 +20,8 @@
         initialAlpha?: number;
         onChange?: (color: string, alpha: number) => void;
         onClose?: (applied: boolean) => void;
+        /** The color that Reset selects. Reset shows only with `defaultColor`. */
+        defaultColor?: string;
         position?: 'top' | 'bottom' | 'left' | 'right';
         triggerLabel?: string;
         class?: string;
@@ -29,7 +32,8 @@
         getInitialColor: () => initialColor,
         getInitialAlpha: () => initialAlpha,
         getOnChange: () => onChange,
-        getOnClose: () => onClose
+        getOnClose: () => onClose,
+        getDefaultColor: () => defaultColor
     });
 
     // Keep clicks in the picker away from document-level listeners, for example the canvas.
@@ -66,6 +70,8 @@
             onAlphaChange={picker.setAlpha}
             onApply={picker.applyChanges}
             onCancel={picker.cancelChanges}
+            onReset={defaultColor ? picker.resetToDefault : undefined}
+            isDefaultColor={picker.isDefaultColor}
         />
     </Popover.Content>
 </Popover.Root>

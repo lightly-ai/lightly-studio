@@ -41,6 +41,7 @@
         triggerLabel={`Change the color of ${labelName}`}
         onChange={picker.setColor}
         onClose={picker.finishColorChange}
+        defaultColor={picker.defaultColor}
     >
         <div
             class={`${className} cursor-pointer rounded-sm border`}

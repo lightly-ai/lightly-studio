@@ -95,6 +95,29 @@ describe('useClassColorPicker and useSourceColorPicker', () => {
         expect(useCustomLabelColors().getCustomColor('cat')?.color).toBe('#112233');
     });
 
+    describe('the default color', () => {
+        test('applying the default color deletes the custom color', async () => {
+            useCustomLabelColors().setCustomColor('cat', '#112233');
+            render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-default'));
+            await fireEvent.click(screen.getByTestId('apply'));
+
+            expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+        });
+
+        test('previewing the default color hides the custom color until cancel', async () => {
+            useCustomLabelColors().setCustomColor('cat', '#112233');
+            render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
+
+            await fireEvent.click(screen.getByTestId('set-default'));
+            expect(useCustomLabelColors().getCustomColor('cat')).toBeUndefined();
+
+            await fireEvent.click(screen.getByTestId('cancel'));
+            expect(useCustomLabelColors().getCustomColor('cat')?.color).toBe('#112233');
+        });
+    });
+
     describe('previews', () => {
         test('cancel keeps a saved color written during the preview', async () => {
             render(UseColorPickerTestWrapper, { props: { label: 'cat' } });
