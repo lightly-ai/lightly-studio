@@ -62,6 +62,16 @@ describe('AnnotationCardFrame', () => {
         await waitFor(() => expect(screen.getByTestId('frame')).not.toBeVisible());
     });
 
+    it('hides when its layer goes away', async () => {
+        let layer = $state<SVGGraphicsElement | null>(fakeLayer().layer);
+        renderFrame({}, undefined, { getLayer: () => layer });
+        await waitFor(() => expect(screen.getByTestId('frame')).toBeVisible());
+
+        layer = null;
+
+        await waitFor(() => expect(screen.getByTestId('frame')).not.toBeVisible());
+    });
+
     it('reports a pointer press outside the card only', async () => {
         const onPointerDownOutside = vi.fn();
         renderFrame({}, undefined, { onPointerDownOutside });
