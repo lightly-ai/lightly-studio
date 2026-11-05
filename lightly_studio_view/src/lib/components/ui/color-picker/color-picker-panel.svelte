@@ -2,6 +2,7 @@
     import { Button } from '$lib/components/ui/button';
     import { Slider } from '$lib/components/ui/slider';
     import { X } from '@lucide/svelte';
+    import ColorPickerActions from './color-picker-actions.svelte';
     import { hexToHsl, isHexColor } from './color-picker.helpers';
     import HueSlider from './hue-slider.svelte';
     import PresetSwatches from './preset-swatches.svelte';
@@ -86,20 +87,5 @@
         <PresetSwatches selectedColor={hex} onSelect={onHexChange} />
     </div>
 
-    <div class="mt-3 flex justify-end gap-2">
-        {#if onReset}
-            <Button
-                size="sm"
-                variant="ghost"
-                class="mr-auto h-7 px-2 py-0 text-xs"
-                onclick={onReset}
-            >
-                Reset to default
-            </Button>
-        {/if}
-        <Button size="sm" variant="outline" class="h-7 px-2 py-0 text-xs" onclick={onCancel}>
-            Cancel
-        </Button>
-        <Button size="sm" class="h-7 px-2 py-0 text-xs" onclick={onApply}>Apply</Button>
-    </div>
+    <ColorPickerActions {onReset} {onCancel} {onApply} />
 </div>
