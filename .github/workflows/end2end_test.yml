@@ -21,8 +21,6 @@ env:
   # ~3.4GB each and blew the 10GB quota, evicting the caches the e2e skip needs.
   # `python-version` is part of the uv cache key: 3.10 shares `unit_test.yml`'s entry.
   UV_SAVE_CACHE: ${{ github.ref == 'refs/heads/main' }}
-  # `end-to-end-after-merge` runs on push and dispatch, so `e2e-success-all` only covers PR runs.
-  E2E_SUCCESS_ALL: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
 
 jobs:
   # Success markers are keyed by `<file-hash>`, so the hash has to cover every input the run
@@ -77,8 +75,9 @@ jobs:
           [ -n "$hash" ] || { echo "::error::No files match the cache key file hash."; exit 1; }
           echo "hash=$hash" >> "$GITHUB_OUTPUT"
 
+      # Push and dispatch also run `end-to-end-after-merge`, which the marker does not cover.
       - name: Check e2e success cache for all matrix jobs
-        if: env.E2E_SUCCESS_ALL == 'true'
+        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
         id: cache-success-all
         uses: actions/cache/restore@v6
         with:
@@ -585,11 +584,11 @@ jobs:
           exit 1
 
       - name: Create e2e success marker for all matrix jobs
-        if: env.E2E_SUCCESS_ALL == 'true' && needs.end-to-end.result == 'success'
+        if: needs.end-to-end.result == 'success'
         run: touch .e2e-success-all
 
       - name: Save e2e success marker for all matrix jobs
-        if: env.E2E_SUCCESS_ALL == 'true' && needs.end-to-end.result == 'success'
+        if: needs.end-to-end.result == 'success'
         uses: actions/cache/save@v6
         with:
           path: .e2e-success-all
