@@ -23,9 +23,15 @@ const defaultProps = {
 };
 
 describe('AnnotationToolPopUp', () => {
-    it('disables Save when canSave is false', () => {
+    it('disables Done when canSave is false', () => {
         render(AnnotationToolPopUp, { props: { ...defaultProps, canSave: false } });
-        expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Done' })).toBeDisabled();
+    });
+
+    it('shows saving progress and blocks Done and Reset while saving', () => {
+        render(AnnotationToolPopUp, { props: { ...defaultProps, isSaving: true } });
+        expect(screen.getByRole('button', { name: 'Saving…' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Reset' })).toBeDisabled();
     });
 
     it('reports the chosen save as option', async () => {
@@ -39,8 +45,8 @@ describe('AnnotationToolPopUp', () => {
         const onSave = vi.fn();
         const onClear = vi.fn();
         render(AnnotationToolPopUp, { props: { ...defaultProps, onSave, onClear } });
-        await fireEvent.click(screen.getByRole('button', { name: 'Save' }));
-        await fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
         expect(onSave).toHaveBeenCalledOnce();
         expect(onClear).toHaveBeenCalledOnce();
     });
