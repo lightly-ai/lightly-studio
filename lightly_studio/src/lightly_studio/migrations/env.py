@@ -60,6 +60,7 @@ def _include_object(
     postgres_only_indexes = {
         "uq_collection_name_root",
         "uq_collection_embedding_model_default",
+        "uq_job_resource_active",
     }
     return not (type_ == "index" and name in postgres_only_indexes)
 
