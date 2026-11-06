@@ -17,7 +17,6 @@ from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
@@ -26,6 +25,8 @@ from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
+    metadata_resolver,
+    sample_resolver,
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
@@ -179,19 +180,16 @@ def test_delete_annotations_by_ids__deletes_metadata(db_session: Session) -> Non
     image = _create_image_in_new_collection(session=db_session)
     (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
     annotation_id = annotation.sample_id
-    db_session.add(
-        SampleMetadataTable(
-            sample_id=annotation_id, data={"score": 0.9}, metadata_schema={"score": "float"}
-        )
+    metadata_resolver.set_value_for_sample(
+        session=db_session, sample_id=annotation_id, key="score", value=0.9
     )
-    db_session.commit()
 
     annotation_resolver.delete_annotations_by_ids(
         session=db_session, annotation_ids=[annotation_id]
     )
 
-    assert db_session.get(SampleTable, annotation_id) is None
-    assert db_session.exec(select(SampleMetadataTable)).all() == []
+    assert sample_resolver.get_by_id(session=db_session, sample_id=annotation_id) is None
+    assert metadata_resolver.get_by_sample_id(session=db_session, sample_id=annotation_id) is None
 
 
 def test_delete_annotations_by_ids__deletes_captions(db_session: Session) -> None:
