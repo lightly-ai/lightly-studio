@@ -260,6 +260,32 @@ describe('ClassPredictionStrip', () => {
         expect(mocks.hide).toHaveBeenCalled();
     });
 
+    it('hides when the predicted annotation is deleted, for example by undo', async () => {
+        mocks.state = READY_STATE;
+        const view = render(ClassPredictionStrip, { props: defaultProps });
+
+        await view.rerender({ ...defaultProps, annotations: [] });
+
+        expect(mocks.hide).toHaveBeenCalled();
+    });
+
+    it('hides when the predicted annotation is deleted while predicting', async () => {
+        mocks.state = { status: 'loading', annotationId: 'ann-1' };
+        const view = render(ClassPredictionStrip, { props: defaultProps });
+
+        await view.rerender({ ...defaultProps, annotations: [] });
+
+        expect(mocks.hide).toHaveBeenCalled();
+    });
+
+    it('stays while a new annotation is not loaded into the sample yet', () => {
+        mocks.state = READY_STATE;
+
+        render(ClassPredictionStrip, { props: { ...defaultProps, annotations: [] } });
+
+        expect(mocks.hide).not.toHaveBeenCalled();
+    });
+
     it('stays when the predicted annotation is selected', () => {
         mocks.state = READY_STATE;
 

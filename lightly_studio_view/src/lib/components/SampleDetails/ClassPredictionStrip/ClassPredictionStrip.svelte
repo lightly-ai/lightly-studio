@@ -61,6 +61,20 @@
         }
     });
 
+    // Deleting the predicted annotation, for example by undoing its creation, drops the
+    // prediction. A new annotation is missing until the sample refetch lands, so only an
+    // annotation that was seen and then vanished counts as deleted.
+    let seenAnnotationId: string | undefined;
+    $effect(() => {
+        if (predictionState.status === 'hidden') return;
+        const { annotationId } = predictionState;
+        if (annotations.some((annotation) => annotation.sample_id === annotationId)) {
+            seenAnnotationId = annotationId;
+        } else if (seenAnnotationId === annotationId) {
+            classPrediction?.hide();
+        }
+    });
+
     const relabel = async (labelName: string) => {
         const annotation = predictedAnnotation;
         if (!annotation || labelName === currentLabelName) return;
