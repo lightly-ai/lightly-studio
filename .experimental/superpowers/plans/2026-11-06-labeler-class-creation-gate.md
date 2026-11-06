@@ -44,6 +44,7 @@ The stack starts on PR 0, which adds the spec and this plan. Each PR branches fr
 - A viewer is treated like a labeler. → Task 1 test.
 - A labeler brushing with a deleted class leaves overlapping masks untouched; an editor's empty stroke still creates no class. → Task 4 tests.
 - A rejected class creation shows exactly one message, the class error text, in every caller. → Task 4 tests.
+- A labeler draws a box before the class list has loaded. An existing class must not count as missing, or the drawing is lost. `useCreateCuboidAnnotation` waits for the list with `labels.refetch()`; `SampleObjectDetectionRect` does not. → Reviewer checks Task 4.
 
 ---
 
@@ -173,12 +174,14 @@ In each picker: `const canCreateClass = useCanCreateAnnotationClass();`, pass `a
     - `shows the class error when the class cannot be created`: as `editor`, so the picker lets the new name through; `createLabel` rejects with `AnnotationClassNotAvailableError('zebra')`. Pick `zebra`. `createLabel` is called. `createAnnotation` is not called. `toast.error` is called once, with `'Class "zebra" is no longer available. Choose another class.'`.
   - `useCreateCuboidAnnotation.svelte.test.ts`:
     - `shows the class error when the class cannot be created`: `createLabel` rejects with `AnnotationClassNotAvailableError('car')`. `toast.error` is called once, with the error text.
+    - `asks for a class again after the remembered class was rejected`: remembered class `car` is rejected as above. On the next attempt, `requestLabel` is called.
 - [ ] **Step 2:** `cd lightly_studio_view && npx vitest run src/lib/hooks/useCreateLabel src/lib/hooks/useSegmentationMaskBrush.test.ts src/lib/components/SampleDetails/SampleDetailsClassificationSegment src/lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation` → the new tests FAIL.
 - [ ] **Step 3: Implement.**
   - `useCreateLabel`: read the Task 1 hook once at setup and return it as `canCreateLabel`. Below editor, reject with `new AnnotationClassNotAvailableError(name)`. Do not call `mutate`. Do not show a toast.
   - Mask brush: keep today's order. Move only the label lookup up, before `applySegmentationMaskConstraints`. For the create path (`!selectedAnnotation`), if no label is found and `!canCreateLabel`, show `toast.error(new AnnotationClassNotAvailableError(name).message)`, call `refetch()` and return. `createLabel` stays where it is, after the empty-mask check.
   - Classification segment: move the label lookup and `createLabel` inside the `try`. In `catch`, show `getCreateLabelErrorMessage(error, 'Failed to create classification. Please try again.')`.
   - `SampleObjectDetectionRect`, `VideoDetails`, `useCreateCuboidAnnotation`: in each `catch`, pass the current fixed message as `fallback` to `getCreateLabelErrorMessage`. Keep `console.error`.
+  - `useCreateCuboidAnnotation` also: on `AnnotationClassNotAvailableError`, forget the remembered class for the collection, so the next attempt opens the class dialog. Today `selectAnnotationLabel` returns the remembered class without asking, so a labeler would be stuck.
 - [ ] **Step 4:** Same command → PASS, including the existing tests. Also run `npx vitest run src/lib/components/SampleDetails/SampleObjectDetectionRect src/lib/components/VideoDetails src/lib/components/SampleDetails/SmartSelectOverlay src/lib/components/SampleDetails/FindInstancesOverlay` → PASS.
 - [ ] **Step 5:** Show the diff. Commit when the user approves: `feat: block class creation on save below editor (LIG-11356)`.
 
