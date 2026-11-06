@@ -54,6 +54,7 @@ def get_all_with_class_name_by_dataset_id(
             object_track_id=t.object_track_id,
             object_track_number=t.object_track_number,
             annotation_class_name=class_name_by_track.get(t.object_track_id),
+            parent_object_track_id=t.parent_object_track_id,
         )
         for t in tracks
     ]

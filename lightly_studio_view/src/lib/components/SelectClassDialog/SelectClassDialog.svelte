@@ -16,6 +16,8 @@
         onCancel: () => void;
         showTrackSelect?: boolean;
         tracks?: TrackWithClassNameView[];
+        /** Track IDs already assigned to annotations on the current frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
     };
 
     type TrackSelection = NonNullable<Parameters<Props['onConfirm']>[1]>;
@@ -26,8 +28,13 @@
         onConfirm,
         onCancel,
         showTrackSelect = false,
-        tracks = []
+        tracks = [],
+        occupiedTrackIds = new Set()
     }: Props = $props();
+
+    const availableTracks = $derived(
+        tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id))
+    );
 
     let selectedItem = $state<ListItem | undefined>(undefined);
     let previousClassValue = $state<string | undefined>(undefined);
@@ -124,8 +131,9 @@
             <div class="min-w-0 space-y-1">
                 <span class="text-sm font-medium text-muted-foreground">Track</span>
                 <TrackSelect
-                    tracks={tracks ?? []}
+                    tracks={availableTracks}
                     bind:value={trackValue}
+                    className="w-full"
                     onValueChange={handleTrackValueChange}
                 />
             </div>
