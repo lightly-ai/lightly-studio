@@ -92,7 +92,8 @@ vi.mock('./useCreateCuboidAnnotation', async () => {
             showSelectClassDialog: writable(false),
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
-            labels: { data: [] }
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });

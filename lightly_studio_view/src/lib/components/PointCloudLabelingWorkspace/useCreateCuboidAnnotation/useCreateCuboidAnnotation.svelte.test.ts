@@ -40,7 +40,8 @@ vi.mock('$lib/hooks', async () => {
             requestLabel,
             handleConfirm,
             handleCancel
-        })
+        }),
+        useTracks: () => ({ data: [], refetch: vi.fn().mockResolvedValue({ data: [] }) })
     };
 });
 
@@ -78,20 +79,26 @@ describe('useCreateCuboidAnnotation', () => {
         useGlobalStorage.mockReturnValue({ lastAnnotationLabel, updateLastAnnotationLabel });
     });
 
-    it('creates a cuboid with the remembered class and scene frame geometry', async () => {
+    it('allows track selection with a remembered class and keeps the scene frame geometry', async () => {
         lastAnnotationLabel.set({ 'collection-1': 'car' });
         labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
+        requestLabel.mockResolvedValue({
+            label: 'car',
+            track: { objectTrackId: 'track-1', isNewTrack: false }
+        });
         const onCreated = vi.fn();
 
         await useCreateCuboidAnnotation(params).handleCreateCuboid([2, 3, 4], onCreated);
 
-        expect(requestLabel).not.toHaveBeenCalled();
+        expect(requestLabel).toHaveBeenCalledOnce();
         expect(createLabel).not.toHaveBeenCalled();
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({
                 parent_sample_id: 'sample-1',
                 annotation_type: 'cuboid_3d',
                 annotation_label_id: 'label-1',
+                object_track_id: 'track-1',
+                create_new_track: false,
                 cuboid_3d: expect.objectContaining({
                     frame_id: 'lidar-front',
                     px: 2,
@@ -122,6 +129,19 @@ describe('useCreateCuboidAnnotation', () => {
             expect.objectContaining({ annotation_label_id: 'new-label' })
         );
         expect(onCreated).toHaveBeenCalledWith('annotation-1');
+    });
+
+    it('creates a new track with the cuboid when selected', async () => {
+        requestLabel.mockResolvedValue({
+            label: 'car',
+            track: { objectTrackId: null, isNewTrack: true }
+        });
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], vi.fn());
+
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ object_track_id: undefined, create_new_track: true })
+        );
     });
 
     it('does nothing when the current collection or sample is unavailable', async () => {

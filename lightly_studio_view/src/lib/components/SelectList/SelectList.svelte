@@ -42,8 +42,11 @@
         autoFocus = false,
         disabled = false,
         isLoading = false,
+        allowCreate = true,
         onKeyboardConfirm,
-        labelledBy
+        labelledBy,
+        pinnedTop = [],
+        pinnedBottom = []
     }: {
         placeholder?: string;
         name?: string;
@@ -55,10 +58,13 @@
         autoFocus?: boolean;
         selectedItem?: ListItem;
         items: ListItem[];
+        pinnedTop?: ListItem[];
+        pinnedBottom?: ListItem[];
         notFound?: Snippet<[{ inputValue: string }]>;
         onSelect?: (item: ListItem) => void;
         disabled?: boolean;
         isLoading?: boolean;
+        allowCreate?: boolean;
         onKeyboardConfirm?: (item: ListItem) => void;
     } = $props();
 
@@ -69,6 +75,7 @@
     let inputValue = $state('');
     let highlightedValue = $state('');
 
+    const allItems = $derived([...pinnedTop, ...items, ...pinnedBottom]);
     const selectedValue = $derived(selectedItem?.value);
 
     $effect(() => {
@@ -85,7 +92,7 @@
     };
 
     const createNewItem = (item: string) => {
-        const existingItem = items.find((i) => i.value.toLowerCase() === item.toLowerCase());
+        const existingItem = allItems.find((i) => i.value.toLowerCase() === item.toLowerCase());
 
         if (existingItem) {
             handleOnSelect(existingItem);
@@ -105,7 +112,7 @@
 
     const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue) {
+            if (event.key === 'Enter' && !highlightedValue && inputValue && allowCreate) {
                 createNewItem(inputValue);
                 event.preventDefault();
                 event.stopPropagation();
@@ -115,19 +122,24 @@
             return;
         }
 
-        const highlightedItem = items.find((item) => item.value === highlightedValue);
+        const highlightedItem = allItems.find((item) => item.value === highlightedValue);
 
         if (highlightedItem) {
             confirmWithKeyboard(highlightedItem);
         } else if (inputValue) {
-            const existingItem = items.find(
+            const existingItem = allItems.find(
                 (item) => item.value.toLowerCase() === inputValue.toLowerCase()
             );
-            const item = existingItem ?? { value: inputValue, label: inputValue };
 
-            if (!existingItem) items.push(item);
-
-            confirmWithKeyboard(item);
+            if (existingItem) {
+                confirmWithKeyboard(existingItem);
+            } else if (allowCreate) {
+                const newItem = { value: inputValue, label: inputValue };
+                items.push(newItem);
+                confirmWithKeyboard(newItem);
+            } else {
+                return;
+            }
         } else {
             return;
         }
@@ -144,6 +156,13 @@
         inputRef.focus();
     };
 </script>
+
+{#snippet pinnedItem(item: ListItem)}
+    <Command.Item value={item.value} onSelect={() => handleOnSelect(item)} forceMount keywords={[]}>
+        <CheckIcon class={cn(selectedValue !== item.value && 'text-transparent')} />
+        <span class="min-w-0 flex-1 truncate" title={item.label}>{item.label}</span>
+    </Command.Item>
+{/snippet}
 
 <Popover.Root bind:open>
     <Popover.Trigger bind:ref={triggerRef}>
@@ -198,6 +217,9 @@
                         Item not found
                     {/if}
                 </Command.Empty>
+                {#each pinnedTop as item (item.value)}
+                    {@render pinnedItem(item)}
+                {/each}
                 <Command.Group value={name}>
                     {#each items as item (item.value)}
                         <Command.Item value={item.value} onSelect={() => handleOnSelect(item)}>
@@ -210,7 +232,10 @@
                         </Command.Item>
                     {/each}
                 </Command.Group>
-                {#if inputValue.trim()}
+                {#each pinnedBottom as item (item.value)}
+                    {@render pinnedItem(item)}
+                {/each}
+                {#if allowCreate && inputValue.trim()}
                     <div class="border-t">
                         <Command.Item
                             value="__create__"

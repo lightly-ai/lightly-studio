@@ -24,7 +24,8 @@ export function useWorkspaceEditing(
         showSelectClassDialog,
         handleClassSelected,
         handleClassDialogCancel,
-        labels
+        labels,
+        tracks
     } = useCreateCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         getDatasetId: () => getOptions().datasetId,
@@ -103,6 +104,7 @@ export function useWorkspaceEditing(
         handleClassSelected,
         handleClassDialogCancel,
         labels,
+        tracks,
         get annotations() {
             return displayedAnnotations.current;
         },
