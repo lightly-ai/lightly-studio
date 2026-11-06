@@ -6,12 +6,10 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from pydantic import field_validator
-from sqlalchemy import JSON, Column, UniqueConstraint
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy import Column, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
-# JSONB on PostgreSQL, because the plain JSON type cannot be part of a unique key there.
-_CONFIG_OVERRIDE_TYPE = JSON().with_variant(JSONB(), "postgresql")
+from lightly_studio.database import db_json
 
 
 class EvaluationClassMetricTable(SQLModel, table=True):
@@ -35,9 +33,11 @@ class EvaluationClassMetricTable(SQLModel, table=True):
     annotation_label_id: UUID
     metric_name: str
     # Config fields that differ from the run's config_json. Empty for the run's own config.
+    # The column is JSONB on PostgreSQL, because a plain JSON column cannot be part of the
+    # unique key.
     config_override: dict[str, Any] = Field(
         default_factory=dict,
-        sa_column=Column(_CONFIG_OVERRIDE_TYPE, nullable=False),
+        sa_column=Column(db_json.JSONB_TYPE, nullable=False),
     )
     value: float
 
