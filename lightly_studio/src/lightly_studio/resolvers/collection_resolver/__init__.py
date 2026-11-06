@@ -8,6 +8,9 @@ from lightly_studio.resolvers.collection_resolver.create_group_components import
     create_group_components,
 )
 from lightly_studio.resolvers.collection_resolver.delete import delete
+from lightly_studio.resolvers.collection_resolver.delete_dependent_rows import (
+    delete_dependent_rows,
+)
 from lightly_studio.resolvers.collection_resolver.export import (
     export,
     get_filtered_samples_count,
@@ -52,6 +55,7 @@ __all__ = [
     "create",
     "create_group_components",
     "delete",
+    "delete_dependent_rows",
     "export",
     "get_all",
     "get_annotation_collections",

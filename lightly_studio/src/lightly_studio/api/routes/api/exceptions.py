@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
@@ -22,10 +23,22 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import ExportError, NotFoundError, QueryExprError, UnknownImageSizeError
+from lightly_studio.errors import (
+    AnnotationSourceInUseError,
+    ExportError,
+    NotFoundError,
+    QueryExprError,
+    UnknownImageSizeError,
+)
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
+
+# Errors whose message is the response, with their status code.
+_ERROR_STATUS_CODES: dict[type[Exception], int] = {
+    # Other rows use the annotation source.
+    AnnotationSourceInUseError: HTTP_STATUS_CONFLICT,
+}
 
 
 def _report_error(
@@ -138,6 +151,9 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
             content={"error": str(_exc) or "Resource not found."},
         )
 
+    for error_type, status_code in _ERROR_STATUS_CODES.items():
+        app.add_exception_handler(error_type, _error_handler(status_code=status_code))
+
     @app.exception_handler(UnknownImageSizeError)
     async def _unknown_image_size_error_handler(
         _request: Request, _exc: UnknownImageSizeError
@@ -220,3 +236,13 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
             status_code=HTTP_STATUS_INTERNAL_SERVER_ERROR,
             content={"error": "Internal server error."},
         )
+
+
+def _error_handler(status_code: int) -> Callable[[Request, Exception], Awaitable[JSONResponse]]:
+    """Return a handler that reports the error and responds with its message."""
+
+    async def handler(_request: Request, exc: Exception) -> JSONResponse:
+        _report_error(exc=exc, status_code=status_code)
+        return JSONResponse(status_code=status_code, content={"error": str(exc)})
+
+    return handler
