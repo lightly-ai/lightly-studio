@@ -31,7 +31,6 @@ from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, Imag
 from lightly_studio.embed.public_api import register_default_embedder, register_remote_embedder
 from lightly_studio.assisted_labeling.labeling_model import (
     PredictedAnnotation,
-    LabelingImage,
     LabelingModel,
     ModelTask,
 )
@@ -54,7 +53,6 @@ __all__ = [
     "GroupDataset",
     "ImageCrop",
     "ImageDataset",
-    "LabelingImage",
     "LabelingModel",
     "McapComponentSpec",
     "McapDataType",

@@ -11,7 +11,7 @@ from uuid import UUID
 from fastapi import APIRouter, Header
 
 from lightly_studio.assisted_labeling import fal_sam3_provider, labeling_model_registry
-from lightly_studio.assisted_labeling.labeling_model import LabelingImage
+from lightly_studio.assisted_labeling.provider import ProviderImage
 from lightly_studio.database import db_manager
 from lightly_studio.errors import NotFoundError
 from lightly_studio.models.assisted_labeling import (
@@ -168,7 +168,7 @@ def _create_model_preview(
     )
 
 
-def _load_image(collection_id: UUID, sample_id: UUID) -> LabelingImage:
+def _load_image(collection_id: UUID, sample_id: UUID) -> ProviderImage:
     # No SessionDep: the session closes before the slow provider call.
     with db_manager.session() as session:
         return assisted_labeling_service.load_provider_image(

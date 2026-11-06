@@ -8,13 +8,13 @@ import uuid
 from datetime import datetime, timezone
 
 from lightly_studio.assisted_labeling.labeling_model import (
-    LabelingImage,
     LabelingModel,
     PredictedAnnotation,
 )
 from lightly_studio.assisted_labeling.provider import (
     AssistedLabelingProvider,
     Prediction,
+    ProviderImage,
     ProviderNotCalledError,
     ProviderUnavailableError,
     SegmentationPrompt,
@@ -31,7 +31,7 @@ OPERATION_MODEL = "label_with_model"
 
 def segment(  # noqa: PLR0913
     provider: AssistedLabelingProvider,
-    image: LabelingImage,
+    image: ProviderImage,
     prompt: SegmentationPrompt,
     operation: str,
     collection_id: uuid.UUID,
@@ -86,7 +86,7 @@ def segment(  # noqa: PLR0913
 
 def predict(
     model: LabelingModel,
-    image: LabelingImage,
+    image: ProviderImage,
     threshold: float,
     collection_id: uuid.UUID,
     user_email: str | None,

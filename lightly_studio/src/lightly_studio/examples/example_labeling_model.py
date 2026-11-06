@@ -14,13 +14,16 @@ Install LightlyTrain to run the example:
 
 from __future__ import annotations
 
+import io
 import threading
 from typing import Any
 
 import lightly_train  # type: ignore[import-not-found]
 from environs import Env
+from PIL import Image
 
 import lightly_studio as ls
+from lightly_studio.assisted_labeling.provider import ProviderImage
 from lightly_studio.database import db_manager
 
 # A LightlyTrain model name or the path of a checkpoint that you trained.
@@ -59,10 +62,11 @@ class LightlyTrainLabelingModel(ls.LabelingModel):
         """The class names, ordered by class ID."""
         return [name for _, name in sorted(self._classes.items())]
 
-    def predict(self, image: ls.LabelingImage, threshold: float) -> list[ls.PredictedAnnotation]:
+    def predict(self, image: ProviderImage, threshold: float) -> list[ls.PredictedAnnotation]:
         """Predicts the annotations of the image."""
+        pil_image = Image.open(io.BytesIO(image.read_bytes())).convert("RGB")
         with self._lock:
-            output = self._model.predict(image=image.to_pil().convert("RGB"), threshold=threshold)
+            output = self._model.predict(image=pil_image, threshold=threshold)
         labels = output["labels"].cpu().tolist()
         scores = output["scores"].detach().cpu().float().tolist()
         boxes = output["bboxes"].detach().cpu().float().reshape(-1, 4).tolist()

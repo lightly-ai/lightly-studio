@@ -19,10 +19,10 @@ import httpx
 import numpy as np
 from numpy.typing import NDArray
 
-from lightly_studio.assisted_labeling.labeling_model import LabelingImage
 from lightly_studio.assisted_labeling.provider import (
     Prediction,
     ProviderError,
+    ProviderImage,
     ProviderNotCalledError,
     ProviderUnavailableError,
     SegmentationPrompt,
@@ -85,7 +85,7 @@ class FalSam3Provider:
             return MISSING_KEY_REASON
         return None
 
-    def segment(self, image: LabelingImage, prompt: SegmentationPrompt) -> list[Prediction]:
+    def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:
         """Runs SAM 3 on fal.ai and returns the predicted masks."""
         client = self._get_client()
         try:
@@ -124,7 +124,7 @@ class FalSam3Provider:
                     raise ProviderUnavailableError(MISSING_EXTRA_REASON) from error
             return self._client
 
-    def _get_image_url(self, client: SyncClient, image: LabelingImage) -> str:
+    def _get_image_url(self, client: SyncClient, image: ProviderImage) -> str:
         # The first call uploads and later calls wait for its future, so other samples do not wait
         sample_id = image.sample_id
         with self._image_urls_lock:
@@ -294,7 +294,7 @@ def content_type_for(file_name: str) -> str:
     return _CONTENT_TYPES.get(PurePosixPath(file_name).suffix.lower(), _DEFAULT_CONTENT_TYPE)
 
 
-def _upload(client: SyncClient, image: LabelingImage) -> str:
+def _upload(client: SyncClient, image: ProviderImage) -> str:
     data = image.read_bytes()
     with _fal_errors_as_provider_errors():
         # The fallback "fal" repository uploads without a timeout, so it is not used.

@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 from lightly_studio.assisted_labeling.labeling_model import (
-    LabelingImage,
     LabelingModel,
     ModelTask,
     PredictedAnnotation,
 )
-from lightly_studio.assisted_labeling.provider import Prediction, SegmentationPrompt
+from lightly_studio.assisted_labeling.provider import Prediction, ProviderImage, SegmentationPrompt
 
 
 class StubProvider:
@@ -27,7 +26,7 @@ class StubProvider:
     def unavailable_reason(self) -> str | None:
         return None
 
-    def segment(self, image: LabelingImage, prompt: SegmentationPrompt) -> list[Prediction]:  # noqa: ARG002
+    def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:  # noqa: ARG002
         self.prompts.append(prompt)
         if self.error is not None:
             raise self.error
@@ -68,7 +67,7 @@ class StubLabelingModel(LabelingModel):
     def vendor(self) -> str:
         return "stub-vendor"
 
-    def predict(self, image: LabelingImage, threshold: float) -> list[PredictedAnnotation]:  # noqa: ARG002
+    def predict(self, image: ProviderImage, threshold: float) -> list[PredictedAnnotation]:  # noqa: ARG002
         self.thresholds.append(threshold)
         if self.error is not None:
             raise self.error

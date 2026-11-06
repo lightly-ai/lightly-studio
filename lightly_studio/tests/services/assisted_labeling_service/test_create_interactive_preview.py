@@ -4,8 +4,12 @@ import uuid
 
 import numpy as np
 
-from lightly_studio.assisted_labeling.labeling_model import LabelingImage
-from lightly_studio.assisted_labeling.provider import BoxPrompt, PointPrompt, Prediction
+from lightly_studio.assisted_labeling.provider import (
+    BoxPrompt,
+    PointPrompt,
+    Prediction,
+    ProviderImage,
+)
 from lightly_studio.models.assisted_labeling import (
     AnnotationBox,
     AnnotationPoint,
@@ -118,7 +122,7 @@ def test_create_interactive_preview__highest_score() -> None:
 
 
 def _request(
-    image: LabelingImage,
+    image: ProviderImage,
     points: list[AnnotationPoint] | None = None,
     boxes: list[AnnotationBox] | None = None,
 ) -> InteractiveAnnotationRequest:

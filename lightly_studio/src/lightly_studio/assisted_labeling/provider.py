@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Protocol
+from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-
-from lightly_studio.assisted_labeling.labeling_model import LabelingImage
 
 
 class ProviderError(Exception):
@@ -24,6 +24,26 @@ class ProviderNotCalledError(ProviderError):
 
 class ProviderUnavailableError(Exception):
     """Raised when the provider is not configured, for example without an API key."""
+
+
+@dataclass(frozen=True)
+class ProviderImage:
+    """An image that a provider segments.
+
+    Attributes:
+        sample_id: ID of the image sample. Providers use it as a cache key.
+        width: Image width in pixels.
+        height: Image height in pixels.
+        file_name: File name of the image, for example `img.jpg`.
+        read_bytes: Returns the encoded image file content. Providers call it only when
+            they need the image data.
+    """
+
+    sample_id: UUID
+    width: int
+    height: int
+    file_name: str
+    read_bytes: Callable[[], bytes]
 
 
 @dataclass(frozen=True)
@@ -110,7 +130,7 @@ class AssistedLabelingProvider(Protocol):
         """Returns None if the provider is usable, else a human-readable reason."""
         ...
 
-    def segment(self, image: LabelingImage, prompt: SegmentationPrompt) -> list[Prediction]:
+    def segment(self, image: ProviderImage, prompt: SegmentationPrompt) -> list[Prediction]:
         """Computes segmentation masks for the image and the prompt.
 
         Args:

@@ -7,11 +7,10 @@ import math
 import numpy as np
 
 from lightly_studio.assisted_labeling.labeling_model import (
-    LabelingImage,
     LabelingModel,
     PredictedAnnotation,
 )
-from lightly_studio.assisted_labeling.provider import BoxPrompt, ProviderError
+from lightly_studio.assisted_labeling.provider import BoxPrompt, ProviderError, ProviderImage
 from lightly_studio.core.annotation import annotation_create
 from lightly_studio.models.assisted_labeling import (
     AnnotationPreviewBox,
@@ -24,7 +23,7 @@ from lightly_studio.services.assisted_labeling_service import run_provider
 
 def create_model_preview(
     model: LabelingModel,
-    image: LabelingImage,
+    image: ProviderImage,
     request: ModelAnnotationRequest,
     user_email: str | None,
 ) -> ModelAnnotationResponse:

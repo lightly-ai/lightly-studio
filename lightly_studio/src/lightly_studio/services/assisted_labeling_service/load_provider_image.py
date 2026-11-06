@@ -8,12 +8,12 @@ from uuid import UUID
 import fsspec
 from sqlmodel import Session
 
-from lightly_studio.assisted_labeling.labeling_model import LabelingImage
+from lightly_studio.assisted_labeling.provider import ProviderImage
 from lightly_studio.errors import NotFoundError, UnknownImageSizeError
 from lightly_studio.resolvers import image_resolver
 
 
-def load_provider_image(session: Session, collection_id: UUID, sample_id: UUID) -> LabelingImage:
+def load_provider_image(session: Session, collection_id: UUID, sample_id: UUID) -> ProviderImage:
     """Returns the provider image of an image sample.
 
     The image file is read only when the provider calls `read_bytes`.
@@ -27,7 +27,7 @@ def load_provider_image(session: Session, collection_id: UUID, sample_id: UUID) 
         raise NotFoundError(f"Image {sample_id} not found in collection {collection_id}.")
     if image.width <= 0 or image.height <= 0:
         raise UnknownImageSizeError(f"Image {sample_id} has no known size.")
-    return LabelingImage(
+    return ProviderImage(
         sample_id=image.sample_id,
         width=image.width,
         height=image.height,

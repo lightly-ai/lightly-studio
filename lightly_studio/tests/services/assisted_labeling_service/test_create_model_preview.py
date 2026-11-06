@@ -5,8 +5,8 @@ import uuid
 import numpy as np
 import pytest
 
-from lightly_studio.assisted_labeling.labeling_model import LabelingImage, PredictedAnnotation
-from lightly_studio.assisted_labeling.provider import ProviderError
+from lightly_studio.assisted_labeling.labeling_model import PredictedAnnotation
+from lightly_studio.assisted_labeling.provider import ProviderError, ProviderImage
 from lightly_studio.models.assisted_labeling import AnnotationPreviewBox, ModelAnnotationRequest
 from lightly_studio.services import assisted_labeling_service
 from tests.assisted_labeling import helpers
@@ -185,7 +185,7 @@ def test_create_model_preview__wrong_mask_shape() -> None:
 
 
 def _request(
-    image: LabelingImage,
+    image: ProviderImage,
     threshold: float = 0.5,
     max_instances: int = 100,
     class_names: list[str] | None = None,

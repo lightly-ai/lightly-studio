@@ -2,16 +2,14 @@
 
 from __future__ import annotations
 
-import io
 from abc import ABC, abstractmethod
-from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
-from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-from PIL import Image
+
+from lightly_studio.assisted_labeling.provider import ProviderImage
 
 
 class ModelTask(str, Enum):
@@ -19,32 +17,6 @@ class ModelTask(str, Enum):
 
     OBJECT_DETECTION = "object_detection"
     INSTANCE_SEGMENTATION = "instance_segmentation"
-
-
-@dataclass(frozen=True)
-class LabelingImage:
-    """An image that a model labels.
-
-    Attributes:
-        sample_id: ID of the image sample. Use it as a cache key.
-        width: Image width in pixels.
-        height: Image height in pixels.
-        file_name: File name of the image, for example `img.jpg`.
-        read_bytes: Returns the encoded image file content. Call it only when you need
-            the image data.
-    """
-
-    sample_id: UUID
-    width: int
-    height: int
-    file_name: str
-    read_bytes: Callable[[], bytes]
-
-    def to_pil(self) -> Image.Image:
-        """Returns the decoded image."""
-        image = Image.open(io.BytesIO(self.read_bytes()))
-        image.load()
-        return image
 
 
 @dataclass
@@ -102,7 +74,7 @@ class LabelingModel(ABC):
         return "local"
 
     @abstractmethod
-    def predict(self, image: LabelingImage, threshold: float) -> list[PredictedAnnotation]:
+    def predict(self, image: ProviderImage, threshold: float) -> list[PredictedAnnotation]:
         """Predicts the annotations of the image.
 
         LightlyStudio drops the predicted annotations with a score below `threshold`
