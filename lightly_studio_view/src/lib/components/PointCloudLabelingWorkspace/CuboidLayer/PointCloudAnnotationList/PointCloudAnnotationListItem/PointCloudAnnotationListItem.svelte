@@ -18,6 +18,8 @@
         annotationSourceName?: string;
         /** When true, numeric fields in the detail panel become editable. */
         editable?: boolean;
+        /** Track IDs already assigned to other annotations on the same frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
         /** Toggles the row's expanded state. */
         onToggle: (cuboidId: string) => void;
         /** Called when the user commits a geometry change in the detail panel. */
@@ -29,7 +31,7 @@
             annotationSourceId: string
         ) => void;
         /** Called after the annotation's track assignment changes. */
-        onTrackChange?: () => void;
+        onTrackChange?: () => Promise<void>;
         /** Deletes this cuboid annotation. */
         onDelete?: (cuboidId: string) => void;
     }
@@ -41,6 +43,7 @@
         isSelected,
         annotationSourceName,
         editable = false,
+        occupiedTrackIds,
         onToggle,
         onCuboidTransform,
         onLabelChange,
@@ -85,6 +88,7 @@
                 {annotationSourceName}
                 annotation={cuboid}
                 {editable}
+                {occupiedTrackIds}
                 onAnnotationChange={handleAnnotationChange}
                 {onTrackChange}
             />
