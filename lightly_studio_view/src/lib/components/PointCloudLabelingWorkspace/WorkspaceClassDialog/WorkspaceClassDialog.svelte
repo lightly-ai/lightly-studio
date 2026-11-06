@@ -12,4 +12,6 @@
         .filter(Boolean) ?? []}
     onConfirm={editing.handleClassSelected}
     onCancel={editing.handleClassDialogCancel}
+    showTrackSelect
+    tracks={editing.tracks.data ?? []}
 />

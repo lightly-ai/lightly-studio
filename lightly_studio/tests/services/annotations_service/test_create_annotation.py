@@ -17,7 +17,11 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    evaluation_run_resolver,
+    object_track_resolver,
+)
 from lightly_studio.services.annotations_service.create_annotation import (
     AnnotationCreateParams,
     create_annotation,
@@ -284,3 +288,89 @@ def test_create_annotation__marks_evaluation_run_stale(db_session: Session) -> N
     refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
     assert refreshed is not None
     assert refreshed.stale_since is not None
+
+
+def test_create_annotation__create_new_track_and_object_track_id_raises(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Setting both create_new_track and object_track_id is invalid."""
+    with pytest.raises(ValueError, match="Cannot set both create_new_track and object_track_id"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=collection.collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+                object_track_id=samples[0].sample_id,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__create_new_track_collection_not_found(
+    db_session: Session,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """create_new_track raises when the collection does not exist."""
+    fake_collection_id = UUID("00000000-0000-0000-0000-000000000099")
+    with pytest.raises(ValueError, match="not found"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=fake_collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+@pytest.mark.parametrize(
+    ("annotation_type", "error"),
+    [
+        (AnnotationType.OBJECT_DETECTION, "Missing x or y"),
+        (AnnotationType.CUBOID_3D, "cuboid_3d is required"),
+    ],
+)
+def test_create_annotation__failed_annotation_does_not_commit_new_track(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_type: AnnotationType,
+    error: str,
+) -> None:
+    """A rejected annotation leaves no new object track, even after a later commit."""
+    annotation_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    with pytest.raises(ValueError, match=error):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_label.annotation_label_id,
+                annotation_type=annotation_type,
+                collection_id=collection.collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+            ),
+        )
+
+    db_session.commit()
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=collection.dataset_id
+    )
+    assert tracks == []
