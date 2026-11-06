@@ -282,20 +282,24 @@ stop-floci-gcp:
 .PHONY: start-e2e-postgres
 start-e2e-postgres: build
 	@echo "Starting server for e2e tests with PostgreSQL..."
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_general.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise \
+		uv run e2e-tests/index_general.py
 
 .PHONY: start-e2e-postgres-with-videos
 start-e2e-postgres-with-videos: build
 	@echo "Starting server for e2e tests with videos on PostgreSQL..."
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_video.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise \
+		uv run e2e-tests/index_video.py
 
 .PHONY: start-e2e-postgres-groups
 start-e2e-postgres-groups: build
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_groups.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise \
+		uv run e2e-tests/index_groups.py
 
 .PHONY: start-e2e-postgres-video-groups
 start-e2e-postgres-video-groups: build
-	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) uv run e2e-tests/index_videos_groups.py
+	LIGHTLY_STUDIO_DATABASE_URL=$(POSTGRES_URL) LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise \
+		uv run e2e-tests/index_videos_groups.py
 
 # Note: we just mock dist_lightly_studio_view_app folder to avoid failing exporting the schema
 # because we need to have schema before building the frontend app

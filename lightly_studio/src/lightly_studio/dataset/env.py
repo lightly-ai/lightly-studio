@@ -20,6 +20,10 @@ LIGHTLY_STUDIO_DEBUG: bool = env.bool("LIGHTLY_STUDIO_DEBUG", False)
 
 LIGHTLY_STUDIO_DATABASE_URL: Optional[str] = env.str("LIGHTLY_STUDIO_DATABASE_URL", default=None)
 
+# "local" for a local run, "enterprise" for a self-hosted server behind the auth proxy. The GUI
+# server does not start if the database backend does not match. See lightly_studio/deployment.py.
+LIGHTLY_STUDIO_DEPLOYMENT_MODE: str = env.str("LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
+
 LIGHTLY_STUDIO_API_URL: Optional[str] = env.str("LIGHTLY_STUDIO_API_URL", default=None)
 LIGHTLY_STUDIO_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_TOKEN", default=None)
 LIGHTLY_STUDIO_API_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_API_KEY", default=None)
