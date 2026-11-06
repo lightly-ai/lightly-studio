@@ -5,6 +5,7 @@ from typing import Optional
 
 from environs import Env
 
+# TODO(Mihnea, 11/2026): Use `X | None` instead of `Optional[X]` for all settings in this file.
 env = Env()
 env.read_env()
 LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE: str = env.str(
