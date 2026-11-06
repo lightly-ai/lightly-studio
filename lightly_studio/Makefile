@@ -430,6 +430,11 @@ demo-mcap-urls:
 
 .PHONY: test
 test: build
+	$(MAKE) test-without-build
+
+# Runs the tests with the current build. CI builds in its own step, to time it separately.
+.PHONY: test-without-build
+test-without-build:
 	@echo "Running tests..."
 	PYTHONPATH=$(PWD) uv run pytest -n auto
 
@@ -450,6 +455,10 @@ test-coverage:
 
 .PHONY: test-postgres
 test-postgres: build
+	$(MAKE) test-postgres-without-build
+
+.PHONY: test-postgres-without-build
+test-postgres-without-build:
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres -n 3
 

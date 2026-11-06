@@ -1,12 +1,14 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { ListItem } from '$lib/components/SelectList/types';
+    import { SelectList } from '$lib/components/SelectList';
+    import type { ComponentProps } from 'svelte';
     import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
     import { TrackSelect } from '$lib/components/TrackSelect';
+    import { useClassDialogForm } from './useClassDialogForm/useClassDialogForm';
 
-    type Props = {
+    interface Props {
         open: boolean;
         labels: string[];
         onConfirm: (
@@ -18,9 +20,8 @@
         tracks?: TrackWithClassNameView[];
         /** Track IDs already assigned to annotations on the current frame. */
         occupiedTrackIds?: ReadonlySet<string>;
-    };
+    }
 
-    type TrackSelection = NonNullable<Parameters<Props['onConfirm']>[1]>;
 
     let {
         open = $bindable(false),
@@ -36,72 +37,26 @@
         tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id))
     );
 
-    let selectedItem = $state<ListItem | undefined>(undefined);
-    let previousClassValue = $state<string | undefined>(undefined);
-    let trackValue = $state('__no_track__');
-    let trackSelection = $state<TrackSelection>({ objectTrackId: null, isNewTrack: false });
-    // Track close origin so the onOpenChange(false) that fires when we set
-    // open = false from handleConfirm does not also invoke onCancel.
-    let closedByConfirm = false;
-
-    const items = $derived<ListItem[]>(
+    const items = $derived<ComponentProps<typeof SelectList>['items']>(
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
-
-    function resetTrack() {
-        trackValue = '__no_track__';
-        trackSelection = { objectTrackId: null, isNewTrack: false };
-        previousClassValue = undefined;
-    }
-
-    function confirmWith(label: string) {
-        closedByConfirm = true;
-        if (showTrackSelect) {
-            onConfirm(label, trackSelection);
-        } else {
-            onConfirm(label);
+    const {
+        selectedItem,
+        trackValue,
+        handleConfirm,
+        handleCancel,
+        handleOpenChange,
+        handleClassSelect,
+        handleTrackValueChange,
+        handleKeyboardConfirm
+    } = useClassDialogForm(() => ({
+        onConfirm,
+        onCancel,
+        showTrackSelect,
+        onClose: () => {
+            open = false;
         }
-        open = false;
-        selectedItem = undefined;
-        resetTrack();
-    }
-
-    const handleConfirm = () => {
-        if (selectedItem) {
-            confirmWith(selectedItem.value);
-        }
-    };
-
-    const handleKeyboardConfirm = (item: ListItem) => {
-        confirmWith(item.value);
-    };
-
-    const handleCancel = () => {
-        onCancel();
-        open = false;
-        selectedItem = undefined;
-        resetTrack();
-    };
-
-    const handleOpenChange = (isOpen: boolean) => {
-        if (isOpen) return;
-        if (closedByConfirm) {
-            closedByConfirm = false;
-            return;
-        }
-        handleCancel();
-    };
-
-    const handleClassSelect = (item: ListItem) => {
-        if (previousClassValue !== item.value) {
-            resetTrack();
-        }
-        previousClassValue = item.value;
-    };
-
-    const handleTrackValueChange = (objectTrackId: string | null, isNewTrack: boolean) => {
-        trackSelection = { objectTrackId, isNewTrack };
-    };
+    }));
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
@@ -115,7 +70,8 @@
 
         <div class="min-w-0 space-y-1 py-2">
             <SelectList
-                bind:selectedItem
+                onCreate={trackClassCreatedInPicker}
+                bind:selectedItem={$selectedItem}
                 {items}
                 label="Select a class..."
                 placeholder="Search or create a class..."
@@ -132,7 +88,7 @@
                 <span class="text-sm font-medium text-muted-foreground">Track</span>
                 <TrackSelect
                     tracks={availableTracks}
-                    bind:value={trackValue}
+                    bind:value={$trackValue}
                     className="w-full"
                     onValueChange={handleTrackValueChange}
                 />
@@ -143,7 +99,7 @@
             <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
             <Button
                 variant="default"
-                buttonProps={{ onclick: handleConfirm, disabled: !selectedItem }}
+                buttonProps={{ onclick: handleConfirm, disabled: !$selectedItem }}
             >
                 Confirm
             </Button>

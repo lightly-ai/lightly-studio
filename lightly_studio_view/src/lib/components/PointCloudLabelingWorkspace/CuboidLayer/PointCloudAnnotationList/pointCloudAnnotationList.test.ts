@@ -4,6 +4,7 @@ import {
     groupAnnotationsBySource,
     resolveAnnotationClassName,
     buildAnnotationForest,
+    subtreeContainsId,
     UNKNOWN_SOURCE_NAME
 } from './pointCloudAnnotationList';
 
@@ -231,7 +232,7 @@ describe('groupAnnotationsBySource — ordering', () => {
 });
 
 describe('buildAnnotationForest', () => {
-    it('wraps a childless root in the no-parent-track group', () => {
+    it('emits a childless root as a top-level leaf node', () => {
         const root = {
             ...createAnnotationFixture(),
             id: 'root',
@@ -242,9 +243,8 @@ describe('buildAnnotationForest', () => {
         const forest = buildAnnotationForest({ cuboids: [root] });
 
         expect(forest).toHaveLength(1);
-        expect(forest[0].cuboid).toBeNull();
-        expect(forest[0].children).toHaveLength(1);
-        expect(forest[0].children[0].cuboid).toBe(root);
+        expect(forest[0].cuboid).toBe(root);
+        expect(forest[0].children).toHaveLength(0);
     });
 
     it('nests children under their parent root', () => {
@@ -304,7 +304,7 @@ describe('buildAnnotationForest', () => {
         expect(forest[0].children[0].children[0].subtreeSize).toBe(1);
     });
 
-    it('wraps a root with null trackNumber in the no-parent-track group', () => {
+    it('emits a root with null trackNumber as a top-level leaf node', () => {
         const nullTrack = {
             ...createAnnotationFixture(),
             id: 'null-track',
@@ -315,12 +315,11 @@ describe('buildAnnotationForest', () => {
         const forest = buildAnnotationForest({ cuboids: [nullTrack] });
 
         expect(forest).toHaveLength(1);
-        expect(forest[0].cuboid).toBeNull();
-        expect(forest[0].children).toHaveLength(1);
-        expect(forest[0].children[0].cuboid).toBe(nullTrack);
+        expect(forest[0].cuboid).toBe(nullTrack);
+        expect(forest[0].children).toHaveLength(0);
     });
 
-    it('places parent root and childless root in separate groups', () => {
+    it('places parent root and childless root as top-level siblings sorted by trackNumber', () => {
         const root1 = {
             ...createAnnotationFixture(),
             id: 'root1',
@@ -345,11 +344,11 @@ describe('buildAnnotationForest', () => {
         expect(forest).toHaveLength(2);
         expect(forest[0].cuboid).toBe(root1);
         expect(forest[0].children[0].cuboid).toBe(child1);
-        expect(forest[1].cuboid).toBeNull();
-        expect(forest[1].children[0].cuboid).toBe(root2);
+        expect(forest[1].cuboid).toBe(root2);
+        expect(forest[1].children).toHaveLength(0);
     });
 
-    it('places absent-parent orphan and standalone root in separate groups', () => {
+    it('places standalone root before absent-parent orphan group', () => {
         const root = {
             ...createAnnotationFixture(),
             id: 'root',
@@ -367,10 +366,46 @@ describe('buildAnnotationForest', () => {
         const forest = buildAnnotationForest({ cuboids: [root, orphan] });
 
         expect(forest).toHaveLength(2);
-        expect(forest[0].cuboid).toBeNull();
-        expect(forest[0].children[0].cuboid).toBe(orphan);
+        expect(forest[0].cuboid).toBe(root);
+        expect(forest[0].children).toHaveLength(0);
         expect(forest[1].cuboid).toBeNull();
-        expect(forest[1].children[0].cuboid).toBe(root);
+        expect(forest[1].children[0].cuboid).toBe(orphan);
+    });
+
+    it('sorts all top-level roots by trackNumber ascending, nulls last', () => {
+        const standalone2 = {
+            ...createAnnotationFixture(),
+            id: 'standalone-2',
+            trackNumber: 5,
+            parentTrackNumber: null
+        };
+        const parent = {
+            ...createAnnotationFixture(),
+            id: 'parent',
+            trackNumber: 2,
+            parentTrackNumber: null
+        };
+        const child = {
+            ...createAnnotationFixture(),
+            id: 'child',
+            trackNumber: 10,
+            parentTrackNumber: 2
+        };
+        const standalone1 = {
+            ...createAnnotationFixture(),
+            id: 'standalone-1',
+            trackNumber: null,
+            parentTrackNumber: null
+        };
+
+        const forest = buildAnnotationForest({
+            cuboids: [standalone2, parent, child, standalone1]
+        });
+
+        expect(forest.map((n) => n.cuboid?.trackNumber)).toEqual([2, 5, null]);
+        expect(forest[0].children).toHaveLength(1);
+        expect(forest[1].children).toHaveLength(0);
+        expect(forest[2].children).toHaveLength(0);
     });
 
     it('groups orphan with parentTrackClassName under absent parent node', () => {
@@ -433,15 +468,14 @@ describe('buildAnnotationForest', () => {
         const forest = buildAnnotationForest({ cuboids: [truck, window] });
 
         expect(forest).toHaveLength(2);
-        expect(forest[0].cuboid).toBeNull();
-        expect(forest[0].children).toHaveLength(1);
-        expect(forest[0].children[0].cuboid).toBe(window);
+        expect(forest[0].cuboid).toBe(truck);
+        expect(forest[0].children).toHaveLength(0);
         expect(forest[1].cuboid).toBeNull();
         expect(forest[1].children).toHaveLength(1);
-        expect(forest[1].children[0].cuboid).toBe(truck);
+        expect(forest[1].children[0].cuboid).toBe(window);
     });
 
-    it('places absent parent groups after present parents, standalone roots in no-parent-track group', () => {
+    it('sorts all roots by trackNumber, then appends absent parent groups', () => {
         const truck = {
             ...createAnnotationFixture(),
             id: 'truck',
@@ -475,10 +509,88 @@ describe('buildAnnotationForest', () => {
         expect(forest).toHaveLength(3);
         expect(forest[0].cuboid).toBe(truck);
         expect(forest[0].children).toHaveLength(1);
-        expect(forest[1].cuboid).toBeNull();
-        expect(forest[1].children[0].cuboid).toBe(absentChild);
+        expect(forest[1].cuboid).toBe(standalone);
+        expect(forest[1].children).toHaveLength(0);
         expect(forest[2].cuboid).toBeNull();
-        expect(forest[2].children[0].cuboid).toBe(standalone);
+        expect(forest[2].children[0].cuboid).toBe(absentChild);
+    });
+});
+
+describe('subtreeContainsId', () => {
+    it('returns true when the node itself matches', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck] });
+
+        expect(subtreeContainsId(forest[0], 'truck')).toBe(true);
+    });
+
+    it('returns true when a direct child matches', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, cabin] });
+
+        expect(subtreeContainsId(forest[0], 'cabin')).toBe(true);
+    });
+
+    it('returns true when a grandchild matches', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+        const window = {
+            ...createAnnotationFixture(),
+            id: 'window',
+            trackNumber: 3,
+            parentTrackNumber: 2
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, cabin, window] });
+
+        expect(subtreeContainsId(forest[0], 'window')).toBe(true);
+    });
+
+    it('returns false when the ID is not in the subtree', () => {
+        const truck = {
+            ...createAnnotationFixture(),
+            id: 'truck',
+            trackNumber: 1,
+            parentTrackNumber: null
+        };
+        const cabin = {
+            ...createAnnotationFixture(),
+            id: 'cabin',
+            trackNumber: 2,
+            parentTrackNumber: 1
+        };
+
+        const forest = buildAnnotationForest({ cuboids: [truck, cabin] });
+
+        expect(subtreeContainsId(forest[0], 'nonexistent')).toBe(false);
     });
 });
 

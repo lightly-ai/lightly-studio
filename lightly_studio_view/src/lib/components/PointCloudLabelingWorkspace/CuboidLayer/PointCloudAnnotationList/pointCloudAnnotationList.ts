@@ -207,10 +207,10 @@ function groupOrphansUnderAbsentParents({
 /**
  * Converts a flat, pre-sorted list of cuboids into a forest of annotation trees.
  *
- * Parent roots (with children) become top-level tree nodes.
+ * All roots (with or without children) become individual top-level tree nodes,
+ * sorted by trackNumber ascending with nulls last.
  * Orphans whose parent is absent from the frame are grouped under a virtual
- * parent node (cuboid: null). Standalone roots (no children) are collected
- * into a "No parent track" group at the end.
+ * parent node (cuboid: null) and appended after the roots.
  */
 export function buildAnnotationForest({
     cuboids
@@ -253,30 +253,20 @@ export function buildAnnotationForest({
         };
     }
 
-    const parentRoots: CuboidAnnotation[] = [];
-    const standaloneRoots: CuboidAnnotation[] = [];
-
-    for (const root of roots) {
-        if (
-            root.trackNumber !== null &&
-            (childrenByParentTrack.get(root.trackNumber)?.length ?? 0) > 0
-        ) {
-            parentRoots.push(root);
-        } else {
-            standaloneRoots.push(root);
-        }
-    }
+    roots.sort(byTrackNumber);
 
     const absentParentGroups = groupOrphansUnderAbsentParents({
         orphans,
         buildNode
     });
 
-    const noParentTrackChildren = standaloneRoots.map(buildNode);
-    const noParentTrackGroup: AnnotationTreeNode[] =
-        noParentTrackChildren.length > 0 ? [buildVirtualGroupNode(noParentTrackChildren)] : [];
+    return [...roots.map(buildNode), ...absentParentGroups];
+}
 
-    return [...parentRoots.map(buildNode), ...absentParentGroups, ...noParentTrackGroup];
+/** Returns true when the subtree rooted at {@link node} contains a cuboid with the given ID. */
+export function subtreeContainsId(node: AnnotationTreeNode, id: string): boolean {
+    if (node.cuboid?.id === id) return true;
+    return node.children.some((child) => subtreeContainsId(child, id));
 }
 
 /**

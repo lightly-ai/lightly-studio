@@ -6,6 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsClassificationSegment from './SampleDetailsClassificationSegment.svelte';
 import SampleDetailsSidePanelAnnotation from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
 
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
+
 const mocks = vi.hoisted(() => ({
     collections: [] as { collection_id: string; name: string }[],
     selectedCollectionIds: [] as string[],
@@ -121,6 +125,7 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     const { writable } = await import('svelte/store');
     return {
         useCustomLabelColors: () => ({
+            customColorsStore: writable({}),
             customLabelColorsStore: writable({}),
             getCustomColor: () => undefined,
             setCustomColor: vi.fn(),

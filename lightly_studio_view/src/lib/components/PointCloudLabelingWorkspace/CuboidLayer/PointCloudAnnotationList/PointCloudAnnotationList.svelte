@@ -9,8 +9,7 @@
         groupAnnotationsBySource,
         resolveAnnotationClassName,
         resolveAnnotationSourceName,
-        buildAnnotationForest,
-        NO_PARENT_TRACK_GROUP_LABEL
+        buildAnnotationForest
     } from './pointCloudAnnotationList';
     import { resolveCuboidColor } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
     import PointCloudAnnotationListGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListGroup';
@@ -98,45 +97,26 @@
 {/snippet}
 
 {#snippet childRows(children: readonly AnnotationTreeNode[])}
-    {#each children as child (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
-        {#if child.children.length > 0}
-            <div class="pl-2 pt-2">
-                {@render annotationNode(child)}
-            </div>
-        {:else}
+    {#each children as child, i (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
+        {@const isLast = i === children.length - 1}
+        <div class="relative mt-1 pl-4">
+            <div class="absolute -top-1 left-2 w-px bg-border {isLast ? 'h-6' : '-bottom-1'}"></div>
+            <div class="absolute left-2 top-5 h-px w-2 bg-border"></div>
             {@render annotationNode(child)}
-        {/if}
+        </div>
     {/each}
 {/snippet}
 
 {#snippet annotationNode(node: AnnotationTreeNode)}
     {#if node.cuboid && node.children.length > 0}
-        <PointCloudAnnotationParentGroup
-            className={resolveAnnotationClassName({
-                annotationClasses,
-                annotationClassId: node.cuboid.annotationClassId
-            })}
-            trackNumber={node.cuboid.trackNumber}
-            subtreeSize={node.subtreeSize}
-        >
-            <div class="space-y-1">
-                {@render annotationItem(node.cuboid)}
-                {@render childRows(node.children)}
-            </div>
-        </PointCloudAnnotationParentGroup>
+        {@render annotationItem(node.cuboid)}
+        {@render childRows(node.children)}
     {:else if !node.cuboid && node.children.length > 0}
-        {@const firstChild = node.children[0].cuboid}
-        {#if firstChild}
-            <PointCloudAnnotationParentGroup
-                className={firstChild.parentTrackClassName ?? NO_PARENT_TRACK_GROUP_LABEL}
-                trackNumber={firstChild.parentTrackClassName ? firstChild.parentTrackNumber : null}
-                subtreeSize={node.subtreeSize}
-            >
-                <div class="space-y-1">
-                    {@render childRows(node.children)}
-                </div>
-            </PointCloudAnnotationParentGroup>
-        {/if}
+        {#each node.children as child (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
+            <div class="pl-4">
+                {@render annotationNode(child)}
+            </div>
+        {/each}
     {:else if node.cuboid}
         {@render annotationItem(node.cuboid)}
     {/if}
@@ -159,7 +139,14 @@
 {:else}
     <div class="space-y-2">
         {#each groups as group (group.sourceId)}
-            <PointCloudAnnotationListGroup name={group.sourceName} count={group.cuboids.length}>
+            <PointCloudAnnotationListGroup
+                name={group.sourceName}
+                count={group.cuboids.length}
+                autoExpandForId={selectedCuboidId &&
+                group.cuboids.some((c) => c.id === selectedCuboidId)
+                    ? selectedCuboidId
+                    : null}
+            >
                 <div class="space-y-1">
                     {@render annotationForest(group.cuboids)}
                 </div>

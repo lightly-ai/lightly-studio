@@ -15,6 +15,11 @@ const adjacentSequences = vi.hoisted(() => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: vi.fn() })
+}));
+
 vi.mock('$app/state', () => ({
     page: {
         url: new URL(
@@ -41,7 +46,8 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
             showSelectClassDialog: writable(false),
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
-            labels: { data: [] }
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });
@@ -75,6 +81,14 @@ vi.mock('$lib/hooks', async () => {
             query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
         }),
         useTickCameraFrames: () => ({ query: { data: undefined } }),
+        // The right panel shows the sequence tags once the summary loads; stub the tag hooks.
+        useTags: () => ({ tags: writable([]), loadTags: vi.fn() }),
+        useAddTagToSample: () => ({
+            busy: writable(false),
+            addExisting: vi.fn(),
+            createAndAdd: vi.fn()
+        }),
+        useRemoveTagFromSample: () => ({ removeTagFromSample: vi.fn() }),
         useAnnotationCollections: () => ({ data: [] }),
         useMcapTickPrefetchScheduler: () => ({
             bufferedRanges: [],

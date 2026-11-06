@@ -7,6 +7,8 @@ import {
 } from '../language/lightly-query-module';
 import { detectScopeAt } from '../language/lightly-query-schema';
 import { getMetadataQueryContext } from '$lib/components/QueryEditor/language';
+import { getEvaluationCompletionContext } from './getEvaluationCompletionContext';
+import { getQuotedMetricRange } from './getQuotedMetricRange';
 import {
     buildSchemaCompletions,
     lspToMonacoCompletion,
@@ -74,8 +76,22 @@ async function getCompletions(
         text: model.getValue(),
         offset: model.getOffsetAt(position) - (position.column - word.startColumn)
     });
-    const isSupported = (item: monaco.languages.CompletionItem) =>
-        shouldShowSuggestion(item, metadataContext);
+    const evaluationContext =
+        scope === 'sample_evaluation'
+            ? getEvaluationCompletionContext({
+                  text: model.getValue(),
+                  offset: model.getOffsetAt(position)
+              })
+            : undefined;
+    const isSupported = (item: monaco.languages.CompletionItem) => {
+        const label = completionLabel(item);
+        if (evaluationContext === 'selector') {
+            if (label.startsWith('"') || ['AND', 'OR', 'NOT'].includes(label)) return false;
+        }
+        if (evaluationContext === 'run' && label.startsWith('"')) return false;
+        if (evaluationContext && evaluationContext !== 'selector' && label === 'name') return false;
+        return shouldShowSuggestion(item, metadataContext);
+    };
     const lspSuggestions = (result?.items ?? [])
         .map((item) => lspToMonacoCompletion(item, fallbackRange, scope))
         // Use the schema snippet instead of Langium's bare metadata keyword.
@@ -93,7 +109,28 @@ async function getCompletions(
         includeBooleanLiterals: metadataContext === 'boolean'
     }).filter((suggestion) => !seen.has(completionLabel(suggestion)));
 
-    return { suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported) };
+    const metricRange =
+        scope === 'sample_evaluation'
+            ? getQuotedMetricRange({
+                  text: model.getValue(),
+                  offset: model.getOffsetAt(position),
+                  position
+              })
+            : undefined;
+    const metricQuote = metricRange
+        ? model.getValue()[model.getOffsetAt(position) - column + metricRange.startColumn]
+        : undefined;
+    return {
+        suggestions: [...lspSuggestions, ...schemaSuggestions].filter(isSupported).map((item) =>
+            metricRange && completionLabel(item).startsWith('"')
+                ? {
+                      ...item,
+                      range: metricRange,
+                      filterText: `${metricQuote}${completionLabel(item).slice(1, -1)}${metricQuote}`
+                  }
+                : item
+        )
+    };
 }
 
 /**

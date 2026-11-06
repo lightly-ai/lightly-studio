@@ -35,8 +35,8 @@ def test_get_tracks_with_class_name(
     test_client: TestClient,
 ) -> None:
     label = annotation_label_resolver.create(
-        db_session,
-        AnnotationLabelCreate(
+        session=db_session,
+        label=AnnotationLabelCreate(
             annotation_label_name="truck",
             dataset_id=collection.dataset_id,
         ),

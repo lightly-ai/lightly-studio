@@ -2,24 +2,26 @@
 
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
-from lightly_studio.resolvers import annotation_resolver, object_track_resolver
+from lightly_studio.resolvers import annotation_resolver, collection_resolver, object_track_resolver
 from lightly_studio.services import annotations_service
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
     create_collection,
+    create_groups,
     create_image,
+    cuboid_create,
 )
 
 
-def test_reassign_to_existing_track(db_session: Session) -> None:
+def test_update_annotation_object_track__reassign_to_existing_track(db_session: Session) -> None:
     """Reassigning an annotation moves it to the target track."""
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
@@ -56,12 +58,14 @@ def test_reassign_to_existing_track(db_session: Session) -> None:
     )
 
     assert result.object_track_id == track_b_id
+    assert result.object_track is not None
+    assert result.object_track.object_track_id == track_b_id
     fetched = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation_id)
     assert fetched is not None
     assert fetched.object_track_id == track_b_id
 
 
-def test_remove_track_assignment(db_session: Session) -> None:
+def test_update_annotation_object_track__remove_track_assignment(db_session: Session) -> None:
     """Setting object_track_id to None removes the annotation from its track."""
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
@@ -99,7 +103,7 @@ def test_remove_track_assignment(db_session: Session) -> None:
     assert result.object_track_id is None
 
 
-def test_empty_track_auto_deleted(db_session: Session) -> None:
+def test_update_annotation_object_track__empty_track_auto_deleted(db_session: Session) -> None:
     """A track with no remaining annotations is deleted after reassignment."""
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
@@ -137,7 +141,9 @@ def test_empty_track_auto_deleted(db_session: Session) -> None:
     assert object_track_resolver.get_by_id(session=db_session, object_track_id=track_id) is None
 
 
-def test_sibling_annotations_unaffected(db_session: Session) -> None:
+def test_update_annotation_object_track__sibling_annotations_unaffected(
+    db_session: Session,
+) -> None:
     """Reassigning one annotation does not move siblings in the old track."""
     collection = create_collection(session=db_session)
     image_a = create_image(session=db_session, collection_id=collection.collection_id)
@@ -193,7 +199,7 @@ def test_sibling_annotations_unaffected(db_session: Session) -> None:
     assert object_track_resolver.get_by_id(session=db_session, object_track_id=track_id) is not None
 
 
-def test_create_new_track(db_session: Session) -> None:
+def test_update_annotation_object_track__create_new_track(db_session: Session) -> None:
     """Setting create_new_track creates a track and assigns the annotation."""
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
@@ -224,12 +230,97 @@ def test_create_new_track(db_session: Session) -> None:
     assert track.dataset_id == collection.dataset_id
 
 
-def test_nonexistent_annotation_raises(db_session: Session) -> None:
+def test_update_annotation_object_track__nonexistent_annotation_raises(db_session: Session) -> None:
     """Updating a nonexistent annotation raises ValueError."""
     with pytest.raises(ValueError, match="does not exist"):
         annotations_service.update_annotation_object_track(
             session=db_session,
-            annotation_id=uuid4(),
-            collection_id=uuid4(),
+            annotation_id=uuid.uuid4(),
+            collection_id=uuid.uuid4(),
             object_track_id=None,
         )
+
+
+def test_update_annotation_object_track__duplicate_cuboid_rejected(db_session: Session) -> None:
+    """A group cannot contain two cuboids assigned to the same track."""
+    collection_id, group_ids = create_groups(session=db_session)
+    collection = collection_resolver.get_by_id(session=db_session, collection_id=collection_id)
+    assert collection is not None
+    label = create_annotation_label(session=db_session, root_collection_id=collection_id)
+    track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )[0]
+    annotation_ids = annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection_id,
+        annotations=[
+            cuboid_create(
+                parent_sample_id=group_ids[0],
+                annotation_label_id=label.annotation_label_id,
+                object_track_id=track_id,
+            ),
+            cuboid_create(
+                parent_sample_id=group_ids[0], annotation_label_id=label.annotation_label_id
+            ),
+        ],
+    )
+
+    with pytest.raises(ValueError, match="A cuboid for this object track already exists"):
+        annotations_service.update_annotation_object_track(
+            session=db_session,
+            annotation_id=annotation_ids[1],
+            collection_id=collection_id,
+            object_track_id=track_id,
+        )
+
+    annotation = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation_ids[1])
+    assert annotation is not None
+    assert annotation.object_track_id is None
+
+
+def test_update_annotation_object_track__parent_track_preserved(db_session: Session) -> None:
+    """Removing a parent's last annotation preserves references from child tracks."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    parent_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )[0]
+    child_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                object_track_number=2,
+                dataset_id=collection.dataset_id,
+                parent_object_track_id=parent_id,
+            )
+        ],
+    )[0]
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+    annotation_id = annotation.sample_id
+    object_track_resolver.add_annotation_to_object_track(
+        session=db_session, annotation_id=annotation_id, object_track_id=parent_id
+    )
+
+    result = annotations_service.update_annotation_object_track(
+        session=db_session,
+        annotation_id=annotation_id,
+        collection_id=collection.collection_id,
+        object_track_id=None,
+    )
+
+    assert result.object_track_id is None
+    assert (
+        object_track_resolver.get_by_id(session=db_session, object_track_id=parent_id) is not None
+    )
+    child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_id)
+    assert child is not None
+    assert child.parent_object_track_id == parent_id

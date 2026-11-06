@@ -1,6 +1,6 @@
 <script lang="ts">
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
-    import { cn, formatConfidence } from '$lib/utils';
+    import { cn, formatConfidence, trackClassCreatedInPicker } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -161,6 +161,7 @@
                                     }}
                                 >
                                     <SelectList
+                                        onCreate={trackClassCreatedInPicker}
                                         {items}
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"

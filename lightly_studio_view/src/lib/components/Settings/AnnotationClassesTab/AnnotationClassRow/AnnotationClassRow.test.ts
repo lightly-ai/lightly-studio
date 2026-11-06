@@ -2,6 +2,10 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/sve
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import AnnotationClassRow from './AnnotationClassRow.svelte';
 
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
+
 interface RenderRowOptions {
     annotationCount?: number;
     onRename?: (name: string) => Promise<unknown>;
@@ -58,12 +62,17 @@ describe('AnnotationClassRow', () => {
         expect(screen.getByText('cat')).toBeInTheDocument();
     });
 
-    it.each(['Enter', 'Escape'])('keeps renaming on %s during IME composition', async (key) => {
+    it.each([
+        ['Enter', { isComposing: true }],
+        ['Escape', { isComposing: true }],
+        // Safari confirms IME text with this Enter.
+        ['Enter', { isComposing: false, keyCode: 229 }]
+    ])('keeps renaming on %s during IME composition %o', async (key, init) => {
         const { onRename } = renderRow();
         const input = await startRename();
 
         await fireEvent.input(input, { target: { value: 'kitty' } });
-        await fireEvent.keyDown(input, { key, isComposing: true });
+        await fireEvent.keyDown(input, { key, ...init });
 
         expect(onRename).not.toHaveBeenCalled();
         expect(screen.getByRole('textbox', { name: 'New name for cat' })).toHaveValue('kitty');

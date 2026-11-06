@@ -2,7 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
-import PointCloudAnnotationDetails from './PointCloudAnnotationDetails.svelte';
+import PointCloudAnnotationDetails from './PointCloudAnnotationDetailsHarness.svelte';
+
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
+    getFeatures: vi.fn().mockResolvedValue({ data: [] }),
+    getAnalyticsConfig: vi.fn().mockResolvedValue({ data: undefined })
+}));
 
 const tracksRef = vi.hoisted(
     () =>
@@ -72,6 +78,7 @@ describe('PointCloudAnnotationDetails', () => {
         expect(screen.getByText('Ground Truth')).toBeInTheDocument();
         expect(screen.getByText('Track number:')).toBeInTheDocument();
         expect(screen.getByText('7')).toBeInTheDocument();
+        expect(screen.queryByTestId('track-select')).not.toBeInTheDocument();
     });
 
     it('shows track number 0', () => {

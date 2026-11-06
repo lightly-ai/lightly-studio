@@ -1,8 +1,10 @@
 <script lang="ts">
-    import { untrack } from 'svelte';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { ListItem } from '$lib/components/SelectList/types';
+    import { untrack, type ComponentProps } from 'svelte';
+    import { SelectList } from '$lib/components/SelectList';
     import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
+
+    type ListItem = ComponentProps<typeof SelectList>['items'][number];
+
 
     const NO_TRACK_VALUE = '__no_track__';
     const NEW_TRACK_VALUE = '__new_track__';

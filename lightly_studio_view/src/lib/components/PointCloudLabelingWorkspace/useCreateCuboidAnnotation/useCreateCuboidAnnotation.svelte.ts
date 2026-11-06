@@ -6,7 +6,6 @@ import {
     useSelectClassDialog,
     useTracks
 } from '$lib/hooks';
-import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
 import type { Bounds3, Vector3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
@@ -107,13 +106,11 @@ export function useCreateCuboidAnnotation({
     });
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() ?? '' }));
     const tracks = useTracks(() => getDatasetId());
-    const { lastAnnotationLabel, updateLastAnnotationLabel } = useGlobalStorage();
+    const { updateLastAnnotationLabel } = useGlobalStorage();
 
     async function selectAnnotationLabel(
         collectionId: string
     ): Promise<{ label: string; track?: TrackSelection } | null> {
-        const stored = get(lastAnnotationLabel)[collectionId] ?? null;
-        if (stored) return { label: stored };
         const selection = await requestLabel();
         if (!selection?.label) return null;
         updateLastAnnotationLabel(collectionId, selection.label);
@@ -187,7 +184,7 @@ export function useCreateCuboidAnnotation({
             return;
         }
         try {
-            await onCreated(annotationId);
+            await Promise.all([onCreated(annotationId), tracks.refetch()]);
         } catch {
             toast.error(
                 'Annotation created, but the workspace could not refresh. Please try again.'

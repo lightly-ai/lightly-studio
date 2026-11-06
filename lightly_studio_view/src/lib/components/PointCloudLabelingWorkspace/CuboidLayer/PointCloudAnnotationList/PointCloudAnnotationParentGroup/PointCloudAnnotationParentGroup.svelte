@@ -15,15 +15,23 @@
         trackNumber: number | null;
         /** Total annotations in this subtree, including the root. */
         subtreeSize: number;
+        /** When this value changes to a new truthy string, the group auto-expands. */
+        autoExpandForId?: string | null;
         /** Annotation rows rendered inside the group body. */
         children: Snippet;
     }
 
-    let { className, trackNumber, subtreeSize, children }: Props = $props();
+    let { className, trackNumber, subtreeSize, autoExpandForId = null, children }: Props = $props();
 
     const label = $derived(trackNumber !== null ? `${className} #${trackNumber}` : className);
 
     let open = $state(true);
+
+    $effect(() => {
+        if (autoExpandForId) {
+            open = true;
+        }
+    });
     const duration = 168;
 </script>
 

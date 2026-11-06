@@ -4,7 +4,12 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import SelectClassDialog from './SelectClassDialog.svelte';
-import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
+import type { ComponentProps } from 'svelte';
+
+const defaultTrackProps = {
+    showTrackSelect: true,
+    tracks: [{ object_track_id: 'track-1', object_track_number: 1, annotation_class_name: 'car' }]
+};
 
 // bits-ui Select uses pointer-capture and scrollIntoView APIs that jsdom doesn't implement.
 const originalHasPointerCapture = Element.prototype.hasPointerCapture;
@@ -28,12 +33,7 @@ afterAll(() => {
 
 describe('SelectClassDialog', () => {
     const renderDialog = (
-        propOverrides: {
-            open?: boolean;
-            labels?: string[];
-            showTrackSelect?: boolean;
-            tracks?: TrackWithClassNameView[];
-        } = {}
+        propOverrides: Partial<ComponentProps<typeof SelectClassDialog>> = {}
     ) => {
         const onConfirm = vi.fn();
         const onCancel = vi.fn();
@@ -151,23 +151,8 @@ describe('SelectClassDialog', () => {
         expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
     });
 
-    it('does not show track select by default', () => {
-        renderDialog();
-
-        expect(screen.queryByTestId('track-select')).not.toBeInTheDocument();
-    });
-
     it('shows track select when showTrackSelect is true', () => {
-        renderDialog({
-            showTrackSelect: true,
-            tracks: [
-                {
-                    object_track_id: 'track-1',
-                    object_track_number: 1,
-                    annotation_class_name: 'car'
-                }
-            ]
-        });
+        renderDialog(defaultTrackProps);
 
         expect(screen.getByTestId('track-select')).toBeInTheDocument();
         expect(screen.getByText('Track')).toBeInTheDocument();
@@ -175,16 +160,7 @@ describe('SelectClassDialog', () => {
 
     it('includes track selection in onConfirm when showTrackSelect is enabled', async () => {
         const user = userEvent.setup();
-        const { onConfirm } = renderDialog({
-            showTrackSelect: true,
-            tracks: [
-                {
-                    object_track_id: 'track-1',
-                    object_track_number: 1,
-                    annotation_class_name: 'car'
-                }
-            ]
-        });
+        const { onConfirm } = renderDialog(defaultTrackProps);
 
         // Select a class
         await user.click(await screen.findByRole('option', { name: 'cat' }));
@@ -208,16 +184,7 @@ describe('SelectClassDialog', () => {
 
     it('resets track selection when class changes', async () => {
         const user = userEvent.setup();
-        const { onConfirm } = renderDialog({
-            showTrackSelect: true,
-            tracks: [
-                {
-                    object_track_id: 'track-1',
-                    object_track_number: 1,
-                    annotation_class_name: 'car'
-                }
-            ]
-        });
+        const { onConfirm } = renderDialog(defaultTrackProps);
 
         // Select "cat" class
         await user.click(await screen.findByRole('option', { name: 'cat' }));

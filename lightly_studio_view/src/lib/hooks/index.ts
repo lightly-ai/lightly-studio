@@ -64,7 +64,11 @@ export { useUpdateTrackMutation } from '$lib/hooks/useUpdateTrackMutation/useUpd
 export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
+export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+export {
+    useClassColorPicker,
+    useSourceColorPicker
+} from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { usePostHog } from '$lib/hooks/usePostHog';
 export {
@@ -111,3 +115,5 @@ export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointF
 export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
+export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte';
+export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';

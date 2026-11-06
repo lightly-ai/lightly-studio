@@ -74,6 +74,7 @@
         collectionId={cuboid.annotationSourceId}
         {color}
         {className}
+        trackNumber={cuboid.trackNumber}
         {isSelected}
         {editable}
         onToggle={() => onToggle(cuboid.id)}

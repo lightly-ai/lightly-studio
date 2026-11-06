@@ -2,8 +2,9 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import type { ComponentProps } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
+import { useCustomSourceColors } from '$lib/hooks';
 import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
-import { getColorByLabel } from '$lib/utils';
+import { getColorByLabel, getColorBySource } from '$lib/utils';
 import SampleAnnotation from './SampleAnnotation.svelte';
 import SelectableSampleAnnotationHarness from './SelectableSampleAnnotationHarness.svelte';
 
@@ -183,12 +184,14 @@ describe('SampleAnnotation', () => {
 
         // The factory annotation belongs to 'collection-1' (named "Predictions" below)
         // and has the label 'car'.
-        const sourceColor = getColorByLabel('Predictions', 1).color;
+        const sourceColor = getColorBySource('Predictions', 1).color;
         const labelColor = getColorByLabel('car', 1).color;
 
         afterEach(() => {
             setSelectedCollectionIds([]);
             setCollectionIdToName({});
+            useCustomLabelColors().clearCustomColors();
+            useCustomSourceColors().clearCustomColors();
         });
 
         it('uses distinct colors for the source and the label', () => {
@@ -223,6 +226,21 @@ describe('SampleAnnotation', () => {
             });
 
             expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', labelColor);
+        });
+
+        it('a class color does not recolor the source in source mode', () => {
+            setCollectionIdToName({ 'collection-1': 'Predictions' });
+            useCustomLabelColors().setCustomColor('Predictions', '#111111');
+
+            render(SampleAnnotation, {
+                props: {
+                    annotation: createObjectDetectionAnnotation(),
+                    imageWidth: 100,
+                    colorBySource: true
+                }
+            });
+
+            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', sourceColor);
         });
 
         it('falls back to the global selection rule when colorBySource is omitted', () => {

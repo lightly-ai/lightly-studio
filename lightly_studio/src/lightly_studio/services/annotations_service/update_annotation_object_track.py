@@ -27,7 +27,7 @@ def update_annotation_object_track(
 
     When ``create_new_track`` is set, a new track is created and the annotation
     is linked to it. When the annotation is removed from a track and no other
-    annotations remain in that track, the track is automatically deleted.
+    annotations or child tracks remain, the track is automatically deleted.
 
     Args:
         session: Database session for executing the operation.
@@ -50,38 +50,50 @@ def update_annotation_object_track(
         raise ValueError(f"Annotation with id {annotation_id} does not exist.")
 
     if create_new_track:
-        collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
-        if collection is None:
-            raise ValueError(f"Collection {collection_id} not found.")
-        track_number = object_track_resolver.next_track_number(
-            session=session, dataset_id=collection.dataset_id
-        )
-        track_ids = object_track_resolver.create_many(
-            session=session,
-            tracks=[
-                ObjectTrackCreate(
-                    object_track_number=track_number,
-                    dataset_id=collection.dataset_id,
-                )
-            ],
-        )
-        object_track_id = track_ids[0]
+        object_track_id = _create_track(session=session, collection_id=collection_id)
 
     old_track_id = annotation.object_track_id
-
-    annotation_helper.update_annotation_object(
-        session=session,
-        annotation=annotation,
-        fields_to_update={"object_track_id": object_track_id},
-    )
-
+    _assign_track(session=session, annotation=annotation, object_track_id=object_track_id)
     if old_track_id is not None and old_track_id != object_track_id:
-        remaining = annotation_resolver.get_all_by_object_track_id(
-            session=session, object_track_id=old_track_id
-        )
-        if len(remaining) == 0:
-            object_track_resolver.delete_by_id(session=session, object_track_id=old_track_id)
-
+        _delete_empty_track(session=session, object_track_id=old_track_id)
     updated = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
     assert updated is not None
     return updated
+
+
+def _create_track(session: Session, collection_id: UUID) -> UUID:
+    """Create a track with the next number in the annotation source's dataset."""
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Annotation source {collection_id} not found.")
+    track_number = object_track_resolver.next_track_number(
+        session=session, dataset_id=collection.dataset_id
+    )
+    return object_track_resolver.create_many(
+        session=session,
+        tracks=[
+            ObjectTrackCreate(object_track_number=track_number, dataset_id=collection.dataset_id)
+        ],
+    )[0]
+
+
+def _assign_track(
+    session: Session, annotation: AnnotationBaseTable, object_track_id: UUID | None
+) -> AnnotationBaseTable:
+    """Assign a track with cuboid validation, or remove the current assignment."""
+    if object_track_id is not None:
+        return object_track_resolver.add_annotation_to_object_track(
+            session=session, annotation_id=annotation.sample_id, object_track_id=object_track_id
+        )
+    return annotation_helper.update_annotation_object(
+        session=session, annotation=annotation, fields_to_update={"object_track_id": None}
+    )
+
+
+def _delete_empty_track(session: Session, object_track_id: UUID) -> None:
+    """Delete a track after its last annotation is removed, preserving parent tracks."""
+    remaining = annotation_resolver.get_all_by_object_track_id(
+        session=session, object_track_id=object_track_id
+    )
+    if not remaining:
+        object_track_resolver.delete_by_id(session=session, object_track_id=object_track_id)
