@@ -50,7 +50,7 @@ def test_validate_server_backend(
 
 def test_validate_server_backend__local_with_postgres(mocker: MockerFixture) -> None:
     mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
-    with pytest.raises(RuntimeError, match="set LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise"):
+    with pytest.raises(RuntimeError, match="the GUI supports only DuckDB"):
         deployment.validate_server_backend(backend=DatabaseBackend.POSTGRESQL)
 
 

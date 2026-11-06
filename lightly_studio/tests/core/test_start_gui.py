@@ -215,7 +215,7 @@ def test_start_gui__backend_does_not_match_deployment_mode(mocker: MockerFixture
     mocker.patch.object(start_gui_module, "_validate_has_samples")
     mock_server = mocker.patch.object(start_gui_module, "Server")
 
-    with pytest.raises(RuntimeError, match="set LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise"):
+    with pytest.raises(RuntimeError, match="the GUI supports only DuckDB"):
         start_gui(open_browser=False)
 
     mock_server.assert_not_called()

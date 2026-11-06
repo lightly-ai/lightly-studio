@@ -61,8 +61,7 @@ def validate_server_backend(backend: DatabaseBackend) -> None:
     mode = get_deployment_mode()
     if mode == DeploymentMode.LOCAL and backend != DatabaseBackend.DUCKDB:
         raise RuntimeError(
-            f"The GUI server uses a {backend.value} database, but a local run supports only "
-            "DuckDB. For an enterprise server, set LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise."
+            f"The GUI server uses a {backend.value} database, but the GUI supports only DuckDB."
         )
     if mode == DeploymentMode.ENTERPRISE and backend != DatabaseBackend.POSTGRESQL:
         raise RuntimeError(
