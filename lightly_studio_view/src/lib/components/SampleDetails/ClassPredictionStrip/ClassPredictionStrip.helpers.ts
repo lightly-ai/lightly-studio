@@ -12,3 +12,20 @@ export const isAnnotationQueryOf =
             | undefined;
         return key?._id === 'getAnnotation' && key.path?.annotation_id === annotationId;
     };
+
+/**
+ * Picks black or white text for a fill color, whichever has the higher WCAG contrast.
+ * Takes an `rgb()` or `rgba()` string, as returned by getColorByLabel.
+ */
+export const getReadableTextColor = (fill: string): 'black' | 'white' => {
+    const [r, g, b] = (fill.match(/\d+(\.\d+)?/g) ?? []).slice(0, 3).map(Number);
+    const luminance = 0.2126 * toLinear(r) + 0.7152 * toLinear(g) + 0.0722 * toLinear(b);
+    // Contrast with black is (L + 0.05) / 0.05, with white 1.05 / (L + 0.05). They are
+    // equal at L ≈ 0.179.
+    return luminance > 0.179 ? 'black' : 'white';
+};
+
+const toLinear = (channel: number): number => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+};

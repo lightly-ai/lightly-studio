@@ -5,7 +5,7 @@ import type { AnnotationView } from '$lib/api/lightly_studio_local';
  * annotation. Omit hiddenAnnotationIds to count all sources.
  */
 export const countVisibleSources = (
-    annotations: AnnotationView[],
+    annotations: Pick<AnnotationView, 'sample_id' | 'annotation_collection_id'>[],
     hiddenAnnotationIds?: Set<string>
 ): number => {
     const visibleSourceIds = new Set<string>();

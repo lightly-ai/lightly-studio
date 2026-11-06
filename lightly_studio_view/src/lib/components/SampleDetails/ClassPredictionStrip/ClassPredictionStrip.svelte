@@ -3,15 +3,27 @@
     import { useAnnotationClassPredictionContext } from '$lib/hooks/useAnnotationClassPrediction/useAnnotationClassPrediction.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+    import { useSettings } from '$lib/hooks/useSettings';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
-    import { cn, isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import {
+        cn,
+        countVisibleSources,
+        getColorByLabel,
+        isOverlayTarget,
+        isTextInputTarget,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
     import { useQueryClient } from '@tanstack/svelte-query';
-    import { isAnnotationQueryOf } from './ClassPredictionStrip.helpers';
+    import { getReadableTextColor, isAnnotationQueryOf } from './ClassPredictionStrip.helpers';
 
     interface Props {
         collectionId: string;
-        annotations: { sample_id: string; annotation_label: { annotation_label_name: string } }[];
+        annotations: {
+            sample_id: string;
+            annotation_collection_id: string;
+            annotation_label: { annotation_label_name: string };
+        }[];
         refetch: () => void;
     }
 
@@ -20,6 +32,7 @@
     const classPrediction = useAnnotationClassPredictionContext();
     const { context: annotationLabelContext, setAnnotationLabel } = useAnnotationLabelContext();
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { enforceColoringByClassStore } = useSettings();
     const queryClient = useQueryClient();
     const { updateAnnotations } = useUpdateAnnotationsMutation({
         getCollectionId: () => collectionId
@@ -32,6 +45,13 @@
             : undefined
     );
     const currentLabelName = $derived(predictedAnnotation?.annotation_label.annotation_label_name);
+    // Same rule as the boxes on the image, so a swatch always matches a box color.
+    const showClassColors = $derived(
+        !resolveEffectiveColorBySource({
+            multipleSourcesVisible: countVisibleSources(annotations) >= 2,
+            enforceColoringByClass: $enforceColoringByClassStore
+        })
+    );
 
     // Selecting another annotation, or none, drops the prediction.
     $effect(() => {
@@ -96,13 +116,39 @@
                 Predicting class…
             </span>
         {:else}
-            {#each predictionState.top as entry, index (entry.annotation_label_id)}
-                {#if index > 0}<span class="text-muted-foreground">{' · '}</span>{/if}
-                <span class={cn(entry.label_name === currentLabelName && 'font-semibold')}>
-                    <kbd class="text-muted-foreground">{index + 1}</kbd>
-                    {entry.label_name}
+            <span class="flex items-center gap-1">
+                {#each predictionState.top as entry, index (entry.annotation_label_id)}
+                    {@const isSelected = entry.label_name === currentLabelName}
+                    {@const classColor = getColorByLabel(entry.label_name).color}
+                    {@const fillWithClassColor = isSelected && showClassColors}
+                    <span
+                        class={cn(
+                            'inline-flex items-center gap-1.5 rounded px-2 py-0.5',
+                            isSelected ? 'font-medium' : 'text-muted-foreground',
+                            isSelected && !showClassColors && 'bg-primary text-primary-foreground'
+                        )}
+                        style:background-color={fillWithClassColor ? classColor : undefined}
+                        style:color={fillWithClassColor
+                            ? getReadableTextColor(classColor)
+                            : undefined}
+                        aria-current={isSelected ? 'true' : undefined}
+                        data-testid="class-prediction-entry"
+                    >
+                        <kbd class={cn(isSelected && 'opacity-70')}>{index + 1}</kbd>
+                        {#if showClassColors && !isSelected}
+                            <span
+                                class="size-2.5 rounded-sm"
+                                style:background-color={classColor}
+                                data-testid="class-prediction-swatch"
+                            ></span>
+                        {/if}
+                        {entry.label_name}
+                    </span>
+                {/each}
+                <span class="ml-1 border-l border-border pl-2 text-muted-foreground">
+                    <kbd>Esc</kbd> skip
                 </span>
-            {/each}
+            </span>
         {/if}
     </div>
 {/if}

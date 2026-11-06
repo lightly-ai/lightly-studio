@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
+import { writable } from 'svelte/store';
+import { getColorByLabel } from '$lib/utils';
 import ClassPredictionStrip from './ClassPredictionStrip.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -12,7 +14,13 @@ const mocks = vi.hoisted(() => ({
     addReversibleAction: vi.fn(),
     updateAnnotations: vi.fn(),
     addAnnotationLabelChangeToUndoStack: vi.fn(),
-    invalidateQueries: vi.fn()
+    invalidateQueries: vi.fn(),
+    enforceColoringByClass: undefined as unknown as ReturnType<typeof writable<boolean>>
+}));
+mocks.enforceColoringByClass = writable(false);
+
+vi.mock('$lib/hooks/useSettings', () => ({
+    useSettings: () => ({ enforceColoringByClassStore: mocks.enforceColoringByClass })
 }));
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
@@ -71,9 +79,43 @@ const READY_STATE = {
 const refetch = vi.fn();
 const defaultProps = {
     collectionId: 'col-1',
-    annotations: [{ sample_id: 'ann-1', annotation_label: { annotation_label_name: 'car' } }],
+    annotations: [
+        {
+            sample_id: 'ann-1',
+            annotation_collection_id: 'source-a',
+            annotation_label: { annotation_label_name: 'car' }
+        }
+    ],
     refetch
 };
+const TWO_SOURCES_PROPS = {
+    ...defaultProps,
+    annotations: [
+        ...defaultProps.annotations,
+        {
+            sample_id: 'ann-2',
+            annotation_collection_id: 'source-b',
+            annotation_label: { annotation_label_name: 'bus' }
+        }
+    ]
+};
+// The DOM normalizes colors, for example rgba(r, g, b, 1) to rgb(r, g, b).
+const asDomColor = (color: string) => {
+    const element = document.createElement('span');
+    element.style.backgroundColor = color;
+    return element.style.backgroundColor;
+};
+const entryText = (entry: HTMLElement) => entry.textContent?.replace(/\s+/g, ' ').trim();
+// The class color of each entry: its swatch, or the fill of the selected pill.
+const classColors = () =>
+    screen
+        .getAllByTestId('class-prediction-entry')
+        .map(
+            (entry) =>
+                entry.querySelector<HTMLElement>('[data-testid="class-prediction-swatch"]')?.style
+                    .backgroundColor || entry.style.backgroundColor
+        )
+        .filter(Boolean);
 
 describe('ClassPredictionStrip', () => {
     beforeEach(() => {
@@ -81,6 +123,7 @@ describe('ClassPredictionStrip', () => {
         mocks.state = { status: 'hidden' };
         mocks.selectedAnnotationId = 'ann-1';
         mocks.updateAnnotations.mockResolvedValue(undefined);
+        mocks.enforceColoringByClass.set(false);
     });
 
     it('shows a spinner and "Predicting class…" while loading', () => {
@@ -95,9 +138,11 @@ describe('ClassPredictionStrip', () => {
         mocks.state = READY_STATE;
         render(ClassPredictionStrip, { props: defaultProps });
 
-        expect(screen.getByTestId('class-prediction-strip')).toHaveTextContent(
-            '1 car · 2 truck · 3 bus'
-        );
+        expect(screen.getAllByTestId('class-prediction-entry').map(entryText)).toEqual([
+            '1 car',
+            '2 truck',
+            '3 bus'
+        ]);
         expect(screen.getByTestId('class-prediction-strip')).not.toHaveTextContent('%');
     });
 
@@ -109,9 +154,7 @@ describe('ClassPredictionStrip', () => {
 
         expect(mocks.addAnnotationLabelChangeToUndoStack).toHaveBeenCalledWith(
             expect.objectContaining({
-                annotations: [
-                    { sample_id: 'ann-1', annotation_label: { annotation_label_name: 'car' } }
-                ],
+                annotations: defaultProps.annotations,
                 collectionId: 'col-1'
             })
         );
@@ -238,5 +281,72 @@ describe('ClassPredictionStrip', () => {
         await fireEvent.keyDown(window, { key: 'Escape' });
 
         expect(mocks.hide).toHaveBeenCalled();
+    });
+
+    it('shows each class in its class color when coloring by class', () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: defaultProps });
+
+        expect(classColors()).toEqual(
+            ['car', 'truck', 'bus'].map((name) => asDomColor(getColorByLabel(name).color))
+        );
+    });
+
+    it('shows no class colors when coloring by source', () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: TWO_SOURCES_PROPS });
+
+        expect(classColors()).toEqual([]);
+    });
+
+    it('shows class colors with several sources when class coloring is enforced', () => {
+        mocks.state = READY_STATE;
+        mocks.enforceColoringByClass.set(true);
+        render(ClassPredictionStrip, { props: TWO_SOURCES_PROPS });
+
+        expect(classColors()).toHaveLength(3);
+    });
+
+    it('shows that Esc skips the prediction', () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: defaultProps });
+
+        expect(screen.getByTestId('class-prediction-strip')).toHaveTextContent('Esc skip');
+    });
+
+    it('marks the class the annotation has now as selected', () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: defaultProps });
+
+        const selected = screen
+            .getAllByTestId('class-prediction-entry')
+            .filter((entry) => entry.getAttribute('aria-current') === 'true');
+        expect(selected.map(entryText)).toEqual(['1 car']);
+    });
+
+    it('marks nothing as selected when the current class is not in the top 3', () => {
+        mocks.state = READY_STATE;
+        const annotations = [
+            {
+                ...defaultProps.annotations[0],
+                annotation_label: { annotation_label_name: 'horse' }
+            }
+        ];
+        render(ClassPredictionStrip, { props: { ...defaultProps, annotations } });
+
+        const entries = screen.getAllByTestId('class-prediction-entry');
+        expect(entries.filter((entry) => entry.getAttribute('aria-current') === 'true')).toEqual(
+            []
+        );
+    });
+
+    it('fills the selected class with its class color when coloring by class', () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: defaultProps });
+
+        const selected = screen
+            .getAllByTestId('class-prediction-entry')
+            .find((entry) => entry.getAttribute('aria-current') === 'true');
+        expect(selected?.style.backgroundColor).toBe(asDomColor(getColorByLabel('car').color));
     });
 });
