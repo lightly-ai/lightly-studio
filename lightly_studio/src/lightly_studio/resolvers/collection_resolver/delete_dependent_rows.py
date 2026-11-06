@@ -6,7 +6,6 @@ from uuid import UUID
 
 from sqlmodel import Session, col, delete, select
 
-from lightly_studio.export import export_artifact
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
 )
@@ -16,15 +15,18 @@ from lightly_studio.models.export_job import ExportJobTable
 from lightly_studio.models.tag import TagTable
 
 
-def delete_dependent_rows(session: Session, collection_id: UUID) -> None:
+def delete_dependent_rows(session: Session, collection_id: UUID) -> list[str]:
     """Delete the coverage, embedding model links, embedding plots, export jobs and tags.
 
-    Also removes the files of the export jobs. Does not commit. Delete the samples and the
-    tag links of the collection first.
+    Does not commit. Delete the samples and the tag links of the collection first. Remove the
+    files of the export jobs after the commit, with ``export_artifact.remove_export_artifact``.
 
     Args:
         session: Database session.
         collection_id: ID of the collection.
+
+    Returns:
+        The export paths of the deleted export jobs.
     """
     session.exec(
         delete(AnnotationCollectionCoverageTable).where(
@@ -42,7 +44,6 @@ def delete_dependent_rows(session: Session, collection_id: UUID) -> None:
     export_paths = session.exec(
         select(ExportJobTable.export_path).where(col(ExportJobTable.collection_id) == collection_id)
     ).all()
-    for export_path in export_paths:
-        export_artifact.remove_export_artifact(export_path=export_path)
     session.exec(delete(ExportJobTable).where(col(ExportJobTable.collection_id) == collection_id))
     session.exec(delete(TagTable).where(col(TagTable.collection_id) == collection_id))
+    return list(export_paths)

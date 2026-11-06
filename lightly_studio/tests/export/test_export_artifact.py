@@ -52,3 +52,13 @@ def test_remove_export_artifact__rmtree_fails(
 
     rmtree.assert_called_once_with(export_dir.resolve(), ignore_errors=True)
     assert f"Could not remove export artifact: {export_dir}" in caplog.text
+
+
+def test_remove_export_artifact__is_dir_fails(tmp_path: Path, mocker: MockerFixture) -> None:
+    export_dir = tmp_path / "yolo"
+    export_dir.mkdir()
+    mocker.patch.object(Path, "is_dir", side_effect=PermissionError("no search permission"))
+
+    export_artifact.remove_export_artifact(export_path=str(export_dir))
+
+    assert export_dir.exists()
