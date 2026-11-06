@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
     import { trackClassCreatedInPicker } from '$lib/utils';
     import { Card, CardContent } from '$lib/components';
     import { Segment } from '$lib/components';
@@ -19,6 +20,7 @@
     const { selectedCount, onSelect, disabled, isLoading, collectionId }: Props = $props();
 
     const result = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
 
     const items = $derived(getSelectionItems(result.data || []));
 </script>
@@ -35,16 +37,17 @@
                     </div>
                     <SelectList
                         onCreate={trackClassCreatedInPicker}
+                        allowCreate={canCreateClass}
                         {items}
                         name="annotation-label"
-                        placeholder="Select or create a class"
+                        placeholder={canCreateClass ? 'Select or create a class' : 'Select a class'}
                         label="Select a class"
                         {onSelect}
                         {isLoading}
                         {disabled}
                     >
                         {#snippet notFound({ inputValue })}
-                            <LabelNotFound label={inputValue} />
+                            <LabelNotFound label={inputValue} canCreate={canCreateClass} />
                         {/snippet}
                     </SelectList>
                     <DeleteAnnotations {collectionId} disabled={isLoading} />
