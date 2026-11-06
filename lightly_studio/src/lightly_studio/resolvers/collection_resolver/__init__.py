@@ -19,9 +19,6 @@ from lightly_studio.resolvers.collection_resolver.get_all import get_all
 from lightly_studio.resolvers.collection_resolver.get_annotation_collections import (
     get_annotation_collections,
 )
-from lightly_studio.resolvers.collection_resolver.get_annotation_counts_by_collection_ids import (
-    get_annotation_counts_by_collection_ids,
-)
 from lightly_studio.resolvers.collection_resolver.get_annotation_types_by_collection_ids import (
     get_annotation_types_by_collection_ids,
 )
@@ -62,7 +59,6 @@ __all__ = [
     "export",
     "get_all",
     "get_annotation_collections",
-    "get_annotation_counts_by_collection_ids",
     "get_annotation_types_by_collection_ids",
     "get_by_id",
     "get_by_name",
