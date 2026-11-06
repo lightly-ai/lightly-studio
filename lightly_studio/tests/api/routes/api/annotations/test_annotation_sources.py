@@ -9,7 +9,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_OK,
 )
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -20,7 +20,6 @@ from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
-    create_caption,
     create_collection,
     create_image,
 )
@@ -93,10 +92,11 @@ def test_delete_annotation_source__has_child_collection(
     pred = _create_annotations(
         session=db_session, collection=collection, source_name="predictions", count=1
     )[0]
-    create_caption(
+    create_collection(
         session=db_session,
-        collection_id=pred.annotation_collection_id,
-        parent_sample_id=pred.sample_id,
+        collection_name="crops",
+        parent_collection_id=pred.annotation_collection_id,
+        sample_type=SampleType.IMAGE,
     )
 
     response = test_client.delete(

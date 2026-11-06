@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from sqlmodel import Session, select
 
 from lightly_studio.models.annotation_collection_coverage import (
@@ -18,7 +20,7 @@ from tests.helpers_resolvers import (
 )
 
 
-def test_delete_dependent_rows(db_session: Session) -> None:
+def test_delete_dependent_rows(db_session: Session, tmp_path: Path) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     deleted, kept = (
@@ -38,8 +40,10 @@ def test_delete_dependent_rows(db_session: Session) -> None:
         )
         create_embedding_model(session=db_session, collection_id=source.collection_id)
         create_tag(session=db_session, collection_id=source.collection_id, tag_name="reviewed")
+        export_path = tmp_path / f"{source.name}.json"
+        export_path.write_text("{}")
         db_session.add(
-            ExportJobTable(collection_id=source.collection_id, export_path="/tmp/export.json")
+            ExportJobTable(collection_id=source.collection_id, export_path=str(export_path))
         )
 
     collection_resolver.delete_dependent_rows(
@@ -55,3 +59,5 @@ def test_delete_dependent_rows(db_session: Session) -> None:
     assert [tag.collection_id for tag in tags] == [kept.collection_id]
     export_jobs = db_session.exec(select(ExportJobTable)).all()
     assert [job.collection_id for job in export_jobs] == [kept.collection_id]
+    assert not (tmp_path / "predictions.json").exists()
+    assert (tmp_path / "ground_truth.json").exists()

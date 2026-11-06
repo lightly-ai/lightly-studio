@@ -343,7 +343,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
     def delete_annotation_source(self, annotation_source: str) -> int:
-        """Delete an annotation source and all its annotations.
+        """Delete an annotation source, all its annotations and their captions.
 
         Delete the evaluation runs that use the annotation source first.
 
@@ -356,7 +356,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         Raises:
             ValueError: If the dataset has no annotation source with this name.
             AnnotationSourceInUseError: If evaluation runs use the annotation source, or if
-                the annotation source has captions or other data attached.
+                the annotation source has child collections other than captions.
         """
         child_id = collection_resolver.get_by_name(
             session=self.session, name=annotation_source, parent_collection_id=self.collection_id
