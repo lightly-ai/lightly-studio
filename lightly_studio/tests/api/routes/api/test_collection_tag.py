@@ -390,4 +390,5 @@ def _post_split(
     }
     if grid_filter is not None:
         body["filter"] = grid_filter
-    return test_client.post(f"/api/collections/{collection_id}/tags/split", json=body)
+    response: Response = test_client.post(f"/api/collections/{collection_id}/tags/split", json=body)
+    return response

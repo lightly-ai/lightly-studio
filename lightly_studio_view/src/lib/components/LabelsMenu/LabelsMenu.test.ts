@@ -5,6 +5,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import LabelsMenu from './LabelsMenu.svelte';
 import type { Annotation } from '$lib/types';
 
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
+
 const mocks = vi.hoisted(() => ({
     selectedCollectionIds: null as unknown as Writable<string[]>,
     allSourcesHidden: null as unknown as Writable<boolean>,
@@ -41,6 +45,7 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     const { writable } = await import('svelte/store');
     return {
         useCustomLabelColors: () => ({
+            customColorsStore: writable({}),
             customLabelColorsStore: writable({}),
             colorVersion: writable(0),
             getCustomColor: () => undefined,

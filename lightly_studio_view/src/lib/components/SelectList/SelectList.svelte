@@ -44,6 +44,7 @@
         isLoading = false,
         allowCreate = true,
         onKeyboardConfirm,
+        onCreate,
         labelledBy,
         pinnedTop = [],
         pinnedBottom = []
@@ -66,6 +67,8 @@
         isLoading?: boolean;
         allowCreate?: boolean;
         onKeyboardConfirm?: (item: ListItem) => void;
+        // Called when the user creates an item from the typed text, before onSelect.
+        onCreate?: (item: ListItem) => void;
     } = $props();
 
     // Part of the trigger's accessible name, so it reads as "<field label> <selected value>".
@@ -91,16 +94,15 @@
         closeAndFocusTrigger();
     };
 
-    const createNewItem = (item: string) => {
-        const existingItem = allItems.find((i) => i.value.toLowerCase() === item.toLowerCase());
+    // Returns the item that matches the text, ignoring case, or creates a new one.
+    const getOrCreateItem = (text: string): ListItem => {
+        const existingItem = allItems.find((i) => i.value.toLowerCase() === text.toLowerCase());
+        if (existingItem) return existingItem;
 
-        if (existingItem) {
-            handleOnSelect(existingItem);
-        } else {
-            const newItem = { value: item, label: item };
-            items.push(newItem);
-            handleOnSelect(newItem);
-        }
+        const newItem = { value: text, label: text };
+        items.push(newItem);
+        onCreate?.(newItem);
+        return newItem;
     };
 
     const confirmWithKeyboard = (item: ListItem) => {
@@ -112,8 +114,8 @@
 
     const handleKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue && allowCreate) {
-                createNewItem(inputValue);
+            if (event.key === 'Enter' && !highlightedValue && inputValue.trim() && allowCreate) {
+                handleOnSelect(getOrCreateItem(inputValue));
                 event.preventDefault();
                 event.stopPropagation();
             } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
@@ -126,20 +128,8 @@
 
         if (highlightedItem) {
             confirmWithKeyboard(highlightedItem);
-        } else if (inputValue) {
-            const existingItem = allItems.find(
-                (item) => item.value.toLowerCase() === inputValue.toLowerCase()
-            );
-
-            if (existingItem) {
-                confirmWithKeyboard(existingItem);
-            } else if (allowCreate) {
-                const newItem = { value: inputValue, label: inputValue };
-                items.push(newItem);
-                confirmWithKeyboard(newItem);
-            } else {
-                return;
-            }
+        } else if (inputValue.trim() && allowCreate) {
+            confirmWithKeyboard(getOrCreateItem(inputValue));
         } else {
             return;
         }
@@ -239,11 +229,7 @@
                     <div class="border-t">
                         <Command.Item
                             value="__create__"
-                            onSelect={() => {
-                                const newItem = { value: inputValue, label: inputValue };
-                                items.push(newItem);
-                                handleOnSelect(newItem);
-                            }}
+                            onSelect={() => handleOnSelect(getOrCreateItem(inputValue))}
                             forceMount
                             keywords={[]}
                         >

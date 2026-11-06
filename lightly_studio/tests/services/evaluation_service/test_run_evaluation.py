@@ -46,7 +46,11 @@ def test_run_evaluation__object_detection(db_session: Session) -> None:
     assert str(runs[0].id) == str(result.evaluation_run_id)
     assert runs[0].name == "run-1"
     assert runs[0].task_type == EvaluationTaskType.OBJECT_DETECTION
-    assert runs[0].config_json == {"iou_threshold": 0.7, "classwise": False}
+    assert runs[0].config_json == {
+        "iou_threshold": 0.7,
+        "classwise": False,
+        "compute_average_precision": False,
+    }
 
 
 def test_run_evaluation__generates_default_name(db_session: Session) -> None:

@@ -375,7 +375,7 @@ def _post_interactive(
     boxes: list[dict[str, float]] | None = None,
     headers: dict[str, str] | None = None,
 ) -> Response:
-    return client.post(
+    response: Response = client.post(
         "/api/annotate/interactive",
         json={
             "collection_id": str(collection_id),
@@ -385,6 +385,7 @@ def _post_interactive(
         },
         headers=headers,
     )
+    return response
 
 
 def _post_instances(
@@ -393,7 +394,7 @@ def _post_instances(
     sample_id: UUID,
     headers: dict[str, str] | None = None,
 ) -> Response:
-    return client.post(
+    response: Response = client.post(
         "/api/annotate/instances",
         json={
             "collection_id": str(collection_id),
@@ -402,3 +403,4 @@ def _post_instances(
         },
         headers=headers,
     )
+    return response

@@ -10,7 +10,8 @@
         cn,
         countVisibleSources,
         formatConfidence,
-        resolveEffectiveColorBySource
+        resolveEffectiveColorBySource,
+        trackClassCreatedInPicker
     } from '$lib/utils';
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
@@ -257,6 +258,7 @@
                 <span class="flex min-w-0 flex-1 flex-col gap-1">
                     {#if $isEditingMode}
                         <SelectList
+                            onCreate={trackClassCreatedInPicker}
                             {items}
                             selectedItem={items.find(
                                 (i) => i.value === getLabelValue(annotation)?.value
@@ -364,6 +366,7 @@
                         <span class="flex min-w-0 flex-1 flex-col gap-1">
                             <span class="min-w-0 text-sm font-medium">
                                 <SelectList
+                                    onCreate={trackClassCreatedInPicker}
                                     {items}
                                     name="classification-label"
                                     placeholder="Select or create a class"

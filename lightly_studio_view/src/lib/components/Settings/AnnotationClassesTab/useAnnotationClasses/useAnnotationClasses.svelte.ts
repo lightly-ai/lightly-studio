@@ -14,7 +14,6 @@ import {
     useQueryClient,
     type CreateQueryResult
 } from '@tanstack/svelte-query';
-import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { toast } from 'svelte-sonner';
 
 interface UseAnnotationClassesParams {
@@ -25,7 +24,7 @@ interface UseAnnotationClassesParams {
 interface UseAnnotationClassesReturn {
     query: CreateQueryResult<ReadAnnotationLabelsWithCountsResponse>;
     addClass: (name: string) => Promise<CreateAnnotationLabelResponse>;
-    renameClass: (labelId: string, oldName: string, name: string) => Promise<void>;
+    renameClass: (labelId: string, name: string) => Promise<void>;
     deleteClass: (labelId: string) => Promise<unknown>;
 }
 
@@ -67,18 +66,11 @@ export const useAnnotationClasses = (
             path: { collection_id: getParams().collectionId },
             body: { annotation_label_name: name }
         });
-    // Custom colors are stored by class name, so a rename moves the color to the new name.
-    const { getCustomColor, setCustomColor, deleteCustomColor } = useCustomLabelColors();
-    const renameClass = async (labelId: string, oldName: string, name: string) => {
+    const renameClass = async (labelId: string, name: string) => {
         await updateMut.mutateAsync({
             path: { label_id: labelId },
             body: { dataset_id: getParams().datasetId, annotation_label_name: name }
         });
-        const customColor = getCustomColor(oldName);
-        if (customColor && oldName !== name) {
-            setCustomColor(name, customColor.color, customColor.alpha);
-            deleteCustomColor(oldName);
-        }
     };
     const deleteClass = (labelId: string) => deleteMut.mutateAsync({ path: { label_id: labelId } });
 

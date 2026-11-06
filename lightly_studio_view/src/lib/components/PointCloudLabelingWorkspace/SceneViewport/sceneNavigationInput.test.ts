@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { listenToSceneNavigation } from '../../PointCloudViewer/sceneNavigation';
 import { createSceneNavigationInput } from './sceneNavigationInput';
 
 describe('scene navigation input', () => {
     let input: ReturnType<typeof createSceneNavigationInput>;
-    let events: ReturnType<typeof vi.fn>;
+    let events: Mock<Parameters<typeof listenToSceneNavigation>[0]>;
     let cleanup: () => void;
     let unsubscribe: () => void;
     beforeEach(() => {

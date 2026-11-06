@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { Button, Segment } from '..';
     import LabelNotFound from '../LabelNotFound/LabelNotFound.svelte';
@@ -72,6 +73,7 @@
                     <label class="flex w-full flex-col gap-3 text-muted-foreground">
                         <div class="text-sm">Select or create a class for a new annotation.</div>
                         <SelectList
+                            onCreate={trackClassCreatedInPicker}
                             {items}
                             selectedItem={items.find((i) => i.value === addAnnotationLabel?.value)}
                             name="annotation-label"

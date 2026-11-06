@@ -14,6 +14,49 @@
 import type { FieldDoc, KeywordDoc, Scope, ScopeDoc } from './types';
 
 export const SCOPES: Record<Scope, ScopeDoc> = {
+    sample_evaluation: {
+        scope: 'sample_evaluation',
+        title: 'Sample evaluation',
+        description: 'Metrics for a sample in the selected evaluation run.',
+        fields: [
+            {
+                name: 'name',
+                type: 'string',
+                description: 'Evaluation run name. Start with name = "run-name".'
+            },
+            {
+                name: 'tp',
+                insertText: '"tp"',
+                type: 'float',
+                description: 'True positive metric in the selected run.'
+            },
+            {
+                name: 'fp',
+                insertText: '"fp"',
+                type: 'float',
+                description: 'False positive metric in the selected run.'
+            },
+            {
+                name: 'fn',
+                insertText: '"fn"',
+                type: 'float',
+                description: 'False negative metric in the selected run.'
+            },
+            {
+                name: 'disagreement',
+                insertText: '"disagreement"',
+                type: 'float',
+                description: 'Classification disagreement score in the selected run.'
+            },
+            {
+                name: 'miou',
+                insertText: '"miou"',
+                type: 'float',
+                description:
+                    'Mean intersection over union for semantic segmentation in the selected run.'
+            }
+        ]
+    },
     image: {
         scope: 'image',
         title: 'Image',
@@ -139,6 +182,12 @@ export const BOOLEAN_KEYWORDS: KeywordDoc[] = [
 
 export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     {
+        name: 'sample_evaluation',
+        description:
+            'Filter samples evaluated by a named run. All metric names require single or double quotes, including "tp", "fp", "fn", "disagreement", and "miou". Use numeric comparisons and AND/OR/NOT. Missing metrics do not match comparisons, including !=. Inner NOT still requires membership in the run.',
+        insertText: 'sample_evaluation(name = "${1:run-name}" AND "${2:tp}" >= ${3:1})'
+    },
+    {
         name: 'metadata',
         description:
             'Sample metadata at a quoted path, e.g. `metadata["camera"] = "front"` or `metadata["odometry.acc[1]"] < -0.2`. ' +
@@ -179,7 +228,7 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
 ];
 
 export function findFieldInScope(scope: Scope, name: string): FieldDoc | undefined {
-    return SCOPES[scope].fields.find((f) => f.name === name);
+    return SCOPES[scope].fields.find((f) => f.name === name || f.insertText === name);
 }
 
 export function findKeyword(name: string): KeywordDoc | undefined {
