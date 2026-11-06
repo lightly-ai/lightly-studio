@@ -4,10 +4,12 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.errors import AnnotationSourceInUseError, NotFoundError
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
     annotation_resolver,
+    caption_resolver,
     collection_embedding_model_resolver,
     collection_resolver,
     evaluation_run_resolver,
@@ -146,17 +148,16 @@ def test_delete_annotation_source__has_child_collection(db_session: Session) -> 
     (pred,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
-    # A caption on an annotation creates the child collection 'caption' of the source.
-    create_caption(
+    create_collection(
         session=db_session,
-        collection_id=pred.annotation_collection_id,
-        parent_sample_id=pred.sample_id,
+        collection_name="crops",
+        parent_collection_id=pred.annotation_collection_id,
+        sample_type=SampleType.IMAGE,
     )
 
     with pytest.raises(
         AnnotationSourceInUseError,
-        match=r"'predictions' cannot be deleted because it has captions or other "
-        r"data attached: caption\.",
+        match=r"'predictions' cannot be deleted because it has data attached: crops\.",
     ):
         annotation_source_service.delete_annotation_source(
             session=db_session,
@@ -164,3 +165,59 @@ def test_delete_annotation_source__has_child_collection(db_session: Session) -> 
             annotation_source_id=pred.annotation_collection_id,
         )
     assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
+
+
+def test_delete_annotation_source__with_caption(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    (pred,) = helpers.create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
+    )
+    source_id = pred.annotation_collection_id
+    caption = create_caption(
+        session=db_session, collection_id=source_id, parent_sample_id=pred.sample_id
+    )
+    caption_sample_id = caption.sample_id
+    caption_collection_id = caption.sample.collection_id
+
+    deleted_count = annotation_source_service.delete_annotation_source(
+        session=db_session,
+        dataset_collection_id=collection.collection_id,
+        annotation_source_id=source_id,
+    )
+
+    assert deleted_count == 1
+    assert caption_resolver.get_by_ids(session=db_session, sample_ids=[caption_sample_id]) == []
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=caption_collection_id)
+        is None
+    )
+    assert collection_resolver.get_by_id(session=db_session, collection_id=source_id) is None
+
+
+def test_delete_annotation_source__deleted_caption(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    (pred,) = helpers.create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
+    )
+    source_id = pred.annotation_collection_id
+    # The delete of a caption keeps its sample in the caption collection.
+    caption = create_caption(
+        session=db_session, collection_id=source_id, parent_sample_id=pred.sample_id
+    )
+    caption_collection_id = caption.sample.collection_id
+    caption_resolver.delete_caption(session=db_session, sample_id=caption.sample_id)
+
+    deleted_count = annotation_source_service.delete_annotation_source(
+        session=db_session,
+        dataset_collection_id=collection.collection_id,
+        annotation_source_id=source_id,
+    )
+
+    assert deleted_count == 1
+    assert (
+        collection_resolver.get_by_id(session=db_session, collection_id=caption_collection_id)
+        is None
+    )
+    assert collection_resolver.get_by_id(session=db_session, collection_id=source_id) is None
