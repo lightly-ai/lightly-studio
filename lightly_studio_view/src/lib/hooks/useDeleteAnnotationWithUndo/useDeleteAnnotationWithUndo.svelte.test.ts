@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { toast } from 'svelte-sonner';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { useDeleteAnnotationWithUndo } from './useDeleteAnnotationWithUndo.svelte';
 
@@ -53,6 +54,18 @@ describe('useDeleteAnnotationWithUndo', () => {
         expect(await deleteWithUndo(annotation, vi.fn())).toBe(false);
 
         expect(mocks.addDeleteToUndoStack).not.toHaveBeenCalled();
+    });
+
+    it('shows no delete error when the refetch after a delete throws', async () => {
+        const refetch = vi.fn(() => {
+            throw new Error('refetch failed');
+        });
+        const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');
+
+        await expect(deleteWithUndo(annotation, refetch)).rejects.toThrow('refetch failed');
+
+        expect(mocks.addDeleteToUndoStack).toHaveBeenCalledOnce();
+        expect(toast.error).not.toHaveBeenCalled();
     });
 
     it('deletes once while a delete runs', async () => {
