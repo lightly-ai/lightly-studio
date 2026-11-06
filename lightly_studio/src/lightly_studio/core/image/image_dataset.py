@@ -358,21 +358,18 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             AnnotationSourceInUseError: If evaluation runs use the annotation source, or if
                 the annotation source has child collections other than captions.
         """
-        child_id = collection_resolver.get_by_name(
-            session=self.session, name=annotation_source, parent_collection_id=self.collection_id
+        sources = collection_resolver.get_annotation_collections(
+            session=self.session, parent_collection_id=self.collection_id
         )
-        child = (
-            collection_resolver.get_by_id(session=self.session, collection_id=child_id)
-            if child_id is not None
-            else None
+        source = next(
+            (collection for collection in sources if collection.name == annotation_source), None
         )
-        # Other children, for example captions, can have the name too.
-        if child is None or child.sample_type != SampleType.ANNOTATION:
+        if source is None:
             raise ValueError(f"The dataset has no annotation source '{annotation_source}'.")
         return annotation_source_service.delete_annotation_source(
             session=self.session,
             dataset_collection_id=self.collection_id,
-            annotation_source_id=child.collection_id,
+            annotation_source_id=source.collection_id,
         )
 
     def add_samples_from_labelformat(  # noqa: PLR0913
