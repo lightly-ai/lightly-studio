@@ -48,6 +48,15 @@ vi.mock('./AnnotationClassesTab/useAnnotationClasses', () => ({
     })
 }));
 
+vi.mock('./AnnotationSourcesTab/useAnnotationSources', () => ({
+    useAnnotationSources: () => ({
+        query: { data: [], isLoading: false }
+    })
+}));
+vi.mock('$lib/hooks/useAnnotationSourceOwnerId/useAnnotationSourceOwnerId.svelte', () => ({
+    useAnnotationSourceOwnerId: () => ({ ownerCollectionId: undefined })
+}));
+
 // Get reference to the mocked function
 import { useSettings } from '$lib/hooks/useSettings';
 
@@ -292,6 +301,17 @@ describe('SettingsDialog', () => {
         expect(saveSettings).toHaveBeenCalledWith(
             expect.objectContaining({ image_interpolation: false })
         );
+    });
+
+    it('says that annotation source changes save immediately', async () => {
+        render(SettingsDialog);
+        await openDialog();
+
+        await openTab('Annotation sources');
+
+        expect(
+            screen.getByText('Changes to annotation sources save immediately.')
+        ).toBeInTheDocument();
     });
 
     it('should show saving state while submitting', async () => {
