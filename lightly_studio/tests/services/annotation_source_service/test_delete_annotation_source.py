@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from sqlmodel import Session
 
@@ -13,6 +15,7 @@ from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
     collection_resolver,
     evaluation_run_resolver,
+    export_job_resolver,
 )
 from lightly_studio.services import annotation_source_service
 from tests.helpers_resolvers import (
@@ -60,6 +63,29 @@ def test_delete_annotation_source(db_session: Session) -> None:
         session=db_session, parent_sample_ids=[image.sample_id]
     )
     assert [annotation.sample_id for annotation in remaining] == [gt.sample_id]
+
+
+def test_delete_annotation_source__export_file(db_session: Session, tmp_path: Path) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    (pred,) = helpers.create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
+    )
+    export_path = tmp_path / "predictions.json"
+    export_path.write_text("{}")
+    export_job_resolver.create(
+        session=db_session,
+        collection_id=pred.annotation_collection_id,
+        export_path=str(export_path),
+    )
+
+    annotation_source_service.delete_annotation_source(
+        session=db_session,
+        dataset_collection_id=collection.collection_id,
+        annotation_source_id=pred.annotation_collection_id,
+    )
+
+    assert not export_path.exists()
 
 
 def test_delete_annotation_source__empty_source(db_session: Session) -> None:
