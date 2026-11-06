@@ -88,5 +88,5 @@ def test_get_identity__local_with_headers(
 ) -> None:
     mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
 
-    with pytest.raises(RuntimeError, match="LIGHTLY_STUDIO_DEPLOYMENT_MODE"):
+    with pytest.raises(RuntimeError, match="Authentication is not supported in a local run"):
         identity.get_identity(x_user_email=x_user_email, x_user_role=x_user_role)
