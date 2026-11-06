@@ -23,7 +23,6 @@ class AssistedLabelingToolState {
     saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
     instancesClass = $state<string | null>(null);
-    // Kept across samples, so one prompt labels a whole series of images.
     instancesPrompt = $state('');
     maxInstances = $state(DEFAULT_MAX_INSTANCES);
     isDrawingInstancesBox = $state(false);
@@ -74,7 +73,10 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             annotationClass: instancesClass,
             annotationSource: annotationLabelContext.annotationSource,
             annotationSourceBlockedReason: annotationLabelContext.annotationSourceBlockedReason,
-            onSaved: refetch
+            onSaved: () => {
+                clearInstances();
+                refetch();
+            }
         };
     });
 
@@ -85,6 +87,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const clearInstances = () => {
         instances.clear();
         state.instancesPrompt = '';
+        endInstancesBoxDrawing();
     };
 
     $effect(() => {
@@ -101,10 +104,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         const tool = activeTool;
         untrack(() => {
             if (tool !== 'smart-select') smartSelect.clear();
-            if (tool !== 'find-instances') {
-                endInstancesBoxDrawing();
-                clearInstances();
-            }
+            if (tool !== 'find-instances') clearInstances();
         });
     });
 
