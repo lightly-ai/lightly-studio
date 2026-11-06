@@ -224,8 +224,10 @@ describe('useSmartSelect', () => {
         const first = smartSelect.save();
         const second = smartSelect.save();
         expect(smartSelect.canSave).toBe(false);
+        expect(smartSelect.isSaving).toBe(true);
         saving.resolve(undefined);
         await Promise.all([first, second]);
+        expect(smartSelect.isSaving).toBe(false);
 
         expect(mocks.saveAnnotationPreviews).toHaveBeenCalledTimes(1);
     });
