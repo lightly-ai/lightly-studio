@@ -230,7 +230,7 @@ jobs:
       # than falling back to looking for a token. `skip-existing` lets a run
       # that uploaded but failed to un-draft be re-dispatched.
       - name: Publish to the Index
-        uses: pypa/gh-action-pypi-publish@v1.14.2
+        uses: pypa/gh-action-pypi-publish@v1.14.3
         with:
           repository-url: >-
             ${{ inputs.target == 'pypi' && 'https://upload.pypi.org/legacy/'

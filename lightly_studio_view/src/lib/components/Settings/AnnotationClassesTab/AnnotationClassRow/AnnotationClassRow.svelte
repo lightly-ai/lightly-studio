@@ -1,7 +1,7 @@
 <script lang="ts">
     import { AnnotationColorLegend } from '$lib/components/AnnotationColorLegend';
     import { Input } from '$lib/components/ui/input';
-    import { cn, formatInteger } from '$lib/utils';
+    import { cn, formatInteger, trackAnnotationClassEvent } from '$lib/utils';
     import { AnnotationClassRowActions } from '../AnnotationClassRowActions';
     import { DeleteAnnotationClassDialog } from '../DeleteAnnotationClassDialog';
 
@@ -36,6 +36,7 @@
         isRenaming = false;
         const trimmed = draft.trim();
         if (!trimmed || trimmed === name) return;
+        trackAnnotationClassEvent('rename_submitted', { annotation_count: annotationCount });
         try {
             await onRename(trimmed);
         } catch {
@@ -44,8 +45,9 @@
     };
     // The input is inside the settings form, so Enter must not submit it.
     const onRenameKeyDown = (event: KeyboardEvent) => {
-        // Enter and Escape during IME composition belong to the input method.
-        if (event.isComposing) return;
+        // Enter and Escape during IME composition belong to the input method. Safari sends
+        // the Enter that confirms the text with isComposing false and keyCode 229.
+        if (event.isComposing || event.keyCode === 229) return;
         if (event.key === 'Enter') {
             event.preventDefault();
             saveRename();

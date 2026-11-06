@@ -3,6 +3,7 @@ export * from './resolveEffectiveColorBySource';
 export * from './groupAnnotationLabels';
 export * from './countVisibleSources';
 export * from './getColorByLabel';
+export * from './getColorBySource';
 export * from './getSimilarityColor';
 export * from './formatter';
 export * from './formatDate';
@@ -44,3 +45,4 @@ export {
     oklchToRgb,
     oklchHueWheelColor
 } from './colorConvert';
+export { trackAnnotationClassEvent, trackClassCreatedInPicker } from './trackAnnotationClassEvent';

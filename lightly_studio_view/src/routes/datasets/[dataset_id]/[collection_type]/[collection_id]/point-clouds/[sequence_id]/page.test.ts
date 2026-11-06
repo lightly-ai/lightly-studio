@@ -81,6 +81,14 @@ vi.mock('$lib/hooks', async () => {
             query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
         }),
         useTickCameraFrames: () => ({ query: { data: undefined } }),
+        // The right panel shows the sequence tags once the summary loads; stub the tag hooks.
+        useTags: () => ({ tags: writable([]), loadTags: vi.fn() }),
+        useAddTagToSample: () => ({
+            busy: writable(false),
+            addExisting: vi.fn(),
+            createAndAdd: vi.fn()
+        }),
+        useRemoveTagFromSample: () => ({ removeTagFromSample: vi.fn() }),
         useAnnotationCollections: () => ({ data: [] }),
         useMcapTickPrefetchScheduler: () => ({
             bufferedRanges: [],

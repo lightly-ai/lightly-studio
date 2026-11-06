@@ -33,11 +33,14 @@ dependencies = [
     # NumPy 2.5 requires Python 3.12 and higher.
     "numpy>=2.2.6; python_version < '3.12'",
     "numpy>=2.5.4; python_version >= '3.12'",
-    "pillow>=12.1.1; python_version < '3.11'",
+    "pillow>=12.3.0; python_version < '3.11'",
     "pillow>=13.0.0; python_version >= '3.11'",
-    "fastapi>=0.115.5",
+    # FastAPI 0.133.0 is the first version that allows starlette 1.x.
+    "fastapi>=0.133.0",
     "fsspec>=2023.1.0",
     "sqlalchemy-utils>=0.41.0",
+    # The floor holds the fixes for the form limit and StaticFiles advisories.
+    "starlette>=1.3.1",
     "sqlmodel>=0.0.22",
     "typing-extensions>=4.12.2",
     "uvicorn>=0.32.1",

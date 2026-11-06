@@ -1,8 +1,10 @@
 <script lang="ts">
-    import { untrack } from 'svelte';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { ListItem } from '$lib/components/SelectList/types';
+    import { untrack, type ComponentProps } from 'svelte';
+    import { SelectList } from '$lib/components/SelectList';
     import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
+
+    type ListItem = ComponentProps<typeof SelectList>['items'][number];
+
 
     const NO_TRACK_VALUE = '__no_track__';
     const NEW_TRACK_VALUE = '__new_track__';
@@ -26,7 +28,7 @@
     const noTrackItem: ListItem = { value: NO_TRACK_LABEL, label: NO_TRACK_LABEL };
     const newTrackItem: ListItem = { value: NEW_TRACK_LABEL, label: NEW_TRACK_LABEL };
 
-    const sortedItems = $derived.by(() => {
+    const sortedItems = $derived(() => {
         return [...tracks]
             .sort((a, b) => {
                 const classA = a.annotation_class_name ?? '';
@@ -81,7 +83,7 @@
 <div data-testid="track-select">
     <SelectList
         bind:selectedItem
-        items={sortedItems}
+        items={sortedItems()}
         pinnedTop={[noTrackItem]}
         pinnedBottom={[newTrackItem]}
         label={NO_TRACK_LABEL}

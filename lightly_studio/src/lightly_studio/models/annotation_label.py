@@ -28,6 +28,8 @@ class AnnotationLabelView(AnnotationLabelBase):
     """Model used when retrieving an annotation label."""
 
     annotation_label_id: UUID
+    color: str | None = None
+    alpha: float | None = None
 
 
 class AnnotationLabelWithCountView(AnnotationLabelView):
@@ -53,6 +55,9 @@ class AnnotationLabelTable(AnnotationLabelBase, table=True):
         default_factory=lambda: datetime.now(timezone.utc),
         index=True,
     )
+    # Custom display color as "#rrggbb", and its opacity in [0, 1]. Null means the default color.
+    color: str | None = None
+    alpha: float | None = None
     annotations: Mapped[list["AnnotationBaseTable"]] = Relationship(
         back_populates="annotation_label",
     )
