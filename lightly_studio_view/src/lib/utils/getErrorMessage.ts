@@ -1,18 +1,25 @@
+import type { ValidationError } from '$lib/api/lightly_studio_local';
+
+/**
+ * The response body of an HTTP error. FastAPI sends a `detail` list for a validation error and a
+ * `detail` text for other errors. Some endpoints send an `error` text.
+ */
+interface ApiErrorBody {
+    detail?: string | ValidationError[];
+    error?: string;
+}
+
 /**
  * Returns a message for an error from the API client, or `undefined` if it has none.
  *
- * An HTTP error gives the parsed response body, for example `{ detail: 'Not found' }` or a
- * validation error with a `detail` list. A transport failure gives an `Error`.
+ * An HTTP error gives the parsed response body. A transport failure gives an `Error`.
  */
-export const getErrorMessage = (error: unknown): string | undefined => {
-    if (typeof error !== 'object' || error === null) return undefined;
-    const body = error as { error?: unknown; detail?: unknown; message?: unknown };
-    if (typeof body.error === 'string') return body.error;
-    if (typeof body.detail === 'string') return body.detail;
-    if (Array.isArray(body.detail)) {
-        const msg = (body.detail[0] as { msg?: unknown } | undefined)?.msg;
-        if (typeof msg === 'string') return msg;
-    }
-    if (typeof body.message === 'string') return body.message;
-    return undefined;
+export const getErrorMessage = (
+    error: ApiErrorBody | Error | null | undefined
+): string | undefined => {
+    if (!error) return undefined;
+    if (error instanceof Error) return error.message;
+    if (error.error) return error.error;
+    if (typeof error.detail === 'string') return error.detail;
+    return error.detail?.[0]?.msg;
 };
