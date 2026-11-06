@@ -40,6 +40,8 @@ def remove_export_artifact(export_path: str) -> None:
         return
     if resolved_path.is_dir():
         shutil.rmtree(resolved_path, ignore_errors=True)
+        if resolved_path.exists():
+            logger.warning("Could not remove export artifact: %s", export_path)
         return
     try:
         resolved_path.unlink(missing_ok=True)
