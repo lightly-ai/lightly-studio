@@ -30,12 +30,13 @@ def get_deployment_mode() -> DeploymentMode:
         ValueError: If the value is not a known deployment mode.
     """
     value = env.LIGHTLY_STUDIO_DEPLOYMENT_MODE.strip().lower()
-    if value not in _MODE_VALUES:
+    try:
+        return DeploymentMode(value)
+    except ValueError as error:
         raise ValueError(
             f"Unknown LIGHTLY_STUDIO_DEPLOYMENT_MODE '{env.LIGHTLY_STUDIO_DEPLOYMENT_MODE}'. "
-            f"Use one of: {', '.join(sorted(_MODE_VALUES))}."
-        )
-    return DeploymentMode(value)
+            f"Use one of: {', '.join(mode.value for mode in DeploymentMode)}."
+        ) from error
 
 
 def is_enterprise() -> bool:
@@ -71,4 +72,5 @@ def validate_server_backend(backend: DatabaseBackend) -> None:
         )
 
 
-_MODE_VALUES: frozenset[str] = frozenset(mode.value for mode in DeploymentMode)
+# Fail at import on an unknown mode, not at the first use
+get_deployment_mode()
