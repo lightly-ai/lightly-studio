@@ -1,5 +1,5 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { render, screen, within } from '@testing-library/svelte';
+import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
@@ -15,7 +15,10 @@ const mocks = vi.hoisted(() => ({
     lastCreatedAnnotationId: null as string | null,
     enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
-    userRole: 'labeler' as string | undefined
+    userRole: 'labeler' as string | undefined,
+    pickClass: vi.fn(),
+    addReversibleAction: vi.fn(),
+    deleteAnnotation: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -54,7 +57,7 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     mocks.isEditingMode = isEditingMode;
     return {
         useGlobalStorage: vi.fn(() => ({
-            addReversibleAction: vi.fn(),
+            addReversibleAction: mocks.addReversibleAction,
             updateLastAnnotationLabel: vi.fn(),
             isEditingMode
         }))
@@ -76,8 +79,14 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     }))
 }));
 
+vi.mock('$lib/hooks/useStickyClass/useStickyClass', () => ({
+    useStickyClass: () => ({ pickClass: mocks.pickClass })
+}));
+
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: vi.fn(() => ({ data: [] }))
+    useAnnotationLabels: vi.fn(() => ({
+        data: [{ annotation_label_id: 'label-cat', annotation_label_name: 'cat' }]
+    }))
 }));
 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
@@ -85,7 +94,7 @@ vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
 }));
 
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
-    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: vi.fn() }))
+    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: mocks.deleteAnnotation }))
 }));
 
 vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
@@ -547,7 +556,7 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
             expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'true');
 
-            await user.click(within(getRow('gt-1')).getByRole('button'));
+            await user.click(within(getRow('gt-1')).getByTestId('mock-annotation-row-toggle'));
             expect(getRow('gt-1')).toHaveAttribute('data-hidden', 'true');
             expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
@@ -593,5 +602,48 @@ describe('SampleDetailsAnnotationSegment', () => {
 
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent('No annotations.');
         });
+    });
+
+    describe('deleting an annotation', () => {
+        const annotations = [createAnnotation('a1', groundTruthSource.collection_id, 'cat')];
+
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource];
+        });
+
+        it('offers undo once the delete succeeded', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('mock-annotation-row-delete'));
+
+            await waitFor(() => expect(mocks.addReversibleAction).toHaveBeenCalledOnce());
+        });
+
+        it('offers no undo when the delete failed', async () => {
+            mocks.deleteAnnotation.mockRejectedValueOnce(new Error('offline'));
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('mock-annotation-row-delete'));
+
+            await waitFor(() => expect(mocks.deleteAnnotation).toHaveBeenCalledOnce());
+            expect(mocks.addReversibleAction).not.toHaveBeenCalled();
+        });
+    });
+
+    it('makes a side-panel relabel an explicit class pick', async () => {
+        mocks.collections = [groundTruthSource];
+        const user = userEvent.setup();
+        render(SampleDetailsAnnotationSegment, {
+            props: {
+                ...defaultProps,
+                annotations: [createAnnotation('a1', groundTruthSource.collection_id, 'cat')]
+            }
+        });
+
+        await user.click(screen.getByTestId('mock-annotation-row-relabel'));
+
+        expect(mocks.pickClass).toHaveBeenCalledWith('collection-1', 'dog');
     });
 });
