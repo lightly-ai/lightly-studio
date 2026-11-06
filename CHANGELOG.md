@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Coloring image and crop embeddings by annotation class is faster by reducing repeated work when loading annotation labels.
 - Embedding plots color faster when no filters are active.
 - Improved labeling tool names, layout, and buttons.
 - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
