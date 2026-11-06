@@ -34,6 +34,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- Removed the `PUT /api/cloud-credentials` endpoint. It let any client that could reach the server set the cloud storage credentials.
+
 ## \[1.2.1\] - 2026-11-02
 
 ### Added
