@@ -7,7 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.mcap_sequence_summary import MCAPSequenceSummary
-from lightly_studio.resolvers import mcap_group_sequence_resolver, mcap_resolver
+from lightly_studio.resolvers import mcap_group_sequence_resolver, mcap_resolver, sample_resolver
 
 
 def get_mcap_sequence_summary(
@@ -39,6 +39,9 @@ def get_mcap_sequence_summary(
     if info.recording.dataset_id != dataset_id:
         return None
 
+    sample = sample_resolver.get_by_id(session=session, sample_id=sequence_id)
+    # The sequence exists, `get_info` checks it.
+    assert sample is not None
     start_log_time_ns = mcap_resolver.get_start_log_time_ns(
         session=session, sequence_id=sequence_id
     )
@@ -47,6 +50,7 @@ def get_mcap_sequence_summary(
     )
     return MCAPSequenceSummary.from_info(
         info=info,
+        sample=sample,
         start_log_time_ns=start_log_time_ns,
         channel_ids_by_component=channel_ids_by_component,
     )
