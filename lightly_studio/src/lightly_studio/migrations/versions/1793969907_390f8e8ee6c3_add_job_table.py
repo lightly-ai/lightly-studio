@@ -16,7 +16,6 @@ Create Date: 2026-11-06 14:58:27.677211
 """
 
 from collections.abc import Sequence
-from typing import Union
 
 import sqlalchemy as sa
 from alembic import op
@@ -25,9 +24,9 @@ from sqlmodel.sql.sqltypes import AutoString
 
 # revision identifiers, used by Alembic.
 revision: str = "390f8e8ee6c3"
-down_revision: Union[str, Sequence[str], None] = "8660d246e98e"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "8660d246e98e"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _STATUSES = ("QUEUED", "RUNNING", "COMPLETED", "FAILED", "CANCELLED")
 _ACTIVE_INDEX_NAME = "uq_job_resource_active"
