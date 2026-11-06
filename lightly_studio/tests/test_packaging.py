@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 from importlib import metadata
@@ -41,8 +42,15 @@ def test_import__without_jobs_extra() -> None:
     # A None entry in sys.modules makes every import of the module fail.
     imports = "; ".join(f"import {module}" for module in MODULES_WITHOUT_JOBS_EXTRA)
     code = f"import sys; sys.modules['hatchet_sdk'] = None; {imports}"
+    # The analytics fixture of the suite does not apply to the new process. Without this, the
+    # import starts a tracker that reports a failed import to PostHog.
+    environment = {**os.environ, "LIGHTLY_STUDIO_ANALYTICS_ENABLED": "false"}
     result = subprocess.run(
-        [sys.executable, "-c", code], capture_output=True, text=True, check=False
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=False,
+        env=environment,
     )
     assert result.returncode == 0, result.stderr
 
