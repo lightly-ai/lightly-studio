@@ -92,6 +92,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
             id: crypto.randomUUID(),
             groupId: undoGroup,
             description: 'Undo Smart select prompt',
+            canExecute: () => !isSaving,
             timestamp: new Date(),
             execute: () => {
                 dropPreview();
@@ -124,8 +125,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
     const save = async () => {
         const className = getParams().annotationClass;
         if (!preview || isSaving || isPending || !className?.trim()) return;
-        // Saving ends prompt editing; saved annotations have their own Undo action.
-        clearReversibleActionsByGroupId(undoGroup);
+        // Keep prompt undo until reset on success; a failed save can still be edited.
         isSaving = true;
         const { sampleId, saveAs, annotationSource, onSaved } = getParams();
         try {

@@ -6,6 +6,7 @@ export interface ReversibleAction {
     id: string;
     description: string;
     execute: ReversibleActionCallback;
+    canExecute?: () => boolean;
     timestamp: Date;
     groupId: string;
 }
@@ -21,7 +22,7 @@ export const useReversibleActions = () => {
         executeReversibleAction: async (actionId: string) => {
             const actions = get(reversibleActions);
             const action = actions.find((a) => a.id === actionId);
-            if (action) {
+            if (action && action.canExecute?.() !== false) {
                 await action.execute();
                 // Remove this action and all actions added after it
                 const actionIndex = actions.findIndex((a) => a.id === actionId);

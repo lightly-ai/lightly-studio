@@ -57,7 +57,7 @@
 
     const executeUndoAction = async (triggeredBy: TriggeredBy) => {
         const latestAction = $reversibleActions[0];
-        if (latestAction) {
+        if (latestAction && latestAction.canExecute?.() !== false) {
             trackEvent('edit_undo', {
                 collection_id: collection.collection_id,
                 triggered_by: triggeredBy
@@ -122,7 +122,9 @@
                             icon={Undo2}
                             buttonProps={{
                                 onclick: () => executeUndoAction('click'),
-                                disabled: $reversibleActions.length === 0,
+                                disabled:
+                                    $reversibleActions.length === 0 ||
+                                    $reversibleActions[0].canExecute?.() === false,
                                 title: $reversibleActions[0]
                                     ? $reversibleActions[0].description
                                     : 'No action to undo',
