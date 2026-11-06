@@ -23,8 +23,6 @@
         annotationClass={assistedLabeling.smartSelectClass}
         onAnnotationClassChange={(value) => (toolState.smartSelectClass = value)}
         canSave={smartSelect.canSave}
-        isPending={smartSelect.isPending}
-        needsPositivePoint={smartSelect.needsPositivePoint}
         onSave={() => void smartSelect.save()}
         onClear={smartSelect.clear}
     />

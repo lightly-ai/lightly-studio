@@ -21,6 +21,7 @@
         className = ''
     }: Props = $props();
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
+    const labelId = $props.id();
     const items = $derived(getSelectionItems(annotationLabels.data ?? []));
     const selectedItem = $derived.by((): ListItem | undefined => {
         if (value == null) return undefined;
@@ -28,11 +29,13 @@
     });
 </script>
 
+<div id={labelId} class="text-xs text-muted-foreground">{label}</div>
 <SelectList
     {items}
     {selectedItem}
     name="annotation-class"
-    {label}
+    label="Select an annotation class"
+    labelledBy={labelId}
     placeholder="Select an annotation class"
     className={cn('w-full', className)}
     contentClassName="w-full"

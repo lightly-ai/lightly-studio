@@ -1,6 +1,5 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import { Loader2 } from '@lucide/svelte';
     import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
 
     type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];
@@ -12,8 +11,6 @@
         annotationClass?: string | null;
         onAnnotationClassChange: (value: string) => void;
         canSave: boolean;
-        isPending: boolean;
-        needsPositivePoint: boolean;
         onSave: () => void;
         onClear: () => void;
     }
@@ -25,8 +22,6 @@
         annotationClass,
         onAnnotationClassChange,
         canSave,
-        isPending,
-        needsPositivePoint,
         onSave,
         onClear
     }: Props = $props();
@@ -43,16 +38,7 @@
     {onSave}
     {onClear}
 >
-    {#if isPending}
-        <p class="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2 class="size-4 animate-spin" />
-            Loading the preview...
-        </p>
-    {:else if needsPositivePoint}
-        <p class="text-xs text-muted-foreground">Click the object to add a point first.</p>
-    {:else}
-        <p class="text-xs text-muted-foreground">
-            Click to add, shift-click to remove. Or drag a box.
-        </p>
-    {/if}
+    <p class="text-xs text-muted-foreground">
+        Click to select. Shift-click to exclude. Drawing a box starts a new selection.
+    </p>
 </AnnotationToolPopUp>
