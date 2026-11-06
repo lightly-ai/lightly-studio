@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from lightly_studio.assisted_labeling.provider import (
-    AssistedLabelingProvider,
-    ProviderImage,
-    SegmentationPrompt,
-)
+from lightly_studio.assisted_labeling.labeling_model import LabelingImage
+from lightly_studio.assisted_labeling.provider import AssistedLabelingProvider, SegmentationPrompt
 from lightly_studio.models.assisted_labeling import (
     InteractiveAnnotationRequest,
     InteractiveAnnotationResponse,
@@ -20,7 +17,7 @@ from lightly_studio.services.assisted_labeling_service import (
 
 def create_interactive_preview(
     provider: AssistedLabelingProvider,
-    image: ProviderImage,
+    image: LabelingImage,
     request: InteractiveAnnotationRequest,
     user_email: str | None,
 ) -> InteractiveAnnotationResponse:

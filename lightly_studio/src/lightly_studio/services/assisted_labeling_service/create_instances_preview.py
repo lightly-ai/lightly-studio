@@ -2,11 +2,8 @@
 
 from __future__ import annotations
 
-from lightly_studio.assisted_labeling.provider import (
-    AssistedLabelingProvider,
-    ProviderImage,
-    SegmentationPrompt,
-)
+from lightly_studio.assisted_labeling.labeling_model import LabelingImage
+from lightly_studio.assisted_labeling.provider import AssistedLabelingProvider, SegmentationPrompt
 from lightly_studio.models.assisted_labeling import (
     InstancesAnnotationRequest,
     InstancesAnnotationResponse,
@@ -23,7 +20,7 @@ _MIN_MULTI_INSTANCE_MASKS = 2
 
 def create_instances_preview(
     provider: AssistedLabelingProvider,
-    image: ProviderImage,
+    image: LabelingImage,
     request: InstancesAnnotationRequest,
     user_email: str | None,
 ) -> InstancesAnnotationResponse:

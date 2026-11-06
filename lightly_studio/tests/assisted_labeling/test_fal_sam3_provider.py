@@ -15,11 +15,11 @@ from pytest_mock import MockerFixture
 
 from lightly_studio.assisted_labeling import fal_sam3_provider
 from lightly_studio.assisted_labeling.fal_sam3_provider import FalSam3Provider
+from lightly_studio.assisted_labeling.labeling_model import LabelingImage
 from lightly_studio.assisted_labeling.provider import (
     BoxPrompt,
     PointPrompt,
     ProviderError,
-    ProviderImage,
     ProviderNotCalledError,
     ProviderUnavailableError,
 )
@@ -311,7 +311,7 @@ class TestFalSam3Provider:
         def read_bytes() -> bytes:
             raise ProviderError("unreadable")
 
-        image = ProviderImage(
+        image = LabelingImage(
             sample_id=UUID(int=1), width=4, height=2, file_name="a.jpg", read_bytes=read_bytes
         )
 
@@ -328,7 +328,7 @@ class TestFalSam3Provider:
         def read_bytes() -> bytes:
             raise NotFoundError("The image file 'a.jpg' could not be read.")
 
-        image = ProviderImage(
+        image = LabelingImage(
             sample_id=UUID(int=1), width=4, height=2, file_name="a.jpg", read_bytes=read_bytes
         )
 

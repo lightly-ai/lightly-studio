@@ -9,6 +9,8 @@ import pydantic
 from pydantic import BaseModel, StringConstraints
 from pydantic_core import PydanticCustomError
 
+from lightly_studio.assisted_labeling.labeling_model import ModelTask
+
 
 class AssistedLabelingStatusView(BaseModel):
     """State of assisted labeling.
@@ -27,6 +29,10 @@ DEFAULT_MAX_INSTANCES = 16
 MAX_INSTANCES_LIMIT = 32
 MAX_INSTANCES_BOXES = 100
 MAX_INSTANCES_TEXT_PROMPT_LENGTH = 200
+DEFAULT_MODEL_THRESHOLD = 0.5
+DEFAULT_MODEL_MAX_INSTANCES = 100
+MAX_MODEL_INSTANCES_LIMIT = 300
+MAX_MODEL_CLASS_NAMES = 1000
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
 # context of a `ValueError` is not JSON serializable in the 422 response.
@@ -143,3 +149,76 @@ class InstancesAnnotationResponse(BaseModel):
     """Instance previews sorted by descending score."""
 
     predictions: list[AnnotationPreview]
+
+
+class LabelingModelView(BaseModel):
+    """A model that can label images.
+
+    Attributes:
+        id: ID of the model, for example `ltdetrv2-s-coco`.
+        task: Task of the model.
+        class_names: Names of the classes that the model can predict.
+    """
+
+    id: str
+    task: ModelTask
+    class_names: list[str]
+
+
+class LabelingModelsView(BaseModel):
+    """Models that can label images.
+
+    Attributes:
+        models: The models. Empty if the models are not available.
+        unavailable_reason: None if the models are available, else the reason why not.
+    """
+
+    models: list[LabelingModelView]
+    unavailable_reason: str | None
+
+
+class ModelAnnotationRequest(BaseModel):
+    """Request for previews of the annotations that a model predicts for an image.
+
+    Attributes:
+        model_id: ID of the model to run.
+        threshold: Minimum confidence score of a preview.
+        max_instances: Maximum number of previews.
+        class_names: Classes to keep. None keeps all classes of the model.
+    """
+
+    collection_id: UUID
+    sample_id: UUID
+    model_id: Annotated[str, StringConstraints(min_length=1, max_length=200)]
+    threshold: float = pydantic.Field(
+        default=DEFAULT_MODEL_THRESHOLD, ge=0, le=1, allow_inf_nan=False
+    )
+    max_instances: int = pydantic.Field(
+        default=DEFAULT_MODEL_MAX_INSTANCES, ge=1, le=MAX_MODEL_INSTANCES_LIMIT
+    )
+    class_names: list[str] | None = pydantic.Field(
+        default=None, min_length=1, max_length=MAX_MODEL_CLASS_NAMES
+    )
+
+
+class ModelAnnotationPreview(BaseModel):
+    """An annotation that a model predicted, as a preview that is not saved.
+
+    Attributes:
+        class_name: Name of the predicted annotation class.
+        bbox: Bounding box in pixels.
+        segmentation_mask: Full-image row-wise run-length encoding of the mask, in the
+            format of the annotation create endpoint. None if the model predicts no masks.
+        score: Confidence score.
+    """
+
+    class_name: str
+    bbox: AnnotationPreviewBox
+    segmentation_mask: list[int] | None
+    score: float
+
+
+class ModelAnnotationResponse(BaseModel):
+    """Model previews sorted by descending score."""
+
+    predictions: list[ModelAnnotationPreview]

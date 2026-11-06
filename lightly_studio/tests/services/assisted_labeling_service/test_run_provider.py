@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 from pytest_mock import MockerFixture
 
+from lightly_studio.assisted_labeling.labeling_model import PredictedAnnotation
 from lightly_studio.assisted_labeling.provider import (
     PointPrompt,
     Prediction,
@@ -19,7 +20,7 @@ from lightly_studio.errors import NotFoundError
 from lightly_studio.services.assisted_labeling_service import run_provider
 from lightly_studio.usage import usage_reporter
 from tests.assisted_labeling import helpers
-from tests.services.assisted_labeling_service.helpers import StubProvider
+from tests.services.assisted_labeling_service.helpers import StubLabelingModel, StubProvider
 
 PROMPT = helpers.make_prompt(points=[PointPrompt(x=50, y=25, positive=True)])
 COLLECTION_ID = UUID(int=7)
@@ -128,6 +129,47 @@ def test_segment__new_event_id_per_call(mocker: MockerFixture) -> None:
 
     assert len(reported) == 2
     assert reported[0].event_id != reported[1].event_id
+
+
+def test_detect(mocker: MockerFixture) -> None:
+    reported = _capture_reports(mocker=mocker)
+    prediction = PredictedAnnotation(class_name="cat", box=(0.0, 0.0, 1.0, 1.0), score=0.9)
+    model = StubLabelingModel(predictions=[prediction], model_id="ltdetrv2-s-coco")
+    image = helpers.make_image(width=100, height=50)
+
+    predictions = run_provider.predict(
+        model=model,
+        image=image,
+        threshold=0.5,
+        collection_id=COLLECTION_ID,
+        user_email=None,
+    )
+
+    assert predictions == [prediction]
+    assert model.thresholds == [0.5]
+    (event,) = reported
+    assert event.operation == "label_with_model"
+    assert event.vendor == "stub-vendor"
+    assert event.model == "ltdetrv2-s-coco"
+    assert event.success is True
+    assert event.details == {"sample_id": str(image.sample_id), "num_predictions": 1}
+
+
+def test_detect__provider_error(mocker: MockerFixture) -> None:
+    reported = _capture_reports(mocker=mocker)
+    model = StubLabelingModel(error=ProviderError("failed"))
+
+    with pytest.raises(ProviderError, match="failed"):
+        run_provider.predict(
+            model=model,
+            image=helpers.make_image(width=100, height=50),
+            threshold=0.5,
+            collection_id=COLLECTION_ID,
+            user_email=None,
+        )
+
+    (event,) = reported
+    assert event.success is False
 
 
 def _capture_reports(mocker: MockerFixture) -> list[usage_reporter.UsageEvent]:

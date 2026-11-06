@@ -35,6 +35,24 @@ describe('AnnotationToolPopUp', () => {
         expect(onSaveAsChange).toHaveBeenCalledWith('box');
     });
 
+    it('hides the save controls when showSaveControls is false', () => {
+        render(AnnotationToolPopUp, { props: { ...defaultProps, showSaveControls: false } });
+        expect(screen.getByText('Tool controls')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Clear' })).not.toBeInTheDocument();
+    });
+
+    it('hides the save as toggle when showSaveAs is false', () => {
+        render(AnnotationToolPopUp, { props: { ...defaultProps, showSaveAs: false } });
+        expect(screen.queryByRole('group', { name: 'Save as' })).not.toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
+    });
+
+    it('shows the save label', () => {
+        render(AnnotationToolPopUp, { props: { ...defaultProps, saveLabel: 'Save 3' } });
+        expect(screen.getByRole('button', { name: 'Save 3' })).toBeInTheDocument();
+    });
+
     it('calls onSave and onClear', async () => {
         const onSave = vi.fn();
         const onClear = vi.fn();

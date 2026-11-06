@@ -4,12 +4,8 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from lightly_studio.assisted_labeling.provider import (
-    BoxPrompt,
-    PointPrompt,
-    ProviderImage,
-    SegmentationPrompt,
-)
+from lightly_studio.assisted_labeling.labeling_model import LabelingImage
+from lightly_studio.assisted_labeling.provider import BoxPrompt, PointPrompt, SegmentationPrompt
 
 DEFAULT_SAMPLE_ID = UUID(int=1)
 
@@ -20,8 +16,8 @@ def make_image(
     sample_id: UUID = DEFAULT_SAMPLE_ID,
     file_name: str = "image.jpg",
     data: bytes = b"image-bytes",
-) -> ProviderImage:
-    return ProviderImage(
+) -> LabelingImage:
+    return LabelingImage(
         sample_id=sample_id,
         width=width,
         height=height,

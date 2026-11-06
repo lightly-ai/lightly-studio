@@ -4,7 +4,8 @@ import uuid
 
 import numpy as np
 
-from lightly_studio.assisted_labeling.provider import BoxPrompt, Prediction, ProviderImage
+from lightly_studio.assisted_labeling.labeling_model import LabelingImage
+from lightly_studio.assisted_labeling.provider import BoxPrompt, Prediction
 from lightly_studio.models.assisted_labeling import (
     AnnotationBox,
     AnnotationPreviewBox,
@@ -123,7 +124,7 @@ def _prediction(x: int, score: float) -> Prediction:
 
 
 def _request(
-    image: ProviderImage,
+    image: LabelingImage,
     text_prompt: str,
     boxes: list[AnnotationBox] | None = None,
     max_instances: int = 16,

@@ -20,8 +20,10 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_SERVICE_UNAVAILABLE,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
-from lightly_studio.assisted_labeling import fal_sam3_provider
+from lightly_studio.assisted_labeling import fal_sam3_provider, labeling_model_registry
 from lightly_studio.assisted_labeling.fal_sam3_provider import FalSam3Provider
+from lightly_studio.assisted_labeling.labeling_model import ModelTask, PredictedAnnotation
+from lightly_studio.assisted_labeling.labeling_model_registry import LabelingModelRegistry
 from lightly_studio.assisted_labeling.provider import (
     Prediction,
     ProviderError,
@@ -29,7 +31,7 @@ from lightly_studio.assisted_labeling.provider import (
 )
 from lightly_studio.usage import usage_reporter
 from tests.helpers_resolvers import create_collection, create_image
-from tests.services.assisted_labeling_service.helpers import StubProvider
+from tests.services.assisted_labeling_service.helpers import StubLabelingModel, StubProvider
 
 POSITIVE_POINT = {"x": 0.5, "y": 0.5, "positive": True}
 
@@ -39,6 +41,13 @@ def stub_provider(mocker: MockerFixture) -> StubProvider:
     provider = StubProvider()
     mocker.patch.object(fal_sam3_provider, "get_provider", return_value=provider)
     return provider
+
+
+@pytest.fixture
+def model_registry(mocker: MockerFixture) -> LabelingModelRegistry:
+    registry = LabelingModelRegistry()
+    mocker.patch.object(labeling_model_registry, "_registry", registry)
+    return registry
 
 
 def test_get_assisted_labeling_status(
@@ -366,6 +375,136 @@ def test_create_instances_annotation_preview__unavailable(
     assert response.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
     assert response.json() == {"error": "Set the FAL_KEY environment variable."}
     create_client.assert_not_called()
+
+
+def test_get_labeling_models(
+    test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model_registry.register(
+        model=StubLabelingModel(
+            model_id="seg", task=ModelTask.INSTANCE_SEGMENTATION, class_names=["cat"]
+        )
+    )
+
+    response = test_client.get("/api/annotate/models")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "models": [{"id": "seg", "task": "instance_segmentation", "class_names": ["cat"]}],
+        "unavailable_reason": None,
+    }
+
+
+@pytest.mark.usefixtures("model_registry")
+def test_get_labeling_models__none_registered(test_client: TestClient) -> None:
+    response = test_client.get("/api/annotate/models")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "models": [],
+        "unavailable_reason": (
+            "No labeling model is registered. Call ls.register_labeling_model before ls.start_gui."
+        ),
+    }
+
+
+def test_create_model_annotation_preview(
+    db_session: Session, media_test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model = StubLabelingModel(
+        model_id="ltdetrv2-s-coco",
+        predictions=[PredictedAnnotation(class_name="cat", box=(10.0, 5.0, 30.0, 25.0), score=0.8)],
+    )
+    model_registry.register(model=model)
+    collection = create_collection(session=db_session)
+    image = create_image(
+        session=db_session, collection_id=collection.collection_id, width=100, height=50
+    )
+
+    response = media_test_client.post(
+        "/api/annotate/model",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "model_id": "ltdetrv2-s-coco",
+            "threshold": 0.3,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert model.thresholds == [0.3]
+    assert response.json() == {
+        "predictions": [
+            {
+                "class_name": "cat",
+                "bbox": {"x": 10, "y": 5, "width": 20, "height": 20},
+                "segmentation_mask": None,
+                "score": 0.8,
+            }
+        ]
+    }
+
+
+def test_create_model_annotation_preview__unknown_model(
+    db_session: Session, media_test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model_registry.register(model=StubLabelingModel(model_id="other"))
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/model",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "model_id": "m",
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert response.json() == {"error": "No labeling model with ID 'm' is registered."}
+
+
+def test_create_model_annotation_preview__provider_error(
+    db_session: Session, media_test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model_registry.register(
+        model=StubLabelingModel(model_id="m", error=ProviderError("The model failed."))
+    )
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/model",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "model_id": "m",
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
+    assert response.json() == {"error": "The model failed."}
+
+
+def test_create_model_annotation_preview__invalid_threshold(
+    test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model = StubLabelingModel(model_id="m")
+    model_registry.register(model=model)
+
+    response = test_client.post(
+        "/api/annotate/model",
+        json={
+            "collection_id": str(uuid.uuid4()),
+            "sample_id": str(uuid.uuid4()),
+            "model_id": "m",
+            "threshold": 1.5,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
+    assert model.thresholds == []
 
 
 def _post_interactive(

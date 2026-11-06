@@ -5,7 +5,10 @@
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
 
     interface Props {
-        preview: Pick<AnnotationPreview, 'bbox' | 'segmentation_mask'>;
+        // A null mask shows only the box, e.g. for an object detection model.
+        preview: Pick<AnnotationPreview, 'bbox'> & {
+            segmentation_mask: AnnotationPreview['segmentation_mask'] | null;
+        };
         image: { width: number };
         saveAs: 'mask' | 'box';
     }
@@ -16,7 +19,7 @@
 </script>
 
 <g pointer-events="none" data-testid="annotation-preview">
-    {#if saveAs === 'mask'}
+    {#if saveAs === 'mask' && preview.segmentation_mask}
         <SampleAnnotationSegmentationRLE
             width={image.width}
             segmentation={preview.segmentation_mask}

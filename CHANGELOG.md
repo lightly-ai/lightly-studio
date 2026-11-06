@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Annotation class colors are saved in the dataset and shared by all users of it.
 - Filter samples by evaluation run and per-sample metrics in the GUI query filter using `sample_evaluation(...)`.
 - Python SDK: Store the per-class average precision of object-detection runs at each IoU threshold when `compute_average_precision=True` is set in `ObjectDetectionEvaluationConfig`.
+- Python SDK: Label images in the GUI with your own model. Subclass `ls.LabelingModel` and call `ls.register_labeling_model` before `ls.start_gui`.
 
 ### Changed
 
