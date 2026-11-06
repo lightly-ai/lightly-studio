@@ -419,7 +419,14 @@
         {/if}
     {/snippet}
 </ZoomableContainer>
-<AnnotationCardLayer {collectionId} getLayer={() => annotationLayer} />
+<AnnotationCardLayer
+    {collectionId}
+    annotations={actualAnnotationsToShow}
+    {selectedAnnotationId}
+    {refetch}
+    getLayer={() => annotationLayer}
+    {colorBySource}
+/>
 
 <style>
     .hidden {
