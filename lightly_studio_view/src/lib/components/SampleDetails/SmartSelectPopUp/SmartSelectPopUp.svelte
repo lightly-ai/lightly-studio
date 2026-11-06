@@ -12,6 +12,7 @@
         annotationClass?: string | null;
         onAnnotationClassChange: (value: string) => void;
         canSave: boolean;
+        isSaving?: boolean;
         isPending: boolean;
         needsPositivePoint: boolean;
         onSave: () => void;
@@ -25,6 +26,7 @@
         annotationClass,
         onAnnotationClassChange,
         canSave,
+        isSaving = false,
         isPending,
         needsPositivePoint,
         onSave,
@@ -40,6 +42,7 @@
     {saveAs}
     {onSaveAsChange}
     {canSave}
+    {isSaving}
     {onSave}
     {onClear}
 >

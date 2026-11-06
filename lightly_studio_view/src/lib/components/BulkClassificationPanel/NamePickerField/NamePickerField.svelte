@@ -11,9 +11,18 @@
         names: string[];
         disabled?: boolean;
         onSelect: (name: string) => void;
+        onCreate?: () => void;
     }
 
-    let { label, placeholder, selectedName, names, disabled = false, onSelect }: Props = $props();
+    let {
+        label,
+        placeholder,
+        selectedName,
+        names,
+        disabled = false,
+        onSelect,
+        onCreate
+    }: Props = $props();
 
     const labelId = $props.id();
 
@@ -39,6 +48,7 @@
         className="w-full"
         contentClassName="w-[var(--bits-popover-anchor-width)]"
         onSelect={handleSelect}
+        {onCreate}
         {disabled}
     />
 </div>

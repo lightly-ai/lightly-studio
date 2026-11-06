@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
@@ -53,6 +54,7 @@
 {#if $isEditingMode}
     <div class="min-w-0">
         <SelectList
+            onCreate={trackClassCreatedInPicker}
             {items}
             selectedItem={items.find((i) => i.value === value?.value)}
             name="annotation-label"
