@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
-from sqlmodel import col
+from sqlmodel import Session, col
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -24,7 +24,11 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
-from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
+from lightly_studio.models.collection import (
+    AnnotationCollectionView,
+    AnnotationCollectionWithCountView,
+    CollectionTable,
+)
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -74,21 +78,39 @@ def read_annotation_collections(
     Each entry includes the distinct annotation types it contains, so the GUI
     can filter sources to those compatible with a chosen evaluation task.
     """
-    collections = collection_resolver.get_annotation_collections(
-        session=session,
-        parent_collection_id=collection.collection_id,
+    return _list_annotation_collection_views(
+        session=session, parent_collection_id=collection.collection_id
     )
-    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+
+
+@annotations_router.get(
+    "/annotation_collections_with_counts",
+    response_model=list[AnnotationCollectionWithCountView],
+)
+def read_annotation_collections_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationCollectionWithCountView]:
+    """List annotation collections under the parent collection with their annotation counts."""
+    sources = _list_annotation_collection_views(
+        session=session, parent_collection_id=collection.collection_id
+    )
+    counts = collection_resolver.get_annotation_counts_by_collection_ids(
         session=session,
-        collection_ids=[c.collection_id for c in collections],
+        collection_ids=[s.collection_id for s in sources],
     )
     return [
-        AnnotationCollectionView(
-            collection_id=c.collection_id,
-            name=c.name,
-            annotation_types=types_by_collection_id.get(c.collection_id, []),
+        AnnotationCollectionWithCountView(
+            collection_id=s.collection_id,
+            name=s.name,
+            annotation_types=s.annotation_types,
+            annotation_count=counts.get(s.collection_id, 0),
         )
-        for c in collections
+        for s in sources
     ]
 
 
@@ -326,3 +348,24 @@ def get_annotation_with_payload(
 ) -> AnnotationDetailsWithPayloadView | None:
     """Retrieve an existing annotation with payload from the database."""
     return annotation_resolver.get_by_id_with_payload(session=session, sample_id=sample_id)
+
+
+def _list_annotation_collection_views(
+    session: Session, parent_collection_id: UUID
+) -> list[AnnotationCollectionView]:
+    collections = collection_resolver.get_annotation_collections(
+        session=session,
+        parent_collection_id=parent_collection_id,
+    )
+    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session,
+        collection_ids=[c.collection_id for c in collections],
+    )
+    return [
+        AnnotationCollectionView(
+            collection_id=c.collection_id,
+            name=c.name,
+            annotation_types=types_by_collection_id.get(c.collection_id, []),
+        )
+        for c in collections
+    ]
