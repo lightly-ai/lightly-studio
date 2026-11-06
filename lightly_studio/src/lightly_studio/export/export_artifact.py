@@ -15,18 +15,22 @@ def remove_export_artifact(export_path: str) -> None:
 
     Every ``export_path`` is generated under the system temp directory (see
     ``lightly_studio.api.routes.api.export``); paths outside of it are left untouched rather than
-    removed, since they cannot be confirmed to be export-owned.
+    removed, since they cannot be confirmed to be export-owned. A file system error is logged
+    and does not stop the caller.
 
     Args:
         export_path: Absolute path to the export job's file or directory.
     """
     try:
-        resolved_path = Path(export_path).resolve()
-        temp_dir = Path(tempfile.gettempdir()).resolve()
+        _remove_export_artifact(export_path=export_path)
     except (OSError, RuntimeError):
         # A symlink loop raises RuntimeError before Python 3.13.
-        logger.warning("Could not resolve export artifact: %s", export_path, exc_info=True)
-        return
+        logger.warning("Could not remove export artifact: %s", export_path, exc_info=True)
+
+
+def _remove_export_artifact(export_path: str) -> None:
+    resolved_path = Path(export_path).resolve()
+    temp_dir = Path(tempfile.gettempdir()).resolve()
     try:
         relative_path = resolved_path.relative_to(temp_dir)
     except ValueError:
@@ -42,8 +46,5 @@ def remove_export_artifact(export_path: str) -> None:
         shutil.rmtree(resolved_path, ignore_errors=True)
         if resolved_path.exists():
             logger.warning("Could not remove export artifact: %s", export_path)
-        return
-    try:
+    else:
         resolved_path.unlink(missing_ok=True)
-    except OSError:
-        logger.warning("Could not remove export artifact: %s", export_path, exc_info=True)
