@@ -13,8 +13,6 @@ const defaultProps = {
     annotationClass: null,
     onAnnotationClassChange: vi.fn(),
     canSave: false,
-    isPending: false,
-    needsPositivePoint: false,
     onSave: vi.fn(),
     onClear: vi.fn()
 };
@@ -23,17 +21,16 @@ describe('SmartSelectPopUp', () => {
     it('shows how to place prompts', () => {
         render(SmartSelectPopUp, { props: defaultProps });
         expect(
-            screen.getByText('Click to add, shift-click to remove. Or drag a box.')
+            screen.getByText(
+                'Click to select. Shift-click to exclude. Drawing a box starts a new selection.'
+            )
         ).toBeInTheDocument();
     });
 
-    it('shows that the preview is loading', () => {
-        render(SmartSelectPopUp, { props: { ...defaultProps, isPending: true } });
-        expect(screen.getByText('Loading the preview...')).toBeInTheDocument();
-    });
-
-    it('asks for a positive point', () => {
-        render(SmartSelectPopUp, { props: { ...defaultProps, needsPositivePoint: true } });
-        expect(screen.getByText('Click the object to add a point first.')).toBeInTheDocument();
+    it('keeps the class selector labelled after a class is selected', () => {
+        render(SmartSelectPopUp, { props: { ...defaultProps, annotationClass: 'person' } });
+        expect(
+            screen.getByRole('combobox', { name: 'Annotation class person' })
+        ).toBeInTheDocument();
     });
 });
