@@ -17,12 +17,19 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_SERVICE_UNAVAILABLE,
+    HTTP_STATUS_UNAUTHORIZED,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import ExportError, NotFoundError, QueryExprError, UnknownImageSizeError
+from lightly_studio.errors import (
+    ExportError,
+    NotFoundError,
+    QueryExprError,
+    UnauthenticatedError,
+    UnknownImageSizeError,
+)
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -137,6 +144,14 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
             status_code=HTTP_STATUS_NOT_FOUND,
             content={"error": str(_exc) or "Resource not found."},
         )
+
+    # An auth failure is an expected client error, so it is not reported.
+    @app.exception_handler(UnauthenticatedError)
+    async def _unauthenticated_error_handler(
+        _request: Request, _exc: UnauthenticatedError
+    ) -> JSONResponse:
+        """Handle a request without a valid user identity."""
+        return JSONResponse(status_code=HTTP_STATUS_UNAUTHORIZED, content={"error": str(_exc)})
 
     @app.exception_handler(UnknownImageSizeError)
     async def _unknown_image_size_error_handler(
