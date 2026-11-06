@@ -9,7 +9,7 @@
 <button
     type="button"
     {onclick}
-    aria-label="Segmentation Mask Brush"
+    aria-label="Mask brush"
     class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none
