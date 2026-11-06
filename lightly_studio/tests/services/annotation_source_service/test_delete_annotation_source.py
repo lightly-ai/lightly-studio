@@ -167,6 +167,35 @@ def test_delete_annotation_source__has_child_collection(db_session: Session) -> 
     assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
 
 
+def test_delete_annotation_source__caption_with_caption(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    (pred,) = helpers.create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
+    )
+    caption = create_caption(
+        session=db_session,
+        collection_id=pred.annotation_collection_id,
+        parent_sample_id=pred.sample_id,
+    )
+    create_caption(
+        session=db_session,
+        collection_id=caption.sample.collection_id,
+        parent_sample_id=caption.sample_id,
+    )
+
+    with pytest.raises(
+        AnnotationSourceInUseError,
+        match=r"'predictions' cannot be deleted because it has data attached: caption\.",
+    ):
+        annotation_source_service.delete_annotation_source(
+            session=db_session,
+            dataset_collection_id=collection.collection_id,
+            annotation_source_id=pred.annotation_collection_id,
+        )
+    assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
+
+
 def test_delete_annotation_source__with_caption(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
