@@ -9,7 +9,6 @@ export * from './namePerCollection';
 export * from './getSimilarityColor';
 export * from './formatter';
 export * from './formatDate';
-export * from './getErrorMessage';
 export * from './echartsTheme';
 export * from './shadcn';
 export * from './isInputElement';
