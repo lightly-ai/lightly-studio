@@ -1,7 +1,8 @@
-"""Dialect-aware JSON extraction functions.
+"""Dialect-aware JSON column type and extraction functions.
 
-Thin wrappers over SQLAlchemy's JSON indexing, which compiles to the right operator
-chain for DuckDB and PostgreSQL and binds every key as a parameter.
+`JSONB_TYPE` is the column type for JSON columns. Extraction functions are thin wrappers
+over SQLAlchemy's JSON indexing, which compiles to the right operator chain for DuckDB and
+PostgreSQL and binds every key as a parameter.
 
 Extraction helpers read values as text or floats because neither database compares raw
 JSON against plain values, and PostgreSQL cannot order or cast it directly. The scalar
@@ -17,12 +18,17 @@ import re
 from typing import Any, cast
 
 import sqlalchemy
-from sqlalchemy import ColumnElement, Text
+from sqlalchemy import JSON, ColumnElement, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.engine.interfaces import Dialect
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.sql.compiler import SQLCompiler
 from sqlalchemy.sql.functions import GenericFunction
 from sqlalchemy.types import TypeDecorator
+
+# JSON on DuckDB, JSONB on PostgreSQL. JSONB stores the JSON pre-parsed as binary, so
+# queries do not parse it again on each access.
+JSONB_TYPE = JSON().with_variant(JSONB(), "postgresql")
 
 _DUCKDB_DIALECT = "duckdb"
 
