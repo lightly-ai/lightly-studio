@@ -35,4 +35,4 @@ def delete_annotation_source(
         annotation_source_id=annotation_source_id,
     )
     checks.check_not_in_use(session=session, source=source)
-    return steps.delete_source(session=session, source_id=annotation_source_id)
+    return steps.delete_source(session=session, source=source)
