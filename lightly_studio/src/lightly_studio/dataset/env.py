@@ -64,3 +64,20 @@ LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS: int = env.int("LIGHTLY_STUDIO_REQUEST_TI
 LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR: bool = env.bool(
     "LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR", False
 )
+
+# The per-tenant secret that signs job payloads.
+LIGHTLY_STUDIO_JOBS_SIGNING_SECRET: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_JOBS_SIGNING_SECRET", default=None
+)
+LIGHTLY_STUDIO_JOBS_TENANT: str = env.str("LIGHTLY_STUDIO_JOBS_TENANT", "default")
+# "none" or "ecs". Invalid values are rejected when jobs start, not on import.
+LIGHTLY_STUDIO_JOBS_WORKER_LAUNCHER: str = env.str("LIGHTLY_STUDIO_JOBS_WORKER_LAUNCHER", "none")
+# "env" or "ssm". Invalid values are rejected when jobs start, not on import.
+LIGHTLY_STUDIO_JOBS_SECRET_PROVIDER: str = env.str("LIGHTLY_STUDIO_JOBS_SECRET_PROVIDER", "env")
+# Set only on a hosted worker that serves one job.
+LIGHTLY_STUDIO_JOBS_WORKER_JOB_ID: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_JOBS_WORKER_JOB_ID", default=None
+)
+LIGHTLY_STUDIO_JOBS_SCHEDULE_TIMEOUT_SECONDS: Optional[int] = env.int(
+    "LIGHTLY_STUDIO_JOBS_SCHEDULE_TIMEOUT_SECONDS", default=None
+)
