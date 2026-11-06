@@ -31,7 +31,10 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import {
+        getCreateLabelErrorMessage,
+        useCreateLabel
+    } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount, untrack } from 'svelte';
@@ -133,7 +136,9 @@
             onVideoUpdate();
             toast.success('Event created successfully');
         } catch (error) {
-            toast.error('Failed to create event. Please try again.');
+            toast.error(
+                getCreateLabelErrorMessage(error, 'Failed to create event. Please try again.')
+            );
             console.error('Error creating event:', error);
         }
     }

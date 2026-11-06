@@ -160,7 +160,8 @@ export function useSlicInteraction(getProps: () => SampleSlicRectProps) {
                 await brushApi.finishBrush(
                     mask,
                     selectedAnnotation,
-                    labels.data ?? [],
+                    // Wait for the class list, so an existing class does not count as missing.
+                    labels.data ?? (await labels.refetch()).data ?? [],
                     async (input: AnnotationUpdateInput) => {
                         await annotationApi.updateAnnotation(input);
                     },

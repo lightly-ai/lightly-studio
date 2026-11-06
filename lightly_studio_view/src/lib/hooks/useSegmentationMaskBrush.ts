@@ -5,7 +5,10 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+import {
+    AnnotationClassNotAvailableError,
+    useCreateLabel
+} from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
@@ -40,7 +43,7 @@ export function useSegmentationMaskBrush({
      *  the chosen class, or null if the user cancelled. */
     requestLabel?: () => Promise<{ label: string } | null>;
 }) {
-    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
+    const { createLabel, canCreateLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
     const {
@@ -91,6 +94,14 @@ export function useSegmentationMaskBrush({
             annotationLabelName = result.label;
             setAnnotationLabel(annotationLabelName);
             updateLastAnnotationLabel(collectionId, annotationLabelName);
+        }
+
+        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
+        if (!selectedAnnotation && !label && !canCreateLabel) {
+            // Stop before trimming other masks, so they stay untouched.
+            toast.error(new AnnotationClassNotAvailableError(annotationLabelName!).message);
+            refetch();
+            return;
         }
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({
@@ -156,8 +167,6 @@ export function useSegmentationMaskBrush({
                 return;
             }
         }
-
-        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
 
         if (!label) {
             label = await createLabel({

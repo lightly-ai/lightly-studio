@@ -25,7 +25,10 @@
     } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import {
+        getCreateLabelErrorMessage,
+        useCreateLabel
+    } from '$lib/hooks/useCreateLabel/useCreateLabel';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
@@ -143,18 +146,18 @@
     const createClassificationAnnotation = async (labelName: string) => {
         if (!annotationLabels.data) return false;
 
-        let label = annotationLabels.data.find(
-            (labelItem) => labelItem.annotation_label_name === labelName
-        );
-
-        if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: labelName
-            });
-        }
-
         try {
+            let label = annotationLabels.data.find(
+                (labelItem) => labelItem.annotation_label_name === labelName
+            );
+
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: labelName
+                });
+            }
+
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: AnnotationType.CLASSIFICATION,
@@ -180,7 +183,12 @@
             toast.success('Classification created successfully');
             return true;
         } catch (error) {
-            toast.error('Failed to create classification. Please try again.');
+            toast.error(
+                getCreateLabelErrorMessage(
+                    error,
+                    'Failed to create classification. Please try again.'
+                )
+            );
             console.error('Error creating classification:', error);
             return false;
         }

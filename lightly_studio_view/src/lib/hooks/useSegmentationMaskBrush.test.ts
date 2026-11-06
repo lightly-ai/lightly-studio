@@ -70,8 +70,10 @@ vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', 
     useUpdateAnnotationsMutation: () => ({ updateAnnotations })
 }));
 
-vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
-    useCreateLabel: () => ({ createLabel })
+const createLabelState = { canCreateLabel: true };
+vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useCreateLabel/useCreateLabel')>()),
+    useCreateLabel: () => ({ createLabel, canCreateLabel: createLabelState.canCreateLabel })
 }));
 
 vi.mock('svelte-sonner', () => {
@@ -99,6 +101,7 @@ describe('useSegmentationMaskBrush', () => {
         annotationLabelContext.lastCreatedAnnotationId = null;
 
         vi.clearAllMocks();
+        createLabelState.canCreateLabel = true;
 
         vi.mocked(computeBoundingBoxFromMask).mockReturnValue(bbox);
         vi.mocked(encodeBinaryMaskToRLE).mockReturnValue(rle);
@@ -237,6 +240,48 @@ describe('useSegmentationMaskBrush', () => {
         expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
         expect(updateAnnotation).not.toHaveBeenCalled();
         expect(refetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops before trimming other masks when the class cannot be created', async () => {
+        createLabelState.canCreateLabel = false;
+        annotationLabelContext.annotationLabel = 'car';
+        const refetch = vi.fn();
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        await expect(finishBrush(mask, null, [])).resolves.toBeUndefined();
+
+        expect(toast.error).toHaveBeenCalledWith(
+            'Class "car" is no longer available. Choose another class.'
+        );
+        expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
+        expect(createLabel).not.toHaveBeenCalled();
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('creates no class for an empty mask', async () => {
+        vi.mocked(computeBoundingBoxFromMask).mockReturnValue(null);
+        annotationLabelContext.annotationLabel = 'car';
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch: vi.fn(),
+            deleteAnnotation
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(createLabel).not.toHaveBeenCalled();
     });
 
     it('creates a new annotation using an existing label', async () => {
