@@ -35,5 +35,8 @@ def remove_export_artifact(export_path: str) -> None:
         return
     if resolved_path.is_dir():
         shutil.rmtree(resolved_path, ignore_errors=True)
-    else:
+        return
+    try:
         resolved_path.unlink(missing_ok=True)
+    except OSError:
+        logger.warning("Could not remove export artifact: %s", export_path, exc_info=True)
