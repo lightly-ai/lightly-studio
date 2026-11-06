@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { getErrorMessage } from '$lib/utils';
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
@@ -778,7 +777,7 @@
                                         onClose={() => setActivePanel('none')}
                                         {evaluationRuns}
                                         isLoading={evaluationRunsQuery.isLoading}
-                                        error={getErrorMessage(evaluationRunsQuery.error)}
+                                        error={evaluationRunsQuery.error?.message}
                                         datasetId={collection.dataset_id}
                                         {collectionId}
                                     />
