@@ -27,7 +27,7 @@
     const noTrackItem: ListItem = { value: NO_TRACK_LABEL, label: NO_TRACK_LABEL };
     const newTrackItem: ListItem = { value: NEW_TRACK_LABEL, label: NEW_TRACK_LABEL };
 
-    const sortedItems = $derived(() => {
+    const sortedItems = $derived.by(() => {
         return [...tracks]
             .sort((a, b) => {
                 const classA = a.annotation_class_name ?? '';
@@ -82,7 +82,7 @@
 <div data-testid="track-select">
     <SelectList
         bind:selectedItem
-        items={sortedItems()}
+        items={sortedItems}
         pinnedTop={[noTrackItem]}
         pinnedBottom={[newTrackItem]}
         label={NO_TRACK_LABEL}

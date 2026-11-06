@@ -2,6 +2,7 @@
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
     import PointCloudAnnotationDetails from './PointCloudAnnotationDetails.svelte';
+    import WorkspaceStoryProvider from '$lib/components/PointCloudLabelingWorkspace/WorkspaceStoryProvider';
 
     const base = createAnnotationFixture();
     const baseAnnotation = {
@@ -19,6 +20,7 @@
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/PointCloudAnnotationDetails',
         component: PointCloudAnnotationDetails,
+        decorators: [() => ({ Component: WorkspaceStoryProvider })],
         tags: ['autodocs'],
         parameters: { layout: 'padded' },
         args: {
