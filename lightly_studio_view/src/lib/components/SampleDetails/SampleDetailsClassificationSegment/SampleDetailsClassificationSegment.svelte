@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
@@ -53,6 +54,7 @@
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
@@ -259,12 +261,15 @@
                     {#if $isEditingMode}
                         <SelectList
                             onCreate={trackClassCreatedInPicker}
+                            allowCreate={canCreateClass}
                             {items}
                             selectedItem={items.find(
                                 (i) => i.value === getLabelValue(annotation)?.value
                             )}
                             name="classification-label"
-                            placeholder="Select or create a class"
+                            placeholder={canCreateClass
+                                ? 'Select or create a class'
+                                : 'Select a class'}
                             className="h-8 w-full min-w-0 px-3"
                             contentClassName="w-full min-w-0"
                             onSelect={async (item) => {
@@ -272,7 +277,7 @@
                             }}
                         >
                             {#snippet notFound({ inputValue })}
-                                <LabelNotFound label={inputValue} />
+                                <LabelNotFound label={inputValue} canCreate={canCreateClass} />
                             {/snippet}
                         </SelectList>
                     {:else}
@@ -367,9 +372,12 @@
                             <span class="min-w-0 text-sm font-medium">
                                 <SelectList
                                     onCreate={trackClassCreatedInPicker}
+                                    allowCreate={canCreateClass}
                                     {items}
                                     name="classification-label"
-                                    placeholder="Select or create a class"
+                                    placeholder={canCreateClass
+                                        ? 'Select or create a class'
+                                        : 'Select a class'}
                                     className="h-8 w-full min-w-0 px-3"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
@@ -382,7 +390,10 @@
                                     }}
                                 >
                                     {#snippet notFound({ inputValue })}
-                                        <LabelNotFound label={inputValue} />
+                                        <LabelNotFound
+                                            label={inputValue}
+                                            canCreate={canCreateClass}
+                                        />
                                     {/snippet}
                                 </SelectList>
                             </span>
