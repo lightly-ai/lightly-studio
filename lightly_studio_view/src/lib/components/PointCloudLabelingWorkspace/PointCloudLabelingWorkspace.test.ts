@@ -45,6 +45,22 @@ vi.mock('$lib/hooks/useTickDetails/useTickDetails', () => ({
     useTickDetails: () => ({ tickDetails })
 }));
 
+vi.mock('./useStartSequenceTrack', () => ({
+    useStartSequenceTrack: () => ({ handleStartTrack: vi.fn() })
+}));
+
+vi.mock('./useDeleteSequenceTrack', () => ({
+    useDeleteSequenceTrack: () => ({ handleDeleteTrack: vi.fn() })
+}));
+
+vi.mock('./useExtendSequenceTrack', () => ({
+    useExtendSequenceTrack: () => ({ handleExtendTrack: vi.fn() })
+}));
+
+vi.mock('./FrameTimeline/useSequenceTracks.svelte', () => ({
+    useSequenceTracks: () => ({ query: { data: { tracks: [] } } })
+}));
+
 vi.mock('$lib/hooks/useTickData/useTickCameraFrames.svelte', () => ({
     useTickCameraFrames: () => ({ query: { data: undefined } })
 }));
