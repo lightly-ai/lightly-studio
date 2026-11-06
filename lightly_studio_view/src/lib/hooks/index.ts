@@ -127,3 +127,4 @@ export {
     PICK_SOURCE_MESSAGE
 } from '$lib/hooks/useAnnotationTarget/messages';
 export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
+export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
