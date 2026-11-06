@@ -35,7 +35,7 @@
                 path: { collection_id: collectionId },
                 body: { ...requestBody(), output_uri: bucketUri }
             });
-            if (response.error) throw new Error(JSON.stringify(response.error));
+            if (response.error) throw response.error;
             if (!response.data) throw new Error('Unexpected empty response data');
             writtenUris = response.data.uris;
         } catch (e) {
