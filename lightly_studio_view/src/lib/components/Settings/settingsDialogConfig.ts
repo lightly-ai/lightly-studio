@@ -46,10 +46,10 @@ export const toolShortcuts: readonly ShortcutSettingConfig[] = [
     { id: 'toolbar-bounding-box', label: 'Bounding box', key: 'keyToolbarBoundingBox' },
     {
         id: 'toolbar-segmentation-mask',
-        label: 'Segmentation mask',
+        label: 'Mask brush',
         key: 'keyToolbarSegmentationMask'
     },
-    { id: 'toolbar-slic', label: 'AI-assisted labeling', key: 'keyToolbarSlic' },
+    { id: 'toolbar-slic', label: 'Superpixel brush', key: 'keyToolbarSlic' },
     { id: 'toolbar-brush-mode', label: 'Brush', key: 'keyToolbarBrush' },
     { id: 'toolbar-eraser-mode', label: 'Eraser', key: 'keyToolbarEraser' }
 ] as const;
