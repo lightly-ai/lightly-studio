@@ -1,7 +1,7 @@
 <script lang="ts">
     import { AnnotationColorLegend } from '$lib/components/AnnotationColorLegend';
     import { Input } from '$lib/components/ui/input';
-    import { cn, formatInteger } from '$lib/utils';
+    import { cn, formatInteger, trackAnnotationClassEvent } from '$lib/utils';
     import {
         NameListRowActions,
         scrollIntoViewWhen,
@@ -20,7 +20,13 @@
     const { name, annotationCount, isHighlighted = false, onRename, onDelete }: Props = $props();
 
     let isDeleteDialogOpen = $state(false);
-    const rename = useInlineRename(() => ({ name, onRename }));
+    const rename = useInlineRename(() => ({
+        name,
+        onRename: (newName: string) => {
+            trackAnnotationClassEvent('rename_submitted', { annotation_count: annotationCount });
+            return onRename(newName);
+        }
+    }));
 </script>
 
 <li
