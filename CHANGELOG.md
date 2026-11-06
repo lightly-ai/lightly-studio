@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
 - Python SDK: Added Python 3.15 support.
 - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
 - Annotation class colors are saved in the dataset and shared by all users of it.

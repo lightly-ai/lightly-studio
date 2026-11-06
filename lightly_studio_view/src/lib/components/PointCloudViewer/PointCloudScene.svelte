@@ -23,6 +23,7 @@
         activeTool?: WorkspaceTool;
         cameraMode?: CameraMode;
         cameraCuboid?: CuboidAnnotation;
+        highlightCuboid?: CuboidAnnotation;
         isScaleSource?: boolean;
         isActive?: () => boolean;
         navigationId?: symbol;
@@ -39,6 +40,7 @@
         activeTool = 'select',
         cameraMode = 'perspective',
         cameraCuboid,
+        highlightCuboid,
         isScaleSource = false,
         isActive,
         navigationId,
@@ -70,6 +72,7 @@
     controls={controlsRef}
     {cameraMode}
     {cameraCuboid}
+    {highlightCuboid}
     {isActive}
     {isScaleSource}
     {viewState}
