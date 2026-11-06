@@ -1,7 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
-import PointCloudAnnotationDetails from './PointCloudAnnotationDetails.svelte';
+import PointCloudAnnotationDetails from './PointCloudAnnotationDetailsHarness.svelte';
+
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
+    getFeatures: vi.fn().mockResolvedValue({ data: [] }),
+    getAnalyticsConfig: vi.fn().mockResolvedValue({ data: undefined })
+}));
 
 const defaultAnnotation = {
     ...createAnnotationFixture(),
@@ -36,6 +42,7 @@ describe('PointCloudAnnotationDetails', () => {
         expect(screen.getByText('Ground Truth')).toBeInTheDocument();
         expect(screen.getByText('Track number:')).toBeInTheDocument();
         expect(screen.getByText('7')).toBeInTheDocument();
+        expect(screen.queryByTestId('track-select')).not.toBeInTheDocument();
     });
 
     it('shows track number 0', () => {
@@ -77,11 +84,12 @@ describe('PointCloudAnnotationDetails - editable mode', () => {
         expect(screen.getByRole('spinbutton', { name: 'location z' })).toHaveValue(1.234);
     });
 
-    it('annotation source and track number remain visible', () => {
+    it('annotation source remains visible and shows TrackSelect', () => {
         render(PointCloudAnnotationDetails, { props: defaultEditableProps });
 
         expect(screen.getByText('Ground Truth')).toBeInTheDocument();
-        expect(screen.getByText('Track number:')).toBeInTheDocument();
+        expect(screen.getByTestId('track-select')).toBeInTheDocument();
+        expect(screen.queryByText('Track number:')).not.toBeInTheDocument();
     });
 
     it('fires onAnnotationChange with updated center on blur', () => {

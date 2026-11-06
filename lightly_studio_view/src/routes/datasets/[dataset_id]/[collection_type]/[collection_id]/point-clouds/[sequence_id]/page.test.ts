@@ -15,6 +15,11 @@ const adjacentSequences = vi.hoisted(() => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: vi.fn() })
+}));
+
 vi.mock('$app/state', () => ({
     page: {
         url: new URL(
@@ -41,7 +46,8 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
             showSelectClassDialog: writable(false),
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
-            labels: { data: [] }
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });

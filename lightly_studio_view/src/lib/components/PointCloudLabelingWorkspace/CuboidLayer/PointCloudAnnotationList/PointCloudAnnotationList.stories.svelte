@@ -3,6 +3,7 @@
     import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
     import { createCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import PointCloudAnnotationList from './PointCloudAnnotationList.svelte';
+    import WorkspaceStoryProvider from '$lib/components/PointCloudLabelingWorkspace/WorkspaceStoryProvider';
 
     const base = createAnnotationFixture();
 
@@ -134,6 +135,7 @@
     const { Story } = defineMeta({
         title: 'Components/PointCloudLabelingWorkspace/PointCloudAnnotationList',
         component: PointCloudAnnotationList,
+        decorators: [() => ({ Component: WorkspaceStoryProvider })],
         tags: ['autodocs'],
         parameters: { layout: 'padded' },
         args: {

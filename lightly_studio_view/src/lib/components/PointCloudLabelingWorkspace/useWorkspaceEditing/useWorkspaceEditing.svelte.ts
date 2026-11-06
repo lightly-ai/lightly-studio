@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/svelte-query';
 import { fromStore } from 'svelte/store';
 import type { PointCloudWorkspaceContext } from '../provider/types';
 import type { WorkspaceOptions } from '../workspaceOptions';
@@ -7,6 +8,7 @@ import { useDeleteCuboidAnnotation } from '../useDeleteCuboidAnnotation';
 import { useUpdateCuboidAnnotation } from '../useUpdateCuboidAnnotation';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
+import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
 import type { Vector3, WorkspaceTool } from '../domain';
 
 /** Shared annotation selection, tools, and persistence for every scene viewport. */
@@ -16,6 +18,7 @@ export function useWorkspaceEditing(
     getData: () => ReturnType<typeof useWorkspaceSceneData>,
     getIsEditingMode: () => boolean
 ) {
+    const queryClient = useQueryClient();
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
@@ -97,6 +100,16 @@ export function useWorkspaceEditing(
         });
     }
 
+    async function handleTrackChange(): Promise<void> {
+        void queryClient.invalidateQueries({
+            queryKey: getTickDetailsSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            })
+        });
+        await getWorkspace().tickDetails.refetch();
+    }
+
     const displayedAnnotations = fromStore(annotations);
     return {
         transforms,
@@ -132,6 +145,7 @@ export function useWorkspaceEditing(
         handleCreateCuboid,
         handleDeleteCuboid,
         handleLabelChange,
+        handleTrackChange,
         panelCuboidTransform
     };
 }
