@@ -40,6 +40,33 @@ def test_put_jpeg__evicts_the_least_recently_used(mocker: MockerFixture) -> None
     assert camera_jpeg_cache.get_jpeg(jpeg_id=_jpeg_id(log_time_ns=300)) == b"300"
 
 
+def test_reserve() -> None:
+    reserved = _jpeg_id(log_time_ns=100)
+    other_size = _jpeg_id(log_time_ns=100, height=16)
+
+    with camera_jpeg_cache.reserve(jpeg_ids=[reserved]):
+        with camera_jpeg_cache.reserve(jpeg_ids=[reserved, other_size]):
+            assert set(_reserved_at(log_time_ns=100)) == {reserved, other_size}
+        assert _reserved_at(log_time_ns=100) == [reserved]
+        assert _reserved_at(log_time_ns=200) == []
+
+    assert _reserved_at(log_time_ns=100) == []
+
+
+def test_reserve__released_on_error() -> None:
+    with (
+        pytest.raises(RuntimeError),
+        camera_jpeg_cache.reserve(jpeg_ids=[_jpeg_id(log_time_ns=100)]),
+    ):
+        raise RuntimeError("request failed")
+
+    assert _reserved_at(log_time_ns=100) == []
+
+
+def _reserved_at(log_time_ns: int) -> list[JpegId]:
+    return camera_jpeg_cache.reserved_at(uri="a.mcap", channel_id=1, log_time_ns=log_time_ns)
+
+
 def _jpeg_id(log_time_ns: int, height: int = 8) -> JpegId:
     return JpegId(
         uri="a.mcap",

@@ -53,6 +53,19 @@ describe('prefetchQueue', () => {
         await promise;
     });
 
+    it("runs the tick data through the session's data limiter", async () => {
+        prefetchMock.mockResolvedValue(undefined);
+        const session = createPrefetchSession('request-1');
+
+        await createQueue().enqueue(session, [1]);
+
+        expect(prefetchMock).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({ seqNumber: 1 }),
+            session.dataLimiter.run
+        );
+    });
+
     it('records failed ticks without rejecting the queue promise', async () => {
         const error = new Error('prefetch failed');
         prefetchMock.mockRejectedValueOnce(error);

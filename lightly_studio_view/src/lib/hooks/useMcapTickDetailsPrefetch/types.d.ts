@@ -1,5 +1,6 @@
 import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
 import type { QueryClient } from '@tanstack/svelte-query';
+import type { createConcurrencyLimiter } from './createConcurrencyLimiter';
 
 export interface TickRange {
     /** Inclusive zero-based index of the first tick in the range. */
@@ -48,6 +49,8 @@ export interface PrefetchSession {
     inFlight: number;
     /** Errors from failed tick prefetches in the current session. */
     errors: Map<number, unknown>;
+    /** Limits the tick-data requests of the session and starts them in tick order. */
+    dataLimiter: ReturnType<typeof createConcurrencyLimiter>;
 }
 
 export interface McapTickPrefetchExecutorParams extends McapTickDetailsPrefetchParams {

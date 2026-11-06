@@ -4,11 +4,9 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from uuid import UUID
 
 import numpy as np
 from numpy.typing import NDArray
-from sqlmodel import Session
 
 from lightly_studio.core.mcap import capture_time
 from lightly_studio.core.mcap.errors import TransformNotFoundError
@@ -24,30 +22,30 @@ from lightly_studio.services.recording_service import (
 logger = logging.getLogger(__name__)
 
 
-def encode_point_cloud_message(  # noqa: PLR0913
-    session: Session,
+def encode_point_cloud_message(
     reader: McapFileReader,
-    recording_id: UUID,
     message: DecodedMessage,
     target_frame_id: str | None,
     static_transforms: Sequence[StaticTransform],
+    dynamic_transforms: load_dynamic_transforms.DynamicTransformsByTime | None,
 ) -> bytes:
     """Maps the points of a message to the target frame and serializes them.
 
-    The points are mapped with the transforms of the recording at the capture time
-    of the message. If no chain of transforms connects the sensor frame to
+    The points are mapped with the transforms of the recording at
+    `transform_timestamp_ns` of the message. If no chain of transforms connects the sensor frame to
     `target_frame_id`, the points stay in the sensor frame. The `frame_id` in the
     Arrow metadata tells the frame of the points.
 
     Args:
-        session: Database session used to load the dynamic transforms.
         reader: Reader of the recording's MCAP file.
-        recording_id: Recording the message was read from.
         message: A decoded PointCloud2 message.
         target_frame_id: Coordinate frame to express the points in. ``None`` keeps
             the points in the sensor frame.
         static_transforms: The static transforms of the recording. Only used when
             the points are mapped.
+        dynamic_transforms: The stored dynamic transforms near the transform time of
+            the message, e.g. from ``load_dynamic_transforms_near_times``. ``None``
+            reads them from the file. Only used when the points are mapped.
 
     Returns:
         The points as an Arrow IPC stream.
@@ -64,22 +62,16 @@ def encode_point_cloud_message(  # noqa: PLR0913
     if target_frame_id is None or target_frame_id == source_frame_id:
         return _serialize(message=message, transform=None, frame_id=target_frame_id)
 
-    # TODO(Horatiu, 09/2026): We already have the capture time but only send the log time.
-    # Consider changing the API to also send the capture time, so that we can use it here.
-    transform_timestamp_ns = (
-        capture_time.from_decoded_message(message.decoded_message) or message.log_time_ns
-    )
+    timestamp_ns = transform_timestamp_ns(message=message)
     try:
         transform = transform_to_target_frame.transform_to_target_frame(
             reader=reader,
             source_frame_id=source_frame_id,
             target_frame_id=target_frame_id,
-            timestamp_ns=transform_timestamp_ns,
+            timestamp_ns=timestamp_ns,
             static_transforms=static_transforms,
-            dynamic_transforms=load_dynamic_transforms.load_dynamic_transforms_near(
-                session=session,
-                recording_id=recording_id,
-                timestamp_ns=transform_timestamp_ns,
+            dynamic_transforms=load_dynamic_transforms.select_near(
+                dynamic_transforms=dynamic_transforms, timestamp_ns=timestamp_ns
             ),
         )
     except TransformNotFoundError as exc:
@@ -91,6 +83,19 @@ def encode_point_cloud_message(  # noqa: PLR0913
         )
         return _serialize(message=message, transform=None, frame_id=None)
     return _serialize(message=message, transform=transform, frame_id=target_frame_id)
+
+
+def transform_timestamp_ns(message: DecodedMessage) -> int:
+    """Returns the time to look up the transforms of a point-cloud message at.
+
+    This is the capture time of the message, or its log time if the capture time is 0.
+
+    Raises:
+        McapAccessError: If the message has no capture time.
+    """
+    # TODO(Horatiu, 09/2026): We already have the capture time but only send the log time.
+    # Consider changing the API to also send the capture time, so that we can use it here.
+    return capture_time.from_decoded_message(message.decoded_message) or message.log_time_ns
 
 
 def _serialize(

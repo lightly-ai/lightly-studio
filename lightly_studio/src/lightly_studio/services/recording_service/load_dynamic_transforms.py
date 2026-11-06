@@ -72,6 +72,53 @@ def load_dynamic_transforms_near(
     )
 
 
+def load_dynamic_transforms_near_times(
+    session: Session,
+    recording_id: UUID,
+    timestamps_ns: Sequence[int],
+) -> DynamicTransformsByTime | None:
+    """Return the dynamic edges near several capture times, read with one query.
+
+    Use it for the sensors of one tick, whose capture times are close together.
+
+    Args:
+        session: The database session.
+        recording_id: The recording the edges belong to.
+        timestamps_ns: The capture times to look around, in nanoseconds. Must not be
+            empty.
+
+    Returns:
+        The edges captured within ``DYNAMIC_TRANSFORM_WINDOW_NS`` of any of the times.
+        Select the edges of one time with ``DynamicTransformsByTime.near``. ``None``
+        means the recording has no stored dynamic transforms, so the caller reads them
+        from the file.
+    """
+    window_ns = calibration.DYNAMIC_TRANSFORM_WINDOW_NS
+    edges = load_dynamic_transforms_between(
+        session=session,
+        recording_id=recording_id,
+        start_ns=max(min(timestamps_ns) - window_ns, 0),
+        end_ns=max(timestamps_ns) + window_ns,
+    )
+    if edges is None:
+        return None
+    return DynamicTransformsByTime(edges=edges)
+
+
+def select_near(
+    dynamic_transforms: DynamicTransformsByTime | None, timestamp_ns: int
+) -> list[StaticTransform] | None:
+    """Return the edges near a capture time, or `None` to read them from the file.
+
+    Args:
+        dynamic_transforms: The result of ``load_dynamic_transforms_near_times``.
+        timestamp_ns: The capture time to look around, in nanoseconds.
+    """
+    if dynamic_transforms is None:
+        return None
+    return dynamic_transforms.near(timestamp_ns=timestamp_ns)
+
+
 def load_dynamic_transforms_between(
     session: Session,
     recording_id: UUID,

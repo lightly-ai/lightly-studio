@@ -6,6 +6,7 @@ import io
 from types import SimpleNamespace
 
 import av
+import numpy as np
 import pytest
 from av import VideoStream
 from PIL import Image
@@ -260,6 +261,29 @@ def test_to_image__scales_to_width() -> None:
     image = compressed_video.to_image(decoded_message=message, width=8)
     assert image.mode == "RGB"
     assert image.size == (8, 4)
+
+
+def test_to_jpeg__keeps_colors() -> None:
+    color = (200, 40, 90)
+    rgb = np.full((16, 16, 3), color, dtype=np.uint8)
+    frame = av.VideoFrame.from_ndarray(rgb, format="rgb24").reformat(format="yuv420p")
+
+    result = compressed_video.to_jpeg(frame=frame, height=8)
+
+    image = Image.open(io.BytesIO(result))
+    assert image.size == (8, 8)
+    mean_color = np.asarray(image.convert("RGB"), dtype=np.float64).mean(axis=(0, 1))
+    assert mean_color == pytest.approx(color, abs=6)
+
+
+def test_to_jpeg__odd_size() -> None:
+    frame = av.VideoFrame.from_ndarray(
+        np.zeros((16, 16, 3), dtype=np.uint8), format="rgb24"
+    ).reformat(format="yuv420p")
+
+    result = compressed_video.to_jpeg(frame=frame, width=7)
+
+    assert _jpeg_size(result) == (7, 7)
 
 
 def test_codec_name__h264_variants() -> None:

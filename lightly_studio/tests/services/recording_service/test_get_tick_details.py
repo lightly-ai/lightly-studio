@@ -11,11 +11,13 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.models.static_transform import StaticTransformCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
+    dynamic_transform_resolver,
     group_resolver,
     sensor_calibration_resolver,
     static_transform_resolver,
@@ -213,6 +215,84 @@ def test_get_tick_details__camera_projection_uses_camera_timestamp(
     )
 
 
+def test_get_tick_details__loads_transforms_once(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    fixture = helpers.create_mcap_sequence(session=db_session, camera_frame_id=CAMERA_FRAME_ID)
+    _add_tick_with_camera_and_cuboid(
+        session=db_session, fixture=fixture, timestamp_ns=1_000, camera_timestamp_ns=3_000
+    )
+    mocker.patch.object(
+        recording_service.transform_to_target_frame,
+        "transform_to_target_frame",
+        return_value=np.eye(4),
+    )
+    borrow_reader = mocker.patch.object(recording_service.reader_cache, "borrow_reader")
+    get_static = mocker.spy(static_transform_resolver, "get_all_by_recording_id")
+    get_dynamic = mocker.spy(dynamic_transform_resolver, "get_near")
+
+    result = recording_service.get_tick_details(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        seq_number=0,
+        target_frame_id="lidar",
+    )
+
+    assert result is not None
+    assert result.camera_channels["front"].projection is not None
+    assert result.annotations[0].cuboid_3d_details is not None
+    assert result.annotations[0].cuboid_3d_details.frame_id == "lidar"
+    assert get_static.call_count == 1
+    assert get_dynamic.call_count == 1
+    assert borrow_reader.call_count == 1
+
+
+def test_get_tick_details__dynamic_transforms_near_each_timestamp(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    fixture = helpers.create_mcap_sequence(session=db_session, camera_frame_id=CAMERA_FRAME_ID)
+    # The camera is captured 500 ms after the tick, more than twice the 100 ms window.
+    _add_tick_with_camera_and_cuboid(
+        session=db_session,
+        fixture=fixture,
+        timestamp_ns=1_000_000_000,
+        camera_timestamp_ns=1_500_000_000,
+    )
+    dynamic_transform_resolver.create_many(
+        session=db_session,
+        rows=[
+            _dynamic_transform(recording_id=fixture.recording_id, timestamp_ns=1_000_000_000),
+            _dynamic_transform(recording_id=fixture.recording_id, timestamp_ns=1_500_000_000),
+        ],
+    )
+    transform = mocker.patch.object(
+        recording_service.transform_to_target_frame,
+        "transform_to_target_frame",
+        return_value=np.eye(4),
+    )
+    mocker.patch.object(recording_service.reader_cache, "borrow_reader")
+
+    recording_service.get_tick_details(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        seq_number=0,
+        target_frame_id="lidar",
+    )
+
+    edge_times_by_call = {
+        call.kwargs["timestamp_ns"]: [
+            edge.timestamp_ns for edge in call.kwargs["dynamic_transforms"]
+        ]
+        for call in transform.call_args_list
+    }
+    assert edge_times_by_call == {
+        1_000_000_000: [1_000_000_000],
+        1_500_000_000: [1_500_000_000],
+    }
+
+
 def test_get_tick_details__tags(db_session: Session) -> None:
     fixture = helpers.create_mcap_sequence(session=db_session)
     group_ids = group_resolver.create_many(
@@ -393,3 +473,73 @@ def _add_tick_with_cuboid(
         collection_name="ground_truth",
     )
     session.commit()
+
+
+def _add_tick_with_camera_and_cuboid(
+    session: Session, fixture: McapSequenceFixture, timestamp_ns: int, camera_timestamp_ns: int
+) -> None:
+    """Index one tick with a calibrated camera and a cuboid in the `odom` frame."""
+    camera = create_mcap(
+        session=session,
+        collection_id=fixture.slots["front"].collection_id,
+        channel_id=3,
+        log_time_ns=camera_timestamp_ns,
+        capture_timestamp_ns=camera_timestamp_ns,
+        keyframe_log_time_ns=camera_timestamp_ns,
+    )
+    group_id = group_resolver.create_many(
+        session=session,
+        collection_id=fixture.group_collection.collection_id,
+        groups=[{camera.sample_id}],
+    )[0]
+    session.add(
+        SampleSequenceLinkTable(
+            sample_id=group_id,
+            sequence_sample_id=fixture.sample_id,
+            seq_number=0,
+            timestamp_ns=timestamp_ns,
+        )
+    )
+    sensor_calibration_resolver.create_many(
+        session=session,
+        rows=[
+            SensorCalibrationCreate(
+                recording_id=fixture.recording_id,
+                collection_id=fixture.slots["front"].collection_id,
+                width=640,
+                height=480,
+                k=[600.0, 0.0, 320.0, 0.0, 600.0, 240.0, 0.0, 0.0, 1.0],
+            )
+        ],
+    )
+    label = create_annotation_label(
+        session=session,
+        root_collection_id=fixture.group_collection.collection_id,
+        label_name="truck",
+    )
+    annotation_resolver.create_many(
+        session=session,
+        parent_collection_id=fixture.group_collection.collection_id,
+        annotations=[
+            cuboid_create(parent_sample_id=group_id, annotation_label_id=label.annotation_label_id)
+        ],
+        collection_name="ground_truth",
+    )
+    session.commit()
+
+
+def _dynamic_transform(recording_id: uuid.UUID, timestamp_ns: int) -> DynamicTransformCreate:
+    """Returns an identity `/tf` edge from `odom` to `base_link`."""
+    return DynamicTransformCreate(
+        recording_id=recording_id,
+        parent="odom",
+        child="base_link",
+        timestamp_ns=timestamp_ns,
+        qx=0.0,
+        qy=0.0,
+        qz=0.0,
+        qw=1.0,
+        tx=0.0,
+        ty=0.0,
+        tz=0.0,
+    )

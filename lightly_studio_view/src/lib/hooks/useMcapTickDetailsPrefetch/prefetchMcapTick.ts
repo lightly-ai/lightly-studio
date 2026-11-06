@@ -13,18 +13,29 @@ interface McapTickPrefetchParams {
     displayFrameId?: string;
 }
 
-/** Prefetches the cached data needed to render one MCAP tick: its details and its sensor data. */
+type RunRequest = <T>(request: () => Promise<T>) => Promise<T>;
+
+/**
+ * Prefetches the cached data needed to render one MCAP tick: its details and its sensor data.
+ *
+ * The details request starts at once. The data request starts through `runDataRequest`, so the
+ * caller can limit how many data requests run at once.
+ */
 export async function prefetchMcapTick(
     /** Query client that owns the visible workspace cache. */
     client: QueryClient,
-    { datasetId, sequenceId, seqNumber, displayFrameId }: McapTickPrefetchParams
+    { datasetId, sequenceId, seqNumber, displayFrameId }: McapTickPrefetchParams,
+    /** Starts the tick-data request. Defaults to starting it at once. */
+    runDataRequest: RunRequest = (request) => request()
 ): Promise<void> {
     await Promise.all([
         client.ensureQueryData(
             getTickDetailsOptions({ datasetId, sequenceId, seqNumber, displayFrameId })
         ),
-        client.ensureQueryData(
-            getTickDataOptions({ datasetId, sequenceId, seqNumber, displayFrameId })
+        runDataRequest(() =>
+            client.ensureQueryData(
+                getTickDataOptions({ datasetId, sequenceId, seqNumber, displayFrameId })
+            )
         )
     ]);
 }

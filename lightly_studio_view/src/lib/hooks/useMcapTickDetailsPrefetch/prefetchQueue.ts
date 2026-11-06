@@ -66,12 +66,16 @@ export function createPrefetchQueue({
         seqNumber: number
     ): Promise<void> {
         try {
-            await prefetchMcapTick(client, {
-                datasetId: getDatasetId(),
-                sequenceId: getSequenceId(),
-                seqNumber,
-                displayFrameId: getDisplayFrameId()
-            });
+            await prefetchMcapTick(
+                client,
+                {
+                    datasetId: getDatasetId(),
+                    sequenceId: getSequenceId(),
+                    seqNumber,
+                    displayFrameId: getDisplayFrameId()
+                },
+                session.dataLimiter.run
+            );
             session.completed.add(index);
             session.errors.delete(index);
         } catch (error: unknown) {
