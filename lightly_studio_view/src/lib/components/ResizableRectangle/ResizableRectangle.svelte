@@ -15,7 +15,9 @@
         scale = 1,
         onResize,
         onMove,
-        onDragEnd
+        onDragStart,
+        onDragStop,
+        onBboxCommit
     }: {
         bbox: BoundingBox;
         scale?: number;
@@ -25,7 +27,12 @@
         handleSize?: number;
         onResize?: (newBbox: BoundingBox) => void;
         onMove?: (newBbox: BoundingBox) => void;
-        onDragEnd?: (newBbox: BoundingBox) => void;
+        /** A move or resize drag starts. */
+        onDragStart?: () => void;
+        /** A drag ends, also when the box did not change. */
+        onDragStop?: () => void;
+        /** A drag ends with a changed box. Runs before `onDragStop`. */
+        onBboxCommit?: (newBbox: BoundingBox) => void;
     } = $props();
 
     const { x, y, width, height } = $derived(bbox);
@@ -164,16 +171,14 @@
 
                             renderHandles();
                         },
-                        onDragEnd: (newBoundingBox) => {
-                            if (onDragEnd) {
-                                onDragEnd(newBoundingBox);
-                            }
-                        },
+                        onDragEnd: (newBoundingBox) => onBboxCommit?.(newBoundingBox),
                         onInteractionStart: () => {
                             isInteracting = true;
+                            onDragStart?.();
                         },
                         onInteractionEnd: () => {
                             isInteracting = false;
+                            onDragStop?.();
                         }
                     })
                 );
@@ -198,16 +203,14 @@
 
                         renderHandles();
                     },
-                    onDragEnd: (newBoundingBox) => {
-                        if (onDragEnd) {
-                            onDragEnd(newBoundingBox);
-                        }
-                    },
+                    onDragEnd: (newBoundingBox) => onBboxCommit?.(newBoundingBox),
                     onInteractionStart: () => {
                         isInteracting = true;
+                        onDragStart?.();
                     },
                     onInteractionEnd: () => {
                         isInteracting = false;
+                        onDragStop?.();
                     }
                 })
             );
