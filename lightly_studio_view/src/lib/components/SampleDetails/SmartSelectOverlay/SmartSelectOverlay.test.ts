@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
         isSaving: false,
         isPending: false,
         box: null,
-        isSaving: false,
         addPoint: vi.fn(),
         selectBox: vi.fn(),
         clear: vi.fn(),

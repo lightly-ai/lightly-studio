@@ -121,6 +121,7 @@ describe('useSmartSelect', () => {
             })
         );
         expect(smartSelect.preview).toBeNull();
+        expect(get(useReversibleActions().reversibleActions)).toEqual([]);
     });
 
     it.each([null, '', '   '])(
@@ -225,7 +226,6 @@ describe('useSmartSelect', () => {
         expect(smartSelect.isSaving).toBe(false);
 
         expect(mocks.saveAnnotationPreviews).toHaveBeenCalledTimes(1);
-        expect(get(useReversibleActions().reversibleActions)).toEqual([]);
     });
 
     it('keeps the preview and reports the error when the save fails', async () => {
@@ -244,21 +244,29 @@ describe('useSmartSelect', () => {
         );
     });
 
-    it('keeps the preview when cleared during a failed save', async () => {
+    it.each(['point', 'box'])('preserves %s undo through a failed save', async (prompt) => {
         const saving = deferred();
         mocks.mutateAsync.mockResolvedValue({ prediction });
         mocks.saveAnnotationPreviews.mockReturnValue(saving.promise);
         const smartSelect = setup();
-        smartSelect.addPoint(point);
+        if (prompt === 'point') smartSelect.addPoint(point);
+        else smartSelect.selectBox({ x: 0, y: 0, width: 0.5, height: 0.5 });
+        const undo = useReversibleActions();
+        const undoLast = () => undo.executeReversibleAction(get(undo.reversibleActions)[0].id);
         await vi.waitFor(() => expect(smartSelect.canSave).toBe(true));
 
         const save = smartSelect.save();
         smartSelect.clear();
+        await undoLast();
+        expect(get(undo.reversibleActions)).toHaveLength(1);
         saving.reject(new Error('create failed'));
         await save;
 
-        expect(smartSelect.preview).toEqual(prediction);
         expect(smartSelect.canSave).toBe(true);
+        await undoLast();
+        expect(smartSelect.preview).toBeNull();
+        expect(smartSelect.points).toEqual([]);
+        expect(smartSelect.box).toBeNull();
     });
 
     it('drops the box preview when a negative point follows a box', async () => {
