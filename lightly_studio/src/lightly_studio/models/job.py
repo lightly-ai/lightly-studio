@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Column
 from sqlmodel import Field, SQLModel
 
@@ -82,15 +83,20 @@ class JobCreate(JobBase):
     """Input model to create a job."""
 
 
-class JobView(JobBase):
+class JobView(BaseModel):
     """API view of a job."""
 
+    model_config = ConfigDict(from_attributes=True)
+
     job_id: UUID
+    job_type: str
+    resource_id: UUID
     engine_run_id: str | None
     status: JobStatus
     progress: int
     attempt: int
     message: str | None
+    params: dict[str, Any]
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None
