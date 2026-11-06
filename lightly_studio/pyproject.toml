@@ -112,6 +112,9 @@ cloud-storage = [
 fal = [
     "fal-client>=1.0.0",
 ]
+jobs = [
+    "hatchet-sdk==1.44.0",
+]
 
 [dependency-groups]
 dev = [
