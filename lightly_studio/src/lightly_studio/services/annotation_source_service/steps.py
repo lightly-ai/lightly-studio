@@ -23,6 +23,10 @@ def delete_source(session: Session, source: CollectionTable) -> int:
     Returns:
         The number of deleted annotations.
     """
+    # TODO(Gabriel, 11/2026): Run the delete in one transaction on PostgreSQL, like
+    # delete_dataset.py. A caption, evaluation run or annotation that is created after the
+    # check can make the delete fail after earlier steps are committed. DuckDB needs the
+    # commits, so make each step safe to run again there.
     source_id = source.collection_id
     child_ids = [child.collection_id for child in source.children]
     annotation_ids = annotation_resolver.get_sample_ids(session=session, collection_id=source_id)
