@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { embedTextAxes } from './embedTextAxes';
+import { ApiError } from '$lib/api/ApiError';
 
 const mocks = vi.hoisted(() => ({ embedText: vi.fn() }));
 
@@ -45,7 +46,7 @@ describe('embedTextAxes', () => {
     it('throws an Error with the server message when a text fails to embed', async () => {
         mocks.embedText.mockResolvedValue({
             data: undefined,
-            error: { error: 'The embedding space cannot embed text.' }
+            error: new ApiError('The embedding space cannot embed text.', 400)
         });
 
         await expect(embedTextAxes('collection-id', TEXT_AXES)).rejects.toThrow(

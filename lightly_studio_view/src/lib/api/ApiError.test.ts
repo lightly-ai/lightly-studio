@@ -18,6 +18,15 @@ describe('ApiError.fromResponseBody', () => {
         );
     });
 
+    it('reads the message and type of a structured detail', () => {
+        const error = ApiError.fromResponseBody(
+            { detail: { type: 'transform_unavailable', message: 'No transform' } },
+            400
+        );
+
+        expect(error).toMatchObject({ message: 'No transform', type: 'transform_unavailable' });
+    });
+
     it('falls back to the status if the body has no message', () => {
         const error = ApiError.fromResponseBody({ detail: [] }, 422);
 

@@ -33,7 +33,7 @@ export const loadDimensionBounds = async ({
         });
 
         if (response.error) {
-            throw new Error(JSON.stringify(response.error, null, 2));
+            throw response.error;
         }
 
         if (!response.data) {

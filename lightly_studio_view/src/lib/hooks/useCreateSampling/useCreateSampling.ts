@@ -4,12 +4,7 @@ import { toast } from 'svelte-sonner';
 import type { TagView } from '$lib/services/types';
 import type { SamplingRequest } from '$lib/api/lightly_studio_local/types.gen';
 import type { BalancingMode } from '$lib/components/Sampling/balancingMode';
-
-type SamplingError = { error: string };
-
-function extractError(error: unknown, fallback: string): string {
-    return (error as SamplingError)?.error || fallback;
-}
+import { getErrorMessage } from '$lib/api/ApiError';
 
 interface UseCreateSamplingParams {
     tags: Readable<TagView[]>;
@@ -55,7 +50,7 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
         });
 
         if (response.error) {
-            toast.error(extractError(response.error, 'Failed to create sampling'));
+            toast.error(getErrorMessage(response.error, 'Failed to create sampling'));
             return false;
         }
 
@@ -141,7 +136,7 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
             // API functions return { data, error } and don't throw, so this
             // only fires for unexpected runtime bugs in the hook itself.
             console.error('Unexpected error in useCreateSampling.submit:', error);
-            toast.error('Failed to create sampling: ' + (error as Error).message);
+            toast.error('Failed to create sampling: ' + getErrorMessage(error, 'Unknown error'));
             return false;
         } finally {
             _isSubmitting.set(false);
