@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
 from typing import Annotated
 from uuid import UUID
 
@@ -25,7 +24,6 @@ from lightly_studio.models.video import (
     VideoView,
 )
 from lightly_studio.resolvers import video_frame_resolver
-from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.resolvers.video_frame_resolver.video_frame_filter import (
     VideoFrameFilter,
 )
@@ -91,20 +89,8 @@ def get_all_frames(
         video_frame_filter=body.filter,
     )
 
-    annotations = [
-        annotation
-        for frame in result.samples
-        for sample in (frame.sample, frame.video.sample)
-        for annotation in sample.annotations
-    ]
-    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
-        session=session, annotations=annotations
-    )
     return VideoFrameViewsWithCount(
-        samples=[
-            _build_video_frame_view(vf=frame, parent_track_class_names=parent_track_class_names)
-            for frame in result.samples
-        ],
+        samples=[_build_video_frame_view(vf=frame) for frame in result.samples],
         total_count=result.total_count,
         next_cursor=result.next_cursor,
     )
@@ -163,10 +149,7 @@ def get_frame_by_id(
     """
     result = video_frame_resolver.get_by_id(session=session, sample_id=sample_id)
 
-    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
-        session=session, annotations=[*result.sample.annotations, *result.video.sample.annotations]
-    )
-    return _build_video_frame_view(vf=result, parent_track_class_names=parent_track_class_names)
+    return _build_video_frame_view(result)
 
 
 @frame_router.post("/annotations/count", response_model=list[CountAnnotationsView])
@@ -192,23 +175,7 @@ def count_video_frame_annotations(
     )
 
 
-def build_frame_view(
-    vf: VideoFrameTable, parent_track_class_names: Mapping[UUID, str]
-) -> FrameView:
-    """Create a FrameView with parent track class names."""
-    return FrameView(
-        frame_number=vf.frame_number,
-        frame_timestamp_s=vf.frame_timestamp_s,
-        sample_id=vf.sample_id,
-        sample=_build_sample_view(
-            sample=vf.sample, parent_track_class_names=parent_track_class_names
-        ),
-    )
-
-
-def _build_sample_view(
-    sample: SampleTable, parent_track_class_names: Mapping[UUID, str]
-) -> SampleView:
+def _build_sample_view(sample: SampleTable) -> SampleView:
     return SampleView(
         collection_id=sample.collection_id,
         sample_id=sample.sample_id,
@@ -222,15 +189,12 @@ def _build_sample_view(
         if sample.captions
         else [],
         annotations=[
-            AnnotationView.from_annotation_table(
-                annotation=annotation, parent_track_class_names=parent_track_class_names
-            )
-            for annotation in sample.annotations
+            AnnotationView.from_annotation_table(annotation=a) for a in sample.annotations
         ],
     )
 
 
-def _build_video_view(video: VideoTable, parent_track_class_names: Mapping[UUID, str]) -> VideoView:
+def _build_video_view(video: VideoTable) -> VideoView:
     return VideoView(
         width=video.width,
         height=video.height,
@@ -239,21 +203,25 @@ def _build_video_view(video: VideoTable, parent_track_class_names: Mapping[UUID,
         file_name=video.file_name,
         file_path_abs=video.file_path_abs,
         sample_id=video.sample_id,
-        sample=_build_sample_view(
-            sample=video.sample, parent_track_class_names=parent_track_class_names
-        ),
+        sample=_build_sample_view(video.sample),
     )
 
 
-def _build_video_frame_view(
-    vf: VideoFrameTable, parent_track_class_names: Mapping[UUID, str]
-) -> VideoFrameView:
+def _build_video_frame_view(vf: VideoFrameTable) -> VideoFrameView:
     return VideoFrameView(
         frame_number=vf.frame_number,
         frame_timestamp_s=vf.frame_timestamp_s,
         sample_id=vf.sample_id,
-        video=_build_video_view(video=vf.video, parent_track_class_names=parent_track_class_names),
-        sample=_build_sample_view(
-            sample=vf.sample, parent_track_class_names=parent_track_class_names
-        ),
+        video=_build_video_view(vf.video),
+        sample=_build_sample_view(vf.sample),
+    )
+
+
+def build_frame_view(vf: VideoFrameTable) -> FrameView:
+    """Create a FrameView."""
+    return FrameView(
+        frame_number=vf.frame_number,
+        frame_timestamp_s=vf.frame_timestamp_s,
+        sample_id=vf.sample_id,
+        sample=_build_sample_view(vf.sample),
     )

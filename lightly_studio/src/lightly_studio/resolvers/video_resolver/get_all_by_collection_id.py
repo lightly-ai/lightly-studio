@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Any
 from uuid import UUID
 
@@ -12,7 +12,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
 
-from lightly_studio.api.routes.api import frame
+from lightly_studio.api.routes.api.frame import build_frame_view
 from lightly_studio.api.routes.api.validators import Paginated
 
 # Aliased because `order_by` is also a parameter name throughout this module.
@@ -29,7 +29,6 @@ from lightly_studio.models.video import (
     VideoViewsWithCount,
 )
 from lightly_studio.resolvers import video_resolver
-from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.resolvers.similarity_utils import (
     apply_similarity_join,
     distance_to_similarity,
@@ -98,7 +97,6 @@ def get_all_by_collection_id_with_frames(
 def convert_video_table_to_view(
     video: VideoTable,
     first_frame: VideoFrameTable | None,
-    parent_track_class_names: Mapping[UUID, str],
     similarity_score: float | None = None,
     order_value: float | None = None,
 ) -> VideoView:
@@ -107,16 +105,13 @@ def convert_video_table_to_view(
     Args:
         video: The video row to convert.
         first_frame: The video's lowest-numbered frame, used for the thumbnail.
-        parent_track_class_names: Mapping from parent object track ID to class name.
         similarity_score: Similarity to a text/embedding query, when search is active.
         order_value: Primary sort value for the current grid sort, when provided by the
             resolver. Mutually exclusive with ``similarity_score`` for the grid overlay.
     """
     first_frame_view = None
     if first_frame:
-        first_frame_view = frame.build_frame_view(
-            vf=first_frame, parent_track_class_names=parent_track_class_names
-        )
+        first_frame_view = build_frame_view(first_frame)
 
     return VideoView(
         width=video.width,
@@ -203,14 +198,10 @@ def _get_all_with_similarity(  # noqa: PLR0913
     total_count = session.exec(total_count_query).one()
     results = session.exec(samples_query).all()
 
-    parent_track_class_names = _fetch_parent_track_class_names(
-        session=session, first_frames=[row[1] for row in results]
-    )
     video_views = [
         convert_video_table_to_view(
             video=r[0],
             first_frame=r[1],
-            parent_track_class_names=parent_track_class_names,
             similarity_score=distance_to_similarity(r[2]),
         )
         for r in results
@@ -286,14 +277,10 @@ def _get_all_without_similarity(  # noqa: PLR0913
     # Multi-column rows: VideoTable at index 0, VideoFrameTable at 1, sort value by label.
     rows = session.execute(ordered_query).all()
 
-    parent_track_class_names = _fetch_parent_track_class_names(
-        session=session, first_frames=[row[1] for row in rows]
-    )
     video_views = [
         convert_video_table_to_view(
             video=row[0],
             first_frame=row[1],
-            parent_track_class_names=parent_track_class_names,
             order_value=_coerce_order_value(order_by_module.get_order_value(row=row)),
         )
         for row in rows
@@ -303,21 +290,6 @@ def _get_all_without_similarity(  # noqa: PLR0913
         samples=video_views,
         total_count=total_count,
         next_cursor=_compute_next_cursor(pagination, total_count),
-    )
-
-
-def _fetch_parent_track_class_names(
-    session: Session, first_frames: Sequence[VideoFrameTable | None]
-) -> dict[UUID, str]:
-    """Look up parent classes for all thumbnail annotations in a page."""
-    annotations = [
-        annotation
-        for first_frame in first_frames
-        if first_frame is not None
-        for annotation in first_frame.sample.annotations
-    ]
-    return parent_track_lookup.fetch_parent_track_class_names(
-        session=session, annotations=annotations
     )
 
 
