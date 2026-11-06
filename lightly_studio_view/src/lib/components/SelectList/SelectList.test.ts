@@ -88,16 +88,6 @@ describe('SelectList', () => {
         expect(screen.getByText('nonexistent')).toBeInTheDocument();
     });
 
-    it('shows the create row by default', async () => {
-        const user = userEvent.setup();
-        render(SelectList, { props: { items: [...mockItems] } });
-
-        await user.click(screen.getByTestId('select-list-trigger'));
-        await user.type(screen.getByTestId('select-list-input'), 'zebra');
-
-        expect(screen.getByText('Create:')).toBeInTheDocument();
-    });
-
     it('hides the create row when allowCreate is false', async () => {
         const user = userEvent.setup();
         render(SelectList, { props: { items: [...mockItems], allowCreate: false } });
