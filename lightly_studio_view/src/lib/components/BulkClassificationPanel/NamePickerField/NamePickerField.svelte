@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import { SelectList } from '$lib/components/SelectList';
-    import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
+    import { LabelNotFound } from '$lib/components/LabelNotFound';
 
     type ListItem = ComponentProps<typeof SelectList>['items'][number];
 

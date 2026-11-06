@@ -146,7 +146,7 @@ describe('SelectClassDialog', () => {
         await user.type(input, 'zebra');
 
         expect(screen.queryByText(/Create:/)).not.toBeInTheDocument();
-        expect(screen.getByText('No class found.')).toBeInTheDocument();
+        expect(screen.getByText('No annotation class found.')).toBeInTheDocument();
         expect(screen.getByText('Choose an existing class.')).toBeInTheDocument();
 
         await user.type(input, '{Enter}');

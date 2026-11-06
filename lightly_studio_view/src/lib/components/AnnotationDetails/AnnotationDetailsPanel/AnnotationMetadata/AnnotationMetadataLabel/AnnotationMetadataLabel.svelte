@@ -45,10 +45,9 @@
 
     const items = $derived(getSelectionItems(result.data || []));
 
-    const value = $derived.by(() => {
-        const item = items.find((i) => i.value === currentValue);
-        return item ? item : { value: currentValue, label: currentValue };
-    });
+    const value = $derived(
+        items.find((i) => i.value === currentValue) ?? { value: currentValue, label: currentValue }
+    );
 </script>
 
 <span class="text-sm">{label}</span>
