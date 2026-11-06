@@ -1,7 +1,7 @@
 <script lang="ts">
     import { trackClassCreatedInPicker } from '$lib/utils';
     import { useCanCreateAnnotationClass } from '$lib/hooks';
-    import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
+    import { LabelNotFound } from '$lib/components/LabelNotFound';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
@@ -27,20 +27,15 @@
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
 
-    const handleConfirm = () => {
-        if (selectedItem) {
-            closedByConfirm = true;
-            onConfirm(selectedItem.value);
-            open = false;
-            selectedItem = undefined;
-        }
-    };
-
-    const handleKeyboardConfirm = (item: ListItem) => {
+    const confirmItem = (item: ListItem) => {
         closedByConfirm = true;
         onConfirm(item.value);
         open = false;
         selectedItem = undefined;
+    };
+
+    const handleConfirm = () => {
+        if (selectedItem) confirmItem(selectedItem);
     };
 
     const handleCancel = () => {
@@ -81,7 +76,7 @@
                 className="w-full"
                 autoOpen
                 autoFocus
-                onKeyboardConfirm={handleKeyboardConfirm}
+                onKeyboardConfirm={confirmItem}
             >
                 {#snippet notFound({ inputValue })}
                     <LabelNotFound label={inputValue} canCreate={canCreateClass} />

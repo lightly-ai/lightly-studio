@@ -32,16 +32,16 @@ describe('NamePickerField', () => {
 
         await search('zebra');
 
-        expect(screen.queryByText('No class found.')).not.toBeInTheDocument();
+        expect(screen.queryByText('No annotation class found.')).not.toBeInTheDocument();
         expect(screen.queryByText(/Press Enter to create|Type to create/)).not.toBeInTheDocument();
     });
 
-    it('shows "No class found." and no create row when creation is not allowed', async () => {
+    it('shows "No annotation class found." and no create row when creation is not allowed', async () => {
         render(NamePickerField, { props: { ...defaultProps, allowCreate: false } });
 
         await search('zebra');
 
-        expect(screen.getByText('No class found.')).toBeInTheDocument();
+        expect(screen.getByText('No annotation class found.')).toBeInTheDocument();
         expect(screen.queryByText(/Create:/)).not.toBeInTheDocument();
     });
 });

@@ -110,29 +110,31 @@
         closeAndFocusTrigger();
     };
 
+    const getTypedItem = (): ListItem | undefined =>
+        inputValue.trim() ? getOrCreateItem(inputValue) : undefined;
+
+    // With onKeyboardConfirm, Enter confirms the highlighted or typed item. Without it,
+    // Enter on a highlighted item is left to the command list.
+    const getEnterItem = (): ListItem | undefined => {
+        if (onKeyboardConfirm) {
+            return items.find((item) => item.value === highlightedValue) ?? getTypedItem();
+        }
+        return highlightedValue ? undefined : getTypedItem();
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue.trim()) {
-                const item = getOrCreateItem(inputValue);
-                if (item) {
-                    handleOnSelect(item);
-                    event.preventDefault();
-                    event.stopPropagation();
-                }
-            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                event.stopPropagation();
-            }
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.stopPropagation();
             return;
         }
+        if (event.key !== 'Enter') return;
 
-        const highlightedItem = items.find((item) => item.value === highlightedValue);
-
-        if (highlightedItem) {
-            confirmWithKeyboard(highlightedItem);
-        } else {
-            const item = inputValue.trim() ? getOrCreateItem(inputValue) : undefined;
-            if (!item) return;
+        const item = getEnterItem();
+        if (!item) return;
+        if (onKeyboardConfirm) {
             confirmWithKeyboard(item);
+        } else {
+            handleOnSelect(item);
         }
 
         event.preventDefault();

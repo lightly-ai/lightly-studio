@@ -3,7 +3,7 @@
 </script>
 
 {#if !canCreate}
-    <div class="text-md m-2">No class found.</div>
+    <div class="text-md m-2">No annotation class found.</div>
 {:else if label.length > 0}
     <div class="text-md m-2">
         Press Enter to create a new <span class="font-semibold">"{label}"</span> annotation class.
