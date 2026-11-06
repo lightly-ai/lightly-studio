@@ -52,8 +52,8 @@ def get_identity(
     if not deployment.is_enterprise():
         if x_user_email is not None or x_user_role is not None:
             raise RuntimeError(
-                "The request has identity headers, but LIGHTLY_STUDIO_DEPLOYMENT_MODE is not "
-                "'enterprise'."
+                "Authentication is not supported in a local run. For an enterprise server, set "
+                "LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise."
             )
         return Identity(email=None, role=Role.ADMIN)
 
