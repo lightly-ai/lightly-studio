@@ -1,5 +1,5 @@
 import { getSummaryOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import type { McapSequenceSummary } from '$lib/api/lightly_studio_local/types.gen';
+import type { GetSummaryError, McapSequenceSummary } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 
 export const useMcapSequenceSummary = ({
@@ -10,7 +10,7 @@ export const useMcapSequenceSummary = ({
     getDatasetId: () => string;
     getSequenceId: () => string;
     getEnabled?: () => boolean;
-}): { summary: CreateQueryResult<McapSequenceSummary, unknown>; refetch: () => void } => {
+}): { summary: CreateQueryResult<McapSequenceSummary, GetSummaryError>; refetch: () => void } => {
     const client = useQueryClient();
     const summary = createQuery(() => ({
         ...getSummaryOptions({

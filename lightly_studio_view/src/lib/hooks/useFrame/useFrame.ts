@@ -1,10 +1,10 @@
-import { type VideoFrameView } from '$lib/api/lightly_studio_local';
+import { type GetFrameByIdError, type VideoFrameView } from '$lib/api/lightly_studio_local';
 import { getFrameByIdOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 
 export const useFrame = (
     getSampleId: () => string
-): { refetch: () => void; videoFrame: CreateQueryResult<VideoFrameView, unknown> } => {
+): { refetch: () => void; videoFrame: CreateQueryResult<VideoFrameView, GetFrameByIdError> } => {
     const client = useQueryClient();
     const videoFrame = createQuery(() =>
         getFrameByIdOptions({
