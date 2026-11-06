@@ -7,7 +7,7 @@ import { client } from '$lib/api/lightly_studio_local/client.gen';
  * run before the root layout. Since 0.99, the client returns a failure without a response as
  * `{ error }`. We throw it, as the client did before.
  */
-client.interceptors.error.use((error: unknown, response: Response | undefined) => {
+client.interceptors.error.use((error, response) => {
     if (!response) {
         throw error;
     }

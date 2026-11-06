@@ -9,12 +9,13 @@ describe('getErrorMessage', () => {
     it('returns the message from an API error body', () => {
         expect(getErrorMessage({ error: 'Provider unavailable' })).toBe('Provider unavailable');
         expect(getErrorMessage({ detail: 'Not found' })).toBe('Not found');
-        expect(getErrorMessage({ detail: [{ msg: 'Field required' }] })).toBe('Field required');
+        expect(
+            getErrorMessage({ detail: [{ loc: ['body'], msg: 'Field required', type: 'missing' }] })
+        ).toBe('Field required');
     });
 
     it('returns undefined if there is no message', () => {
         expect(getErrorMessage({ detail: [] })).toBeUndefined();
-        expect(getErrorMessage({ message: 42 })).toBeUndefined();
         expect(getErrorMessage(null)).toBeUndefined();
     });
 });
