@@ -1,6 +1,6 @@
 <script lang="ts">
     import { trackClassCreatedInPicker } from '$lib/utils';
-    import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { Card, CardContent, Segment } from '$lib/components';
     import ConfirmApplyDialog from './ConfirmApplyDialog/ConfirmApplyDialog.svelte';
     import NamePickerField from './NamePickerField/NamePickerField.svelte';

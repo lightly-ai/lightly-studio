@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';

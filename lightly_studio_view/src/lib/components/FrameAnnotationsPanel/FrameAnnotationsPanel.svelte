@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { trackClassCreatedInPicker } from '$lib/utils';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { Button, Segment } from '..';

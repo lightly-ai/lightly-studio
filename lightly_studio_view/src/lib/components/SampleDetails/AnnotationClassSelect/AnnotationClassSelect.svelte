@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks';
-    import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { SelectList } from '$lib/components/SelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';

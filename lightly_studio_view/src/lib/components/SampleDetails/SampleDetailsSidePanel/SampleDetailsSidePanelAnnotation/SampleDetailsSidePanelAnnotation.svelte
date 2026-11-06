@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     import { cn, formatConfidence, trackClassCreatedInPicker } from '$lib/utils';
     import { page } from '$app/state';

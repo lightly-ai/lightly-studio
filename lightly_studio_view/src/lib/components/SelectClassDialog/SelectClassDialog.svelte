@@ -1,6 +1,6 @@
 <script lang="ts">
     import { trackClassCreatedInPicker } from '$lib/utils';
-    import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
