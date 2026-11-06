@@ -39,6 +39,10 @@
     };
 </script>
 
+{#snippet classNotFound({ inputValue }: { inputValue: string })}
+    <LabelNotFound label={inputValue} canCreate={false} />
+{/snippet}
+
 <div class="space-y-1.5">
     <div id={labelId} class="text-xs font-medium text-muted-foreground">{label}</div>
     <SelectList
@@ -54,9 +58,6 @@
         onSelect={handleSelect}
         {onCreate}
         {disabled}
-    >
-        {#snippet notFound({ inputValue })}
-            <LabelNotFound label={inputValue} canCreate={allowCreate} />
-        {/snippet}
-    </SelectList>
+        notFound={allowCreate ? undefined : classNotFound}
+    />
 </div>
