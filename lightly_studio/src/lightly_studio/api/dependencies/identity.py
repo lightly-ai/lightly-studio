@@ -51,10 +51,7 @@ def get_identity(
     """
     if not deployment.is_enterprise():
         if x_user_email is not None or x_user_role is not None:
-            raise RuntimeError(
-                "Authentication is not supported in a local run. For an enterprise server, set "
-                "LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise."
-            )
+            raise RuntimeError("Authentication is not supported in a local run.")
         return Identity(email=None, role=Role.ADMIN)
 
     email = (x_user_email or "").strip()
