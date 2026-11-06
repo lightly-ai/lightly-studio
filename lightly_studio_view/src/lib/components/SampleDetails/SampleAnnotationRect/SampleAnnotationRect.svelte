@@ -8,7 +8,7 @@
             height: number;
         };
         interactionRect?: SVGRectElement | undefined | null;
-        cursor: 'auto' | 'crosshair';
+        cursor: string;
         pointerEvents?: 'all' | 'none';
     } & SVGAttributes<SVGRectElement>;
 

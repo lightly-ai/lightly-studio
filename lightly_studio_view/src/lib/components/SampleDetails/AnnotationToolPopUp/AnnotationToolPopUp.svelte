@@ -39,7 +39,8 @@
     ] as const;
 </script>
 
-<div class="absolute bottom-11 w-[min(90vw,265px)]">
+<!-- Leave room for the tool strip on the left and the annotation source below. -->
+<div class="absolute bottom-20 left-12 w-[min(90vw,265px)]">
     <div
         class="pointer-events-auto grid max-h-[70vh] gap-1.5 overflow-y-auto rounded-lg bg-muted p-2 shadow-md"
         role="dialog"

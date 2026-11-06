@@ -9,7 +9,6 @@ const setup = (activeTool: string | null) =>
     render(AssistedLabelingOverlays, {
         props: {
             sample: { sampleId: 'sample-1', width: 100, height: 100 },
-            visibleAnnotations: [],
             scale: 1,
             // Only the fields the overlays read.
             assistedLabeling: {
