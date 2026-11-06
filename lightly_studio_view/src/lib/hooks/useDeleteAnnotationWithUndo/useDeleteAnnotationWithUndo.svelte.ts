@@ -34,23 +34,23 @@ export const useDeleteAnnotationWithUndo = (getCollectionId: () => string) => {
         deletingIds.add(annotation.sample_id);
         try {
             await deleteAnnotation(annotation.sample_id, annotation.annotation_type);
-            addAnnotationDeleteToUndoStack({
-                annotation,
-                labels: undoLabels,
-                sources: undoSources,
-                addReversibleAction,
-                createAnnotation,
-                refetch
-            });
-            toast.success('Annotation deleted successfully');
-            refetch();
-            return true;
         } catch {
             toast.error('Failed to delete annotation. Please try again.');
             return false;
         } finally {
             deletingIds.delete(annotation.sample_id);
         }
+        addAnnotationDeleteToUndoStack({
+            annotation,
+            labels: undoLabels,
+            sources: undoSources,
+            addReversibleAction,
+            createAnnotation,
+            refetch
+        });
+        toast.success('Annotation deleted successfully');
+        refetch();
+        return true;
     };
 
     return { deleteWithUndo };
