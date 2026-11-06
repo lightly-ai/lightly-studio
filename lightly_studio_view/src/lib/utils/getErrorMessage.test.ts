@@ -6,19 +6,15 @@ describe('getErrorMessage', () => {
         expect(getErrorMessage(new Error('Network down'))).toBe('Network down');
     });
 
-    it('returns the message of an object with a message', () => {
-        expect(getErrorMessage({ message: 'Bad request' })).toBe('Bad request');
+    it('returns the message from an API error body', () => {
+        expect(getErrorMessage({ error: 'Provider unavailable' })).toBe('Provider unavailable');
+        expect(getErrorMessage({ detail: 'Not found' })).toBe('Not found');
+        expect(getErrorMessage({ detail: [{ msg: 'Field required' }] })).toBe('Field required');
     });
 
-    it('returns undefined for an API error body without a message', () => {
+    it('returns undefined if there is no message', () => {
         expect(getErrorMessage({ detail: [] })).toBeUndefined();
-    });
-
-    it('returns undefined for a non-string message', () => {
         expect(getErrorMessage({ message: 42 })).toBeUndefined();
-    });
-
-    it('returns undefined for null', () => {
         expect(getErrorMessage(null)).toBeUndefined();
     });
 });
