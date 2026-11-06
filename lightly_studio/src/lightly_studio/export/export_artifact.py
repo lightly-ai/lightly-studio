@@ -20,8 +20,13 @@ def remove_export_artifact(export_path: str) -> None:
     Args:
         export_path: Absolute path to the export job's file or directory.
     """
-    resolved_path = Path(export_path).resolve()
-    temp_dir = Path(tempfile.gettempdir()).resolve()
+    try:
+        resolved_path = Path(export_path).resolve()
+        temp_dir = Path(tempfile.gettempdir()).resolve()
+    except (OSError, RuntimeError):
+        # A symlink loop raises RuntimeError before Python 3.13.
+        logger.warning("Could not resolve export artifact: %s", export_path, exc_info=True)
+        return
     try:
         relative_path = resolved_path.relative_to(temp_dir)
     except ValueError:
