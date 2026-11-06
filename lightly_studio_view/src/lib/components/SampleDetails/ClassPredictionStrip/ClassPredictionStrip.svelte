@@ -15,7 +15,7 @@
         resolveEffectiveColorBySource
     } from '$lib/utils';
     import { useQueryClient } from '@tanstack/svelte-query';
-    import { getReadableTextColor, isAnnotationQueryOf } from './ClassPredictionStrip.helpers';
+    import { isAnnotationQueryOf } from './ClassPredictionStrip.helpers';
 
     interface Props {
         collectionId: string;
@@ -120,22 +120,22 @@
                 {#each predictionState.top as entry, index (entry.annotation_label_id)}
                     {@const isSelected = entry.label_name === currentLabelName}
                     {@const classColor = getColorByLabel(entry.label_name).color}
-                    {@const fillWithClassColor = isSelected && showClassColors}
+                    <!-- Only colors change on selection. Font weight or content changes would
+                    resize the entry and shift its neighbours. -->
                     <span
                         class={cn(
-                            'inline-flex items-center gap-1.5 rounded px-2 py-0.5',
-                            isSelected ? 'font-medium' : 'text-muted-foreground',
-                            isSelected && !showClassColors && 'bg-primary text-primary-foreground'
+                            'inline-flex items-center gap-1.5 border-b-2 border-transparent px-2 py-0.5',
+                            isSelected ? 'text-foreground' : 'text-muted-foreground opacity-60',
+                            isSelected && !showClassColors && 'border-primary'
                         )}
-                        style:background-color={fillWithClassColor ? classColor : undefined}
-                        style:color={fillWithClassColor
-                            ? getReadableTextColor(classColor)
+                        style:border-bottom-color={isSelected && showClassColors
+                            ? classColor
                             : undefined}
                         aria-current={isSelected ? 'true' : undefined}
                         data-testid="class-prediction-entry"
                     >
-                        <kbd class={cn(isSelected && 'opacity-70')}>{index + 1}</kbd>
-                        {#if showClassColors && !isSelected}
+                        <kbd>{index + 1}</kbd>
+                        {#if showClassColors}
                             <span
                                 class="size-2.5 rounded-sm"
                                 style:background-color={classColor}

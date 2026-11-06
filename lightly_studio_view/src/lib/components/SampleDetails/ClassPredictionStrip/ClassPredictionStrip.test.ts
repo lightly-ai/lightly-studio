@@ -106,16 +106,10 @@ const asDomColor = (color: string) => {
     return element.style.backgroundColor;
 };
 const entryText = (entry: HTMLElement) => entry.textContent?.replace(/\s+/g, ' ').trim();
-// The class color of each entry: its swatch, or the fill of the selected pill.
 const classColors = () =>
     screen
-        .getAllByTestId('class-prediction-entry')
-        .map(
-            (entry) =>
-                entry.querySelector<HTMLElement>('[data-testid="class-prediction-swatch"]')?.style
-                    .backgroundColor || entry.style.backgroundColor
-        )
-        .filter(Boolean);
+        .queryAllByTestId('class-prediction-swatch')
+        .map((swatch) => swatch.style.backgroundColor);
 
 describe('ClassPredictionStrip', () => {
     beforeEach(() => {
@@ -340,13 +334,20 @@ describe('ClassPredictionStrip', () => {
         );
     });
 
-    it('fills the selected class with its class color when coloring by class', () => {
+    it('underlines the selected class in its class color when coloring by class', () => {
         mocks.state = READY_STATE;
         render(ClassPredictionStrip, { props: defaultProps });
 
         const selected = screen
             .getAllByTestId('class-prediction-entry')
             .find((entry) => entry.getAttribute('aria-current') === 'true');
-        expect(selected?.style.backgroundColor).toBe(asDomColor(getColorByLabel('car').color));
+        expect(selected?.style.borderBottomColor).toBe(asDomColor(getColorByLabel('car').color));
+    });
+
+    it('keeps the swatch on the selected class so entries keep their width', () => {
+        mocks.state = READY_STATE;
+        render(ClassPredictionStrip, { props: defaultProps });
+
+        expect(screen.getAllByTestId('class-prediction-swatch')).toHaveLength(3);
     });
 });
