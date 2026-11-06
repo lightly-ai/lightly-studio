@@ -115,3 +115,4 @@ export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetc
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
 export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte';
 export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
+export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
