@@ -1,5 +1,6 @@
 <script lang="ts">
     import * as Tabs from '$lib/components/ui/tabs';
+    import { usePostHog } from '$lib/hooks';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { AnnotationClassesTab } from '../AnnotationClassesTab';
     import { AnnotationsTab } from '../AnnotationsTab';
@@ -13,6 +14,14 @@
 
     let { value = $bindable(), dialogState }: Props = $props();
 
+    const { trackEvent } = usePostHog();
+
+    // The dialog always opens on the first tab, so this tracks every visit to the other tabs.
+    const onValueChange = (tab: string) => {
+        dialogState.clearRecording();
+        trackEvent('settings_tab_opened', { tab });
+    };
+
     const tabs = [
         { value: 'shortcuts', label: 'Shortcuts', component: ShortcutsTab },
         { value: 'display', label: 'Display', component: DisplayTab },
@@ -25,11 +34,7 @@
     ];
 </script>
 
-<Tabs.Root
-    bind:value
-    onValueChange={() => dialogState.clearRecording()}
-    class="flex min-h-0 flex-1 flex-col"
->
+<Tabs.Root bind:value {onValueChange} class="flex min-h-0 flex-1 flex-col">
     <Tabs.List
         class="mt-4 h-auto justify-start gap-6 rounded-none border-b border-border bg-transparent p-0 px-6"
     >
