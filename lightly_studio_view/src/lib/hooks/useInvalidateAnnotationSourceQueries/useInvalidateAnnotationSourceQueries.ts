@@ -11,8 +11,8 @@ const ANNOTATION_SOURCE_LIST_QUERY_KEYS = [
     [{ _id: 'readCollectionHierarchy' }]
 ];
 
-// Queries that show annotations with their source: class and video counts and the sample
-// details.
+// Queries that show annotations with their source: class and video counts, the sample
+// details and the point cloud tick details.
 const SOURCE_DEPENDENT_QUERY_KEYS = [
     [{ _id: 'readAnnotationLabelsWithCounts' }],
     [{ _id: 'countVideoFrameAnnotations' }],
@@ -20,6 +20,7 @@ const SOURCE_DEPENDENT_QUERY_KEYS = [
     [{ _id: 'readImage' }],
     [{ _id: 'getFrameById' }],
     [{ _id: 'getVideoById' }],
+    [{ _id: 'getTickDetails' }],
     [{ _id: 'getAnnotationWithPayload' }]
 ];
 
@@ -27,7 +28,7 @@ const SOURCE_DEPENDENT_QUERY_KEYS = [
  * Returns the function that refreshes what deleting an annotation source of a collection
  * changes: what `useInvalidateAnnotationQueries` refreshes, plus the source lists and the
  * collection hierarchy of every collection, the annotations grid, the class and video counts and
- * the sample details. Call it on success only.
+ * the sample and tick details. Call it on success only.
  */
 export const useInvalidateAnnotationSourceQueries = () => {
     const client = useQueryClient();

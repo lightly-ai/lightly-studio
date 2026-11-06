@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
     countVideoFrameAnnotationsByVideoCollectionQueryKey,
     countVideoFrameAnnotationsQueryKey,
+    getTickDetailsQueryKey,
     readAnnotationCollectionsQueryKey,
     readAnnotationCollectionsWithCountsQueryKey,
     readCollectionHierarchyQueryKey,
@@ -30,13 +31,16 @@ describe('useInvalidateAnnotationSourceQueries', () => {
         vi.mocked(useQueryClient).mockReturnValue(client);
     });
 
-    it('refreshes the sources, the grids and the sample details', () => {
+    it('refreshes the sources, the grids, and the sample and tick details', () => {
         const affected = [
             readAnnotationCollectionsQueryKey(path('owner')),
             readAnnotationCollectionsWithCountsQueryKey(path('owner')),
             [...getImagesInfiniteQueryKeyPrefix('owner'), 'normal'],
             [...getAnnotationsInfiniteQueryKeyPrefix('source-1'), {}],
             readImageQueryKey({ path: { sample_id: 'sample-1' } }),
+            getTickDetailsQueryKey({
+                path: { dataset_id: 'owner', sequence_id: 'sequence-1', seq_number: 0 }
+            }),
             readCollectionHierarchyQueryKey(path('owner')),
             countVideoFrameAnnotationsQueryKey({
                 path: { video_frame_collection_id: 'frames-1' },
