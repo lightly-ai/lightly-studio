@@ -23,6 +23,7 @@ from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUna
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
 from lightly_studio.errors import ExportError, NotFoundError, QueryExprError, UnknownImageSizeError
+from lightly_studio.jobs.errors import JobConflictError, JobsNotConfiguredError
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -204,6 +205,27 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
         _request: Request, _exc: ProviderUnavailableError
     ) -> JSONResponse:
         """Handle an assisted labeling provider that is not usable."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_SERVICE_UNAVAILABLE)
+        return JSONResponse(
+            status_code=HTTP_STATUS_SERVICE_UNAVAILABLE, content={"error": str(_exc)}
+        )
+
+    @app.exception_handler(JobConflictError)
+    async def _job_conflict_error_handler(
+        _request: Request, _exc: JobConflictError
+    ) -> JSONResponse:
+        """Handle a job start on a resource that already has an active job."""
+        _report_error(exc=_exc, status_code=HTTP_STATUS_CONFLICT)
+        return JSONResponse(
+            status_code=HTTP_STATUS_CONFLICT,
+            content={"error": str(_exc), "active_job_id": str(_exc.active_job_id)},
+        )
+
+    @app.exception_handler(JobsNotConfiguredError)
+    async def _jobs_not_configured_error_handler(
+        _request: Request, _exc: JobsNotConfiguredError
+    ) -> JSONResponse:
+        """Handle a job request on a studio without job settings."""
         _report_error(exc=_exc, status_code=HTTP_STATUS_SERVICE_UNAVAILABLE)
         return JSONResponse(
             status_code=HTTP_STATUS_SERVICE_UNAVAILABLE, content={"error": str(_exc)}

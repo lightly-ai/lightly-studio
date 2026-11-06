@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from uuid import UUID
+
 import pytest
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
@@ -15,9 +17,11 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
+    HTTP_STATUS_SERVICE_UNAVAILABLE,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.errors import NotFoundError
+from lightly_studio.jobs.errors import JobConflictError, JobsNotConfiguredError, UnknownJobTypeError
 
 
 @pytest.fixture
@@ -176,6 +180,56 @@ def test_register_exception_handlers__not_found_error_handler_reports_error(
     report_error_kwargs = mock_report_error.call_args.kwargs
     assert isinstance(report_error_kwargs["exc"], NotFoundError)
     assert report_error_kwargs["status_code"] == HTTP_STATUS_NOT_FOUND
+
+
+def test_register_exception_handlers__job_conflict_error_handler(
+    app_with_exception_handlers: FastAPI, client: TestClient
+) -> None:
+    active_job_id = UUID("6f1c1a52-58f4-4f43-9d6b-3c1e2b9a7d10")
+    path = "/test-job-conflict-error"
+
+    @app_with_exception_handlers.get(path)
+    async def test_job_conflict_error() -> None:
+        raise JobConflictError(active_job_id=active_job_id)
+
+    response = client.get(path)
+
+    assert response.status_code == HTTP_STATUS_CONFLICT
+    assert response.json() == {
+        "error": "A job is already active for this resource.",
+        "active_job_id": "6f1c1a52-58f4-4f43-9d6b-3c1e2b9a7d10",
+    }
+
+
+def test_register_exception_handlers__jobs_not_configured_error_handler(
+    app_with_exception_handlers: FastAPI, client: TestClient
+) -> None:
+    path = "/test-jobs-not-configured-error"
+
+    @app_with_exception_handlers.get(path)
+    async def test_jobs_not_configured_error() -> None:
+        raise JobsNotConfiguredError()
+
+    response = client.get(path)
+
+    assert response.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
+    assert response.json() == {"error": "Jobs are not configured."}
+
+
+def test_register_exception_handlers__unknown_job_type_error_uses_value_error_handler(
+    app_with_exception_handlers: FastAPI, client: TestClient
+) -> None:
+    msg = "Unknown job type: 'missing'."
+    path = "/test-unknown-job-type-error"
+
+    @app_with_exception_handlers.get(path)
+    async def test_unknown_job_type_error() -> None:
+        raise UnknownJobTypeError(msg)
+
+    response = client.get(path)
+
+    assert response.status_code == HTTP_STATUS_BAD_REQUEST
+    assert response.json() == {"error": msg}
 
 
 def test_register_exception_handlers__unhandled_exception_handler(
