@@ -25,10 +25,7 @@
     } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import {
-        getCreateLabelErrorMessage,
-        useCreateLabel
-    } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';

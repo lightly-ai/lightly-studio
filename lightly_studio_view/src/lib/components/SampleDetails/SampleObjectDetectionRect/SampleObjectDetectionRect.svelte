@@ -2,10 +2,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import {
-        getCreateLabelErrorMessage,
-        useCreateLabel
-    } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import type { BoundingBox } from '$lib/types';
     import { drag, type D3DragEvent } from 'd3-drag';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';

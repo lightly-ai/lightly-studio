@@ -18,6 +18,8 @@ import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/use
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
 
+type LabelList = { annotation_label_id?: string; annotation_label_name?: string }[];
+
 export function useSegmentationMaskBrush({
     collectionId,
     datasetId,
@@ -58,13 +60,34 @@ export function useSegmentationMaskBrush({
         getCollectionId: () => collectionId
     });
 
+    // Waits for the class list. Returns undefined, after showing an error, when a new
+    // annotation cannot get its class. Editing an existing mask works without the list.
+    const resolveLabelList = async (
+        labels: LabelList | Promise<LabelList | undefined>,
+        annotationLabelName: string | null | undefined,
+        isNewAnnotation: boolean
+    ): Promise<LabelList | undefined> => {
+        const labelList = await labels;
+        if (!isNewAnnotation) return labelList ?? [];
+        if (!labelList) {
+            toast.error('Could not load annotation classes. Please try again.');
+            return undefined;
+        }
+        const exists = labelList.some((l) => l.annotation_label_name === annotationLabelName);
+        if (!exists && !canCreateLabel) {
+            // Stop before trimming other masks, so they stay untouched.
+            toast.error(new AnnotationClassNotAvailableError(annotationLabelName!).message);
+            refetch();
+            return undefined;
+        }
+        return labelList;
+    };
+
     const finishBrush = async (
         workingMask: Uint8Array | null,
         selectedAnnotation: AnnotationView | null,
-        labels: {
-            annotation_label_id?: string;
-            annotation_label_name?: string;
-        }[],
+        // A promise while the class list is still loading.
+        labels: LabelList | Promise<LabelList | undefined>,
         updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>,
         lockedAnnotationIds?: Set<string>
     ) => {
@@ -96,13 +119,9 @@ export function useSegmentationMaskBrush({
             updateLastAnnotationLabel(collectionId, annotationLabelName);
         }
 
-        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
-        if (!selectedAnnotation && !label && !canCreateLabel) {
-            // Stop before trimming other masks, so they stay untouched.
-            toast.error(new AnnotationClassNotAvailableError(annotationLabelName!).message);
-            refetch();
-            return;
-        }
+        const labelList = await resolveLabelList(labels, annotationLabelName, !selectedAnnotation);
+        if (!labelList) return;
+        let label = labelList.find((l) => l.annotation_label_name === annotationLabelName);
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({
             workingMask,
@@ -118,7 +137,7 @@ export function useSegmentationMaskBrush({
             await restoreOverriddenSegmentationAnnotationsForUndo({
                 collectionId,
                 overriddenAnnotations,
-                labels,
+                labels: labelList,
                 updateAnnotations,
                 createAnnotation
             });

@@ -31,10 +31,7 @@
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import {
-        getCreateLabelErrorMessage,
-        useCreateLabel
-    } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount, untrack } from 'svelte';

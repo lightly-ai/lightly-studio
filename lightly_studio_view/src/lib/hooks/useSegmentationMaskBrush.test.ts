@@ -268,6 +268,52 @@ describe('useSegmentationMaskBrush', () => {
         expect(createAnnotation).not.toHaveBeenCalled();
     });
 
+    it('waits for a loading class list before checking the class', async () => {
+        createLabelState.canCreateLabel = false;
+        annotationLabelContext.annotationLabel = 'car';
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch: vi.fn(),
+            deleteAnnotation
+        });
+
+        await finishBrush(
+            mask,
+            null,
+            Promise.resolve([{ annotation_label_id: 'label-car', annotation_label_name: 'car' }])
+        );
+
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_label_id: 'label-car' })
+        );
+    });
+
+    it('shows a lookup error when the class list fails to load', async () => {
+        annotationLabelContext.annotationLabel = 'car';
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch: vi.fn(),
+            deleteAnnotation
+        });
+
+        await finishBrush(mask, null, Promise.resolve(undefined));
+
+        expect(toast.error).toHaveBeenCalledWith(
+            'Could not load annotation classes. Please try again.'
+        );
+        expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
+        expect(createLabel).not.toHaveBeenCalled();
+    });
+
     it('creates no class for an empty mask', async () => {
         vi.mocked(computeBoundingBoxFromMask).mockReturnValue(null);
         annotationLabelContext.annotationLabel = 'car';
