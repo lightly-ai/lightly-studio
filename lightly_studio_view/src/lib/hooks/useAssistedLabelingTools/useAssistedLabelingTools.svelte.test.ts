@@ -126,6 +126,20 @@ describe('useAssistedLabelingTools', () => {
         expect(mocks.clearInstances).toHaveBeenCalledOnce();
     });
 
+    it('resets the inputs after saving and keeps find all instances active', () => {
+        const { tools } = setup('find-instances');
+        tools.state.instancesPrompt = 'cars';
+        tools.state.isDrawingInstancesBox = true;
+
+        const onSaved = mocks.getInstancesParams().onSaved as () => void;
+        onSaved();
+
+        expect(tools.state.instancesPrompt).toBe('');
+        expect(tools.state.isDrawingInstancesBox).toBe(false);
+        expect(mocks.clearInstances).toHaveBeenCalledOnce();
+        expect(tools.activeTool).toBe('find-instances');
+    });
+
     it('passes the tool settings and falls back to the sticky class as class', () => {
         const { tools } = setup();
         expect(mocks.getSmartSelectParams()).toMatchObject({
