@@ -1,8 +1,10 @@
 <script lang="ts">
-    const { label }: { label: string } = $props();
+    const { label, canCreate = true }: { label: string; canCreate?: boolean } = $props();
 </script>
 
-{#if label.length > 0}
+{#if !canCreate}
+    <div class="text-md m-2">No class found.</div>
+{:else if label.length > 0}
     <div class="text-md m-2">
         Press Enter to create a new <span class="font-semibold">"{label}"</span> annotation class.
     </div>
