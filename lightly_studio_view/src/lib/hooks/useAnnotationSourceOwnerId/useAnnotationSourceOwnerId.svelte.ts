@@ -5,11 +5,12 @@ import { createQuery } from '@tanstack/svelte-query';
 /**
  * The collection that owns the annotation sources of the collection on screen. Annotation
  * sources are child collections of the owner, so on the annotations grid, where the collection
- * on screen is a source, the owner is its parent. Undefined while the collection loads.
+ * on screen is a source, the owner is its parent. Undefined while the collection loads or when
+ * it fails to load.
  */
 export const useAnnotationSourceOwnerId = (
     getCollectionId: () => string
-): { readonly ownerCollectionId: string | undefined } => {
+): { readonly ownerCollectionId: string | undefined; readonly isError: boolean } => {
     const collection = createQuery(() => ({
         ...readCollectionOptions({ path: { collection_id: getCollectionId() } }),
         enabled: !!getCollectionId()
@@ -21,6 +22,9 @@ export const useAnnotationSourceOwnerId = (
             if (!data) return undefined;
             if (data.sample_type !== SampleType.ANNOTATION) return data.collection_id;
             return data.parent_collection_id ?? undefined;
+        },
+        get isError() {
+            return collection.isError;
         }
     };
 };

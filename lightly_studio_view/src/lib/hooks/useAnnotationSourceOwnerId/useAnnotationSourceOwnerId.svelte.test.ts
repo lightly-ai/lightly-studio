@@ -4,7 +4,8 @@ import { useAnnotationSourceOwnerId } from './useAnnotationSourceOwnerId.svelte'
 const mocks = vi.hoisted(() => ({
     data: undefined as
         | { collection_id: string; sample_type: string; parent_collection_id?: string | null }
-        | undefined
+        | undefined,
+    isError: false
 }));
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
@@ -12,6 +13,9 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
     createQuery: () => ({
         get data() {
             return mocks.data;
+        },
+        get isError() {
+            return mocks.isError;
         }
     })
 }));
@@ -19,6 +23,7 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
 describe('useAnnotationSourceOwnerId', () => {
     beforeEach(() => {
         mocks.data = undefined;
+        mocks.isError = false;
     });
 
     it('is undefined while the collection loads', () => {
@@ -39,5 +44,14 @@ describe('useAnnotationSourceOwnerId', () => {
         };
 
         expect(useAnnotationSourceOwnerId(() => 'source-1').ownerCollectionId).toBe('images-1');
+    });
+
+    it('reports a failed collection query', () => {
+        mocks.isError = true;
+
+        const owner = useAnnotationSourceOwnerId(() => 'c1');
+
+        expect(owner.isError).toBe(true);
+        expect(owner.ownerCollectionId).toBeUndefined();
     });
 });

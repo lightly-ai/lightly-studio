@@ -20,7 +20,8 @@
     const owner = useAnnotationSourceOwnerId(() => routeCollectionId);
     const collectionId = $derived(owner.ownerCollectionId ?? '');
     const sources = useAnnotationSources(() => ({ collectionId }));
-    const isLoading = $derived(!collectionId || sources.query.isLoading);
+    const isError = $derived(owner.isError || sources.query.isError);
+    const isLoading = $derived(!isError && (!collectionId || sources.query.isLoading));
     const sortedSources = $derived(
         [...(sources.query.data ?? [])].sort((a, b) => a.name.localeCompare(b.name))
     );
@@ -38,7 +39,7 @@
 {:else}
     <div class="flex h-full flex-col gap-3">
         <p class="mx-auto min-h-4 w-full max-w-lg shrink-0 px-2 text-xs text-muted-foreground">
-            {#if !isLoading}
+            {#if !isLoading && !isError}
                 {sourceCount} annotation {sourceCount === 1 ? 'source' : 'sources'}
             {/if}
         </p>
@@ -48,7 +49,7 @@
             <AnnotationSourceList
                 sources={sortedSources}
                 {isLoading}
-                isError={sources.query.isError}
+                {isError}
                 onDelete={(source) =>
                     (deleting = {
                         id: source.collection_id,

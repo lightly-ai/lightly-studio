@@ -11,7 +11,9 @@ const mocks = vi.hoisted(() => ({
     goto: vi.fn(),
     toastError: vi.fn(),
     // The collection that owns the sources, when it is not the route collection.
-    ownerId: undefined as string | undefined
+    ownerId: undefined as string | undefined,
+    ownerError: false,
+    sourcesError: false
 }));
 
 // The query data is a store, so the tab reacts when a test changes it.
@@ -26,7 +28,9 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => {
                 return data.current;
             },
             isLoading: false,
-            isError: false
+            get isError() {
+                return mocks.sourcesError;
+            }
         }),
         useQueryClient: () => ({ invalidateQueries: vi.fn() })
     };
@@ -47,7 +51,10 @@ vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
 vi.mock('$lib/hooks/useAnnotationSourceOwnerId/useAnnotationSourceOwnerId.svelte', () => ({
     useAnnotationSourceOwnerId: (getCollectionId: () => string) => ({
         get ownerCollectionId() {
-            return mocks.ownerId ?? getCollectionId();
+            return mocks.ownerError ? undefined : (mocks.ownerId ?? getCollectionId());
+        },
+        get isError() {
+            return mocks.ownerError;
         }
     })
 }));
@@ -66,6 +73,8 @@ describe('AnnotationSourcesTab', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.ownerId = undefined;
+        mocks.ownerError = false;
+        mocks.sourcesError = false;
         mocks.data.set([
             { collection_id: 's1', name: 'ground_truth', annotation_count: 12 },
             { collection_id: 's2', name: 'model_v1', annotation_count: 3 }
@@ -80,6 +89,19 @@ describe('AnnotationSourcesTab', () => {
         expect(screen.getByText('ground_truth')).toBeInTheDocument();
         expect(screen.getByText(/12\s+annotations/)).toBeInTheDocument();
         expect(screen.getByText('2 annotation sources')).toBeInTheDocument();
+    });
+
+    it.each([
+        ['the owner collection', 'ownerError'],
+        ['the sources', 'sourcesError']
+    ] as const)('shows an error without a count when %s fail to load', (_, error) => {
+        mocks[error] = true;
+        mocks.data.set(undefined);
+        render(AnnotationSourcesTab);
+
+        expect(screen.getByText('Could not load the annotation sources.')).toBeInTheDocument();
+        expect(screen.queryByText(/annotation sources?$/)).not.toBeInTheDocument();
+        expect(screen.queryByText('Loading annotation sources…')).not.toBeInTheDocument();
     });
 
     it('confirms a delete with the annotation count and the evaluation warning', async () => {
