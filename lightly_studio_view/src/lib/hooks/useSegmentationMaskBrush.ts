@@ -1,3 +1,4 @@
+import { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
 import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     computeBoundingBoxFromMask,
@@ -9,7 +10,9 @@ import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
+import { get } from 'svelte/store';
 import { useGlobalStorage } from './useGlobalStorage';
+import { resolveStickyClass, useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
 import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
@@ -42,7 +45,8 @@ export function useSegmentationMaskBrush({
 }) {
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { addReversibleAction } = useGlobalStorage();
+    const { stickyClasses, pickClass } = useStickyClass();
     const {
         context: annotationLabelContext,
         setIsDrawing,
@@ -81,16 +85,22 @@ export function useSegmentationMaskBrush({
             return;
         }
 
-        let annotationLabelName = annotationLabelContext.annotationLabel;
+        // Check before anything else: the constraints below trim other masks on the server.
+        if (!selectedAnnotation && isAnnotationSourceBlocked(annotationLabelContext)) return;
+
+        // Callers pass no labels while they load, so an empty list means unknown.
+        let annotationLabelName = resolveStickyClass({
+            collectionId,
+            stickyClass: get(stickyClasses)[collectionId],
+            classNames: labels.length
+                ? labels.map((label) => label.annotation_label_name ?? '')
+                : undefined
+        });
         if (!selectedAnnotation && !annotationLabelName) {
             const result = requestLabel ? await requestLabel() : null;
-            if (!result?.label) {
-                toast.error('Please select a class before creating an annotation');
-                return;
-            }
+            if (!result?.label) return;
             annotationLabelName = result.label;
-            setAnnotationLabel(annotationLabelName);
-            updateLastAnnotationLabel(collectionId, annotationLabelName);
+            pickClass(collectionId, annotationLabelName);
         }
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({

@@ -2,7 +2,7 @@ import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInteractiveAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useSaveAnnotationPreviews } from '$lib/hooks';
+import { isAnnotationSourceBlocked, useSaveAnnotationPreviews } from '$lib/hooks';
 import {
     getAnnotationPreviewErrorMessage,
     pickClassName
@@ -24,6 +24,7 @@ interface UseSmartSelectParams {
     saveAs: SaveAs;
     annotationClass: string | null | undefined;
     annotationSource: string | null | undefined;
+    annotationSourceBlockedReason?: string | null;
     onSaved: () => void;
 }
 
@@ -97,6 +98,13 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
 
     const save = async () => {
         if (!preview || isSaving) return;
+        // Before isSaving is set, so a refused save leaves the overlay usable.
+        if (
+            isAnnotationSourceBlocked({
+                annotationSourceBlockedReason: getParams().annotationSourceBlockedReason
+            })
+        )
+            return;
         isSaving = true;
         const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
         const className = pickClassName({ selected: annotationClass, hint: hintedClass });

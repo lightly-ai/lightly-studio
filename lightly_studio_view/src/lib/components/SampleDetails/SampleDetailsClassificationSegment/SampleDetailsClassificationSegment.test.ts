@@ -239,7 +239,9 @@ describe('SampleDetailsClassificationSegment', () => {
         await userEvent.click(screen.getByLabelText('Duplicate to another annotation source'));
         expect(onClick).not.toHaveBeenCalled();
         const input = screen.getByRole('combobox', { name: 'Annotation source' });
-        await userEvent.type(input, ' {Enter}');
+        // A blank name and the annotation's own source offer nothing to pick.
+        await userEvent.type(input, ' ');
+        expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
         await userEvent.type(input, `${groundTruthSource.name}{Enter}`);
         expect(screen.queryByRole('option', { name: /Create:/ })).not.toBeInTheDocument();
         expect(mocks.createAnnotation).not.toHaveBeenCalled();

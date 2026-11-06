@@ -1,26 +1,21 @@
 <script lang="ts">
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
-    import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
+    import { Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
-    import {
-        useAnnotationCollections,
-        useAnnotationCollectionsFilter,
-        useSettings
-    } from '$lib/hooks';
+    import { useAnnotationCollections, useSetTargetSource, useSettings } from '$lib/hooks';
+    import { NewAnnotationSourceInput } from '$lib/components/SampleDetails/NewAnnotationSourceInput';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
     import {
-        areAllAnnotationsHidden,
-        computeSeededHiddenIds,
         groupAnnotationsBySource,
-        isSourceGroupInitiallyOpen,
-        toggleSourceVisibility
+        listAllSourceGroups
     } from './SampleDetailsAnnotationSegment.helpers';
-    import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
+    import { useAnnotationPanelVisibility } from './useAnnotationPanelVisibility.svelte';
     import { useAnnotationRowActions } from './useAnnotationRowActions.svelte';
+    import AnnotationSourceGroupList from './AnnotationSourceGroupList/AnnotationSourceGroupList.svelte';
 
     type SampleDetailsAnnotationSegmentProps = {
         annotationsIdsToHide: Set<string>;
@@ -43,6 +38,8 @@
     const { isEditingMode } = useGlobalStorage();
     const { user } = useAuth();
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    // The target source is picked in edit mode only, like the rest of the editing controls.
+    const canPickTarget = $derived(canEdit && $isEditingMode);
 
     const { context: annotationLabelContext } = useAnnotationLabelContext();
     const rowActions = useAnnotationRowActions({
@@ -53,9 +50,9 @@
     });
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const { isSourceVisible } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
-    const { sourceGroupStates, setSourceGroupState } = useAnnotationSourceGroupState();
+    const setTargetSource = useSetTargetSource(() => collectionId);
+    const targetSource = $derived(annotationLabelContext.annotationSource ?? null);
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -72,79 +69,34 @@
     });
 
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
-    const isGrouped = $derived(annotationSources.length > 1);
-    const sourceGroups = $derived(
-        isGrouped ? groupAnnotationsBySource(annotationsSort, annotationSources) : []
+    // Every source gets a group, also without annotations here, so any source can be the target.
+    const allSourceGroups = $derived(
+        listAllSourceGroups(
+            groupAnnotationsBySource(annotationsSort, annotationSources),
+            annotationSources,
+            targetSource
+        )
     );
+    const isGrouped = $derived(allSourceGroups.length > 1);
 
-    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
-    // the effect-written `annotationsIdsToHide`); drives the initial collapse.
-    const gridHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
-    // The seed also applies the source visibility the user set on earlier samples.
-    const seededHiddenIds = $derived(
-        computeSeededHiddenIds(annotationsSort, (sourceId) => {
-            const hidden = $sourceGroupStates[sourceId]?.hidden;
-            return hidden === undefined ? $isSourceVisible(sourceId) : !hidden;
-        })
-    );
+    const visibility = useAnnotationPanelVisibility({
+        getSampleId: () => sampleId,
+        getAnnotations: () => annotationsSort,
+        getAreSourcesLoaded: () => annotationSources.length > 0,
+        getGroups: () => allSourceGroups,
+        getLastCreatedAnnotationId: () => annotationLabelContext.lastCreatedAnnotationId,
+        getHiddenIds: () => annotationsIdsToHide,
+        setHiddenIds: (ids) => (annotationsIdsToHide = ids)
+    });
 
-    // Keep source markers and row layout stable when annotations are hidden, matching
-    // the details canvas. The explicit class-color preference still takes priority.
+    // Matches the details canvas: only visible sources count. The explicit class-color
+    // preference still takes priority.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
-            multipleSourcesVisible: countVisibleSources(annotationsSort) >= 2,
+            multipleSourcesVisible: countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2,
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
-
-    // Tracks which sample the hidden set was seeded for. Intentionally not reactive:
-    // it must not re-trigger the seeding effect.
-    let seededSampleId: string | undefined = undefined;
-
-    // Seed the local visibility state from the grid's annotation source filter, once
-    // per sample. Annotations of unselected sources start hidden
-    // but stay re-showable locally without touching the global grid filter.
-    // Refetches (same sample) keep manual changes; navigating to a sample re-seeds.
-    // Waits until both the sources query and the annotations are available so an
-    // empty hidden set is never locked in prematurely.
-    $effect(() => {
-        if (
-            seededSampleId === sampleId ||
-            annotationSources.length === 0 ||
-            annotationsSort.length === 0
-        ) {
-            return;
-        }
-
-        seededSampleId = sampleId;
-        const nextHiddenIds = new Set(seededHiddenIds);
-        // Keep the annotation the user just drew visible, also when its source is hidden.
-        nextHiddenIds.delete(annotationLabelContext.lastCreatedAnnotationId ?? '');
-        annotationsIdsToHide = nextHiddenIds;
-    });
-
-    const onToggleShowAnnotation = (annotationId: string) => {
-        annotationsIdsToHide = new Set(
-            annotationsIdsToHide.has(annotationId)
-                ? [...annotationsIdsToHide].filter((id) => id !== annotationId)
-                : [...annotationsIdsToHide, annotationId]
-        );
-        const group = sourceGroups.find((sourceGroup) =>
-            sourceGroup.annotations.some((annotation) => annotation.sample_id === annotationId)
-        );
-        if (group) rememberSourceVisibility(group.id, group.annotations);
-    };
-
-    const onToggleSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
-        annotationsIdsToHide = toggleSourceVisibility(sourceAnnotations, annotationsIdsToHide);
-        rememberSourceVisibility(sourceId, sourceAnnotations);
-    };
-
-    const rememberSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
-        setSourceGroupState(sourceId, {
-            hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
-        });
-    };
 </script>
 
 {#snippet annotationRow(annotation: AnnotationView)}
@@ -158,7 +110,7 @@
         isLocked={annotationLabelContext.lockedAnnotationIds?.has(annotation.sample_id) ?? false}
         onToggleShowAnnotation={(e) => {
             e.stopPropagation();
-            onToggleShowAnnotation(annotation.sample_id);
+            visibility.toggleAnnotation(annotation.sample_id);
         }}
         onToggleLock={(e) => {
             e.stopPropagation();
@@ -172,7 +124,18 @@
 {/snippet}
 
 <Segment title="Annotations">
-    {#if annotationsSort.length === 0}
+    {#if isGrouped}
+        <AnnotationSourceGroupList
+            groups={allSourceGroups}
+            {sampleId}
+            {targetSource}
+            {canPickTarget}
+            onSetTarget={setTargetSource}
+            {visibility}
+            {colorBySource}
+            row={annotationRow}
+        />
+    {:else if annotationsSort.length === 0}
         <p class="text-sm text-muted-foreground" data-testid="empty-state-message">
             {#if $isEditingMode}
                 No annotations. Use the toolbar to add one.
@@ -182,40 +145,19 @@
                 No annotations.
             {/if}
         </p>
-    {:else if isGrouped}
-        <div class="flex flex-col gap-3">
-            {#each sourceGroups as group (group.id)}
-                <SampleDetailsAnnotationSourceGroup
-                    name={group.name}
-                    count={group.annotations.length}
-                    {sampleId}
-                    initiallyOpen={isSourceGroupInitiallyOpen(
-                        group.annotations,
-                        gridHiddenIds,
-                        annotationLabelContext.lastCreatedAnnotationId,
-                        $sourceGroupStates[group.id]?.open
-                    )}
-                    showColorMarker={colorBySource}
-                    allHidden={areAllAnnotationsHidden(group.annotations, annotationsIdsToHide)}
-                    onToggleVisibility={(e) => {
-                        e.stopPropagation();
-                        onToggleSourceVisibility(group.id, group.annotations);
-                    }}
-                    onOpenChange={(open) => setSourceGroupState(group.id, { open })}
-                >
-                    <div class="flex flex-col gap-2">
-                        {#each group.annotations as annotation (annotation.sample_id)}
-                            {@render annotationRow(annotation)}
-                        {/each}
-                    </div>
-                </SampleDetailsAnnotationSourceGroup>
-            {/each}
-        </div>
     {:else}
         <div class="flex flex-col gap-2">
             {#each annotationsSort as annotation (annotation.sample_id)}
                 {@render annotationRow(annotation)}
             {/each}
+        </div>
+    {/if}
+    {#if canPickTarget}
+        <div class="mt-3">
+            <NewAnnotationSourceInput
+                existingNames={allSourceGroups.map((group) => group.name)}
+                onSubmit={(name) => setTargetSource(name, { isNew: true })}
+            />
         </div>
     {/if}
 </Segment>

@@ -32,9 +32,6 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
         setAnnotationLabel(label: string | null) {
             annotationLabelContext.annotationLabel = label;
         },
-        setAnnotationSource(source: string | null) {
-            annotationLabelContext.annotationSource = source;
-        },
         setLastCreatedAnnotationId(id: string | null) {
             annotationLabelContext.lastCreatedAnnotationId = id;
         },
@@ -92,11 +89,13 @@ const sample = { width: 100, height: 100 };
 describe('useSegmentationMaskBrush', () => {
     beforeEach(() => {
         useGlobalStorage().clearReversibleActions();
+        useGlobalStorage().lastAnnotationLabel.set({});
         annotationLabelContext.isDrawing = true;
         annotationLabelContext.annotationId = null;
         annotationLabelContext.annotationLabel = null;
         annotationLabelContext.annotationSource = null;
         annotationLabelContext.lastCreatedAnnotationId = null;
+        annotationLabelContext.annotationSourceBlockedReason = null;
 
         vi.clearAllMocks();
 
@@ -140,6 +139,7 @@ describe('useSegmentationMaskBrush', () => {
         vi.mocked(computeBoundingBoxFromMask).mockReturnValue(null);
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
 
         const refetch = vi.fn();
 
@@ -243,6 +243,7 @@ describe('useSegmentationMaskBrush', () => {
         const refetch = vi.fn();
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
 
         const labels = [
             {
@@ -276,10 +277,34 @@ describe('useSegmentationMaskBrush', () => {
         expect(refetch).toHaveBeenCalled();
     });
 
-    it('shows error and does not create annotation when no label is selected', async () => {
-        const refetch = vi.fn();
+    it('creates the mask with the sticky class, not the context label', async () => {
+        annotationLabelContext.annotationLabel = 'bobcat';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'deer');
+        const labels = [
+            { annotation_label_id: 'bobcat-id', annotation_label_name: 'bobcat' },
+            { annotation_label_id: 'deer-id', annotation_label_name: 'deer' }
+        ];
 
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch: vi.fn(),
+            deleteAnnotation
+        });
+
+        await finishBrush(mask, null, labels);
+
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_label_id: 'deer-id' })
+        );
+    });
+
+    it('stays silent when there is no sticky class and the dialog is cancelled', async () => {
+        const refetch = vi.fn();
         annotationLabelContext.annotationLabel = null;
+        const requestLabel = vi.fn().mockResolvedValue(null);
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
@@ -287,24 +312,70 @@ describe('useSegmentationMaskBrush', () => {
             sampleId: 's1',
             sample,
             refetch,
-            deleteAnnotation
+            deleteAnnotation,
+            requestLabel
         });
 
         await finishBrush(mask, null, []);
 
-        expect(toast.error).toHaveBeenCalledWith(
-            'Please select a class before creating an annotation'
-        );
-        expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
-        expect(createLabel).not.toHaveBeenCalled();
+        expect(toast.error).not.toHaveBeenCalled();
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(refetch).not.toHaveBeenCalled();
+    });
+
+    it('changes nothing on the server while the annotation source is blocked', async () => {
+        annotationLabelContext.annotationSourceBlockedReason = 'Pick a source.';
+        const requestLabel = vi.fn().mockResolvedValue({ label: 'car' });
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            annotations: [{ sample_id: 'other-mask' } as AnnotationView],
+            refetch: vi.fn(),
+            deleteAnnotation,
+            requestLabel
+        });
+
+        await finishBrush(mask, null, []);
+
+        expect(toast.error).toHaveBeenCalledWith('Pick a source.');
+        expect(requestLabel).not.toHaveBeenCalled();
+        expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
+        expect(updateAnnotations).not.toHaveBeenCalled();
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('still updates the selected mask while the annotation source is blocked', async () => {
+        annotationLabelContext.annotationSourceBlockedReason = 'Pick a source.';
+        const updateAnnotation = vi.fn().mockResolvedValue(undefined);
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch: vi.fn(),
+            deleteAnnotation
+        });
+
+        await finishBrush(
+            mask,
+            { sample_id: 'existing-id' } as AnnotationView,
+            [],
+            updateAnnotation
+        );
+
+        expect(updateAnnotation).toHaveBeenCalled();
+        expect(toast.error).not.toHaveBeenCalled();
     });
 
     it('sends annotation_collection_name from the selected source in the context', async () => {
         const refetch = vi.fn();
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
         annotationLabelContext.annotationSource = 'predictions';
 
         const labels = [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }];
@@ -347,7 +418,7 @@ describe('useSegmentationMaskBrush', () => {
         await finishBrush(mask, null, []);
 
         expect(annotationLabelContext.annotationLabel).toBe('car');
-        // The label choice is persisted to the session store, keyed by collection id.
+        // The label choice is persisted to the sticky class store, keyed by collection id.
         const { lastAnnotationLabel } = useGlobalStorage();
         expect(get(lastAnnotationLabel)['c1']).toBe('car');
         // The collection name still flows from the context source set by the pill.
@@ -360,6 +431,7 @@ describe('useSegmentationMaskBrush', () => {
         const refetch = vi.fn();
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
         annotationLabelContext.annotationSource = null;
 
         const labels = [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }];
@@ -384,6 +456,7 @@ describe('useSegmentationMaskBrush', () => {
         const refetch = vi.fn();
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
@@ -409,6 +482,7 @@ describe('useSegmentationMaskBrush', () => {
         const { reversibleActions } = useReversibleActions();
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
         const refetch = vi.fn();
 
         const { finishBrush } = useSegmentationMaskBrush({
@@ -434,6 +508,7 @@ describe('useSegmentationMaskBrush', () => {
         const { reversibleActions } = useReversibleActions();
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
         const refetch = vi.fn();
         const updateAnnotation = vi.fn().mockResolvedValue(undefined);
 
@@ -481,6 +556,7 @@ describe('useSegmentationMaskBrush', () => {
         const { reversibleActions, executeReversibleAction } = useReversibleActions();
 
         annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
         const refetch = vi.fn();
         deleteAnnotation.mockResolvedValue(undefined);
 
