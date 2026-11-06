@@ -11,6 +11,7 @@
         annotationClass?: string | null;
         onAnnotationClassChange: (value: string) => void;
         canSave: boolean;
+        isSaving?: boolean;
         onSave: () => void;
         onClear: () => void;
     }
@@ -22,6 +23,7 @@
         annotationClass,
         onAnnotationClassChange,
         canSave,
+        isSaving = false,
         onSave,
         onClear
     }: Props = $props();
@@ -35,6 +37,7 @@
     {saveAs}
     {onSaveAsChange}
     {canSave}
+    {isSaving}
     {onSave}
     {onClear}
 >

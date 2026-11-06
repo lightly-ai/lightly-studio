@@ -161,11 +161,11 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
                 preview !== null && !isSaving && !isPending && !!getParams().annotationClass?.trim()
             );
         },
-        get isPending() {
-            return isPending;
-        },
         get isSaving() {
             return isSaving;
+        },
+        get isPending() {
+            return isPending;
         },
         addPoint,
         selectBox,

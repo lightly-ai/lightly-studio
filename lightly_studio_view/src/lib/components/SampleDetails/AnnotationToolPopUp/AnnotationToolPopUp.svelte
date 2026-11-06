@@ -15,6 +15,7 @@
         saveAs: SaveAs;
         onSaveAsChange: (saveAs: SaveAs) => void;
         canSave: boolean;
+        isSaving?: boolean;
         onSave: () => void;
         onClear: () => void;
         children: Snippet;
@@ -28,6 +29,7 @@
         saveAs,
         onSaveAsChange,
         canSave,
+        isSaving = false,
         onSave,
         onClear,
         children
@@ -46,7 +48,7 @@
         role="dialog"
         aria-label={title}
     >
-        <div class="truncate text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div class="truncate text-sm font-semibold text-foreground">
             {title}
         </div>
 
@@ -87,8 +89,12 @@
         </div>
 
         <div class="flex gap-1.5">
-            <Button class="h-8 flex-1" disabled={!canSave} onclick={onSave}>Save</Button>
-            <Button variant="outline" class="h-8 flex-1" onclick={onClear}>Clear</Button>
+            <Button class="h-8 flex-1" disabled={!canSave || isSaving} onclick={onSave}
+                >{isSaving ? 'Saving…' : 'Done'}</Button
+            >
+            <Button variant="outline" class="h-8 flex-1" disabled={isSaving} onclick={onClear}
+                >Reset</Button
+            >
         </div>
     </div>
 </div>

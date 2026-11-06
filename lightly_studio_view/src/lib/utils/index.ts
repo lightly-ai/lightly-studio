@@ -45,3 +45,4 @@ export {
     oklchToRgb,
     oklchHueWheelColor
 } from './colorConvert';
+export { trackAnnotationClassEvent, trackClassCreatedInPicker } from './trackAnnotationClassEvent';
