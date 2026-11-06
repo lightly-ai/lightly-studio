@@ -261,6 +261,8 @@ describe('useSegmentationMaskBrush', () => {
         expect(toast.error).toHaveBeenCalledWith(
             'Class "car" is no longer available. Choose another class.'
         );
+        expect(toast.error).toHaveBeenCalledTimes(1);
+        expect(refetch).toHaveBeenCalled();
         expect(applySegmentationMaskConstraints).not.toHaveBeenCalled();
         expect(createLabel).not.toHaveBeenCalled();
         expect(createAnnotation).not.toHaveBeenCalled();
