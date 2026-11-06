@@ -1,14 +1,12 @@
 import {
+    AnnotationClassNotAvailableError,
+    getCreateLabelErrorMessage,
     useAnnotationLabels,
     useCreateAnnotation,
     useCreateLabel,
     useGlobalStorage,
     useSelectClassDialog
 } from '$lib/hooks';
-import {
-    AnnotationClassNotAvailableError,
-    getCreateLabelErrorMessage
-} from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';

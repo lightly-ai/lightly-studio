@@ -31,7 +31,11 @@ const {
 
 vi.mock('$lib/hooks', async () => {
     const { writable } = await import('svelte/store');
+    const { AnnotationClassNotAvailableError, getCreateLabelErrorMessage } =
+        await import('$lib/hooks/useCreateLabel/useCreateLabel');
     return {
+        AnnotationClassNotAvailableError,
+        getCreateLabelErrorMessage,
         useAnnotationLabels,
         useCreateAnnotation,
         useCreateLabel,

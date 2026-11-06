@@ -59,7 +59,11 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+export {
+    AnnotationClassNotAvailableError,
+    getCreateLabelErrorMessage,
+    useCreateLabel
+} from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
