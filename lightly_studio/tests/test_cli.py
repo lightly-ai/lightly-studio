@@ -16,6 +16,7 @@ import lightly_studio
 from lightly_studio import cli
 from lightly_studio.analytics import tracking
 from lightly_studio.database import db_manager
+from lightly_studio.dataset import env
 from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
 
@@ -113,8 +114,11 @@ def test_gui__nonexistent_db_file(
 
 
 def test_gui__with_empty_db_file__complains_about_missing_dataset(
+    mocker: MockerFixture,
     tmp_path: Path,
 ) -> None:
+    # A DuckDB file, also in the PostgreSQL suite
+    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
     db_file = tmp_path / "empty.db"
     db_manager.connect(db_file=str(db_file), cleanup_existing=True)
     db_manager.close()

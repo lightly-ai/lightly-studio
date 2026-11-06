@@ -252,6 +252,8 @@ def test_start_gui_background(
     patch_gui_background_state: None,  # noqa: ARG001
 ) -> None:
     """Ensure a background start sets the background state."""
+    # The test does not connect a database, so the default DuckDB is used in each suite
+    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
     # Arrange: Mock server to use our FakeUvicornServer
     mocker.patch.object(
         target=start_gui_module,
