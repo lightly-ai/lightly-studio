@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { useTextEmbedding } from './useTextEmbedding';
+import { ApiError } from '$lib/api/ApiError';
 
 const mocks = vi.hoisted(() => ({
     embedText: vi.fn()
@@ -49,7 +50,7 @@ describe('useTextEmbedding', () => {
     it('surfaces API errors via onError without calling onSuccess', async () => {
         mocks.embedText.mockResolvedValue({
             data: undefined,
-            error: { error: 'embedding service unavailable' }
+            error: new ApiError('embedding service unavailable', 503)
         });
         const { text, onError, onSuccess } = setup();
 

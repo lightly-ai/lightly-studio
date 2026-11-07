@@ -1,3 +1,4 @@
+import { ApiError } from '$lib/api/ApiError';
 import { getTickDetailsQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { getTickDetails } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
@@ -57,8 +58,9 @@ export const getTickDetailsOptions = ({
                 });
                 return data;
             } catch (error) {
-                const detail = (error as { detail?: { type?: unknown } } | null)?.detail;
-                if (!displayFrameId || signal.aborted || detail?.type !== 'transform_unavailable') {
+                const isTransformUnavailable =
+                    error instanceof ApiError && error.type === 'transform_unavailable';
+                if (!displayFrameId || signal.aborted || !isTransformUnavailable) {
                     throw error;
                 }
                 const { data } = await getTickDetails({ path, signal, throwOnError: true });
