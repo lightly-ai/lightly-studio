@@ -5,6 +5,7 @@ import type {
 } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 export const UNKNOWN_SOURCE_NAME = 'Unknown source';
+export const NO_PARENT_TRACK_GROUP_LABEL = 'No parent track';
 
 interface AnnotationGroup {
     readonly sourceId: string;
