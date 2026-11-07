@@ -79,9 +79,16 @@ class ObjectTrackWithCountView(BaseModel):
     total_count: int
 
 
+class ObjectTrackUpdate(BaseModel):
+    """Input model for updating an object track's parent relationship."""
+
+    parent_object_track_id: UUID | None = None
+
+
 class TrackWithClassNameView(BaseModel):
     """Track response enriched with the annotation class name."""
 
     object_track_id: UUID
     object_track_number: int
     annotation_class_name: str | None = None
+    parent_object_track_id: UUID | None = None

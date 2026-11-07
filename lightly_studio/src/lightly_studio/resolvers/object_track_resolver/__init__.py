@@ -13,6 +13,7 @@ from lightly_studio.resolvers.object_track_resolver.get_all_with_class_name_by_d
 )
 from lightly_studio.resolvers.object_track_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.object_track_resolver.next_track_number import next_track_number
+from lightly_studio.resolvers.object_track_resolver.update_parent_track import update_parent_track
 
 __all__ = [
     "add_annotation_to_object_track",
@@ -22,4 +23,5 @@ __all__ = [
     "get_all_with_class_name_by_dataset_id",
     "get_by_id",
     "next_track_number",
+    "update_parent_track",
 ]

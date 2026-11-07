@@ -18,6 +18,8 @@
         onCancel: () => void;
         showTrackSelect?: boolean;
         tracks?: TrackWithClassNameView[];
+        /** Track IDs already assigned to annotations on the current frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
     }
 
 
@@ -27,8 +29,13 @@
         onConfirm,
         onCancel,
         showTrackSelect = false,
-        tracks = []
+        tracks = [],
+        occupiedTrackIds = new Set()
     }: Props = $props();
+
+    const availableTracks = $derived(
+        tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id))
+    );
 
     const items = $derived<ComponentProps<typeof SelectList>['items']>(
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
@@ -80,8 +87,9 @@
             <div class="min-w-0 space-y-1">
                 <span class="text-sm font-medium text-muted-foreground">Track</span>
                 <TrackSelect
-                    {tracks}
+                    tracks={availableTracks}
                     bind:value={$trackValue}
+                    className="w-full"
                     onValueChange={handleTrackValueChange}
                 />
             </div>

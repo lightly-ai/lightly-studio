@@ -3,13 +3,13 @@
     import { useAnnotationDetailsEditing } from './useAnnotationDetailsEditing.svelte';
     import AnnotationGeometryGroup from './AnnotationGeometryGroup';
     import { Typography } from '$lib/components/Typography';
-    import { TrackSelect } from '$lib/components/TrackSelect';
-    import { useTracks, useUpdateAnnotationsMutation } from '$lib/hooks';
-    import { usePointCloudWorkspaceLayoutContext } from '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte';
+    import AnnotationTrackDetails from './AnnotationTrackDetails';
 
     type AnnotationInput = Parameters<typeof createAnnotationDetails>[0]['annotation'] & {
         id: string;
         trackId: string | null;
+        parentTrackNumber: number | null;
+        parentTrackClassName: string | null;
         annotationSourceId: string;
     };
 
@@ -20,44 +20,27 @@
         annotationSourceName?: string;
         /** When true, numeric fields become editable inputs. */
         editable?: boolean;
+        /** Track IDs already assigned to other annotations on the same frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
         /** Called with the full updated annotation when a field is committed. */
         onAnnotationChange?: (annotation: AnnotationInput) => void;
         /** Called after the annotation's track assignment changes. */
-        onTrackChange?: () => void;
+        onTrackChange?: () => Promise<void>;
     }
 
     let {
         annotation,
         annotationSourceName,
         editable = false,
+        occupiedTrackIds = new Set(),
         onAnnotationChange,
         onTrackChange
     }: Props = $props();
     const details = $derived(createAnnotationDetails({ annotation, annotationSourceName }));
     const editing = useAnnotationDetailsEditing(
         () => annotation,
-        (updated) => onAnnotationChange?.({ ...annotation, ...updated })
+        (updated) => onAnnotationChange?.(updated as AnnotationInput)
     );
-
-    const getLayoutState = usePointCloudWorkspaceLayoutContext();
-    const tracksQuery = useTracks(() => getLayoutState().datasetId);
-    const tracks = $derived(tracksQuery.data ?? []);
-
-    const { updateAnnotations } = useUpdateAnnotationsMutation({
-        getCollectionId: () => annotation.annotationSourceId
-    });
-
-    async function handleTrackChange(trackId: string | null, isNewTrack: boolean) {
-        await updateAnnotations([
-            {
-                annotation_id: annotation.id,
-                collection_id: annotation.annotationSourceId,
-                ...(isNewTrack ? { create_new_track: true } : { object_track_id: trackId })
-            }
-        ]);
-        await tracksQuery.refetch();
-        onTrackChange?.();
-    }
 </script>
 
 <dl class="space-y-3 text-diffuse-foreground" data-testid="point-cloud-annotation-details">
@@ -101,21 +84,15 @@
         </div>
     {/if}
 
-    {#if editable}
-        <div class="grid grid-cols-[5rem_1fr] gap-x-2">
-            <Typography component="dt" variant="body2">Track:</Typography>
-            <dd>
-                <TrackSelect
-                    {tracks}
-                    value={annotation.trackId ?? '__no_track__'}
-                    onValueChange={handleTrackChange}
-                />
-            </dd>
-        </div>
-    {:else if details.trackNumber !== null}
-        <div class="grid grid-cols-[5rem_1fr] gap-x-2">
-            <Typography component="dt" variant="body2">Track number:</Typography>
-            <Typography component="dd" variant="body2">{details.trackNumber}</Typography>
-        </div>
-    {/if}
+    <AnnotationTrackDetails
+        annotationId={annotation.id}
+        annotationSourceId={annotation.annotationSourceId}
+        trackId={annotation.trackId}
+        trackNumber={details.trackNumber}
+        parentTrackNumber={annotation.parentTrackNumber}
+        parentTrackClassName={annotation.parentTrackClassName}
+        {editable}
+        {occupiedTrackIds}
+        {onTrackChange}
+    />
 </dl>

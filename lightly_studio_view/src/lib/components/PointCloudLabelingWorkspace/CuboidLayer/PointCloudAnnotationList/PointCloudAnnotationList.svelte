@@ -39,7 +39,7 @@
             annotationSourceId: string
         ) => void;
         /** Called after the annotation's track assignment changes. */
-        onTrackChange?: () => void;
+        onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
     }
@@ -57,6 +57,9 @@
     }: Props = $props();
 
     const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
+    const occupiedTrackIds = $derived(
+        new Set(cuboids.flatMap((c) => (c.trackId ? [c.trackId] : [])))
+    );
 
     function toggle(id: string): void {
         selectedCuboidId = selectedCuboidId === id ? null : id;
@@ -85,6 +88,7 @@
         })}
         onToggle={toggle}
         {editable}
+        {occupiedTrackIds}
         {onCuboidTransform}
         {onLabelChange}
         {onTrackChange}
