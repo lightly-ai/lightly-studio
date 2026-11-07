@@ -15,6 +15,11 @@ const adjacentSequences = vi.hoisted(() => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: vi.fn() })
+}));
+
 vi.mock('$app/state', () => ({
     page: {
         url: new URL(
