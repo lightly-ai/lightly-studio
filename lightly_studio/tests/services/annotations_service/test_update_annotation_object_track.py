@@ -230,6 +230,57 @@ def test_update_annotation_object_track__create_new_track(db_session: Session) -
     assert track.dataset_id == collection.dataset_id
 
 
+def test_update_annotation_object_track__object_track_not_found(db_session: Session) -> None:
+    """Supplying a non-existent object_track_id raises ValueError."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+
+    with pytest.raises(ValueError, match="not found"):
+        annotations_service.update_annotation_object_track(
+            session=db_session,
+            annotation_id=annotation.sample_id,
+            collection_id=collection.collection_id,
+            object_track_id=uuid.uuid4(),
+        )
+
+
+def test_update_annotation_object_track__cross_dataset_track_rejected(db_session: Session) -> None:
+    """Assigning a track from a different dataset raises ValueError."""
+    collection_a = create_collection(session=db_session)
+    collection_b = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection_b.collection_id)
+    label = create_annotation_label(
+        session=db_session, root_collection_id=collection_b.collection_id
+    )
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection_b.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+    track_from_other_dataset = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection_a.dataset_id)],
+    )[0]
+
+    with pytest.raises(ValueError, match="different dataset"):
+        annotations_service.update_annotation_object_track(
+            session=db_session,
+            annotation_id=annotation.sample_id,
+            collection_id=collection_b.collection_id,
+            object_track_id=track_from_other_dataset,
+        )
+
+
 def test_update_annotation_object_track__nonexistent_annotation_raises(db_session: Session) -> None:
     """Updating a nonexistent annotation raises ValueError."""
     with pytest.raises(ValueError, match="does not exist"):

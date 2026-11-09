@@ -49,6 +49,13 @@ def update_annotation_object_track(
     if annotation is None:
         raise ValueError(f"Annotation with id {annotation_id} does not exist.")
 
+    if object_track_id is not None:
+        _validate_object_track(
+            session=session,
+            object_track_id=object_track_id,
+            collection_id=collection_id,
+        )
+
     if create_new_track:
         object_track_id = _create_track(session=session, collection_id=collection_id)
 
@@ -88,6 +95,23 @@ def _assign_track(
     return annotation_helper.update_annotation_object(
         session=session, annotation=annotation, fields_to_update={"object_track_id": None}
     )
+
+
+def _validate_object_track(
+    session: Session, object_track_id: UUID, collection_id: UUID
+) -> None:
+    """Raise if the track does not exist or belongs to a different dataset."""
+    track = object_track_resolver.get_by_id(session=session, object_track_id=object_track_id)
+    if track is None:
+        raise ValueError(f"Object track {object_track_id} not found.")
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {collection_id} not found.")
+    if track.dataset_id != collection.dataset_id:
+        raise ValueError(
+            f"Object track {object_track_id} belongs to a different dataset"
+            f" than collection {collection_id}."
+        )
 
 
 def _delete_empty_track(session: Session, object_track_id: UUID) -> None:
