@@ -1,5 +1,6 @@
 <script lang="ts">
     import { X } from '@lucide/svelte';
+    import { Button } from '$lib/components/ui/button';
 
     interface Props {
         count: number;
@@ -19,13 +20,14 @@
         Plot filter: {count}
         {count === 1 ? itemLabel : `${itemLabel}s`}
     </span>
-    <button
-        type="button"
-        class="shrink-0 text-muted-foreground hover:text-foreground"
+    <Button
+        variant="ghost"
+        size="icon"
+        class="size-4 shrink-0 text-muted-foreground hover:bg-transparent hover:text-foreground"
         onclick={onClear}
         title="Clear plot filter (Esc)"
         aria-label="Clear plot filter"
     >
-        <X class="size-4" />
-    </button>
+        <X />
+    </Button>
 </div>

@@ -46,6 +46,7 @@
         NO_CATEGORY_LABEL
     } from './plotCategories';
     import { page } from '$app/state';
+    import { cn } from '$lib/utils';
     import { isAnnotationsRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
     import { useMcapSequenceFilters } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
@@ -592,9 +593,7 @@
                     {#if $plotSelectionCount > 0}
                         <!-- Below the top axis label, which it would overlap on a narrow plot. -->
                         <div
-                            class="absolute left-2 z-10"
-                            class:top-2={!showAxesLabels}
-                            class:top-11={showAxesLabels}
+                            class={cn('absolute left-2 z-10', showAxesLabels ? 'top-11' : 'top-2')}
                         >
                             <PlotSelectionChip
                                 count={$plotSelectionCount}
