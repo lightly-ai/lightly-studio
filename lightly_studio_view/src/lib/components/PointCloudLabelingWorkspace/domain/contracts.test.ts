@@ -122,6 +122,7 @@ describe('point-cloud domain contracts', () => {
             trackId: 'track-0',
             trackNumber: 7,
             parentTrackNumber: null,
+            parentTrackClassName: null,
             keyframeId: 'kf-0',
             center: [1, 0, 0],
             size: [2, 1, 1],

@@ -111,12 +111,11 @@ def get_2d_embeddings(
         )
 
     matching_sample_ids: set[UUID] | None = None
-    filters = body.filters if body else None
-    if filters:
+    if filter_values:
         matching_sample_ids = _get_matching_sample_ids(
             session=session,
             collection_id=collection_id,
-            filters=filters,
+            filters=body.filters,
         )
 
     if matching_sample_ids is None:

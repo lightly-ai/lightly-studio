@@ -59,7 +59,11 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+export {
+    AnnotationClassNotAvailableError,
+    getCreateLabelErrorMessage,
+    useCreateLabel
+} from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
@@ -116,6 +120,7 @@ export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetc
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
 export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte';
 export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
+export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
