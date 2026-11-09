@@ -53,7 +53,7 @@
     const pinnedVisible = $derived(!!pinnedItem && matchesSearch(pinnedItem, list.search));
 </script>
 
-<div class="w-full space-y-2 overflow-hidden" data-testid={testId}>
+<div class="w-full min-w-0 space-y-2" data-testid={testId}>
     {#if list.searchVisible}
         <Input
             value={list.search}
