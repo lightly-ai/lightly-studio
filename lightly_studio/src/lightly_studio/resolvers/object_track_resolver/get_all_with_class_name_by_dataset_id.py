@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, func, select
 
+from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_track import ObjectTrackTable, TrackWithClassNameView
 from lightly_studio.models.annotation_label import AnnotationLabelTable
@@ -40,7 +41,7 @@ def get_all_with_class_name_by_dataset_id(
             col(AnnotationBaseTable.annotation_label_id)
             == col(AnnotationLabelTable.annotation_label_id),
         )
-        .where(col(AnnotationBaseTable.object_track_id).in_(track_ids))
+        .where(db_array.in_array(column=col(AnnotationBaseTable.object_track_id), values=track_ids))
         .group_by(col(AnnotationBaseTable.object_track_id))
     ).all()
 
