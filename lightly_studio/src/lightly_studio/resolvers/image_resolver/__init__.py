@@ -9,6 +9,9 @@ from lightly_studio.resolvers.image_resolver.count_image_annotations_by_pair imp
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_sample_tags import (
     count_image_annotations_by_sample_tags,
 )
+from lightly_studio.resolvers.image_resolver.count_unannotated_images_by_source import (
+    count_unannotated_images_by_source,
+)
 from lightly_studio.resolvers.image_resolver.create_many import create_many
 from lightly_studio.resolvers.image_resolver.delete import delete
 from lightly_studio.resolvers.image_resolver.get_adjacent_images import get_adjacent_images
@@ -45,6 +48,7 @@ __all__ = [
     "count_image_annotations_by_collection",
     "count_image_annotations_by_pair",
     "count_image_annotations_by_sample_tags",
+    "count_unannotated_images_by_source",
     "create_many",
     "delete",
     "get_adjacent_images",

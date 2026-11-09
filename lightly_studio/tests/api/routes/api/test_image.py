@@ -734,3 +734,41 @@ def test_count_image_annotations_by_pair(
             "total_count": 1,
         }
     ]
+
+
+def test_count_unannotated_images_by_source(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/a.png"
+    )
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/path/b.png")
+    car_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    source = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id, annotation_label_id=car_label.annotation_label_id
+            )
+        ],
+        collection_name="source_a",
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/unannotated/count_by_source",
+        json={},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [
+        {
+            "annotation_collection_id": str(source[0].annotation_collection_id),
+            "current_count": 1,
+            "total_count": 1,
+        }
+    ]
