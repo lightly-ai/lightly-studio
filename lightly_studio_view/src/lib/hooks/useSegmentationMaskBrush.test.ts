@@ -5,6 +5,7 @@ import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotati
 
 import { useSegmentationMaskBrush } from './useSegmentationMaskBrush';
 import { useGlobalStorage } from './useGlobalStorage';
+import { resetPickedClassesForTests, useStickyClass } from './useStickyClass/useStickyClass';
 import { useReversibleActions } from './useReversibleActions';
 import {
     computeBoundingBoxFromMask,
@@ -92,6 +93,7 @@ describe('useSegmentationMaskBrush', () => {
     beforeEach(() => {
         useGlobalStorage().clearReversibleActions();
         useGlobalStorage().lastAnnotationLabel.set({});
+        resetPickedClassesForTests();
         annotationLabelContext.isDrawing = true;
         annotationLabelContext.annotationId = null;
         annotationLabelContext.annotationLabel = null;
@@ -397,6 +399,32 @@ describe('useSegmentationMaskBrush', () => {
         );
     });
 
+    it('asks for a class when the stored class is not in the loaded class list', async () => {
+        // Stored on an earlier visit, then deleted elsewhere.
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
+        const requestLabel = vi.fn().mockResolvedValue({ label: 'deer' });
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch: vi.fn(),
+            deleteAnnotation,
+            requestLabel
+        });
+
+        await finishBrush(mask, null, [
+            { annotation_label_id: 'deer-id', annotation_label_name: 'deer' }
+        ]);
+
+        expect(requestLabel).toHaveBeenCalledOnce();
+        expect(createLabel).not.toHaveBeenCalled();
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_label_id: 'deer-id' })
+        );
+    });
+
     it('stays silent when there is no sticky class and the dialog is cancelled', async () => {
         const refetch = vi.fn();
         annotationLabelContext.annotationLabel = null;
@@ -552,7 +580,7 @@ describe('useSegmentationMaskBrush', () => {
         const refetch = vi.fn();
 
         annotationLabelContext.annotationLabel = 'car';
-        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
+        useStickyClass().pickClass('c1', 'car');
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
