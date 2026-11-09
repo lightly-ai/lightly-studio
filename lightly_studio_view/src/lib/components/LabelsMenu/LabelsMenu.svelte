@@ -1,6 +1,6 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { FilterList, type FilterListItem } from '$lib/components/FilterList';
+    import { FilterList } from '$lib/components/FilterList';
     import type { Annotation } from '$lib/types';
     import { formatInteger, resolveEffectiveColorBySource } from '$lib/utils';
     import { type Readable } from 'svelte/store';
@@ -40,23 +40,21 @@
     );
 
     const classItems = $derived(
-        $annotationFilterRows.map(
-            ({ label_name, current_count, total_count, selected }): FilterListItem => ({
-                id: label_name,
-                label: label_name,
-                selected,
-                count:
-                    current_count === undefined
-                        ? undefined
-                        : `${formatInteger(current_count)} of ${formatInteger(total_count)}`
-            })
-        )
+        $annotationFilterRows.map(({ label_name, current_count, total_count, selected }) => ({
+            id: label_name,
+            label: label_name,
+            selected,
+            count:
+                current_count === undefined
+                    ? undefined
+                    : `${formatInteger(current_count)} of ${formatInteger(total_count)}`
+        }))
     );
     const selectedById = $derived(new Map(classItems.map((item) => [item.id, item.selected])));
 </script>
 
 <Segment title="Annotation Classes">
-    <div class="width-full space-y-2 overflow-hidden">
+    <div class="width-full min-w-0 space-y-2">
         {#if $allSourcesHidden}
             <!-- The rows are empty here because every source is unchecked, not because the
                  dataset has no annotations. Say so, otherwise the message below sends the user
