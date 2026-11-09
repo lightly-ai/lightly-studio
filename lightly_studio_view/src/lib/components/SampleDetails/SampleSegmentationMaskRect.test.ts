@@ -1,6 +1,5 @@
 import { fireEvent, render } from '@testing-library/svelte';
 import { tick } from 'svelte';
-import { writable } from 'svelte/store';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleSegmentationMaskRect from './SampleSegmentationMaskRect/SampleSegmentationMaskRect.svelte';
 
@@ -90,10 +89,10 @@ vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
 }));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: () =>
-        writable({
-            data: []
-        })
+    useAnnotationLabels: () => ({
+        data: [],
+        refetch: vi.fn()
+    })
 }));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
