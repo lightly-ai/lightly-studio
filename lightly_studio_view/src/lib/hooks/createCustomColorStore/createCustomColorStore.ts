@@ -6,6 +6,9 @@ export type CustomColor = {
     alpha: number;
 };
 
+// Identifies one save request. A newer save, or a reset, makes older tickets stale.
+type SaveTicket = { seq: number; generation: number };
+
 interface CustomColorStore {
     customColorsStore: Readable<Record<string, CustomColor>>;
     colorVersion: Writable<number>;
@@ -19,6 +22,10 @@ interface CustomColorStore {
     getSavedColor: (name: string) => CustomColor | undefined;
     hasSavedColor: (name: string) => boolean;
     replaceSavedColors: (colors: Record<string, CustomColor>) => void;
+    beginSave: (name: string) => SaveTicket;
+    setSavedColor: (name: string, color: CustomColor, ticket: SaveTicket) => void;
+    reset: () => void;
+    getGeneration: () => number;
 }
 
 export const createCustomColorStore = (): CustomColorStore => {
@@ -31,7 +38,8 @@ export const createCustomColorStore = (): CustomColorStore => {
 
     // The saved layer overlaid with previews.
     const customColorsStore = derived([savedColors, previews], ([$saved, $previews]) => {
-        const merged = { ...$saved };
+        // No prototype: a class can be named `__proto__`.
+        const merged: Record<string, CustomColor> = Object.assign(Object.create(null), $saved);
         for (const [name, { color }] of Object.entries($previews)) {
             if (color) merged[name] = color;
             else delete merged[name];
@@ -102,6 +110,40 @@ export const createCustomColorStore = (): CustomColorStore => {
         colorVersion.update((v) => v + 1);
     };
 
+    // Save bookkeeping. A reset bumps the generation, so saves begun before it never apply.
+    let generation = 0;
+    // Maps, not objects: a class can be named `__proto__`.
+    const lastBegun = new Map<string, number>();
+    const lastApplied = new Map<string, number>();
+
+    // Start a save for a name. Later saves of the same name get a higher seq.
+    const beginSave = (name: string): SaveTicket => {
+        const seq = (lastBegun.get(name) ?? 0) + 1;
+        lastBegun.set(name, seq);
+        return { seq, generation };
+    };
+
+    // Apply a finished save to the saved layer, unless a newer save or a reset came first.
+    const setSavedColor = (name: string, color: CustomColor, ticket: SaveTicket) => {
+        if (ticket.generation !== generation) return;
+        if (ticket.seq <= (lastApplied.get(name) ?? 0)) return;
+        lastApplied.set(name, ticket.seq);
+        savedColors.update((colors) => ({ ...colors, [name]: color }));
+        colorVersion.update((v) => v + 1);
+    };
+
+    // Clear the saved layer, previews and counters, and drop saves still in flight
+    const reset = () => {
+        generation += 1;
+        lastBegun.clear();
+        lastApplied.clear();
+        savedColors.set({});
+        previews.set({});
+        colorVersion.update((v) => v + 1);
+    };
+
+    const getGeneration = (): number => generation;
+
     // Clear all custom colors
     const clearCustomColors = () => {
         savedColors.set({});
@@ -122,6 +164,10 @@ export const createCustomColorStore = (): CustomColorStore => {
         clearPreviewColor,
         getSavedColor,
         hasSavedColor,
-        replaceSavedColors
+        replaceSavedColors,
+        beginSave,
+        setSavedColor,
+        reset,
+        getGeneration
     };
 };

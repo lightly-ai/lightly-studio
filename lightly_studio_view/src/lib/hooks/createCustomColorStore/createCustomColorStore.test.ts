@@ -12,6 +12,16 @@ describe('createCustomColorStore previews', () => {
         expect(get(store.customColorsStore).cat.color).toBe('#222222');
     });
 
+    // __proto__ is a valid class name and must not hit Object.prototype.
+    test('the merged colors list a preview of a class named __proto__', () => {
+        const store = createCustomColorStore();
+        store.setPreviewColor('__proto__', { color: '#222222', alpha: 1 }, Symbol());
+
+        expect(Object.entries(get(store.customColorsStore))).toEqual([
+            ['__proto__', { color: '#222222', alpha: 1 }]
+        ]);
+    });
+
     test('a null preview shows the default', () => {
         const store = createCustomColorStore();
         store.setCustomColor('cat', '#111111', 1);
@@ -69,6 +79,53 @@ describe('createCustomColorStore previews', () => {
         expect(store.getCustomColor('cat')?.color).toBe('#222222');
         expect(store.getSavedColor('cat')?.color).toBe('#111111');
         expect(store.getSavedColor('dog')).toBeUndefined();
+    });
+});
+
+describe('createCustomColorStore saves', () => {
+    const red = { color: '#ff0000', alpha: 1 };
+    const blue = { color: '#0000ff', alpha: 1 };
+
+    // __proto__ is a valid class name and must not hit Object.prototype.
+    test.each(['cat', '__proto__'])('setSavedColor ignores an older sequence for %s', (name) => {
+        const store = createCustomColorStore();
+        const older = store.beginSave(name);
+        const newer = store.beginSave(name);
+
+        store.setSavedColor(name, blue, newer);
+        store.setSavedColor(name, red, older);
+
+        expect(store.getSavedColor(name)).toEqual(blue);
+    });
+
+    test('reset clears saved colors and previews', () => {
+        const store = createCustomColorStore();
+        store.setCustomColor('cat', '#ff0000', 1);
+        store.setPreviewColor('dog', blue, Symbol());
+
+        store.reset();
+
+        expect(get(store.customColorsStore)).toEqual({});
+    });
+
+    test('setSavedColor ignores a save begun before reset', () => {
+        const store = createCustomColorStore();
+        const ticket = store.beginSave('cat');
+
+        store.reset();
+        store.setSavedColor('cat', red, ticket);
+
+        expect(store.getSavedColor('cat')).toBeUndefined();
+        expect(store.getGeneration()).toBe(ticket.generation + 1);
+    });
+
+    test('replaceSavedColors keeps the generation', () => {
+        const store = createCustomColorStore();
+        const generation = store.getGeneration();
+
+        store.replaceSavedColors({ cat: red });
+
+        expect(store.getGeneration()).toBe(generation);
     });
 });
 

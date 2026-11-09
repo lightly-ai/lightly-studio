@@ -10,6 +10,7 @@ from sqlmodel import Session, select
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_sample_metric_resolver,
 )
 from tests.api.routes.api.evaluation import helpers
@@ -36,6 +37,7 @@ def test_delete_run(
                 "task_type": "object_detection",
                 "gt_annotation_source": "gt",
                 "pred_annotation_source": "pred",
+                "config": {"compute_average_precision": True},
             },
         )
         assert response.status_code == 201
@@ -54,8 +56,15 @@ def test_delete_run(
         )
         for run_id in run_ids
     ]
+    class_metrics = [
+        evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+            session=db_session, evaluation_run_id=run_id
+        )
+        for run_id in run_ids
+    ]
     assert all(annotation_metrics)
     assert all(sample_metrics)
+    assert all(class_metrics)
     assert annotations
     dataset_id = uuid4() if target == "wrong_dataset" else root.dataset_id
     run_id = str(uuid4()) if target == "missing" else str(run_ids[0])
@@ -84,6 +93,9 @@ def test_delete_run(
         assert evaluation_sample_metric_resolver.get_all_by_evaluation_run_id(
             session=db_session, evaluation_run_id=saved_id
         ) == ([] if deleted else sample_metrics[index])
+        assert evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+            session=db_session, evaluation_run_id=saved_id
+        ) == ([] if deleted else class_metrics[index])
     if status == 204:
         assert response.content == b""
         assert test_client.delete(f"{url}/{run_id}").status_code == 404

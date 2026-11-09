@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { Card, CardContent, Segment } from '$lib/components';
     import ConfirmApplyDialog from './ConfirmApplyDialog/ConfirmApplyDialog.svelte';
     import NamePickerField from './NamePickerField/NamePickerField.svelte';
@@ -52,6 +53,7 @@
                         placeholder="Select an annotation class"
                         selectedName={className}
                         names={classNames}
+                        onCreate={trackClassCreatedInPicker}
                         disabled={isApplying}
                         onSelect={onClassSelect}
                     />

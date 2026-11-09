@@ -8,14 +8,23 @@ type SessionColor = NonNullable<
     Parameters<ReturnType<typeof useCustomLabelColors>['setPreviewColor']>[1]
 >;
 
+interface ClassColorPickerOptions {
+    onCommit?: (color: SessionColor) => Promise<void>;
+}
+
 type ColorStore = Pick<
     ReturnType<typeof useCustomLabelColors>,
-    'customColorsStore' | 'setCustomColor' | 'setPreviewColor' | 'clearPreviewColor'
+    | 'customColorsStore'
+    | 'beginSave'
+    | 'setSavedColor'
+    | 'getGeneration'
+    | 'setPreviewColor'
+    | 'clearPreviewColor'
 >;
 
 /** A color picker for an annotation class. See `createColorPicker`. */
-export const useClassColorPicker = (getName: () => string) =>
-    createColorPicker(getName, useCustomLabelColors(), getColorByLabel);
+export const useClassColorPicker = (getName: () => string, options?: ClassColorPickerOptions) =>
+    createColorPicker(getName, useCustomLabelColors(), getColorByLabel, options?.onCommit);
 
 /** A color picker for an annotation source. See `createColorPicker`. */
 export const useSourceColorPicker = (getName: () => string) =>
@@ -30,13 +39,31 @@ export const useSourceColorPicker = (getName: () => string) =>
 function createColorPicker(
     getName: () => string,
     colorStore: ColorStore,
-    getDefaultColor: typeof getColorByLabel
+    getDefaultColor: typeof getColorByLabel,
+    onCommit?: (color: SessionColor) => Promise<void>
 ) {
-    const { setCustomColor, setPreviewColor, clearPreviewColor } = colorStore;
+    const { beginSave, setSavedColor, getGeneration, setPreviewColor, clearPreviewColor } =
+        colorStore;
     const colors = fromStore(colorStore.customColorsStore);
     // A session starts at the first setColor after a finished one. A rename can change the
     // name while the picker stays open, so the session follows the name.
-    let session: { owner: symbol; name: string; color: SessionColor } | undefined;
+    let session:
+        | { owner: symbol; name: string; color: SessionColor; generation: number }
+        | undefined;
+
+    // Save a color through onCommit and show it meanwhile. The preview ends when the save
+    // settles. A failed save leaves the saved color; the onCommit owner shows the toast.
+    const commit = async (name: string, owner: symbol, color: SessionColor) => {
+        const ticket = beginSave(name);
+        try {
+            await onCommit?.(color);
+            setSavedColor(name, color, ticket);
+        } catch {
+            // Not rethrown: the onCommit owner reports the failure.
+        } finally {
+            clearPreviewColor(name, owner);
+        }
+    };
 
     $effect.pre(() => {
         const name = getName();
@@ -79,17 +106,31 @@ function createColorPicker(
             return initialAlpha;
         },
         setColor(color: string, alpha: number) {
-            session ??= { owner: Symbol(), name: getName(), color: { color, alpha } };
+            // A store reset (dataset switch) ends the session; later picks start a new one.
+            if (session && session.generation !== getGeneration()) {
+                clearPreviewColor(session.name, session.owner);
+                session = undefined;
+            }
+            session ??= {
+                owner: Symbol(),
+                name: getName(),
+                color: { color, alpha },
+                generation: getGeneration()
+            };
             session.color = { color, alpha };
             setPreviewColor(session.name, session.color, session.owner);
         },
-        finishColorChange(applied: boolean) {
+        async finishColorChange(applied: boolean): Promise<void> {
             if (!session) return;
 
-            const { owner, name, color } = session;
+            const { owner, name, color, generation } = session;
             session = undefined;
-            if (applied) setCustomColor(name, color.color, color.alpha);
-            clearPreviewColor(name, owner);
+            // The store was reset (dataset switch) while the picker was open.
+            if (!applied || generation !== getGeneration()) {
+                clearPreviewColor(name, owner);
+                return;
+            }
+            await commit(name, owner, color);
         }
     };
 }

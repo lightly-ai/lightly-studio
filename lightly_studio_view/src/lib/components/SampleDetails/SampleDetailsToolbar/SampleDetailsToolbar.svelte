@@ -92,34 +92,35 @@
             visible: !annotationLabelContext.isOnAnnotationDetailsView
         },
         {
+            id: 'brush',
+            label: 'Mask brush',
+            icon: Brush,
+            shortcut: $settingsStore.key_toolbar_segmentation_mask,
+            action: 'paint',
+            visible: showSegmentationTool
+        },
+        {
             id: 'slic',
-            label: 'AI-Assisted labeling',
+            label: 'Superpixel brush',
             icon: Bot,
             shortcut: $settingsStore.key_toolbar_slic ?? 'a',
             action: 'activate',
+            hint: 'Build a mask by selecting image regions.',
             visible: showSegmentationTool && slicAvailable
         },
         {
             id: 'smart-select',
             label: 'Smart select',
             icon: WandSparkles,
-            hint: 'Segments the object that you click or box. Sends the image to fal.ai.',
+            hint: 'Segments the object that you click or box.',
             visible: showAssistedLabelingTools
         },
         {
             id: 'find-instances',
             label: 'Find all instances',
             icon: Layers3,
-            hint: 'Finds all objects that match a text prompt. Sends the image to fal.ai.',
+            hint: 'Finds all objects that match a text prompt.',
             visible: showAssistedLabelingTools
-        },
-        {
-            id: 'brush',
-            label: 'Segmentation Mask Brush',
-            icon: Brush,
-            shortcut: $settingsStore.key_toolbar_segmentation_mask,
-            action: 'paint',
-            visible: showSegmentationTool
         }
     ]);
 
