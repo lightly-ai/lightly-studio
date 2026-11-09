@@ -9,7 +9,10 @@ interface TreeScope {
     sourceIds: string[];
 }
 
-/** Tick actions on tree rows. A row ticks its pairs and its "No annotations" sources. */
+/**
+ * Tick and eye actions on tree rows. A row ticks its pairs and its "No annotations" sources,
+ * and its eye shows or hides its pairs.
+ */
 export const createTreeActions = (getTree: () => TreeState, getScope: () => TreeScope) => {
     // Only the given "No annotations" rows stay ticked, so a source keeps its own.
     const onlyTargets = (pairs: PairKey[], unannotatedIds: string[]) => {
@@ -25,6 +28,8 @@ export const createTreeActions = (getTree: () => TreeState, getScope: () => Tree
             getTree().setTicked(pairs, ticked);
             getTree().setUnannotatedTicked(unannotatedIds, ticked);
         },
+        setVisible: (leaves: TreeLeaf[], visible: boolean) =>
+            getTree().setVisible(leafTargets(leaves).pairs, visible),
         only: (leaves: TreeLeaf[]) => {
             const { pairs, unannotatedIds } = leafTargets(leaves);
             onlyTargets(pairs, unannotatedIds);

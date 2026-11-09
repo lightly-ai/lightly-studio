@@ -73,7 +73,7 @@ const hasKey = (keys: PairKey[], key: PairKey): boolean =>
     );
 
 // No rows reads as "on": it filters nothing out.
-const toTriState = (count: number, length: number): TriState => {
+export const toTriState = (count: number, length: number): TriState => {
     if (count === length) return 'on';
     return count === 0 ? 'off' : 'partial';
 };
