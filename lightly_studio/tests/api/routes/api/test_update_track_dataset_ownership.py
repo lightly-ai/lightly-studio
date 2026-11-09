@@ -208,6 +208,7 @@ def _create_annotations(
     samples: Sequence[ImageTable],
     track_ids: Sequence[UUID],
 ) -> list[UUID]:
+    assert len(samples) >= len(track_ids)
     annotation_class = annotation_label_resolver.create(
         session=session,
         label=AnnotationLabelCreate(

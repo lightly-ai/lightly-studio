@@ -69,6 +69,7 @@ export function useAnnotationTrackEditing({
     }
 
     async function handleTrackChange(trackId: string | null, isNewTrack: boolean): Promise<void> {
+        if (!isNewTrack && trackId === annotation.trackId) return;
         await state.save(() =>
             updateAnnotations([
                 {
