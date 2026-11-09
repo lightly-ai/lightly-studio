@@ -531,3 +531,12 @@ def test_get_backend(
 
     assert db_manager.get_backend() == DatabaseBackend.DUCKDB
     db_manager.close()
+
+
+def test_get_session_backend(tmp_path: Path) -> None:
+    engine = DatabaseEngine(engine_url=f"duckdb:///{tmp_path / 'test.db'}")
+    try:
+        with engine.session() as session:
+            assert db_manager.get_session_backend(session=session) == DatabaseBackend.DUCKDB
+    finally:
+        engine.close()

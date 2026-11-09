@@ -27,6 +27,7 @@ from lightly_studio.resolvers import (
     sample_resolver,
     sensor_calibration_resolver,
 )
+from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.services.recording_service import (
     cuboids_in_frame,
     load_dynamic_transforms,
@@ -96,11 +97,18 @@ def get_tick_details(
             lidar_channels[name] = channel
         elif data_type is McapDataType.VIDEO_FRAME:
             camera_channels[name] = channel.model_copy(update={"projection": projections.get(name)})
+    annotation_rows = annotation_resolver.get_all_by_parent_sample_ids(
+        session=session, parent_sample_ids=[link.sample_id]
+    )
+    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
+        session=session, annotations=annotation_rows
+    )
     annotations = [
-        AnnotationView.from_annotation_table(annotation=annotation)
-        for annotation in annotation_resolver.get_all_by_parent_sample_ids(
-            session=session, parent_sample_ids=[link.sample_id]
+        AnnotationView.from_annotation_table(
+            annotation=annotation,
+            parent_track_class_names=parent_track_class_names,
         )
+        for annotation in annotation_rows
     ]
     if target_frame_id is not None:
         annotations = cuboids_in_frame.cuboids_in_frame(
