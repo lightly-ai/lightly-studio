@@ -13,13 +13,21 @@
         name: string;
         /** Number of annotations in the group. */
         count: number;
+        /** When this value changes to a new truthy string, the group auto-expands. */
+        autoExpandForId?: string | null;
         /** Annotation rows rendered inside the collapsible body. */
         children: Snippet;
     }
 
-    let { name, count, children }: Props = $props();
+    let { name, count, autoExpandForId = null, children }: Props = $props();
 
     let open = $state(true);
+
+    $effect(() => {
+        if (autoExpandForId) {
+            open = true;
+        }
+    });
     const duration = 168;
 </script>
 

@@ -29,6 +29,7 @@
         trackId: null,
         trackNumber: null,
         parentTrackNumber: null,
+        parentTrackClassName: null,
         keyframeId: null,
         center: [0, 0, 0],
         size: [1, 1, 1],
