@@ -64,14 +64,13 @@ export function useSegmentationMaskBrush({
         getCollectionId: () => collectionId
     });
 
-    // Waits for the class list. Returns undefined, after showing an error, when a new
-    // annotation cannot get its class. Editing an existing mask works without the list.
-    const resolveLabelList = async (
-        labels: LabelList | Promise<LabelList | undefined>,
+    // Returns undefined, after showing an error, when a new annotation cannot get its class.
+    // Editing an existing mask works without the class list.
+    const resolveLabelList = (
+        labelList: LabelList | undefined,
         annotationLabelName: string | null | undefined,
         isNewAnnotation: boolean
-    ): Promise<LabelList | undefined> => {
-        const labelList = await labels;
+    ): LabelList | undefined => {
         if (!isNewAnnotation) return labelList ?? [];
         if (!labelList) {
             toast.error('Could not load annotation classes. Please try again.');
@@ -114,13 +113,13 @@ export function useSegmentationMaskBrush({
         // Check before anything else: the constraints below trim other masks on the server.
         if (!selectedAnnotation && isAnnotationSourceBlocked(annotationLabelContext)) return;
 
-        // Callers pass no labels while they load, so an empty list means unknown.
+        // Wait for a loading class list. Undefined when it failed to load: then the stored
+        // class is used as is.
+        const loadedLabels = await labels;
         let annotationLabelName = resolveStickyClass({
             collectionId,
             stickyClass: get(stickyClasses)[collectionId],
-            classNames: labels.length
-                ? labels.map((label) => label.annotation_label_name ?? '')
-                : undefined
+            classNames: loadedLabels?.map((label) => label.annotation_label_name ?? '')
         });
         if (!selectedAnnotation && !annotationLabelName) {
             const result = requestLabel ? await requestLabel() : null;
@@ -129,7 +128,7 @@ export function useSegmentationMaskBrush({
             pickClass(collectionId, annotationLabelName);
         }
 
-        const labelList = await resolveLabelList(labels, annotationLabelName, !selectedAnnotation);
+        const labelList = resolveLabelList(loadedLabels, annotationLabelName, !selectedAnnotation);
         if (!labelList) return;
         let label = labelList.find((l) => l.annotation_label_name === annotationLabelName);
 

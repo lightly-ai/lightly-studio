@@ -155,7 +155,9 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [
+            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
+        ]);
 
         expect(toast.error).toHaveBeenCalledWith('Invalid segmentation mask');
         expect(createAnnotation).not.toHaveBeenCalled();
@@ -244,7 +246,6 @@ describe('useSegmentationMaskBrush', () => {
 
     it('stops before trimming other masks when the class cannot be created', async () => {
         createLabelState.canCreateLabel = false;
-        annotationLabelContext.annotationLabel = 'car';
         const refetch = vi.fn();
 
         const { finishBrush } = useSegmentationMaskBrush({
@@ -253,7 +254,9 @@ describe('useSegmentationMaskBrush', () => {
             sampleId: 's1',
             sample,
             refetch,
-            deleteAnnotation
+            deleteAnnotation,
+            // A new class name from the dialog, which this user may not create.
+            requestLabel: vi.fn().mockResolvedValue({ label: 'car' })
         });
 
         await expect(finishBrush(mask, null, [])).resolves.toBeUndefined();
@@ -270,7 +273,7 @@ describe('useSegmentationMaskBrush', () => {
 
     it('waits for a loading class list before checking the class', async () => {
         createLabelState.canCreateLabel = false;
-        annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
@@ -294,7 +297,7 @@ describe('useSegmentationMaskBrush', () => {
     });
 
     it('shows a lookup error when the class list fails to load', async () => {
-        annotationLabelContext.annotationLabel = 'car';
+        useGlobalStorage().updateLastAnnotationLabel('c1', 'car');
 
         const { finishBrush } = useSegmentationMaskBrush({
             collectionId: 'c1',
