@@ -1,8 +1,8 @@
 <script lang="ts">
-    const { label, canCreate = true }: { label: string; canCreate?: boolean } = $props();
+    const { label, allowCreate = true }: { label: string; allowCreate?: boolean } = $props();
 </script>
 
-{#if !canCreate}
+{#if !allowCreate}
     <div class="text-md m-2">No annotation class found.</div>
 {:else if label.length > 0}
     <div class="text-md m-2">
