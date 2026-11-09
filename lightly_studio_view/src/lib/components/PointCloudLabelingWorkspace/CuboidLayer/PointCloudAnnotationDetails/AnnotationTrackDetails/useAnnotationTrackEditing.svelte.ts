@@ -4,9 +4,15 @@ import { createTrackEditingState } from './createTrackEditingState';
 import { useTracks, useUpdateAnnotationsMutation, useUpdateTrackMutation } from '$lib/hooks';
 import { usePointCloudWorkspaceLayoutContext } from '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte';
 import { getParentTrackChoices } from './getParentTrackChoices';
+import { filterTracksByAnnotationClass } from '$lib/components/TrackSelect/filterTracksByAnnotationClass';
 
 interface Params {
-    getAnnotation: () => { id: string; trackId: string | null; annotationSourceId: string };
+    getAnnotation: () => {
+        id: string;
+        trackId: string | null;
+        annotationSourceId: string;
+        annotationClassName: string | null;
+    };
     getOccupiedTrackIds: () => ReadonlySet<string>;
     onTrackChange: () => Promise<void>;
 }
@@ -43,7 +49,7 @@ export function useAnnotationTrackEditing({
     const state = createTrackEditingState({ refresh });
 
     const availableTracks = $derived(
-        tracks.filter(
+        filterTracksByAnnotationClass(tracks, annotation.annotationClassName).filter(
             (t) =>
                 !occupiedTrackIds.has(t.object_track_id) || t.object_track_id === annotation.trackId
         )

@@ -86,7 +86,7 @@
         <div class="px-4 pb-4 pt-1">
             <PointCloudAnnotationDetails
                 {annotationSourceName}
-                annotation={cuboid}
+                annotation={{ ...cuboid, annotationClassName: className }}
                 {editable}
                 {occupiedTrackIds}
                 onAnnotationChange={handleAnnotationChange}

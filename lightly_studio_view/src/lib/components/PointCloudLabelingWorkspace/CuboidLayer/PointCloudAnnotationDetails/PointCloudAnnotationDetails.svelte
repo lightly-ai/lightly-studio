@@ -11,6 +11,7 @@
         parentTrackNumber: number | null;
         parentTrackClassName: string | null;
         annotationSourceId: string;
+        annotationClassName?: string | null;
     };
 
     interface Props {
@@ -88,6 +89,7 @@
         annotationId={annotation.id}
         annotationSourceId={annotation.annotationSourceId}
         trackId={annotation.trackId}
+        annotationClassName={annotation.annotationClassName ?? null}
         trackNumber={details.trackNumber}
         parentTrackNumber={annotation.parentTrackNumber}
         parentTrackClassName={annotation.parentTrackClassName}

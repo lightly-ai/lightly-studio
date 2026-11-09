@@ -8,6 +8,7 @@
     import type { ComponentProps } from 'svelte';
     import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
     import { TrackSelect } from '$lib/components/TrackSelect';
+    import { filterTracksByAnnotationClass } from '$lib/components/TrackSelect/filterTracksByAnnotationClass';
     import { useClassDialogForm } from './useClassDialogForm/useClassDialogForm';
 
     interface Props {
@@ -36,10 +37,6 @@
 
     const canCreateClass = useCanCreateAnnotationClass();
 
-    const availableTracks = $derived(
-        tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id))
-    );
-
     const items = $derived<ComponentProps<typeof SelectList>['items']>(
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
@@ -60,6 +57,13 @@
             open = false;
         }
     }));
+
+    const availableTracks = $derived(
+        filterTracksByAnnotationClass(
+            tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id)),
+            $selectedItem?.value ?? null
+        )
+    );
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>

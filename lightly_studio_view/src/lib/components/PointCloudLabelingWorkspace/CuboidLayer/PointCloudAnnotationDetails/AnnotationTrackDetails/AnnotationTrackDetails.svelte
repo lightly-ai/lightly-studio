@@ -8,6 +8,7 @@
         annotationId: string;
         annotationSourceId: string;
         trackId: string | null;
+        annotationClassName: string | null;
         trackNumber: number | null;
         parentTrackNumber: number | null;
         parentTrackClassName: string | null;
@@ -20,6 +21,7 @@
         annotationId,
         annotationSourceId,
         trackId,
+        annotationClassName,
         trackNumber,
         parentTrackNumber,
         parentTrackClassName,
@@ -28,7 +30,12 @@
         onTrackChange
     }: Props = $props();
     const editing = useAnnotationTrackEditing({
-        getAnnotation: () => ({ id: annotationId, annotationSourceId, trackId }),
+        getAnnotation: () => ({
+            id: annotationId,
+            annotationSourceId,
+            trackId,
+            annotationClassName
+        }),
         getOccupiedTrackIds: () => occupiedTrackIds,
         onTrackChange: async () => {
             await onTrackChange?.();

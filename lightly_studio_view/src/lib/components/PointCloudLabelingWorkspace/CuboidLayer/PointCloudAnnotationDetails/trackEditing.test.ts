@@ -18,6 +18,19 @@ let queryClient: QueryClient;
 function setServerTracks(data: TrackWithClassNameView[]) {
     serverTracks = data;
 }
+vi.mock('$lib/hooks/useUpdateTrackMutation/useUpdateTrackMutation.svelte', () => ({
+    useUpdateTrackMutation: () => ({
+        updateParentTrack: async (trackId: string, parentTrackId: string | null) => {
+            await updateParentTrack({
+                path: { dataset_id: 'ds-1', track_id: trackId },
+                body: { parent_object_track_id: parentTrackId }
+            });
+        },
+        get isPending() {
+            return false;
+        }
+    })
+}));
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
     getTracks: async (...args: unknown[]) => {
@@ -291,5 +304,62 @@ describe('track editing refresh lifecycle', () => {
                 .map((option) => option.textContent?.trim());
             expect(parents).toEqual(['No parent', 'car - 1']);
         });
+    });
+
+    it('filters available tracks by annotation class name', async () => {
+        const personTrack = {
+            object_track_id: 'person-track',
+            object_track_number: 2,
+            annotation_class_name: 'person',
+            parent_object_track_id: null
+        };
+        const classlessTrack = {
+            object_track_id: 'empty-track',
+            object_track_number: 3,
+            annotation_class_name: null,
+            parent_object_track_id: null
+        };
+        setServerTracks([currentTrack, personTrack, classlessTrack]);
+        renderDetails({
+            props: {
+                ...defaultProps,
+                annotation: { ...defaultProps.annotation, annotationClassName: 'car' }
+            }
+        });
+        const user = userEvent.setup();
+        await user.click(screen.getAllByRole('combobox')[0]);
+        const assignments = screen
+            .getAllByRole('option')
+            .map((option) => option.textContent?.trim());
+        expect(assignments).toEqual(['No track', 'Track 3', 'car - 7', '+ New track']);
+    });
+
+    it('hides the current track when its class differs from the annotation', async () => {
+        const mismatchedCurrentTrack = {
+            object_track_id: 'track-0',
+            object_track_number: 7,
+            annotation_class_name: 'truck',
+            parent_object_track_id: null
+        };
+        const matchingTrack = {
+            object_track_id: 'matching',
+            object_track_number: 2,
+            annotation_class_name: 'car',
+            parent_object_track_id: null
+        };
+        setServerTracks([mismatchedCurrentTrack, matchingTrack]);
+        renderDetails({
+            props: {
+                ...defaultProps,
+                annotation: { ...defaultProps.annotation, annotationClassName: 'car' }
+            }
+        });
+        const user = userEvent.setup();
+        await user.click(screen.getAllByRole('combobox')[0]);
+        const assignments = screen
+            .getAllByRole('option')
+            .map((option) => option.textContent?.trim());
+        expect(assignments).not.toContain('truck - 7');
+        expect(assignments).toContain('car - 2');
     });
 });

@@ -13,7 +13,7 @@ vi.mock('$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass', ()
 
 const defaultTrackProps = {
     showTrackSelect: true,
-    tracks: [{ object_track_id: 'track-1', object_track_number: 1, annotation_class_name: 'car' }]
+    tracks: [{ object_track_id: 'track-1', object_track_number: 1, annotation_class_name: 'cat' }]
 };
 
 // bits-ui Select uses pointer-capture and scrollIntoView APIs that jsdom doesn't implement.
@@ -206,7 +206,7 @@ describe('SelectClassDialog', () => {
         await user.click(
             within(screen.getByTestId('track-select')).getByTestId('select-list-trigger')
         );
-        await user.click(screen.getByRole('option', { name: 'car - 1' }));
+        await user.click(screen.getByRole('option', { name: 'cat - 1' }));
 
         // Confirm
         const confirmButton = screen.getByRole('button', { name: 'Confirm' });
@@ -237,6 +237,26 @@ describe('SelectClassDialog', () => {
         expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
     });
 
+    it('filters tracks by the selected class name', async () => {
+        const user = userEvent.setup();
+        const tracks = [
+            { object_track_id: 'track-1', object_track_number: 1, annotation_class_name: 'cat' },
+            { object_track_id: 'track-2', object_track_number: 2, annotation_class_name: 'dog' },
+            { object_track_id: 'track-3', object_track_number: 3, annotation_class_name: null }
+        ];
+        renderDialog({ showTrackSelect: true, tracks });
+
+        await user.click(await screen.findByRole('option', { name: 'cat' }));
+
+        await user.click(
+            within(screen.getByTestId('track-select')).getByTestId('select-list-trigger')
+        );
+        const trackLabels = screen.getAllByRole('option').map((o) => o.textContent?.trim());
+        expect(trackLabels).toContain('cat - 1');
+        expect(trackLabels).toContain('Track 3');
+        expect(trackLabels).not.toContain('dog - 2');
+    });
+
     it('resets track selection when class changes', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog(defaultTrackProps);
@@ -248,7 +268,7 @@ describe('SelectClassDialog', () => {
         await user.click(
             within(screen.getByTestId('track-select')).getByTestId('select-list-trigger')
         );
-        await user.click(screen.getByRole('option', { name: 'car - 1' }));
+        await user.click(screen.getByRole('option', { name: 'cat - 1' }));
 
         // Change to a different class - this should reset the track
         // First trigger in DOM order is the class SelectList
