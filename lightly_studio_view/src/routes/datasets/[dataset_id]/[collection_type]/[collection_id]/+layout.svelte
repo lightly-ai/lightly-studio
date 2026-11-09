@@ -29,6 +29,11 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
+    import {
+        AnnotationTree,
+        setAnnotationTreeEnabled,
+        useTreeAnnotationsFilter
+    } from '$lib/components/AnnotationTree';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import {
         isAnnotationDetailsRoute,
@@ -64,6 +69,7 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
+    import { selectClassFromBar } from './distributionHandlers';
     import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import {
         buildVideoAnnotationCountsFilter,
@@ -168,6 +174,8 @@
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
     );
+    const showAnnotationTree = $derived(isImages && $featureFlags.includes('annotation_tree'));
+    setAnnotationTreeEnabled(() => showAnnotationTree);
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
@@ -393,7 +401,17 @@
     // backend restricts the counted annotations by their own collection id.
     const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
         useAnnotationCollectionsFilter();
+    // The annotation tree replaces the source selection and the class filter.
+    const treeFilter = useTreeAnnotationsFilter(() => ({
+        collectionId,
+        filter: $imageFilterFromHook,
+        enabled: showAnnotationTree
+    }));
+    const sourcesHidden = $derived(!showAnnotationTree && $allSourcesHidden);
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
+        if (showAnnotationTree) {
+            return treeFilter.current && { filter_type: 'annotations', ...treeFilter.current };
+        }
         const base = $annotationFilterStore;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
@@ -435,7 +453,7 @@
     const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         filter: imageAnnotationCountsFilter,
-        enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
+        enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !sourcesHidden
     }));
 
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
@@ -472,7 +490,7 @@
 
     // With every known source unchecked nothing is drawn, so nothing is counted either.
     // The request itself cannot say that, so the empty result is produced here.
-    const annotationCountsData = $derived($allSourcesHidden ? [] : annotationCounts.data);
+    const annotationCountsData = $derived(sourcesHidden ? [] : annotationCounts.data);
 
     // Feed annotation counts back into the hook for UI-ready filter rows.
     // Only update when data is present to avoid flicker during query refetch.
@@ -518,11 +536,15 @@
         annotationLabelsData === undefined || annotationLabelsData.length > 0
     );
 
-    // Clicking a class bar toggles the same annotation-label filter as the
-    // sidebar's LabelsMenu, so the plot and sidebar stay in sync.
-    const handleClassBarClick = (item: CategoryCount) => {
-        toggleAnnotationFilterSelection(item.label, collectionId);
-    };
+    // Clicking a class bar filters like the sidebar: "Only" on the class in the annotation tree,
+    // or a toggle in LabelsMenu.
+    const handleClassBarClick = (item: CategoryCount) =>
+        selectClassFromBar({
+            className: item.label,
+            showAnnotationTree,
+            onlyClass: treeFilter.onlyClass,
+            toggleClass: (className) => toggleAnnotationFilterSelection(className, collectionId)
+        });
 
     const distributionPanelVisible = $derived(
         $activePanel === 'distribution' && supportsDistribution
@@ -672,18 +694,22 @@
                             {#if isImages}
                                 <ConfusionCellFilterItem />
                             {/if}
-                            {#if isImages}
-                                <AnnotationCollectionsMenu {collectionId} />
-                            {/if}
-                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
-                            {#if !isCaptions && !isPointClouds}
-                                <LabelsMenu
-                                    {annotationFilterRows}
-                                    onToggleAnnotationFilter={(label) =>
-                                        toggleAnnotationFilterSelection(label, collectionId)}
-                                    onSelectionChange={setAnnotationFilterSelection}
-                                    showVisibilityToggle={showAnnotationVisibilityToggle}
-                                />
+                            {#if showAnnotationTree}
+                                <AnnotationTree {collectionId} />
+                            {:else}
+                                {#if isImages}
+                                    <AnnotationCollectionsMenu {collectionId} />
+                                {/if}
+                                <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
+                                {#if !isCaptions && !isPointClouds}
+                                    <LabelsMenu
+                                        {annotationFilterRows}
+                                        onToggleAnnotationFilter={(label) =>
+                                            toggleAnnotationFilterSelection(label, collectionId)}
+                                        onSelectionChange={setAnnotationFilterSelection}
+                                        showVisibilityToggle={showAnnotationVisibilityToggle}
+                                    />
+                                {/if}
                             {/if}
 
                             {#if isImages || isVideos || isVideoFrames || isCaptions}

@@ -84,6 +84,11 @@ vi.mock('$lib/components/QueryControl/QueryControl.svelte', async () => ({
 vi.mock('$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
+vi.mock('$lib/components/AnnotationTree', async () => ({
+    AnnotationTree: (await import('./LayoutStub.test.svelte')).default,
+    setAnnotationTreeEnabled: vi.fn(),
+    useTreeAnnotationsFilter: vi.fn(() => ({ current: undefined, ready: true, onlyClass: vi.fn() }))
+}));
 vi.mock(
     '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte',
     async () => ({ default: (await import('./LayoutStub.test.svelte')).default })

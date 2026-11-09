@@ -1,6 +1,7 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useOnboarding } from '$lib/hooks';
+    import { useTreeAnnotationsFilter } from '$lib/components/AnnotationTree';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import {
         useMetadataFilters,
@@ -39,8 +40,10 @@
         collection_id: string;
         sampleWidth: number;
         textEmbedding: Readable<TextEmbedding | undefined>;
+        /** The annotation tree replaces the class filter on this grid. */
+        showAnnotationTree?: boolean;
     };
-    const { collection_id, textEmbedding }: ImagesProps = $props();
+    const { collection_id, textEmbedding, showAnnotationTree = false }: ImagesProps = $props();
 
     const { selectedAnnotationFilterIdsArray: selectedAnnotationFilterIds } =
         useSelectedAnnotationsFilter();
@@ -66,13 +69,25 @@
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 
+    const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy, imageFilter } =
+        useImageFilters();
+
+    const treeEnabled = $derived(showAnnotationTree);
+    const treeFilter = useTreeAnnotationsFilter(() => ({
+        collectionId: collection_id,
+        filter: $imageFilter,
+        enabled: treeEnabled
+    }));
+
     const samplesParams = $derived({
         collection_id,
         mode: 'normal' as const,
         filters: {
-            annotation_label_ids: $selectedAnnotationFilterIds?.length
-                ? $selectedAnnotationFilterIds
-                : undefined,
+            annotation_label_ids:
+                !treeEnabled && $selectedAnnotationFilterIds?.length
+                    ? $selectedAnnotationFilterIds
+                    : undefined,
+            ...treeFilter.current,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },
@@ -80,9 +95,6 @@
         categorical_metadata_values: $categoricalMetadataValues,
         text_embedding: $textEmbedding?.embedding
     });
-
-    const { filterParams, updateFilterParams, imageQueryExpression, imageSortBy } =
-        useImageFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local samples parameters
@@ -113,12 +125,15 @@
         updateFilterParams(mergeExternalFilters(baseParams, currentParams));
     });
 
-    const { samples: infiniteSamples } = useImagesInfinite(() => ({
-        ...$filterParams,
-        collection_id: collection_id,
-        query_expr: $imageQueryExpression?.query_expr,
-        sort_by: $textEmbedding ? undefined : ($imageSortBy ?? undefined)
-    }));
+    const { samples: infiniteSamples } = useImagesInfinite(
+        () => ({
+            ...$filterParams,
+            collection_id: collection_id,
+            query_expr: $imageQueryExpression?.query_expr,
+            sort_by: $textEmbedding ? undefined : ($imageSortBy ?? undefined)
+        }),
+        () => treeFilter.ready
+    );
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(
         infiniteSamples && infiniteSamples.data
@@ -168,7 +183,8 @@
 
     const filterHash = $derived.by(() => {
         const parts = [
-            $selectedAnnotationFilterIds.join(','),
+            treeEnabled ? '' : $selectedAnnotationFilterIds.join(','),
+            treeFilter.current ? JSON.stringify(treeFilter.current) : '',
             $imageQueryExpression?.query_expr_str || '',
             Array.from($tagsSelected).join(','),
             `${$dimensions?.min_width}-${$dimensions?.max_width}`,

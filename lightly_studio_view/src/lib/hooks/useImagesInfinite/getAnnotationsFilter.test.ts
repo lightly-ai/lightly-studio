@@ -33,4 +33,15 @@ describe('getAnnotationsFilter', () => {
         const result = getAnnotationsFilter({});
         expect(result).toBeUndefined();
     });
+    it('keeps an empty pair list from the tree', () => {
+        const result = getAnnotationsFilter({
+            annotation_pairs: [],
+            unannotated_collection_ids: ['s1']
+        });
+        expect(result).toEqual({
+            annotation_pairs: [],
+            unannotated_collection_ids: ['s1'],
+            filter_type: 'annotations'
+        });
+    });
 });
