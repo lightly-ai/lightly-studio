@@ -90,7 +90,7 @@ it.each([
 - Modify: `lightly_studio_view/src/lib/components/LabelNotFound/LabelNotFound.svelte`
 
 **Interfaces:**
-- Produces: `SelectList` prop `allowCreate?: boolean` (default `true`). `LabelNotFound` prop `canCreate?: boolean` (default `true`); when `false` it renders `No class found.`
+- Produces: `SelectList` prop `allowCreate?: boolean` (default `true`). `LabelNotFound` prop `allowCreate?: boolean` (default `true`); when `false` it renders `No class found.`
 
 Behavior with `allowCreate={false}`:
 - The "Create: …" row is not rendered.
