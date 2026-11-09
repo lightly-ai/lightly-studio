@@ -370,7 +370,6 @@ jobs:
         run: |
           if [ "${{ matrix.postgres }}" = "true" ]; then
             LIGHTLY_STUDIO_DATABASE_URL=postgresql://lightly:lightly@localhost:5432/lightly_studio \
-              LIGHTLY_STUDIO_DEPLOYMENT_MODE=enterprise \
               uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &
           else
             uv run e2e-tests/${{ matrix.index_script }} > server.log 2>&1 &

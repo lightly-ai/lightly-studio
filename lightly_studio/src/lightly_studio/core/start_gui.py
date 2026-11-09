@@ -11,7 +11,6 @@ from dataclasses import dataclass
 
 import uvicorn
 
-from lightly_studio import deployment
 from lightly_studio.api.server import Server
 from lightly_studio.database import db_manager
 from lightly_studio.resolvers import collection_resolver, sample_resolver
@@ -36,7 +35,6 @@ def start_gui(
     Returns:
         The Server instance.
     """
-    _validate_server_backend()
     _validate_has_samples()
 
     server = Server(host=host, port=port)
@@ -98,7 +96,6 @@ def start_gui_background(
     global _GUI_BACKGROUND_STATE  # noqa: PLW0603
     # TODO(Malte, 01/26): Handle start when a background server is already running.
 
-    _validate_server_backend()
     _validate_has_samples()
 
     server = Server(host=host, port=port)
@@ -150,14 +147,6 @@ def _run_uvicorn_server(uvicorn_server: uvicorn.Server) -> None:
 
     # start the app with connection limits and timeouts
     uvicorn_server.run()
-
-
-def _validate_server_backend() -> None:
-    """Validate that the database backend matches the deployment mode.
-
-    Separate from _validate_has_samples(), which the self-hosted image skips.
-    """
-    deployment.validate_server_backend(backend=db_manager.get_backend())
 
 
 def _validate_has_samples() -> None:

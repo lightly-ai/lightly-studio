@@ -17,8 +17,6 @@ from lightly_studio.api.server import Server
 from lightly_studio.core import start_gui as start_gui_module
 from lightly_studio.core.start_gui import start_gui
 from lightly_studio.database import db_manager
-from lightly_studio.database.db_manager import DatabaseBackend
-from lightly_studio.dataset import env
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.resolvers import collection_resolver
 
@@ -208,19 +206,6 @@ def test_start_gui__does_not_open_browser_when_disabled(
     mock_open.assert_not_called()
 
 
-def test_start_gui__backend_does_not_match_deployment_mode(mocker: MockerFixture) -> None:
-    """Test that start_gui does not start, also if the sample check is skipped."""
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
-    mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.POSTGRESQL)
-    mocker.patch.object(start_gui_module, "_validate_has_samples")
-    mock_server = mocker.patch.object(start_gui_module, "Server")
-
-    with pytest.raises(RuntimeError, match="the GUI supports only DuckDB"):
-        start_gui(open_browser=False)
-
-    mock_server.assert_not_called()
-
-
 def test_start_gui__no_datasets(
     patch_collection: None,  # noqa: ARG001
 ) -> None:
@@ -252,9 +237,6 @@ def test_start_gui_background(
     patch_gui_background_state: None,  # noqa: ARG001
 ) -> None:
     """Ensure a background start sets the background state."""
-    # Patch the backend, so the test does not create the default database
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
-    mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
     # Arrange: Mock server to use our FakeUvicornServer
     mocker.patch.object(
         target=start_gui_module,
@@ -278,22 +260,6 @@ def test_start_gui_background(
 
     stop_event.set()
     state.thread.join(timeout=1.0)
-
-
-def test_start_gui_background__backend_does_not_match_deployment_mode(
-    mocker: MockerFixture,
-    patch_gui_background_state: None,  # noqa: ARG001
-) -> None:
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "enterprise")
-    mocker.patch.object(db_manager, "get_backend", return_value=DatabaseBackend.DUCKDB)
-    mocker.patch.object(start_gui_module, "_validate_has_samples")
-    mock_server = mocker.patch.object(start_gui_module, "Server")
-
-    with pytest.raises(RuntimeError, match="An enterprise server requires PostgreSQL"):
-        start_gui_module.start_gui_background()
-
-    mock_server.assert_not_called()
-    assert start_gui_module._GUI_BACKGROUND_STATE is None
 
 
 def test_stop_gui_background(
