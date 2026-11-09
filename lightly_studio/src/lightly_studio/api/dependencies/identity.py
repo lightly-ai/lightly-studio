@@ -26,6 +26,14 @@ class Role(str, Enum):
     ADMIN = "admin"
 
 
+_ROLE_RANK: dict[Role, int] = {
+    Role.VIEWER: 0,
+    Role.LABELER: 1,
+    Role.EDITOR: 2,
+    Role.ADMIN: 3,
+}
+
+
 @dataclass(frozen=True)
 class Identity:
     """The user that sends a request.
@@ -84,14 +92,6 @@ def require_role(min_role: Role) -> Callable[[Identity], Identity]:
         return identity
 
     return _check_role
-
-
-_ROLE_RANK: dict[Role, int] = {
-    Role.VIEWER: 0,
-    Role.LABELER: 1,
-    Role.EDITOR: 2,
-    Role.ADMIN: 3,
-}
 
 
 def _single_header(name: str, values: list[str]) -> str:
