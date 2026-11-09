@@ -11,12 +11,14 @@ from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.models.static_transform import StaticTransformCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     group_resolver,
+    object_track_resolver,
     sensor_calibration_resolver,
     static_transform_resolver,
     tag_resolver,
@@ -140,6 +142,87 @@ def test_get_tick_details__annotations(db_session: Session) -> None:
     assert annotation.annotation_label.annotation_label_name == "truck"
     assert annotation.cuboid_3d_details is not None
     assert annotation.cuboid_3d_details.px == pytest.approx(1.0)
+
+
+def test_get_tick_details__parent_track_class_name(db_session: Session) -> None:
+    fixture = helpers.create_mcap_sequence(session=db_session)
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=fixture.group_collection.collection_id,
+        groups=[set()],
+    )
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=group_ids[0],
+            sequence_sample_id=fixture.sample_id,
+            seq_number=0,
+            timestamp_ns=1_000,
+        )
+    )
+    parent_track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                dataset_id=fixture.sequence_collection.dataset_id,
+                object_track_number=7,
+            )
+        ],
+    )[0]
+    child_track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                dataset_id=fixture.sequence_collection.dataset_id,
+                object_track_number=8,
+                parent_object_track_id=parent_track_id,
+            )
+        ],
+    )[0]
+    parent_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=fixture.group_collection.collection_id,
+        label_name="truck",
+    )
+    child_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=fixture.group_collection.collection_id,
+        label_name="cabin",
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=fixture.group_collection.collection_id,
+        annotations=[
+            cuboid_create(
+                parent_sample_id=group_ids[0],
+                annotation_label_id=parent_label.annotation_label_id,
+                object_track_id=parent_track_id,
+                px=1.0,
+            ),
+            cuboid_create(
+                parent_sample_id=group_ids[0],
+                annotation_label_id=child_label.annotation_label_id,
+                object_track_id=child_track_id,
+                px=2.0,
+            ),
+        ],
+        collection_name="ground_truth",
+    )
+    db_session.commit()
+
+    result = recording_service.get_tick_details(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        seq_number=0,
+    )
+
+    assert result is not None
+    assert len(result.annotations) == 2
+    child = next(a for a in result.annotations if a.object_track_number == 8)
+    parent = next(a for a in result.annotations if a.object_track_number == 7)
+    assert child.parent_object_track_number == 7
+    assert child.parent_object_track_class_name == "truck"
+    assert parent.parent_object_track_class_name is None
 
 
 def test_get_tick_details__camera_projection_uses_camera_timestamp(

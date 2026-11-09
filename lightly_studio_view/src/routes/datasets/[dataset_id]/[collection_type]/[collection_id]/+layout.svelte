@@ -421,6 +421,8 @@
         })
     );
 
+    const categoricalCountsFilter = $derived($imageFilterFromHook ?? undefined);
+
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
     const isVideoFrameAnnotations = $derived(
@@ -697,7 +699,7 @@
                                         isImageCollection={isImages || isCaptions}
                                         categoricalFilter={isCaptions
                                             ? undefined
-                                            : imageAnnotationCountsFilter}
+                                            : categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}
