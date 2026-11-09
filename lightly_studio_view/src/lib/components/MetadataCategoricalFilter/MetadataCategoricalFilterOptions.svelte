@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { FilterList, type FilterListItem } from '$lib/components/FilterList';
+    import { FilterList } from '$lib/components/FilterList';
     import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { buildOptions, getCheckboxLabel, getOptionLabel } from './helpers';
@@ -20,7 +20,7 @@
     const isSelected = (value: CategoricalMetadataValue) =>
         selectedValues.some((selected) => Object.is(selected, value));
     const items = $derived(
-        options.map((option): FilterListItem => {
+        options.map((option) => {
             const label = getOptionLabel(option, options, buckets);
             return {
                 id: option.bucket.id,
@@ -59,7 +59,7 @@
     };
 </script>
 
-<div class="max-h-56 overflow-y-auto">
+<div class="-m-1 max-h-56 overflow-y-auto p-1">
     <FilterList
         {items}
         onToggle={toggleById}
