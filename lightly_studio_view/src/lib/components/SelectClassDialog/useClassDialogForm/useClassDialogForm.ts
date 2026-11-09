@@ -78,6 +78,12 @@ export function useClassDialogForm(getOptions: () => Options) {
         handleOpenChange,
         handleClassSelect,
         handleTrackValueChange,
-        handleKeyboardConfirm: (item: ListItem) => confirmWith(item.value)
+        handleKeyboardConfirm: (item: ListItem) => {
+            if (getOptions().showTrackSelect) {
+                selectedItem.set(item);
+                return;
+            }
+            confirmWith(item.value);
+        }
     };
 }

@@ -213,6 +213,24 @@ describe('SelectClassDialog', () => {
         });
     });
 
+    it('does not confirm when Enter is pressed on a class while track select is shown', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog(defaultTrackProps);
+        const input = await screen.findByTestId('select-list-input');
+
+        await user.type(input, 'do');
+        await waitFor(() =>
+            expect(screen.getByRole('option', { name: 'dog' })).toHaveAttribute(
+                'aria-selected',
+                'true'
+            )
+        );
+        await user.keyboard('{Enter}');
+
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeEnabled();
+    });
+
     it('resets track selection when class changes', async () => {
         const user = userEvent.setup();
         const { onConfirm } = renderDialog(defaultTrackProps);
