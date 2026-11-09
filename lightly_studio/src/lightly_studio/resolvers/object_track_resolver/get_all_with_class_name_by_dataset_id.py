@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session, col, func, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.annotation.object_track import ObjectTrackTable, TrackWithClassNameView
@@ -33,7 +33,7 @@ def get_all_with_class_name_by_dataset_id(
     rows = session.exec(
         select(
             col(AnnotationBaseTable.object_track_id),
-            col(AnnotationLabelTable.annotation_label_name),
+            func.min(col(AnnotationLabelTable.annotation_label_name)),
         )
         .join(
             AnnotationLabelTable,
@@ -41,10 +41,7 @@ def get_all_with_class_name_by_dataset_id(
             == col(AnnotationLabelTable.annotation_label_id),
         )
         .where(col(AnnotationBaseTable.object_track_id).in_(track_ids))
-        .group_by(
-            col(AnnotationBaseTable.object_track_id),
-            col(AnnotationLabelTable.annotation_label_name),
-        )
+        .group_by(col(AnnotationBaseTable.object_track_id))
     ).all()
 
     class_name_by_track: dict[UUID, str] = {row[0]: row[1] for row in rows if row[0] is not None}
