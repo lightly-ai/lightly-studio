@@ -9,6 +9,7 @@ from typing import Annotated
 from fastapi import Depends, Header
 
 from lightly_studio import deployment
+from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import UnauthenticatedError
 
 
@@ -35,6 +36,7 @@ class Identity:
 
 
 def get_identity(
+    session: SessionDep,
     x_user_email: Annotated[str | None, Header()] = None,
     x_user_role: Annotated[str | None, Header()] = None,
 ) -> Identity:
@@ -45,11 +47,11 @@ def get_identity(
 
     Raises:
         RuntimeError: If a local run gets the headers. An auth proxy sends them, so the server
-            is an enterprise server without the enterprise mode. This fails closed.
+            is an enterprise server on DuckDB. This fails closed.
         UnauthenticatedError: If an enterprise server gets a request without an email or with
             an unknown role.
     """
-    if not deployment.is_enterprise():
+    if not deployment.is_enterprise(session=session):
         if x_user_email is not None or x_user_role is not None:
             raise RuntimeError("Authentication is not supported in a local run.")
         return Identity(email=None, role=Role.ADMIN)

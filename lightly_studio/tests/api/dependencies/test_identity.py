@@ -4,17 +4,20 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlmodel import Session
 
+from lightly_studio import deployment
 from lightly_studio.api.dependencies import identity
 from lightly_studio.api.dependencies.identity import IdentityDep
 from lightly_studio.api.routes.api import exceptions
 from lightly_studio.api.routes.api.status import HTTP_STATUS_OK, HTTP_STATUS_UNAUTHORIZED
-from lightly_studio.dataset import env
+from lightly_studio.database import db_manager
 
 
 @pytest.fixture
-def client() -> TestClient:
+def client(db_session: Session) -> TestClient:
     app = FastAPI()
+    app.dependency_overrides[db_manager._session_dependency] = lambda: db_session
     exceptions.register_exception_handlers(app=app)
 
     @app.get("/identity")
@@ -25,7 +28,7 @@ def client() -> TestClient:
 
 
 def test_get_identity(client: TestClient, mocker: MockerFixture) -> None:
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "enterprise")
+    mocker.patch.object(deployment, "is_enterprise", return_value=True)
 
     response = client.get(
         "/identity", headers={"X-User-Email": "ada@example.com", "X-User-Role": "labeler"}
@@ -36,7 +39,7 @@ def test_get_identity(client: TestClient, mocker: MockerFixture) -> None:
 
 
 def test_get_identity__normalizes_role(client: TestClient, mocker: MockerFixture) -> None:
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "enterprise")
+    mocker.patch.object(deployment, "is_enterprise", return_value=True)
 
     response = client.get(
         "/identity", headers={"X-User-Email": " ada@example.com ", "X-User-Role": " Editor "}
@@ -59,7 +62,7 @@ def test_get_identity__normalizes_role(client: TestClient, mocker: MockerFixture
 def test_get_identity__invalid_headers(
     client: TestClient, mocker: MockerFixture, headers: dict[str, str]
 ) -> None:
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "enterprise")
+    mocker.patch.object(deployment, "is_enterprise", return_value=True)
 
     response = client.get("/identity", headers=headers)
 
@@ -67,7 +70,7 @@ def test_get_identity__invalid_headers(
 
 
 def test_get_identity__local(client: TestClient, mocker: MockerFixture) -> None:
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
+    mocker.patch.object(deployment, "is_enterprise", return_value=False)
 
     response = client.get("/identity")
 
@@ -84,9 +87,11 @@ def test_get_identity__local(client: TestClient, mocker: MockerFixture) -> None:
     ],
 )
 def test_get_identity__local_with_headers(
-    mocker: MockerFixture, x_user_email: str | None, x_user_role: str | None
+    db_session: Session, mocker: MockerFixture, x_user_email: str | None, x_user_role: str | None
 ) -> None:
-    mocker.patch.object(env, "LIGHTLY_STUDIO_DEPLOYMENT_MODE", "local")
+    mocker.patch.object(deployment, "is_enterprise", return_value=False)
 
     with pytest.raises(RuntimeError, match="Authentication is not supported in a local run"):
-        identity.get_identity(x_user_email=x_user_email, x_user_role=x_user_role)
+        identity.get_identity(
+            session=db_session, x_user_email=x_user_email, x_user_role=x_user_role
+        )
