@@ -19,9 +19,8 @@ const isPlainPress = (event: KeyPress) =>
 export const isDeleteKey = (event: KeyPress): boolean =>
     (event.key === 'Delete' || event.key === 'Backspace') && isPlainPress(event);
 
-const CARD_BUTTON = ['button', 'a', '[role="button"]']
-    .map((control) => `[data-annotation-card] ${control}`)
-    .join(', ');
+const CARD_BUTTON =
+    '[data-annotation-card] button, [data-annotation-card] a, [data-annotation-card] [role="button"]';
 
 const isCardButtonTarget = (target: EventTarget | null) =>
     target instanceof Element && target.closest(CARD_BUTTON) !== null;
