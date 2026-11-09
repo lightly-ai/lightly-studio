@@ -6,20 +6,23 @@ import AnnotationTreeTestWrapper from './AnnotationTreeTestWrapper.test.svelte';
 
 const mocks = vi.hoisted(() => ({
     sources: [] as { collection_id: string; name: string }[],
-    pairs: [] as AnnotationPairCount[]
+    pairs: [] as AnnotationPairCount[],
+    pairsResponse: null as Promise<unknown> | null,
+    readImages: vi.fn()
 }));
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/api/lightly_studio_local/sdk.gen')>()),
     readAnnotationCollections: vi.fn(async () => ({ data: mocks.sources })),
-    countImageAnnotationsByPair: vi.fn(async () => ({ data: mocks.pairs })),
+    countImageAnnotationsByPair: vi.fn(() => mocks.pairsResponse ?? { data: mocks.pairs }),
     countUnannotatedImagesBySource: vi.fn(async () => ({
         data: mocks.sources.map((source) => ({
             annotation_collection_id: source.collection_id,
             current_count: 3,
             total_count: 3
         }))
-    }))
+    })),
+    readImages: mocks.readImages
 }));
 
 const pair = (sourceId: string, labelId: string, name: string): AnnotationPairCount => ({
@@ -64,6 +67,11 @@ describe('AnnotationTree', () => {
             pair('src-labels', 'lbl-person', 'person'),
             pair('src-model', 'lbl-car', 'car')
         ];
+        mocks.pairsResponse = null;
+        mocks.readImages.mockReset();
+        mocks.readImages.mockResolvedValue({
+            data: { data: [], total_count: 0, nextCursor: null }
+        });
     });
 
     it('renders a source with "No annotations" first and its classes indented under it', async () => {
@@ -74,6 +82,39 @@ describe('AnnotationTree', () => {
             expect(childNames(labels)).toEqual(['No annotations', 'car', 'person'])
         );
         expect(within(labels).getByTestId('annotation-tree-children')).toBeInTheDocument();
+    });
+
+    it('sends every pair except the unticked one with the images query', async () => {
+        renderTree();
+
+        await fireEvent.click(await screen.findByRole('checkbox', { name: 'car in labels' }));
+
+        await waitFor(() =>
+            expect(mocks.readImages).toHaveBeenLastCalledWith(
+                expect.objectContaining({
+                    body: expect.objectContaining({
+                        filters: expect.objectContaining({
+                            sample_filter: expect.objectContaining({
+                                annotations_filter: {
+                                    filter_type: 'annotations',
+                                    annotation_pairs: [
+                                        {
+                                            collection_id: 'src-labels',
+                                            annotation_label_id: 'lbl-person'
+                                        },
+                                        {
+                                            collection_id: 'src-model',
+                                            annotation_label_id: 'lbl-car'
+                                        }
+                                    ],
+                                    unannotated_collection_ids: ['src-labels', 'src-model']
+                                }
+                            })
+                        })
+                    })
+                })
+            )
+        );
     });
 
     it('shows a dash on the group checkbox when some children are unticked', async () => {
@@ -129,6 +170,52 @@ describe('AnnotationTree', () => {
             'aria-checked',
             'true'
         );
+    });
+
+    it('holds the images request back while the pair counts load', async () => {
+        mocks.pairsResponse = new Promise(() => {});
+        renderTree();
+
+        await screen.findAllByTestId('annotation-tree-group');
+        expect(mocks.readImages).not.toHaveBeenCalled();
+    });
+
+    it('sends the images request without a tree filter when the pair counts fail', async () => {
+        mocks.pairsResponse = Promise.reject(new Error('count failed'));
+        renderTree();
+
+        await waitFor(() => expect(mocks.readImages).toHaveBeenCalled());
+        const [request] = mocks.readImages.mock.calls[0];
+        expect(request.body.filters.sample_filter.annotations_filter).toBeUndefined();
+    });
+
+    it('sends the images request without a tree filter when nothing is unticked', async () => {
+        renderTree();
+
+        await waitFor(() => expect(mocks.readImages).toHaveBeenCalled());
+        const [request] = mocks.readImages.mock.calls[0];
+        expect(request.body.filters.sample_filter.annotations_filter).toBeUndefined();
+    });
+
+    it('ticks only the class pairs and no "No annotations" row on a class bar click', async () => {
+        renderTree();
+
+        await screen.findByRole('checkbox', { name: 'car in labels' });
+        await fireEvent.click(screen.getByRole('button', { name: 'Class bar car' }));
+
+        await waitFor(() =>
+            expect(screen.getByRole('checkbox', { name: 'person in labels' })).toHaveAttribute(
+                'aria-checked',
+                'false'
+            )
+        );
+        expect(screen.getByRole('checkbox', { name: 'car in model_v1' })).toHaveAttribute(
+            'aria-checked',
+            'true'
+        );
+        expect(
+            screen.getByRole('checkbox', { name: 'No annotations in model_v1' })
+        ).toHaveAttribute('aria-checked', 'false');
     });
 
     it('starts collapsed with 4 sources', async () => {
