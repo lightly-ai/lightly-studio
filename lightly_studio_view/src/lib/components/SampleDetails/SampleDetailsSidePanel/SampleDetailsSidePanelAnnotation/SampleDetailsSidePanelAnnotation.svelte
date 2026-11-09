@@ -200,7 +200,7 @@
                                         {#snippet notFound({ inputValue })}
                                             <LabelNotFound
                                                 label={inputValue}
-                                                canCreate={canCreateClass}
+                                                allowCreate={canCreateClass}
                                             />
                                         {/snippet}
                                     </SelectList>

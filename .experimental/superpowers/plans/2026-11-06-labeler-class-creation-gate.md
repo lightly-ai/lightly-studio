@@ -90,7 +90,7 @@ it.each([
 - Modify: `lightly_studio_view/src/lib/components/LabelNotFound/LabelNotFound.svelte`
 
 **Interfaces:**
-- Produces: `SelectList` prop `allowCreate?: boolean` (default `true`). `LabelNotFound` prop `canCreate?: boolean` (default `true`); when `false` it renders `No class found.`
+- Produces: `SelectList` prop `allowCreate?: boolean` (default `true`). `LabelNotFound` prop `allowCreate?: boolean` (default `true`); when `false` it renders `No class found.`
 
 Behavior with `allowCreate={false}`:
 - The "Create: …" row is not rendered.
@@ -104,7 +104,7 @@ Behavior with `allowCreate={false}`:
   - `selects an existing item typed in another case when allowCreate is false` — with `onKeyboardConfirm`, type `ITEM2{Enter}`; `onKeyboardConfirm` called with `{ value: 'item2', label: 'Item 2' }`. cmdk filters case-insensitively and highlights the first match, so this goes through the highlighted path, not the fallback branches in `handleKeyDown`. Those are likely unreachable for existing items; the test only pins that the gate does not block picking an existing class.
   - `shows the create row by default` — no `allowCreate`; type `zebra`; `getByText('Create:')` present.
 - [ ] **Step 2:** `npx vitest run src/lib/components/SelectList` → new tests FAIL.
-- [ ] **Step 3: Implement** the prop in `SelectList.svelte`: wrap the create row in `allowCreate &&`; in `handleKeyDown`, only create a new item when `allowCreate`. Add `canCreate` to `LabelNotFound.svelte`.
+- [ ] **Step 3: Implement** the prop in `SelectList.svelte`: wrap the create row in `allowCreate &&`; in `handleKeyDown`, only create a new item when `allowCreate`. Add `allowCreate` to `LabelNotFound.svelte`.
 - [ ] **Step 4:** Same command → PASS.
 - [ ] **Step 5:** Show diff, commit on approval: `feat: let SelectList hide class creation (LIG-11356)`.
 
@@ -123,9 +123,9 @@ Behavior with `allowCreate={false}`:
 
 **Interfaces:**
 - Consumes: `useCanCreateAnnotationClass()` (Task 1), `allowCreate`, `LabelNotFound canCreate` (Task 2).
-- Produces: `NamePickerField` prop `allowCreate?: boolean` (default `true`); passes it to `SelectList` and, when `false`, uses placeholder `Search…` and a `notFound` snippet with `<LabelNotFound label={inputValue} canCreate={false} />`. Only the class field in `BulkClassificationPanel` sets it.
+- Produces: `NamePickerField` prop `allowCreate?: boolean` (default `true`); passes it to `SelectList` and, when `false`, uses placeholder `Search…` and a `notFound` snippet with `<LabelNotFound label={inputValue} allowCreate={false} />`. Only the class field in `BulkClassificationPanel` sets it.
 
-In each picker: `const canCreateClass = useCanCreateAnnotationClass();`, pass `allowCreate={canCreateClass}`, render `<LabelNotFound label={inputValue} canCreate={canCreateClass} />` in `notFound` (add the snippet where missing: `AnnotationClassSelect`, `SelectClassDialog`). Text when `!canCreateClass`:
+In each picker: `const canCreateClass = useCanCreateAnnotationClass();`, pass `allowCreate={canCreateClass}`, render `<LabelNotFound label={inputValue} allowCreate={canCreateClass} />` in `notFound` (add the snippet where missing: `AnnotationClassSelect`, `SelectClassDialog`). Text when `!canCreateClass`:
 
 | Current | Gated |
 |---|---|

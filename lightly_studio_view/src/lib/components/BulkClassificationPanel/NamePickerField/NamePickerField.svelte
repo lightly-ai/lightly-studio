@@ -40,7 +40,7 @@
 </script>
 
 {#snippet classNotFound({ inputValue }: { inputValue: string })}
-    <LabelNotFound label={inputValue} canCreate={false} />
+    <LabelNotFound label={inputValue} allowCreate={false} />
 {/snippet}
 
 <div class="space-y-1.5">

@@ -50,6 +50,6 @@
     onSelect={handleSelect}
 >
     {#snippet notFound({ inputValue })}
-        <LabelNotFound label={inputValue} canCreate={canCreateClass} />
+        <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
     {/snippet}
 </SelectList>
