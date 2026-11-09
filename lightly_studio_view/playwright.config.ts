@@ -49,7 +49,9 @@ export default defineConfig({
         },
         {
             name: 'evaluations',
-            testDir: './e2e/evaluations'
+            testDir: './e2e/evaluations',
+            // The evaluation fixture loads annotations from four sources on CI runners.
+            expect: { timeout: 15_000 }
         },
         {
             name: 'distribution',

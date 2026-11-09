@@ -30,9 +30,11 @@ from lightly_studio.models.evaluation_run import (
 )
 from lightly_studio.resolvers import (
     annotation_collection_coverage_resolver,
+    annotation_label_resolver,
     annotation_resolver,
     collection_resolver,
     evaluation_annotation_metric_resolver,
+    evaluation_class_metric_resolver,
     evaluation_run_resolver,
 )
 
@@ -317,9 +319,11 @@ class ImageDatasetEvaluate:
         """Return aggregate metrics for an evaluation run.
 
         Derives per-class and micro-averaged precision, recall, and F1 from the
-        run's confusion matrix, plus accuracy for classification runs. Object
-        detection and classification are supported; segmentation tasks have no
-        confusion matrix and so no confusion-derived metrics.
+        run's confusion matrix, plus accuracy for classification runs. For
+        object-detection runs created with ``compute_average_precision=True`` it also
+        includes the per-class and mean average precision. Object detection and
+        classification are supported; segmentation tasks have no confusion matrix and
+        so no confusion-derived metrics.
 
         Args:
             run_id: ID of the evaluation run.
@@ -332,9 +336,26 @@ class ImageDatasetEvaluate:
             NotImplementedError: If the run's task type has no confusion matrix.
         """
         run, matrix = self._confusion_matrix_with_run(run_id)
-        return aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
+        metrics = aggregate_metrics.compute_aggregate_metrics_from_confusion_matrix(
             matrix=matrix,
             task_type=run.task_type,
+        )
+        if run.task_type != EvaluationTaskType.OBJECT_DETECTION:
+            return metrics
+        by_label = average_precision.by_label_and_threshold(
+            class_metrics=evaluation_class_metric_resolver.get_all_by_evaluation_run_id(
+                session=self.session, evaluation_run_id=run.id
+            ),
+            run_config=run.config_json,
+        )
+        # Resolve names at read time, so renamed labels keep their values and deleted
+        # labels are skipped.
+        labels = annotation_label_resolver.get_by_ids(session=self.session, ids=list(by_label))
+        return average_precision.with_average_precision(
+            metrics=metrics,
+            by_class={
+                label.annotation_label_name: by_label[label.annotation_label_id] for label in labels
+            },
         )
 
     def _confusion_matrix_with_run(

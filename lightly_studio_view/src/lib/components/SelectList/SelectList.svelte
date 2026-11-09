@@ -44,6 +44,7 @@
         isLoading = false,
         onKeyboardConfirm,
         onCreate,
+        allowCreate = true,
         labelledBy
     }: {
         placeholder?: string;
@@ -63,6 +64,8 @@
         onKeyboardConfirm?: (item: ListItem) => void;
         // Called when the user creates an item from the typed text, before onSelect.
         onCreate?: (item: ListItem) => void;
+        // When false, users can only pick existing items.
+        allowCreate?: boolean;
     } = $props();
 
     // Part of the trigger's accessible name, so it reads as "<field label> <selected value>".
@@ -88,9 +91,11 @@
     };
 
     // Returns the item that matches the text, ignoring case, or creates a new one.
-    const getOrCreateItem = (text: string): ListItem => {
+    // Returns undefined when there is no match and creating is not allowed.
+    const getOrCreateItem = (text: string): ListItem | undefined => {
         const existingItem = items.find((i) => i.value.toLowerCase() === text.toLowerCase());
         if (existingItem) return existingItem;
+        if (!allowCreate) return undefined;
 
         const newItem = { value: text, label: text };
         items.push(newItem);
@@ -105,26 +110,31 @@
         closeAndFocusTrigger();
     };
 
+    const getTypedItem = (): ListItem | undefined =>
+        inputValue.trim() ? getOrCreateItem(inputValue) : undefined;
+
+    // With onKeyboardConfirm, Enter confirms the highlighted or typed item. Without it,
+    // Enter on a highlighted item is left to the command list.
+    const getEnterItem = (): ListItem | undefined => {
+        if (onKeyboardConfirm) {
+            return items.find((item) => item.value === highlightedValue) ?? getTypedItem();
+        }
+        return highlightedValue ? undefined : getTypedItem();
+    };
+
     const handleKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Enter' || !onKeyboardConfirm) {
-            if (event.key === 'Enter' && !highlightedValue && inputValue.trim()) {
-                handleOnSelect(getOrCreateItem(inputValue));
-                event.preventDefault();
-                event.stopPropagation();
-            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
-                event.stopPropagation();
-            }
+        if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') {
+            event.stopPropagation();
             return;
         }
+        if (event.key !== 'Enter') return;
 
-        const highlightedItem = items.find((item) => item.value === highlightedValue);
-
-        if (highlightedItem) {
-            confirmWithKeyboard(highlightedItem);
-        } else if (inputValue.trim()) {
-            confirmWithKeyboard(getOrCreateItem(inputValue));
+        const item = getEnterItem();
+        if (!item) return;
+        if (onKeyboardConfirm) {
+            confirmWithKeyboard(item);
         } else {
-            return;
+            handleOnSelect(item);
         }
 
         event.preventDefault();
@@ -205,11 +215,14 @@
                         </Command.Item>
                     {/each}
                 </Command.Group>
-                {#if inputValue.trim()}
+                {#if allowCreate && inputValue.trim()}
                     <div class="border-t">
                         <Command.Item
                             value="__create__"
-                            onSelect={() => handleOnSelect(getOrCreateItem(inputValue))}
+                            onSelect={() => {
+                                const item = getOrCreateItem(inputValue);
+                                if (item) handleOnSelect(item);
+                            }}
                             forceMount
                             keywords={[]}
                         >
