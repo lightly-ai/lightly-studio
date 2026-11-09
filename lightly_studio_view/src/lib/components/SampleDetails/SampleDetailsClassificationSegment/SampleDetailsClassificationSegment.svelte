@@ -19,7 +19,8 @@
     import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
     import {
         getAnnotationTreeEnabled,
-        useTreeAnnotationVisibility
+        useTreeAnnotationVisibility,
+        useTreeColorMode
     } from '$lib/components/AnnotationTree';
     import {
         computeSeededHiddenIds,
@@ -89,6 +90,7 @@
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { isSourceVisible } = useAnnotationCollectionsFilter();
     const isTreeEnabled = getAnnotationTreeEnabled();
+    const treeColorMode = useTreeColorMode(isTreeEnabled);
     const treeVisibility = useTreeAnnotationVisibility(() => ({
         collectionId,
         enabled: isTreeEnabled()
@@ -114,7 +116,8 @@
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: countVisibleSources(classificationAnnotations) >= 2,
-            enforceColoringByClass: $enforceColoringByClassStore
+            enforceColoringByClass: $enforceColoringByClassStore,
+            colorMode: treeColorMode.current
         })
     );
 

@@ -3,7 +3,8 @@
     import { useOnboarding } from '$lib/hooks';
     import {
         useTreeAnnotationVisibility,
-        useTreeAnnotationsFilter
+        useTreeAnnotationsFilter,
+        useTreeColorMode
     } from '$lib/components/AnnotationTree';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import {
@@ -85,6 +86,8 @@
         collectionId: collection_id,
         enabled: treeEnabled
     }));
+
+    const treeColorMode = useTreeColorMode(() => treeEnabled);
 
     const samplesParams = $derived({
         collection_id,
@@ -354,6 +357,7 @@
                                         tileHeight={height}
                                         {displayTextOnImage}
                                         isAnnotationVisible={treeVisibility.current}
+                                        colorMode={treeColorMode.current}
                                     />
                                 </GridItem>
                             {/key}

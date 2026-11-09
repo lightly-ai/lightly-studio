@@ -415,5 +415,47 @@ describe('SampleAnnotations', () => {
                 clearCustomColors();
             }
         });
+
+        it('colors by the saved source mode with one source visible and enforce enabled', async () => {
+            const colorBySourceSpy = vi.spyOn(utils, 'getColorBySource');
+            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+
+            setSelectedCollectionIds(['col-a']);
+            setCollectionIdToName({ 'col-a': 'labels', 'col-b': 'model_v1' });
+            setEnforceColoringByClass(true);
+
+            render(SampleAnnotations, {
+                props: { sample: createTwoSourceSample(), colorMode: 'source' }
+            });
+
+            await waitFor(() => {
+                const sourceNames = colorBySourceSpy.mock.calls.map(([name]) => name);
+                expect(sourceNames).toContain('labels');
+            });
+            expect(colorByLabelSpy.mock.calls.map(([name]) => name)).not.toContain('car');
+
+            colorBySourceSpy.mockRestore();
+            colorByLabelSpy.mockRestore();
+        });
+
+        it('colors by the saved class mode with several sources visible and enforce disabled', async () => {
+            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+
+            setSelectedCollectionIds(['col-a', 'col-b']);
+            setCollectionIdToName({ 'col-a': 'labels', 'col-b': 'model_v1' });
+            setEnforceColoringByClass(false);
+
+            render(SampleAnnotations, {
+                props: { sample: createTwoSourceSample(), colorMode: 'class' }
+            });
+
+            await waitFor(() => {
+                const calledNames = colorByLabelSpy.mock.calls.map(([name]) => name);
+                expect(calledNames).toContain('car');
+                expect(calledNames).not.toContain('labels');
+            });
+
+            colorByLabelSpy.mockRestore();
+        });
     });
 });

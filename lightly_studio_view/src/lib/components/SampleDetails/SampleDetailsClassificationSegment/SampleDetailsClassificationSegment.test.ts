@@ -75,7 +75,8 @@ vi.mock('$lib/hooks/useSettings', async () => {
     mocks.enforceColoringByClassStore = enforceColoringByClassStore;
     return {
         useSettings: vi.fn(() => ({
-            enforceColoringByClassStore
+            enforceColoringByClassStore,
+            annotationColorModeStore: writable('class')
         }))
     };
 });

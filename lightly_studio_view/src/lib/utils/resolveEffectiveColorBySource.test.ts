@@ -37,4 +37,21 @@ describe('resolveEffectiveColorBySource', () => {
             })
         ).toBe(false);
     });
+
+    it('lets the color mode decide alone when it is set', () => {
+        expect(
+            resolveEffectiveColorBySource({
+                multipleSourcesVisible: false,
+                enforceColoringByClass: true,
+                colorMode: 'source'
+            })
+        ).toBe(true);
+        expect(
+            resolveEffectiveColorBySource({
+                multipleSourcesVisible: true,
+                enforceColoringByClass: false,
+                colorMode: 'class'
+            })
+        ).toBe(false);
+    });
 });
