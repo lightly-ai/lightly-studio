@@ -1,7 +1,7 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import type { BoundingBox } from '$lib/types';
     import { drag, type D3DragEvent } from 'd3-drag';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
@@ -193,7 +193,9 @@
             toast.success('Annotation created successfully');
         } catch (error) {
             pendingBbox.clear(pendingToken);
-            toast.error('Failed to create annotation. Please try again.');
+            toast.error(
+                getCreateLabelErrorMessage(error, 'Failed to create annotation. Please try again.')
+            );
             console.error('Error creating annotation:', error);
         } finally {
             endCreateBoundingBoxPending(pendingOperation);
@@ -212,8 +214,10 @@
 
     // The ID of the class with the name. A new name creates the class.
     const getLabelId = async (className: string): Promise<string> => {
+        // Wait for the class list, so an existing class does not count as missing.
+        const labelList = labels.data ?? (await labels.refetch()).data;
         const existing =
-            labels.data?.find((label) => label.annotation_label_name === className)
+            labelList?.find((label) => label.annotation_label_name === className)
                 ?.annotation_label_id ?? createdLabelIds.get(className);
         if (existing) return existing;
         const label = await createLabel({
