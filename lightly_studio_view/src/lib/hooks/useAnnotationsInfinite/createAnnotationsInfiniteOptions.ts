@@ -19,6 +19,7 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
         ...getAnnotationsInfiniteQueryKeyPrefix(params.collection_id),
         {
             annotation_label_ids: params.annotation_label_ids,
+            annotation_pairs: params.annotation_pairs,
             tag_ids: params.tag_ids,
             sample_ids: params.sample_ids,
             embedding_region: params.embedding_region,
@@ -42,6 +43,7 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
                 body: {
                     pagination: { cursor: pageParam, limit: DEFAULT_PAGE_LIMIT },
                     annotation_label_ids: params.annotation_label_ids,
+                    annotation_pairs: params.annotation_pairs,
                     tag_ids: params.tag_ids,
                     sample_ids: params.sample_ids,
                     embedding_region: params.embedding_region,
@@ -53,6 +55,7 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
             });
             return data;
         },
+        enabled: params.enabled ?? true,
         initialPageParam: 0,
         getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined
     });

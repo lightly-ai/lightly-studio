@@ -10,6 +10,8 @@ import {
     type AnnotationWithPayloadView,
     type ImageAnnotationView
 } from '$lib/api/lightly_studio_local';
+import { useAnnotationsInfinite } from '$lib/hooks/useAnnotationsInfinite/useAnnotationsInfinite';
+import { useTreeAnnotationsFilter } from '$lib/components/AnnotationTree';
 import AnnotationsGrid from './AnnotationsGrid.svelte';
 
 const SORT_BY: AnnotationEvaluationMetricSortExpr = {
@@ -37,7 +39,9 @@ const mocks = vi.hoisted(() => ({
     textEmbeddingStore: null as unknown as Writable<undefined>,
     isEditingModeStore: null as unknown as Writable<boolean>,
     hasEmbeddings: false,
-    sortBy: null as AnnotationEvaluationMetricSortExpr | null
+    sortBy: null as AnnotationEvaluationMetricSortExpr | null,
+    filterLabelIds: [] as string[],
+    treeFilter: { current: undefined as unknown, ready: true }
 }));
 
 vi.mock('$app/navigation', () => ({
@@ -60,10 +64,24 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', async () => {
     const { writable } = await import('svelte/store');
     return {
         useSelectedAnnotationsFilter: vi.fn(() => ({
-            selectedAnnotationFilterIdsArray: writable<string[]>([])
+            selectedAnnotationFilterIdsArray: writable<string[]>(mocks.filterLabelIds)
         }))
     };
 });
+
+vi.mock('$lib/components/AnnotationTree', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/components/AnnotationTree')>()),
+    // Like the real hook, it does nothing while it is disabled.
+    useTreeAnnotationsFilter: vi.fn((getParams: () => { enabled: boolean }) => ({
+        get current() {
+            return getParams().enabled ? mocks.treeFilter.current : undefined;
+        },
+        get ready() {
+            return !getParams().enabled || mocks.treeFilter.ready;
+        }
+    })),
+    useTreeAnnotationVisibility: vi.fn(() => ({ current: undefined, ready: true }))
+}));
 
 vi.mock('$lib/hooks/useTags/useTags', async () => {
     const { writable } = await import('svelte/store');
@@ -259,6 +277,8 @@ describe('AnnotationsGrid', () => {
         mocks.hasEmbeddings = false;
         mocks.textEmbeddingStore.set(undefined);
         mocks.sortBy = null;
+        mocks.filterLabelIds = [];
+        mocks.treeFilter = { current: undefined, ready: true };
         mocks.selectAllAnnotationSnapshot.set(null);
         mocks.relabelAnnotations.mockResolvedValue({
             data: { previous_labels: [{ annotation_id: 'cls-1', label_name: 'cat' }] }
@@ -294,6 +314,58 @@ describe('AnnotationsGrid', () => {
 
         expect(tiles[0]).toHaveAttribute('data-annotation-id', 'cls-1');
         expect(screen.getByTestId('mock-grid-scroll-reset-key')).not.toHaveTextContent('sort:');
+    });
+
+    describe('with the annotation tree', () => {
+        const requestParams = () => vi.mocked(useAnnotationsInfinite).mock.lastCall![0]();
+        const pairs = [{ collection_id: 'col-1', annotation_label_id: 'lbl-person' }];
+
+        function renderTreeGrid() {
+            return render(AnnotationsGrid, {
+                props: { collection_id: 'col-1', itemWidth: 3, treeCollectionId: 'images-1' }
+            });
+        }
+
+        it('sends the tree pairs of the tab source instead of the class filter', () => {
+            mocks.filterLabelIds = ['lbl-car'];
+            mocks.treeFilter = { current: { annotation_pairs: pairs }, ready: true };
+
+            renderTreeGrid();
+
+            expect(useTreeAnnotationsFilter).toHaveBeenCalled();
+            const treeParams = vi.mocked(useTreeAnnotationsFilter).mock.lastCall![0]();
+            expect(treeParams).toMatchObject({
+                collectionId: 'images-1',
+                sourceId: 'col-1',
+                enabled: true
+            });
+            expect(requestParams()).toMatchObject({
+                annotation_pairs: pairs,
+                annotation_label_ids: undefined,
+                enabled: true
+            });
+        });
+
+        it('holds the request back until the tree filter is ready', () => {
+            mocks.treeFilter = { current: undefined, ready: false };
+
+            renderTreeGrid();
+
+            expect(requestParams().enabled).toBe(false);
+        });
+
+        it('keeps the class filter and sends no pairs while the tree is off', () => {
+            mocks.filterLabelIds = ['lbl-car'];
+            mocks.treeFilter = { current: { annotation_pairs: pairs }, ready: false };
+
+            renderGrid();
+
+            expect(requestParams()).toMatchObject({
+                annotation_label_ids: ['lbl-car'],
+                annotation_pairs: undefined,
+                enabled: true
+            });
+        });
     });
 
     it('renders two separate tiles for two classification annotations', () => {
