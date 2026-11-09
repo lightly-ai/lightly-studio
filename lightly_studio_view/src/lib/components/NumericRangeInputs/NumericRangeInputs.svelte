@@ -15,13 +15,18 @@
     let drafts = $state(['', '']);
     let dirty = $state([false, false]);
     let errors = $state(['', '']);
+    let pending: number[] | undefined;
 
     const reset = () => {
         drafts = [String(value.min), String(value.max)];
         dirty = [false, false];
         errors = ['', ''];
     };
-    $effect(reset);
+    $effect(() => {
+        const acknowledged = pending?.[0] === value.min && pending?.[1] === value.max;
+        pending = undefined;
+        if (!acknowledged) reset();
+    });
 
     const validate = (index: number): string => {
         const number = Number(drafts[index]);
@@ -47,10 +52,13 @@
         const number = Number(drafts[index]);
         dirty[index] = false;
         if (number === (index === 0 ? value.min : value.max)) return;
-        onValueCommit(index === 0 ? [number, value.max] : [value.min, number]);
+        drafts[index] = String(number);
+        pending = index === 0 ? [number, value.max] : [value.min, number];
+        onValueCommit(pending);
     };
 
     const handleKeyDown = (event: KeyboardEvent, index: number) => {
+        if (event.isComposing) return;
         if (event.key !== 'Enter' && event.key !== 'Escape') return;
         event.preventDefault();
         event.stopPropagation();
@@ -72,6 +80,7 @@
                     aria-invalid={!!errors[index]}
                     aria-describedby={errors[index] ? `${id}-${index}-error` : undefined}
                     class="h-8 px-2"
+                    wrapperClass="min-w-0 flex-1"
                     bind:value={drafts[index]}
                     oninput={() => (dirty[index] = true)}
                     onblur={() => commit(index)}

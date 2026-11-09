@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import NumericRangeInputs from './NumericRangeInputs.svelte';
+import type { ComponentProps } from 'svelte';
+import { NumericRangeInputs } from '.';
 
 const defaultProps = {
     label: 'Width',
@@ -9,7 +10,7 @@ const defaultProps = {
     integer: true,
     unit: 'px'
 };
-const setup = (props = {}) => {
+const setup = (props: Partial<ComponentProps<typeof NumericRangeInputs>> = {}) => {
     const onValueCommit = vi.fn();
     const view = render(NumericRangeInputs, { ...defaultProps, ...props, onValueCommit });
     return { ...view, onValueCommit, min: screen.getByRole('textbox', { name: 'Width minimum' }) };
@@ -20,6 +21,7 @@ describe('NumericRangeInputs', () => {
         const { min, onValueCommit } = setup();
         expect(onValueCommit).not.toHaveBeenCalled();
         await fireEvent.input(min, { target: { value: '250' } });
+        expect(await fireEvent.keyDown(min, { key: 'Enter', isComposing: true })).toBe(true);
         expect(onValueCommit).not.toHaveBeenCalled();
         await fireEvent.keyDown(min, { key: 'Enter' });
         await fireEvent.blur(min);
@@ -61,7 +63,7 @@ describe('NumericRangeInputs', () => {
         expect(onValueCommit).not.toHaveBeenCalled();
     });
 
-    it('cancels edits on Escape and synchronizes external resets without committing', async () => {
+    it('preserves other drafts on commit but clears them on Escape or external reset', async () => {
         const { min, onValueCommit, rerender } = setup();
         await fireEvent.input(min, { target: { value: '250' } });
         await fireEvent.keyDown(min, { key: 'Escape' });
@@ -69,6 +71,14 @@ describe('NumericRangeInputs', () => {
         expect(min).toHaveValue('257');
         await fireEvent.input(min, { target: { value: 'invalid' } });
         await fireEvent.blur(min);
+        const max = screen.getByRole('textbox', { name: 'Width maximum' });
+        await fireEvent.input(max, { target: { value: '900' } });
+        await fireEvent.blur(max);
+        expect(onValueCommit).toHaveBeenCalledExactlyOnceWith([257, 900]);
+        await rerender({ ...defaultProps, value: { min: 257, max: 900 }, onValueCommit });
+        expect(min).toHaveValue('invalid');
+        expect(min).toHaveAttribute('aria-invalid', 'true');
+        onValueCommit.mockClear();
         await rerender({ ...defaultProps, value: { min: 0, max: 1000 }, onValueCommit });
         expect(min).toHaveValue('0');
         expect(screen.queryByRole('alert')).not.toBeInTheDocument();
