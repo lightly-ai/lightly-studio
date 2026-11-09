@@ -40,6 +40,9 @@ export function useClassDialogForm(getOptions: () => Options) {
         if (showTrackSelect) onConfirm(label, trackSelection);
         else onConfirm(label);
         close();
+        // Bits UI does not fire onOpenChange on programmatic close (bind:open),
+        // so reset the flag here to prevent it from staying stale.
+        closedByConfirm = false;
     }
 
     function handleConfirm() {
