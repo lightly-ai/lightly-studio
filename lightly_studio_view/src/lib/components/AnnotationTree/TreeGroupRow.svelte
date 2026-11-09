@@ -4,7 +4,8 @@
     import { cn } from '$lib/utils/shadcn';
     import OnlyButton from './OnlyButton.svelte';
     import TreeChildRow from './TreeChildRow.svelte';
-    import { tickState, type TreeBranch, type TreeLeaf } from './treeBranches';
+    import TreeEye from './TreeEye.svelte';
+    import { eyeState, tickState, type TreeBranch, type TreeLeaf } from './treeBranches';
 
     interface Props {
         branch: TreeBranch;
@@ -12,11 +13,13 @@
         onToggleOpen: () => void;
         onSetTicked: (leaves: TreeLeaf[], ticked: boolean) => void;
         onOnly: (leaves: TreeLeaf[]) => void;
+        onSetVisible: (leaves: TreeLeaf[], visible: boolean) => void;
     }
 
-    let { branch, open, onToggleOpen, onSetTicked, onOnly }: Props = $props();
+    let { branch, open, onToggleOpen, onSetTicked, onOnly, onSetVisible }: Props = $props();
 
     const tick = $derived(tickState(branch.leaves));
+    const eye = $derived(eyeState(branch.leaves));
     const isEmpty = $derived(branch.leaves.length === 0);
     const expanded = $derived(open && !isEmpty);
     const tickedCount = $derived(branch.leaves.filter((leaf) => leaf.ticked).length);
@@ -68,6 +71,14 @@
                 >{branch.count}</span
             >
         {/if}
+        {#if eye}
+            <TreeEye
+                {eye}
+                target={branch.name}
+                dimmed={tick === 'off'}
+                onToggle={(visible) => onSetVisible(branch.leaves, visible)}
+            />
+        {/if}
     </div>
     {#if expanded}
         <!-- The guide line runs under the group checkbox. -->
@@ -80,6 +91,7 @@
                     {leaf}
                     onToggle={() => onSetTicked([leaf], !leaf.ticked)}
                     onOnly={() => onOnly([leaf])}
+                    onToggleEye={(visible) => onSetVisible([leaf], visible)}
                 />
             {/each}
         </div>

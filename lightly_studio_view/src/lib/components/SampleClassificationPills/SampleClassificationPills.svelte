@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { ImageView } from '$lib/api/lightly_studio_local';
+    import type { AnnotationView, ImageView } from '$lib/api/lightly_studio_local';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useCustomSourceColors, useSettings } from '$lib/hooks';
@@ -20,13 +20,16 @@
          * grid's source filter does not apply.
          */
         showAllSources?: boolean;
+        /** The tree eyes. When set, they decide in place of the source filter. */
+        isAnnotationVisible?: (annotation: AnnotationView) => boolean;
     }
 
     let {
         sample,
         hasBottomOverlay = false,
         hasRightOverlay = false,
-        showAllSources = false
+        showAllSources = false,
+        isAnnotationVisible
     }: Props = $props();
 
     let containerWidth = $state(0);
@@ -42,6 +45,7 @@
         getSampleClassificationPills({
             annotations: sample.annotations,
             isSourceVisible: showAllSources ? () => true : $isSourceVisible,
+            isAnnotationVisible,
             multipleSourcesVisible: showAllSources ? false : $multipleSourcesVisible,
             collectionIdToName: $collectionIdToName,
             enforceColoringByClass: $enforceColoringByClassStore

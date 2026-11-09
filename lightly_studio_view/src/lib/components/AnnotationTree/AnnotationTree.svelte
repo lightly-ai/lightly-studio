@@ -11,6 +11,7 @@
     import { groupPairRows } from './groupPairRows';
     import { buildPairRows, formatCount, summarizeRows } from './pairRows';
     import { createTreeActions } from './treeActions';
+    import { rowsInScope } from './treeSearch';
     import {
         buildTreeBranches,
         buildUnannotatedRows,
@@ -51,12 +52,14 @@
     const unannotated = $derived(
         buildUnannotatedRows(sources, unannotatedQuery.data ?? [], $untickedUnannotated)
     );
-    const branches = $derived(
-        flat ? [] : buildTreeBranches(groupPairRows(rows, $groupBy, sources), $groupBy, unannotated)
-    );
+    const groups = $derived(groupPairRows(rows, $groupBy, sources));
+    const branches = $derived(flat ? [] : buildTreeBranches(groups, $groupBy, unannotated));
     const flatLeaves = $derived(flat ? rows.map((row) => pairLeaf(row, row.className)) : []);
     const allLeaves = $derived([...flatLeaves, ...branches.flatMap((branch) => branch.leaves)]);
     const total = $derived(summarizeRows(rows));
+    // The root eye acts on the rows in scope, which a search narrows.
+    const eyeRows = $derived(flat ? rows : rowsInScope(groups));
+    const setAllVisible = (visible: boolean) => tree.setVisible(eyeRows.map(toPairKey), visible);
 
     const actions = createTreeActions(
         () => tree,
@@ -85,8 +88,10 @@
         {/if}
         <TreeRootRow
             tick={tickState(allLeaves)}
+            eye={eyeRows.length > 0 ? summarizeRows(eyeRows).eye : undefined}
             count={rows.length > 0 ? formatCount(total.current, total.total) : undefined}
             onToggle={(ticked) => actions.setTicked(allLeaves, ticked)}
+            onToggleEye={setAllVisible}
         />
         <div class="space-y-1 pl-4">
             {#each flatLeaves as leaf (leaf.id)}
@@ -94,6 +99,7 @@
                     {leaf}
                     onToggle={() => actions.setTicked([leaf], !leaf.ticked)}
                     onOnly={() => actions.only([leaf])}
+                    onToggleEye={(visible) => actions.setVisible([leaf], visible)}
                 />
             {/each}
             {#each branches as branch (`${$groupBy}:${branch.id}`)}
@@ -103,6 +109,7 @@
                     onToggleOpen={() => tree.toggleOpen(branch.id, isOpen(branch.id))}
                     onSetTicked={actions.setTicked}
                     onOnly={actions.only}
+                    onSetVisible={actions.setVisible}
                 />
             {/each}
         </div>

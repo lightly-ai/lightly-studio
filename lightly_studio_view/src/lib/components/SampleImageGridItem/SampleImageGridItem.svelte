@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { ImageView } from '$lib/api/lightly_studio_local';
+    import type { AnnotationView, ImageView } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
     import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
@@ -13,13 +13,15 @@
         objectFit,
         tileWidth,
         tileHeight,
-        displayTextOnImage
+        displayTextOnImage,
+        isAnnotationVisible
     }: {
         sample: ImageView;
         objectFit?: SampleImageObjectFit;
         tileWidth: number;
         tileHeight: number;
         displayTextOnImage?: string;
+        isAnnotationVisible?: (annotation: AnnotationView) => boolean;
     } = $props();
 
     const { gridViewThumbnailQualityStore } = useSettings();
@@ -43,8 +45,15 @@
     {sample}
     hasBottomOverlay={Boolean(displayTextOnImage)}
     hasRightOverlay={showMissingValue || hasValueBadge(sample.order_value, sample.similarity_score)}
+    {isAnnotationVisible}
 />
-<SampleAnnotations {sample} {objectFit} outputWidth={tileWidth} outputHeight={tileHeight} />
+<SampleAnnotations
+    {sample}
+    {objectFit}
+    outputWidth={tileWidth}
+    outputHeight={tileHeight}
+    {isAnnotationVisible}
+/>
 
 <SampleValueBadge
     {showMissingValue}
