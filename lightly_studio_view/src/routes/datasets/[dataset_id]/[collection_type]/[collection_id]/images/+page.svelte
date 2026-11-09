@@ -1,6 +1,5 @@
 <script lang="ts">
     import { Images } from '$lib/components/index.js';
-    import { getAnnotationTreeEnabled } from '$lib/components/AnnotationTree';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { page } from '$app/state';
@@ -13,7 +12,6 @@
     const collection_id = $derived(page.params.collection_id!);
 
     const { lastGridType } = useGlobalStorage();
-    const isAnnotationTreeEnabled = getAnnotationTreeEnabled();
 
     const { clearTagsSelected } = $derived(
         useTags({
@@ -28,9 +26,4 @@
     });
 </script>
 
-<Images
-    sampleWidth={$sampleSize.width}
-    {textEmbedding}
-    {collection_id}
-    showAnnotationTree={isAnnotationTreeEnabled()}
-/>
+<Images sampleWidth={$sampleSize.width} {textEmbedding} {collection_id} />

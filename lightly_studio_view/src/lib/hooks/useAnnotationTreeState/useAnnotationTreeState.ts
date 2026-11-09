@@ -48,6 +48,12 @@ const withIds = (list: string[], ids: string[], present: boolean): string[] => {
     return present ? [...rest, ...new Set(ids)] : rest;
 };
 
+/**
+ * The key of the tree state of a grid tab. The Images grid keeps it under its collection, and
+ * the Annotations grid under its annotation source, so each tab has its own ticks and eyes.
+ */
+export const treeStateKey = (collectionId: string, sourceId?: string) => sourceId ?? collectionId;
+
 export function useAnnotationTreeState(collectionId: string) {
     const select = <K extends keyof TreeState>(key: K): Readable<TreeState[K]> =>
         derived(statesStore, ($states) => readState($states, collectionId)[key]);

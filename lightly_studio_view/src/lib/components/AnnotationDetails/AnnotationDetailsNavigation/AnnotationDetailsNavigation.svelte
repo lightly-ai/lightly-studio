@@ -4,6 +4,10 @@
     import { routeHelpers } from '$lib/routes';
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { useAdjacentAnnotations } from '$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations';
+    import {
+        getFlatAnnotationTreeCollectionId,
+        getFlatAnnotationTreeFilter
+    } from '$lib/components/AnnotationTree';
     import { useEvaluationRuns } from '$lib/hooks';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { TriangleAlert } from '@lucide/svelte';
@@ -24,10 +28,14 @@
     const collectionType = $derived(page.params.collection_type!);
     const annotationId = $derived(page.params.annotationId!);
 
+    const treeCollectionId = getFlatAnnotationTreeCollectionId();
+    const treeFilter = getFlatAnnotationTreeFilter();
+
     const { query: sampleAdjacentQuery, sortBy: adjacentSortBy } = $derived(
         useAdjacentAnnotations({
             sampleId: annotationId,
-            collectionId
+            collectionId,
+            treeFilter: treeCollectionId() ? (treeFilter() ?? {}) : undefined
         })
     );
 

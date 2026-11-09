@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import userEvent from '@testing-library/user-event';
 import { writable } from 'svelte/store';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import SettingsDialog from './SettingsDialog.svelte';
 import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
 
@@ -192,7 +193,7 @@ describe('SettingsDialog', () => {
 
         await fireEvent.click(screen.getByLabelText('Hide annotations'));
         await openTab('Annotations');
-        await fireEvent.click(screen.getByRole('switch', { name: 'Always color by class' }));
+        await fireEvent.click(screen.getByRole('switch', { name: 'Show annotation class names' }));
         await fireEvent.keyDown(document, { key: 'z' });
         await openTab('Shortcuts');
 
@@ -202,7 +203,10 @@ describe('SettingsDialog', () => {
 
         const { saveSettings } = useSettings();
         expect(saveSettings).toHaveBeenCalledWith(
-            expect.objectContaining({ key_hide_annotations: 'v', annotation_color_mode: 'class' })
+            expect.objectContaining({
+                key_hide_annotations: 'v',
+                show_annotation_text_labels: true
+            })
         );
     });
 
@@ -225,23 +229,53 @@ describe('SettingsDialog', () => {
         );
     });
 
-    it('should show and save the enforce coloring by class switch', async () => {
+    it('does not offer the color by class switch', async () => {
         render(SettingsDialog);
         await openDialog();
         await openTab('Annotations');
 
-        const toggle = screen.getByRole('switch', { name: 'Always color by class' });
-        expect(toggle).toHaveAttribute('aria-checked', 'false');
+        expect(screen.queryByRole('switch', { name: 'Always color by class' })).toBeNull();
+    });
 
-        await fireEvent.click(toggle);
-        await fireEvent.click(screen.getByText('Save changes'));
+    describe('Color by', () => {
+        const { settingsStore } = useSettings();
+        const setColorMode = (mode: 'class' | 'source') =>
+            settingsStore.update((settings) => ({ ...settings, annotation_color_mode: mode }));
 
-        const { saveSettings } = useSettings();
-        expect(saveSettings).toHaveBeenCalledWith(
-            expect.objectContaining({
-                annotation_color_mode: 'class'
-            })
-        );
+        beforeAll(() => {
+            // bits-ui Select uses pointer capture and scrollIntoView, which jsdom lacks.
+            Element.prototype.hasPointerCapture = vi.fn(() => false);
+            Element.prototype.setPointerCapture = vi.fn();
+            Element.prototype.releasePointerCapture = vi.fn();
+            Element.prototype.scrollIntoView = vi.fn();
+        });
+
+        afterEach(() => setColorMode('source'));
+
+        it('shows the saved mode', async () => {
+            setColorMode('class');
+            render(SettingsDialog);
+            await openDialog();
+            await openTab('Annotations');
+
+            expect(screen.getByLabelText('Color by')).toHaveTextContent('Class');
+        });
+
+        it('saves "source"', async () => {
+            setColorMode('class');
+            render(SettingsDialog);
+            await openDialog();
+            await openTab('Annotations');
+
+            const user = userEvent.setup();
+            await user.click(screen.getByLabelText('Color by'));
+            await user.click(await screen.findByRole('option', { name: 'Source' }));
+            await fireEvent.click(screen.getByText('Save changes'));
+
+            expect(useSettings().saveSettings).toHaveBeenCalledWith(
+                expect.objectContaining({ annotation_color_mode: 'source' })
+            );
+        });
     });
 
     it('should disable image interpolation and save the setting', async () => {

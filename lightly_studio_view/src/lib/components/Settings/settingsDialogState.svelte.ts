@@ -7,6 +7,7 @@ import type { ShortcutSettingKey } from './settingsDialogConfig';
 
 type RenderingMode = GridViewSampleRenderingType;
 type ThumbnailQualityMode = GridViewThumbnailQualityType;
+type AnnotationColorMode = SettingView['annotation_color_mode'];
 
 interface SettingsDialogShortcutState {
     hideAnnotations: string;
@@ -28,7 +29,7 @@ interface SettingsDialogFormState {
     showAnnotationTextLabels: boolean;
     showSampleFilenames: boolean;
     showBoundingBoxesForSegmentation: boolean;
-    enforceColoringByClass: boolean;
+    annotationColorMode: AnnotationColorMode;
 }
 
 interface ShortcutKeyboardEvent {
@@ -55,7 +56,7 @@ export function createSettingsDialogFormState(settings: SettingView): SettingsDi
         showAnnotationTextLabels: settings.show_annotation_text_labels,
         showSampleFilenames: settings.show_sample_filenames,
         showBoundingBoxesForSegmentation: settings.show_bounding_boxes_for_segmentation,
-        enforceColoringByClass: settings.annotation_color_mode === 'class'
+        annotationColorMode: settings.annotation_color_mode
     };
 }
 
@@ -71,7 +72,7 @@ export function createSettingsSavePayload(
         show_annotation_text_labels: formState.showAnnotationTextLabels,
         show_sample_filenames: formState.showSampleFilenames,
         show_bounding_boxes_for_segmentation: formState.showBoundingBoxesForSegmentation,
-        annotation_color_mode: formState.enforceColoringByClass ? 'class' : 'source',
+        annotation_color_mode: formState.annotationColorMode,
         key_toolbar_selection: formState.shortcutSettings.keyToolbarSelection,
         key_toolbar_drag: formState.shortcutSettings.keyToolbarDrag,
         key_toolbar_bounding_box: formState.shortcutSettings.keyToolbarBoundingBox,
@@ -122,7 +123,7 @@ export class SettingsDialogState {
     showAnnotationTextLabels = $state(false);
     showSampleFilenames = $state(false);
     showBoundingBoxesForSegmentation = $state(true);
-    enforceColoringByClass = $state(false);
+    annotationColorMode: AnnotationColorMode = $state('class');
     recordingShortcut: ShortcutSettingKey | null = $state(null);
     isSaving = $state(false);
     // Payload of the last hydrated settings, to detect unsaved changes.
@@ -146,7 +147,7 @@ export class SettingsDialogState {
         this.showAnnotationTextLabels = formState.showAnnotationTextLabels;
         this.showSampleFilenames = formState.showSampleFilenames;
         this.showBoundingBoxesForSegmentation = formState.showBoundingBoxesForSegmentation;
-        this.enforceColoringByClass = formState.enforceColoringByClass;
+        this.annotationColorMode = formState.annotationColorMode;
         this.savedPayload = createSettingsSavePayload(formState);
     }
 
@@ -180,7 +181,7 @@ export class SettingsDialogState {
             showAnnotationTextLabels: this.showAnnotationTextLabels,
             showSampleFilenames: this.showSampleFilenames,
             showBoundingBoxesForSegmentation: this.showBoundingBoxesForSegmentation,
-            enforceColoringByClass: this.enforceColoringByClass
+            annotationColorMode: this.annotationColorMode
         });
     }
 }

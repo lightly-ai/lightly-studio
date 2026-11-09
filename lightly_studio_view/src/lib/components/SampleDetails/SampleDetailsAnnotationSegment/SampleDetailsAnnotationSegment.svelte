@@ -2,7 +2,7 @@
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
     import {
-        getAnnotationTreeEnabled,
+        getSampleDetailsFollowTree,
         useTreeAnnotationVisibility,
         useTreeColorMode
     } from '$lib/components/AnnotationTree';
@@ -71,11 +71,11 @@
     const { isSourceVisible } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { sourceGroupStates, setSourceGroupState } = useAnnotationSourceGroupState();
-    const isTreeEnabled = getAnnotationTreeEnabled();
-    const treeColorMode = useTreeColorMode(isTreeEnabled);
+    const followsTree = getSampleDetailsFollowTree();
+    const treeColorMode = useTreeColorMode(followsTree);
     const treeVisibility = useTreeAnnotationVisibility(() => ({
         collectionId,
-        enabled: isTreeEnabled()
+        enabled: followsTree()
     }));
 
     const annotationsSort = $derived.by(() => {
@@ -225,7 +225,7 @@
     };
 
     const rememberSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
-        if (isTreeEnabled()) return;
+        if (followsTree()) return;
         setSourceGroupState(sourceId, {
             hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
         });

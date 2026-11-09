@@ -18,13 +18,13 @@ const mocks = vi.hoisted(() => ({
     enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
     userRole: 'labeler' as string | undefined,
-    isTreeEnabled: false,
+    followsTree: false,
     labels: [] as { annotation_label_id: string; annotation_label_name: string }[]
 }));
 
 vi.mock('$lib/components/AnnotationTree', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/components/AnnotationTree')>()),
-    getAnnotationTreeEnabled: () => () => mocks.isTreeEnabled
+    getSampleDetailsFollowTree: () => () => mocks.followsTree
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -153,7 +153,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
-        mocks.isTreeEnabled = false;
+        mocks.followsTree = false;
         mocks.labels = [];
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
@@ -406,7 +406,7 @@ describe('SampleDetailsAnnotationSegment', () => {
 
     it('seeds the hidden annotations from the tree eyes when the tree is on', async () => {
         const user = userEvent.setup();
-        mocks.isTreeEnabled = true;
+        mocks.followsTree = true;
         mocks.collections = [groundTruthSource, predictionsSource];
         mocks.selectedCollectionIds = [];
         mocks.labels = [{ annotation_label_id: 'lbl-cat', annotation_label_name: 'cat' }];

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: Store the per-class average precision of object-detection runs at each IoU threshold when `compute_average_precision=True` is set in `ObjectDetectionEvaluationConfig`.
 - Python SDK: `dataset.evaluate().metrics(run_id)` includes the per-class and mean average precision of object-detection runs created with `compute_average_precision=True`, averaged over the IoU thresholds 0.50 to 0.95 and at each threshold.
 - Every filter list in the filter panel has a search, "Select all" and "Clear".
+- An annotation tree in the filter panel of the Images and Annotations grids. Filter by annotation source and class, and hide annotations with the eye icons.
 
 ### Changed
 
@@ -24,11 +25,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved labeling tool names, layout, and buttons.
 - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
 - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
-- The annotation color setting now stores a choice between coloring by annotation class and by annotation source. Existing databases are set to coloring by class.
+- Annotations are colored by annotation class by default. Use "Color by" in the filter panel or in Settings > Annotations to color them by annotation source.
 
 ### Deprecated
 
 ### Removed
+
+- The "Always color by class" setting. Use "Color by" in the filter panel or in Settings > Annotations instead.
 
 ### Fixed
 

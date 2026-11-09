@@ -68,6 +68,25 @@ describe('useImageFilters', () => {
         });
     });
 
+    describe('imageFilter annotation tree', () => {
+        it('carries the tree pairs of the Images grid, as the adjacent images request needs', () => {
+            const { imageFilter, updateFilterParams } = useImageFilters();
+            const pairs = [{ collection_id: 'source-1', annotation_label_id: 'car' }];
+
+            updateFilterParams({
+                collection_id: 'collection-1',
+                mode: 'normal',
+                filters: { annotation_pairs: pairs, unannotated_collection_ids: [] }
+            });
+
+            expect(get(imageFilter)?.sample_filter?.annotations_filter).toEqual({
+                filter_type: 'annotations',
+                annotation_pairs: pairs,
+                unannotated_collection_ids: []
+            });
+        });
+    });
+
     describe('updateConfusionCell', () => {
         const cell = {
             evaluation_run_id: 'run-1',

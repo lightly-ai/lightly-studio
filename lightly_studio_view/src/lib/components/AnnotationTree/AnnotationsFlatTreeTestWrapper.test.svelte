@@ -16,11 +16,7 @@
     setQueryClientContext(untrack(() => client));
 
     // Mirrors the Annotations grid: the tree filter of the tab's source goes into its request.
-    const treeFilter = useTreeAnnotationsFilter(() => ({
-        collectionId,
-        sourceId,
-        enabled: true
-    }));
+    const treeFilter = useTreeAnnotationsFilter(() => ({ collectionId, sourceId }));
     useAnnotationsInfinite(() => ({
         collection_id: sourceId,
         annotation_pairs: treeFilter.current?.annotation_pairs,

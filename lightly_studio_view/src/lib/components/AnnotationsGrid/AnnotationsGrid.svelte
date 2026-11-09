@@ -52,6 +52,7 @@
     }));
     const treeVisibility = useTreeAnnotationVisibility(() => ({
         collectionId: treeCollectionId ?? '',
+        sourceId: collection_id,
         enabled: treeEnabled
     }));
     setTreeAnnotationVisibility(() => treeVisibility.current);

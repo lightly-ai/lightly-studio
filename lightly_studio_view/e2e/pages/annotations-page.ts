@@ -1,9 +1,13 @@
 import { type Page, expect } from '@playwright/test';
 import { waitForRequestsToSettle } from '../utils';
+import { AnnotationTree } from './annotation-tree';
 
 export class AnnotationsPage {
+    readonly annotationTree: AnnotationTree;
+
     constructor(public readonly page: Page) {
         this.page = page;
+        this.annotationTree = new AnnotationTree(page);
     }
 
     async goto() {
@@ -54,16 +58,7 @@ export class AnnotationsPage {
     async clickLabel(label: string) {
         const requestsSettled = waitForRequestsToSettle(this.page, '/annotations');
 
-        // Long class lists render in pages, so narrow the list with the search box first.
-        const search = this.page.getByTestId('labels-menu').getByRole('textbox');
-        if ((await search.count()) > 0) {
-            await search.fill(label);
-        }
-        // Search highlights split the name text, so click the checkbox by its accessible name.
-        await this.page
-            .getByTestId('labels-menu')
-            .getByRole('checkbox', { name: label, exact: true })
-            .click();
+        await this.annotationTree.toggleClass(label);
 
         await requestsSettled;
         await expect(this.page.getByTestId('annotations-grid')).toBeVisible({

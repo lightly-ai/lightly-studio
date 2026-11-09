@@ -12,6 +12,10 @@
     import type { Collection } from '$lib/services/types';
     import { page } from '$app/state';
     import { useAdjacentAnnotations } from '$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations';
+    import {
+        getFlatAnnotationTreeCollectionId,
+        getFlatAnnotationTreeFilter
+    } from '$lib/components/AnnotationTree';
 
     const {
         rootCollection
@@ -24,10 +28,14 @@
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id!);
 
+    const treeCollectionId = getFlatAnnotationTreeCollectionId();
+    const treeFilter = getFlatAnnotationTreeFilter();
+
     const { query: sampleAdjacentQuery } = $derived(
         useAdjacentAnnotations({
             sampleId: page.params.annotationId!,
-            collectionId: collectionId
+            collectionId: collectionId,
+            treeFilter: treeCollectionId() ? (treeFilter() ?? {}) : undefined
         })
     );
 
