@@ -9,16 +9,25 @@
 
     interface MetadataFilterItemProps {
         metadataKey: string;
+        displayName?: string;
+        unit?: string;
         bound: MetadataBound;
         value: MetadataValue;
         isInteger: boolean;
         onValueCommit: (metadataKey: string, newValues: number[]) => void;
     }
 
-    const { metadataKey, bound, value, isInteger, onValueCommit }: MetadataFilterItemProps =
-        $props();
+    const {
+        metadataKey,
+        displayName,
+        unit,
+        bound,
+        value,
+        isInteger,
+        onValueCommit
+    }: MetadataFilterItemProps = $props();
 
-    const label = $derived(metadataKey.replace(/_/g, ' '));
+    const label = $derived(displayName ?? metadataKey.replace(/_/g, ' '));
     const ticks = $derived(getSliderTickCount(bound, isInteger));
 
     const sliderValue = $derived([
@@ -44,6 +53,7 @@
         {label}
         {bound}
         {value}
+        {unit}
         integer={isInteger}
         onValueCommit={(values) => onValueCommit(metadataKey, values)}
     />

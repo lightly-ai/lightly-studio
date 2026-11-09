@@ -1,8 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
-    import { formatInteger } from '$lib/utils';
-    import { Slider } from '$lib/components/ui/slider/index.js';
+    import { useVideoBounds } from '$lib/hooks';
+    import { MetadataFilterItem } from '$lib/components/CombinedMetadataDimensionsFilters/MetadataFilterItem';
 
     interface Props {
         /** Called when a video field filter (width, height, fps, duration) range changes. */
@@ -15,7 +14,7 @@
         page.params.collection_id
     );
 
-    const handleChangeWidth = (newValues: number[]) => {
+    const handleChangeWidth = (_key: string, newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
@@ -27,7 +26,7 @@
         onFilterChanged?.('width', newValues[0], newValues[1]);
     };
 
-    const handleChangeHeight = (newValues: number[]) => {
+    const handleChangeHeight = (_key: string, newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
@@ -39,7 +38,7 @@
         onFilterChanged?.('height', newValues[0], newValues[1]);
     };
 
-    const handleChangeFps = (newValues: number[]) => {
+    const handleChangeFps = (_key: string, newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
@@ -51,7 +50,7 @@
         onFilterChanged?.('fps', newValues[0], newValues[1]);
     };
 
-    const handleChangeDuration = (newValues: number[]) => {
+    const handleChangeDuration = (_key: string, newValues: number[]) => {
         if (!$videoBoundsValues) return;
         updateVideoBoundsValues({
             ...$videoBoundsValues,
@@ -65,79 +64,41 @@
 </script>
 
 {#if $videoBounds && $videoBoundsValues}
-    <div class="space-y-1">
-        <h2 class="text-md">Width</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.width.min)}px</span>
-            <span>{formatInteger($videoBoundsValues.width.max)}px</span>
-        </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-width"
-                min={$videoBounds?.width.min}
-                max={$videoBounds?.width.max}
-                value={[$videoBoundsValues.width.min, $videoBoundsValues.width.max]}
-                onValueCommit={handleChangeWidth}
-            />
-        </div>
-    </div>
-
-    <div class="space-y-1">
-        <h2 class="text-md">Height</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.height.min)}px</span>
-            <span>{formatInteger($videoBoundsValues.height.max)}px</span>
-        </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-height"
-                min={$videoBounds.height.min}
-                max={$videoBounds.height.max}
-                value={[$videoBoundsValues.height.min, $videoBoundsValues.height.max]}
-                onValueCommit={handleChangeHeight}
-            />
-        </div>
-    </div>
-
-    {#if $videoBoundsValues.fps.min != $videoBoundsValues.fps.max}
-        <div class="space-y-1">
-            <h2 class="text-md">FPS</h2>
-            <div class="flex justify-between text-sm text-diffuse-foreground">
-                <span>{formatInteger($videoBoundsValues.fps.min)}</span>
-                <span>{formatInteger($videoBoundsValues.fps.max)}</span>
-            </div>
-            <div class="relative p-2">
-                <Slider
-                    type="multiple"
-                    class="filter-width"
-                    min={$videoBounds?.fps.min}
-                    max={$videoBounds?.fps.max}
-                    step={0.01}
-                    value={[$videoBoundsValues.fps.min, $videoBoundsValues.fps.max]}
-                    onValueCommit={handleChangeFps}
-                />
-            </div>
-        </div>
+    <MetadataFilterItem
+        metadataKey="width"
+        displayName="Width"
+        bound={$videoBounds.width}
+        value={$videoBoundsValues.width}
+        isInteger={true}
+        unit="px"
+        onValueCommit={handleChangeWidth}
+    />
+    <MetadataFilterItem
+        metadataKey="height"
+        displayName="Height"
+        bound={$videoBounds.height}
+        value={$videoBoundsValues.height}
+        isInteger={true}
+        unit="px"
+        onValueCommit={handleChangeHeight}
+    />
+    {#if $videoBounds.fps.min !== $videoBounds.fps.max}
+        <MetadataFilterItem
+            metadataKey="fps"
+            displayName="FPS"
+            bound={$videoBounds.fps}
+            value={$videoBoundsValues.fps}
+            isInteger={false}
+            onValueCommit={handleChangeFps}
+        />
     {/if}
-
-    <div class="space-y-1">
-        <h2 class="text-md">Duration</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoBoundsValues.duration_s.min)}s</span>
-            <span>{formatInteger($videoBoundsValues.duration_s.max)}s</span>
-        </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-width"
-                min={$videoBounds.duration_s.min}
-                max={$videoBounds.duration_s.max}
-                step={0.01}
-                value={[$videoBoundsValues.duration_s.min, $videoBoundsValues.duration_s.max]}
-                onValueCommit={handleChangeDuration}
-            />
-        </div>
-    </div>
+    <MetadataFilterItem
+        metadataKey="duration_s"
+        displayName="Duration"
+        bound={$videoBounds.duration_s}
+        value={$videoBoundsValues.duration_s}
+        isInteger={false}
+        unit="s"
+        onValueCommit={handleChangeDuration}
+    />
 {/if}
