@@ -54,6 +54,7 @@ vi.mock('$lib/hooks', async () => {
         useGlobalStorage: () => ({ isEditingMode: writable(false) }),
         useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
         useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() }),
+        useCanCreateAnnotationClass: () => true,
         // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
         useMcapSequenceSummary: () => ({
             summary: { data: summaryData, isLoading: false, isError: false },

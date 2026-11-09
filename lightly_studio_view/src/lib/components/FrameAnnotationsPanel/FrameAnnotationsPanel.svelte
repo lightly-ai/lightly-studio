@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { trackClassCreatedInPicker } from '$lib/utils';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { Button, Segment } from '..';
@@ -37,6 +38,7 @@
     }: Props = $props();
 
     const { isEditingMode } = page.data.globalStorage;
+    const canCreateClass = useCanCreateAnnotationClass();
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const items = $derived(getSelectionItems(annotationLabels.data || []));
     const annotations = $derived(
@@ -71,22 +73,29 @@
                 </div>
                 {#if addAnnotationEnabled}
                     <label class="flex w-full flex-col gap-3 text-muted-foreground">
-                        <div class="text-sm">Select or create a class for a new annotation.</div>
+                        <div class="text-sm">
+                            {canCreateClass
+                                ? 'Select or create a class for a new annotation.'
+                                : 'Select a class for a new annotation.'}
+                        </div>
                         <SelectList
                             onCreate={trackClassCreatedInPicker}
+                            allowCreate={canCreateClass}
                             {items}
                             selectedItem={items.find((i) => i.value === addAnnotationLabel?.value)}
                             name="annotation-label"
-                            label="Choose or create a class"
+                            label={canCreateClass ? 'Choose or create a class' : 'Choose a class'}
                             className="w-full"
                             contentClassName="w-full"
-                            placeholder="Select or create a class"
+                            placeholder={canCreateClass
+                                ? 'Select or create a class'
+                                : 'Select a class'}
                             onSelect={(item) => {
                                 addAnnotationLabel = item;
                             }}
                         >
                             {#snippet notFound({ inputValue })}
-                                <LabelNotFound label={inputValue} />
+                                <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
                             {/snippet}
                         </SelectList>
                     </label>

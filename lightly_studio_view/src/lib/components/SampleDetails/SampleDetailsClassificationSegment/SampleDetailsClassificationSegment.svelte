@@ -1,5 +1,6 @@
 <script lang="ts">
     import { AnnotationTargetCaption } from '$lib/components/SampleDetails/AnnotationTargetCaption';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
@@ -29,7 +30,7 @@
     } from '../SampleDetailsAnnotationSegment/SampleDetailsAnnotationSegment.helpers';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
@@ -58,6 +59,7 @@
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
 
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
     const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
@@ -147,18 +149,18 @@
         if (!annotationLabels.data) return false;
         if (isAnnotationSourceBlocked(annotationLabelContext)) return false;
 
-        let label = annotationLabels.data.find(
-            (labelItem) => labelItem.annotation_label_name === labelName
-        );
-
-        if (!label) {
-            label = await createLabel({
-                dataset_id: datasetId,
-                annotation_label_name: labelName
-            });
-        }
-
         try {
+            let label = annotationLabels.data.find(
+                (labelItem) => labelItem.annotation_label_name === labelName
+            );
+
+            if (!label) {
+                label = await createLabel({
+                    dataset_id: datasetId,
+                    annotation_label_name: labelName
+                });
+            }
+
             const newAnnotation = await createAnnotation({
                 parent_sample_id: sampleId,
                 annotation_type: AnnotationType.CLASSIFICATION,
@@ -184,7 +186,12 @@
             toast.success('Classification created successfully');
             return true;
         } catch (error) {
-            toast.error('Failed to create classification. Please try again.');
+            toast.error(
+                getCreateLabelErrorMessage(
+                    error,
+                    'Failed to create classification. Please try again.'
+                )
+            );
             console.error('Error creating classification:', error);
             return false;
         }
@@ -265,12 +272,15 @@
                     {#if $isEditingMode}
                         <SelectList
                             onCreate={trackClassCreatedInPicker}
+                            allowCreate={canCreateClass}
                             {items}
                             selectedItem={items.find(
                                 (i) => i.value === getLabelValue(annotation)?.value
                             )}
                             name="classification-label"
-                            placeholder="Select or create a class"
+                            placeholder={canCreateClass
+                                ? 'Select or create a class'
+                                : 'Select a class'}
                             className="h-8 w-full min-w-0 px-3"
                             contentClassName="w-full min-w-0"
                             onSelect={async (item) => {
@@ -278,7 +288,7 @@
                             }}
                         >
                             {#snippet notFound({ inputValue })}
-                                <LabelNotFound label={inputValue} />
+                                <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
                             {/snippet}
                         </SelectList>
                     {:else}
@@ -373,9 +383,12 @@
                             <span class="min-w-0 text-sm font-medium">
                                 <SelectList
                                     onCreate={trackClassCreatedInPicker}
+                                    allowCreate={canCreateClass}
                                     {items}
                                     name="classification-label"
-                                    placeholder="Select or create a class"
+                                    placeholder={canCreateClass
+                                        ? 'Select or create a class'
+                                        : 'Select a class'}
                                     className="h-8 w-full min-w-0 px-3"
                                     contentClassName="w-full min-w-0"
                                     onSelect={async (item) => {
@@ -388,7 +401,10 @@
                                     }}
                                 >
                                     {#snippet notFound({ inputValue })}
-                                        <LabelNotFound label={inputValue} />
+                                        <LabelNotFound
+                                            label={inputValue}
+                                            allowCreate={canCreateClass}
+                                        />
                                     {/snippet}
                                 </SelectList>
                             </span>

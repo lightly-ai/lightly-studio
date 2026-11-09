@@ -2,7 +2,7 @@
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
     import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+    import { getCreateLabelErrorMessage, useCreateLabel } from '$lib/hooks';
     import type { BoundingBox } from '$lib/types';
     import { drag, type D3DragEvent } from 'd3-drag';
     import SampleAnnotationRect from '../SampleAnnotationRect/SampleAnnotationRect.svelte';
@@ -202,7 +202,9 @@
                 updateLastAnnotationLabel(collectionId, selectedLabelName);
             }
 
-            let label = labels.data?.find(
+            // Wait for the class list, so an existing class does not count as missing.
+            const labelList = labels.data ?? (await labels.refetch()).data;
+            let label = labelList?.find(
                 (label) => label.annotation_label_name === selectedLabelName
             );
 
@@ -249,7 +251,9 @@
             toast.success('Annotation created successfully');
             return newAnnotation;
         } catch (error) {
-            toast.error('Failed to create annotation. Please try again.');
+            toast.error(
+                getCreateLabelErrorMessage(error, 'Failed to create annotation. Please try again.')
+            );
             console.error('Error creating annotation:', error);
             return;
         } finally {
