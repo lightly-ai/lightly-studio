@@ -72,7 +72,7 @@
     };
 
     // Metadata filters logic
-    const { metadataBounds, metadataValues, updateMetadataValues } = $derived.by(() =>
+    const { metadataBounds, metadataValues, metadataInfo, updateMetadataValues } = $derived.by(() =>
         useMetadataFilters(collectionId)
     );
 
@@ -161,6 +161,8 @@
                     {metadataKey}
                     bound={$metadataBounds[metadataKey]}
                     value={$metadataValues[metadataKey]}
+                    isInteger={$metadataInfo.find((info) => info.name === metadataKey)?.type ===
+                        'integer'}
                     onValueCommit={handleMetadataValueCommit}
                 />
             {/each}
