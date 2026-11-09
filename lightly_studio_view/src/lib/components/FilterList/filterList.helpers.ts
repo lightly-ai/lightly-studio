@@ -19,6 +19,16 @@ export const selectAllVisible = (items: FilterListItem[], visible: FilterListIte
     return items.filter((item) => item.selected || visibleIds.has(item.id)).map((item) => item.id);
 };
 
+/** Character range of the first case-insensitive match of the search in the label. */
+export const highlightRange = (
+    label: string,
+    search: string
+): { start: number; end: number } | null => {
+    const query = search.trim().toLowerCase();
+    const start = query ? label.toLowerCase().indexOf(query) : -1;
+    return start === -1 ? null : { start, end: start + query.length };
+};
+
 /** Splits text into the parts before, inside and after the range. */
 export const splitMatch = (
     text: string,

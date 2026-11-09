@@ -1,11 +1,10 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
     import { Input } from '$lib/components/ui/input';
-    import { ChevronDown } from '@lucide/svelte';
-    import { FilterActionButton } from '$lib/components/FilterActionButton';
     import FilterListActions from './FilterListActions.svelte';
-    import FilterListRow from './FilterListRow.svelte';
+    import FilterListRows from './FilterListRows.svelte';
     import { matchesSearch, selectAllVisible, type FilterListItem } from './filterList.helpers';
+    import { useFilterListState } from './useFilterListState.svelte';
 
     interface Props {
         /** The values to filter by, in display order. */
@@ -50,30 +49,15 @@
         customRowId = null
     }: Props = $props();
 
-    // Rendering thousands of rows (e.g. a metadata field with a unique value per image) blocks
-    // the page for seconds, so long lists render in pages. Search still covers every item.
-    const PAGE_SIZE = 50;
-
-    let search = $state('');
-    let shownCount = $state(PAGE_SIZE);
-
-    const searchVisible = $derived(showSearch ?? items.length > 5);
-    const visible = $derived(items.filter((item) => matchesSearch(item, search)));
-    const shown = $derived(visible.slice(0, shownCount));
-    const hiddenCount = $derived(visible.length - shown.length);
-
-    const highlightFor = (item: FilterListItem) => {
-        const query = search.trim().toLowerCase();
-        const start = query ? item.label.toLowerCase().indexOf(query) : -1;
-        return start === -1 ? null : { start, end: start + query.length };
-    };
+    const list = useFilterListState({ getItems: () => items, getShowSearch: () => showSearch });
+    const pinnedVisible = $derived(!!pinnedItem && matchesSearch(pinnedItem, list.search));
 </script>
 
 <div class="w-full space-y-2 overflow-hidden" data-testid={testId}>
-    {#if searchVisible}
+    {#if list.searchVisible}
         <Input
-            value={search}
-            oninput={(event) => (search = event.currentTarget.value)}
+            value={list.search}
+            oninput={(event) => list.setSearch(event.currentTarget.value)}
             placeholder={searchPlaceholder}
             aria-label={searchPlaceholder.replace('…', '')}
             class="h-8"
@@ -81,46 +65,26 @@
     {/if}
     {#if items.length > 1}
         <FilterListActions
-            onSelectAll={() => onSelectionChange(selectAllVisible(items, visible))}
+            onSelectAll={() => onSelectionChange(selectAllVisible(items, list.visible))}
             onClear={() => onSelectionChange([])}
         />
     {/if}
-    {#if pinnedItem && matchesSearch(pinnedItem, search)}
-        <FilterListRow
-            item={pinnedItem}
-            checked={pinnedItem.selected}
-            onToggle={pinnedItem.onToggle}
-            testId="{testId}-pinned"
-            highlight={highlightFor(pinnedItem)}
-            emphasized
-            trailingSpacer={trailing}
-        />
-    {/if}
-    {#each shown as item (item.id)}
-        {#if customRow && item.id === customRowId}
-            {@render customRow(item)}
-        {:else}
-            <FilterListRow
-                {item}
-                checked={item.selected}
-                onToggle={() => onToggle(item.id)}
-                {testId}
-                highlight={highlightFor(item)}
-                {leading}
-                {trailing}
-            />
-        {/if}
-    {/each}
-    {#if hiddenCount > 0}
-        <FilterActionButton
-            label="Show {Math.min(PAGE_SIZE, hiddenCount)} more"
-            icon={ChevronDown}
-            onclick={() => (shownCount += PAGE_SIZE)}
-        />
-    {/if}
+    <FilterListRows
+        items={list.shown}
+        {onToggle}
+        pinnedItem={pinnedVisible ? pinnedItem : undefined}
+        search={list.search}
+        {testId}
+        nextPageCount={list.nextPageCount}
+        onShowMore={list.showMore}
+        {leading}
+        {trailing}
+        {customRow}
+        {customRowId}
+    />
     {#if items.length === 0 && emptyText}
         <p class="text-sm text-diffuse-foreground">{emptyText}</p>
-    {:else if items.length > 0 && visible.length === 0}
+    {:else if items.length > 0 && list.visible.length === 0 && !pinnedVisible}
         <p class="text-sm text-diffuse-foreground">{noMatchText}</p>
     {/if}
 </div>

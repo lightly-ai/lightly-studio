@@ -46,6 +46,33 @@ describe('FilterList', () => {
         expect(screen.getByText('No matches.')).toBeInTheDocument();
     });
 
+    it('keeps the search box while a query is active after the items shrink', async () => {
+        const onToggle = vi.fn();
+        const onSelectionChange = vi.fn();
+        const { rerender } = render(FilterList, {
+            items: makeItems(8),
+            onToggle,
+            onSelectionChange
+        });
+
+        await userEvent.type(screen.getByPlaceholderText('Search…'), 'zzz');
+        await rerender({ items: makeItems(3) });
+
+        expect(screen.getByPlaceholderText('Search…')).toHaveValue('zzz');
+    });
+
+    it('does not show the no-match text when only the pinned item matches', async () => {
+        renderList({
+            items: makeItems(8),
+            pinnedItem: { id: 'none', label: 'No annotations', selected: false, onToggle: vi.fn() }
+        });
+
+        await userEvent.type(screen.getByPlaceholderText('Search…'), 'no annotations');
+
+        expect(screen.getByTestId('filter-list-pinned-item')).toBeInTheDocument();
+        expect(screen.queryByText('No matches.')).not.toBeInTheDocument();
+    });
+
     it('renders the count of a row', () => {
         renderList({ items: [{ id: 'a', label: 'A', selected: false, count: '3 of 8' }] });
 
@@ -86,6 +113,15 @@ describe('FilterList', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Show 50 more' }));
 
         expect(screen.getAllByTestId('filter-list-item')).toHaveLength(100);
+    });
+
+    it('goes back to the first page when the search changes', async () => {
+        renderList({ items: makeItems(120) });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Show 50 more' }));
+        await userEvent.type(screen.getByPlaceholderText('Search…'), 'item');
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(50);
     });
 
     it('renders the pinned item above the list outside the selection', async () => {
