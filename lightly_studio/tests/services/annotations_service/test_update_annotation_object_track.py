@@ -5,11 +5,13 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.resolvers import annotation_resolver, collection_resolver, object_track_resolver
+from lightly_studio.resolvers.annotation_resolver import annotation_helper
 from lightly_studio.services import annotations_service
 from tests.helpers_resolvers import (
     create_annotation,
@@ -375,3 +377,48 @@ def test_update_annotation_object_track__parent_track_preserved(db_session: Sess
     child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_id)
     assert child is not None
     assert child.parent_object_track_id == parent_id
+
+
+def test_update_annotation_object_track__track_deleted_during_reinsert(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """Annotation is preserved when the target track is deleted between delete and reinsert."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )[0]
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+    annotation_id = annotation.sample_id
+
+    original_delete = annotation_resolver.delete_annotation
+
+    def delete_then_remove_track(
+        session: Session, annotation_id: uuid.UUID, delete_sample: bool = True
+    ) -> None:
+        """Delete the annotation, then remove the track to simulate a concurrent deletion."""
+        original_delete(session, annotation_id, delete_sample=delete_sample)
+        object_track_resolver.delete_by_id(session=session, object_track_id=track_id)
+
+    mocker.patch.object(
+        annotation_resolver, "delete_annotation", side_effect=delete_then_remove_track
+    )
+
+    result = annotation_helper.update_annotation_object(
+        session=db_session,
+        annotation=annotation,
+        fields_to_update={"object_track_id": track_id},
+    )
+
+    assert result.object_track_id is None
+    fetched = annotation_resolver.get_by_id(session=db_session, annotation_id=annotation_id)
+    assert fetched is not None
+    assert fetched.object_track_id is None

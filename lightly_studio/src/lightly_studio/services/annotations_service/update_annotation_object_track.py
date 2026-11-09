@@ -97,9 +97,7 @@ def _assign_track(
     )
 
 
-def _validate_object_track(
-    session: Session, object_track_id: UUID, collection_id: UUID
-) -> None:
+def _validate_object_track(session: Session, object_track_id: UUID, collection_id: UUID) -> None:
     """Raise if the track does not exist or belongs to a different dataset."""
     track = object_track_resolver.get_by_id(session=session, object_track_id=object_track_id)
     if track is None:
