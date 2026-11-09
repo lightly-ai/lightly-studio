@@ -88,7 +88,7 @@ describe('EmbeddingSelectionFilterItem', () => {
         expect(mocks.useEmbeddingFilterForVideos).toHaveBeenCalledOnce();
         expect(mocks.useEmbeddingFilterForAnnotations).toHaveBeenCalledOnce();
         expect(screen.getByTestId('embedding-selection-filter-chip')).toBeInTheDocument();
-        expect(screen.getByText('Embedding Plot Filter')).toBeInTheDocument();
+        expect(screen.getByText('Plot Filter')).toBeInTheDocument();
         expect(screen.getByText(/1\s*image/i)).toBeInTheDocument();
     });
 
@@ -116,7 +116,7 @@ describe('EmbeddingSelectionFilterItem', () => {
             }
         });
 
-        await fireEvent.click(screen.getByLabelText('Embedding plot filter'));
+        await fireEvent.click(screen.getByLabelText('Plot filter'));
         expect(videoSetVisibility).toHaveBeenCalledWith(true);
         expect(imageSetVisibility).not.toHaveBeenCalled();
     });
@@ -130,7 +130,7 @@ describe('EmbeddingSelectionFilterItem', () => {
             }
         });
 
-        await fireEvent.click(screen.getByLabelText('Clear embedding plot filter'));
+        await fireEvent.click(screen.getByLabelText('Clear plot filter'));
         expect(imageClearFilter).toHaveBeenCalledOnce();
         expect(videoClearFilter).not.toHaveBeenCalled();
     });
