@@ -3,7 +3,12 @@
     import { Segment } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
-    import { useAnnotationCollections, useSetTargetSource, useSettings } from '$lib/hooks';
+    import {
+        DEFAULT_SOURCE_NAME,
+        useAnnotationCollections,
+        useSetTargetSource,
+        useSettings
+    } from '$lib/hooks';
     import { NewAnnotationSourceInput } from '$lib/components/SampleDetails/NewAnnotationSourceInput';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
@@ -77,7 +82,15 @@
             targetSource
         )
     );
-    const isGrouped = $derived(allSourceGroups.length > 1);
+    // A typed source that does not exist yet shows as a group, also when it is the only one, so
+    // the user sees it is the target. The backend default keeps the empty state.
+    const hasPendingTarget = $derived(
+        canPickTarget &&
+            targetSource !== null &&
+            targetSource !== DEFAULT_SOURCE_NAME &&
+            !annotationSources.some((source) => source.name === targetSource)
+    );
+    const isGrouped = $derived(allSourceGroups.length > 1 || hasPendingTarget);
 
     const visibility = useAnnotationPanelVisibility({
         getSampleId: () => sampleId,
