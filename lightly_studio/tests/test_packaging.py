@@ -17,6 +17,7 @@ MODULES_WITHOUT_JOBS_EXTRA = (
     "lightly_studio",
     "lightly_studio.api.app",
     "lightly_studio.jobs",
+    "lightly_studio.jobs.errors",
     "lightly_studio.jobs.settings",
 )
 
