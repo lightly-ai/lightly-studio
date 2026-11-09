@@ -1,7 +1,8 @@
+import { omit } from 'lodash-es';
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { GridType } from '$lib/types';
-import type { TagByFilterBody } from '$lib/api/lightly_studio_local';
+import type { AnnotationsFilter, TagByFilterBody } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters, buildVideoFilter } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -24,7 +25,17 @@ const GRID_FILTER_TYPE = {
     annotations: 'annotations'
 } as const satisfies Partial<Record<GridType, SnapshotFilter['filter_type']>>;
 
-export function useSelectAll(collectionId: string, gridType: GridType) {
+type TreeAnnotationsFilter = { annotation_pairs?: AnnotationsFilter['annotation_pairs'] };
+
+/**
+ * `getTreeFilter` returns the annotation tree filter while the tree is on, else undefined.
+ * The tree then replaces the class filter on the annotations grid.
+ */
+export function useSelectAll(
+    collectionId: string,
+    gridType: GridType,
+    getTreeFilter?: () => TreeAnnotationsFilter | undefined
+) {
     const {
         setAllSelectedSampleIds,
         setAllSelectedAnnotationCropIds,
@@ -84,14 +95,15 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                 // The plot selection is geometry; the backend resolves it to sample ids when
                 // fetching / tagging, so select-all also carries the region, not a list.
                 const plotRegion = get(annotationPlotRegion);
+                const baseFilter = withTreeFilter(get(annotationFilter), getTreeFilter?.());
                 const filter =
                     plotRegion !== null
                         ? {
-                              ...get(annotationFilter),
+                              ...baseFilter,
                               filter_type: GRID_FILTER_TYPE.annotations,
                               embedding_region: plotRegion
                           }
-                        : get(annotationFilter);
+                        : baseFilter;
                 return {
                     snapshotFilter: { ...filter, filter_type: GRID_FILTER_TYPE.annotations },
                     fetchIds: () => fetchSampleIdsForAnnotations(collectionId, filter)
@@ -143,4 +155,16 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
     };
 
     return { handleSelectAll };
+}
+
+function withTreeFilter(
+    filter: AnnotationsFilter | undefined,
+    treeFilter: TreeAnnotationsFilter | undefined
+): AnnotationsFilter | undefined {
+    if (!treeFilter) return filter;
+    return {
+        ...omit(filter, 'annotation_label_ids'),
+        filter_type: 'annotations',
+        annotation_pairs: treeFilter.annotation_pairs
+    };
 }

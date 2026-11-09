@@ -60,6 +60,7 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', async () => {
 import { toast } from 'svelte-sonner';
 import { useSelectAll } from './useSelectAll';
 import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
+import { fetchSampleIdsForAnnotations } from './fetchSampleIdsForAnnotations';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
@@ -139,6 +140,23 @@ describe('useSelectAll', () => {
 
         expect(annotationSnapshot()).toEqual({ filter: annotationFilter, size: 3 });
         expect(sampleSnapshot()).toBeNull();
+    });
+
+    it('follows the tree ticks on the annotations grid instead of the class filter', async () => {
+        annotationFilterStore().set({
+            filter_type: 'annotations',
+            annotation_label_ids: ['old-class'],
+            tag_ids: ['t1']
+        });
+        const pairs = [{ collection_id: 'source-1', annotation_label_id: 'person' }];
+
+        await useSelectAll(collectionId, 'annotations', () => ({
+            annotation_pairs: pairs
+        })).handleSelectAll();
+
+        const expected = { filter_type: 'annotations', tag_ids: ['t1'], annotation_pairs: pairs };
+        expect(fetchSampleIdsForAnnotations).toHaveBeenCalledWith(collectionId, expected);
+        expect(annotationSnapshot()).toEqual({ filter: expected, size: 3 });
     });
 
     it('normalizes an empty annotations select-all to a conditionless typed filter', async () => {

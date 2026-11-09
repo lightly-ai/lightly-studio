@@ -2,6 +2,7 @@
     import { Button } from '$lib/components/Button';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { FilterX } from '@lucide/svelte';
+    import { toStore } from 'svelte/store';
     import { useClearAllFilters } from './useClearAllFilters';
 
     interface Props {
@@ -10,12 +11,30 @@
         isImages: boolean;
         isVideos: boolean;
         isVideoFrames: boolean;
+        treeCollectionId?: string;
+        treeFilterActive?: boolean;
     }
 
-    let { collectionId, isCaptions = false, isImages, isVideos, isVideoFrames }: Props = $props();
+    let {
+        collectionId,
+        isCaptions = false,
+        isImages,
+        isVideos,
+        isVideoFrames,
+        treeCollectionId,
+        treeFilterActive = false
+    }: Props = $props();
 
     const { hasActiveFilters, clearAllFilters } = $derived(
-        useClearAllFilters({ collectionId, isCaptions, isImages, isVideos, isVideoFrames })
+        useClearAllFilters({
+            collectionId,
+            isCaptions,
+            isImages,
+            isVideos,
+            isVideoFrames,
+            treeCollectionId,
+            treeFilterActive: toStore(() => treeFilterActive)
+        })
     );
 </script>
 
