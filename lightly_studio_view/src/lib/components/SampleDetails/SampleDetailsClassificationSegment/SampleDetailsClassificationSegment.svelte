@@ -18,6 +18,10 @@
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
     import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
     import {
+        getAnnotationTreeEnabled,
+        useTreeAnnotationVisibility
+    } from '$lib/components/AnnotationTree';
+    import {
         computeSeededHiddenIds,
         groupAnnotationsBySource,
         isSourceGroupInitiallyOpen
@@ -84,16 +88,26 @@
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { isSourceVisible } = useAnnotationCollectionsFilter();
+    const isTreeEnabled = getAnnotationTreeEnabled();
+    const treeVisibility = useTreeAnnotationVisibility(() => ({
+        collectionId,
+        enabled: isTreeEnabled()
+    }));
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
         isGrouped ? groupAnnotationsBySource(classificationAnnotations, annotationSources) : []
     );
 
-    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
-    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    // Hidden set from the tree eyes or, without the tree, the grid source selection. It is a
+    // derived, so it is readable at mount (unlike the effect-written `annotationsIdsToHide`);
+    // it drives the seed and the initial collapse.
     const seededHiddenIds = $derived(
-        computeSeededHiddenIds(classificationAnnotations, $isSourceVisible)
+        computeSeededHiddenIds(
+            classificationAnnotations,
+            treeVisibility.current ??
+                ((annotation) => $isSourceVisible(annotation.annotation_collection_id))
+        )
     );
 
     // Local visibility changes must not alter source colors or card layout.

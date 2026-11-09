@@ -1,6 +1,10 @@
 <script lang="ts">
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { SampleDetailsAnnotationSourceGroup, Segment } from '$lib/components';
+    import {
+        getAnnotationTreeEnabled,
+        useTreeAnnotationVisibility
+    } from '$lib/components/AnnotationTree';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
@@ -66,6 +70,11 @@
     const { isSourceVisible } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { sourceGroupStates, setSourceGroupState } = useAnnotationSourceGroupState();
+    const isTreeEnabled = getAnnotationTreeEnabled();
+    const treeVisibility = useTreeAnnotationVisibility(() => ({
+        collectionId,
+        enabled: isTreeEnabled()
+    }));
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -87,15 +96,26 @@
         isGrouped ? groupAnnotationsBySource(annotationsSort, annotationSources) : []
     );
 
-    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
-    // the effect-written `annotationsIdsToHide`); drives the initial collapse.
-    const gridHiddenIds = $derived(computeSeededHiddenIds(annotationsSort, $isSourceVisible));
-    // The seed also applies the source visibility the user set on earlier samples.
+    // Hidden set from the tree eyes or, without the tree, the grid source selection. It is a
+    // derived, so it is readable at mount (unlike the effect-written `annotationsIdsToHide`);
+    // it drives the initial collapse.
+    const gridHiddenIds = $derived(
+        computeSeededHiddenIds(
+            annotationsSort,
+            treeVisibility.current ??
+                ((annotation) => $isSourceVisible(annotation.annotation_collection_id))
+        )
+    );
+    // Without the tree, the seed also applies the source visibility the user set on earlier
+    // samples.
     const seededHiddenIds = $derived(
-        computeSeededHiddenIds(annotationsSort, (sourceId) => {
-            const hidden = $sourceGroupStates[sourceId]?.hidden;
-            return hidden === undefined ? $isSourceVisible(sourceId) : !hidden;
-        })
+        treeVisibility.current
+            ? gridHiddenIds
+            : computeSeededHiddenIds(annotationsSort, (annotation) => {
+                  const sourceId = annotation.annotation_collection_id;
+                  const hidden = $sourceGroupStates[sourceId]?.hidden;
+                  return hidden === undefined ? $isSourceVisible(sourceId) : !hidden;
+              })
     );
 
     // Keep source markers and row layout stable when annotations are hidden, matching
@@ -121,7 +141,8 @@
         if (
             seededSampleId === sampleId ||
             annotationSources.length === 0 ||
-            annotationsSort.length === 0
+            annotationsSort.length === 0 ||
+            !treeVisibility.ready
         ) {
             return;
         }
@@ -201,6 +222,7 @@
     };
 
     const rememberSourceVisibility = (sourceId: string, sourceAnnotations: AnnotationView[]) => {
+        if (isTreeEnabled()) return;
         setSourceGroupState(sourceId, {
             hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
         });

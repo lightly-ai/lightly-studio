@@ -161,8 +161,8 @@ describe('computeSeededHiddenIds', () => {
         createAnnotation('pred-2', predictionsSource.collection_id, 'dog')
     ];
 
-    const visibleSources = (selectedIds: string[]) => (sourceId: string) =>
-        selectedIds.includes(sourceId);
+    const visibleSources = (selectedIds: string[]) => (annotation: AnnotationView) =>
+        selectedIds.includes(annotation.annotation_collection_id);
 
     it('hides annotations whose source is not selected', () => {
         const hiddenIds = computeSeededHiddenIds(

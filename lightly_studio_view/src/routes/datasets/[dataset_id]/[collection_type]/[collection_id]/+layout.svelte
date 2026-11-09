@@ -174,8 +174,10 @@
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
     );
-    const showAnnotationTree = $derived(isImages && $featureFlags.includes('annotation_tree'));
-    setAnnotationTreeEnabled(() => showAnnotationTree);
+    const isAnnotationTreeOn = $derived($featureFlags.includes('annotation_tree'));
+    const showAnnotationTree = $derived(isImages && isAnnotationTreeOn);
+    // Image sample details draw by the tree eyes of the Images grid.
+    setAnnotationTreeEnabled(() => (isImages || isSampleDetails) && isAnnotationTreeOn);
 
     let gridType = $state<GridType>('images');
     let lastCollectionId: string | null = null;
