@@ -208,9 +208,10 @@ describe('Header', () => {
             expect(undoButton).toHaveAttribute('title', 'Test reversible action');
         });
 
-        it('should call executeReversibleAction when undo button is clicked', async () => {
+        it.each([true, false])('respects canExecute=%s for undo', async (canExecute) => {
             const mockAction = {
                 id: 'test-action',
+                canExecute: () => canExecute,
                 description: 'Test reversible action',
                 execute: vi.fn(),
                 timestamp: new Date()
@@ -227,9 +228,11 @@ describe('Header', () => {
             render(Header, { props: { collection } });
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
+            expect(undoButton).toHaveProperty('disabled', !canExecute);
             await fireEvent.click(undoButton);
+            await fireEvent.keyDown(window, { key: 'z', ctrlKey: true });
 
-            expect(executeReversibleActionMock).toHaveBeenCalledWith('test-action');
+            expect(executeReversibleActionMock).toHaveBeenCalledTimes(canExecute ? 2 : 0);
         });
 
         it('should show most recent action description in tooltip', () => {

@@ -255,6 +255,19 @@
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet toolbarContent()}
+        {#if assistedLabeling.activeTool === 'smart-select' && (assistedLabeling.smartSelect.isPending || assistedLabeling.smartSelect.isSaving)}
+            <div class="pointer-events-none absolute inset-0 z-30 flex items-center justify-center">
+                <div
+                    class="flex items-center gap-2 rounded-lg bg-muted px-4 py-3 shadow-md"
+                    role="status"
+                >
+                    <LoaderCircle class="size-5 animate-spin" />
+                    {assistedLabeling.smartSelect.isSaving
+                        ? 'Saving annotation…'
+                        : 'Generating preview…'}
+                </div>
+            </div>
+        {/if}
         {#if $isEditingMode}
             <SampleDetailsToolbar
                 showSegmentationTool={shouldShowSegmentationToolInToolbar}
@@ -410,7 +423,6 @@
                 <AssistedLabelingOverlays
                     bind:interactionRect
                     {sample}
-                    visibleAnnotations={actualAnnotationsToShow}
                     {scale}
                     {assistedLabeling}
                 />

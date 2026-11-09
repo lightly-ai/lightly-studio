@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Smart select shows busy feedback, requires an annotation class before saving, and supports undoing point and box prompts.
 - Coloring image and crop embeddings by annotation class is faster by reducing repeated work when loading annotation labels.
 - Embedding plots color faster when no filters are active.
 - Improved labeling tool names, layout, and buttons.

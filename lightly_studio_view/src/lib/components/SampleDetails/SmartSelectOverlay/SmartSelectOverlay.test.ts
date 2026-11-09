@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
         canSave: false,
         isSaving: false,
         isPending: false,
-        needsPositivePoint: false,
+        box: null,
         addPoint: vi.fn(),
         selectBox: vi.fn(),
         clear: vi.fn(),
@@ -20,7 +20,6 @@ const mocks = vi.hoisted(() => ({
 
 const defaultProps = {
     sample: { width: 100, height: 100 },
-    annotations: [],
     scale: 1,
     isPanning: false,
     saveAs: 'mask' as const,
@@ -40,6 +39,7 @@ describe('SmartSelectOverlay', () => {
         mocks.smartSelect.points = [];
         mocks.smartSelect.preview = null;
         mocks.smartSelect.canSave = false;
+        mocks.smartSelect.isPending = false;
     });
 
     it('clears the prompts on Escape and keeps the tool open', async () => {
@@ -81,6 +81,23 @@ describe('SmartSelectOverlay', () => {
     it('lets pointer events through while panning', () => {
         const rect = renderOverlay({ isPanning: true });
         expect(rect).toHaveAttribute('pointer-events', 'none');
+    });
+
+    it('blocks pointer events while generating a preview', () => {
+        mocks.smartSelect.isPending = true;
+        expect(renderOverlay()).toHaveAttribute('pointer-events', 'none');
+    });
+
+    it('shows the exclusion cursor while Shift is held and resets on release or blur', async () => {
+        const rect = renderOverlay();
+        await fireEvent.keyDown(window, { key: 'Shift', shiftKey: true });
+        expect(getComputedStyle(rect).cursor).toContain('data:image/svg+xml');
+        await fireEvent.keyUp(window, { key: 'Shift', shiftKey: false });
+        expect(getComputedStyle(rect).cursor).toBe('crosshair');
+        await fireEvent(window, new MouseEvent('pointermove', { shiftKey: true }));
+        expect(getComputedStyle(rect).cursor).toContain('data:image/svg+xml');
+        await fireEvent.blur(window);
+        expect(getComputedStyle(rect).cursor).toBe('crosshair');
     });
 
     it('marks positive and negative points', () => {

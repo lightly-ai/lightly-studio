@@ -3,10 +3,8 @@ import { createMutation } from '@tanstack/svelte-query';
 import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createInteractiveAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { useSaveAnnotationPreviews } from '$lib/hooks';
-import {
-    getAnnotationPreviewErrorMessage,
-    pickClassName
-} from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
+import { useReversibleActions } from '$lib/hooks/useReversibleActions';
+import { getAnnotationPreviewErrorMessage } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 import type { boxFromPoints } from '$lib/components/SampleDetails/useDragBox/useDragBox.helpers';
 import { page } from '$app/state';
 import { canInferFromPoints, type SmartSelectPoint } from './SmartSelectOverlay.helpers';
@@ -32,7 +30,10 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
     let points = $state<SmartSelectPoint[]>([]);
     let preview = $state<AnnotationPreview | null>(null);
     let isSaving = $state(false);
-    let hintedClass: string | null = null;
+    let box = $state<NormalizedBox | null>(null);
+    let isPending = $state(false);
+    const undoGroup = crypto.randomUUID();
+    const { addReversibleAction, clearReversibleActionsByGroupId } = useReversibleActions();
     // Drops responses that a newer prompt or a clear made stale.
     let sequence = 0;
 
@@ -44,6 +45,7 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
 
     const infer = async (prompt: SmartSelectPrompt) => {
         const requestSequence = ++sequence;
+        isPending = true;
         const { collectionId, sampleId } = getParams();
         try {
             const result = await mutation.mutateAsync({
@@ -53,18 +55,22 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         } catch (error) {
             if (requestSequence !== sequence) return;
             toast.error(`Smart select failed: ${getAnnotationPreviewErrorMessage(error)}`);
+        } finally {
+            if (requestSequence === sequence) isPending = false;
         }
     };
 
     const dropPreview = () => {
         sequence += 1;
         preview = null;
+        isPending = false;
     };
 
     const reset = () => {
         dropPreview();
         points = [];
-        hintedClass = null;
+        box = null;
+        clearReversibleActionsByGroupId(undoGroup);
     };
 
     const currentSampleId = $derived(getParams().sampleId);
@@ -80,26 +86,48 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         if (!isSaving) reset();
     };
 
-    const addPoint = (point: SmartSelectPoint, className: string | null) => {
-        if (isSaving) return;
+    const rememberPrompt = () => {
+        const previous = { points, box, preview };
+        addReversibleAction({
+            id: crypto.randomUUID(),
+            groupId: undoGroup,
+            description: 'Undo Smart select prompt',
+            canExecute: () => !isSaving,
+            timestamp: new Date(),
+            execute: () => {
+                dropPreview();
+                points = previous.points;
+                box = previous.box;
+                preview = previous.preview;
+            }
+        });
+    };
+
+    const addPoint = (point: SmartSelectPoint) => {
+        if (isSaving || isPending) return;
+        rememberPrompt();
+        box = null;
         points = [...points, point];
         // The preview no longer matches the points, even if no new request starts.
         dropPreview();
-        hintedClass = className ?? hintedClass;
         if (canInferFromPoints(points)) void infer({ points });
     };
 
-    const selectBox = (box: NormalizedBox) => {
-        if (isSaving) return;
-        reset();
-        void infer({ boxes: [box] });
+    const selectBox = (value: NormalizedBox) => {
+        if (isSaving || isPending) return;
+        rememberPrompt();
+        dropPreview();
+        points = [];
+        box = value;
+        void infer({ boxes: [value] });
     };
 
     const save = async () => {
-        if (!preview || isSaving) return;
+        const className = getParams().annotationClass;
+        if (!preview || isSaving || isPending || !className?.trim()) return;
+        // Keep prompt undo until reset on success; a failed save can still be edited.
         isSaving = true;
-        const { sampleId, saveAs, annotationClass, annotationSource, onSaved } = getParams();
-        const className = pickClassName({ selected: annotationClass, hint: hintedClass });
+        const { sampleId, saveAs, annotationSource, onSaved } = getParams();
         try {
             await saveAnnotationPreviews({
                 sampleId,
@@ -122,20 +150,22 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         get points() {
             return points;
         },
+        get box() {
+            return box;
+        },
         get preview() {
             return preview;
         },
         get canSave() {
-            return preview !== null && !isSaving;
+            return (
+                preview !== null && !isSaving && !isPending && !!getParams().annotationClass?.trim()
+            );
         },
         get isSaving() {
             return isSaving;
         },
         get isPending() {
-            return mutation.isPending;
-        },
-        get needsPositivePoint() {
-            return points.length > 0 && !canInferFromPoints(points);
+            return isPending;
         },
         addPoint,
         selectBox,
