@@ -6,7 +6,7 @@
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { ImageFilter } from '$lib/api/lightly_studio_local';
     import type { CategoricalMetadataValue, MetadataValues } from '$lib/services/types';
-    import { formatInteger } from '$lib/utils';
+    import { NumericRangeInputs } from '$lib/components/NumericRangeInputs';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
     import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
@@ -114,10 +114,14 @@
             <!-- Dimension Filters -->
             <div class="space-y-1">
                 <h2 class="text-md">Width</h2>
-                <div class="flex justify-between text-sm text-diffuse-foreground">
-                    <span>{formatInteger($values.min_width)}px</span>
-                    <span>{formatInteger($values.max_width)}px</span>
-                </div>
+                <NumericRangeInputs
+                    label="Width"
+                    bound={{ min: $bounds.min_width, max: $bounds.max_width }}
+                    value={{ min: $values.min_width, max: $values.max_width }}
+                    integer
+                    unit="px"
+                    onValueCommit={handleChangeWidth}
+                />
                 <div class="relative p-2">
                     <Slider
                         type="multiple"
@@ -132,10 +136,14 @@
 
             <div class="space-y-1">
                 <h2 class="text-md">Height</h2>
-                <div class="flex justify-between text-sm text-diffuse-foreground">
-                    <span>{formatInteger($values.min_height)}px</span>
-                    <span>{formatInteger($values.max_height)}px</span>
-                </div>
+                <NumericRangeInputs
+                    label="Height"
+                    bound={{ min: $bounds.min_height, max: $bounds.max_height }}
+                    value={{ min: $values.min_height, max: $values.max_height }}
+                    integer
+                    unit="px"
+                    onValueCommit={handleChangeHeight}
+                />
                 <div class="relative p-2">
                     <Slider
                         type="multiple"

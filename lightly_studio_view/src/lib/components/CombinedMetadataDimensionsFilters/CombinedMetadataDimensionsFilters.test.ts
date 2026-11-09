@@ -2,10 +2,13 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { tick } from 'svelte';
-import { useMetadataFilters } from '$lib/hooks';
+import { useDimensions, useMetadataFilters, useVideoFramesBounds } from '$lib/hooks';
 import CombinedMetadataDimensionsFilters from './CombinedMetadataDimensionsFilters.svelte';
 
 const storage = useMetadataFilters();
+const dimensions = useDimensions();
+const frames = useVideoFramesBounds();
+vi.mock('$app/state', () => ({ page: { params: {} } }));
 const defaultProps = {
     collectionId: '',
     showDimensions: false,
@@ -16,6 +19,10 @@ afterEach(() => {
     storage.updateMetadataBounds({});
     storage.updateMetadataValues({});
     storage.updateMetadataInfo([]);
+    dimensions.updateDimensionsBounds({ min_width: 0, max_width: 0, min_height: 0, max_height: 0 });
+    dimensions.updateDimensionsValues({ min_width: 0, max_width: 0, min_height: 0, max_height: 0 });
+    frames.videoFramesBounds.set(null);
+    frames.videoFramesBoundsValues.set(null);
 });
 
 it.each([
@@ -55,3 +62,45 @@ it.each([
         expect(storage.createMetadataFilters(get(storage.metadataValues))).toEqual([]);
     }
 );
+
+it.each(['width', 'height'] as const)('edits image %s in exact pixels', async (field) => {
+    const bounds = { min_width: 0, max_width: 1000, min_height: 0, max_height: 1000 };
+    dimensions.updateDimensionsBounds(bounds);
+    dimensions.updateDimensionsValues({ ...bounds, [`min_${field}`]: 257 });
+    const onFilterChanged = vi.fn();
+    render(CombinedMetadataDimensionsFilters, {
+        ...defaultProps,
+        showDimensions: true,
+        onFilterChanged
+    });
+    const input = screen.getByRole('textbox', { name: new RegExp(`${field} minimum`, 'i') });
+    await fireEvent.input(input, { target: { value: '250' } });
+    await fireEvent.blur(input);
+    expect(get(dimensions.dimensionsValues)).toEqual({ ...bounds, [`min_${field}`]: 250 });
+    expect(onFilterChanged).toHaveBeenCalledExactlyOnceWith(field, 250, 1000);
+    await fireEvent.input(input, { target: { value: '250.5' } });
+    await fireEvent.blur(input);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    dimensions.updateDimensionsValues(bounds);
+    await tick();
+    expect(input).toHaveValue('0');
+});
+
+it('edits exact frame numbers and synchronizes slider changes', async () => {
+    const bounds = { frame_number: { min: 0, max: 1000 } };
+    frames.updateVideoFramesBounds(bounds);
+    frames.updateVideoFramesBoundsValues(bounds);
+    const onFilterChanged = vi.fn();
+    render(CombinedMetadataDimensionsFilters, {
+        ...defaultProps,
+        isVideoFrames: true,
+        onFilterChanged
+    });
+    const input = screen.getByRole('textbox', { name: 'Frame number minimum' });
+    await fireEvent.input(input, { target: { value: '250' } });
+    await fireEvent.blur(input);
+    expect(get(frames.videoFramesBoundsValues)?.frame_number.min).toBe(250);
+    expect(onFilterChanged).toHaveBeenCalledExactlyOnceWith('frame_number', 250, 1000);
+    await fireEvent.keyDown(screen.getAllByRole('slider')[0], { key: 'ArrowRight' });
+    expect(input).toHaveValue('251');
+});
