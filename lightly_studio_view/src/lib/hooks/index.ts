@@ -80,6 +80,7 @@ export {
 } from '$lib/hooks/useOnboarding/useOnboarding';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+export { useDeleteAnnotationWithUndo } from '$lib/hooks/useDeleteAnnotationWithUndo/useDeleteAnnotationWithUndo.svelte';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
