@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { tick } from 'svelte';
-import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import { useMetadataFilters } from '$lib/hooks';
 import CombinedMetadataDimensionsFilters from './CombinedMetadataDimensionsFilters.svelte';
 
 const storage = useMetadataFilters();
