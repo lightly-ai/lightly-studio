@@ -218,6 +218,69 @@ describe('AnnotationTree', () => {
         ).toHaveAttribute('aria-checked', 'false');
     });
 
+    it('toggles the eye of an unticked row and dims it', async () => {
+        renderTree();
+
+        await fireEvent.click(await screen.findByRole('checkbox', { name: 'car in labels' }));
+        const eye = screen.getByRole('button', { name: 'Show car in labels' });
+        await waitFor(() => expect(eye).toHaveClass('opacity-50'));
+        expect(eye).toHaveAttribute('aria-pressed', 'true');
+
+        await fireEvent.click(eye);
+
+        await waitFor(() => expect(eye).toHaveAttribute('aria-pressed', 'false'));
+        expect(screen.getByRole('checkbox', { name: 'car in labels' })).toHaveAttribute(
+            'aria-checked',
+            'false'
+        );
+    });
+
+    it('hides all children with the group eye and shows a dimmed eye when partly visible', async () => {
+        renderTree();
+
+        await fireEvent.click(await screen.findByRole('button', { name: 'Show car in labels' }));
+        const groupEye = screen.getByRole('button', { name: 'Show labels' });
+        await waitFor(() => expect(groupEye).toHaveAttribute('aria-pressed', 'mixed'));
+
+        await fireEvent.click(groupEye);
+        await fireEvent.click(groupEye);
+
+        await waitFor(() => expect(groupEye).toHaveAttribute('aria-pressed', 'false'));
+        for (const name of ['car in labels', 'person in labels']) {
+            expect(screen.getByRole('button', { name: `Show ${name}` })).toHaveAttribute(
+                'aria-pressed',
+                'false'
+            );
+        }
+        expect(screen.getByRole('button', { name: 'Show car in model_v1' })).toHaveAttribute(
+            'aria-pressed',
+            'true'
+        );
+        expect(screen.queryByRole('button', { name: 'Show No annotations in labels' })).toBeNull();
+    });
+
+    it('hides a class in every source with its eye "By class"', async () => {
+        renderTree();
+
+        await fireEvent.click(await screen.findByRole('button', { name: 'By class' }));
+        await fireEvent.click(await screen.findByRole('button', { name: 'Show car' }));
+
+        await waitFor(() =>
+            expect(screen.getByRole('button', { name: 'Show car in labels' })).toHaveAttribute(
+                'aria-pressed',
+                'false'
+            )
+        );
+        expect(screen.getByRole('button', { name: 'Show car in model_v1' })).toHaveAttribute(
+            'aria-pressed',
+            'false'
+        );
+        expect(screen.getByRole('button', { name: 'Show person' })).toHaveAttribute(
+            'aria-pressed',
+            'true'
+        );
+    });
+
     it('starts collapsed with 4 sources', async () => {
         mocks.sources = ['a', 'b', 'c', 'd'].map((name) => ({
             collection_id: `src-${name}`,

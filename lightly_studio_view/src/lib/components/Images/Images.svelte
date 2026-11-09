@@ -1,7 +1,10 @@
 <script lang="ts">
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useOnboarding } from '$lib/hooks';
-    import { useTreeAnnotationsFilter } from '$lib/components/AnnotationTree';
+    import {
+        useTreeAnnotationVisibility,
+        useTreeAnnotationsFilter
+    } from '$lib/components/AnnotationTree';
     import { type TextEmbedding, useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import {
         useMetadataFilters,
@@ -76,6 +79,10 @@
     const treeFilter = useTreeAnnotationsFilter(() => ({
         collectionId: collection_id,
         filter: $imageFilter,
+        enabled: treeEnabled
+    }));
+    const treeVisibility = useTreeAnnotationVisibility(() => ({
+        collectionId: collection_id,
         enabled: treeEnabled
     }));
 
@@ -346,6 +353,7 @@
                                         tileWidth={width}
                                         tileHeight={height}
                                         {displayTextOnImage}
+                                        isAnnotationVisible={treeVisibility.current}
                                     />
                                 </GridItem>
                             {/key}

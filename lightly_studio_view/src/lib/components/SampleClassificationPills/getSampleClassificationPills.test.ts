@@ -88,6 +88,23 @@ describe('getSampleClassificationPills', () => {
         ]);
     });
 
+    it('uses the tree eyes per source and class in place of the source filter', () => {
+        const pills = getSampleClassificationPills({
+            annotations: [
+                createAnnotation({ annotationCollectionId: 'labels', annotationLabelName: 'car' }),
+                createAnnotation({ annotationCollectionId: 'labels', annotationLabelName: 'bus' })
+            ],
+            ...sourceFilter(['other']),
+            isAnnotationVisible: (annotation) =>
+                annotation.annotation_collection_id !== 'labels' ||
+                annotation.annotation_label.annotation_label_name !== 'car',
+            collectionIdToName: {},
+            enforceColoringByClass: false
+        });
+
+        expect(pills.map((pill) => pill.label)).toEqual(['bus']);
+    });
+
     it('dedupes identical visible labels across collections when source colors are off', () => {
         const pills = getSampleClassificationPills({
             annotations: [

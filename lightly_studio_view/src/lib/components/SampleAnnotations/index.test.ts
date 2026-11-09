@@ -284,6 +284,45 @@ describe('SampleAnnotations', () => {
         expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(false);
     });
 
+    it('draws by the tree eyes per source and class when they are given', async () => {
+        setShowBoundingBoxesForSegmentation(true);
+        // The tree replaces the class eye and the source selection.
+        useAnnotationClassVisibility().toggleClassVisibility('person');
+        useAnnotationCollectionsFilter().setSelectedCollectionIds([]);
+        const sample = createSample();
+        sample.annotations = [
+            {
+                ...sample.annotations[0],
+                sample_id: 'labels-car',
+                annotation_collection_id: 'labels'
+            },
+            {
+                ...sample.annotations[0],
+                sample_id: 'model-car',
+                annotation_collection_id: 'model_v1',
+                object_detection_details: { x: 50, y: 50, width: 10, height: 10 }
+            },
+            sample.annotations[1]
+        ];
+
+        render(SampleAnnotations, {
+            props: {
+                sample,
+                isAnnotationVisible: (annotation) =>
+                    !(
+                        annotation.annotation_collection_id === 'labels' &&
+                        annotation.annotation_label.annotation_label_name === 'car'
+                    )
+            }
+        });
+
+        await waitFor(() => {
+            expect(hasStrokeRectCall(mockContext, 50, 50, 10, 10)).toBe(true);
+            expect(hasStrokeRectCall(mockContext, 2, 3, 4, 5)).toBe(true);
+        });
+        expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(false);
+    });
+
     describe('enforceColoringByClass setting', () => {
         const { setSelectedCollectionIds, setCollectionIdToName } =
             useAnnotationCollectionsFilter();

@@ -1,6 +1,13 @@
 import type { UnannotatedImageCount } from '$lib/api/lightly_studio_local';
 import type { GroupBy, TreeGroup } from './groupPairRows';
-import { formatCount, summarizeRows, type PairKey, type PairRow, type TriState } from './pairRows';
+import {
+    formatCount,
+    summarizeRows,
+    toTriState,
+    type PairKey,
+    type PairRow,
+    type TriState
+} from './pairRows';
 
 export const NO_ANNOTATIONS = 'No annotations';
 
@@ -18,6 +25,8 @@ export interface TreeLeaf {
     label: string;
     ariaLabel: string;
     ticked: boolean;
+    /** The eye. "No annotations" rows have none. */
+    visible?: boolean;
     count?: string;
     pairs: PairKey[];
     unannotatedIds: string[];
@@ -64,15 +73,20 @@ export const pairLeaf = (row: PairRow, label: string): TreeLeaf => ({
     label,
     ariaLabel: `${row.className} in ${row.sourceName}`,
     ticked: row.ticked,
+    visible: row.visible,
     count: formatCount(row.current, row.total),
     pairs: [toPairKey(row)],
     unannotatedIds: []
 });
 
-export const tickState = (leaves: TreeLeaf[]): TriState => {
-    const ticked = leaves.filter((leaf) => leaf.ticked).length;
-    if (ticked === leaves.length) return 'on';
-    return ticked === 0 ? 'off' : 'partial';
+export const tickState = (leaves: TreeLeaf[]): TriState =>
+    toTriState(leaves.filter((leaf) => leaf.ticked).length, leaves.length);
+
+/** The eye of the leaves that have one, or undefined when none has one. */
+export const eyeState = (leaves: TreeLeaf[]): TriState | undefined => {
+    const withEye = leaves.filter((leaf) => leaf.visible !== undefined);
+    if (withEye.length === 0) return undefined;
+    return toTriState(withEye.filter((leaf) => leaf.visible).length, withEye.length);
 };
 
 export const leafTargets = (leaves: TreeLeaf[]) => ({
