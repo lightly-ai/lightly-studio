@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Literal
 from uuid import UUID, uuid4
 
 from sqlmodel import Field, SQLModel
+from sqlmodel.sql.sqltypes import AutoString
 
 
 class GridViewSampleRenderingType(str, Enum):
@@ -59,8 +61,8 @@ class SettingBase(SQLModel):
         description="Controls whether to show annotation bounding boxes for segmentation",
     )
 
-    enforce_coloring_by_class: bool = Field(
-        description="Controls whether annotations are always colored by class",
+    annotation_color_mode: Literal["class", "source"] = Field(
+        description="Controls whether annotations are colored by class or by annotation source",
     )
 
     # Toolbar shortcuts
@@ -115,8 +117,9 @@ class SettingDefaults(SettingBase):
     show_bounding_boxes_for_segmentation: bool = Field(
         default=True,
     )
-    enforce_coloring_by_class: bool = Field(
-        default=False,
+    annotation_color_mode: Literal["class", "source"] = Field(
+        default="class",
+        sa_type=AutoString,
     )
     key_toolbar_selection: str = Field(
         default="s",

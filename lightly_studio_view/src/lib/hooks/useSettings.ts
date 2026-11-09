@@ -2,6 +2,7 @@ import type { GridViewSampleRenderingType, SettingView } from '$lib/api/lightly_
 import { derived, get, writable } from 'svelte/store';
 import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
 
+type AnnotationColorMode = SettingView['annotation_color_mode'];
 type UpdateSettingsResult = { success: boolean; error?: string };
 
 // Default settings values
@@ -16,7 +17,7 @@ const DEFAULT_SETTINGS: SettingView = {
     show_annotation_text_labels: false,
     show_sample_filenames: false,
     show_bounding_boxes_for_segmentation: true,
-    enforce_coloring_by_class: false,
+    annotation_color_mode: 'class',
     created_at: new Date(),
     updated_at: new Date(),
     key_toolbar_selection: 's',
@@ -55,10 +56,12 @@ const showBoundingBoxesForSegmentationStore = derived(
     ($settings) => $settings.show_bounding_boxes_for_segmentation
 );
 
-const enforceColoringByClassStore = derived(
+const annotationColorModeStore = derived(
     settingsStore,
-    ($settings) => $settings.enforce_coloring_by_class
+    ($settings) => $settings.annotation_color_mode
 );
+
+const enforceColoringByClassStore = derived(annotationColorModeStore, ($mode) => $mode === 'class');
 
 const gridViewThumbnailQualityStore = derived(
     settingsStore,
@@ -144,6 +147,13 @@ const updateShowAnnotationTextLabels = async (show: boolean) => {
     });
 };
 
+// Utility function to update the annotation color mode
+const setAnnotationColorMode = async (mode: AnnotationColorMode) => {
+    return saveSettings({
+        annotation_color_mode: mode
+    });
+};
+
 // Export the settings store and functions
 export function useSettings() {
     // Initialize settings on first use
@@ -163,6 +173,7 @@ export function useSettings() {
         showAnnotationTextLabelsStore,
         showSampleFilenamesStore,
         showBoundingBoxesForSegmentationStore,
+        annotationColorModeStore,
         enforceColoringByClassStore,
         gridViewThumbnailQualityStore,
 
@@ -171,6 +182,7 @@ export function useSettings() {
         saveSettings,
         updateGridViewSampleRendering,
         updateShowAnnotationTextLabels,
+        setAnnotationColorMode,
 
         // Direct access to current values
         get settings() {
