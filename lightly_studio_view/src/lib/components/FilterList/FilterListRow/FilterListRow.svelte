@@ -3,15 +3,14 @@
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { Label } from '$lib/components/ui/label/index.js';
     import { cn } from '$lib/utils/shadcn';
-    import { splitMatch, type FilterListItem } from './filterList.helpers';
+    import { splitMatch, type FilterListItem } from '../filterList.helpers';
 
     interface Props {
         item: FilterListItem;
-        checked: boolean;
         onToggle: () => void;
         testId: string;
         /** Mutes the label, for special rows such as "No annotations". */
-        emphasized?: boolean;
+        muted?: boolean;
         /** Character range of the label to highlight. */
         highlight?: { start: number; end: number } | null;
         leading?: Snippet<[FilterListItem]>;
@@ -22,10 +21,9 @@
 
     const {
         item,
-        checked,
         onToggle,
         testId,
-        emphasized = false,
+        muted = false,
         highlight = null,
         leading,
         trailing,
@@ -39,9 +37,8 @@
 <div class="flex w-full items-center gap-2" title={item.label} data-testid="{testId}-item">
     <Checkbox
         id={rowId}
-        {checked}
+        bind:checked={() => item.selected, () => onToggle()}
         aria-label={item.ariaLabel ?? item.label}
-        onCheckedChange={onToggle}
     />
     <Label
         for={rowId}
@@ -49,10 +46,7 @@
     >
         {@render leading?.(item)}
         <span
-            class={cn(
-                'flex-1 truncate text-base font-normal',
-                emphasized && 'text-muted-foreground'
-            )}
+            class={cn('flex-1 truncate text-base font-normal', muted && 'text-muted-foreground')}
             data-testid="{testId}-name"
             >{before}{#if match}<mark class="rounded-sm bg-primary/25 text-foreground">{match}</mark
                 >{/if}{after}</span

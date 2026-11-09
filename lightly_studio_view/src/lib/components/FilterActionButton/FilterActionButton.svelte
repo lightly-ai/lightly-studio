@@ -1,20 +1,25 @@
 <script lang="ts">
     import type { Component } from 'svelte';
+    import type { IconProps } from '@lucide/svelte';
+    import { Button } from '$lib/components';
 
     interface Props {
         label: string;
-        icon: Component;
+        icon: Component<IconProps>;
         onclick: () => void;
     }
 
-    let { label, icon: Icon, onclick }: Props = $props();
+    let { label, icon, onclick }: Props = $props();
 </script>
 
-<button
-    type="button"
-    class="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-md border border-border bg-muted/40 px-2 text-xs text-foreground/80 transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+<Button
+    {icon}
+    variant="outline"
     {onclick}
+    buttonProps={{
+        size: 'xs',
+        class: 'h-6 shrink-0 gap-1 border-border bg-muted/40 px-2 text-foreground/80 hover:bg-muted hover:text-foreground'
+    }}
 >
-    <Icon class="size-3.5 shrink-0" aria-hidden="true" />
     {label}
-</button>
+</Button>
