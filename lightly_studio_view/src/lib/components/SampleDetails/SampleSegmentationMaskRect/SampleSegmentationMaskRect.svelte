@@ -255,7 +255,8 @@
                 await brushApi.finishBrush(
                     updatedMask,
                     targetAnnotation,
-                    labels.data ?? [],
+                    // Wait for the class list, so an existing class does not count as missing.
+                    labels.data ?? labels.refetch().then((result) => result.data),
                     updateAnnotation,
                     annotationLabelContext.lockedAnnotationIds
                 );
