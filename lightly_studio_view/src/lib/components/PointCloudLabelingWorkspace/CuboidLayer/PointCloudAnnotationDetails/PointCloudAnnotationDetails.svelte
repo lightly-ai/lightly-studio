@@ -4,6 +4,7 @@
     import AnnotationGeometryGroup from './AnnotationGeometryGroup';
     import { Typography } from '$lib/components/Typography';
     import { TrackSelect } from '$lib/components/TrackSelect';
+    import { toast } from 'svelte-sonner';
     import { useTracks, useUpdateAnnotationsMutation } from '$lib/hooks';
     import { usePointCloudWorkspaceLayoutContext } from '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte';
 
@@ -48,14 +49,20 @@
     });
 
     async function handleTrackChange(trackId: string | null, isNewTrack: boolean) {
-        await updateAnnotations([
-            {
-                annotation_id: annotation.id,
-                collection_id: annotation.annotationSourceId,
-                ...(isNewTrack ? { create_new_track: true } : { object_track_id: trackId })
-            }
-        ]);
-        await tracksQuery.refetch();
+        try {
+            await updateAnnotations([
+                {
+                    annotation_id: annotation.id,
+                    collection_id: annotation.annotationSourceId,
+                    ...(isNewTrack ? { create_new_track: true } : { object_track_id: trackId })
+                }
+            ]);
+        } catch {
+            toast.error('Failed to update track. Please try again.');
+            return;
+        } finally {
+            await tracksQuery.refetch();
+        }
         onTrackChange?.();
     }
 </script>
