@@ -3,6 +3,7 @@ import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotati
 import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import type { Writable } from 'svelte/store';
+import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegmentTestWrapper.test.svelte';
 import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
@@ -722,12 +723,18 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         it('offers no undo when the delete failed', async () => {
             mocks.deleteAnnotation.mockRejectedValueOnce(new Error('offline'));
+            const toastError = vi.spyOn(toast, 'error');
             const user = userEvent.setup();
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
 
             await user.click(screen.getByTestId('mock-annotation-row-delete'));
 
-            await waitFor(() => expect(mocks.deleteAnnotation).toHaveBeenCalledOnce());
+            // The error toast means the failed delete was handled.
+            await waitFor(() =>
+                expect(toastError).toHaveBeenCalledWith(
+                    'Failed to delete annotation. Please try again.'
+                )
+            );
             expect(mocks.addReversibleAction).not.toHaveBeenCalled();
         });
     });
