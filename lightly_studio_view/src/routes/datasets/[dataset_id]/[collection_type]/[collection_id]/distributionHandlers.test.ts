@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+    selectClassFromBar,
     selectHistogramRange,
     toCategoryCounts,
     toggleCategoricalValue,
@@ -57,5 +58,26 @@ describe('withoutCategoricalValues', () => {
 
         expect(withoutCategoricalValues(values, 'city')).toEqual({ weather: ['sunny'] });
         expect(values).toEqual({ city: ['Zurich'], weather: ['sunny'] });
+    });
+});
+
+describe('selectClassFromBar', () => {
+    const run = (showAnnotationTree: boolean) => {
+        const onlyClass = vi.fn();
+        const toggleClass = vi.fn();
+        selectClassFromBar({ className: 'car', showAnnotationTree, onlyClass, toggleClass });
+        return { onlyClass, toggleClass };
+    };
+
+    it('applies "Only" to the class in the annotation tree when the tree is shown', () => {
+        const { onlyClass, toggleClass } = run(true);
+        expect(onlyClass).toHaveBeenCalledWith('car');
+        expect(toggleClass).not.toHaveBeenCalled();
+    });
+
+    it('toggles the class filter when the tree is not shown', () => {
+        const { onlyClass, toggleClass } = run(false);
+        expect(toggleClass).toHaveBeenCalledWith('car');
+        expect(onlyClass).not.toHaveBeenCalled();
     });
 });
