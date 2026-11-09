@@ -6,7 +6,10 @@ import {
 } from '$lib/components/SampleAnnotation/utils';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-import { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+import {
+    AnnotationClassNotAvailableError,
+    useCreateLabel
+} from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
@@ -17,6 +20,8 @@ import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreat
 import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
 import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
+
+type LabelList = { annotation_label_id?: string; annotation_label_name?: string }[];
 
 export function useSegmentationMaskBrush({
     collectionId,
@@ -43,7 +48,7 @@ export function useSegmentationMaskBrush({
      *  the chosen class, or null if the user cancelled. */
     requestLabel?: () => Promise<{ label: string } | null>;
 }) {
-    const { createLabel } = useCreateLabel({ getCollectionId: () => collectionId });
+    const { createLabel, canCreateLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { addReversibleAction } = useGlobalStorage();
     const { stickyClasses, pickClass } = useStickyClass();
@@ -59,13 +64,33 @@ export function useSegmentationMaskBrush({
         getCollectionId: () => collectionId
     });
 
+    // Returns undefined, after showing an error, when a new annotation cannot get its class.
+    // Editing an existing mask works without the class list.
+    const resolveLabelList = (
+        labelList: LabelList | undefined,
+        annotationLabelName: string | null | undefined,
+        isNewAnnotation: boolean
+    ): LabelList | undefined => {
+        if (!isNewAnnotation) return labelList ?? [];
+        if (!labelList) {
+            toast.error('Could not load annotation classes. Please try again.');
+            return undefined;
+        }
+        const exists = labelList.some((l) => l.annotation_label_name === annotationLabelName);
+        if (!exists && !canCreateLabel) {
+            // Stop before trimming other masks, so they stay untouched.
+            toast.error(new AnnotationClassNotAvailableError(annotationLabelName!).message);
+            refetch();
+            return undefined;
+        }
+        return labelList;
+    };
+
     const finishBrush = async (
         workingMask: Uint8Array | null,
         selectedAnnotation: AnnotationView | null,
-        labels: {
-            annotation_label_id?: string;
-            annotation_label_name?: string;
-        }[],
+        // A promise while the class list is still loading.
+        labels: LabelList | Promise<LabelList | undefined>,
         updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>,
         lockedAnnotationIds?: Set<string>
     ) => {
@@ -88,13 +113,13 @@ export function useSegmentationMaskBrush({
         // Check before anything else: the constraints below trim other masks on the server.
         if (!selectedAnnotation && isAnnotationSourceBlocked(annotationLabelContext)) return;
 
-        // Callers pass no labels while they load, so an empty list means unknown.
+        // Wait for a loading class list. Undefined when it failed to load: then the stored
+        // class is used as is.
+        const loadedLabels = await labels;
         let annotationLabelName = resolveStickyClass({
             collectionId,
             stickyClass: get(stickyClasses)[collectionId],
-            classNames: labels.length
-                ? labels.map((label) => label.annotation_label_name ?? '')
-                : undefined
+            classNames: loadedLabels?.map((label) => label.annotation_label_name ?? '')
         });
         if (!selectedAnnotation && !annotationLabelName) {
             const result = requestLabel ? await requestLabel() : null;
@@ -102,6 +127,10 @@ export function useSegmentationMaskBrush({
             annotationLabelName = result.label;
             pickClass(collectionId, annotationLabelName);
         }
+
+        const labelList = resolveLabelList(loadedLabels, annotationLabelName, !selectedAnnotation);
+        if (!labelList) return;
+        let label = labelList.find((l) => l.annotation_label_name === annotationLabelName);
 
         const overriddenAnnotations = await applySegmentationMaskConstraints({
             workingMask,
@@ -117,7 +146,7 @@ export function useSegmentationMaskBrush({
             await restoreOverriddenSegmentationAnnotationsForUndo({
                 collectionId,
                 overriddenAnnotations,
-                labels,
+                labels: labelList,
                 updateAnnotations,
                 createAnnotation
             });
@@ -166,8 +195,6 @@ export function useSegmentationMaskBrush({
                 return;
             }
         }
-
-        let label = labels?.find((l) => l.annotation_label_name === annotationLabelName);
 
         if (!label) {
             label = await createLabel({

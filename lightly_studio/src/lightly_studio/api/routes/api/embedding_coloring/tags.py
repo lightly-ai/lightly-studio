@@ -31,6 +31,7 @@ def build_tag_color_maps(
     tag_ids: list[UUID],
     sample_ids: list[UUID],
     matching_sample_ids: set[UUID] | None,
+    collection_id: UUID | None = None,
 ) -> tuple[list[list[int]], dict[int, str]]:
     """Build color categories and a legend for tag-based sample coloring.
 
@@ -46,6 +47,7 @@ def build_tag_color_maps(
         matching_sample_ids: Sample IDs matching the active filter. Tags are
             prioritized by their frequency among these samples. ``None`` counts
             all samples.
+        collection_id: If given, count only memberships in this collection.
 
     Returns:
         A tuple of `(color_categories, color_legend)` for the provided samples. The
@@ -58,7 +60,10 @@ def build_tag_color_maps(
         for tag_id, name in tag_resolver.get_names_by_ids(session=session, tag_ids=tag_ids).items()
     }
     memberships = _group_memberships(
-        session=session, tag_ids=tag_ids, matching_sample_ids=matching_sample_ids
+        session=session,
+        tag_ids=tag_ids,
+        matching_sample_ids=matching_sample_ids,
+        collection_id=collection_id,
     )
     ordered_tag_ids = sorted(
         memberships.matching_counts,
@@ -98,7 +103,10 @@ def _assign_categories(
 
 
 def _group_memberships(
-    session: Session, tag_ids: list[UUID], matching_sample_ids: set[UUID] | None
+    session: Session,
+    tag_ids: list[UUID],
+    matching_sample_ids: set[UUID] | None,
+    collection_id: UUID | None = None,
 ) -> _GroupedMemberships:
     """Group unique links and count filter-matching samples in one pass."""
     matching_keys = (
@@ -107,7 +115,7 @@ def _group_memberships(
     samples_by_tag: dict[str, list[str]] = {}
     counts: Counter[str] = Counter()
     for sample_id, tag_id in iter_sample_memberships.iter_sample_memberships(
-        session=session, tag_ids=tag_ids
+        session=session, tag_ids=tag_ids, collection_id=collection_id
     ):
         samples_by_tag.setdefault(tag_id, []).append(sample_id)
         if matching_keys is None or sample_id in matching_keys:

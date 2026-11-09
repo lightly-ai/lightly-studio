@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
+import { AnnotationClassNotAvailableError } from '$lib/hooks/useCreateLabel/useCreateLabel';
 import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation.svelte';
 type Params = Parameters<typeof useCreateCuboidAnnotation>[0];
 
@@ -30,7 +31,11 @@ const {
 
 vi.mock('$lib/hooks', async () => {
     const { writable } = await import('svelte/store');
+    const { AnnotationClassNotAvailableError, getCreateLabelErrorMessage } =
+        await import('$lib/hooks/useCreateLabel/useCreateLabel');
     return {
+        AnnotationClassNotAvailableError,
+        getCreateLabelErrorMessage,
         useAnnotationLabels,
         useCreateAnnotation,
         useCreateLabel,
@@ -221,6 +226,31 @@ describe('useCreateCuboidAnnotation', () => {
             'Failed to create annotation class. Please try again.'
         );
         expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('shows the class error when the class cannot be created', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        createLabel.mockRejectedValue(new AnnotationClassNotAvailableError('car'));
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], vi.fn());
+
+        expect(toast.error).toHaveBeenCalledTimes(1);
+        expect(toast.error).toHaveBeenCalledWith(
+            'Class "car" is no longer available. Choose another class.'
+        );
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('asks for a class again after the remembered class was rejected', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        createLabel.mockRejectedValue(new AnnotationClassNotAvailableError('car'));
+        const { handleCreateCuboid } = useCreateCuboidAnnotation(params);
+
+        await handleCreateCuboid([0, 0, 0], vi.fn());
+        expect(requestLabel).not.toHaveBeenCalled();
+
+        await handleCreateCuboid([0, 0, 0], vi.fn());
+        expect(requestLabel).toHaveBeenCalledOnce();
     });
 
     it('shows an error when creating the cuboid fails', async () => {
