@@ -318,6 +318,15 @@ def get_backend() -> DatabaseBackend:
     return get_engine().backend
 
 
+def get_session_backend(session: Session) -> DatabaseBackend:
+    """Returns the database backend that `session` is bound to.
+
+    Uses the bind of the session, not the global engine, so it is correct in tests with
+    per-test engines.
+    """
+    return DatabaseBackend(session.get_bind().dialect.name)
+
+
 def require_postgres_backend(session: Session) -> None:
     """Raise unless ``session`` is bound to a PostgreSQL backend.
 
@@ -330,12 +339,11 @@ def require_postgres_backend(session: Session) -> None:
     Raises:
         NotImplementedError: If the session is not bound to PostgreSQL.
     """
-    bind = session.get_bind()
-    dialect_name = bind.dialect.name if bind is not None else None
-    if dialect_name != DatabaseBackend.POSTGRESQL.value:
+    backend = get_session_backend(session=session)
+    if backend != DatabaseBackend.POSTGRESQL:
         raise NotImplementedError(
             "This operation is only supported on the PostgreSQL backend. "
-            f"Current backend: {dialect_name or 'unknown'}."
+            f"Current backend: {backend.value}."
         )
 
 
