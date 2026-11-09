@@ -232,6 +232,110 @@ def test_update_annotation_object_track__create_new_track(db_session: Session) -
     assert track.dataset_id == collection.dataset_id
 
 
+def test_update_annotation_object_track__create_new_track_with_object_track_id_raises(
+    db_session: Session,
+) -> None:
+    """Setting both create_new_track and object_track_id raises ValueError."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+
+    with pytest.raises(ValueError, match="Cannot set both"):
+        annotations_service.update_annotation_object_track(
+            session=db_session,
+            annotation_id=annotation.sample_id,
+            collection_id=collection.collection_id,
+            object_track_id=uuid.uuid4(),
+            create_new_track=True,
+        )
+
+
+def test_update_annotation_object_track__create_new_track_uses_next_track_number(
+    db_session: Session,
+) -> None:
+    """A newly created track gets the next track number after existing tracks."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+
+    object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id),
+            ObjectTrackCreate(object_track_number=5, dataset_id=collection.dataset_id),
+        ],
+    )
+
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+
+    result = annotations_service.update_annotation_object_track(
+        session=db_session,
+        annotation_id=annotation.sample_id,
+        collection_id=collection.collection_id,
+        object_track_id=None,
+        create_new_track=True,
+    )
+
+    assert result.object_track_id is not None
+    track = object_track_resolver.get_by_id(
+        session=db_session, object_track_id=result.object_track_id
+    )
+    assert track is not None
+    assert track.object_track_number == 6
+
+
+def test_update_annotation_object_track__same_track_reassignment(db_session: Session) -> None:
+    """Reassigning to the same track keeps the track and annotation intact."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+
+    track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id),
+        ],
+    )[0]
+
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+    annotation_id = annotation.sample_id
+
+    object_track_resolver.add_annotation_to_object_track(
+        session=db_session,
+        annotation_id=annotation_id,
+        object_track_id=track_id,
+    )
+
+    result = annotations_service.update_annotation_object_track(
+        session=db_session,
+        annotation_id=annotation_id,
+        collection_id=collection.collection_id,
+        object_track_id=track_id,
+    )
+
+    assert result.object_track_id == track_id
+    assert object_track_resolver.get_by_id(session=db_session, object_track_id=track_id) is not None
+
+
 def test_update_annotation_object_track__object_track_not_found(db_session: Session) -> None:
     """Supplying a non-existent object_track_id raises ValueError."""
     collection = create_collection(session=db_session)
