@@ -32,7 +32,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
-      skip: ${{ steps.cache-success-all.outputs.cache-hit == 'true' }}
+      # Pull requests skip e2e tests, the merge queue runs them.
+      skip: ${{ github.event_name == 'pull_request' || steps.cache-success-all.outputs.cache-hit == 'true' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -77,7 +78,7 @@ jobs:
 
       # Push and dispatch also run `end-to-end-after-merge`, which the marker does not cover.
       - name: Check e2e success cache for all matrix jobs
-        if: github.event_name == 'pull_request' || github.event_name == 'merge_group'
+        if: github.event_name == 'merge_group'
         id: cache-success-all
         uses: actions/cache/restore@v6
         with:
