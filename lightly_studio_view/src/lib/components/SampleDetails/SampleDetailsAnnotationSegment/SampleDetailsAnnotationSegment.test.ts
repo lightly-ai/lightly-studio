@@ -683,6 +683,19 @@ describe('SampleDetailsAnnotationSegment', () => {
             );
         });
 
+        it('lists a typed new source as the target when the dataset has no sources', async () => {
+            mocks.collections = [];
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: [] }
+            });
+
+            await user.click(screen.getByTestId('new-annotation-source-button'));
+            await user.type(screen.getByTestId('new-annotation-source-input'), 'Review{Enter}');
+
+            expect(screen.getByTestId(radioId('Review'))).toHaveAttribute('aria-checked', 'true');
+        });
+
         it('hides the radios and the new source input from viewers', () => {
             mocks.userRole = 'viewer';
             render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
