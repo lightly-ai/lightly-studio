@@ -17,7 +17,7 @@ async function applyQuery(page: Page): Promise<void> {
         (response) => response.url().includes('/images/list') && response.status() === 200
     );
     await page.getByTestId('query-editor-apply-button').click();
-    await response;
+    await (await response).finished();
 }
 
 async function applyRunQuery(page: Page): Promise<void> {
@@ -28,6 +28,9 @@ async function applyRunQuery(page: Page): Promise<void> {
 
 test.beforeEach(async ({ page }) => {
     await gotoFirstPage(page);
+    await expect
+        .poll(() => page.getByTestId('sample-grid-item').count())
+        .toBeGreaterThan(TAGGED_SAMPLE_COUNT);
     await page.getByTestId('side-panel-tabs-query').click();
     await expect(page.getByRole('heading', { name: 'Query Filter' })).toBeVisible();
 });
@@ -41,6 +44,9 @@ test('run membership returns the evaluated samples', async ({ page }) => {
         items.map((item) => item.getAttribute('data-sample-name'))
     );
 
+    // Restore a different count so stale tagged results cannot satisfy the next assertion.
+    await page.getByRole('button', { name: 'Clear query filter' }).click();
+    await expect.poll(() => samples.count()).toBeGreaterThan(TAGGED_SAMPLE_COUNT);
     await applyRunQuery(page);
     const evaluatedNames = await samples.evaluateAll((items) =>
         items.map((item) => item.getAttribute('data-sample-name'))
@@ -54,7 +60,6 @@ for (const quote of ['"', "'"]) {
         page
     }) => {
         // The fixture uses identical ground truth and predictions: fp and fn are zero.
-        await applyRunQuery(page);
         const metric = (name: string) => `${quote}${name}${quote}`;
         await typeQuery(
             page,
@@ -72,7 +77,6 @@ for (const quote of ['"', "'"]) {
     test(`autocomplete replaces a partially quoted metric starting with ${quote}`, async ({
         page
     }) => {
-        await applyRunQuery(page);
         await typeQuery(page, `sample_evaluation(name = "${RUN_NAME}" AND ${quote}t`);
         await page.keyboard.press('Control+Space');
         const suggestion = page.getByRole('option', { name: /^"tp",/ });
