@@ -19,3 +19,7 @@ class UnknownImageSizeError(Exception):
 
 class ExportError(Exception):
     """An export cannot be written. The message says why and is shown to the user."""
+
+
+class UnauthenticatedError(Exception):
+    """The request has no valid user identity."""
