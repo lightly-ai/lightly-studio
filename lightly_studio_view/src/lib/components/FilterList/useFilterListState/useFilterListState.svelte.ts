@@ -1,4 +1,4 @@
-import { matchesSearch, type FilterListItem } from './filterList.helpers';
+import { matchesSearch, type FilterListItem } from '../filterList.helpers';
 
 // Rendering thousands of rows (e.g. a metadata field with a unique value per image) blocks
 // the page for seconds, so long lists render in pages. Search still covers every item.

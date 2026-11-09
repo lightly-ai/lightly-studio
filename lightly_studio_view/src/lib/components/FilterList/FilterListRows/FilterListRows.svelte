@@ -2,8 +2,8 @@
     import type { Snippet } from 'svelte';
     import { ChevronDown } from '@lucide/svelte';
     import { FilterActionButton } from '$lib/components/FilterActionButton';
-    import FilterListRow from './FilterListRow.svelte';
-    import { highlightRange, type FilterListItem } from './filterList.helpers';
+    import FilterListRow from '../FilterListRow/FilterListRow.svelte';
+    import { highlightRange, type FilterListItem } from '../filterList.helpers';
 
     interface Props {
         /** The rows of the current page. */
@@ -39,11 +39,10 @@
 {#if pinnedItem}
     <FilterListRow
         item={pinnedItem}
-        checked={pinnedItem.selected}
         onToggle={pinnedItem.onToggle}
         testId="{testId}-pinned"
         highlight={highlightRange(pinnedItem.label, search)}
-        emphasized
+        muted
         trailingSpacer={trailing}
     />
 {/if}
@@ -53,7 +52,6 @@
     {:else}
         <FilterListRow
             {item}
-            checked={item.selected}
             onToggle={() => onToggle(item.id)}
             {testId}
             highlight={highlightRange(item.label, search)}

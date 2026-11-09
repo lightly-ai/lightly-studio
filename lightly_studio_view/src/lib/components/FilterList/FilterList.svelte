@@ -1,10 +1,10 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
     import { Input } from '$lib/components/ui/input';
-    import FilterListActions from './FilterListActions.svelte';
-    import FilterListRows from './FilterListRows.svelte';
+    import FilterListActions from './FilterListActions/FilterListActions.svelte';
+    import FilterListRows from './FilterListRows/FilterListRows.svelte';
     import { matchesSearch, selectAllVisible, type FilterListItem } from './filterList.helpers';
-    import { useFilterListState } from './useFilterListState.svelte';
+    import { useFilterListState } from './useFilterListState/useFilterListState.svelte';
 
     interface Props {
         /** The values to filter by, in display order. */
