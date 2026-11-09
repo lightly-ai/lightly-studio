@@ -256,7 +256,7 @@ def test_get_metadata_value_counts__filters_and_own_key_exclusion(
     assert [(entry.value, entry.count) for entry in counts["group"].value_counts] == [("x", 1)]
 
 
-def test_get_metadata_value_counts__applies_annotation_and_tag_filter(
+def test_get_metadata_value_counts__applies_annotation_filter(
     db_session: Session,
 ) -> None:
     collection = create_collection(session=db_session)
