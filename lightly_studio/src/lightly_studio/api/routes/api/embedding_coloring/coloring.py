@@ -73,6 +73,7 @@ def build_color_data(
     if isinstance(color_by, TagColorBy):
         return tags.build_tag_color_maps(
             session=session,
+            collection_id=collection_id,
             tag_ids=color_by.tag_ids,
             sample_ids=sample_ids,
             matching_sample_ids=matching_sample_ids,
