@@ -101,6 +101,12 @@ def _resolve_object_track_id(session: Session, annotation: AnnotationCreateParam
     if annotation.create_new_track and annotation.object_track_id is not None:
         raise ValueError("Cannot set both create_new_track and object_track_id.")
     if not annotation.create_new_track:
+        if annotation.object_track_id is not None:
+            _validate_object_track(
+                session=session,
+                object_track_id=annotation.object_track_id,
+                collection_id=annotation.collection_id,
+            )
         return annotation.object_track_id
 
     collection = collection_resolver.get_by_id(
@@ -116,6 +122,20 @@ def _resolve_object_track_id(session: Session, annotation: AnnotationCreateParam
         name=annotation.annotation_collection_name,
     )
     return _create_object_track(session=session, dataset_id=collection.dataset_id)
+
+
+def _validate_object_track(session: Session, object_track_id: UUID, collection_id: UUID) -> None:
+    track = object_track_resolver.get_by_id(session=session, object_track_id=object_track_id)
+    if track is None:
+        raise ValueError(f"Object track {object_track_id} not found.")
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {collection_id} not found.")
+    if track.dataset_id != collection.dataset_id:
+        raise ValueError(
+            f"Object track {object_track_id} belongs to a different dataset"
+            f" than collection {collection_id}."
+        )
 
 
 def _create_object_track(session: Session, dataset_id: UUID) -> UUID:

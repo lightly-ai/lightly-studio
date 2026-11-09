@@ -13,6 +13,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
@@ -331,6 +332,64 @@ def test_create_annotation__create_new_track_collection_not_found(
                 collection_id=fake_collection_id,
                 parent_sample_id=samples[0].sample_id,
                 create_new_track=True,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__object_track_id_not_found(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Supplying a non-existent object_track_id raises ValueError."""
+    fake_track_id = UUID("00000000-0000-0000-0000-000000000099")
+    with pytest.raises(ValueError, match="not found"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=collection.collection_id,
+                parent_sample_id=samples[0].sample_id,
+                object_track_id=fake_track_id,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__object_track_id_wrong_dataset(
+    db_session: Session,
+) -> None:
+    """Supplying an object_track_id from another dataset raises ValueError."""
+    collection_a = create_collection(session=db_session)
+    collection_b = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection_b.collection_id)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_b.collection_id,
+        label_name="car",
+    )
+    track_ids = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection_a.dataset_id)],
+    )
+    with pytest.raises(ValueError, match="different dataset"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=collection_b.collection_id,
+                parent_sample_id=image.sample_id,
+                object_track_id=track_ids[0],
                 x=0,
                 y=0,
                 width=10,
