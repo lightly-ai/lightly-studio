@@ -3,6 +3,8 @@
     import { useAnnotationCollections } from '$lib/hooks/useAnnotationCollections/useAnnotationCollections';
     import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import CollapseAllButton from './CollapseAllButton.svelte';
+    import GroupBySwitch from './GroupBySwitch.svelte';
     import TreeChildRow from './TreeChildRow.svelte';
     import TreeGroupRow from './TreeGroupRow.svelte';
     import TreeRootRow from './TreeRootRow.svelte';
@@ -61,11 +63,26 @@
         () => ({ allPairs: rows.map(toPairKey), sourceIds: flat ? [] : sources.map((s) => s.id) })
     );
 
-    const isOpen = (id: string) => $openGroups[id] ?? true;
+    // More than 3 groups start collapsed until the user opens them.
+    const isOpen = (id: string) => $openGroups[id] ?? branches.length <= 3;
+    const anyOpen = $derived(branches.some((branch) => isOpen(branch.id)));
+    const setAllOpen = (open: boolean) => {
+        for (const branch of branches) {
+            if (isOpen(branch.id) !== open) tree.toggleOpen(branch.id, !open);
+        }
+    };
 </script>
 
 <Segment title="Annotations">
     <div class="space-y-1" data-testid="annotation-tree">
+        {#if !flat}
+            <div class="mb-2 flex items-center gap-1">
+                <div class="min-w-0 flex-1">
+                    <GroupBySwitch value={$groupBy} onChange={tree.setGroupBy} />
+                </div>
+                <CollapseAllButton {anyOpen} onToggle={setAllOpen} />
+            </div>
+        {/if}
         <TreeRootRow
             tick={tickState(allLeaves)}
             count={rows.length > 0 ? formatCount(total.current, total.total) : undefined}

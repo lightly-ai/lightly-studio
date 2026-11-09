@@ -89,6 +89,15 @@ describe('AnnotationTree', () => {
         );
     });
 
+    it('groups a class across sources "By class"', async () => {
+        renderTree();
+
+        await fireEvent.click(await screen.findByRole('button', { name: 'By class' }));
+
+        const car = await groupNamed('car');
+        await waitFor(() => expect(childNames(car)).toEqual(['labels', 'model_v1']));
+    });
+
     it('keeps the source "No annotations" ticked on "Only" for a source', async () => {
         renderTree();
 
@@ -120,5 +129,23 @@ describe('AnnotationTree', () => {
             'aria-checked',
             'true'
         );
+    });
+
+    it('starts collapsed with 4 sources', async () => {
+        mocks.sources = ['a', 'b', 'c', 'd'].map((name) => ({
+            collection_id: `src-${name}`,
+            name
+        }));
+        mocks.pairs = mocks.sources.map((source) => pair(source.collection_id, 'lbl-car', 'car'));
+        renderTree();
+
+        await waitFor(() => expect(screen.getAllByTestId('annotation-tree-group')).toHaveLength(4));
+        for (const name of ['a', 'b', 'c', 'd']) {
+            expect(screen.getByRole('button', { name: `Expand ${name}` })).toHaveAttribute(
+                'aria-expanded',
+                'false'
+            );
+        }
+        expect(screen.queryAllByTestId('annotation-tree-row-name')).toHaveLength(0);
     });
 });
