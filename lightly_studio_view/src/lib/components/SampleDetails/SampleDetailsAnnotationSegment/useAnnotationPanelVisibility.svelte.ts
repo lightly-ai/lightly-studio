@@ -28,6 +28,10 @@ interface UseAnnotationPanelVisibilityParams {
     getLastCreatedAnnotationId: () => string | null | undefined;
     getHiddenIds: () => Set<string>;
     setHiddenIds: (ids: Set<string>) => void;
+    /** Visibility from the annotation tree eyes, or undefined without the tree. */
+    getTreeVisibility: () => ((annotation: AnnotationView) => boolean) | undefined;
+    /** Whether the tree visibility has loaded. True without the tree. */
+    getIsTreeReady: () => boolean;
 }
 
 /**
@@ -41,17 +45,31 @@ export const useAnnotationPanelVisibility = (params: UseAnnotationPanelVisibilit
     const storedStates = fromStore(sourceGroupStates);
     const gridVisibility = fromStore(useAnnotationCollectionsFilter().isSourceVisible);
 
-    // The hidden set implied by the grid filter alone. A derived, so it's readable at mount,
-    // unlike the hidden set the seeding effect writes. Drives the initial collapse.
+    // The hidden set implied by the tree eyes or, without the tree, the grid filter alone. A
+    // derived, so it's readable at mount, unlike the hidden set the seeding effect writes. Drives
+    // the initial collapse.
     const gridHiddenIds = $derived(
-        computeSeededHiddenIds(getAnnotations(), gridVisibility.current)
+        computeSeededHiddenIds(
+            getAnnotations(),
+            params.getTreeVisibility() ??
+                ((annotation) => gridVisibility.current(annotation.annotation_collection_id))
+        )
     );
 
-    seedHiddenIdsPerSample(params, (sourceId) =>
-        isSourceShown(storedStates.current[sourceId]?.hidden, gridVisibility.current(sourceId))
-    );
+    // Without the tree, the seed also applies the source visibility the user set on earlier
+    // samples.
+    seedHiddenIdsPerSample(params, (annotation) => {
+        const treeVisibility = params.getTreeVisibility();
+        if (treeVisibility) return treeVisibility(annotation);
+        const sourceId = annotation.annotation_collection_id;
+        return isSourceShown(
+            storedStates.current[sourceId]?.hidden,
+            gridVisibility.current(sourceId)
+        );
+    });
 
     const rememberSourceVisibility = (group: SourceGroup) => {
+        if (params.getTreeVisibility()) return;
         setSourceGroupState(group.id, {
             hidden: areAllAnnotationsHidden(group.annotations, getHiddenIds())
         });
@@ -90,14 +108,19 @@ export const useAnnotationPanelVisibility = (params: UseAnnotationPanelVisibilit
 // locked in too early.
 const seedHiddenIdsPerSample = (
     params: UseAnnotationPanelVisibilityParams,
-    isShown: (sourceId: string) => boolean
+    isShown: (annotation: AnnotationView) => boolean
 ) => {
     // Not reactive on purpose: it must not re-trigger the effect.
     let seededSampleId: string | undefined = undefined;
     $effect(() => {
         const sampleId = params.getSampleId();
         const annotations = params.getAnnotations();
-        if (seededSampleId === sampleId || !params.getAreSourcesLoaded() || !annotations.length) {
+        if (
+            seededSampleId === sampleId ||
+            !params.getAreSourcesLoaded() ||
+            !annotations.length ||
+            !params.getIsTreeReady()
+        ) {
             return;
         }
         seededSampleId = sampleId;

@@ -1,6 +1,10 @@
 <script lang="ts">
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
+    import {
+        getAnnotationTreeEnabled,
+        useTreeAnnotationVisibility
+    } from '$lib/components/AnnotationTree';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import {
@@ -58,6 +62,11 @@
     const { enforceColoringByClassStore } = useSettings();
     const setTargetSource = useSetTargetSource(() => collectionId);
     const targetSource = $derived(annotationLabelContext.annotationSource ?? null);
+    const isTreeEnabled = getAnnotationTreeEnabled();
+    const treeVisibility = useTreeAnnotationVisibility(() => ({
+        collectionId,
+        enabled: isTreeEnabled()
+    }));
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -99,7 +108,9 @@
         getGroups: () => allSourceGroups,
         getLastCreatedAnnotationId: () => annotationLabelContext.lastCreatedAnnotationId,
         getHiddenIds: () => annotationsIdsToHide,
-        setHiddenIds: (ids) => (annotationsIdsToHide = ids)
+        setHiddenIds: (ids) => (annotationsIdsToHide = ids),
+        getTreeVisibility: () => treeVisibility.current,
+        getIsTreeReady: () => treeVisibility.ready
     });
 
     // Matches the details canvas: only visible sources count. The explicit class-color

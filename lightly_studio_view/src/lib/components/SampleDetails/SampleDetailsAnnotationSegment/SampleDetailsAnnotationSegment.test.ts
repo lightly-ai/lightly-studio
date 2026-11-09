@@ -7,6 +7,7 @@ import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { resolveStickyClass, useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegmentTestWrapper.test.svelte';
+import { useAnnotationTreeState } from '$lib/hooks/useAnnotationTreeState/useAnnotationTreeState';
 import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
 
 vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
@@ -23,7 +24,14 @@ const mocks = vi.hoisted(() => ({
     lastAnnotationSource: undefined as unknown as Writable<Record<string, string>>,
     context: undefined as unknown as AnnotationLabelContext,
     addReversibleAction: vi.fn(),
-    deleteAnnotation: vi.fn()
+    deleteAnnotation: vi.fn(),
+    isTreeEnabled: false,
+    labels: [{ annotation_label_id: 'label-cat', annotation_label_name: 'cat' }] as { annotation_label_id: string; annotation_label_name: string }[]
+}));
+
+vi.mock('$lib/components/AnnotationTree', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/components/AnnotationTree')>()),
+    getAnnotationTreeEnabled: () => () => mocks.isTreeEnabled
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -79,9 +87,7 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
 });
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: vi.fn(() => ({
-        data: [{ annotation_label_id: 'label-cat', annotation_label_name: 'cat' }]
-    }))
+    useAnnotationLabels: vi.fn(() => ({ data: mocks.labels }))
 }));
 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
@@ -154,6 +160,8 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
         mocks.lastAnnotationSource.set({});
+        mocks.isTreeEnabled = false;
+        mocks.labels = [{ annotation_label_id: 'label-cat', annotation_label_name: 'cat' }];
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
 
@@ -405,6 +413,39 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('pred-1')).toHaveAttribute('data-hidden', 'true');
             expect(getRow('pred-2')).toHaveAttribute('data-hidden', 'true');
         });
+    });
+
+    it('seeds the hidden annotations from the tree eyes when the tree is on', async () => {
+        const user = userEvent.setup();
+        mocks.isTreeEnabled = true;
+        mocks.collections = [groundTruthSource, predictionsSource];
+        mocks.selectedCollectionIds = [];
+        mocks.labels = [{ annotation_label_id: 'lbl-cat', annotation_label_name: 'cat' }];
+        useAnnotationTreeState('collection-tree').setVisible(
+            [{ collection_id: groundTruthSource.collection_id, annotation_label_id: 'lbl-cat' }],
+            false
+        );
+        useAnnotationSourceGroupState().setSourceGroupState(predictionsSource.collection_id, {
+            hidden: true
+        });
+        const annotations = [
+            createAnnotation('gt-cat', groundTruthSource.collection_id, 'cat'),
+            createAnnotation('gt-dog', groundTruthSource.collection_id, 'dog'),
+            createAnnotation('pred-cat', predictionsSource.collection_id, 'cat')
+        ];
+
+        render(SampleDetailsAnnotationSegment, {
+            props: { ...defaultProps, collectionId: 'collection-tree', annotations }
+        });
+
+        expect(getRow('gt-cat')).toHaveAttribute('data-hidden', 'true');
+        expect(getRow('gt-dog')).not.toHaveAttribute('data-hidden', 'true');
+        expect(getRow('pred-cat')).not.toHaveAttribute('data-hidden', 'true');
+        // The per-source hide state is not kept with the tree.
+        await user.click(screen.getAllByTestId('source-group-eye')[0]);
+        expect(getRow('gt-dog')).toHaveAttribute('data-hidden', 'true');
+        const { sourceGroupStates } = useAnnotationSourceGroupState();
+        expect(get(sourceGroupStates)[groundTruthSource.collection_id]?.hidden).toBeUndefined();
     });
 
     describe('keeping the source state across samples', () => {
