@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Input } from '$lib/components/ui/input';
+    import { untrack } from 'svelte';
 
     interface Props {
         label: string;
@@ -17,43 +18,41 @@
     let errors = $state(['', '']);
     let pending: number[] | undefined;
 
-    const reset = () => {
-        drafts = [String(value.min), String(value.max)];
-        dirty = [false, false];
-        errors = ['', ''];
+    const reset = (preserve = false) => {
+        drafts = [value.min, value.max].map((n, i) =>
+            preserve && dirty[i] ? drafts[i] : String(n)
+        );
+        if (!preserve) {
+            dirty = [false, false];
+            errors = ['', ''];
+        }
     };
     $effect(() => {
-        const acknowledged = pending?.[0] === value.min && pending?.[1] === value.max;
+        const acknowledged = [value.min, value.max].every((n, i) => n === pending?.[i]);
         pending = undefined;
-        if (!acknowledged) reset();
+        untrack(() => reset(acknowledged));
     });
 
-    const validate = (index: number): string => {
-        const number = Number(drafts[index]);
-        const min = index === 0 ? bound.min : value.min;
-        const max = index === 0 ? value.max : bound.max;
-        if (
-            !drafts[index].trim() ||
-            !Number.isFinite(number) ||
-            (integer && !Number.isInteger(number))
-        ) {
+    const validate = (index: number, range: number[]): string => {
+        const number = drafts[index].trim() ? Number(drafts[index]) : NaN;
+        const min = index === 0 ? bound.min : range[0];
+        const max = index === 0 ? range[1] : bound.max;
+        if (!Number.isFinite(number) || (integer && !Number.isInteger(number))) {
             return integer ? 'Enter a whole number.' : 'Enter a number.';
         }
-        if (number < min || number > max) {
-            return `Enter a value between ${min} and ${max}.`;
-        }
-        return '';
+        return number < min || number > max ? `Enter a value between ${min} and ${max}.` : '';
     };
 
     const commit = (index: number) => {
         if (!dirty[index]) return;
-        errors[index] = validate(index);
+        const range = pending ?? [value.min, value.max];
+        errors[index] = validate(index, range);
         if (errors[index]) return;
         const number = Number(drafts[index]);
         dirty[index] = false;
-        if (number === (index === 0 ? value.min : value.max)) return;
+        if (number === range[index]) return;
         drafts[index] = String(number);
-        pending = index === 0 ? [number, value.max] : [value.min, number];
+        pending = range.map((n, i) => (i === index ? number : n));
         onValueCommit(pending);
     };
 
