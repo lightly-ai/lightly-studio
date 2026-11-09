@@ -552,6 +552,7 @@ describe('SampleDetailsClassificationSegment', () => {
         });
 
         it('creates the class first when the typed name is new', async () => {
+            mocks.userRole = 'editor';
             mocks.createLabel.mockResolvedValue({
                 annotation_label_id: 'label-otter',
                 annotation_label_name: 'otter'
