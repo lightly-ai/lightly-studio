@@ -23,3 +23,7 @@ class ExportError(Exception):
 
 class UnauthenticatedError(Exception):
     """The request has no valid user identity."""
+
+
+class ForbiddenError(Exception):
+    """The user of the request does not have the required role."""

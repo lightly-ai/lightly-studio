@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
 from typing import Annotated
@@ -10,7 +11,7 @@ from fastapi import Depends, Request
 
 from lightly_studio import deployment
 from lightly_studio.database.db_manager import SessionDep
-from lightly_studio.errors import UnauthenticatedError
+from lightly_studio.errors import ForbiddenError, UnauthenticatedError
 
 _EMAIL_HEADER = "X-User-Email"
 _ROLE_HEADER = "X-User-Role"
@@ -23,6 +24,14 @@ class Role(str, Enum):
     LABELER = "labeler"
     EDITOR = "editor"
     ADMIN = "admin"
+
+
+_ROLE_RANK: dict[Role, int] = {
+    Role.VIEWER: 0,
+    Role.LABELER: 1,
+    Role.EDITOR: 2,
+    Role.ADMIN: 3,
+}
 
 
 @dataclass(frozen=True)
@@ -69,6 +78,20 @@ def get_identity(session: SessionDep, request: Request) -> Identity:
 
 
 IdentityDep = Annotated[Identity, Depends(get_identity)]
+
+
+def require_role(min_role: Role) -> Callable[[Identity], Identity]:
+    """Returns a dependency that rejects users with a role lower than `min_role`.
+
+    Usage: `identity: Annotated[Identity, Depends(require_role(min_role=Role.EDITOR))]`.
+    """
+
+    def _check_role(identity: IdentityDep) -> Identity:
+        if _ROLE_RANK[identity.role] < _ROLE_RANK[min_role]:
+            raise ForbiddenError(f"Requires the {min_role.value} role or higher.")
+        return identity
+
+    return _check_role
 
 
 def _single_header(name: str, values: list[str]) -> str:

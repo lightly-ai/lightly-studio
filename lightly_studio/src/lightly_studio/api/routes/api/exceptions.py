@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_FORBIDDEN,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_SERVICE_UNAVAILABLE,
@@ -25,6 +26,7 @@ from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavai
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
 from lightly_studio.errors import (
     ExportError,
+    ForbiddenError,
     NotFoundError,
     QueryExprError,
     UnauthenticatedError,
@@ -156,6 +158,11 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
             status_code=HTTP_STATUS_UNAUTHORIZED,
             content={"error": "The request has no valid user identity."},
         )
+
+    @app.exception_handler(ForbiddenError)
+    async def _forbidden_error_handler(_request: Request, _exc: ForbiddenError) -> JSONResponse:
+        """Handle a user without the required role."""
+        return JSONResponse(status_code=HTTP_STATUS_FORBIDDEN, content={"error": str(_exc)})
 
     @app.exception_handler(UnknownImageSizeError)
     async def _unknown_image_size_error_handler(

@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 import pytest
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio import deployment
-from lightly_studio.api.dependencies.identity import IdentityDep
+from lightly_studio.api.dependencies import identity
+from lightly_studio.api.dependencies.identity import Identity, IdentityDep, Role
 from lightly_studio.api.routes.api import exceptions
 from lightly_studio.api.routes.api.status import (
+    HTTP_STATUS_FORBIDDEN,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_OK,
     HTTP_STATUS_UNAUTHORIZED,
@@ -25,6 +29,12 @@ def client(db_session: Session) -> TestClient:
 
     @app.get("/identity")
     def _get_identity(user: IdentityDep) -> dict[str, str | None]:
+        return {"email": user.email, "role": user.role.value}
+
+    @app.get("/editor")
+    def _get_editor(
+        user: Annotated[Identity, Depends(identity.require_role(min_role=Role.EDITOR))],
+    ) -> dict[str, str | None]:
         return {"email": user.email, "role": user.role.value}
 
     return TestClient(app, raise_server_exceptions=False)
@@ -137,3 +147,48 @@ def test_get_identity__local_with_headers(
     response = client.get("/identity", headers=headers)
 
     assert response.status_code == HTTP_STATUS_INTERNAL_SERVER_ERROR
+
+
+@pytest.mark.parametrize(
+    ("role", "expected_status"),
+    [
+        ("viewer", HTTP_STATUS_FORBIDDEN),
+        ("labeler", HTTP_STATUS_FORBIDDEN),
+        ("editor", HTTP_STATUS_OK),
+        ("admin", HTTP_STATUS_OK),
+    ],
+)
+def test_require_role(
+    client: TestClient, mocker: MockerFixture, role: str, expected_status: int
+) -> None:
+    mocker.patch.object(deployment, "is_enterprise", return_value=True)
+
+    response = client.get(
+        "/editor", headers={"X-User-Email": "ada@example.com", "X-User-Role": role}
+    )
+
+    assert response.status_code == expected_status
+
+
+def test_require_role__without_identity(client: TestClient, mocker: MockerFixture) -> None:
+    mocker.patch.object(deployment, "is_enterprise", return_value=True)
+
+    response = client.get("/editor")
+
+    assert response.status_code == HTTP_STATUS_UNAUTHORIZED
+
+
+def test_require_role__local(client: TestClient, mocker: MockerFixture) -> None:
+    mocker.patch.object(deployment, "is_enterprise", return_value=False)
+
+    response = client.get("/editor")
+
+    assert response.status_code == HTTP_STATUS_OK
+
+
+def test_role_rank() -> None:
+    ranks = [
+        identity._ROLE_RANK[role] for role in (Role.VIEWER, Role.LABELER, Role.EDITOR, Role.ADMIN)
+    ]
+
+    assert ranks == sorted(set(ranks))
