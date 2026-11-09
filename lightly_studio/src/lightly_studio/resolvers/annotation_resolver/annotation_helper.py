@@ -40,7 +40,7 @@ def update_annotation_object(
         fields_to_update: Dictionary of field names and values to update.
         cuboid_3d: New cuboid geometry to use when reinserting the cuboid row.
             If None, the existing cuboid geometry is preserved.
-        commit: Whether to commit the transaction after the update.
+        commit: Whether to commit or leave changes in the caller's transaction.
 
     Returns:
         A copy of the annotation with the updated fields.
@@ -144,8 +144,9 @@ def update_annotation_object(
     if temporal_span:
         session.add(temporal_span)
 
-    session.flush()
     if commit:
         session.commit()
+    else:
+        session.flush()
 
     return new_annotation

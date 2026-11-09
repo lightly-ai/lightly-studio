@@ -22,6 +22,7 @@ def update_parent_track(
     dataset_id: UUID,
     object_track_id: UUID,
     parent_object_track_id: UUID | None,
+    commit: bool = True,
 ) -> ObjectTrackTable | None:
     """Set or remove the parent track relationship.
 
@@ -34,6 +35,7 @@ def update_parent_track(
         dataset_id: UUID of the dataset the track must belong to.
         object_track_id: UUID of the track to update.
         parent_object_track_id: UUID of the new parent track, or None to remove.
+        commit: Whether to commit or leave changes in the caller's transaction.
 
     Returns:
         The replacement track, or None if the track was not found in the dataset.
@@ -69,7 +71,13 @@ def update_parent_track(
         object_track_id=object_track_id,
         new_track_id=new_track_id,
     )
-    object_track_resolver.delete_by_id(session=session, object_track_id=object_track_id)
+    object_track_resolver.delete_by_id(
+        session=session, object_track_id=object_track_id, commit=False
+    )
+    if commit:
+        session.commit()
+    else:
+        session.flush()
 
     return object_track_resolver.get_by_id(session=session, object_track_id=new_track_id)
 
@@ -109,6 +117,7 @@ def _create_replacement_track(
                 parent_object_track_id=parent_object_track_id,
             )
         ],
+        commit=False,
     )[0]
 
 
@@ -136,6 +145,9 @@ def _migrate_descendants(
         )
     ).all()
     for child in child_tracks:
+        # DuckDB checks FK constraints against committed state during DELETE,
+        # so each child migration must commit before the caller can delete the
+        # old parent track.
         update_parent_track(
             session=session,
             dataset_id=dataset_id,
