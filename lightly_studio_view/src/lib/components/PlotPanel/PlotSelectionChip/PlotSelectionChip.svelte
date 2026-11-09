@@ -23,7 +23,7 @@
         type="button"
         class="shrink-0 text-muted-foreground hover:text-foreground"
         onclick={onClear}
-        title="Clear plot filter"
+        title="Clear plot filter (Esc)"
         aria-label="Clear plot filter"
     >
         <X class="size-4" />

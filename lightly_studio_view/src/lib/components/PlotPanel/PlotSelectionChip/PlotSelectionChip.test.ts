@@ -5,18 +5,13 @@ import PlotSelectionChip from './PlotSelectionChip.svelte';
 describe('PlotSelectionChip', () => {
     const defaultProps = { count: 1204, itemLabel: 'image', onClear: vi.fn() };
 
-    it('shows the plural count', () => {
-        render(PlotSelectionChip, defaultProps);
+    it('shows the count with a singular or plural label', async () => {
+        const { rerender } = render(PlotSelectionChip, defaultProps);
+        const chip = screen.getByTestId('plot-selection-chip');
+        expect(chip).toHaveTextContent('Plot filter: 1204 images');
 
-        expect(screen.getByTestId('plot-selection-chip')).toHaveTextContent(
-            'Plot filter: 1204 images'
-        );
-    });
-
-    it('shows the singular count', () => {
-        render(PlotSelectionChip, { ...defaultProps, count: 1, itemLabel: 'video' });
-
-        expect(screen.getByTestId('plot-selection-chip')).toHaveTextContent('Plot filter: 1 video');
+        await rerender({ ...defaultProps, count: 1, itemLabel: 'video' });
+        expect(chip).toHaveTextContent('Plot filter: 1 video');
     });
 
     it('calls onClear when the clear button is clicked', async () => {

@@ -164,6 +164,7 @@
         plotAxes,
         commitTextAxes
     } = usePlotLayout(untrack(() => collectionId));
+    const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
@@ -584,12 +585,17 @@
                         <PlotAxisLines proxy={overlayProxy} />
                     {/if}
 
-                    {#if $plotLayout === 'text' && $appliedTextAxes}
+                    {#if showAxesLabels && $appliedTextAxes}
                         <PlotAxesLabels axes={$appliedTextAxes} />
                     {/if}
 
                     {#if $plotSelectionCount > 0}
-                        <div class="absolute left-2 top-2 z-10">
+                        <!-- Below the top axis label, which it would overlap on a narrow plot. -->
+                        <div
+                            class="absolute left-2 z-10"
+                            class:top-2={!showAxesLabels}
+                            class:top-11={showAxesLabels}
+                        >
                             <PlotSelectionChip
                                 count={$plotSelectionCount}
                                 {itemLabel}

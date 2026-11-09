@@ -657,9 +657,12 @@ describe('PlotPanel.svelte', () => {
             'Plot filter: 3 images'
         );
 
+        mockClearPlotSelectionCount.mockImplementationOnce(() => plotSelectionCountStore.set(0));
         await user.click(screen.getByRole('button', { name: 'Clear plot filter' }));
         expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
-        expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+        await waitFor(() =>
+            expect(screen.queryByTestId('plot-selection-chip')).not.toBeInTheDocument()
+        );
     });
 
     it('uses the text-axis viewport after resetting a user pan', async () => {
