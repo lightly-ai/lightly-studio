@@ -30,6 +30,13 @@ describe('useLocalStorage', () => {
         expect(localStorage.getItem('k')).toBe('{"a":2}');
     });
 
+    it('stores a string with quotes and reads it back', () => {
+        useLocalStorage<string>('k', 'initial').set('ground truth');
+
+        expect(localStorage.getItem('k')).toBe('"ground truth"');
+        expect(get(useLocalStorage<string>('k', 'initial'))).toBe('ground truth');
+    });
+
     it('keeps working when a write fails', () => {
         const store = useLocalStorage<string>('k', 'initial');
         vi.spyOn(Storage.prototype, 'setItem').mockImplementationOnce(() => {
