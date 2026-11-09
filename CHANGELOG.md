@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The previous and next buttons of a point cloud sequence now follow the tags, the embedding plot selection, and the text search of the point clouds grid.
 - Smart select stays active when you select a segmentation mask or change its class in the sample details sidebar.
 - The value counts of categorical metadata now match the filters of the images grid.
+- Zooming with the mouse wheel or trackpad works while the Smart select tool is active.
 
 ### Security
 
