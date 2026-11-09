@@ -147,13 +147,17 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
             content={"error": str(_exc) or "Resource not found."},
         )
 
-    # Auth failures are expected client errors, so they are not reported.
+    # An auth failure is an expected client error, so it is logged but not reported.
     @app.exception_handler(UnauthenticatedError)
     async def _unauthenticated_error_handler(
-        _request: Request, _exc: UnauthenticatedError
+        request: Request, exc: UnauthenticatedError
     ) -> JSONResponse:
         """Handle a request without a valid user identity."""
-        return JSONResponse(status_code=HTTP_STATUS_UNAUTHORIZED, content={"error": str(_exc)})
+        logger.warning(f"Unauthenticated request to {request.url.path}: {exc}")
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNAUTHORIZED,
+            content={"error": "The request has no valid user identity."},
+        )
 
     @app.exception_handler(ForbiddenError)
     async def _forbidden_error_handler(_request: Request, _exc: ForbiddenError) -> JSONResponse:
