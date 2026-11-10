@@ -15,6 +15,7 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
     const {
         selectedAnnotationFilterIds,
         setSelectedAnnotationFilterIds: toggleSelectedAnnotationFilterId,
+        replaceSelectedAnnotationFilterIds,
         clearSelectedAnnotationFilterIds
     } = useGlobalStorage();
 
@@ -65,6 +66,7 @@ export function useSelectedAnnotationsFilter(collectionId?: string) {
         annotationLabelIds: readonly(annotationLabelIds),
         annotationFilter: readonly(annotationFilter),
         toggleSelectedAnnotationFilterId,
+        replaceSelectedAnnotationFilterIds,
         clearSelectedAnnotationFilterIds
     };
 }
@@ -94,6 +96,7 @@ export function useAnnotationsFilter({
         annotationLabelIds,
         annotationFilter,
         toggleSelectedAnnotationFilterId,
+        replaceSelectedAnnotationFilterIds,
         clearSelectedAnnotationFilterIds
     } = useSelectedAnnotationsFilter(collectionId);
 
@@ -185,17 +188,25 @@ export function useAnnotationsFilter({
         });
     };
 
-    // Replace the selection with exactly these label names
-    const setAnnotationFilterSelection = (labelNames: string[]) => {
+    // Replace the selection with exactly these label names. Also drops IDs that are not in
+    // the label map, e.g. from another dataset, so they cannot keep filtering the grid.
+    const setAnnotationFilterSelection = (labelNames: string[], collectionId?: string) => {
         const labelsMap = get(annotationFilterLabels);
-        const wantedIds = new Set(labelNames.map((name) => labelsMap[name]).filter(Boolean));
-        const knownIds = new Set(Object.values(labelsMap));
-        Array.from(get(selectedAnnotationFilterIds)).forEach((id) => {
-            if (knownIds.has(id) && !wantedIds.has(id)) toggleSelectedAnnotationFilterId(id);
-        });
-        wantedIds.forEach((id) => {
-            if (!get(selectedAnnotationFilterIds).has(id)) toggleSelectedAnnotationFilterId(id);
-        });
+        const previous = new Set(get(selectedAnnotationFilterIds));
+        const next = new Set(labelNames.map((name) => labelsMap[name]).filter(Boolean));
+        replaceSelectedAnnotationFilterIds(next);
+
+        const idToName = new Map(Object.entries(labelsMap).map(([name, id]) => [id, name]));
+        const track = (labelId: string, action: 'selected' | 'unselected') =>
+            trackEvent('grid_filter_toggled', {
+                collection_id: collectionId,
+                filter_type: 'annotation_label',
+                filter_value: idToName.get(labelId) ?? labelId,
+                action,
+                active_count: next.size
+            });
+        next.forEach((labelId) => !previous.has(labelId) && track(labelId, 'selected'));
+        previous.forEach((labelId) => !next.has(labelId) && track(labelId, 'unselected'));
     };
 
     return {

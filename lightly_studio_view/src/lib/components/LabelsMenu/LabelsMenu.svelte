@@ -81,6 +81,7 @@
                 {onSelectionChange}
                 testId="labels-menu"
                 searchPlaceholder="Search classes…"
+                paged={false}
             >
                 {#snippet leading(item)}
                     {#if showClassColorLegend}

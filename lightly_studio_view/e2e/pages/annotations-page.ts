@@ -54,16 +54,7 @@ export class AnnotationsPage {
     async clickLabel(label: string) {
         const requestsSettled = waitForRequestsToSettle(this.page, '/annotations');
 
-        // Long class lists render in pages, so narrow the list with the search box first.
-        const search = this.page.getByTestId('labels-menu').getByRole('textbox');
-        if ((await search.count()) > 0) {
-            await search.fill(label);
-        }
-        // Search highlights split the name text, so click the checkbox by its accessible name.
-        await this.page
-            .getByTestId('labels-menu')
-            .getByRole('checkbox', { name: label, exact: true })
-            .click();
+        await this.page.getByTestId('labels-menu-name').getByText(label, { exact: true }).click();
 
         await requestsSettled;
         await expect(this.page.getByTestId('annotations-grid')).toBeVisible({
