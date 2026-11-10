@@ -27,14 +27,14 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
 const setup = (toolbarStatus = 'bounding-box') => {
     const pending = usePendingBoxClass();
     const result = pending.requestClass({ x: 1, y: 2, width: 30, height: 40 });
-    render(PendingBoxCard, {
+    const view = render(PendingBoxCard, {
         props: { collectionId: 'col-1', getLayer: () => null },
         context: new Map<string, unknown>([
             ['annotation-label', { isDrawing: false }],
             ['sample-details-toolbar-type', { status: toolbarStatus }]
         ])
     });
-    return { result, user: userEvent.setup() };
+    return { result, user: userEvent.setup(), unmount: view.unmount };
 };
 
 // jsdom has no PointerEvent, so fireEvent.pointerDown drops the button. A MouseEvent keeps it.
@@ -70,6 +70,15 @@ describe('PendingBoxCard', () => {
 
         expect(pickClass).toHaveBeenCalledWith('col-1', 'deer');
         await expect(result).resolves.toBe('deer');
+    });
+
+    it('drops the box when the card unmounts', async () => {
+        const { result, unmount } = setup();
+
+        unmount();
+
+        await expect(result).resolves.toBeNull();
+        expect(get(usePendingBoxClass().request)).toBeNull();
     });
 
     it('drops the box on Esc', async () => {
