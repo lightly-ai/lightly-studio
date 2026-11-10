@@ -167,7 +167,8 @@ def write_sequence_labels(  # noqa: PLR0913
         messages: `(log_time_ns, labels)` pairs from the annotation MCAP.
         annotation_source: Name of the annotation source that stores the cuboids.
         overwrite: Delete the annotations of `annotation_source` on the sequence before
-            the new cuboids are stored. Frame tags and object tracks are kept.
+            the new cuboids are stored. Object tracks without annotations after the delete
+            are also deleted. Frame tags are kept.
 
     Raises:
         ValueError: If `overwrite` is set and no label matches a tick of the sequence.
@@ -217,7 +218,10 @@ def _delete_sequence_annotations(
     annotation_source: str,
     group_ids: Sequence[UUID],
 ) -> None:
-    """Delete the annotations of an annotation source on the groups of a sequence."""
+    """Delete the annotations of an annotation source on the groups of a sequence.
+
+    Also deletes the object tracks of the deleted annotations that have no annotations left.
+    """
     annotation_collection_id = collection_resolver.get_by_name(
         session=session, name=annotation_source, parent_collection_id=group_collection_id
     )
@@ -228,12 +232,21 @@ def _delete_sequence_annotations(
         parent_sample_ids=group_ids,
         annotation_collection_id=annotation_collection_id,
     )
+    object_track_ids = {
+        annotation.object_track_id
+        for annotation in annotations
+        if annotation.object_track_id is not None
+    }
     deleted_count = annotation_resolver.delete_annotations_by_ids(
         session=session, annotation_ids=[annotation.sample_id for annotation in annotations]
     )
+    deleted_track_count = object_track_resolver.delete_empty_by_ids(
+        session=session, object_track_ids=list(object_track_ids)
+    )
     logger.info(
-        "Deleted %d annotations of annotation source '%s' to overwrite them.",
+        "Deleted %d annotations and %d object tracks of annotation source '%s' to overwrite them.",
         deleted_count,
+        deleted_track_count,
         annotation_source,
     )
 

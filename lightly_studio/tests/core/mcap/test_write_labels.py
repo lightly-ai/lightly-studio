@@ -74,6 +74,32 @@ def test_write_sequence_labels(
     assert track.source_track_id == 7
 
 
+def test_write_sequence_labels__overwrite_deletes_empty_tracks(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, _ = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    # Track 8 is a parent track without cuboids of its own.
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=7, parent_track_id=8),),
+    )
+
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=1),),
+        overwrite=True,
+    )
+
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    assert [track.source_track_id for track in tracks] == [1]
+
+
 def test_write_sequence_labels__overwrite_keeps_annotations_of_invalid_labels(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
