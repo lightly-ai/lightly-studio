@@ -9,6 +9,7 @@ from uuid import UUID
 from lightly_studio.models.sample import SampleView
 
 
+# TODO(Iunir, 11/2026): Return a model without DB tables. `SampleView.tags` holds `TagTable`.
 class SampleTransport(Protocol):
     """Gets samples."""
 
