@@ -43,8 +43,14 @@ describe('visibleTracks', () => {
         expect(selectVisibleTracks(tracks, [], null)).toEqual([]);
     });
 
-    it('always lists the track of the selected annotation', () => {
-        const visible = selectVisibleTracks(tracks, [], 'annotation-17');
-        expect(visible.map((track) => track.object_track_number)).toEqual([17]);
+    it('includes the selected track in the default list', () => {
+        const visible = selectVisibleTracks(tracks, null, 'annotation-17');
+        expect(visible.map((track) => track.object_track_number)).toEqual([
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 17
+        ]);
+    });
+
+    it('does not add the selected track to an explicit selection', () => {
+        expect(selectVisibleTracks(tracks, [], 'annotation-17')).toEqual([]);
     });
 });

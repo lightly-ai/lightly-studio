@@ -226,7 +226,7 @@ describe('TrackTimelineRows', () => {
             expect(screen.getByText(/Showing 10 of 14 tracks/)).toBeTruthy();
         });
 
-        it('lists the track of the selected annotation even when it is not chosen', () => {
+        it('does not list the track of the selected annotation when it is not chosen', () => {
             localStorage.clear();
             const { container } = render(TrackTimelineRows, {
                 props: {
@@ -242,8 +242,8 @@ describe('TrackTimelineRows', () => {
                 }
             });
 
-            expect(container.querySelectorAll('[data-track-id]')).toHaveLength(11);
-            expect(container.querySelector('[data-track-id="track-14"]')).toBeTruthy();
+            expect(container.querySelectorAll('[data-track-id]')).toHaveLength(10);
+            expect(container.querySelector('[data-track-id="track-14"]')).toBeNull();
         });
 
         it('shows only the stored tracks for this sequence', () => {

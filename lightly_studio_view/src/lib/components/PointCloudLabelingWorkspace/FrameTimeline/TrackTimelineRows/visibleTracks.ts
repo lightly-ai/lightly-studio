@@ -13,9 +13,8 @@ export function getDefaultTrackKeys(tracks: readonly SequenceTrackView[]): strin
 }
 
 /**
- * The tracks the timeline lists. A chosen selection wins over the default, keys of deleted
- * tracks are dropped, and the track holding the selected annotation is always listed so the
- * selection never points at a hidden row.
+ * The tracks the timeline lists. An explicit choice wins over the default. Before the user
+ * makes a choice, the track holding the selected annotation stays listed so its row is visible.
  */
 export function selectVisibleTracks(
     tracks: readonly SequenceTrackView[],
@@ -26,6 +25,7 @@ export function selectVisibleTracks(
     return tracks.filter(
         (track) =>
             chosen.has(getTrackKey(track)) ||
-            track.annotations.some(({ annotation_id }) => annotation_id === selectedAnnotationId)
+            (selection === null &&
+                track.annotations.some(({ annotation_id }) => annotation_id === selectedAnnotationId))
     );
 }
