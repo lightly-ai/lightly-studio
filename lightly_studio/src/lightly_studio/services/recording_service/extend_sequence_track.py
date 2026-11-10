@@ -88,8 +88,6 @@ def extend_sequence_track(  # noqa: PLR0913
         }
         if not retained:
             raise ValueError("The requested range must retain at least one track annotation.")
-        if start_seq_number > min(by_seq) or end_seq_number < max(by_seq):
-            raise ValueError("The requested range must not narrow existing track coverage.")
         removed = [
             annotation
             for annotation in track.annotations

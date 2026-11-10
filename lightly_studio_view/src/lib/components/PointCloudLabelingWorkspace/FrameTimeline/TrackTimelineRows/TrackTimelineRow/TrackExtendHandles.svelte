@@ -67,11 +67,10 @@
                 ? `Resize ${label}`
                 : `Resize ${handle.edge} of ${label}`}
             aria-valuenow={handle.index}
-            class="absolute -top-0.5 z-10 h-3 w-1.5 cursor-ew-resize touch-none rounded-sm bg-foreground/80 hover:bg-primary {handle.edge ===
-                'start' ||
-            (handle.edge === 'point' && handle.isEnd)
+            class="absolute right-0 top-0 z-10 ml-0.5 h-4 w-4 cursor-ew-resize touch-none rounded-full bg-foreground/80 hover:bg-primary {handle.edge ===
+                'end'
                 ? '-translate-x-full'
-                : ''}"
+                : '-translate-x-1/2'}"
             style:left={percent(handle.index)}
             data-testid={`track-extend-${handle.edge}`}
             onpointerdown={(event) => drag.start(event, handle.edge)}
