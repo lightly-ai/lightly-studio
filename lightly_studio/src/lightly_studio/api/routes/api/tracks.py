@@ -37,7 +37,7 @@ def get_tracks(
     "/tracks/{track_id}",
     response_model=TrackWithClassNameView,
 )
-def update_track(
+def update_parent_track(
     session: SessionDep,
     dataset_id: Annotated[UUID, Path(title="Dataset ID")],
     track_id: Annotated[UUID, Path(title="Track ID")],
