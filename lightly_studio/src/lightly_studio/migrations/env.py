@@ -53,10 +53,14 @@ def _include_object(
     _reflected: bool,
     _compare_to: SchemaItem | None,
 ) -> bool:
-    """Keep indexes that migrations create but SQLModel tables do not declare.
+    """Compare only the default schema and keep Postgres-only indexes.
 
+    Tables in other schemas belong to other version locations. Indexes that migrations
+    create but SQLModel tables do not declare are kept.
     Used only by ``revision --autogenerate``; ``upgrade`` does not call this hook.
     """
+    if type_ == "table" and getattr(_object, "schema", None) is not None:
+        return False
     postgres_only_indexes = {
         "uq_collection_name_root",
         "uq_collection_embedding_model_default",

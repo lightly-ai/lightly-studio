@@ -2,18 +2,20 @@
 
 Schema changes for PostgreSQL use [Alembic](https://alembic.sqlalchemy.org/). Migration scripts live in `src/lightly_studio/migrations/versions/`; configuration in `alembic.ini` and `migrations/env.py`. Runtime logic is in `db_migrations.run_migrations()`.
 
+The revisions in this package form the Alembic branch `oss` (label on the baseline revision). `run_migrations(extra_version_locations=...)` adds directories with revisions of other branches. The first revision of such a branch sets `depends_on` to the `oss` head. Without extra locations the upgrade target is `oss@head`, with them it is `heads`.
+
 ## Startup behavior (Postgres only)
 
 | Database state | On connect | What runs |
 |----------------|------------|-----------|
-| Empty (no `alembic_version`, no app tables) | `upgrade head` | All revision scripts from the start (e.g. baseline → `head`) |
-| `alembic_version` present | `upgrade head` | Pending revisions from current version → `head` |
+| Empty (no `alembic_version`, no app tables) | `upgrade oss@head` | All revision scripts from the start (e.g. baseline → `head`) |
+| `alembic_version` present | `upgrade oss@head` | Pending revisions from current version → `head` |
 
-Empty and tracked databases both build schema via Alembic `upgrade head`, not `SQLModel.metadata.create_all()`. The difference is scope: a fresh database replays the full chain; a tracked database applies only migrations not yet in `alembic_version`.
+Empty and tracked databases both build schema via Alembic `upgrade oss@head`, not `SQLModel.metadata.create_all()`. The difference is scope: a fresh database replays the full chain; a tracked database applies only migrations not yet in `alembic_version`.
 
 The `alembic_version` table stores the current revision id, not the product version string. Map product releases (e.g. v5 → v10) to revision ids in release notes.
 
-`cleanup_existing=True` on Postgres drops all tables (including `alembic_version`), then runs `upgrade head` on the empty database.
+`cleanup_existing=True` on Postgres drops all tables (including `alembic_version`), then runs `upgrade oss@head` on the empty database.
 
 ## Local Postgres setup
 
@@ -26,7 +28,7 @@ make start-postgres
 
 Set `LIGHTLY_STUDIO_DATABASE_URL` to the dev URL (the Makefile uses `postgresql://lightly:lightly@localhost:5433/lightly_studio` via `POSTGRES_URL`).
 
-Makefile targets: `migration-upgrade-postgresql`, `migration-revision-postgresql` (requires `MSG=...`), `migration-downgrade-postgresql` (dev only), `migration-check-postgresql` (empty DB: `upgrade head` + `alembic check`).
+Makefile targets: `migration-upgrade-postgresql`, `migration-revision-postgresql` (requires `MSG=...`), `migration-downgrade-postgresql` (dev only), `migration-check-postgresql` (empty DB: `upgrade oss@head` + `alembic check`).
 
 ## Adding a schema change
 
