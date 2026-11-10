@@ -4,7 +4,8 @@
 
     interface Props {
         name: string;
-        onRename: () => void;
+        /** Shows the rename button when set. */
+        onRename?: () => void;
         onDelete: () => void;
     }
 
@@ -14,12 +15,14 @@
 <div
     class="flex text-muted-foreground opacity-60 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100"
 >
-    <Button
-        variant="ghost"
-        icon={Pencil}
-        ariaLabel={`Rename ${name}`}
-        buttonProps={{ type: 'button', size: 'icon', class: 'size-8', onclick: onRename }}
-    />
+    {#if onRename}
+        <Button
+            variant="ghost"
+            icon={Pencil}
+            ariaLabel={`Rename ${name}`}
+            buttonProps={{ type: 'button', size: 'icon', class: 'size-8', onclick: onRename }}
+        />
+    {/if}
     <Button
         variant="ghost"
         icon={Trash2}

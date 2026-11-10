@@ -3,7 +3,7 @@
     import { page } from '$app/state';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { AnnotationClassList } from './AnnotationClassList';
-    import { AnnotationClassSearchInput } from './AnnotationClassSearchInput';
+    import { NameListSearchInput } from '$lib/components/Settings/NameList';
     import { AnnotationClassesStatus } from './AnnotationClassesStatus';
     import { searchAnnotationClasses } from './AnnotationClassesTab.helpers';
     import { useAnnotationClasses } from './useAnnotationClasses';
@@ -68,7 +68,11 @@
     <!-- Only the list scrolls, so the search stays visible. -->
     <div class="flex h-full flex-col gap-3">
         <div class="mx-auto flex w-full max-w-lg shrink-0 flex-col gap-3">
-            <AnnotationClassSearchInput bind:value={query} onkeydown={onKeyDown} />
+            <NameListSearchInput
+                bind:value={query}
+                onkeydown={onKeyDown}
+                label="Find or add an annotation class"
+            />
             <AnnotationClassesStatus
                 totalCount={sortedClasses.length}
                 visibleCount={visibleClasses.length}
