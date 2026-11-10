@@ -58,7 +58,7 @@ export class SamplesPage {
     }
 
     getTagsMenuItem(tagName: string) {
-        return this.page.getByTestId('tags-menu-label').getByText(tagName, { exact: true });
+        return this.page.getByTestId('tags-menu-name').getByText(tagName, { exact: true });
     }
 
     async clickLabel(label: string) {
@@ -176,7 +176,7 @@ export class SamplesPage {
     async pressTag(tagName: string): Promise<void> {
         await expect(this.page.getByTestId('sample-grid-item').first()).toBeVisible();
 
-        const tagLabel = this.page.getByTestId('tags-menu-label').getByText(tagName, {
+        const tagLabel = this.page.getByTestId('tags-menu-name').getByText(tagName, {
             exact: true
         });
         await expect(tagLabel).toBeVisible();
@@ -223,7 +223,7 @@ export class SamplesPage {
     }
 
     async getTagNames(): Promise<string[]> {
-        const tagLabels = this.page.getByTestId('tags-menu-label');
+        const tagLabels = this.page.getByTestId('tags-menu-name');
         const tagLabelsText: string[] = [];
         const labelCount = await tagLabels.count();
         for (let i = 0; i < labelCount; i++) {
@@ -234,10 +234,10 @@ export class SamplesPage {
     }
 
     async getTagIdByName(tagName: string): Promise<string | null> {
-        const tagLabel = this.page.getByTestId('tags-menu-label').getByText(tagName, {
-            exact: true
-        });
-        return tagLabel.getAttribute('for');
+        return this.page
+            .getByTestId('tags-menu-item')
+            .filter({ has: this.page.getByText(tagName, { exact: true }) })
+            .getAttribute('data-item-id');
     }
 
     async getNumSelectedSamples(): Promise<number> {

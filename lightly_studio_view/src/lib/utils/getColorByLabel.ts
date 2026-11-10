@@ -63,3 +63,12 @@ export const getColorByLabel = (label: string, alpha: number = 1) => {
 
     return getDefaultColor(label, alpha);
 };
+
+/**
+ * The solid color of a label or annotation source, as the side panel shows it: the custom color
+ * when one is set, else the default. Takes the store value so callers stay reactive.
+ */
+export const getLabelColor = (
+    customColors: Record<string, { color: string } | undefined>,
+    label: string
+): string => customColors[label]?.color ?? getColorByLabel(label, 1).color;

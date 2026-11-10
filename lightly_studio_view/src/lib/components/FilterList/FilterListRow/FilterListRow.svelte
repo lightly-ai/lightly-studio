@@ -34,7 +34,12 @@
     const [before, match, after] = $derived(splitMatch(item.label, highlight));
 </script>
 
-<div class="flex w-full items-center gap-2" title={item.label} data-testid="{testId}-item">
+<div
+    class="flex w-full items-center gap-2"
+    title={item.label}
+    data-testid="{testId}-item"
+    data-item-id={item.id}
+>
     <Checkbox
         id={rowId}
         bind:checked={() => item.selected, () => onToggle()}

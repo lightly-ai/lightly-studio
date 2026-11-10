@@ -56,6 +56,7 @@ vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
     clearTagsSelected: vi.fn(),
     clearTagSelected: vi.fn(),
     setTagSelected: vi.fn(),
+    setTagsSelected: vi.fn(),
     tagSelectionToggle: vi.fn(),
     isLoading: writable(false),
     error: writable(null)
