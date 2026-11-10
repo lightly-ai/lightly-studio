@@ -29,8 +29,8 @@ export function proposeExtent(
         return { first: Math.min(index, extent.first), last: Math.max(index, extent.last) };
     }
     return edge === 'start'
-        ? { first: Math.min(index, extent.last), last: extent.last }
-        : { first: extent.first, last: Math.max(index, extent.first) };
+        ? { first: Math.min(index, extent.first), last: extent.last }
+        : { first: extent.first, last: Math.max(index, extent.last) };
 }
 
 /** The tick numbers a proposed extent covers, or null when it changes nothing. */

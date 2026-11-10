@@ -29,12 +29,23 @@ export function useTrackExtendDrag({
 }: Params) {
     let edge = $state<ExtendEdge | null>(null);
     let proposed = $state<Extent | null>(null);
+    let pointerOffset = 0;
 
     function start(event: PointerEvent, nextEdge: ExtendEdge) {
         const extent = getExtent();
-        if (!extent || edge) return;
+        const bar = getBar();
+        const ticks = getTicks();
+        if (!extent || !bar || ticks.length === 0 || edge) return;
         event.preventDefault();
         (event.currentTarget as HTMLElement).setPointerCapture?.(event.pointerId);
+        const rect = bar.getBoundingClientRect();
+        const handleIndex =
+            nextEdge === 'start'
+                ? extent.first
+                : nextEdge === 'end'
+                  ? extent.last + 1
+                  : extent.first + 0.5;
+        pointerOffset = event.clientX - (rect.left + (handleIndex / ticks.length) * rect.width);
         edge = nextEdge;
         proposed = extent;
         onStart();
@@ -45,7 +56,11 @@ export function useTrackExtendDrag({
         const bar = getBar();
         if (!edge || !extent || !bar) return;
         const rect = bar.getBoundingClientRect();
-        proposed = proposeExtent(extent, edge, tickIndexAt(event.clientX, rect, getTicks().length));
+        proposed = proposeExtent(
+            extent,
+            edge,
+            tickIndexAt(event.clientX - pointerOffset, rect, getTicks().length)
+        );
     }
 
     function finish(commit: boolean) {

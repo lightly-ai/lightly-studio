@@ -47,9 +47,9 @@ export function useVisibleTracks({ getTracks, getSelectedAnnotationId, getStorag
             selection = read(key);
             knownTracks = null;
         }
+        if (tracks.length === 0) return;
         if (knownTracks === null) {
-            // Tracks load after the first render, so only a non-empty list is a baseline.
-            if (tracks.length > 0) knownTracks = tracks;
+            knownTracks = tracks;
             return;
         }
         const known = new Set(knownTracks.map(getTrackKey));

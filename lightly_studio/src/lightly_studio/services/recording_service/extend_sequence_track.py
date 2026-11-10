@@ -5,10 +5,11 @@ from __future__ import annotations
 import threading
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.dataset import DatasetTable
 from lightly_studio.models.mcap_sequence_tracks import SequenceTrackView, TrackAnnotationView
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import (
@@ -64,6 +65,12 @@ def extend_sequence_track(  # noqa: PLR0913
     if start_seq_number not in known or end_seq_number not in known:
         raise ValueError("The requested ticks do not exist in this sequence.")
 
+    dataset = session.exec(
+        select(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id).with_for_update()
+    ).first()
+    if dataset is None:
+        return None
+
     with _EXTEND_LOCK:
         track = find_sequence_track(
             session=session,
@@ -80,10 +87,12 @@ def extend_sequence_track(  # noqa: PLR0913
         }
         if not retained:
             raise ValueError("The requested range must retain at least one track annotation.")
+        if start_seq_number > min(by_seq) or end_seq_number < max(by_seq):
+            raise ValueError("The requested range must not narrow existing track coverage.")
         removed = [
             annotation
-            for seq_number, annotation in by_seq.items()
-            if not start_seq_number <= seq_number <= end_seq_number
+            for annotation in track.annotations
+            if not start_seq_number <= annotation.seq_number <= end_seq_number
         ]
         by_seq = retained
         first, last = min(by_seq), max(by_seq)
@@ -93,14 +102,18 @@ def extend_sequence_track(  # noqa: PLR0913
             if start_seq_number <= seq_number <= end_seq_number
             and (seq_number < first or seq_number > last)
         ]
-        created = _create_copies(
-            session=session,
-            sequence_id=sequence_id,
-            track=track,
-            by_seq=by_seq,
-            targets=targets,
-            annotation_source_id=annotation_source_id,
-        ) if targets else []
+        created = (
+            _create_copies(
+                session=session,
+                sequence_id=sequence_id,
+                track=track,
+                by_seq=by_seq,
+                targets=targets,
+                annotation_source_id=annotation_source_id,
+            )
+            if targets
+            else []
+        )
         if removed:
             annotation_resolver.delete_annotations_by_ids(
                 session=session,

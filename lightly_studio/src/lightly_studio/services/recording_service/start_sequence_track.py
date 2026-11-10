@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver, sequence_resolver
 from lightly_studio.services.recording_service.get_ticks import get_ticks
@@ -17,9 +17,8 @@ def start_sequence_track(
 ) -> ObjectTrackTable | None:
     """Create a track and make an untracked cuboid its first annotation.
 
-    The cuboid is checked before the track is created, and the track is deleted again if
-    the cuboid cannot be attached, so a failed request leaves no empty track. Attaching a
-    cuboid is not one database transaction, so the track is removed explicitly.
+    A row lock claims the cuboid while its track is created and attached in the same
+    transaction, so concurrent requests cannot claim it or leave an empty track.
 
     Args:
         session: The database session.
@@ -44,16 +43,29 @@ def start_sequence_track(
     )
     if link is None or link.sequence_sample_id != sequence_id:
         raise ValueError(f"Annotation {annotation_id} is not on a tick of sequence {sequence_id}.")
-    if annotation.object_track_id is not None:
+    locked_annotation = session.exec(
+        select(AnnotationBaseTable)
+        .where(col(AnnotationBaseTable.sample_id) == annotation_id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    ).first()
+    if locked_annotation is None:
+        raise ValueError(f"Cuboid annotation {annotation_id} not found.")
+    if locked_annotation.object_track_id is not None:
         raise ValueError(f"Annotation {annotation_id} already belongs to a track.")
 
-    track = object_track_resolver.create_with_next_number(session=session, dataset_id=dataset_id)
     try:
-        object_track_resolver.add_annotation_to_object_track(
-            session=session, annotation_id=annotation_id, object_track_id=track.object_track_id
+        track = object_track_resolver.create_with_next_number(
+            session=session, dataset_id=dataset_id, commit=False
         )
+        object_track_resolver.add_annotation_to_object_track(
+            session=session,
+            annotation_id=annotation_id,
+            object_track_id=track.object_track_id,
+            commit=False,
+        )
+        session.commit()
     except Exception:
         session.rollback()
-        object_track_resolver.delete_by_id(session=session, object_track_id=track.object_track_id)
         raise
     return track
