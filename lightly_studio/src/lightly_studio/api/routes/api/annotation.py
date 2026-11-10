@@ -54,6 +54,7 @@ annotations_router.include_router(annotations_module.bulk_create_classifications
 annotations_router.include_router(annotations_module.bulk_delete_annotations_router)
 annotations_router.include_router(annotations_module.bulk_relabel_annotations_router)
 annotations_router.include_router(annotations_module.annotation_metrics_info_router)
+annotations_router.include_router(annotations_module.annotation_sources_router)
 
 
 @annotations_router.get(

@@ -1,0 +1,29 @@
+"""Get an annotation source of a collection."""
+
+from __future__ import annotations
+
+from uuid import UUID
+
+from sqlmodel import Session
+
+from lightly_studio.errors import NotFoundError
+from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.resolvers import collection_resolver
+
+
+def get_annotation_source(
+    session: Session, dataset_collection_id: UUID, annotation_source_id: UUID
+) -> CollectionTable:
+    """Return the annotation source collection that is a child of the given collection.
+
+    Raises:
+        NotFoundError: If the collection has no annotation source with this ID.
+    """
+    source = collection_resolver.get_by_id(session=session, collection_id=annotation_source_id)
+    if (
+        source is None
+        or source.sample_type != SampleType.ANNOTATION
+        or source.parent_collection_id != dataset_collection_id
+    ):
+        raise NotFoundError(f"Annotation source {annotation_source_id} not found.")
+    return source
