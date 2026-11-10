@@ -23,7 +23,7 @@ interface UseVideoMetadataDistributionSourceParams {
     collectionId: string;
     /** The filter of the videos grid, with every sidebar filter applied. */
     filter: MetadataFilter;
-    /** Only the tags and sample ids of the grid, so the totals stay stable. */
+    /** The grid filter without the sidebar filters, so the totals stay stable. */
     baseFilter: MetadataFilter;
     histogramBinCount: number;
     /** The source and group that the panel shows. Only the shown metadata key is fetched. */
