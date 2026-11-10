@@ -1,5 +1,6 @@
 import type { VideoFilter } from '$lib/api/lightly_studio_local';
 import { buildVideoFilter } from '$lib/hooks';
+import { withFilterOverrides } from '$lib/utils/withFilterOverrides';
 
 type VideoFilterParams = Parameters<typeof buildVideoFilter>[0];
 
@@ -12,20 +13,19 @@ const withFilterType = (value: VideoFilter | null) =>
  * videos grid.
  */
 export function buildVideoDistributionFilters(filterParams: VideoFilterParams) {
+    const videoFilter = buildVideoFilter(filterParams);
     return {
         // The filter of the videos grid, with every sidebar filter applied.
-        filter: withFilterType(buildVideoFilter(filterParams)),
-        // Only the tags and sample ids of the grid, so the totals stay stable.
-        baseFilter: withFilterType(
-            buildVideoFilter(
-                filterParams && {
-                    collection_id: filterParams.collection_id,
-                    filters: {
-                        sample_ids: filterParams.filters?.sample_ids,
-                        tag_ids: filterParams.filters?.tag_ids
-                    }
-                }
-            )
-        )
+        filter: withFilterType(videoFilter),
+        // The grid filter without the sidebar filters, so the totals stay stable. It keeps the
+        // tags, sample ids and plot selection.
+        baseFilter: withFilterOverrides('video', videoFilter, {
+            width: undefined,
+            height: undefined,
+            fps: undefined,
+            duration_s: undefined,
+            frame_annotation_filter: undefined,
+            sample_filter: { metadata_filters: undefined }
+        })
     };
 }

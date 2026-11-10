@@ -65,10 +65,8 @@
     import type { CategoryCount } from '$lib/components/BarChart';
     import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
     import { buildImageAnnotationCountsFilter } from './imageAnnotationCountsFilter';
-    import {
-        buildVideoAnnotationCountsFilter,
-        buildVideoFrameAnnotationCountsFilter
-    } from '$lib/utils/buildAnnotationCountsFilters';
+    import { buildVideoAnnotationCountsFilter } from './videoAnnotationCountsFilter';
+    import { buildVideoFrameAnnotationCountsFilter } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import ClearAllFiltersButton from '$lib/components/ClearAllFiltersButton';
@@ -367,9 +365,6 @@
     const { imageFilter: imageFilterFromHook } = useImageFilters();
 
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
-    const plotFilterVideoSampleIds = $derived(
-        $videoFilterFromHook?.sample_filter?.sample_ids ?? []
-    );
 
     // Fill the annotation source filter for whatever collection is on screen. Every grid draws
     // its boxes against this one selection, so seeding only from the images-grid menu left the
@@ -427,10 +422,10 @@
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
         collectionId,
         filter: buildVideoAnnotationCountsFilter({
+            videoFilter: $videoFilterFromHook,
             metadataFilters,
             annotationFilter: $annotationFilterStore,
-            videoBoundsValues: $videoBoundsValues,
-            sampleIds: plotFilterVideoSampleIds
+            videoBoundsValues: $videoBoundsValues
         }),
         enabled: isVideos && !$allSourcesHidden
     }));
