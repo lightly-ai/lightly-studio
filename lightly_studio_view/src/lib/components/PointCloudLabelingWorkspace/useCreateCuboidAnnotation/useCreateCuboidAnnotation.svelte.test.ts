@@ -83,12 +83,9 @@ describe('useCreateCuboidAnnotation', () => {
         useGlobalStorage.mockReturnValue({ lastAnnotationLabel, updateLastAnnotationLabel });
     });
 
-    it('allows track selection and keeps the scene frame geometry', async () => {
+    it('skips the class dialog when the last annotation label is remembered', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
         labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
-        requestLabel.mockResolvedValue({
-            label: 'car',
-            track: { objectTrackId: 'track-1', isNewTrack: false }
-        });
         const onCreated = vi.fn();
 
         await useCreateCuboidAnnotation(params).handleCreateCuboid(
@@ -96,14 +93,14 @@ describe('useCreateCuboidAnnotation', () => {
             onCreated
         );
 
-        expect(requestLabel).toHaveBeenCalledOnce();
+        expect(requestLabel).not.toHaveBeenCalled();
         expect(createLabel).not.toHaveBeenCalled();
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({
                 parent_sample_id: 'sample-1',
                 annotation_type: 'cuboid_3d',
                 annotation_label_id: 'label-1',
-                object_track_id: 'track-1',
+                object_track_id: undefined,
                 create_new_track: false,
                 cuboid_3d: expect.objectContaining({
                     frame_id: 'lidar-front',
