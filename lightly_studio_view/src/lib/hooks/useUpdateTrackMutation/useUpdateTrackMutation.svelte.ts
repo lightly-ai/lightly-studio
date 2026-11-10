@@ -1,4 +1,4 @@
-import { updateTrackMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import { updateParentTrackMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation } from '@tanstack/svelte-query';
 
 interface Params {
@@ -11,7 +11,7 @@ interface UseUpdateTrackMutationReturn {
 }
 
 export function useUpdateTrackMutation({ getDatasetId }: Params): UseUpdateTrackMutationReturn {
-    const mutation = createMutation(() => updateTrackMutation());
+    const mutation = createMutation(() => updateParentTrackMutation());
 
     async function updateParentTrack(trackId: string, parentTrackId: string | null): Promise<void> {
         const datasetId = getDatasetId();

@@ -177,7 +177,8 @@ export function useWorkspaceEditing(
             queryKey: getTickDetailsSequenceQueryKey({
                 datasetId: getOptions().datasetId,
                 sequenceId: getOptions().sequenceId
-            })
+            }),
+            refetchType: 'none'
         });
         await getWorkspace().tickDetails.refetch({ throwOnError: true });
     }
