@@ -17,6 +17,8 @@ interface UseTagsReturn {
     clearTagsSelected: () => void;
     clearTagSelected: (tagId: string) => void;
     setTagSelected: (tagId: string, isSelected: boolean) => void;
+    /** Replaces the whole tag selection of the collection in one update. */
+    setTagsSelected: (tagIds: string[]) => void;
     loadTags: () => Promise<void>;
     tagSelectionToggle: (tagId: string) => void;
     isLoading: Readable<boolean>;
@@ -148,12 +150,20 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         });
     };
 
+    const setTagsSelected = (tagIds: string[]) => {
+        tagsSelectedByCollection.update((selectedByCollection) => ({
+            ...selectedByCollection,
+            [collection_id]: new Set(tagIds)
+        }));
+    };
+
     return {
         tags: readonly(tags),
         loadTags,
         tagsSelected: readonly(tagsSelectedForCollection),
         tagSelectionToggle,
         setTagSelected,
+        setTagsSelected,
         clearTagsSelected,
         clearTagSelected,
         isLoading: readonly(isLoading),

@@ -33,7 +33,7 @@
 
     const isAnnotationGrid = $derived(gridType === 'annotations');
 
-    const { tags, tagsSelected, tagSelectionToggle, setTagSelected, loadTags, clearTagSelected } =
+    const { tags, tagsSelected, tagSelectionToggle, setTagsSelected, loadTags, clearTagSelected } =
         $derived(useTags({ collection_id }));
 
     const tagById = $derived(new Map($tags.map((tag) => [tag.tag_id, tag])));
@@ -44,9 +44,6 @@
             selected: $tagsSelected.has(tag.tag_id)
         }))
     );
-    const handleSelectionChange = (ids: string[]) => {
-        $tags.forEach((tag) => setTagSelected(tag.tag_id, ids.includes(tag.tag_id)));
-    };
 
     const {
         getSelectedSampleIds,
@@ -222,7 +219,7 @@
         <FilterList
             items={tagItems}
             onToggle={tagSelectionToggle}
-            onSelectionChange={handleSelectionChange}
+            onSelectionChange={setTagsSelected}
             testId="tags-menu"
             showSearch
             searchPlaceholder="Search tags…"

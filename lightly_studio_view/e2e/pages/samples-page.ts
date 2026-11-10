@@ -234,12 +234,10 @@ export class SamplesPage {
     }
 
     async getTagIdByName(tagName: string): Promise<string | null> {
-        const actionsTrigger = this.page
+        return this.page
             .getByTestId('tags-menu-item')
             .filter({ has: this.page.getByText(tagName, { exact: true }) })
-            .locator('[data-testid^="tag-actions-trigger-"]');
-        const testId = await actionsTrigger.getAttribute('data-testid');
-        return testId?.replace('tag-actions-trigger-', '') ?? null;
+            .getAttribute('data-item-id');
     }
 
     async getNumSelectedSamples(): Promise<number> {

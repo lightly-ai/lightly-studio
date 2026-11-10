@@ -189,6 +189,17 @@ describe('useTags Hook', () => {
         expect(get(tagsSelected).has('2')).toBe(true);
     });
 
+    it('should replace the tag selection', () => {
+        const { tagsSelected, tagSelectionToggle, setTagsSelected } = useTags({
+            collection_id: 'collection1'
+        });
+
+        tagSelectionToggle('1');
+        setTagsSelected(['2', '3']);
+
+        expect(get(tagsSelected)).toEqual(new Set(['2', '3']));
+    });
+
     it('should toggle tags independently across collections', () => {
         const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1 } = useTags({
             collection_id: 'collection1'
