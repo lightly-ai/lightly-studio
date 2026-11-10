@@ -85,7 +85,7 @@ def test_start_gui__with_samples(
     start_gui(open_browser=False)
 
     # Verify that the server was created with None defaults (env fallback is in Server)
-    mock_server.assert_called_once_with(host=None, port=None)
+    mock_server.assert_called_once_with(host=None, port=None, app=None)
     mock_server_instance.create_uvicorn_server.assert_called_once_with()
 
 
@@ -105,7 +105,7 @@ def test_start_gui__with_explicit_host_port(
 
     start_gui(host="0.0.0.0", port=9999, open_browser=False)
 
-    mock_server.assert_called_once_with(host="0.0.0.0", port=9999)
+    mock_server.assert_called_once_with(host="0.0.0.0", port=9999, app=None)
 
 
 def test_start_gui__returns_on_keyboard_interrupt(
