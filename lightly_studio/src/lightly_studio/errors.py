@@ -27,3 +27,7 @@ class UnauthenticatedError(Exception):
 
 class ForbiddenError(Exception):
     """The user of the request does not have the required role."""
+
+
+class SchemaCompatError(Exception):
+    """The database schema and this client do not match. The message says what to do."""
