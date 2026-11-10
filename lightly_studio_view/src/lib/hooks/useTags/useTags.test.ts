@@ -200,6 +200,44 @@ describe('useTags Hook', () => {
         expect(get(tagsSelected)).toEqual(new Set(['2', '3']));
     });
 
+    it('fires grid_filter_toggled for each tag changed by setTagsSelected', async () => {
+        const { setTagsSelected, tagSelectionToggle, clearTagsSelected, tags } = useTags({
+            collection_id: '123'
+        });
+        clearTagsSelected();
+        await waitFor(() => expect(get(tags)).toEqual(mockTags));
+        tagSelectionToggle('1');
+        trackEvent.mockClear();
+
+        setTagsSelected(['2']);
+
+        expect(trackEvent).toHaveBeenCalledTimes(2);
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: '123',
+            filter_type: 'tag',
+            filter_value: 'Tag 2',
+            action: 'selected',
+            active_count: 1
+        });
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: '123',
+            filter_type: 'tag',
+            filter_value: 'Tag 1',
+            action: 'unselected',
+            active_count: 1
+        });
+    });
+
+    it('does not fire grid_filter_toggled when clearing all tags', () => {
+        const { tagSelectionToggle, clearTagsSelected } = useTags({ collection_id: '123' });
+        tagSelectionToggle('1');
+        trackEvent.mockClear();
+
+        clearTagsSelected();
+
+        expect(trackEvent).not.toHaveBeenCalled();
+    });
+
     it('should toggle tags independently across collections', () => {
         const { tagsSelected: tags1Selected, tagSelectionToggle: toggle1 } = useTags({
             collection_id: 'collection1'

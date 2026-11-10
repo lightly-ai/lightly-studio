@@ -225,6 +225,7 @@
             searchPlaceholder="Search tags…"
             emptyText="No tags yet"
             customRowId={editingTagId}
+            paged={false}
         >
             {#snippet customRow(item)}
                 {@const tag = tagById.get(item.id)!}
