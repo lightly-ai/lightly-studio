@@ -763,6 +763,8 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         await user.click(screen.getByTestId('mock-annotation-row-relabel'));
 
+        // Also when the row is not selected: a drawn box takes the class of the context.
+        expect(mocks.context.annotationLabel).toBe('dog');
         // 'dog' is not in the class list yet: a new class is created with its first annotation.
         expect(
             resolveStickyClass({
