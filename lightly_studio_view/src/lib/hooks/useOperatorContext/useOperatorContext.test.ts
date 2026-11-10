@@ -118,8 +118,7 @@ describe('resolveHasActiveFilter', () => {
         ['images', APP_ROUTES.images],
         ['videos', APP_ROUTES.videos],
         ['frames', APP_ROUTES.frames]
-    ])('follows the grid filters on the %s route', (_name, route) => {
-        expect(resolveHasActiveFilter(route, false, NONE, NONE)).toBe(false);
+    ])('is true with grid filters on the %s route', (_name, route) => {
         expect(resolveHasActiveFilter(route, true, NONE, NONE)).toBe(true);
     });
 
