@@ -3,6 +3,7 @@
     import { usePostHog } from '$lib/hooks';
     import type { SettingsDialogState } from '../settingsDialogState.svelte';
     import { AnnotationClassesTab } from '../AnnotationClassesTab';
+    import { AnnotationSourcesTab } from '../AnnotationSourcesTab';
     import { AnnotationsTab } from '../AnnotationsTab';
     import { DisplayTab } from '../DisplayTab';
     import { ShortcutsTab } from '../ShortcutsTab';
@@ -30,6 +31,11 @@
             value: 'annotation-classes',
             label: 'Annotation classes',
             component: AnnotationClassesTab
+        },
+        {
+            value: 'annotation-sources',
+            label: 'Annotation sources',
+            component: AnnotationSourcesTab
         }
     ];
 </script>
