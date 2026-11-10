@@ -35,13 +35,7 @@ def run_migrations(engine: Engine, engine_url: str) -> None:
     else:
         logging.info("Initializing empty PostgreSQL database (upgrade head).")
 
-    _run_alembic_command(
-        engine=engine,
-        config=config,
-        fn=command.upgrade,
-        revision="head",
-    )
-    schema_compat.write_schema_compat(engine=engine, oss_revision=get_head_revision())
+    _upgrade_to_head(engine=engine, config=config)
 
 
 def get_head_revision() -> str:
@@ -84,6 +78,18 @@ def _base_config() -> Config:
     migrations_dir = package_dir / "migrations"
     ensure_script_location(config=alembic_config, migrations_dir=migrations_dir)
     return alembic_config
+
+
+def _upgrade_to_head(engine: Engine, config: Config) -> None:
+    """Upgrade to head and write the ``schema_compat`` row in one transaction.
+
+    The row cannot disagree with the schema: both are committed, or neither is.
+    """
+    # Alembic does not commit a connection that is already in a transaction.
+    with engine.begin() as connection:
+        config.attributes["connection"] = connection
+        command.upgrade(config, revision="head")
+        schema_compat.write_schema_compat(connection=connection, oss_revision=get_head_revision())
 
 
 def _run_alembic_command(

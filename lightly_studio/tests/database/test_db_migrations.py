@@ -36,20 +36,11 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=True)
-    mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
-
-    mocker.patch.object(db_migrations, "get_head_revision", return_value="abc123")
-    mock_write = mocker.patch.object(schema_compat, "write_schema_compat")
+    mock_upgrade = mocker.patch.object(db_migrations, "_upgrade_to_head")
 
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
-    mock_run_command.assert_called_once_with(
-        engine=engine,
-        config=alembic_cfg,
-        fn=command.upgrade,
-        revision="head",
-    )
-    mock_write.assert_called_once_with(engine=engine, oss_revision="abc123")
+    mock_upgrade.assert_called_once_with(engine=engine, config=alembic_cfg)
 
 
 def test_run_migrations__fresh_database(
@@ -60,20 +51,11 @@ def test_run_migrations__fresh_database(
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
-    mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
-
-    mocker.patch.object(db_migrations, "get_head_revision", return_value="abc123")
-    mock_write = mocker.patch.object(schema_compat, "write_schema_compat")
+    mock_upgrade = mocker.patch.object(db_migrations, "_upgrade_to_head")
 
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
-    mock_run_command.assert_called_once_with(
-        engine=engine,
-        config=alembic_cfg,
-        fn=command.upgrade,
-        revision="head",
-    )
-    mock_write.assert_called_once_with(engine=engine, oss_revision="abc123")
+    mock_upgrade.assert_called_once_with(engine=engine, config=alembic_cfg)
 
 
 def _reset_postgres_database(engine_url: str) -> None:
@@ -138,6 +120,29 @@ def test_postgres_fresh_database__upgrade_head(
     finally:
         _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()
+
+
+def test_postgres_fresh_database__schema_compat_write_fails(
+    postgres_url: str | None,
+    mocker: MockerFixture,
+) -> None:
+    """A failed schema_compat write rolls the schema upgrade back."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+    _reset_postgres_database(engine_url=postgres_url)
+    mocker.patch.object(schema_compat, "write_schema_compat", side_effect=RuntimeError("fail"))
+    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
+    try:
+        with pytest.raises(RuntimeError, match="fail"):
+            db_migrations.run_migrations(engine=engine, engine_url=postgres_url)
+
+        inspector = db_migrations._get_inspector(engine=engine)
+        assert not inspector.has_table(table_name="collection")
+        assert not inspector.has_table(table_name="alembic_version")
+    finally:
+        mocker.stopall()
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
 
 
 def test_postgres_embedding_plot__upgrade_preserves_existing_cache(
