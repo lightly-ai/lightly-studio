@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
+import type { ImageFilter } from '$lib/api/lightly_studio_local';
 import { buildDistributionBaseFilter } from './distributionBaseFilter';
 
-const REGION = {
+const region = {
     polygon: [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
@@ -13,9 +13,9 @@ const REGION = {
 describe('buildDistributionBaseFilter', () => {
     it('passes the plot selection through', () => {
         const result = buildDistributionBaseFilter({
-            sample_filter: { embedding_region: REGION }
+            sample_filter: { embedding_region: region }
         } as ImageFilter);
-        expect(result?.sample_filter?.embedding_region).toEqual(REGION);
+        expect(result?.sample_filter?.embedding_region).toEqual(region);
     });
 
     it('keeps tags, sample ids, confusion cell and query', () => {

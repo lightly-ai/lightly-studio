@@ -1,16 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local/types.gen.js';
+import type { AnnotationsFilter, ImageFilter } from '$lib/api/lightly_studio_local';
 import { buildImageAnnotationCountsFilter } from './imageAnnotationCountsFilter';
 
-const REGION = {
+const region = {
     polygon: [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
         { x: 0, y: 1 }
     ]
 };
-const A = { filter_type: 'annotations', annotation_label_ids: ['a'] } as AnnotationsFilter;
-const M = { key: 'k', op: '==', value: 1 } as never;
+const annotationsFilter = {
+    filter_type: 'annotations',
+    annotation_label_ids: ['a']
+} as AnnotationsFilter;
+const metadataFilter = { key: 'k', op: '==', value: 1 } as never;
 
 const defaultParams = {
     imageFilter: null as ImageFilter | null,
@@ -23,26 +26,29 @@ const defaultParams = {
 describe('buildImageAnnotationCountsFilter', () => {
     it('passes the plot selection through', () => {
         const imageFilter: ImageFilter = {
-            sample_filter: { embedding_region: REGION, tag_ids: ['t'] }
+            sample_filter: { embedding_region: region, tag_ids: ['t'] }
         };
         expect(buildImageAnnotationCountsFilter({ ...defaultParams, imageFilter })).toEqual({
             filter_type: 'image',
-            sample_filter: { embedding_region: REGION, tag_ids: ['t'] }
+            sample_filter: { embedding_region: region, tag_ids: ['t'] }
         });
     });
 
     it('ignores the image filter on the annotations route', () => {
         const imageFilter: ImageFilter = {
-            sample_filter: { embedding_region: REGION, tag_ids: ['t'] }
+            sample_filter: { embedding_region: region, tag_ids: ['t'] }
         };
         expect(
             buildImageAnnotationCountsFilter({
                 ...defaultParams,
                 imageFilter,
                 isAnnotations: true,
-                annotationFilter: A
+                annotationFilter: annotationsFilter
             })
-        ).toEqual({ filter_type: 'image', sample_filter: { annotations_filter: A } });
+        ).toEqual({
+            filter_type: 'image',
+            sample_filter: { annotations_filter: annotationsFilter }
+        });
     });
 
     it('builds from parts when the image filter is null', () => {
@@ -50,14 +56,17 @@ describe('buildImageAnnotationCountsFilter', () => {
             buildImageAnnotationCountsFilter({
                 ...defaultParams,
                 dimensionsValues: { min_width: 1, max_width: 2, min_height: 3, max_height: 4 },
-                annotationFilter: A,
-                metadataFilters: [M]
+                annotationFilter: annotationsFilter,
+                metadataFilters: [metadataFilter]
             })
         ).toEqual({
             filter_type: 'image',
             width: { min: 1, max: 2 },
             height: { min: 3, max: 4 },
-            sample_filter: { annotations_filter: A, metadata_filters: [M] }
+            sample_filter: {
+                annotations_filter: annotationsFilter,
+                metadata_filters: [metadataFilter]
+            }
         });
     });
 
@@ -67,7 +76,7 @@ describe('buildImageAnnotationCountsFilter', () => {
                 annotations_filter: { filter_type: 'annotations', annotation_label_ids: ['l'] }
             }
         };
-        const passed = { ...A, collection_ids: ['c'] } as AnnotationsFilter;
+        const passed = { ...annotationsFilter, collection_ids: ['c'] } as AnnotationsFilter;
         expect(
             buildImageAnnotationCountsFilter({
                 ...defaultParams,

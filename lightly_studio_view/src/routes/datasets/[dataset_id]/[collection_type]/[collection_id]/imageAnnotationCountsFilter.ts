@@ -1,10 +1,10 @@
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
-import type {
-    AnnotationsFilter,
-    ImageFilter,
-    SampleFilter
-} from '$lib/api/lightly_studio_local/types.gen.js';
-import { imageDimensionRanges, withFilterOverrides } from '$lib/utils/withFilterOverrides';
+import type { AnnotationsFilter, ImageFilter, SampleFilter } from '$lib/api/lightly_studio_local';
+import { imageDimensionRanges, withFilterOverrides } from '$lib/utils';
+
+interface ImageAnnotationCountsFilter extends ImageFilter {
+    filter_type: 'image';
+}
 
 interface BuildImageAnnotationCountsFilterParams {
     imageFilter: ImageFilter | null | undefined;
@@ -25,7 +25,7 @@ export function buildImageAnnotationCountsFilter({
     dimensionsValues,
     annotationFilter,
     metadataFilters
-}: BuildImageAnnotationCountsFilterParams): (ImageFilter & { filter_type: 'image' }) | undefined {
+}: BuildImageAnnotationCountsFilterParams): ImageAnnotationCountsFilter | undefined {
     return withFilterOverrides('image', isAnnotations ? null : imageFilter, {
         ...imageDimensionRanges(dimensionsValues),
         sample_filter: {

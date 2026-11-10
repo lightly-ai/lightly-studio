@@ -3,20 +3,20 @@ import type {
     AnnotationsFilter,
     FilterDimensions,
     ImageFilter
-} from '$lib/api/lightly_studio_local/types.gen.js';
+} from '$lib/api/lightly_studio_local';
 import { imageDimensionRanges, withFilterOverrides } from './withFilterOverrides';
 
-const REGION = {
+const region = {
     polygon: [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
         { x: 0, y: 1 }
     ]
 };
-const W: FilterDimensions = { min: 1, max: 2 };
-const H: FilterDimensions = { min: 3, max: 4 };
-const A = { annotation_label_ids: ['a'] } as AnnotationsFilter;
-const A2 = { annotation_label_ids: ['b'] } as AnnotationsFilter;
+const widthRange: FilterDimensions = { min: 1, max: 2 };
+const heightRange: FilterDimensions = { min: 3, max: 4 };
+const annotationsFilter = { annotation_label_ids: ['a'] } as AnnotationsFilter;
+const otherAnnotationsFilter = { annotation_label_ids: ['b'] } as AnnotationsFilter;
 
 type Filter = Omit<ImageFilter, 'filter_type'> & { filter_type?: 'image' | 'video' };
 
@@ -24,7 +24,7 @@ describe('withFilterOverrides', () => {
     it('passes through fields absent from overrides', () => {
         const base = {
             filter_type: 'image',
-            sample_filter: { embedding_region: REGION, tag_ids: ['t'] }
+            sample_filter: { embedding_region: region, tag_ids: ['t'] }
         } as Filter;
         expect(withFilterOverrides('image', base, {})).toEqual(base);
     });
@@ -32,12 +32,12 @@ describe('withFilterOverrides', () => {
     it('removes keys overridden with undefined', () => {
         const base = {
             filter_type: 'image',
-            width: W,
-            height: H,
+            width: widthRange,
+            height: heightRange,
             sample_filter: {
-                annotations_filter: A,
+                annotations_filter: annotationsFilter,
                 metadata_filters: [],
-                embedding_region: REGION
+                embedding_region: region
             }
         } as Filter;
         expect(
@@ -46,18 +46,26 @@ describe('withFilterOverrides', () => {
                 height: undefined,
                 sample_filter: { annotations_filter: undefined, metadata_filters: undefined }
             })
-        ).toEqual({ filter_type: 'image', sample_filter: { embedding_region: REGION } });
+        ).toEqual({ filter_type: 'image', sample_filter: { embedding_region: region } });
     });
 
     it('replaces overridden keys', () => {
-        const base = { filter_type: 'image', sample_filter: { annotations_filter: A } } as Filter;
+        const base = {
+            filter_type: 'image',
+            sample_filter: { annotations_filter: annotationsFilter }
+        } as Filter;
         expect(
-            withFilterOverrides('image', base, { sample_filter: { annotations_filter: A2 } })
-        ).toEqual({ filter_type: 'image', sample_filter: { annotations_filter: A2 } });
+            withFilterOverrides('image', base, {
+                sample_filter: { annotations_filter: otherAnnotationsFilter }
+            })
+        ).toEqual({
+            filter_type: 'image',
+            sample_filter: { annotations_filter: otherAnnotationsFilter }
+        });
     });
 
     it('returns undefined when only removed fields remain', () => {
-        const base = { filter_type: 'image', width: W } as Filter;
+        const base = { filter_type: 'image', width: widthRange } as Filter;
         expect(withFilterOverrides('image', base, { width: undefined })).toBeUndefined();
     });
 
@@ -68,10 +76,14 @@ describe('withFilterOverrides', () => {
     it('builds from overrides when base is null', () => {
         expect(
             withFilterOverrides<Filter, 'image'>('image', null, {
-                width: W,
-                sample_filter: { annotations_filter: A }
+                width: widthRange,
+                sample_filter: { annotations_filter: annotationsFilter }
             })
-        ).toEqual({ filter_type: 'image', width: W, sample_filter: { annotations_filter: A } });
+        ).toEqual({
+            filter_type: 'image',
+            width: widthRange,
+            sample_filter: { annotations_filter: annotationsFilter }
+        });
     });
 
     it('keeps an empty array override', () => {
@@ -83,18 +95,18 @@ describe('withFilterOverrides', () => {
     });
 
     it('sets the given filter type', () => {
-        const base = { width: W } as Filter;
+        const base = { width: widthRange } as Filter;
         expect(withFilterOverrides('video', base, {})).toEqual({
             filter_type: 'video',
-            width: W
+            width: widthRange
         });
     });
 
     it('does not mutate base', () => {
         const base = {
             filter_type: 'image',
-            width: W,
-            sample_filter: { annotations_filter: A }
+            width: widthRange,
+            sample_filter: { annotations_filter: annotationsFilter }
         } as Filter;
         const copy = structuredClone(base);
         withFilterOverrides('image', base, {
