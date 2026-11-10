@@ -3,7 +3,10 @@ from __future__ import annotations
 import uuid
 
 import pytest
+import sqlalchemy
+from pytest_mock import MockerFixture
 
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.transport.collection_transport import CollectionTransport
 from lightly_studio.transport.local.local_collection_transport import LocalCollectionTransport
@@ -47,6 +50,33 @@ class TestLocalCollectionTransport:
         assert transport.get_by_id(collection_id=created.collection_id) == created
         assert transport.get_by_id(collection_id=uuid.uuid4()) is None
 
+    def test_get_by_id__one_query_without_children(self, mocker: MockerFixture) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        root = transport.create(
+            collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
+        )
+        transport.create(
+            collection=CollectionCreate(
+                name="child",
+                sample_type=SampleType.ANNOTATION,
+                parent_collection_id=root.collection_id,
+            )
+        )
+        session = db_manager.persistent_session()
+        session.expire_all()
+
+        listener = mocker.Mock()
+        engine = session.get_bind()
+        sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+        try:
+            fetched = transport.get_by_id(collection_id=root.collection_id)
+        finally:
+            sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+
+        assert listener.call_count == 1
+        assert fetched is not None
+        assert not hasattr(fetched, "children")
+
     def test_get_by_name(self) -> None:
         transport: CollectionTransport = LocalCollectionTransport()
         created = transport.create(
@@ -55,6 +85,25 @@ class TestLocalCollectionTransport:
 
         assert transport.get_by_name(name="root", parent_collection_id=None) == created
         assert transport.get_by_name(name="other", parent_collection_id=None) is None
+
+    def test_get_by_name__one_query(self, mocker: MockerFixture) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        root = transport.create(
+            collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
+        )
+        session = db_manager.persistent_session()
+        session.expire_all()
+
+        listener = mocker.Mock()
+        engine = session.get_bind()
+        sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+        try:
+            fetched = transport.get_by_name(name="root", parent_collection_id=None)
+        finally:
+            sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+
+        assert listener.call_count == 1
+        assert fetched == root
 
     def test_get_or_create_child(self) -> None:
         transport: CollectionTransport = LocalCollectionTransport()
