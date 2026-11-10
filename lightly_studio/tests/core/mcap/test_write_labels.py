@@ -13,6 +13,7 @@ from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver, tag_resolver
 from tests.core.mcap import helpers
@@ -97,7 +98,35 @@ def test_write_sequence_labels__overwrite_deletes_empty_tracks(
     tracks = object_track_resolver.get_all_by_dataset_id(
         session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
     )
-    assert [track.source_track_id for track in tracks] == [1]
+    # The new track reuses the number of a deleted track.
+    assert [(track.source_track_id, track.object_track_number) for track in tracks] == [(1, 1)]
+
+
+def test_write_sequence_labels__reuses_free_track_numbers(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, _ = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    object_track_resolver.create_many(
+        session=db_manager.persistent_session(),
+        tracks=[ObjectTrackCreate(object_track_number=2, dataset_id=dataset.dataset_id)],
+    )
+
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(
+            _cuboid(timestamp_ns=timestamp_ns, track_id=1),
+            _cuboid(timestamp_ns=timestamp_ns, track_id=7),
+        ),
+    )
+
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    number_by_source_track = {track.source_track_id: track.object_track_number for track in tracks}
+    assert number_by_source_track == {None: 2, 1: 1, 7: 3}
 
 
 def test_write_sequence_labels__overwrite_keeps_annotations_of_invalid_labels(
