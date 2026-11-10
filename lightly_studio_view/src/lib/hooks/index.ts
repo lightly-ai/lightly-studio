@@ -59,7 +59,11 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+export {
+    AnnotationClassNotAvailableError,
+    getCreateLabelErrorMessage,
+    useCreateLabel
+} from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
@@ -76,6 +80,7 @@ export {
 } from '$lib/hooks/useOnboarding/useOnboarding';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+export { useDeleteAnnotationWithUndo } from '$lib/hooks/useDeleteAnnotationWithUndo/useDeleteAnnotationWithUndo.svelte';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
@@ -113,3 +118,6 @@ export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointF
 export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
+export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte';
+export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
+export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';

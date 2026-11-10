@@ -54,6 +54,7 @@ vi.mock('$lib/hooks', async () => {
         useGlobalStorage: () => ({ isEditingMode: writable(false) }),
         useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
         useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() }),
+        useCanCreateAnnotationClass: () => true,
         // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
         useMcapSequenceSummary: () => ({
             summary: { data: summaryData, isLoading: false, isError: false },
@@ -75,6 +76,14 @@ vi.mock('$lib/hooks', async () => {
             query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
         }),
         useTickCameraFrames: () => ({ query: { data: undefined } }),
+        // The right panel shows the sequence tags once the summary loads; stub the tag hooks.
+        useTags: () => ({ tags: writable([]), loadTags: vi.fn() }),
+        useAddTagToSample: () => ({
+            busy: writable(false),
+            addExisting: vi.fn(),
+            createAndAdd: vi.fn()
+        }),
+        useRemoveTagFromSample: () => ({ removeTagFromSample: vi.fn() }),
         useAnnotationCollections: () => ({ data: [] }),
         useMcapTickPrefetchScheduler: () => ({
             bufferedRanges: [],

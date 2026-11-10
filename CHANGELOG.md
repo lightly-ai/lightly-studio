@@ -9,12 +9,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
 - Python SDK: Added Python 3.15 support.
+- Python SDK: `McapDataset.add_labels_from_folder` accepts `overwrite=True` to replace the annotations of recordings that already have annotations.
+- The embedding plot shows the active plot filter and lets you clear it right on the plot.
 - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
+- Annotation class colors are saved in the dataset and shared by all users of it.
 - Filter samples by evaluation run and per-sample metrics in the GUI query filter using `sample_evaluation(...)`.
+- Python SDK: Store the per-class average precision of object-detection runs at each IoU threshold when `compute_average_precision=True` is set in `ObjectDetectionEvaluationConfig`.
+- Python SDK: `dataset.evaluate().metrics(run_id)` includes the per-class and mean average precision of object-detection runs created with `compute_average_precision=True`, averaged over the IoU thresholds 0.50 to 0.95 and at each threshold.
 
 ### Changed
 
+- Coloring image and crop embeddings by annotation class is faster by reducing repeated work when loading annotation labels.
+- Embedding plots color faster when no filters are active.
+- Improved labeling tool names, layout, and buttons.
+- Users with the labeler or viewer role can only choose existing annotation classes in the labeling tools.
 - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
 - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
 
@@ -28,6 +38,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The browser no longer freezes when a collection has an integer metadata field with a very wide range, such as an ID.
 - The previous and next buttons of a point cloud sequence now follow the tags, the embedding plot selection, and the text search of the point clouds grid.
 - Smart select stays active when you select a segmentation mask or change its class in the sample details sidebar.
+- The value counts of categorical metadata now match the filters of the images grid.
+- Zooming with the mouse wheel or trackpad works while the Smart select tool is active.
 
 ### Security
 

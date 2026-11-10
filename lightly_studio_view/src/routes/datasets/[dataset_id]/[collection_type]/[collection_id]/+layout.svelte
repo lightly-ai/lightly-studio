@@ -25,6 +25,7 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { setAnnotationClasses } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -339,6 +340,8 @@
         collectionId: collectionId ?? ''
     }));
     const annotationLabelsData = $derived(annotationLabelsQuery?.data);
+    // The route param is the root collection ID; classes point to the dataset table.
+    $effect(() => setAnnotationClasses(collection.dataset_id, annotationLabelsData ?? []));
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -417,6 +420,8 @@
             queryExpr: isAnnotations ? null : plotFilterQueryExpr
         })
     );
+
+    const categoricalCountsFilter = $derived($imageFilterFromHook ?? undefined);
 
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
@@ -694,7 +699,7 @@
                                         isImageCollection={isImages || isCaptions}
                                         categoricalFilter={isCaptions
                                             ? undefined
-                                            : imageAnnotationCountsFilter}
+                                            : categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}

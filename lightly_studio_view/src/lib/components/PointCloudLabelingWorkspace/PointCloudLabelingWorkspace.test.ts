@@ -122,6 +122,28 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     };
 });
 
+// The right panel shows the sequence tags once the summary loads; stub the tag hooks so they
+// render without a live TanStack query client.
+vi.mock('$lib/hooks/useTags/useTags', async () => {
+    const { writable } = await import('svelte/store');
+    return { useTags: () => ({ tags: writable([]), loadTags: vi.fn() }) };
+});
+
+vi.mock('$lib/hooks/useAddTagToSample/useAddTagToSample', async () => {
+    const { writable } = await import('svelte/store');
+    return {
+        useAddTagToSample: () => ({
+            busy: writable(false),
+            addExisting: vi.fn(),
+            createAndAdd: vi.fn()
+        })
+    };
+});
+
+vi.mock('$lib/hooks/useRemoveTagFromSample/useRemoveTagFromSample', () => ({
+    useRemoveTagFromSample: () => ({ removeTagFromSample: vi.fn() })
+}));
+
 vi.mock('$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte', () => ({
     useCloudPointFrame: () => ({
         query: cloudQuery
@@ -164,7 +186,9 @@ vi.mock('$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary', () => ({
                         group_component_name: 'rear',
                         group_component_index: 1
                     }
-                ]
+                ],
+                collection_id: 'sequence-collection',
+                tags: []
             },
             get isLoading() {
                 return summaryState.isLoading;

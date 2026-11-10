@@ -49,6 +49,7 @@
     {saveAs}
     {onSaveAsChange}
     canSave={instances.canSave}
+    isSaving={instances.isSaving}
     onSave={() => void instances.save()}
     {onClear}
 >

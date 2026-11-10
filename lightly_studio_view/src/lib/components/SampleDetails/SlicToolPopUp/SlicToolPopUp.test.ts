@@ -36,18 +36,18 @@ beforeEach(() => {
 describe('SLIC controls', () => {
     it('finishes the object and keeps size controls available', async () => {
         const view = render(SlicToolPopUp);
-        await fireEvent.click(view.getByRole('button', { name: 'Finish' }));
+        await fireEvent.click(view.getByRole('button', { name: 'Done' }));
         expect(setAnnotationId).toHaveBeenCalledWith(null);
         expect(setLastCreatedAnnotationId).toHaveBeenCalledWith(null);
         expect(view.getByRole('button', { name: 'Fine' })).toBeInTheDocument();
     });
-    it.each(['no object', 'drawing', 'saving', 'details'])('guards Finish during %s', (state) => {
+    it.each(['no object', 'drawing', 'saving', 'details'])('guards Done during %s', (state) => {
         annotationContext.annotationId = state === 'no object' ? null : 'object-1';
         annotationContext.isDrawing = state === 'drawing';
         annotationContext.isOnAnnotationDetailsView = state === 'details';
         const view = render(SlicToolPopUp, { isPending: state === 'saving' });
-        if (state === 'details') expect(view.queryByRole('button', { name: 'Finish' })).toBeNull();
-        else expect(view.getByRole('button', { name: 'Finish' })).toBeDisabled();
+        if (state === 'details') expect(view.queryByRole('button', { name: 'Done' })).toBeNull();
+        else expect(view.getByRole('button', { name: 'Done' })).toBeDisabled();
     });
     it('lets the user choose the superpixel size', async () => {
         const view = render(SlicToolPopUp);
