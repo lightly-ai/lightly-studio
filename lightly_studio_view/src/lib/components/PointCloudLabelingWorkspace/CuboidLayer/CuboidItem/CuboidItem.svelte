@@ -21,6 +21,7 @@
     const isSelected = $derived(layer.selectedAnnotationId === item.annotation.id);
     const isHovered = $derived(layer.hoveredAnnotationId === item.annotation.id);
     const gizmoMode = $derived(getCuboidGizmoMode(layer.activeTool));
+    let transformStartAnnotation: typeof item.annotation | null = $state(null);
 </script>
 
 <T.Group
@@ -53,15 +54,30 @@
                 cameraMode={layer.cameraMode}
                 size={item.annotation.size}
                 onTransformEnd={(obj) => {
-                    const payload = buildCuboidTransformPayload(item.annotation, obj);
+                    const payload = buildCuboidTransformPayload(
+                        transformStartAnnotation ?? item.annotation,
+                        obj
+                    );
+                    transformStartAnnotation = null;
                     layer.onCuboidTransform?.(payload);
                     void layer.transforms.commit(payload);
                 }}
+                onTransformPreview={(obj) => {
+                    const payload = buildCuboidTransformPayload(
+                        transformStartAnnotation ?? item.annotation,
+                        obj.clone()
+                    );
+                    layer.transforms.preview(payload);
+                }}
                 onInteractionStart={() => {
                     layer.hoverTracker.markClicked();
+                    transformStartAnnotation = item.annotation;
                     layer.transforms.begin(item.annotation);
                 }}
-                onInteractionCancel={() => layer.transforms.cancel(item.annotation.id)}
+                onInteractionCancel={() => {
+                    transformStartAnnotation = null;
+                    layer.transforms.cancel(item.annotation.id);
+                }}
             />
         {/if}
         {#if layer.activeTool === 'resize'}
@@ -74,6 +90,7 @@
                     layer.transforms.begin(item.annotation);
                 }}
                 onResizeCancel={() => layer.transforms.cancel(item.annotation.id)}
+                onResizePreview={(payload) => layer.transforms.preview(payload)}
                 onResizeEnd={(payload) => void layer.transforms.commit(payload)}
             />
         {/if}
