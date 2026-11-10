@@ -20,6 +20,7 @@
         size,
         enabled = true,
         onTransformEnd,
+        onTransformPreview,
         onInteractionStart,
         onInteractionCancel
     }: Props = $props();
@@ -31,6 +32,7 @@
     useCuboidTransformControls({
         getControls: () => controlsRef,
         onTransformEnd: (object, snapshot) => onTransformEnd?.(object, snapshot),
+        onTransformPreview: (object) => onTransformPreview?.(object),
         onInteractionStart: () => onInteractionStart?.(),
         onInteractionCancel: () => onInteractionCancel?.()
     });
