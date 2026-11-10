@@ -16,6 +16,7 @@ interface Params {
     getAnnotation: () => Pick<CuboidAnnotation, 'id' | 'frameId' | 'center' | 'rotation' | 'size'>;
     onResizeStart?: () => void;
     onResizeCancel?: () => void;
+    onResizePreview?: (payload: ResizePayload) => void;
     onResizeEnd?: (payload: ResizePayload) => void;
 }
 
@@ -32,6 +33,7 @@ export function useCuboidFaceResize({
     getAnnotation,
     onResizeStart,
     onResizeCancel,
+    onResizePreview,
     onResizeEnd
 }: Params): FaceResizeReturn {
     const { camera, renderer, invalidate } = useThrelte();
@@ -86,6 +88,8 @@ export function useCuboidFaceResize({
             transform.size[1] / activeDrag.originalSize[1],
             transform.size[2] / activeDrag.originalSize[2]
         );
+        const { id, frameId, rotation } = getAnnotation();
+        onResizePreview?.({ annotationId: id, frameId, ...transform, rotation });
         invalidate();
     }
 
