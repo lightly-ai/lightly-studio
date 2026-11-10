@@ -82,11 +82,6 @@ const sampleTag: TagView = {
     updated_at: new Date('2024-01-01T00:00:00.000Z')
 };
 
-const defaultProps = {
-    collection_id: 'collection-1',
-    gridType: 'images' as const
-};
-
 const mockRequest = new Request('http://localhost/api/test');
 const mockResponse = new Response(null, { status: 200 });
 
@@ -154,7 +149,12 @@ describe('TagsMenu', () => {
     }
 
     it('shows the tag search for a single tag', () => {
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         expect(screen.getByPlaceholderText('Search tags…')).toBeVisible();
         expect(screen.getByTestId('tags-menu-item')).toBeVisible();
@@ -162,7 +162,12 @@ describe('TagsMenu', () => {
     });
 
     it('toggles a tag from its row', async () => {
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await fireEvent.click(screen.getByRole('checkbox', { name: 'Vehicle' }));
 
@@ -173,7 +178,12 @@ describe('TagsMenu', () => {
         mocks.tags = [sampleTag, { ...sampleTag, tag_id: 'tag-2', name: 'Person' }];
         mocks.tagsSelected = new Set(['tag-1']);
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
         expect(mocks.setTagsSelected).toHaveBeenCalledWith(['tag-1', 'tag-2']);
@@ -185,7 +195,12 @@ describe('TagsMenu', () => {
     it('shows an empty message without tags', () => {
         mocks.tags = [];
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         expect(screen.getByText('No tags yet')).toBeVisible();
     });
@@ -195,7 +210,12 @@ describe('TagsMenu', () => {
             'collection-1': new Set(['sample-1', 'sample-2'])
         };
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await pickExistingTag('veh', 'Vehicle');
 
@@ -217,7 +237,11 @@ describe('TagsMenu', () => {
 
     it('hides the assign input when allowAssign is false', () => {
         render(TagsMenu, {
-            props: { ...defaultProps, gridType: 'captions', allowAssign: false }
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'captions',
+                allowAssign: false
+            }
         });
 
         expect(screen.queryByPlaceholderText('Assign tag to selection')).not.toBeInTheDocument();
@@ -231,7 +255,12 @@ describe('TagsMenu', () => {
             'collection-1': { filter: { filter_type: 'image' }, size: 2 }
         };
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await pickExistingTag('veh', 'Vehicle');
 
@@ -261,7 +290,10 @@ describe('TagsMenu', () => {
         };
 
         render(TagsMenu, {
-            props: { ...defaultProps, gridType: 'annotations' }
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'annotations'
+            }
         });
 
         await pickExistingTag('veh', 'Vehicle');
@@ -289,7 +321,12 @@ describe('TagsMenu', () => {
             'collection-1': { filter: { filter_type: 'image' }, size: 5 }
         };
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await pickExistingTag('veh', 'Vehicle');
 
@@ -315,7 +352,10 @@ describe('TagsMenu', () => {
         };
 
         render(TagsMenu, {
-            props: { ...defaultProps, gridType: 'annotations' }
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'annotations'
+            }
         });
 
         const input = screen.getByPlaceholderText('Assign tag to selection');
@@ -347,7 +387,12 @@ describe('TagsMenu', () => {
     });
 
     it('disables tag assignment when no samples are selected', () => {
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         expect(screen.getByPlaceholderText('Assign tag to selection')).toBeDisabled();
     });
@@ -359,7 +404,12 @@ describe('TagsMenu', () => {
             isAuthenticated: true
         });
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         expect(screen.getByText('Vehicle')).toBeVisible();
         expect(screen.queryByPlaceholderText('Assign tag to selection')).not.toBeInTheDocument();
@@ -373,7 +423,12 @@ describe('TagsMenu', () => {
             isAuthenticated: true
         });
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         expect(screen.getByPlaceholderText('Assign tag to selection')).toBeVisible();
         expect(screen.getByTestId('tag-actions-trigger-tag-1')).toBeVisible();
@@ -386,7 +441,12 @@ describe('TagsMenu', () => {
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
         vi.mocked(addSampleIdsToTagId).mockRejectedValue(new Error('network error'));
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await pickExistingTag('veh', 'Vehicle');
 
@@ -399,7 +459,12 @@ describe('TagsMenu', () => {
     });
 
     it('deletes a tag from the sidebar actions menu', async () => {
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
         await fireEvent.click(await screen.findByTestId('delete-tag-tag-1'));
@@ -421,7 +486,12 @@ describe('TagsMenu', () => {
     it('shows a toast when deleting a tag fails', async () => {
         vi.mocked(deleteTag).mockRejectedValue(new Error('network error'));
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
         await fireEvent.click(await screen.findByTestId('delete-tag-tag-1'));
@@ -435,7 +505,12 @@ describe('TagsMenu', () => {
     });
 
     it('renames a tag from the inline row edit via tick button', async () => {
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
         await fireEvent.click(await screen.findByTestId('rename-tag-tag-1'));
@@ -473,7 +548,12 @@ describe('TagsMenu', () => {
     it('shows a toast when renaming a tag fails', async () => {
         vi.mocked(renameTag).mockRejectedValue(new Error('network error'));
 
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
         await fireEvent.click(await screen.findByTestId('rename-tag-tag-1'));
@@ -491,7 +571,12 @@ describe('TagsMenu', () => {
     });
 
     it('does not toggle the checkbox when opening the tag actions menu', async () => {
-        render(TagsMenu, { props: defaultProps });
+        render(TagsMenu, {
+            props: {
+                collection_id: 'collection-1',
+                gridType: 'images'
+            }
+        });
 
         await fireEvent.click(screen.getByTestId('tag-actions-trigger-tag-1'));
 
