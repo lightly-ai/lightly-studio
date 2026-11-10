@@ -115,23 +115,29 @@ class _LabelingContext:
     topic: str
     suffix: str
     annotation_source: str
+    overwrite: bool
     by_uri: dict[str, _IndexedSequence]
     by_file_name: dict[str, list[_IndexedSequence]]
     labeled_sequence_ids: set[UUID]
 
 
-def add_labels_from_folder(
+def add_labels_from_folder(  # noqa: PLR0913
     dataset: McapDataset,
     path: PathLike,
     topic: str,
     suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
     annotation_source: str = add_labels.DEFAULT_ANNOTATION_SOURCE,
+    overwrite: bool = False,
 ) -> None:
     """Store cuboids from annotation MCAPs in a folder on indexed sequences.
 
     A file that cannot be used is skipped and the reason is logged. The reasons are
     a missing or ambiguous recording, a file that is not a readable MCAP, a missing
     topic, and labels that do not join the ticks.
+
+    A sequence that already has cuboids of the annotation source is skipped. With
+    `overwrite`, its cuboids of the annotation source are replaced instead. A sequence
+    gets labels from at most one file per call.
     """
     by_uri, by_file_name = recording_index(
         session=dataset.group_dataset.session, dataset_id=dataset.dataset_id
@@ -141,10 +147,14 @@ def add_labels_from_folder(
         topic=topic,
         suffix=suffix,
         annotation_source=annotation_source,
+        overwrite=overwrite,
         by_uri=by_uri,
         by_file_name=by_file_name,
-        labeled_sequence_ids=_labeled_sequence_ids(
-            dataset=dataset, annotation_source=annotation_source
+        # With overwrite, only the sequences labeled during this call are skipped.
+        labeled_sequence_ids=(
+            set()
+            if overwrite
+            else _labeled_sequence_ids(dataset=dataset, annotation_source=annotation_source)
         ),
     )
     if not by_uri:
@@ -206,6 +216,7 @@ def _add_labels_from_file(context: _LabelingContext, annotation_uri: str) -> Non
             annotation_mcap_uri=annotation_uri,
             messages=messages,
             annotation_source=context.annotation_source,
+            overwrite=context.overwrite,
         )
     except FileNotFoundError as error:
         logger.error("Cannot add annotations from '%s': the file does not exist.", annotation_uri)
