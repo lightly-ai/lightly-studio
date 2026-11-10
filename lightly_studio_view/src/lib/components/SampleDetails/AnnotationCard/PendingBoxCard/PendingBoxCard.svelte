@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onDestroy } from 'svelte';
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { usePendingBoxClass, useStickyClass } from '$lib/hooks';
     import { ClassSearchList, useClassSearchData } from '$lib/components/SampleDetails/SearchList';
@@ -13,6 +14,9 @@
 
     const { collectionId, getLayer }: Props = $props();
     const { request, resolve, cancel } = usePendingBoxClass();
+    // The request is module level. Settle it when the card goes, so the next sample shows no
+    // card for this box.
+    onDestroy(cancel);
     const { context: toolbarContext } = useSampleDetailsToolbarContext();
     const { pickClass } = useStickyClass();
     const classSearch = useClassSearchData(() => collectionId);
