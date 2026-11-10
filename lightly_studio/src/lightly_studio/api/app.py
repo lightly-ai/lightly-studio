@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from typing import Annotated
 
@@ -95,34 +95,59 @@ if LIGHTLY_STUDIO_DEBUG:
     logger = logging.getLogger("sqlalchemy.engine")
     logger.setLevel(logging.DEBUG)
 
-"""Create the FastAPI app."""
-app = FastAPI(lifespan=lifespan)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-app.add_middleware(
-    BrotliMiddleware,
-    minimum_size=1024,
-    # Exclude already-compressed media from compression (images, videos, video frames)
-    excluded_handlers=[
-        r"/images/sample/",
-        r"/videos/media/",
-        r"/frames/media/",
-    ],
-)
-
-if LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED:
+def create_app(routers: Sequence[APIRouter] = ()) -> FastAPI:
+    """Create the FastAPI app. `routers` are served under `/api`, before the webapp catch-all."""
+    app = FastAPI(lifespan=lifespan)
     app.add_middleware(
-        RequestTimingMiddleware,
-        error_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
-        fail_on_error=LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR,
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=False,
+        allow_methods=["*"],
+        allow_headers=["*"],
     )
+
+    app.add_middleware(
+        BrotliMiddleware,
+        minimum_size=1024,
+        # Exclude already-compressed media from compression (images, videos, video frames)
+        excluded_handlers=[
+            r"/images/sample/",
+            r"/videos/media/",
+            r"/frames/media/",
+        ],
+    )
+
+    if LIGHTLY_STUDIO_REQUEST_TIMING_ENABLED:
+        app.add_middleware(
+            RequestTimingMiddleware,
+            error_threshold_ms=LIGHTLY_STUDIO_REQUEST_TIMING_ERROR_MS,
+            fail_on_error=LIGHTLY_STUDIO_REQUEST_TIMING_FAIL_ON_ERROR,
+        )
+
+    register_exception_handlers(app)
+
+    # api routes
+    api_router = _create_api_router()
+    for router in routers:
+        api_router.include_router(router)
+    app.include_router(api_router)
+
+    # images serving
+    app.include_router(images.app_router, prefix="/images")
+    app.include_router(video_frames_media.frames_router)
+    app.include_router(video_media.app_router)
+    app.include_router(mcap_sequences.mcap_sequences_router)
+    app.include_router(recordings.recordings_router)
+
+    # health status check
+    app.include_router(healthz.health_router)
+
+    # webapp routes, the catch-all router stays last
+    app.include_router(webapp.app_router)
+
+    use_route_names_as_operation_ids(app)
+    return app
 
 
 def use_route_names_as_operation_ids(app: FastAPI) -> None:
@@ -135,51 +160,36 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
             route.operation_id = route.name  # in this case, 'read_items'
 
 
-register_exception_handlers(app)
+def _create_api_router() -> APIRouter:
+    """Create a new `/api` router. A new router per call keeps apps independent."""
+    api_router = APIRouter(prefix="/api", tags=["api"])
+    api_router.include_router(collection.collection_router)
+    api_router.include_router(collection_tag.tag_router)
+    api_router.include_router(export.export_router)
+    api_router.include_router(image.image_router)
+    api_router.include_router(sample.sample_router)
+    api_router.include_router(annotation_label.annotations_label_router)
+    api_router.include_router(annotation.annotations_router)
+    api_router.include_router(caption.captions_router)
+    api_router.include_router(text_embedding.text_embedding_router)
+    api_router.include_router(image_embedding.image_embedding_router)
+    api_router.include_router(settings.settings_router)
+    api_router.include_router(classifier.classifier_router)
+    api_router.include_router(embeddings2d.embeddings2d_router)
+    api_router.include_router(features.features_router)
+    api_router.include_router(analytics.analytics_router)
+    api_router.include_router(assisted_labeling.assisted_labeling_router)
+    api_router.include_router(evaluation.evaluation_router)
+    api_router.include_router(metadata.metadata_router)
+    api_router.include_router(sampling.sampling_router)
+    api_router.include_router(operator.operator_router)
+    api_router.include_router(frame.frame_router)
+    api_router.include_router(video.video_router)
+    api_router.include_router(group.group_router)
+    api_router.include_router(mcap_sequence.mcap_sequence_router)
+    api_router.include_router(enterprise.enterprise_router)
+    api_router.include_router(version.version_router)
+    return api_router
 
-# api routes
-api_router = APIRouter(prefix="/api", tags=["api"])
 
-api_router.include_router(collection.collection_router)
-api_router.include_router(collection_tag.tag_router)
-api_router.include_router(export.export_router)
-api_router.include_router(image.image_router)
-api_router.include_router(sample.sample_router)
-api_router.include_router(annotation_label.annotations_label_router)
-api_router.include_router(annotation.annotations_router)
-api_router.include_router(caption.captions_router)
-api_router.include_router(text_embedding.text_embedding_router)
-api_router.include_router(image_embedding.image_embedding_router)
-api_router.include_router(settings.settings_router)
-api_router.include_router(classifier.classifier_router)
-api_router.include_router(embeddings2d.embeddings2d_router)
-api_router.include_router(features.features_router)
-api_router.include_router(analytics.analytics_router)
-api_router.include_router(assisted_labeling.assisted_labeling_router)
-api_router.include_router(evaluation.evaluation_router)
-api_router.include_router(metadata.metadata_router)
-api_router.include_router(sampling.sampling_router)
-api_router.include_router(operator.operator_router)
-api_router.include_router(frame.frame_router)
-api_router.include_router(video.video_router)
-api_router.include_router(group.group_router)
-api_router.include_router(mcap_sequence.mcap_sequence_router)
-api_router.include_router(enterprise.enterprise_router)
-api_router.include_router(version.version_router)
-
-app.include_router(api_router)
-
-# images serving
-app.include_router(images.app_router, prefix="/images")
-app.include_router(video_frames_media.frames_router)
-app.include_router(video_media.app_router)
-app.include_router(mcap_sequences.mcap_sequences_router)
-app.include_router(recordings.recordings_router)
-
-# health status check
-app.include_router(healthz.health_router)
-
-# webapp routes
-app.include_router(webapp.app_router)
-
-use_route_names_as_operation_ids(app)
+app = create_app()
