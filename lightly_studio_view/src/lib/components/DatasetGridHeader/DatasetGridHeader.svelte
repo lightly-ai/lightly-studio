@@ -7,6 +7,7 @@
         VideoOrderBy
     } from '$lib/components';
     import GridHeaderSelectAllButton from '$lib/components/GridHeaderSelectAllButton/GridHeaderSelectAllButton.svelte';
+    import { ExtensionSlot } from '$lib/extensions';
 
     type SearchImage = { name: string; previewUrl: string };
 
@@ -72,6 +73,10 @@
         {:else if isAnnotations}
             <AnnotationOrderBy {collectionId} datasetId={collectionDatasetId} />
         {/if}
+        <ExtensionSlot
+            name="dataset.toolbar"
+            props={{ datasetId: collectionDatasetId, collectionId }}
+        />
     {/snippet}
     {#if hasMediaWithEmbeddings}
         <div class="relative" role="region" data-grid-search-drop-target data-onboarding-search>
