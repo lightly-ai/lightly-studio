@@ -13,10 +13,18 @@
         filter?: ImageFilter;
         categoricalKeys: string[];
         onValueToggle: (field: string, value: CategoricalMetadataValue) => void;
+        onValuesSet: (field: string, values: CategoricalMetadataValue[]) => void;
         onValuesClear: (field: string) => void;
     }
 
-    const { collectionId, filter, categoricalKeys, onValueToggle, onValuesClear }: Props = $props();
+    const {
+        collectionId,
+        filter,
+        categoricalKeys,
+        onValueToggle,
+        onValuesSet,
+        onValuesClear
+    }: Props = $props();
     const { categoricalMetadataValues } = useGlobalStorage();
 
     let addedFields = $state<string[]>([]);
@@ -68,6 +76,7 @@
         error={getErrorMessage(categoricalQuery.error)}
         onRetry={() => categoricalQuery.refetch()}
         onToggle={(value) => onValueToggle(field, value)}
+        onSetValues={(values) => onValuesSet(field, values)}
         onClear={() => onValuesClear(field)}
         onRemove={() => removeField(field)}
     />

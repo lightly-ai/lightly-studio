@@ -19,6 +19,7 @@ const defaultProps = {
     buckets,
     selectedValues: [] as (string | null)[],
     onToggle: vi.fn(),
+    onSetValues: vi.fn(),
     onClear: vi.fn()
 };
 
@@ -230,9 +231,9 @@ describe('MetadataCategoricalFilter', () => {
             label: `value-${index}`,
             count: 1
         }));
-        const onToggle = vi.fn();
+        const onSetValues = vi.fn();
         render(MetadataCategoricalFilter, {
-            props: { ...defaultProps, buckets: manyBuckets, onToggle }
+            props: { ...defaultProps, buckets: manyBuckets, onSetValues }
         });
 
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
@@ -244,6 +245,7 @@ describe('MetadataCategoricalFilter', () => {
         expect(screen.getAllByTestId('metadata-value-list-item')).toHaveLength(60);
 
         await fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
-        expect(onToggle).toHaveBeenCalledTimes(60);
+        expect(onSetValues).toHaveBeenCalledOnce();
+        expect(onSetValues).toHaveBeenCalledWith(manyBuckets.map((bucket) => bucket.label));
     });
 });

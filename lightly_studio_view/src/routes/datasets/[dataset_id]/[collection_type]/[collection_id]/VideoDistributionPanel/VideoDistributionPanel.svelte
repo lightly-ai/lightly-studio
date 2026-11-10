@@ -77,6 +77,7 @@
     onBarClick={onClassBarClick}
     onHistogramRangeSelect={metadataDistribution.onHistogramRangeSelect}
     onCategoricalValueToggle={metadataDistribution.onCategoricalValueToggle}
+    onCategoricalValuesSet={metadataDistribution.onCategoricalValuesSet}
     onCategoricalValuesClear={metadataDistribution.onCategoricalValuesClear}
     onCategoricalRetry={metadataDistribution.onCategoricalRetry}
     {histogramBinCount}

@@ -20,7 +20,15 @@ export function useFilterListState({
     let shownCount = $state(PAGE_SIZE);
 
     const matching = $derived(getItems().filter((item) => matchesSearch(item, search)));
-    const shown = $derived(getPaged() ? matching.slice(0, shownCount) : matching);
+    // Selected rows past the current page stay visible, so an active filter is never hidden.
+    const shown = $derived(
+        getPaged()
+            ? [
+                  ...matching.slice(0, shownCount),
+                  ...matching.slice(shownCount).filter((item) => item.selected)
+              ]
+            : matching
+    );
 
     return {
         get search() {
@@ -41,7 +49,7 @@ export function useFilterListState({
             return shown;
         },
         get nextPageCount() {
-            return Math.min(PAGE_SIZE, matching.length - shown.length);
+            return getPaged() ? Math.max(0, Math.min(PAGE_SIZE, matching.length - shownCount)) : 0;
         },
         showMore() {
             shownCount += PAGE_SIZE;

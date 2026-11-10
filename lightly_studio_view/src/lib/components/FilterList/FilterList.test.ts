@@ -115,6 +115,14 @@ describe('FilterList', () => {
         expect(screen.getAllByTestId('filter-list-item')).toHaveLength(100);
     });
 
+    it('renders selected rows past the current page', () => {
+        const items = makeItems(120).map((item, index) => ({ ...item, selected: index === 99 }));
+        renderList({ items });
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(51);
+        expect(screen.getByText('Item 99')).toBeInTheDocument();
+    });
+
     it('renders all rows when paging is off', () => {
         renderList({ items: makeItems(120), paged: false });
 

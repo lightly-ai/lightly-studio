@@ -15,6 +15,8 @@
         error?: string;
         onRetry?: () => void;
         onToggle: (value: CategoricalMetadataValue) => void;
+        /** Replaces the selected values in one update; used by "Select all". */
+        onSetValues: (values: CategoricalMetadataValue[]) => void;
         onClear: () => void;
         onRemove?: () => void;
         layout?: 'dropdown' | 'list';
@@ -29,6 +31,7 @@
         error,
         onRetry,
         onToggle,
+        onSetValues,
         onClear,
         onRemove,
         layout = 'dropdown'
@@ -66,6 +69,7 @@
             {error}
             listMode={layout === 'list'}
             {onToggle}
+            {onSetValues}
             {onClear}
         />
     {/snippet}

@@ -26,6 +26,7 @@
         categoricalFilter?: ImageFilter;
         categoricalKeys?: string[];
         onCategoricalValueToggle: (field: string, value: CategoricalMetadataValue) => void;
+        onCategoricalValuesSet: (field: string, values: CategoricalMetadataValue[]) => void;
         onCategoricalValuesClear: (field: string) => void;
     }
 
@@ -39,6 +40,7 @@
         categoricalFilter,
         categoricalKeys = [],
         onCategoricalValueToggle,
+        onCategoricalValuesSet,
         onCategoricalValuesClear
     }: Props = $props();
 
@@ -106,6 +108,7 @@
                 filter={categoricalFilter}
                 {categoricalKeys}
                 onValueToggle={onCategoricalValueToggle}
+                onValuesSet={onCategoricalValuesSet}
                 onValuesClear={onCategoricalValuesClear}
             />
         {/if}

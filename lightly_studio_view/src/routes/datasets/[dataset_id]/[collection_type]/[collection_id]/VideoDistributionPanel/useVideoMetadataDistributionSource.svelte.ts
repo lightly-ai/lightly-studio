@@ -1,3 +1,4 @@
+import type { CategoricalMetadataValue } from '$lib/services/types';
 import { getErrorMessage } from '$lib/utils';
 import { fromStore } from 'svelte/store';
 import type { VideoFilter } from '$lib/api/lightly_studio_local';
@@ -146,6 +147,9 @@ export function useVideoMetadataDistributionSource(
                 ...values.current,
                 [metadataKey]: toggleCategoricalValue(values.current[metadataKey] ?? [], value)
             });
+        },
+        onCategoricalValuesSet: (metadataKey: string, selected: CategoricalMetadataValue[]) => {
+            updateCategoricalMetadataValues({ ...values.current, [metadataKey]: selected });
         },
         onCategoricalValuesClear: (metadataKey: string) => {
             updateCategoricalMetadataValues(withoutCategoricalValues(values.current, metadataKey));

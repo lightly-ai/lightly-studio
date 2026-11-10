@@ -11,11 +11,20 @@
         error?: string;
         listMode: boolean;
         onToggle: (value: CategoricalMetadataValue) => void;
+        onSetValues: (values: CategoricalMetadataValue[]) => void;
         onClear: () => void;
     }
 
-    const { buckets, selectedValues, loading, error, listMode, onToggle, onClear }: Props =
-        $props();
+    const {
+        buckets,
+        selectedValues,
+        loading,
+        error,
+        listMode,
+        onToggle,
+        onSetValues,
+        onClear
+    }: Props = $props();
     const options = $derived(buildOptions(buckets, selectedValues));
     const isSelected = (value: CategoricalMetadataValue) =>
         selectedValues.some((selected) => Object.is(selected, value));
@@ -53,9 +62,9 @@
             return;
         }
         const wanted = new Set(ids);
-        options
-            .filter(({ bucket }) => wanted.has(bucket.id) && !isSelected(bucket.value))
-            .forEach(({ bucket }) => onToggle(bucket.value));
+        onSetValues(
+            options.filter(({ bucket }) => wanted.has(bucket.id)).map(({ bucket }) => bucket.value)
+        );
     };
 </script>
 
