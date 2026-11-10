@@ -133,16 +133,15 @@ def test_postgres_fresh_database__extra_version_locations(
         assert inspector.has_table(table_name="extra_table")
         with engine.connect() as connection:
             versions = (
-                connection.execute(
-                    text("SELECT version_num FROM alembic_version ORDER BY version_num")
-                )
-                .scalars()
-                .all()
+                connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
             )
-        assert versions == sorted([db_migrations.get_head_revision(), "extra0001"])
+        # The extra revision depends on the oss head, so Alembic stores only the extra revision.
+        assert versions == ["extra0001"]
     finally:
         with engine.begin() as connection:
             connection.execute(text("DROP TABLE IF EXISTS extra_table"))
+        # The oss script directory does not know the extra revision.
+        _reset_postgres_database(engine_url=postgres_url)
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()
 
