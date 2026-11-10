@@ -2,7 +2,7 @@
 
 Schema changes for PostgreSQL use [Alembic](https://alembic.sqlalchemy.org/). Migration scripts live in `src/lightly_studio/migrations/versions/`; configuration in `alembic.ini` and `migrations/env.py`. Runtime logic is in `db_migrations.run_migrations()`.
 
-The revisions in this package form the Alembic branch `oss` (label on the baseline revision). `run_migrations(extra_version_locations=...)` adds directories with revisions of other branches. The first revision of such a branch sets `depends_on` to the `oss` head. Without extra locations the upgrade target is `oss@head`, with them it is `heads`.
+The revisions in this package form the Alembic branch `oss` (label on the baseline revision). `run_migrations(extra_version_locations=...)` adds directories with revisions of other branches. Each revision of such a branch sets `depends_on` to an `oss` revision and runs directly after it, on a new and on an existing database. Without extra locations the upgrade target is `oss@head`.
 
 ## Startup behavior (Postgres only)
 

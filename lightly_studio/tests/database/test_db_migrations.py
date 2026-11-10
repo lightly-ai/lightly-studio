@@ -10,7 +10,6 @@ import numpy as np
 import pytest
 from alembic import command
 from alembic.config import Config
-from alembic.script import ScriptDirectory
 from pytest_mock import MockerFixture
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
@@ -22,6 +21,7 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from tests.helpers_resolvers import create_collection, create_embedding_model, create_image
 
 _POSTGRES_URL = "postgresql://localhost/db"
+_BASELINE_REVISION = "fa45898e4138"
 
 
 @pytest.fixture
@@ -70,15 +70,25 @@ def test_run_migrations__fresh_database(
     )
 
 
-def test_run_migrations__extra_version_locations_upgrade_heads(
+def test_run_migrations__extra_version_locations(
     mocker: MockerFixture,
     engine: Engine,
     tmp_path: Path,
 ) -> None:
-    """Extra version locations add a branch, so all heads are upgraded."""
-    alembic_cfg = Config()
-    mock_get_config = mocker.patch.object(
-        db_migrations, "get_alembic_config", return_value=alembic_cfg
+    """Each extra revision is an upgrade target, oldest first, then the oss head."""
+    _write_extra_revision(
+        versions_dir=tmp_path,
+        revision="extra0001",
+        down_revision=None,
+        depends_on=_BASELINE_REVISION,
+        upgrade_sql="CREATE TABLE extra_table AS SELECT version_num FROM alembic_version",
+    )
+    _write_extra_revision(
+        versions_dir=tmp_path,
+        revision="extra0002",
+        down_revision="extra0001",
+        depends_on=db_migrations.get_head_revision(),
+        upgrade_sql="SELECT 1",
     )
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
     mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
@@ -87,79 +97,77 @@ def test_run_migrations__extra_version_locations_upgrade_heads(
         engine=engine, engine_url=_POSTGRES_URL, extra_version_locations=[str(tmp_path)]
     )
 
-    mock_get_config.assert_called_once_with(
-        engine_url=_POSTGRES_URL, extra_version_locations=[str(tmp_path)]
-    )
-    mock_run_command.assert_called_once_with(
-        engine=engine,
-        config=alembic_cfg,
-        fn=command.upgrade,
-        revision="heads",
-    )
-
-
-def test_get_alembic_config__extra_revision_depends_on_oss_head(tmp_path: Path) -> None:
-    """An extra branch revision runs right after the oss head."""
-    _write_extra_revision(versions_dir=tmp_path)
-    config = db_migrations.get_alembic_config(
-        engine_url=_POSTGRES_URL, extra_version_locations=[str(tmp_path)]
-    )
-    script = ScriptDirectory.from_config(config)
-
-    oss_head = script.get_revision("oss@head").revision
-    assert set(script.get_heads()) == {oss_head, "extra0001"}
-    assert [rev.revision for rev in script.iterate_revisions("heads", "base")][:2] == [
-        "extra0001",
-        oss_head,
-    ]
+    revisions = [call.kwargs["revision"] for call in mock_run_command.call_args_list]
+    assert revisions == ["extra0001", "extra0002", "oss@head"]
 
 
 def test_postgres_fresh_database__extra_version_locations(
     postgres_url: str | None,
     tmp_path: Path,
 ) -> None:
-    """Fresh Postgres runs the oss branch and the extra branch."""
+    """An extra revision runs directly after the oss revision that it depends on."""
     if postgres_url is None:
         pytest.skip("Requires --postgres")
     _reset_postgres_database(engine_url=postgres_url)
-    _write_extra_revision(versions_dir=tmp_path)
+    # The extra table stores the oss revision that is applied when extra0001 runs.
+    _write_extra_revision(
+        versions_dir=tmp_path,
+        revision="extra0001",
+        down_revision=None,
+        depends_on=_BASELINE_REVISION,
+        upgrade_sql="CREATE TABLE extra_table AS SELECT version_num FROM alembic_version",
+    )
+    _write_extra_revision(
+        versions_dir=tmp_path,
+        revision="extra0002",
+        down_revision="extra0001",
+        depends_on=db_migrations.get_head_revision(),
+        upgrade_sql="SELECT 1",
+    )
     engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
     try:
         db_migrations.run_migrations(
             engine=engine, engine_url=postgres_url, extra_version_locations=[str(tmp_path)]
         )
-        inspector = db_migrations._get_inspector(engine=engine)
-        assert inspector.has_table(table_name="collection")
-        assert inspector.has_table(table_name="extra_table")
+        assert db_migrations._get_inspector(engine=engine).has_table(table_name="collection")
         with engine.connect() as connection:
+            applied_before_extra = (
+                connection.execute(text("SELECT version_num FROM extra_table")).scalars().all()
+            )
             versions = (
                 connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
             )
-        # The extra revision depends on the oss head, so Alembic stores only the extra revision.
-        assert versions == ["extra0001"]
+        assert applied_before_extra == [_BASELINE_REVISION]
+        # extra0002 depends on the oss head, so Alembic stores only extra0002.
+        assert versions == ["extra0002"]
     finally:
         with engine.begin() as connection:
             connection.execute(text("DROP TABLE IF EXISTS extra_table"))
-        # The oss script directory does not know the extra revision.
+        # The oss script directory does not know the extra revisions.
         _reset_postgres_database(engine_url=postgres_url)
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
         engine.dispose()
 
 
-def _write_extra_revision(versions_dir: Path) -> None:
-    """Write one revision of the ``extra`` branch that depends on the oss head."""
-    oss_head = db_migrations.get_head_revision()
-    (versions_dir / "extra0001_add_extra_table.py").write_text(
+def _write_extra_revision(
+    versions_dir: Path,
+    revision: str,
+    down_revision: str | None,
+    depends_on: str,
+    upgrade_sql: str,
+) -> None:
+    """Write one revision of the ``extra`` branch that depends on an oss revision."""
+    branch_labels = None if down_revision else ("extra",)
+    (versions_dir / f"{revision}.py").write_text(
         "from alembic import op\n"
-        "import sqlalchemy as sa\n"
-        'revision = "extra0001"\n'
-        "down_revision = None\n"
-        'branch_labels = ("extra",)\n'
-        f'depends_on = "{oss_head}"\n'
+        f"revision = {revision!r}\n"
+        f"down_revision = {down_revision!r}\n"
+        f"branch_labels = {branch_labels!r}\n"
+        f"depends_on = {depends_on!r}\n"
         "def upgrade() -> None:\n"
-        '    op.create_table("extra_table", sa.Column("id", sa.Integer(), primary_key=True))\n'
+        f"    op.execute({upgrade_sql!r})\n"
         "def downgrade() -> None:\n"
-        '    op.drop_table("extra_table")\n'
+        "    pass\n"
     )
 
 

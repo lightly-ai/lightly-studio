@@ -1,8 +1,8 @@
 """PostgreSQL schema migrations via Alembic.
 
 The revisions in this package form the ``oss`` branch. Extra version locations add
-branches whose first revision depends on the ``oss`` head. Without extra locations the
-upgrade target is ``oss@head``, with them it is ``heads``.
+branches whose revisions depend on ``oss`` revisions. An extra revision runs directly
+after the ``oss`` revision that it depends on, on a new and on an existing database.
 """
 
 from __future__ import annotations
@@ -40,19 +40,20 @@ def run_migrations(
     config = get_alembic_config(
         engine_url=engine_url, extra_version_locations=extra_version_locations
     )
-    revision = "heads" if extra_version_locations else OSS_HEAD
+    revisions = _get_upgrade_targets(config=config) if extra_version_locations else [OSS_HEAD]
 
     if _alembic_version_table_exists(engine=engine):
-        logging.info(f"Applying pending Alembic migrations (upgrade {revision}).")
+        logging.info(f"Applying pending Alembic migrations (upgrade {revisions}).")
     else:
-        logging.info(f"Initializing empty PostgreSQL database (upgrade {revision}).")
+        logging.info(f"Initializing empty PostgreSQL database (upgrade {revisions}).")
 
-    _run_alembic_command(
-        engine=engine,
-        config=config,
-        fn=command.upgrade,
-        revision=revision,
-    )
+    for revision in revisions:
+        _run_alembic_command(
+            engine=engine,
+            config=config,
+            fn=command.upgrade,
+            revision=revision,
+        )
 
 
 def get_head_revision() -> str:
@@ -115,6 +116,23 @@ def _add_version_locations(config: Config, extra_version_locations: Sequence[str
     config.set_main_option(name="path_separator", value="os")
     config.set_main_option(name="version_path_separator", value="os")
     config.set_main_option(name="version_locations", value=os.pathsep.join(locations))
+
+
+def _get_upgrade_targets(config: Config) -> list[str]:
+    """Return the upgrade targets that apply all branches in a fixed order.
+
+    Each extra revision is a target, oldest first. For each target, Alembic first applies
+    the ``oss`` revisions that it depends on. The last target is the ``oss`` head.
+    ``upgrade heads`` does not give this order: it can apply later ``oss`` revisions
+    before an extra revision.
+    """
+    script = ScriptDirectory.from_config(config=config)
+    oss_revisions = {rev.revision for rev in script.iterate_revisions(upper=OSS_HEAD, lower="base")}
+    # walk_revisions goes from the heads to the base.
+    extra_revisions = [
+        rev.revision for rev in script.walk_revisions() if rev.revision not in oss_revisions
+    ]
+    return [*reversed(extra_revisions), OSS_HEAD]
 
 
 def _run_alembic_command(
