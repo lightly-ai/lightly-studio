@@ -8,6 +8,8 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Path, Query
 from pydantic import BaseModel
 
+from lightly_studio.api.dependencies import authorization
+from lightly_studio.api.dependencies.authorization import Action
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_CONFLICT,
     HTTP_STATUS_CREATED,
@@ -186,7 +188,10 @@ def deep_copy(
     return {"collection_id": str(new_collection.collection_id)}
 
 
-@collection_router.delete("/collections/{collection_id}/delete-dataset")
+@collection_router.delete(
+    "/collections/{collection_id}/delete-dataset",
+    dependencies=[Depends(authorization.require(Action.DATASET_DELETE))],
+)
 def delete_dataset(
     session: SessionDep,
     collection: Annotated[

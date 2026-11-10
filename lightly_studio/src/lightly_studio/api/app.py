@@ -29,6 +29,7 @@ from lightly_studio.api.routes.api import (
     annotation,
     annotation_label,
     assisted_labeling,
+    capabilities,
     caption,
     classifier,
     collection,
@@ -201,6 +202,7 @@ def _create_api_router() -> APIRouter:
     api_router.include_router(classifier.classifier_router)
     api_router.include_router(embeddings2d.embeddings2d_router)
     api_router.include_router(features.features_router)
+    api_router.include_router(capabilities.capabilities_router)
     api_router.include_router(analytics.analytics_router)
     api_router.include_router(assisted_labeling.assisted_labeling_router)
     api_router.include_router(evaluation.evaluation_router)
