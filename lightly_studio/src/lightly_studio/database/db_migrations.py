@@ -17,7 +17,7 @@ from sqlalchemy import inspect
 from sqlalchemy.engine import Engine, Inspector
 
 import lightly_studio.api.db_tables  # noqa: F401
-from lightly_studio.database import db_url
+from lightly_studio.database import db_url, schema_compat
 from lightly_studio.migrations.config_utils import ensure_script_location, find_alembic_ini
 
 
@@ -41,6 +41,7 @@ def run_migrations(engine: Engine, engine_url: str) -> None:
         fn=command.upgrade,
         revision="head",
     )
+    schema_compat.write_schema_compat(engine=engine, oss_revision=get_head_revision())
 
 
 def get_head_revision() -> str:

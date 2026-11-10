@@ -14,7 +14,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel
 
-from lightly_studio.database import db_migrations, db_url
+from lightly_studio.database import db_migrations, db_url, schema_compat
 from lightly_studio.database.db_manager import DatabaseEngine
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from tests.helpers_resolvers import create_collection, create_embedding_model, create_image
@@ -38,6 +38,9 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=True)
     mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
 
+    mocker.patch.object(db_migrations, "get_head_revision", return_value="abc123")
+    mock_write = mocker.patch.object(schema_compat, "write_schema_compat")
+
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
     mock_run_command.assert_called_once_with(
@@ -46,6 +49,7 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
         fn=command.upgrade,
         revision="head",
     )
+    mock_write.assert_called_once_with(engine=engine, oss_revision="abc123")
 
 
 def test_run_migrations__fresh_database(
@@ -58,6 +62,9 @@ def test_run_migrations__fresh_database(
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
     mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
 
+    mocker.patch.object(db_migrations, "get_head_revision", return_value="abc123")
+    mock_write = mocker.patch.object(schema_compat, "write_schema_compat")
+
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
     mock_run_command.assert_called_once_with(
@@ -66,6 +73,7 @@ def test_run_migrations__fresh_database(
         fn=command.upgrade,
         revision="head",
     )
+    mock_write.assert_called_once_with(engine=engine, oss_revision="abc123")
 
 
 def _reset_postgres_database(engine_url: str) -> None:
@@ -123,6 +131,10 @@ def test_postgres_fresh_database__upgrade_head(
                 statement=text("SELECT version_num FROM alembic_version"),
             ).scalar_one()
         assert version == head_revision
+        row = schema_compat.read_schema_compat(engine=engine._engine)
+        assert row is not None
+        assert row.oss_revision == head_revision
+        assert row.min_client_version == schema_compat.MIN_SUPPORTED_CLIENT_VERSION
     finally:
         _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()
