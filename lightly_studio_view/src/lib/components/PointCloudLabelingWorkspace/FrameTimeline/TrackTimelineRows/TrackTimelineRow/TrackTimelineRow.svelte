@@ -79,7 +79,7 @@
     <div class="relative" bind:this={bar}>
         <button
             type="button"
-            class="relative block h-2 w-full cursor-pointer overflow-hidden rounded-sm bg-muted/40"
+            class="relative block h-4 w-full cursor-pointer overflow-hidden rounded-sm bg-muted/40"
             aria-label={`Select ${track.annotation_label_name} track ${track.object_track_number} position`}
             onclick={(event) => onSelectPosition(event, track)}
         >
