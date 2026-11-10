@@ -23,7 +23,8 @@ def _engine(tmp_path: Path) -> Engine:
 def test_write_schema_compat__inserts_row(tmp_path: Path) -> None:
     engine = _engine(tmp_path=tmp_path)
 
-    schema_compat.write_schema_compat(engine=engine, oss_revision="abc123")
+    with engine.begin() as connection:
+        schema_compat.write_schema_compat(connection=connection, oss_revision="abc123")
 
     row = schema_compat.read_schema_compat(engine=engine)
     assert row is not None
@@ -33,9 +34,11 @@ def test_write_schema_compat__inserts_row(tmp_path: Path) -> None:
 
 def test_write_schema_compat__replaces_row(tmp_path: Path) -> None:
     engine = _engine(tmp_path=tmp_path)
-    schema_compat.write_schema_compat(engine=engine, oss_revision="abc123")
+    with engine.begin() as connection:
+        schema_compat.write_schema_compat(connection=connection, oss_revision="abc123")
 
-    schema_compat.write_schema_compat(engine=engine, oss_revision="def456")
+    with engine.begin() as connection:
+        schema_compat.write_schema_compat(connection=connection, oss_revision="def456")
 
     row = schema_compat.read_schema_compat(engine=engine)
     assert row is not None
