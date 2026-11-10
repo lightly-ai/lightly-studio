@@ -6,6 +6,7 @@ SceneEntity.timestamp to sample_sequence_link.timestamp_ns.
 
 from __future__ import annotations
 
+import itertools
 import logging
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
@@ -13,7 +14,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session, col, func, select
+from sqlmodel import Session, col, select
 
 from lightly_studio.core.mcap import scene_update
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
@@ -186,17 +187,21 @@ def write_sequence_labels(  # noqa: PLR0913
             f"No label of annotation MCAP '{annotation_mcap_uri}' matches a tick of the "
             f"sequence. The annotations of annotation source '{annotation_source}' are kept."
         )
-    track_ids = _allocate_tracks(session=session, dataset_id=dataset.dataset_id, matched=matched)
-    annotations = _annotation_creates(
-        session=session, dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
-    )
+    parent_by_source = _parent_by_source_track(matched=matched)
     if overwrite:
+        # The delete comes before the track allocation, so new tracks reuse freed numbers.
         _delete_sequence_annotations(
             session=session,
             group_collection_id=dataset.group_dataset.collection_id,
             annotation_source=annotation_source,
             group_ids=[entry.sample_id for entry in entries],
         )
+    track_ids = _allocate_tracks(
+        session=session, dataset_id=dataset.dataset_id, parent_by_source=parent_by_source
+    )
+    annotations = _annotation_creates(
+        session=session, dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
+    )
     if annotations:
         annotation_resolver.create_many(
             session=session,
@@ -315,16 +320,13 @@ def _entity_timestamps(messages: Sequence[tuple[int, SceneUpdateLabels]]) -> lis
     return timestamps
 
 
-def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -> dict[int, UUID]:
+def _allocate_tracks(
+    session: Session, dataset_id: UUID, parent_by_source: Mapping[int, int | None]
+) -> dict[int, UUID]:
     """Create a dataset-unique track for each source_track_id and link it to its parent track.
 
-    A parent track id without cuboids of its own also gets a track. Parent tracks must be
-    root tracks. Roots are created before children, so the parent foreign key resolves.
-
-    Raises:
-        ValueError: If a track has more than one parent, or a parent track has a parent.
+    Roots are created before children, so the parent foreign key resolves.
     """
-    parent_by_source = _parent_by_source_track(matched=matched)
     if not parent_by_source:
         return {}
 
@@ -334,15 +336,13 @@ def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -
         for source_id, parent_id in parent_by_source.items()
         if parent_id is not None
     ]
-    root_ids = set(roots)
-    if any(parent_id not in root_ids for _, parent_id in children):
-        raise ValueError("A parent track must not have a parent track itself.")
-
-    next_number = _next_track_number(session=session, dataset_id=dataset_id)
+    numbers = _free_track_numbers(
+        session=session, dataset_id=dataset_id, count=len(parent_by_source)
+    )
     track_ids = _create_source_tracks(
         session=session,
         dataset_id=dataset_id,
-        next_number=next_number,
+        numbers=numbers[: len(roots)],
         links=[(source_id, None) for source_id in roots],
     )
     if children:
@@ -350,7 +350,7 @@ def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -
             _create_source_tracks(
                 session=session,
                 dataset_id=dataset_id,
-                next_number=next_number + len(roots),
+                numbers=numbers[len(roots) :],
                 links=[(source_id, track_ids[parent_id]) for source_id, parent_id in children],
             )
         )
@@ -360,8 +360,10 @@ def _allocate_tracks(session: Session, dataset_id: UUID, matched: MatchResult) -
 def _parent_by_source_track(matched: MatchResult) -> dict[int, int | None]:
     """Map each source_track_id, including parent-only ids, to its parent source_track_id.
 
+    Parent tracks must be root tracks.
+
     Raises:
-        ValueError: If cuboids of one track have different parent track ids.
+        ValueError: If a track has more than one parent, or a parent track has a parent.
     """
     parent_by_source: dict[int, int | None] = {}
     for cuboids in matched.cuboids_by_group.values():
@@ -372,26 +374,31 @@ def _parent_by_source_track(matched: MatchResult) -> dict[int, int | None]:
     for parent_id in list(parent_by_source.values()):
         if parent_id is not None:
             parent_by_source.setdefault(parent_id, None)
+    if any(parent_by_source[p] is not None for p in parent_by_source.values() if p is not None):
+        raise ValueError("A parent track must not have a parent track itself.")
     return parent_by_source
 
 
 def _create_source_tracks(
     session: Session,
     dataset_id: UUID,
-    next_number: int,
+    numbers: Sequence[int],
     links: Sequence[tuple[int, UUID | None]],
 ) -> dict[int, UUID]:
-    """Insert tracks and map each source_track_id to its object_track_id."""
+    """Insert tracks and map each source_track_id to its object_track_id.
+
+    The tracks get the object_track_numbers in `numbers`, in the order of `links`.
+    """
     created_ids = object_track_resolver.create_many(
         session=session,
         tracks=[
             ObjectTrackCreate(
-                object_track_number=next_number + index,
+                object_track_number=number,
                 dataset_id=dataset_id,
                 source_track_id=source_id,
                 parent_object_track_id=parent_object_track_id,
             )
-            for index, (source_id, parent_object_track_id) in enumerate(links)
+            for number, (source_id, parent_object_track_id) in zip(numbers, links)
         ],
     )
     return {
@@ -399,14 +406,20 @@ def _create_source_tracks(
     }
 
 
-def _next_track_number(session: Session, dataset_id: UUID) -> int:
-    """Return the next dataset-unique object_track_number."""
-    maximum = session.exec(
-        select(func.max(ObjectTrackTable.object_track_number)).where(
-            col(ObjectTrackTable.dataset_id) == dataset_id
-        )
-    ).one()
-    return 1 if maximum is None else maximum + 1
+def _free_track_numbers(session: Session, dataset_id: UUID, count: int) -> list[int]:
+    """Return the `count` lowest positive object_track_numbers that the dataset does not use.
+
+    Numbers of deleted tracks are used again, so the numbers have no gaps.
+    """
+    used_numbers = set(
+        session.exec(
+            select(ObjectTrackTable.object_track_number).where(
+                col(ObjectTrackTable.dataset_id) == dataset_id
+            )
+        ).all()
+    )
+    free_numbers = (number for number in itertools.count(start=1) if number not in used_numbers)
+    return list(itertools.islice(free_numbers, count))
 
 
 def _annotation_creates(
