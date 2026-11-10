@@ -26,4 +26,4 @@ class UnauthenticatedError(Exception):
 
 
 class ForbiddenError(Exception):
-    """The user of the request does not have the required role."""
+    """The request does not have the required role or secret."""

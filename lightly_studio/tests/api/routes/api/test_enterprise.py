@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import json
 import os
 import tempfile
@@ -12,7 +14,78 @@ from pytest_mock import MockerFixture
 from s3fs import S3FileSystem  # type: ignore[import-untyped]
 
 from lightly_studio import ca_bundle
+from lightly_studio.dataset import env
 from tests import helpers_tls
+
+_SECRET = "test-cloud-credentials-secret"
+_HEADERS = {"X-Cloud-Credentials-Secret": _SECRET}
+
+
+@pytest.fixture(autouse=True)
+def _set_cloud_credentials_secret(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(env, "LIGHTLY_STUDIO_CLOUD_CREDENTIALS_SECRET", _SECRET)
+
+
+@pytest.mark.parametrize(
+    "headers",
+    [
+        {},
+        {"X-Cloud-Credentials-Secret": ""},
+        {"X-Cloud-Credentials-Secret": "wrong-secret"},
+    ],
+)
+def test_refresh_cloud_credentials__rejects_missing_or_wrong_secret(
+    test_client: TestClient,
+    mocker: MockerFixture,
+    headers: dict[str, str],
+) -> None:
+    mocker.patch.dict(os.environ, clear=False)
+
+    response = test_client.put(
+        "/api/cloud-credentials",
+        headers=headers,
+        json={"AWS_ACCESS_KEY_ID": "attacker-key"},
+    )
+
+    assert response.status_code == 403
+    assert os.environ.get("AWS_ACCESS_KEY_ID") != "attacker-key"
+
+
+def test_refresh_cloud_credentials__rejects_non_ascii_secret(
+    test_client: TestClient,
+) -> None:
+    response = test_client.put(
+        "/api/cloud-credentials",
+        headers={b"X-Cloud-Credentials-Secret": "wrong-\u00e9".encode()},
+        json={"AWS_ACCESS_KEY_ID": "key"},
+    )
+
+    assert response.status_code == 403
+
+
+@pytest.mark.parametrize("secret", [None, ""])
+def test_refresh_cloud_credentials__rejects_every_request_without_configured_secret(
+    test_client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+    secret: str | None,
+) -> None:
+    monkeypatch.setattr(env, "LIGHTLY_STUDIO_CLOUD_CREDENTIALS_SECRET", secret)
+
+    response = test_client.put(
+        "/api/cloud-credentials",
+        headers={"X-Cloud-Credentials-Secret": ""},
+        json={"AWS_ACCESS_KEY_ID": "key"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_refresh_cloud_credentials__checks_secret_before_body(
+    test_client: TestClient,
+) -> None:
+    response = test_client.put("/api/cloud-credentials", json=[1])
+
+    assert response.status_code == 403
 
 
 def test_refresh_cloud_credentials__sets_env_vars(
@@ -23,6 +96,7 @@ def test_refresh_cloud_credentials__sets_env_vars(
 
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={
             "AWS_ACCESS_KEY_ID": "test-key-id",
             "AWS_SECRET_ACCESS_KEY": "test-secret",
@@ -43,6 +117,7 @@ def test_refresh_cloud_credentials__clears_s3_cache(
 
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={"AWS_ACCESS_KEY_ID": "x"},
     )
 
@@ -61,6 +136,7 @@ def test_refresh_cloud_credentials__applies_gcs_config(
 
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={"FSSPEC_GCS": json.dumps(storage_options)},
     )
 
@@ -81,6 +157,7 @@ def test_refresh_cloud_credentials__applies_azure_config(
 
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={"FSSPEC_ABFS": serialized_options},
     )
 
@@ -106,6 +183,7 @@ def test_refresh_cloud_credentials__invalidates_cached_s3_filesystem(
     # Push new credentials via the endpoint
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={
             "AWS_ACCESS_KEY_ID": "new-key",
             "AWS_SECRET_ACCESS_KEY": "new-secret",
@@ -124,6 +202,7 @@ def test_refresh_cloud_credentials__rejects_disallowed_keys(
 ) -> None:
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={"EVIL_KEY": "value"},
     )
 
@@ -135,6 +214,7 @@ def test_refresh_cloud_credentials__rejects_mixed_disallowed_keys(
 ) -> None:
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={
             "AWS_ACCESS_KEY_ID": "key",
             "EVIL_KEY": "value",
@@ -161,6 +241,7 @@ def test_refresh_cloud_credentials__drops_omitted_aws_key_on_rotation(
     # Rotation payload uses long-term credentials — no session token.
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={
             "AWS_ACCESS_KEY_ID": "new-key",
             "AWS_SECRET_ACCESS_KEY": "new-secret",
@@ -182,6 +263,7 @@ def test_refresh_cloud_credentials__accepts_google_credentials(
 
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={"GOOGLE_APPLICATION_CREDENTIALS": "/path/to/key.json"},
     )
 
@@ -203,6 +285,7 @@ def test_refresh_cloud_credentials__writes_ca_bundle(
 
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={"AWS_ACCESS_KEY_ID": "key", "AWS_CA_BUNDLE_PEM": ca_pem},
     )
 
@@ -217,6 +300,7 @@ def test_refresh_cloud_credentials__rejects_invalid_ca_bundle(
 ) -> None:
     response = test_client.put(
         "/api/cloud-credentials",
+        headers=_HEADERS,
         json={"AWS_ACCESS_KEY_ID": "key", "AWS_CA_BUNDLE_PEM": "not a certificate"},
     )
 

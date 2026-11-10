@@ -161,7 +161,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
 
     @app.exception_handler(ForbiddenError)
     async def _forbidden_error_handler(_request: Request, _exc: ForbiddenError) -> JSONResponse:
-        """Handle a user without the required role."""
+        """Handle a request without the required role or secret."""
         return JSONResponse(status_code=HTTP_STATUS_FORBIDDEN, content={"error": str(_exc)})
 
     @app.exception_handler(UnknownImageSizeError)

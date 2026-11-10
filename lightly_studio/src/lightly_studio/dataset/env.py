@@ -47,6 +47,12 @@ LIGHTLY_STUDIO_USAGE_REPORT_URL: Optional[str] = env.str(
 # The token this installation presents to the central service, for every call it makes there.
 LIGHTLY_STUDIO_SERVICE_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_SERVICE_TOKEN", default=None)
 
+# The shared secret that a caller of PUT /api/cloud-credentials must send. Unset or empty, the
+# endpoint rejects every request. See lightly_studio/api/routes/api/enterprise.py.
+LIGHTLY_STUDIO_CLOUD_CREDENTIALS_SECRET: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_CLOUD_CREDENTIALS_SECRET", default=None
+)
+
 LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)
 )
