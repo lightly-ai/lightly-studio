@@ -26,6 +26,8 @@ export function selectVisibleTracks(
         (track) =>
             chosen.has(getTrackKey(track)) ||
             (selection === null &&
-                track.annotations.some(({ annotation_id }) => annotation_id === selectedAnnotationId))
+                track.annotations.some(
+                    ({ annotation_id }) => annotation_id === selectedAnnotationId
+                ))
     );
 }

@@ -65,9 +65,10 @@ def extend_sequence_track(  # noqa: PLR0913
     if start_seq_number not in known or end_seq_number not in known:
         raise ValueError("The requested ticks do not exist in this sequence.")
 
-    dataset = session.exec(
-        select(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id).with_for_update()
-    ).first()
+    dataset_query = select(DatasetTable).where(col(DatasetTable.dataset_id) == dataset_id)
+    if session.get_bind().dialect.name == "postgresql":
+        dataset_query = dataset_query.with_for_update()
+    dataset = session.exec(dataset_query).first()
     if dataset is None:
         return None
 

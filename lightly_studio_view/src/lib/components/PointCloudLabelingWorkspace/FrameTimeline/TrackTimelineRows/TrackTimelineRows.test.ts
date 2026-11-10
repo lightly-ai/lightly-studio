@@ -228,6 +228,12 @@ describe('TrackTimelineRows', () => {
 
         it('does not list the track of the selected annotation when it is not chosen', () => {
             localStorage.clear();
+            localStorage.setItem(
+                'lightlyStudio_trackTimelineVisibleTracks_sequence-1',
+                JSON.stringify(
+                    manyTracks.slice(0, 10).map((item) => `${item.object_track_id}-source`)
+                )
+            );
             const { container } = render(TrackTimelineRows, {
                 props: {
                     ...props,
