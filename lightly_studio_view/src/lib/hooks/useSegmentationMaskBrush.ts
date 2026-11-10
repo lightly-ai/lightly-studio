@@ -88,7 +88,7 @@ export function useSegmentationMaskBrush({
         selectedAnnotation: AnnotationView | null,
         // A promise while the class list is still loading.
         labels: LabelList | Promise<LabelList | undefined>,
-        updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>,
+        updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>,
         lockedAnnotationIds?: Set<string>
     ) => {
         if (!annotationLabelContext.isDrawing || !workingMask) {
@@ -157,8 +157,6 @@ export function useSegmentationMaskBrush({
         const rle = encodeBinaryMaskToRLE(workingMask);
         if (selectedAnnotation) {
             try {
-                if (!updateAnnotation) return;
-
                 await updateAnnotation({
                     annotation_id: selectedAnnotation.sample_id!,
                     collection_id: collectionId,
