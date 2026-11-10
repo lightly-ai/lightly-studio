@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from pathlib import Path
 from uuid import UUID
 
@@ -11,7 +12,7 @@ from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.database import db_manager
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver, tag_resolver
 from tests.core.mcap import helpers
@@ -71,6 +72,55 @@ def test_write_sequence_labels(
     )
     assert track is not None
     assert track.source_track_id == 7
+
+
+def test_write_sequence_labels__overwrite_keeps_annotations_of_invalid_labels(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, group_ids = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=1),),
+    )
+    # Tracks 7 and 8 parent each other.
+    invalid_cuboids = (
+        _cuboid(timestamp_ns=timestamp_ns, track_id=7, parent_track_id=8),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=8, parent_track_id=7),
+    )
+
+    with pytest.raises(ValueError, match="A parent track must not have a parent track itself"):
+        _write_cuboids(dataset=dataset, sequence=sequence, cuboids=invalid_cuboids, overwrite=True)
+
+    assert len(_cuboid_annotations(group_ids=group_ids)) == 1
+
+
+def test_write_sequence_labels__overwrite_keeps_annotations_without_matched_labels(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, group_ids = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    _write_cuboids(
+        dataset=dataset,
+        sequence=sequence,
+        cuboids=(_cuboid(timestamp_ns=timestamp_ns, track_id=1),),
+    )
+    # No tick has this timestamp.
+    unmatched_cuboids = (_cuboid(timestamp_ns=timestamp_ns + 1, track_id=1),)
+
+    with pytest.raises(ValueError, match="matches a tick of the sequence"):
+        _write_cuboids(
+            dataset=dataset, sequence=sequence, cuboids=unmatched_cuboids, overwrite=True
+        )
+
+    assert len(_cuboid_annotations(group_ids=group_ids)) == 1
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    assert len(tracks) == 1
 
 
 def test_write_sequence_labels__frame_tags(
@@ -226,4 +276,27 @@ def _cuboid(
         position=(px, 0.0, 0.5),
         rotation=(0.0, 0.0, 0.0, 1.0),
         size=(2.0, 1.0, 1.5),
+    )
+
+
+def _write_cuboids(
+    dataset: McapDataset,
+    sequence: McapSequence,
+    cuboids: tuple[CuboidLabel, ...],
+    overwrite: bool = False,
+) -> None:
+    add_labels.write_sequence_labels(
+        dataset=dataset,
+        sequence=sequence,
+        annotation_mcap_uri="memory://foo_labeled.mcap",
+        messages=[(cuboids[0].timestamp_ns, SceneUpdateLabels(cuboids=cuboids))],
+        overwrite=overwrite,
+    )
+
+
+def _cuboid_annotations(group_ids: list[UUID]) -> Sequence[AnnotationBaseTable]:
+    return annotation_resolver.get_all_by_parent_sample_ids(
+        session=db_manager.persistent_session(),
+        parent_sample_ids=group_ids,
+        annotation_types=[AnnotationType.CUBOID_3D],
     )
