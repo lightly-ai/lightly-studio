@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
-    import TrackSelect from '$lib/components/TrackSelect/TrackSelect.svelte';
+    import { TrackSelect } from '$lib/components/TrackSelect';
     import { Typography } from '$lib/components/Typography';
     import { useAnnotationTrackEditing } from './useAnnotationTrackEditing.svelte';
 
