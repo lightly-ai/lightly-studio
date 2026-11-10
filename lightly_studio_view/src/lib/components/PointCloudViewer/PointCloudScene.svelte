@@ -5,6 +5,7 @@
     import PointCloudPoints from './PointCloudPoints/PointCloudPoints.svelte';
     import SceneCamera from './SceneCamera/SceneCamera.svelte';
     import type { ColorMode } from './pointCloudUtils';
+    import type { CuboidGeometry } from './getPointCloudFrameColors';
     import type { PointBatch } from './types';
     import type {
         CuboidAnnotation,
@@ -23,7 +24,7 @@
         activeTool?: WorkspaceTool;
         cameraMode?: CameraMode;
         cameraCuboid?: CuboidAnnotation;
-        highlightCuboid?: CuboidAnnotation;
+        highlightCuboid?: CuboidGeometry;
         isScaleSource?: boolean;
         isActive?: () => boolean;
         navigationId?: symbol;

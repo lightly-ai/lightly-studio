@@ -5,6 +5,7 @@
     import type { OrthographicCamera, PerspectiveCamera, Plane } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type { ColorMode } from '../pointCloudUtils';
+    import type { CuboidGeometry } from '../getPointCloudFrameColors';
     import type { PointBatch } from '../types';
     import type {
         CuboidAnnotation,
@@ -19,7 +20,7 @@
         colorMode: ColorMode;
         pointSize: number;
         intensityRange?: [number, number];
-        highlightCuboid?: CuboidAnnotation;
+        highlightCuboid?: CuboidGeometry;
         fitKey?: string;
         camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
