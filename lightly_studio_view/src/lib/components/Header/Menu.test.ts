@@ -93,6 +93,20 @@ describe('Split dataset menu', () => {
     );
 });
 
+describe('Train model menu', () => {
+    it('is shown for images when training is available', async () => {
+        render(Menu, { collection, isImages: true, showTraining: true });
+        await openMenu();
+        expect(screen.getByTestId('menu-train-model')).toBeInTheDocument();
+    });
+
+    it('is hidden when training is not available', async () => {
+        render(Menu, { collection, isImages: true });
+        await openMenu();
+        expect(screen.queryByTestId('menu-train-model')).not.toBeInTheDocument();
+    });
+});
+
 describe('Export menu', () => {
     it('is shown for sequence (MCAP) collections', async () => {
         render(Menu, { collection: { ...collection, sample_type: 'sequence' } });

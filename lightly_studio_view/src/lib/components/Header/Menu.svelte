@@ -7,6 +7,7 @@
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useTrainModelDialog } from '$lib/hooks/useTrainModelDialog/useTrainModelDialog';
     import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
     import {
@@ -17,7 +18,8 @@
         BrainCircuit as BrainCircuitIcon,
         WandSparkles as WandSparklesIcon,
         Menu as MenuIcon,
-        Compass as CompassIcon
+        Compass as CompassIcon,
+        Dumbbell as DumbbellIcon
     } from '@lucide/svelte';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -33,6 +35,8 @@
         user?: LightlyEnterpriseSession['user'];
         showTour?: boolean;
         onShowTour?: () => void;
+        /** Whether LightlyTrain is installed, so that a model can be trained. */
+        showTraining?: boolean;
     }
 
     let {
@@ -43,7 +47,8 @@
         collection,
         user,
         showTour = false,
-        onShowTour
+        onShowTour,
+        showTraining = false
     }: Props = $props();
 
     const { openDatasetSplitDialog } = useDatasetSplitDialog();
@@ -53,6 +58,7 @@
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
+    const { openTrainModelDialog } = useTrainModelDialog();
 
     type MenuAction = SelectItem & { onSelect: () => void };
 
@@ -105,6 +111,14 @@
                 onSelect: () => openDatasetSplitDialog(collection.collection_id)
             }
         );
+
+        addAction(items, showTraining && isEditor && collection.sample_type === 'image', {
+            value: 'menu-train-model',
+            label: 'Train model',
+            icon: DumbbellIcon,
+            testId: 'menu-train-model',
+            onSelect: openTrainModelDialog
+        });
 
         addAction(items, isEditor, {
             value: 'menu-operators',

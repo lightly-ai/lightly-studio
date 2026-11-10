@@ -47,6 +47,7 @@ from lightly_studio.api.routes.api import (
     sampling,
     settings,
     text_embedding,
+    training,
     version,
     video,
 )
@@ -157,6 +158,7 @@ api_router.include_router(features.features_router)
 api_router.include_router(analytics.analytics_router)
 api_router.include_router(assisted_labeling.assisted_labeling_router)
 api_router.include_router(evaluation.evaluation_router)
+api_router.include_router(training.training_router)
 api_router.include_router(metadata.metadata_router)
 api_router.include_router(sampling.sampling_router)
 api_router.include_router(operator.operator_router)

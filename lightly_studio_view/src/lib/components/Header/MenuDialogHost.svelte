@@ -7,6 +7,7 @@
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
+    import { useTrainModelDialog } from '$lib/hooks/useTrainModelDialog/useTrainModelDialog';
 
     let {
         isImages = false,
@@ -38,6 +39,7 @@
     const { isExportDialogOpen } = useExportDialog();
     const { isOperatorsDialogOpen } = useOperatorsDialog();
     const { isSettingsDialogOpen } = useSettingsDialog();
+    const { isTrainModelDialogOpen } = useTrainModelDialog();
 
     $effect(() => {
         if (!hasSelection || $datasetSplitCollectionId !== collection.collection_id) {
@@ -77,6 +79,12 @@
 {#if hasOperatorsMenuLoaded}
     {#await import('$lib/components/Operator/OperatorsMenu.svelte') then { default: OperatorsMenu }}
         <OperatorsMenu />
+    {/await}
+{/if}
+
+{#if isImageCollection && $isTrainModelDialogOpen}
+    {#await import('$lib/components/TrainModelDialog/TrainModelDialog.svelte') then { default: TrainModelDialog }}
+        <TrainModelDialog collectionId={collection.collection_id} />
     {/await}
 {/if}
 

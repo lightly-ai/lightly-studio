@@ -579,6 +579,7 @@
         {collection}
         showTour={onboardingEnabled}
         onShowTour={() => useOnboarding().requestReplay()}
+        showTraining={featuresLoaded && $featureFlags.includes('training')}
     />
     <MenuDialogHost {isImages} {isVideos} {isPointClouds} {hasEmbeddings} {collection} />
 </div>

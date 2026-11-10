@@ -21,6 +21,9 @@ lightly_studio/.env
 # Ignore studio example datasets.
 dataset_examples_studio
 
+# Training runs, written into the folder Studio is started from.
+lightly_studio_training_runs/
+
 .claude/settings.local.json
 
 # Top-level tmp dir.

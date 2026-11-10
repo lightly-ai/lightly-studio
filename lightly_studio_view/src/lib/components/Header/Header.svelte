@@ -21,9 +21,10 @@
         collection: CollectionView;
         showTour?: boolean;
         onShowTour?: () => void;
+        showTraining?: boolean;
     }
 
-    let { collection, showTour = false, onShowTour }: Props = $props();
+    let { collection, showTour = false, onShowTour, showTraining = false }: Props = $props();
 
     const isImages = $derived(isImagesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
@@ -115,6 +116,7 @@
                     {user}
                     {showTour}
                     {onShowTour}
+                    {showTraining}
                 />
                 {#if hasMinimumRole(user?.role, 'labeler')}
                     {#if $isEditingMode}

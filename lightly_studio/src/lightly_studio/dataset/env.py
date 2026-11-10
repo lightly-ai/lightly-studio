@@ -13,6 +13,16 @@ LIGHTLY_STUDIO_EMBEDDINGS_MODEL_TYPE: str = env.str(
 LIGHTLY_STUDIO_MODEL_CACHE_DIR: Path = env.path(
     "LIGHTLY_STUDIO_MODEL_CACHE_DIR", Path.home() / ".cache" / "lightly-studio"
 )
+# The folder for the files of training runs: the exported annotations, the checkpoints and
+# the predictions.
+LIGHTLY_STUDIO_TRAINING_RUNS_DIR: Path = env.path(
+    "LIGHTLY_STUDIO_TRAINING_RUNS_DIR", Path("lightly_studio_training_runs")
+)
+# The Python executable of the training process. Set it to use LightlyTrain from a different
+# virtual environment. If it is not set, the Python of Studio is used.
+LIGHTLY_STUDIO_TRAINING_PYTHON: Optional[str] = env.str(
+    "LIGHTLY_STUDIO_TRAINING_PYTHON", default=None
+)
 LIGHTLY_STUDIO_PROTOCOL: str = env.str("LIGHTLY_STUDIO_PROTOCOL", "http")
 LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")
