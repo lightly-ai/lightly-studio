@@ -307,6 +307,7 @@ class McapDataset:
         topic: str,
         suffix: str = annotation_mcap.DEFAULT_ANNOTATION_MCAP_SUFFIX,
         annotation_source: str = add_labels.DEFAULT_ANNOTATION_SOURCE,
+        overwrite: bool = False,
     ) -> None:
         """Attach cuboids from annotation MCAPs in a folder to indexed sequences.
 
@@ -315,10 +316,19 @@ class McapDataset:
             topic: The SceneUpdate topic in the annotation MCAP.
             suffix: Inserted before `.mcap`. The default is `_labeled`.
             annotation_source: Name of the annotation source that stores the cuboids.
+            overwrite: Replace the annotations of `annotation_source` on a sequence that
+                already has them. By default, such a sequence is skipped. Frame tags
+                that the earlier file added are kept. A file whose labels match no
+                tick of the sequence is skipped, and the annotations are kept.
         """
         remote_storage.configure_connections(paths=[str(path)])
         folder_labels.add_labels_from_folder(
-            dataset=self, path=path, topic=topic, suffix=suffix, annotation_source=annotation_source
+            dataset=self,
+            path=path,
+            topic=topic,
+            suffix=suffix,
+            annotation_source=annotation_source,
+            overwrite=overwrite,
         )
 
     def export_annotations_to_folder(  # noqa: PLR0913

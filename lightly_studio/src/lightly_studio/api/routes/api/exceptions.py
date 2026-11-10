@@ -15,9 +15,11 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_FORBIDDEN,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_SERVICE_UNAVAILABLE,
+    HTTP_STATUS_UNAUTHORIZED,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
@@ -26,8 +28,10 @@ from lightly_studio.embed.remote.errors import RemoteEmbedderError
 from lightly_studio.errors import (
     AnnotationSourceInUseError,
     ExportError,
+    ForbiddenError,
     NotFoundError,
     QueryExprError,
+    UnauthenticatedError,
     UnknownImageSizeError,
 )
 
@@ -153,6 +157,23 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
 
     for error_type, status_code in _ERROR_STATUS_CODES.items():
         app.add_exception_handler(error_type, _error_handler(status_code=status_code))
+
+    # An auth failure is an expected client error, so it is logged but not reported.
+    @app.exception_handler(UnauthenticatedError)
+    async def _unauthenticated_error_handler(
+        request: Request, exc: UnauthenticatedError
+    ) -> JSONResponse:
+        """Handle a request without a valid user identity."""
+        logger.warning(f"Unauthenticated request to {request.url.path}: {exc}")
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNAUTHORIZED,
+            content={"error": "The request has no valid user identity."},
+        )
+
+    @app.exception_handler(ForbiddenError)
+    async def _forbidden_error_handler(_request: Request, _exc: ForbiddenError) -> JSONResponse:
+        """Handle a user without the required role."""
+        return JSONResponse(status_code=HTTP_STATUS_FORBIDDEN, content={"error": str(_exc)})
 
     @app.exception_handler(UnknownImageSizeError)
     async def _unknown_image_size_error_handler(
