@@ -72,7 +72,7 @@ class CollectionWithoutChildrenView(CollectionBase):
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
-    group_component_definition: Optional["GroupComponentDefinitionView"] = None
+    group_component_definition: "GroupComponentDefinitionView | None" = None
 
 
 class CollectionView(CollectionWithoutChildrenView):
