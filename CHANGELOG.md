@@ -42,7 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
-- Removed the `PUT /api/cloud-credentials` endpoint. It let any client that could reach the server set the cloud storage credentials.
+- The `PUT /api/cloud-credentials` endpoint requires the secret set in `LIGHTLY_STUDIO_CLOUD_CREDENTIALS_SECRET` in the `X-Cloud-Credentials-Secret` header. Before, any client that could reach the server could set the cloud storage credentials. Without the environment variable, the endpoint rejects every request.
 
 ## \[1.2.1\] - 2026-11-02
 

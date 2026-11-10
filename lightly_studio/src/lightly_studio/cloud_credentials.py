@@ -15,7 +15,7 @@ from lightly_studio import ca_bundle
 
 # Keys accepted by apply_cloud_credentials. Only well-known cloud provider
 # environment variables are allowed to prevent arbitrary process-environment
-# injection.
+# injection through the enterprise credential endpoint.
 _ALLOWED_KEY_PATTERN = re.compile(
     r"^("
     r"AWS_[A-Z0-9_]+"
