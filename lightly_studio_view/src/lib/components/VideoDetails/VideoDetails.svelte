@@ -4,6 +4,7 @@
         CardContent,
         MetadataSegment,
         SegmentTags,
+        SidePanelToggleButton,
         VideoDetailsNavigation,
         VideoFrameDetails,
         VideoPlayer
@@ -63,7 +64,7 @@
     );
 
     // Reuse the global "Edit annotations" toggle to enable event editing.
-    const { isEditingMode } = useGlobalStorage();
+    const { isEditingMode, isSampleDetailsSidePanelCollapsed } = useGlobalStorage();
 
     // Events live on the video's own collection; labels are shared per dataset.
     const eventCollectionId = untrack(
@@ -269,8 +270,13 @@
 </script>
 
 <div class="flex h-full min-h-0 w-full flex-col">
+    <div class="flex shrink-0 justify-end pb-2">
+        <SidePanelToggleButton />
+    </div>
     <div class="flex min-h-0 flex-1 gap-4">
-        <Card className="flex h-full min-h-0 w-[60vw] flex-col overflow-hidden">
+        <Card
+            className={`flex h-full min-h-0 flex-col overflow-hidden ${$isSampleDetailsSidePanelCollapsed ? 'flex-1' : 'w-[60vw]'}`}
+        >
             <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div
                     bind:this={videoFrameContainerEl}
@@ -317,48 +323,50 @@
             </CardContent>
         </Card>
 
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-            <CardContent className="h-full overflow-y-auto">
-                {#if video?.sample?.sample_id}
-                    <SegmentTags
-                        tags={video.sample.tags ?? []}
-                        collectionId={datasetId}
-                        sampleId={video.sample.sample_id}
-                        onRefetch={onVideoUpdate}
-                    />
-                {/if}
-                <VideoSampleMetadata {video} />
-                <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
-                {#if video?.sample?.sample_id}
-                    <SampleDetailsClassificationSegment
-                        collectionId={(video.sample as SampleView).collection_id!}
-                        annotations={videoClassificationAnnotations}
-                        sampleId={video.sample_id}
-                        refetch={onVideoUpdate}
-                    />
-                {/if}
-                {#if video?.sample?.sample_id}
-                    <SampleDetailsCaptionSegment
-                        refetch={onVideoUpdate}
-                        captions={video?.sample?.captions ?? []}
-                        sampleId={video?.sample?.sample_id}
-                    />
-                {/if}
-                {#if $currentFrame}
-                    {@const frameSample = $currentFrame.sample as SampleView}
-                    {#if frameSample.collection_id && frameSample.sample_id}
-                        {@const frameURL = routeHelpers.toFramesDetails(
-                            datasetId,
-                            'video_frame',
-                            frameSample.collection_id,
-                            frameSample.sample_id,
-                            true
-                        )}
-                        <VideoFrameDetails frame={$currentFrame} {frameURL} />
+        {#if !$isSampleDetailsSidePanelCollapsed}
+            <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <CardContent className="h-full overflow-y-auto">
+                    {#if video?.sample?.sample_id}
+                        <SegmentTags
+                            tags={video.sample.tags ?? []}
+                            collectionId={datasetId}
+                            sampleId={video.sample.sample_id}
+                            onRefetch={onVideoUpdate}
+                        />
                     {/if}
-                {/if}
-            </CardContent>
-        </Card>
+                    <VideoSampleMetadata {video} />
+                    <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
+                    {#if video?.sample?.sample_id}
+                        <SampleDetailsClassificationSegment
+                            collectionId={(video.sample as SampleView).collection_id!}
+                            annotations={videoClassificationAnnotations}
+                            sampleId={video.sample_id}
+                            refetch={onVideoUpdate}
+                        />
+                    {/if}
+                    {#if video?.sample?.sample_id}
+                        <SampleDetailsCaptionSegment
+                            refetch={onVideoUpdate}
+                            captions={video?.sample?.captions ?? []}
+                            sampleId={video?.sample?.sample_id}
+                        />
+                    {/if}
+                    {#if $currentFrame}
+                        {@const frameSample = $currentFrame.sample as SampleView}
+                        {#if frameSample.collection_id && frameSample.sample_id}
+                            {@const frameURL = routeHelpers.toFramesDetails(
+                                datasetId,
+                                'video_frame',
+                                frameSample.collection_id,
+                                frameSample.sample_id,
+                                true
+                            )}
+                            <VideoFrameDetails frame={$currentFrame} {frameURL} />
+                        {/if}
+                    {/if}
+                </CardContent>
+            </Card>
+        {/if}
     </div>
 </div>
 
