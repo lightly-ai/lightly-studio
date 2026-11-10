@@ -20,7 +20,8 @@ const mocks = vi.hoisted(() => ({
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
     userRole: 'labeler' as string | undefined,
     addReversibleAction: vi.fn(),
-    deleteAnnotation: vi.fn()
+    deleteAnnotation: vi.fn(),
+    setAnnotationLabel: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -78,7 +79,7 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
             annotationType: null
         },
         setAnnotationId: vi.fn(),
-        setAnnotationLabel: vi.fn(),
+        setAnnotationLabel: mocks.setAnnotationLabel,
         setLastCreatedAnnotationId: vi.fn(),
         setLockedAnnotationIds: vi.fn()
     }))
@@ -651,6 +652,8 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         await user.click(screen.getByTestId('mock-annotation-row-relabel'));
 
+        // Also when the row is not selected: a drawn box takes the class of the context.
+        expect(mocks.setAnnotationLabel).toHaveBeenCalledWith('dog');
         // 'dog' is not in the class list yet: a new class is created with its first annotation.
         expect(
             resolveStickyClass({

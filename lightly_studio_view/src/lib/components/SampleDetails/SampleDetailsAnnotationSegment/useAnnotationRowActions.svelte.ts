@@ -62,11 +62,11 @@ export const useAnnotationRowActions = (
         },
         relabel: (annotation: AnnotationView, className: string) => {
             pickClass(getCollectionId(), className);
+            setAnnotationLabel(className);
             setLastCreatedAnnotationId(null);
             if (context.annotationType === AnnotationType.SEGMENTATION_MASK) {
                 setAnnotationId(annotation.sample_id);
             }
-            if (context.annotationId === annotation.sample_id) setAnnotationLabel(className);
         }
     };
 };
