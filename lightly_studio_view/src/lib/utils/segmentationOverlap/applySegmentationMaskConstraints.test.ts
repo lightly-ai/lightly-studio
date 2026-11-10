@@ -29,7 +29,7 @@ describe('applySegmentationMaskConstraints', () => {
         vi.clearAllMocks();
     });
 
-    it('strips locked pixels and trims overlaps with the drawn stroke', async () => {
+    it('strips locked pixels and trims overlaps only with the remaining pixels', async () => {
         const workingMask = Uint8Array.from([1, 1, 1, 0]);
         const locked = new Set(['lock']);
         const annotations = [baseAnn('lock', [1, 1, 0, 0]), baseAnn('other', [1, 0, 1, 0])];
@@ -46,10 +46,10 @@ describe('applySegmentationMaskConstraints', () => {
 
         // Locked mask should clear the locked drawn pixels in-place.
         expect(Array.from(workingMask)).toEqual([0, 0, 1, 0]);
-        // Trimming uses the original stroke, so all of "other" is removed.
+        // Pixels rejected by the lock do not trim "other".
         expect(updateAnnotations).toHaveBeenCalledTimes(1);
         expect(updateAnnotations).toHaveBeenCalledWith([
-            expect.objectContaining({ annotation_id: 'other', segmentation_mask: [0, 0, 0, 0] })
+            expect.objectContaining({ annotation_id: 'other', segmentation_mask: [1, 0, 0, 0] })
         ]);
         expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['other']);
     });
@@ -70,6 +70,67 @@ describe('applySegmentationMaskConstraints', () => {
         });
 
         expect(Array.from(workingMask)).toEqual([0, 0, 0, 0]);
+        expect(updateAnnotations).not.toHaveBeenCalled();
+        expect(overriddenAnnotations).toEqual([]);
+    });
+
+    it('does not trim other masks when painting onto an existing mask fully over a locked mask', async () => {
+        // "selected" already has pixel 3. The stroke covers pixels 0 and 1, which are locked.
+        const workingMask = Uint8Array.from([1, 1, 0, 1]);
+        const annotations = [
+            baseAnn('selected', [0, 0, 0, 1]),
+            baseAnn('lock', [1, 1, 0, 0]),
+            baseAnn('other', [1, 0, 0, 0])
+        ];
+
+        const overriddenAnnotations = await applySegmentationMaskConstraints({
+            workingMask,
+            lockedAnnotationIds: new Set(['lock']),
+            annotations,
+            sample,
+            skipId: 'selected',
+            collectionId: 'c',
+            updateAnnotations
+        });
+
+        expect(Array.from(workingMask)).toEqual([0, 0, 0, 1]);
+        expect(updateAnnotations).not.toHaveBeenCalled();
+        expect(overriddenAnnotations).toEqual([]);
+    });
+
+    it('removes existing pixels of the edited mask that lie on a locked mask', async () => {
+        // "selected" already has pixels 0 and 3, and pixel 0 overlaps the locked mask.
+        const workingMask = Uint8Array.from([1, 0, 1, 1]);
+        const annotations = [baseAnn('selected', [1, 0, 0, 1]), baseAnn('lock', [1, 0, 0, 0])];
+
+        await applySegmentationMaskConstraints({
+            workingMask,
+            lockedAnnotationIds: new Set(['lock']),
+            annotations,
+            sample,
+            skipId: 'selected',
+            collectionId: 'c',
+            updateAnnotations
+        });
+
+        expect(Array.from(workingMask)).toEqual([0, 0, 1, 1]);
+    });
+
+    it('does not trim other masks under pixels erased from the edited mask', async () => {
+        // Smart select in erase mode removed pixel 1 from "selected".
+        const workingMask = Uint8Array.from([1, 0, 0, 0]);
+        const annotations = [baseAnn('selected', [1, 1, 0, 0]), baseAnn('other', [0, 1, 0, 0])];
+
+        const overriddenAnnotations = await applySegmentationMaskConstraints({
+            workingMask,
+            lockedAnnotationIds: new Set(),
+            annotations,
+            sample,
+            skipId: 'selected',
+            collectionId: 'c',
+            updateAnnotations
+        });
+
         expect(updateAnnotations).not.toHaveBeenCalled();
         expect(overriddenAnnotations).toEqual([]);
     });
