@@ -132,6 +132,7 @@ def _migrate_annotations(session: Session, object_track_id: UUID, new_track_id: 
             session=session,
             annotation=annotation,
             fields_to_update={"object_track_id": new_track_id},
+            commit=False,
         )
 
 
@@ -145,9 +146,10 @@ def _migrate_descendants(
         )
     ).all()
     for child in child_tracks:
-        # DuckDB checks FK constraints against committed state during DELETE,
-        # so each child migration must commit before the caller can delete the
-        # old parent track.
+        # DuckDB enforces FK constraints against committed state during DELETE,
+        # so each child must be committed before the caller can delete the old
+        # parent track. This means descendant migration is not atomic with the
+        # rest of the operation.
         update_parent_track(
             session=session,
             dataset_id=dataset_id,
