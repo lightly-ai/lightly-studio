@@ -1,4 +1,8 @@
-"""The user and the role that send a request."""
+"""The user and the role that send a request.
+
+`get_identity` is a hook. The default returns the local user. A deployment with an auth proxy
+overrides it: `app.dependency_overrides[identity.get_identity] = identity.get_proxy_identity`.
+"""
 
 from __future__ import annotations
 
@@ -9,8 +13,6 @@ from typing import Annotated
 
 from fastapi import Depends, Request
 
-from lightly_studio import deployment
-from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import ForbiddenError, UnauthenticatedError
 
 _EMAIL_HEADER = "X-User-Email"
@@ -39,7 +41,7 @@ class Identity:
     """The user that sends a request.
 
     Attributes:
-        email: The email of the user. None for a local run without an auth proxy.
+        email: The email of the user. None for the local user.
         role: The role of the user.
     """
 
@@ -47,23 +49,30 @@ class Identity:
     role: Role
 
 
-def get_identity(session: SessionDep, request: Request) -> Identity:
-    """Returns the user's identity from the headers sent in enterprise deployments.
+LOCAL_USER = Identity(email=None, role=Role.ADMIN)
 
-    A local run has no user identity. Every request is an anonymous admin.
+
+def get_identity(request: Request) -> Identity:
+    """Returns the local user. Every request is the same anonymous admin.
 
     Raises:
-        RuntimeError: If a local run gets the headers.
-        UnauthenticatedError: If an enterprise server gets a request without an email, with
-            an unknown role, or with a header sent more than once.
+        RuntimeError: If the request carries user headers. They are only valid behind an auth
+            proxy, and that deployment overrides this dependency with `get_proxy_identity`.
+    """
+    if request.headers.getlist(_EMAIL_HEADER) or request.headers.getlist(_ROLE_HEADER):
+        raise RuntimeError("User headers are not supported in a local run.")
+    return LOCAL_USER
+
+
+def get_proxy_identity(request: Request) -> Identity:
+    """Returns the user's identity from the headers that an auth proxy sets.
+
+    Raises:
+        UnauthenticatedError: If the request has no email, an unknown role, or a header sent
+            more than once.
     """
     emails = request.headers.getlist(_EMAIL_HEADER)
     roles = request.headers.getlist(_ROLE_HEADER)
-    if not deployment.is_enterprise(session=session):
-        if emails or roles:
-            raise RuntimeError("Authentication is not supported in a local run.")
-        return Identity(email=None, role=Role.ADMIN)
-
     email = _single_header(name=_EMAIL_HEADER, values=emails).strip().lower()
     if not email:
         raise UnauthenticatedError(f"The {_EMAIL_HEADER} header is missing or empty.")
