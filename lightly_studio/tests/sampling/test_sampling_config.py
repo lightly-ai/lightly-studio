@@ -26,13 +26,15 @@ def test_strategy__unknown_strategy_name_rejected() -> None:
 
 class TestSamplingConfig:
     def test_init__rejects_base_strategy(self) -> None:
-        with pytest.raises(ValidationError, match="Unable to extract tag"):
+        with pytest.raises(ValidationError) as exc_info:
             SamplingConfig(
                 collection_id=uuid4(),
                 n_samples_to_select=4,
                 sampling_result_tag_name="selected",
                 strategies=[SamplingStrategy()],  # type: ignore[list-item]
             )
+
+        assert exc_info.value.errors()[0]["type"] == "union_tag_not_found"
 
     def test_model_validate_json__keeps_strategy_type(self) -> None:
         config = SamplingConfig(

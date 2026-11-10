@@ -16,28 +16,11 @@ MetadataValueName = Union[str, bool]
 MetadataValueToTarget = dict[MetadataValueName, float]
 
 
-class SamplingConfig(BaseModel):
-    """Configuration for the sampling process."""
-
-    collection_id: UUID
-    n_samples_to_select: int
-    sampling_result_tag_name: str
-    preselected_tag_name: str | None = None
-    strategies: Sequence[Strategy]
-    selected_sequence_length: int | None = Field(
-        default=None,
-        ge=2,
-        description=(
-            "Number of frames per selected sequence. None selects individual samples. "
-            "When set, n_samples_to_select still counts frames and must be a multiple "
-            "of this value. Only VIDEO_FRAME collections and diversity strategies "
-            "support sequences."
-        ),
-    )
-
-
 class SamplingStrategy(BaseModel):
-    """Base class for sampling strategies."""
+    """Shared fields of the sampling strategies.
+
+    SamplingConfig accepts only the strategies in ``Strategy``, not other subclasses.
+    """
 
     strength: float = 1.0
 
@@ -124,3 +107,23 @@ Strategy = Annotated[
     ],
     Field(discriminator="strategy_name"),
 ]
+
+
+class SamplingConfig(BaseModel):
+    """Configuration for the sampling process."""
+
+    collection_id: UUID
+    n_samples_to_select: int
+    sampling_result_tag_name: str
+    preselected_tag_name: str | None = None
+    strategies: Sequence[Strategy]
+    selected_sequence_length: int | None = Field(
+        default=None,
+        ge=2,
+        description=(
+            "Number of frames per selected sequence. None selects individual samples. "
+            "When set, n_samples_to_select still counts frames and must be a multiple "
+            "of this value. Only VIDEO_FRAME collections and diversity strategies "
+            "support sequences."
+        ),
+    )
