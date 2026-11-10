@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sqlalchemy.engine import Engine
-from sqlmodel import Session
+from sqlalchemy.engine import Connection, Engine
+from sqlmodel import Session, delete, insert
 
 from lightly_studio.models.schema_compat import SchemaCompatTable
 
@@ -12,25 +12,23 @@ from lightly_studio.models.schema_compat import SchemaCompatTable
 MIN_SUPPORTED_CLIENT_VERSION = "1.2.1"
 
 
-def write_schema_compat(engine: Engine, oss_revision: str) -> None:
-    """Write the single ``schema_compat`` row after a schema upgrade.
+def write_schema_compat(connection: Connection, oss_revision: str) -> None:
+    """Write the single ``schema_compat`` row in the transaction of a schema upgrade.
+
+    The caller commits. The row and the schema upgrade are then one transaction.
 
     Args:
-        engine: Engine bound to the upgraded database.
+        connection: The connection that runs the schema upgrade.
         oss_revision: The Alembic revision that the upgrade applied.
     """
-    with Session(engine) as session:
-        row = session.get(SchemaCompatTable, 1)
-        if row is None:
-            row = SchemaCompatTable(
-                oss_revision=oss_revision,
-                min_client_version=MIN_SUPPORTED_CLIENT_VERSION,
-            )
-        else:
-            row.oss_revision = oss_revision
-            row.min_client_version = MIN_SUPPORTED_CLIENT_VERSION
-        session.add(row)
-        session.commit()
+    connection.execute(delete(SchemaCompatTable))
+    connection.execute(
+        insert(SchemaCompatTable).values(
+            id=1,
+            oss_revision=oss_revision,
+            min_client_version=MIN_SUPPORTED_CLIENT_VERSION,
+        )
+    )
 
 
 def read_schema_compat(engine: Engine) -> SchemaCompatTable | None:
