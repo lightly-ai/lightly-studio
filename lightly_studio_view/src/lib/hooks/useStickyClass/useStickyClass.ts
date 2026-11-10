@@ -7,6 +7,9 @@ import { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
 const pickedClasses = new Set<string>();
 const pickKey = (collectionId: string, className: string) => `${collectionId}/${className}`;
 
+/** Forgets the picked classes, so each test starts from a fresh page load. Tests only. */
+export const resetPickedClassesForTests = () => pickedClasses.clear();
+
 /**
  * The sticky class of a collection, if new annotations may use it. A class restored from an
  * earlier visit that is no longer in `classNames` was deleted elsewhere, so it counts as unset

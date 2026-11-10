@@ -1,3 +1,4 @@
+import { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
 import type { AnnotationUpdateInput, AnnotationView } from '$lib/api/lightly_studio_local';
 import {
     computeBoundingBoxFromMask,
@@ -12,7 +13,9 @@ import {
 import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
 import type { BoundingBox } from '$lib/types';
 import { toast } from 'svelte-sonner';
+import { get } from 'svelte/store';
 import { useGlobalStorage } from './useGlobalStorage';
+import { resolveStickyClass, useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
 import { useUpdateAnnotationsMutation } from './useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
 import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap';
@@ -47,7 +50,8 @@ export function useSegmentationMaskBrush({
 }) {
     const { createLabel, canCreateLabel } = useCreateLabel({ getCollectionId: () => collectionId });
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
-    const { addReversibleAction, updateLastAnnotationLabel } = useGlobalStorage();
+    const { addReversibleAction } = useGlobalStorage();
+    const { stickyClasses, pickClass } = useStickyClass();
     const {
         context: annotationLabelContext,
         setIsDrawing,
@@ -60,14 +64,13 @@ export function useSegmentationMaskBrush({
         getCollectionId: () => collectionId
     });
 
-    // Waits for the class list. Returns undefined, after showing an error, when a new
-    // annotation cannot get its class. Editing an existing mask works without the list.
-    const resolveLabelList = async (
-        labels: LabelList | Promise<LabelList | undefined>,
+    // Returns undefined, after showing an error, when a new annotation cannot get its class.
+    // Editing an existing mask works without the class list.
+    const resolveLabelList = (
+        labelList: LabelList | undefined,
         annotationLabelName: string | null | undefined,
         isNewAnnotation: boolean
-    ): Promise<LabelList | undefined> => {
-        const labelList = await labels;
+    ): LabelList | undefined => {
         if (!isNewAnnotation) return labelList ?? [];
         if (!labelList) {
             toast.error('Could not load annotation classes. Please try again.');
@@ -107,19 +110,25 @@ export function useSegmentationMaskBrush({
             return;
         }
 
-        let annotationLabelName = annotationLabelContext.annotationLabel;
+        // Check before anything else: the constraints below trim other masks on the server.
+        if (!selectedAnnotation && isAnnotationSourceBlocked(annotationLabelContext)) return;
+
+        // Wait for a loading class list. Undefined when it failed to load: then the stored
+        // class is used as is.
+        const loadedLabels = await labels;
+        let annotationLabelName = resolveStickyClass({
+            collectionId,
+            stickyClass: get(stickyClasses)[collectionId],
+            classNames: loadedLabels?.map((label) => label.annotation_label_name ?? '')
+        });
         if (!selectedAnnotation && !annotationLabelName) {
             const result = requestLabel ? await requestLabel() : null;
-            if (!result?.label) {
-                toast.error('Please select a class before creating an annotation');
-                return;
-            }
+            if (!result?.label) return;
             annotationLabelName = result.label;
-            setAnnotationLabel(annotationLabelName);
-            updateLastAnnotationLabel(collectionId, annotationLabelName);
+            pickClass(collectionId, annotationLabelName);
         }
 
-        const labelList = await resolveLabelList(labels, annotationLabelName, !selectedAnnotation);
+        const labelList = resolveLabelList(loadedLabels, annotationLabelName, !selectedAnnotation);
         if (!labelList) return;
         let label = labelList.find((l) => l.annotation_label_name === annotationLabelName);
 

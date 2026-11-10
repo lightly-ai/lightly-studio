@@ -6,7 +6,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { onMount, untrack, type Snippet } from 'svelte';
+    import { untrack, type Snippet } from 'svelte';
 
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
@@ -26,6 +26,7 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
+    import { useAnnotationTarget } from '$lib/hooks';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
@@ -76,7 +77,7 @@
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
-    const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
+    const { isEditingMode } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations.
     // isOnAnnotationDetailsView is re-synced via $effect when the prop changes.
@@ -98,6 +99,12 @@
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
+    // Always mounted, also without the Annotations panel, so drawing is always guarded.
+    useAnnotationTarget({
+        getCollectionId: () => collectionId,
+        getAnnotations: () => sample?.annotations ?? [],
+        getHiddenIds: () => annotationsIdsToHide
+    });
     let previousAnnotationType: AnnotationType | null | undefined;
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
@@ -231,11 +238,6 @@
             sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
-    });
-
-    onMount(() => {
-        annotationLabelContext.annotationLabel = $lastAnnotationLabel[collectionId];
-        annotationLabelContext.annotationSource = $lastAnnotationSource[collectionId];
     });
 </script>
 
