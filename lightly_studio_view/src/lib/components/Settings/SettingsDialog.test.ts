@@ -50,6 +50,10 @@ vi.mock('./AnnotationClassesTab/useAnnotationClasses', () => ({
 
 // Get reference to the mocked function
 import { useSettings } from '$lib/hooks/useSettings';
+
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
 const { openSettingsDialog, closeSettingsDialog } = useSettingsDialog();
 
 async function openDialog() {

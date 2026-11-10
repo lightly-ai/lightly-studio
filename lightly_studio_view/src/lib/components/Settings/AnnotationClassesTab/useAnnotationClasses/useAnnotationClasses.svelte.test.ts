@@ -5,10 +5,7 @@ import { useAnnotationClasses } from './useAnnotationClasses.svelte';
 const mocks = vi.hoisted(() => ({
     mutateAsync: vi.fn(),
     invalidateQueries: vi.fn(),
-    createQuery: vi.fn(),
-    getCustomColor: vi.fn(),
-    setCustomColor: vi.fn(),
-    deleteCustomColor: vi.fn()
+    createQuery: vi.fn()
 }));
 
 type MutationOptions = { onSettled?: () => unknown };
@@ -32,13 +29,6 @@ vi.mock('@tanstack/svelte-query', () => ({
     },
     useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries })
 }));
-vi.mock('$lib/hooks/useCustomLabelColors', () => ({
-    useCustomLabelColors: () => ({
-        getCustomColor: mocks.getCustomColor,
-        setCustomColor: mocks.setCustomColor,
-        deleteCustomColor: mocks.deleteCustomColor
-    })
-}));
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
 let cleanup = () => {};
@@ -60,35 +50,11 @@ describe('useAnnotationClasses', () => {
 
     afterEach(() => cleanup());
 
-    it('renameClass moves the custom color to the new name', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
-        const classes = setup();
-
-        await classes.renameClass('label-1', 'cat', 'kitty');
-
-        expect(mocks.setCustomColor).toHaveBeenCalledWith('kitty', '#ff0000', 0.5);
-        expect(mocks.deleteCustomColor).toHaveBeenCalledWith('cat');
-    });
-
-    it('renameClass keeps the custom color when the name is unchanged', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
-        const classes = setup();
-
-        await classes.renameClass('label-1', 'cat', 'cat');
-
-        expect(mocks.setCustomColor).not.toHaveBeenCalled();
-        expect(mocks.deleteCustomColor).not.toHaveBeenCalled();
-    });
-
-    it('renameClass keeps colors when the rename fails', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
+    it('renameClass rejects when the rename fails', async () => {
         mocks.mutateAsync.mockRejectedValue(new Error('boom'));
         const classes = setup();
 
-        await expect(classes.renameClass('label-1', 'cat', 'kitty')).rejects.toThrow('boom');
-
-        expect(mocks.setCustomColor).not.toHaveBeenCalled();
-        expect(mocks.deleteCustomColor).not.toHaveBeenCalled();
+        await expect(classes.renameClass('label-1', 'kitty')).rejects.toThrow('boom');
     });
 
     it('query is disabled without a collection', () => {
@@ -108,7 +74,7 @@ describe('useAnnotationClasses', () => {
     it('renameClass refreshes all queries', async () => {
         const classes = setup();
 
-        await classes.renameClass('label-1', 'cat', 'kitty');
+        await classes.renameClass('label-1', 'kitty');
 
         expect(mocks.invalidateQueries).toHaveBeenCalledWith();
     });

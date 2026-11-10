@@ -1,4 +1,6 @@
 import {
+    AnnotationClassNotAvailableError,
+    getCreateLabelErrorMessage,
     useAnnotationLabels,
     useCreateAnnotation,
     useCreateLabel,
@@ -107,7 +109,17 @@ export function useCreateCuboidAnnotation({
         return selection.label;
     }
 
-    async function findOrCreateLabelId(labelName: string): Promise<string | null> {
+    function forgetLastAnnotationLabel(collectionId: string) {
+        lastAnnotationLabel.update((value) => {
+            delete value[collectionId];
+            return value;
+        });
+    }
+
+    async function findOrCreateLabelId(
+        collectionId: string,
+        labelName: string
+    ): Promise<string | null> {
         let currentData = labels.data;
         if (currentData === undefined) {
             const result = await labels.refetch();
@@ -125,8 +137,17 @@ export function useCreateCuboidAnnotation({
             });
             await labels.refetch();
             return label.annotation_label_id ?? null;
-        } catch {
-            toast.error('Failed to create annotation class. Please try again.');
+        } catch (error) {
+            // Forget a rejected class, so the next attempt asks for a class again.
+            if (error instanceof AnnotationClassNotAvailableError) {
+                forgetLastAnnotationLabel(collectionId);
+            }
+            toast.error(
+                getCreateLabelErrorMessage(
+                    error,
+                    'Failed to create annotation class. Please try again.'
+                )
+            );
             return null;
         }
     }
@@ -155,7 +176,7 @@ export function useCreateCuboidAnnotation({
         if (!labelName) return;
         // Cancel if the active tick changed while the class dialog was open.
         if (getTickSampleId() !== sampleId) return;
-        const labelId = await findOrCreateLabelId(labelName);
+        const labelId = await findOrCreateLabelId(collectionId, labelName);
         if (!labelId) return;
         // Cancel if the active sample or collection changed while finding/creating the label.
         if (getTickSampleId() !== sampleId || getCollectionId() !== collectionId) return;

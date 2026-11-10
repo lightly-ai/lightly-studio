@@ -1,6 +1,7 @@
 <script lang="ts">
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
-    import { cn, formatConfidence } from '$lib/utils';
+    import { cn, formatConfidence, trackClassCreatedInPicker } from '$lib/utils';
     import { page } from '$app/state';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
@@ -75,6 +76,7 @@
     const { isEditingMode } = page.data.globalStorage;
     const collectionId = $derived(page.params.collection_id!);
     const result = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const items = $derived(getSelectionItems(result.data || []));
     const { addReversibleAction } = useGlobalStorage();
 
@@ -161,10 +163,14 @@
                                     }}
                                 >
                                     <SelectList
+                                        onCreate={trackClassCreatedInPicker}
+                                        allowCreate={canCreateClass}
                                         {items}
                                         selectedItem={items.find((i) => i.value === value?.value)}
                                         name="annotation-label"
-                                        placeholder="Select or create a class"
+                                        placeholder={canCreateClass
+                                            ? 'Select or create a class'
+                                            : 'Select a class'}
                                         className="h-8 w-full min-w-0 px-3"
                                         contentClassName="w-full min-w-0"
                                         onSelect={async (item) => {
@@ -192,7 +198,10 @@
                                         }}
                                     >
                                         {#snippet notFound({ inputValue })}
-                                            <LabelNotFound label={inputValue} />
+                                            <LabelNotFound
+                                                label={inputValue}
+                                                allowCreate={canCreateClass}
+                                            />
                                         {/snippet}
                                     </SelectList>
                                 </div>

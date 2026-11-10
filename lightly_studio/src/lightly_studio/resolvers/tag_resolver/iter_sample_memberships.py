@@ -9,10 +9,12 @@ from sqlalchemy import String, cast
 from sqlmodel import Session, col, select
 
 from lightly_studio.database import db_array
-from lightly_studio.models.sample import SampleTagLinkTable
+from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 
 
-def iter_sample_memberships(session: Session, tag_ids: Sequence[UUID]) -> Iterator[tuple[str, str]]:
+def iter_sample_memberships(
+    session: Session, tag_ids: Sequence[UUID], collection_id: UUID | None = None
+) -> Iterator[tuple[str, str]]:
     """Yield unique (sample ID, tag ID) string pairs for the requested tags.
 
     Cast only the selected columns to avoid decoding two UUIDs per membership;
@@ -22,6 +24,7 @@ def iter_sample_memberships(session: Session, tag_ids: Sequence[UUID]) -> Iterat
     Args:
         session: Database session, which must stay open during iteration.
         tag_ids: Tags whose memberships to read.
+        collection_id: If given, include only samples from this collection.
 
     Yields:
         Sample and tag IDs as canonical UUID strings.
@@ -32,4 +35,8 @@ def iter_sample_memberships(session: Session, tag_ids: Sequence[UUID]) -> Iterat
         cast(col(SampleTagLinkTable.sample_id), String),
         cast(col(SampleTagLinkTable.tag_id), String),
     ).where(db_array.in_array(column=col(SampleTagLinkTable.tag_id), values=tag_ids))
+    if collection_id is not None:
+        stmt = stmt.join(
+            SampleTable, col(SampleTable.sample_id) == col(SampleTagLinkTable.sample_id)
+        ).where(SampleTable.collection_id == collection_id)
     yield from session.exec(stmt)

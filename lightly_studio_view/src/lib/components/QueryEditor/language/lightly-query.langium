@@ -23,6 +23,17 @@ interface FunctionCall extends Expression {
   args: Expression[];
 }
 
+interface SampleEvaluationQuery extends Expression {
+  runName: string;
+  criteria?: Expression;
+}
+
+interface EvaluationMetricComparison extends Expression {
+  metricName: string;
+  operator: '=' | '!=' | '<' | '>' | '<=' | '>=';
+  value: number;
+}
+
 interface FieldReference extends Expression {
   member: string;
 }
@@ -66,7 +77,28 @@ SampleUnary<isImage> returns Expression:
     | SampleComparison<isImage>
     | MetadataComparison
     | TagInExpression
-    | AnnotationQuery;
+    | AnnotationQuery
+    | SampleEvaluationQuery;
+
+// The run selector scopes every metric predicate, including OR and NOT.
+SampleEvaluationQuery returns SampleEvaluationQuery:
+  {SampleEvaluationQuery} SAMPLE_EVALUATION_FUNCTION '(' 'name' '=' runName=STRING
+    (AND criteria=EvaluationMetricOr)? ')';
+
+EvaluationMetricOr returns Expression:
+  EvaluationMetricAnd ({BooleanExpression.children+=current} operator=OR children+=EvaluationMetricAnd (OR children+=EvaluationMetricAnd)*)?;
+
+EvaluationMetricAnd returns Expression:
+  EvaluationMetricUnary ({BooleanExpression.children+=current} operator=AND children+=EvaluationMetricUnary (AND children+=EvaluationMetricUnary)*)?;
+
+EvaluationMetricUnary returns Expression:
+  '(' EvaluationMetricOr ')'
+    | {NotExpression} NOT expression=EvaluationMetricUnary
+    | EvaluationMetricComparison;
+
+EvaluationMetricComparison returns EvaluationMetricComparison:
+  {EvaluationMetricComparison} metricName=STRING
+    operator=('=' | '!=' | '<' | '>' | '<=' | '>=') value=SignedNumber;
 
 SampleComparison<isImage> returns ComparisonExpression:
   SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
@@ -266,7 +298,7 @@ StringLiteral returns Expression:
 terminal BOOLEAN returns boolean: /\b(true|false)\b/i;
 terminal FLOAT returns number: /[0-9]+\.[0-9]*/;
 terminal INT returns number: /[0-9]+/;
-terminal STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
+terminal QUOTED_STRING: /"([^"\\\n\r]|\\.)*"|'([^'\\\n\r]|\\.)*'/;
 
 terminal AND: /\bAND\b/i;
 terminal OR: /\bOR\b/i;
@@ -280,6 +312,12 @@ terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
 terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
+terminal SAMPLE_EVALUATION_FUNCTION returns string: /\bsample_evaluation\b/;
+
+// Keep built-in metrics valid wherever a string is accepted.
+STRING returns string:
+  QUOTED_STRING | '"tp"' | '"fp"' | '"fn"'
+    | '"disagreement"' | '"miou"';
 
 hidden terminal WS: /\s+/;
 hidden terminal SL_COMMENT: /#[^\n\r]*/;

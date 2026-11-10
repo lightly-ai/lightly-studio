@@ -31,7 +31,10 @@ export function useAnnotationSelection() {
         if (annotation.annotation_type === 'segmentation_mask') {
             setAnnotationType(annotation.annotation_type);
             setAnnotationLabel(annotation.annotation_label?.annotation_label_name ?? null);
-            setStatus(toolbarContext.status === 'slic' ? 'slic' : 'brush');
+            // Keep the active mask tool. Other tools switch to the brush.
+            if (!['brush', 'slic', 'smart-select'].includes(toolbarContext.status)) {
+                setStatus('brush');
+            }
         } else {
             setStatus('cursor');
         }

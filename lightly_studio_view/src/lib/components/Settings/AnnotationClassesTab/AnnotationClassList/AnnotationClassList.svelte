@@ -20,7 +20,7 @@
         showEmptyHint: boolean;
         highlightedId: string | null;
         onAdd: () => void;
-        onRename: (labelId: string, oldName: string, name: string) => Promise<unknown>;
+        onRename: (labelId: string, name: string) => Promise<unknown>;
         onDelete: (labelId: string) => Promise<unknown>;
     }
 
@@ -59,12 +59,7 @@
             name={annotationClass.annotation_label_name}
             isHighlighted={annotationClass.annotation_label_id === highlightedId}
             annotationCount={annotationClass.annotation_count}
-            onRename={(name) =>
-                onRename(
-                    annotationClass.annotation_label_id!,
-                    annotationClass.annotation_label_name,
-                    name
-                )}
+            onRename={(name) => onRename(annotationClass.annotation_label_id!, name)}
             onDelete={() => onDelete(annotationClass.annotation_label_id!)}
         />
     {/each}

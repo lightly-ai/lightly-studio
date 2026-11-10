@@ -28,6 +28,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
+    collection_resolver,
     object_track_resolver,
     tag_resolver,
 )
@@ -147,27 +148,54 @@ def log_match_summary(
         )
 
 
-def write_sequence_labels(
+def write_sequence_labels(  # noqa: PLR0913
     dataset: McapDataset,
     sequence: McapSequence,
     annotation_mcap_uri: str,
     messages: list[tuple[int, SceneUpdateLabels]],
     annotation_source: str = DEFAULT_ANNOTATION_SOURCE,
+    overwrite: bool = False,
 ) -> None:
     """Match annotation MCAP messages to ticks and persist cuboids, object tracks and tags.
 
     Frame tags are added as sample tags to the tick groups in the group collection.
+
+    Args:
+        dataset: The dataset that holds the sequence.
+        sequence: The sequence to store the labels on.
+        annotation_mcap_uri: The path or URI of the annotation MCAP, used in log messages.
+        messages: `(log_time_ns, labels)` pairs from the annotation MCAP.
+        annotation_source: Name of the annotation source that stores the cuboids.
+        overwrite: Delete the annotations of `annotation_source` on the sequence before
+            the new cuboids are stored. Frame tags and object tracks are kept.
+
+    Raises:
+        ValueError: If `overwrite` is set and no label matches a tick of the sequence.
+            The existing annotations are kept.
     """
     session = dataset.group_dataset.session
-    ticks = ticks_by_timestamp(entries=sequence.get_samples())
+    entries = sequence.get_samples()
+    ticks = ticks_by_timestamp(entries=entries)
     matched = match_labels(messages=messages, ticks=ticks)
     log_match_summary(
         annotation_mcap_uri=annotation_mcap_uri, matched=matched, ticks=ticks, messages=messages
     )
+    if overwrite and matched.matched_count == 0:
+        raise ValueError(
+            f"No label of annotation MCAP '{annotation_mcap_uri}' matches a tick of the "
+            f"sequence. The annotations of annotation source '{annotation_source}' are kept."
+        )
     track_ids = _allocate_tracks(session=session, dataset_id=dataset.dataset_id, matched=matched)
     annotations = _annotation_creates(
         session=session, dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
     )
+    if overwrite:
+        _delete_sequence_annotations(
+            session=session,
+            group_collection_id=dataset.group_dataset.collection_id,
+            annotation_source=annotation_source,
+            group_ids=[entry.sample_id for entry in entries],
+        )
     if annotations:
         annotation_resolver.create_many(
             session=session,
@@ -180,6 +208,33 @@ def write_sequence_labels(
         session=session,
         collection_id=dataset.group_dataset.collection_id,
         tags_by_group=matched.tags_by_group,
+    )
+
+
+def _delete_sequence_annotations(
+    session: Session,
+    group_collection_id: UUID,
+    annotation_source: str,
+    group_ids: Sequence[UUID],
+) -> None:
+    """Delete the annotations of an annotation source on the groups of a sequence."""
+    annotation_collection_id = collection_resolver.get_by_name(
+        session=session, name=annotation_source, parent_collection_id=group_collection_id
+    )
+    if annotation_collection_id is None:
+        return
+    annotations = annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id(
+        session=session,
+        parent_sample_ids=group_ids,
+        annotation_collection_id=annotation_collection_id,
+    )
+    deleted_count = annotation_resolver.delete_annotations_by_ids(
+        session=session, annotation_ids=[annotation.sample_id for annotation in annotations]
+    )
+    logger.info(
+        "Deleted %d annotations of annotation source '%s' to overwrite them.",
+        deleted_count,
+        annotation_source,
     )
 
 
