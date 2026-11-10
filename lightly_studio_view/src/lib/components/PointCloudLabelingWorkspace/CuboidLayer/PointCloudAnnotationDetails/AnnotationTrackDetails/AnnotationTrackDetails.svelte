@@ -74,8 +74,8 @@
                 value={editing.currentTrack?.parent_object_track_id ?? '__no_track__'}
                 noSelectionLabel="No parent"
                 showNewTrack={false}
-                disabled={$disabled || editing.isPending}
-                isLoading={$isSaving || editing.isPending}
+                disabled={$disabled || editing.isPending || editing.isTracksNotReady}
+                isLoading={$isSaving || editing.isPending || editing.isTracksNotReady}
                 className="w-full"
                 onValueChange={(id) => editing.handleParentTrackChange(id)}
             />

@@ -22,6 +22,7 @@ interface UseAnnotationTrackEditingReturn {
     readonly parentTrackTracks: TrackWithClassNameView[];
     readonly currentTrack: TrackWithClassNameView | null | undefined;
     readonly isPending: boolean;
+    readonly isTracksNotReady: boolean;
     state: ReturnType<typeof createTrackEditingState>;
     handleTrackChange: (trackId: string | null, isNewTrack: boolean) => Promise<void>;
     handleParentTrackChange: (parentTrackId: string | null) => Promise<void>;
@@ -104,6 +105,9 @@ export function useAnnotationTrackEditing({
         },
         get isPending() {
             return trackMutation.isPending;
+        },
+        get isTracksNotReady() {
+            return tracksQuery.isPending || tracksQuery.isError;
         },
         state,
         handleTrackChange,
