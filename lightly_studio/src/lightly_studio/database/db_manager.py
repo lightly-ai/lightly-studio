@@ -18,19 +18,20 @@ import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from enum import Enum
+from importlib import metadata
 from pathlib import Path
 from typing import Annotated, Any
 
 import duckdb
 import sqlalchemy_utils
 from fastapi import Depends
-from sqlalchemy import StaticPool, text
+from sqlalchemy import StaticPool, inspect, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.exc import OperationalError
 from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
-from lightly_studio.database import db_migrations, db_url
+from lightly_studio.database import db_migrations, db_url, schema_compat
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 
 
@@ -56,6 +57,7 @@ class DatabaseEngine:
         cleanup_existing: bool = False,
         must_exist: bool = False,
         single_threaded: bool = False,
+        migrate: bool = True,
     ) -> None:
         """Create a new instance of the DatabaseEngine.
 
@@ -65,10 +67,13 @@ class DatabaseEngine:
             cleanup_existing: If True, removes the existing database before use.
             must_exist: If True, raises FileNotFoundError when the database does not exist.
             single_threaded: If True, creates a single-threaded engine suitable for testing.
+            migrate: If True, applies PostgreSQL migrations. If False, only checks that
+                this client can use the existing schema. DuckDB ignores this argument.
 
         Raises:
             FileNotFoundError: If must_exist is True and the database does not exist.
             RuntimeError: If the DuckDB file is already open in another process.
+            SchemaCompatError: If migrate is False and the client cannot use the schema.
         """
         # Guards every access to the persistent session. A SQLAlchemy Session is not
         # thread-safe, and the session below is reached from many threads at once: FastAPI
@@ -149,6 +154,7 @@ class DatabaseEngine:
                 engine_url=self._engine_url,
                 db_exists=db_exists,
                 cleanup_existing=cleanup_existing,
+                migrate=migrate,
             )
         else:
             _create_duckdb_schema(engine=self._engine, engine_url=self._engine_url)
@@ -263,6 +269,7 @@ def connect(
     must_exist: bool = False,
     db_file: str | None = None,
     db_url: str | None = None,
+    migrate: bool = True,
 ) -> None:
     """Set up the database connection.
 
@@ -274,6 +281,8 @@ def connect(
         must_exist: If True, raises FileNotFoundError when the database does not exist.
         db_file: Path to DuckDB file.
         db_url: Full database URL.
+        migrate: If True, applies PostgreSQL migrations. If False, only checks that this
+            client can use the existing schema.
 
     Raises:
         ValueError: If both db_file and db_url are provided.
@@ -288,6 +297,7 @@ def connect(
         engine_url=db_url,
         cleanup_existing=cleanup_existing,
         must_exist=must_exist,
+        migrate=migrate,
     )
     set_engine(engine=engine)
 
@@ -352,8 +362,15 @@ def _initialize_postgres_schema(
     engine_url: str,
     db_exists: bool,
     cleanup_existing: bool,
+    migrate: bool = True,
 ) -> None:
-    """Create the database if needed, enable pgvector, and run Alembic migrations."""
+    """Create the database if needed, enable pgvector, and run Alembic migrations.
+
+    With ``migrate=False``, only check that this client can use the existing schema.
+    """
+    if not migrate:
+        _check_postgres_schema_compat(engine=engine)
+        return
     if not db_exists:
         sqlalchemy_utils.create_database(url=engine_url)
     with engine.connect() as conn:
@@ -368,6 +385,17 @@ def _initialize_postgres_schema(
         logging.info("Dropped all tables in PostgreSQL database.")
 
     db_migrations.run_migrations(engine=engine, engine_url=engine_url)
+
+
+def _check_postgres_schema_compat(engine: Engine) -> None:
+    """Check that this client can use the schema of a database it does not migrate."""
+    has_table = inspect(engine).has_table(table_name="schema_compat")
+    row = schema_compat.read_schema_compat(engine=engine) if has_table else None
+    schema_compat.check_client_compatibility(
+        row=row,
+        client_version=metadata.version("lightly-studio"),
+        script=db_migrations.get_script_directory(),
+    )
 
 
 def _create_duckdb_schema(engine: Engine, engine_url: str) -> None:

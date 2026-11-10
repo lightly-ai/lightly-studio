@@ -38,6 +38,11 @@ def run_migrations(engine: Engine, engine_url: str) -> None:
     _upgrade_to_head(engine=engine, config=config)
 
 
+def get_script_directory() -> ScriptDirectory:
+    """Return the Alembic script directory of the migrations package."""
+    return ScriptDirectory.from_config(config=_base_config())
+
+
 def get_head_revision() -> str:
     """Return the current Alembic head revision id.
 
@@ -47,8 +52,7 @@ def get_head_revision() -> str:
     Raises:
         RuntimeError: If no head revision is defined in the migrations package.
     """
-    script = ScriptDirectory.from_config(config=_base_config())
-    head = script.get_current_head()
+    head = get_script_directory().get_current_head()
     if head is None:
         raise RuntimeError("No Alembic head revision found in migrations/scripts.")
     return head

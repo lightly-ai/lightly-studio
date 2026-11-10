@@ -8,6 +8,7 @@ from __future__ import annotations
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
+from importlib import metadata
 from pathlib import Path
 
 import duckdb
@@ -20,13 +21,14 @@ from sqlmodel import Session
 from lightly_studio import ImageDataset
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
-from lightly_studio.database import db_manager
+from lightly_studio.database import db_manager, db_migrations, schema_compat
 from lightly_studio.database.db_manager import (
     DatabaseBackend,
     DatabaseEngine,
     _detect_backend_from_url,
 )
 from lightly_studio.models.collection import CollectionTable
+from lightly_studio.models.schema_compat import SchemaCompatTable
 from lightly_studio.resolvers import image_resolver
 from tests.helpers_resolvers import (
     create_collection,
@@ -161,6 +163,7 @@ def test_connect__db_file_none(
         engine_url=None,
         cleanup_existing=True,
         must_exist=False,
+        migrate=True,
     )
 
 
@@ -491,6 +494,44 @@ def test_database_engine__postgres_sets_keepalive_and_pool_options(
         "keepalives_interval": 10,
         "keepalives_count": 5,
     }
+
+
+def test_initialize_postgres_schema__without_migrate_checks_compat(
+    mocker: MockerFixture,
+) -> None:
+    engine = mocker.MagicMock()
+    mock_run_migrations = mocker.patch.object(db_migrations, "run_migrations")
+    mock_check = mocker.patch.object(db_manager, "_check_postgres_schema_compat")
+
+    db_manager._initialize_postgres_schema(
+        engine=engine,
+        engine_url="postgresql://user:pass@host:5432/db",
+        db_exists=True,
+        cleanup_existing=False,
+        migrate=False,
+    )
+
+    engine.connect.assert_not_called()
+    mock_run_migrations.assert_not_called()
+    mock_check.assert_called_once_with(engine=engine)
+
+
+@pytest.mark.parametrize("has_table", [True, False])
+def test_check_postgres_schema_compat(mocker: MockerFixture, has_table: bool) -> None:
+    engine = mocker.MagicMock()
+    row = SchemaCompatTable(oss_revision="abc123", min_client_version="1.0.0")
+    mocker.patch.object(db_manager, "inspect").return_value.has_table.return_value = has_table
+    mocker.patch.object(schema_compat, "read_schema_compat", return_value=row)
+    mocker.patch.object(db_migrations, "get_script_directory", return_value="script")
+    mocker.patch.object(metadata, "version", return_value="1.5.0")
+    mock_check = mocker.patch.object(schema_compat, "check_client_compatibility")
+
+    db_manager._check_postgres_schema_compat(engine=engine)
+
+    # Without the table the row is not read, the check gets None.
+    mock_check.assert_called_once_with(
+        row=row if has_table else None, client_version="1.5.0", script="script"
+    )
 
 
 def test_database_engine__duckdb_omits_postgres_pool_options(
