@@ -30,11 +30,13 @@ describe('ResizableRectangle', () => {
         expect(onBboxCommit).not.toHaveBeenCalled();
     });
 
-    it('signals the start of a resize', async () => {
-        const { onDragStart } = renderRectangle();
+    it('signals the start and the stop of a resize', async () => {
+        const { onDragStart, onDragStop } = renderRectangle();
 
         mouseEvent('mousedown', await screen.findByTestId('resize-handle-se'));
-
         expect(onDragStart).toHaveBeenCalledOnce();
+        mouseEvent('mouseup', window);
+
+        expect(onDragStop).toHaveBeenCalledOnce();
     });
 });
