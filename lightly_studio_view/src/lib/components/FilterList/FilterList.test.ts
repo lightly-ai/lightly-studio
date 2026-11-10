@@ -87,7 +87,7 @@ describe('FilterList', () => {
         expect(onToggle).toHaveBeenCalledWith('id-1');
     });
 
-    it('selects all visible ids plus the selected ones', async () => {
+    it('selects all matching ids plus the selected ones', async () => {
         const items = makeItems(8);
         items[0].selected = true;
         const { onSelectionChange } = renderList({ items });

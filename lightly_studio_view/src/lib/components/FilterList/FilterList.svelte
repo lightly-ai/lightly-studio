@@ -3,7 +3,7 @@
     import { Input } from '$lib/components/ui/input';
     import FilterListActions from './FilterListActions/FilterListActions.svelte';
     import FilterListRows from './FilterListRows/FilterListRows.svelte';
-    import { matchesSearch, selectAllVisible, type FilterListItem } from './filterList.helpers';
+    import { matchesSearch, selectAllMatching, type FilterListItem } from './filterList.helpers';
     import { useFilterListState } from './useFilterListState/useFilterListState.svelte';
 
     interface Props {
@@ -65,7 +65,7 @@
     {/if}
     {#if items.length > 1}
         <FilterListActions
-            onSelectAll={() => onSelectionChange(selectAllVisible(items, list.visible))}
+            onSelectAll={() => onSelectionChange(selectAllMatching(items, list.matching))}
             onClear={() => onSelectionChange([])}
         />
     {/if}
@@ -84,7 +84,7 @@
     />
     {#if items.length === 0 && emptyText}
         <p class="text-sm text-diffuse-foreground">{emptyText}</p>
-    {:else if items.length > 0 && list.visible.length === 0 && !pinnedVisible}
+    {:else if items.length > 0 && list.matching.length === 0 && !pinnedVisible}
         <p class="text-sm text-diffuse-foreground">{noMatchText}</p>
     {/if}
 </div>

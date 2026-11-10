@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
     highlightRange,
     matchesSearch,
-    selectAllVisible,
+    selectAllMatching,
     splitMatch,
     type FilterListItem
 } from './filterList.helpers';
@@ -16,10 +16,10 @@ describe('matchesSearch', () => {
     });
 });
 
-describe('selectAllVisible', () => {
-    it('adds the visible items to the selection', () => {
+describe('selectAllMatching', () => {
+    it('adds the matching items to the selection', () => {
         const items = [item('car', true), item('cat'), item('dog')];
-        expect(selectAllVisible(items, [item('cat')])).toEqual(['car', 'cat']);
+        expect(selectAllMatching(items, [item('cat')])).toEqual(['car', 'cat']);
     });
 });
 

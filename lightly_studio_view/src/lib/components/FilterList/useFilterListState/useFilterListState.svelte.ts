@@ -14,8 +14,8 @@ export function useFilterListState({ getItems, getShowSearch }: UseFilterListSta
     let search = $state('');
     let shownCount = $state(PAGE_SIZE);
 
-    const visible = $derived(getItems().filter((item) => matchesSearch(item, search)));
-    const shown = $derived(visible.slice(0, shownCount));
+    const matching = $derived(getItems().filter((item) => matchesSearch(item, search)));
+    const shown = $derived(matching.slice(0, shownCount));
 
     return {
         get search() {
@@ -29,14 +29,14 @@ export function useFilterListState({ getItems, getShowSearch }: UseFilterListSta
         get searchVisible() {
             return (getShowSearch() ?? getItems().length > 5) || search.length > 0;
         },
-        get visible() {
-            return visible;
+        get matching() {
+            return matching;
         },
         get shown() {
             return shown;
         },
         get nextPageCount() {
-            return Math.min(PAGE_SIZE, visible.length - shown.length);
+            return Math.min(PAGE_SIZE, matching.length - shown.length);
         },
         showMore() {
             shownCount += PAGE_SIZE;

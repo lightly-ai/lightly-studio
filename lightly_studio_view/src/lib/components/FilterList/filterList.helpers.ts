@@ -13,10 +13,13 @@ export interface FilterListItem {
 export const matchesSearch = (item: FilterListItem, search: string): boolean =>
     item.label.toLowerCase().includes(search.trim().toLowerCase());
 
-/** The selection after "Select all": the selected items plus every visible item. */
-export const selectAllVisible = (items: FilterListItem[], visible: FilterListItem[]): string[] => {
-    const visibleIds = new Set(visible.map((item) => item.id));
-    return items.filter((item) => item.selected || visibleIds.has(item.id)).map((item) => item.id);
+/** The selection after "Select all": the selected items plus every matching item. */
+export const selectAllMatching = (
+    items: FilterListItem[],
+    matching: FilterListItem[]
+): string[] => {
+    const matchingIds = new Set(matching.map((item) => item.id));
+    return items.filter((item) => item.selected || matchingIds.has(item.id)).map((item) => item.id);
 };
 
 /** Character range of the first case-insensitive match of the search in the label. */
