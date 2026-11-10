@@ -2,9 +2,10 @@ import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import type { AnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import type { Writable } from 'svelte/store';
+import { get, type Writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolveStickyClass, useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegmentTestWrapper.test.svelte';
 import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
 
@@ -21,7 +22,6 @@ const mocks = vi.hoisted(() => ({
     userRole: 'labeler' as string | undefined,
     lastAnnotationSource: undefined as unknown as Writable<Record<string, string>>,
     context: undefined as unknown as AnnotationLabelContext,
-    pickClass: vi.fn(),
     addReversibleAction: vi.fn(),
     deleteAnnotation: vi.fn()
 }));
@@ -60,12 +60,15 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
     const isEditingMode = writable(false);
     const lastAnnotationSource = writable<Record<string, string>>({});
+    const lastAnnotationLabel = writable<Record<string, string>>({});
     mocks.isEditingMode = isEditingMode;
     mocks.lastAnnotationSource = lastAnnotationSource;
     return {
         useGlobalStorage: vi.fn(() => ({
             addReversibleAction: mocks.addReversibleAction,
-            updateLastAnnotationLabel: vi.fn(),
+            lastAnnotationLabel,
+            updateLastAnnotationLabel: (collectionId: string, label: string) =>
+                lastAnnotationLabel.update((value) => ({ ...value, [collectionId]: label })),
             lastAnnotationSource,
             updateLastAnnotationSource: (collectionId: string, name: string) =>
                 lastAnnotationSource.update((value) => ({ ...value, [collectionId]: name })),
@@ -74,10 +77,6 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
         }))
     };
 });
-
-vi.mock('$lib/hooks/useStickyClass/useStickyClass', () => ({
-    useStickyClass: () => ({ pickClass: mocks.pickClass })
-}));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: vi.fn(() => ({
@@ -752,7 +751,7 @@ describe('SampleDetailsAnnotationSegment', () => {
         });
     });
 
-    it('makes a side-panel relabel an explicit class pick', async () => {
+    it('uses the class of a side-panel relabel for the next new annotation', async () => {
         mocks.collections = [groundTruthSource];
         const user = userEvent.setup();
         render(SampleDetailsAnnotationSegment, {
@@ -764,6 +763,13 @@ describe('SampleDetailsAnnotationSegment', () => {
 
         await user.click(screen.getByTestId('mock-annotation-row-relabel'));
 
-        expect(mocks.pickClass).toHaveBeenCalledWith('collection-1', 'dog');
+        // 'dog' is not in the class list yet: a new class is created with its first annotation.
+        expect(
+            resolveStickyClass({
+                collectionId: 'collection-1',
+                stickyClass: get(useStickyClass().stickyClasses)['collection-1'],
+                classNames: ['cat']
+            })
+        ).toBe('dog');
     });
 });
