@@ -5,13 +5,17 @@ from __future__ import annotations
 from typing import Protocol
 from uuid import UUID
 
-from lightly_studio.models.collection import CollectionCreate, CollectionView, SampleType
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 
 
 class CollectionTransport(Protocol):
     """Creates and finds collections."""
 
-    def create(self, collection: CollectionCreate) -> CollectionView:
+    def create(self, collection: CollectionCreate) -> CollectionWithoutChildrenView:
         """Create a collection.
 
         A root collection also gets a new dataset. A child collection uses the dataset
@@ -21,10 +25,12 @@ class CollectionTransport(Protocol):
             ValueError: If a collection with the same name exists under the same parent.
         """
 
-    def get_by_id(self, collection_id: UUID) -> CollectionView | None:
+    def get_by_id(self, collection_id: UUID) -> CollectionWithoutChildrenView | None:
         """Get a collection by ID, or None if it does not exist."""
 
-    def get_by_name(self, name: str, parent_collection_id: UUID | None) -> CollectionView | None:
+    def get_by_name(
+        self, name: str, parent_collection_id: UUID | None
+    ) -> CollectionWithoutChildrenView | None:
         """Get a collection by name under a parent, or None if it does not exist.
 
         Args:
