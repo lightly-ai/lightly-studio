@@ -8,6 +8,7 @@ const transforms = {
     annotations: readonly(writable([])),
     reconcile: vi.fn(),
     begin: vi.fn(),
+    preview: vi.fn(),
     cancel: vi.fn(),
     commit: vi.fn()
 };
