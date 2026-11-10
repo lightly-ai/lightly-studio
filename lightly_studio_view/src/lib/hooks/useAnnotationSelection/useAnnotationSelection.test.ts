@@ -41,10 +41,12 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
 }));
 
 const updateLastAnnotationLabelMock = vi.fn();
+const openSampleDetailsSidePanelMock = vi.fn();
 
 vi.mock('../useGlobalStorage', () => ({
     useGlobalStorage: () => ({
-        updateLastAnnotationLabel: updateLastAnnotationLabelMock
+        updateLastAnnotationLabel: updateLastAnnotationLabelMock,
+        openSampleDetailsSidePanel: openSampleDetailsSidePanelMock
     })
 }));
 
@@ -58,6 +60,7 @@ describe('useAnnotationSelection', () => {
         mockAnnotationLabelContext.lastCreatedAnnotationId = 'prev-id';
 
         updateLastAnnotationLabelMock.mockClear();
+        openSampleDetailsSidePanelMock.mockClear();
     });
 
     it.each(['slic', 'smart-select'] as const)(
@@ -169,6 +172,48 @@ describe('useAnnotationSelection', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
 
         expect(updateLastAnnotationLabelMock).not.toHaveBeenCalled();
+    });
+
+    it('opens the side panel when selecting an annotation', () => {
+        const annotations = [
+            {
+                sample_id: 'a5',
+                annotation_type: AnnotationType.OBJECT_DETECTION,
+                annotation_label: { annotation_label_name: 'Car' }
+            }
+        ];
+
+        const { selectAnnotation } = useAnnotationSelection();
+
+        selectAnnotation({
+            annotationId: 'a5',
+            collectionId: 'collection-1',
+            annotations
+        });
+
+        expect(openSampleDetailsSidePanelMock).toHaveBeenCalledOnce();
+    });
+
+    it('does not open the side panel when deselecting an annotation', () => {
+        mockAnnotationLabelContext.annotationId = 'a6';
+
+        const annotations = [
+            {
+                sample_id: 'a6',
+                annotation_type: AnnotationType.OBJECT_DETECTION,
+                annotation_label: { annotation_label_name: 'Car' }
+            }
+        ];
+
+        const { selectAnnotation } = useAnnotationSelection();
+
+        selectAnnotation({
+            annotationId: 'a6',
+            collectionId: 'collection-1',
+            annotations
+        });
+
+        expect(openSampleDetailsSidePanelMock).not.toHaveBeenCalled();
     });
 
     it('does nothing if annotation is not found', () => {

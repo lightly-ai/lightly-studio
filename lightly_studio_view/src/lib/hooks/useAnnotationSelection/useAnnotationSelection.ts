@@ -12,6 +12,7 @@ export function useAnnotationSelection() {
     } = useAnnotationLabelContext();
 
     const { context: toolbarContext, setStatus } = useSampleDetailsToolbarContext();
+    const { updateLastAnnotationLabel, openSampleDetailsSidePanel } = useGlobalStorage();
 
     function selectAnnotation({
         annotationId,
@@ -38,7 +39,11 @@ export function useAnnotationSelection() {
 
         setLastCreatedAnnotationId(null);
 
-        setAnnotationId(context.annotationId === annotationId ? null : annotationId);
+        const isDeselecting = context.annotationId === annotationId;
+        if (!isDeselecting) {
+            openSampleDetailsSidePanel();
+        }
+        setAnnotationId(isDeselecting ? null : annotationId);
     }
 
     return {

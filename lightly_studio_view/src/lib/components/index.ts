@@ -65,6 +65,7 @@ export { default as LayoutCard } from '$lib/components/LayoutCard/LayoutCard.sve
 export { default as Onboarding } from '$lib/components/Onboarding/Onboarding.svelte';
 export { default as SelectionPill } from '$lib/components/SelectionPill/SelectionPill.svelte';
 export { default as ShowFiltersButton } from '$lib/components/ShowFiltersButton/ShowFiltersButton.svelte';
+export { default as SidePanelToggleButton } from '$lib/components/SidePanelToggleButton/SidePanelToggleButton.svelte';
 export { default as Separator } from '$lib/components/ui/separator/separator.svelte';
 export { default as CollectionSearch } from '$lib/components/CollectionSearch/CollectionSearch.svelte';
 export { default as CollectionSearchImage } from '$lib/components/CollectionSearch/CollectionSearchImage/CollectionSearchImage.svelte';
