@@ -14,11 +14,15 @@ interface Params {
 export const useDeleteAnnotationSource = (getParams: () => Params) => {
     const invalidateAnnotationSourceQueries = useInvalidateAnnotationSourceQueries();
     const { removeLastAnnotationSource } = useGlobalStorage();
+    // The params of the request in flight. The params can change before it ends, for example
+    // when the user opens another dataset, and the cleanup belongs to the deleted source.
+    let request: Params | undefined;
 
     const mutation = createMutation(() => ({
         ...deleteAnnotationSourceMutation(),
         onSuccess: () => {
-            const { collectionId, source, onDeleted } = getParams();
+            if (!request) return;
+            const { collectionId, source, onDeleted } = request;
             // The target is stored by name. Forget it, so the next annotation does not
             // re-create the deleted source.
             removeLastAnnotationSource(collectionId, source.name);
@@ -34,7 +38,8 @@ export const useDeleteAnnotationSource = (getParams: () => Params) => {
     }));
     const remove = () => {
         if (mutation.isPending) return;
-        const { collectionId, source } = getParams();
+        request = getParams();
+        const { collectionId, source } = request;
         mutation.mutate({
             path: { collection_id: collectionId, annotation_collection_id: source.id }
         });

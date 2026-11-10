@@ -51,7 +51,7 @@ describe('useDeleteAnnotationSource', () => {
     it('forgets the deleted source as target, and refreshes', () => {
         const { lastAnnotationSource, updateLastAnnotationSource } = useGlobalStorage();
         updateLastAnnotationSource('col-1', 'predictions');
-        setup('predictions');
+        setup('predictions').remove();
 
         mocks.onSuccess?.();
 
@@ -63,11 +63,30 @@ describe('useDeleteAnnotationSource', () => {
     it('keeps another source as target', () => {
         const { lastAnnotationSource, updateLastAnnotationSource } = useGlobalStorage();
         updateLastAnnotationSource('col-1', 'labels');
-        setup('predictions');
+        setup('predictions').remove();
 
         mocks.onSuccess?.();
 
         expect(get(lastAnnotationSource)['col-1']).toBe('labels');
+    });
+
+    it('cleans up the collection of the request when the params change before it ends', () => {
+        const { lastAnnotationSource, updateLastAnnotationSource } = useGlobalStorage();
+        updateLastAnnotationSource('col-1', 'predictions');
+        updateLastAnnotationSource('col-2', 'predictions');
+        let collectionId = 'col-1';
+        const { remove } = useDeleteAnnotationSource(() => ({
+            collectionId,
+            source: { id: 's1', name: 'predictions' },
+            onDeleted: mocks.onDeleted
+        }));
+
+        remove();
+        collectionId = 'col-2';
+        mocks.onSuccess?.();
+
+        expect(get(lastAnnotationSource)).toEqual({ 'col-2': 'predictions' });
+        expect(mocks.invalidate).toHaveBeenCalledWith('col-1');
     });
 
     it('shows why the API refused the delete', () => {
