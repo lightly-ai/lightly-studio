@@ -23,13 +23,18 @@ from typing import Any
 import lightly_train  # type: ignore[import-not-found]
 import torch
 
+_TRAIN_BATCH_SIZE = 16
 _PREDICTION_BATCH_SIZE = 8
+# The Lightning accelerator name for each torch device type.
+_ACCELERATORS = {"cuda": "gpu", "mps": "mps", "cpu": "cpu"}
 
 
 def main(config_path: Path) -> None:
     """Train a model, then write its predictions for all images in the config."""
     config = json.loads(config_path.read_text(encoding="utf-8"))
     out_dir = Path(config["out_dir"])
+    device = _device()
+    print(f"Training and predicting on device '{device}'.", flush=True)
     _write_stage(config=config, stage="training")
     lightly_train.train_object_detection(
         out=str(out_dir),
@@ -40,12 +45,19 @@ def main(config_path: Path) -> None:
             "val": {"annotations": config["val_annotations_file"]},
         },
         steps=config["steps"],
-        precision=_precision(),
+        batch_size=_TRAIN_BATCH_SIZE,
+        accelerator=_ACCELERATORS[device],
+        # One device only. With more GPUs, LightlyTrain starts more processes, and Studio
+        # cancels a run by stopping only this process.
+        devices=1,
+        precision=_precision(device=device),
         logger_args={"log_every_num_steps": max(1, config["steps"] // 50)},
     )
 
     _write_stage(config=config, stage="predicting")
-    model = lightly_train.load_model(str(_exported_model_path(out_dir=out_dir)))
+    model = lightly_train.load_model(
+        model=str(_exported_model_path(out_dir=out_dir)), device=device
+    )
     images = json.loads(Path(config["predict_images_file"]).read_text(encoding="utf-8"))
     predictions = _predict(model=model, images=images, threshold=config["score_threshold"])
     Path(config["predictions_file"]).write_text(json.dumps(predictions), encoding="utf-8")
@@ -55,9 +67,21 @@ def _write_stage(config: dict[str, Any], stage: str) -> None:
     Path(config["stage_file"]).write_text(stage, encoding="utf-8")
 
 
-def _precision() -> str:
-    # Mixed precision needs a GPU. On the CPU and on MPS full precision is used.
-    return "bf16-mixed" if torch.cuda.is_available() else "32-true"
+def _device() -> str:
+    """Return the fastest available device: a CUDA GPU, then Apple MPS, then the CPU."""
+    if torch.cuda.is_available():
+        return "cuda"
+    if torch.backends.mps.is_available():
+        return "mps"
+    return "cpu"
+
+
+def _precision(device: str) -> str:
+    # bf16 needs a CUDA GPU of the Ampere generation or newer. Older GPUs use fp16.
+    # MPS and the CPU use full precision.
+    if device != "cuda":
+        return "32-true"
+    return "bf16-mixed" if torch.cuda.is_bf16_supported() else "16-mixed"
 
 
 def _exported_model_path(out_dir: Path) -> Path:

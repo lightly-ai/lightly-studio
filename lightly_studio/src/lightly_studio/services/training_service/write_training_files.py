@@ -18,8 +18,8 @@ from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.services.training_service.training_run_files import TrainingRunFiles
 
-# A low threshold keeps uncertain boxes. They are useful to review and for evaluation.
-PREDICTION_SCORE_THRESHOLD = 0.25
+# Only confident boxes become predictions. Boxes with a lower score are removed.
+PREDICTION_SCORE_THRESHOLD = 0.5
 
 
 def write_training_files(  # noqa: PLR0913
