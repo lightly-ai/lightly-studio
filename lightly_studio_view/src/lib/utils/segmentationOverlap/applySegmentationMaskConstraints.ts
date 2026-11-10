@@ -4,6 +4,9 @@ import type { ApplyMaskConstraintsParams, OverriddenSegmentationAnnotations } fr
 
 /**
  * Applies lock constraints and overlap cleanup to a working segmentation mask.
+ *
+ * Returns an empty list without touching other annotations when no stroke pixels remain
+ * after locked pixels are removed.
  */
 export const applySegmentationMaskConstraints = async ({
     workingMask,
@@ -18,6 +21,10 @@ export const applySegmentationMaskConstraints = async ({
         annotations: rest.annotations,
         sample: rest.sample
     });
+
+    if (!workingMask.includes(1)) {
+        return [];
+    }
 
     return removeOverlapFromOtherSegmentationAnnotations({
         newMask: maskForOverlap,

@@ -29,7 +29,32 @@ describe('applySegmentationMaskConstraints', () => {
         vi.clearAllMocks();
     });
 
-    it('strips locked pixels and updates overlaps in one call', async () => {
+    it('strips locked pixels and trims overlaps with the drawn stroke', async () => {
+        const workingMask = Uint8Array.from([1, 1, 1, 0]);
+        const locked = new Set(['lock']);
+        const annotations = [baseAnn('lock', [1, 1, 0, 0]), baseAnn('other', [1, 0, 1, 0])];
+
+        const overriddenAnnotations = await applySegmentationMaskConstraints({
+            workingMask,
+            lockedAnnotationIds: locked,
+            annotations,
+            sample,
+            skipId: 'new',
+            collectionId: 'c',
+            updateAnnotations
+        });
+
+        // Locked mask should clear the locked drawn pixels in-place.
+        expect(Array.from(workingMask)).toEqual([0, 0, 1, 0]);
+        // Trimming uses the original stroke, so all of "other" is removed.
+        expect(updateAnnotations).toHaveBeenCalledTimes(1);
+        expect(updateAnnotations).toHaveBeenCalledWith([
+            expect.objectContaining({ annotation_id: 'other', segmentation_mask: [0, 0, 0, 0] })
+        ]);
+        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['other']);
+    });
+
+    it('does not trim other masks when locked masks cover the whole stroke', async () => {
         const workingMask = Uint8Array.from([1, 1, 0, 0]);
         const locked = new Set(['lock']);
         const annotations = [baseAnn('lock', [1, 1, 0, 0]), baseAnn('other', [1, 0, 0, 0])];
@@ -44,10 +69,8 @@ describe('applySegmentationMaskConstraints', () => {
             updateAnnotations
         });
 
-        // Locked mask should clear the drawn pixels in-place.
         expect(Array.from(workingMask)).toEqual([0, 0, 0, 0]);
-        // Overlap with "other" should trigger an update call.
-        expect(updateAnnotations).toHaveBeenCalledTimes(1);
-        expect(overriddenAnnotations.map((annotation) => annotation.sample_id)).toEqual(['other']);
+        expect(updateAnnotations).not.toHaveBeenCalled();
+        expect(overriddenAnnotations).toEqual([]);
     });
 });

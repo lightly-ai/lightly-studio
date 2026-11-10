@@ -39,6 +39,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smart select stays active when you select a segmentation mask or change its class in the sample details sidebar.
 - The value counts of categorical metadata now match the filters of the images grid.
 - Zooming with the mouse wheel or trackpad works while the Smart select tool is active.
+- Drawing a segmentation mask only over locked annotations no longer trims other annotations' masks.
 
 ### Security
 
