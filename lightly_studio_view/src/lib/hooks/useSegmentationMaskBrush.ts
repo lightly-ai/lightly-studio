@@ -19,6 +19,28 @@ import { applySegmentationMaskConstraints } from '$lib/utils/segmentationOverlap
 import { restoreOverriddenSegmentationAnnotationsForUndo } from '$lib/services/restoreOverriddenSegmentationAnnotationsForUndo';
 
 type LabelList = { annotation_label_id?: string; annotation_label_name?: string }[];
+type SegmentationMaskRLE = ReturnType<typeof encodeBinaryMaskToRLE>;
+
+interface ResolvedLabels {
+    annotationLabelName: string | null | undefined;
+    labelList: LabelList;
+}
+
+interface UpdateExistingMaskParams {
+    selectedAnnotation: AnnotationView;
+    bbox: BoundingBox;
+    rle: SegmentationMaskRLE;
+    updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>;
+    restoreOverriddenAnnotations: () => Promise<void>;
+}
+
+interface CreateNewMaskParams {
+    label: LabelList[number] | undefined;
+    annotationLabelName: string | null | undefined;
+    bbox: BoundingBox;
+    rle: SegmentationMaskRLE;
+    restoreOverriddenAnnotations: () => Promise<void>;
+}
 
 export function useSegmentationMaskBrush({
     collectionId,
@@ -83,110 +105,77 @@ export function useSegmentationMaskBrush({
         return labelList;
     };
 
-    const finishBrush = async (
-        workingMask: Uint8Array | null,
+    // Asks the user for a class. Returns undefined, after showing an error, when the user
+    // does not pick one.
+    const requestAnnotationLabelName = async (): Promise<string | undefined> => {
+        const result = requestLabel ? await requestLabel() : null;
+        if (!result?.label) {
+            toast.error('Please select a class before creating an annotation');
+            return undefined;
+        }
+        const annotationLabelName = result.label;
+        setAnnotationLabel(annotationLabelName);
+        updateLastAnnotationLabel(collectionId, annotationLabelName);
+        return annotationLabelName;
+    };
+
+    // Finds the class name for the mask and waits for the class list. Returns undefined
+    // when the brush stroke must stop.
+    const resolveLabels = async (
         selectedAnnotation: AnnotationView | null,
-        // A promise while the class list is still loading.
-        labels: LabelList | Promise<LabelList | undefined>,
-        updateAnnotation?: (input: AnnotationUpdateInput) => Promise<void>,
-        lockedAnnotationIds?: Set<string>
-    ) => {
-        if (!annotationLabelContext.isDrawing || !workingMask) {
-            return;
-        }
-
-        setIsDrawing(false);
-
-        if (
-            selectedAnnotation?.sample_id &&
-            lockedAnnotationIds?.has(selectedAnnotation.sample_id)
-        ) {
-            // Prevent any overlap updates or mask mutations when the selected annotation is locked.
-            refetch();
-            toast.error('This annotation is locked');
-            return;
-        }
-
+        labels: LabelList | Promise<LabelList | undefined>
+    ): Promise<ResolvedLabels | undefined> => {
         let annotationLabelName = annotationLabelContext.annotationLabel;
         if (!selectedAnnotation && !annotationLabelName) {
-            const result = requestLabel ? await requestLabel() : null;
-            if (!result?.label) {
-                toast.error('Please select a class before creating an annotation');
-                return;
-            }
-            annotationLabelName = result.label;
-            setAnnotationLabel(annotationLabelName);
-            updateLastAnnotationLabel(collectionId, annotationLabelName);
+            annotationLabelName = await requestAnnotationLabelName();
+            if (!annotationLabelName) return undefined;
         }
 
         const labelList = await resolveLabelList(labels, annotationLabelName, !selectedAnnotation);
-        if (!labelList) return;
-        let label = labelList.find((l) => l.annotation_label_name === annotationLabelName);
+        if (!labelList) return undefined;
+        return { annotationLabelName, labelList };
+    };
 
-        const overriddenAnnotations = await applySegmentationMaskConstraints({
-            workingMask,
-            skipId: selectedAnnotation?.sample_id,
-            lockedAnnotationIds,
-            annotations,
-            sample,
-            collectionId,
-            updateAnnotations
-        });
-
-        const restoreOverriddenAnnotations = async () => {
-            await restoreOverriddenSegmentationAnnotationsForUndo({
-                collectionId,
-                overriddenAnnotations,
-                labels: labelList,
-                updateAnnotations,
-                createAnnotation
+    const updateExistingMask = async ({
+        selectedAnnotation,
+        bbox,
+        rle,
+        updateAnnotation,
+        restoreOverriddenAnnotations
+    }: UpdateExistingMaskParams): Promise<void> => {
+        try {
+            await updateAnnotation({
+                annotation_id: selectedAnnotation.sample_id!,
+                collection_id: collectionId,
+                bounding_box: bbox,
+                segmentation_mask: rle
             });
-        };
 
-        const bbox: BoundingBox | null = computeBoundingBoxFromMask(
-            workingMask,
-            sample.width,
-            sample.height
-        );
+            setAnnotationType('segmentation_mask');
+            refetch();
 
-        if (!bbox) {
-            toast.error('Invalid segmentation mask');
-            return;
+            addAnnotationUpdateToUndoStack({
+                annotation: selectedAnnotation,
+                collection_id: collectionId,
+                addReversibleAction,
+                updateAnnotation,
+                onUndo: async () => {
+                    await restoreOverriddenAnnotations();
+                    refetch();
+                }
+            });
+        } catch (error) {
+            console.error('Failed to update annotation:', (error as Error).message);
         }
+    };
 
-        const rle = encodeBinaryMaskToRLE(workingMask);
-        if (selectedAnnotation) {
-            try {
-                if (!updateAnnotation) return;
-
-                await updateAnnotation({
-                    annotation_id: selectedAnnotation.sample_id!,
-                    collection_id: collectionId,
-                    bounding_box: bbox,
-                    segmentation_mask: rle
-                });
-
-                setAnnotationType('segmentation_mask');
-                refetch();
-
-                addAnnotationUpdateToUndoStack({
-                    annotation: selectedAnnotation,
-                    collection_id: collectionId,
-                    addReversibleAction,
-                    updateAnnotation,
-                    onUndo: async () => {
-                        await restoreOverriddenAnnotations();
-                        refetch();
-                    }
-                });
-
-                return;
-            } catch (error) {
-                console.error('Failed to update annotation:', (error as Error).message);
-                return;
-            }
-        }
-
+    const createNewMask = async ({
+        label,
+        annotationLabelName,
+        bbox,
+        rle,
+        restoreOverriddenAnnotations
+    }: CreateNewMaskParams): Promise<void> => {
         if (!label) {
             label = await createLabel({
                 dataset_id: datasetId,
@@ -228,5 +217,92 @@ export function useSegmentationMaskBrush({
         onAnnotationCreated?.();
     };
 
+    const finishBrush = async (
+        workingMask: Uint8Array | null,
+        selectedAnnotation: AnnotationView | null,
+        // A promise while the class list is still loading.
+        labels: LabelList | Promise<LabelList | undefined>,
+        updateAnnotation: (input: AnnotationUpdateInput) => Promise<void>,
+        lockedAnnotationIds?: Set<string>
+    ) => {
+        if (!annotationLabelContext.isDrawing || !workingMask) {
+            return;
+        }
+
+        setIsDrawing(false);
+
+        if (isAnnotationLocked(selectedAnnotation, lockedAnnotationIds)) {
+            // Prevent any overlap updates or mask mutations when the selected annotation is locked.
+            refetch();
+            toast.error('This annotation is locked');
+            return;
+        }
+
+        const resolved = await resolveLabels(selectedAnnotation, labels);
+        if (!resolved) return;
+        const { annotationLabelName, labelList } = resolved;
+        const label = labelList.find((l) => l.annotation_label_name === annotationLabelName);
+
+        const overriddenAnnotations = await applySegmentationMaskConstraints({
+            workingMask,
+            skipId: selectedAnnotation?.sample_id,
+            lockedAnnotationIds,
+            annotations,
+            sample,
+            collectionId,
+            updateAnnotations
+        });
+
+        const restoreOverriddenAnnotations = async () => {
+            await restoreOverriddenSegmentationAnnotationsForUndo({
+                collectionId,
+                overriddenAnnotations,
+                labels: labelList,
+                updateAnnotations,
+                createAnnotation
+            });
+        };
+
+        const bbox: BoundingBox | null = computeBoundingBoxFromMask(
+            workingMask,
+            sample.width,
+            sample.height
+        );
+
+        if (!bbox) {
+            toast.error('Invalid segmentation mask');
+            return;
+        }
+
+        const rle = encodeBinaryMaskToRLE(workingMask);
+        if (selectedAnnotation) {
+            await updateExistingMask({
+                selectedAnnotation,
+                bbox,
+                rle,
+                updateAnnotation,
+                restoreOverriddenAnnotations
+            });
+            return;
+        }
+
+        await createNewMask({
+            label,
+            annotationLabelName,
+            bbox,
+            rle,
+            restoreOverriddenAnnotations
+        });
+    };
+
     return { finishBrush };
+}
+
+function isAnnotationLocked(
+    selectedAnnotation: AnnotationView | null,
+    lockedAnnotationIds: Set<string> | undefined
+): boolean {
+    return Boolean(
+        selectedAnnotation?.sample_id && lockedAnnotationIds?.has(selectedAnnotation.sample_id)
+    );
 }

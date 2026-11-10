@@ -60,6 +60,7 @@ vi.mock('$lib/utils/segmentationOverlap', () => ({
 const createAnnotation = vi.fn();
 const createLabel = vi.fn();
 const deleteAnnotation = vi.fn();
+const updateAnnotation = vi.fn();
 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
     useCreateAnnotation: () => ({ createAnnotation })
@@ -132,7 +133,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [], updateAnnotation);
 
         expect(createAnnotation).not.toHaveBeenCalled();
         expect(refetch).not.toHaveBeenCalled();
@@ -155,7 +156,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [], updateAnnotation);
 
         expect(toast.error).toHaveBeenCalledWith('Invalid segmentation mask');
         expect(createAnnotation).not.toHaveBeenCalled();
@@ -256,7 +257,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await expect(finishBrush(mask, null, [])).resolves.toBeUndefined();
+        await expect(finishBrush(mask, null, [], updateAnnotation)).resolves.toBeUndefined();
 
         expect(toast.error).toHaveBeenCalledWith(
             'Class "car" is no longer available. Choose another class.'
@@ -284,7 +285,8 @@ describe('useSegmentationMaskBrush', () => {
         await finishBrush(
             mask,
             null,
-            Promise.resolve([{ annotation_label_id: 'label-car', annotation_label_name: 'car' }])
+            Promise.resolve([{ annotation_label_id: 'label-car', annotation_label_name: 'car' }]),
+            updateAnnotation
         );
 
         expect(toast.error).not.toHaveBeenCalled();
@@ -305,7 +307,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, Promise.resolve(undefined));
+        await finishBrush(mask, null, Promise.resolve(undefined), updateAnnotation);
 
         expect(toast.error).toHaveBeenCalledWith(
             'Could not load annotation classes. Please try again.'
@@ -327,7 +329,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [], updateAnnotation);
 
         expect(createLabel).not.toHaveBeenCalled();
     });
@@ -353,7 +355,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, labels);
+        await finishBrush(mask, null, labels, updateAnnotation);
 
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -383,7 +385,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [], updateAnnotation);
 
         expect(toast.error).toHaveBeenCalledWith(
             'Please select a class before creating an annotation'
@@ -411,7 +413,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, labels);
+        await finishBrush(mask, null, labels, updateAnnotation);
 
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({ annotation_collection_name: 'predictions' })
@@ -437,7 +439,7 @@ describe('useSegmentationMaskBrush', () => {
             requestLabel
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [], updateAnnotation);
 
         expect(annotationLabelContext.annotationLabel).toBe('car');
         // The label choice is persisted to the session store, keyed by collection id.
@@ -466,7 +468,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, labels);
+        await finishBrush(mask, null, labels, updateAnnotation);
 
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({ annotation_collection_name: undefined })
@@ -487,7 +489,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [], updateAnnotation);
 
         expect(createLabel).toHaveBeenCalledWith({
             dataset_id: datasetId,
@@ -513,9 +515,12 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, [
-            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
-        ]);
+        await finishBrush(
+            mask,
+            null,
+            [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }],
+            updateAnnotation
+        );
 
         const actions = get(reversibleActions);
         expect(actions).toHaveLength(1);
@@ -540,9 +545,12 @@ describe('useSegmentationMaskBrush', () => {
         });
 
         // First stroke: creates the annotation (no selected annotation)
-        await finishBrush(mask, null, [
-            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
-        ]);
+        await finishBrush(
+            mask,
+            null,
+            [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }],
+            updateAnnotation
+        );
 
         // Simulate the user starting a new stroke (onpointerdown sets isDrawing back to true)
         annotationLabelContext.isDrawing = true;
@@ -586,9 +594,12 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, [
-            { annotation_label_id: 'car-label-id', annotation_label_name: 'car' }
-        ]);
+        await finishBrush(
+            mask,
+            null,
+            [{ annotation_label_id: 'car-label-id', annotation_label_name: 'car' }],
+            updateAnnotation
+        );
 
         // After creating the annotation, annotationId is set to the new annotation's id.
         expect(annotationLabelContext.annotationId).toBe('new-annotation-id');
@@ -599,5 +610,45 @@ describe('useSegmentationMaskBrush', () => {
         expect(deleteAnnotation).toHaveBeenCalledWith('new-annotation-id', 'segmentation_mask');
         expect(get(reversibleActions)).toHaveLength(0);
         expect(annotationLabelContext.annotationId).toBeNull();
+    });
+
+    it('restores trimmed masks and refetches when the update undo action is executed', async () => {
+        const { reversibleActions, executeReversibleAction } = useReversibleActions();
+        const refetch = vi.fn();
+        updateAnnotations.mockResolvedValue(undefined);
+        vi.mocked(applySegmentationMaskConstraints).mockResolvedValue([
+            {
+                sample_id: 'other',
+                annotation_type: 'segmentation_mask',
+                segmentation_details: { segmentation_mask: [4, 5, 6] }
+            } as AnnotationView
+        ]);
+
+        const { finishBrush } = useSegmentationMaskBrush({
+            collectionId: 'c1',
+            datasetId,
+            sampleId: 's1',
+            sample,
+            refetch,
+            deleteAnnotation
+        });
+
+        await finishBrush(
+            mask,
+            { sample_id: 'existing-id' } as AnnotationView,
+            [],
+            updateAnnotation
+        );
+        refetch.mockClear();
+        updateAnnotations.mockClear();
+
+        await executeReversibleAction(get(reversibleActions)[0].id);
+
+        expect(updateAnnotations).toHaveBeenCalledWith([
+            expect.objectContaining({ annotation_id: 'other' })
+        ]);
+        expect(refetch).toHaveBeenCalled();
+        const lastRefetchOrder = refetch.mock.invocationCallOrder.at(-1)!;
+        expect(lastRefetchOrder).toBeGreaterThan(updateAnnotations.mock.invocationCallOrder[0]);
     });
 });
