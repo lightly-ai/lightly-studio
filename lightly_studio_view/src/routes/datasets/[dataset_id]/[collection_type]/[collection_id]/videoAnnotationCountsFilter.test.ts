@@ -3,19 +3,22 @@ import type {
     AnnotationsFilter,
     VideoFieldsBoundsView,
     VideoFilter
-} from '$lib/api/lightly_studio_local/types.gen.js';
+} from '$lib/api/lightly_studio_local';
 import { buildVideoAnnotationCountsFilter } from './videoAnnotationCountsFilter';
 
-const REGION = {
+const region = {
     polygon: [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
         { x: 0, y: 1 }
     ]
 };
-const A = { filter_type: 'annotations', annotation_label_ids: ['a'] } as AnnotationsFilter;
-const M = { key: 'k', op: '==', value: 1 } as never;
-const BOUNDS: VideoFieldsBoundsView = {
+const annotationsFilter = {
+    filter_type: 'annotations',
+    annotation_label_ids: ['a']
+} as AnnotationsFilter;
+const metadataFilter = { key: 'k', op: '==', value: 1 } as never;
+const videoBounds: VideoFieldsBoundsView = {
     width: { min: 1, max: 2 },
     height: { min: 3, max: 4 },
     fps: { min: 5, max: 6 },
@@ -32,11 +35,11 @@ const defaultParams = {
 describe('buildVideoAnnotationCountsFilter', () => {
     it('passes the plot selection and tags through', () => {
         const videoFilter: VideoFilter = {
-            sample_filter: { embedding_region: REGION, tag_ids: ['t'] }
+            sample_filter: { embedding_region: region, tag_ids: ['t'] }
         };
         expect(buildVideoAnnotationCountsFilter({ ...defaultParams, videoFilter })).toEqual({
             filter_type: 'video',
-            sample_filter: { embedding_region: REGION, tag_ids: ['t'] }
+            sample_filter: { embedding_region: region, tag_ids: ['t'] }
         });
     });
 
@@ -44,15 +47,15 @@ describe('buildVideoAnnotationCountsFilter', () => {
         expect(
             buildVideoAnnotationCountsFilter({
                 ...defaultParams,
-                videoBoundsValues: BOUNDS,
-                annotationFilter: A,
-                metadataFilters: [M]
+                videoBoundsValues: videoBounds,
+                annotationFilter: annotationsFilter,
+                metadataFilters: [metadataFilter]
             })
         ).toEqual({
             filter_type: 'video',
-            ...BOUNDS,
-            frame_annotation_filter: A,
-            sample_filter: { metadata_filters: [M] }
+            ...videoBounds,
+            frame_annotation_filter: annotationsFilter,
+            sample_filter: { metadata_filters: [metadataFilter] }
         });
     });
 
@@ -62,7 +65,7 @@ describe('buildVideoAnnotationCountsFilter', () => {
             buildVideoAnnotationCountsFilter({
                 ...defaultParams,
                 videoFilter,
-                videoBoundsValues: BOUNDS
+                videoBoundsValues: videoBounds
             })
         ).toMatchObject({ fps: { min: 5, max: 6 } });
     });
@@ -71,9 +74,13 @@ describe('buildVideoAnnotationCountsFilter', () => {
         expect(
             buildVideoAnnotationCountsFilter({
                 ...defaultParams,
-                videoBoundsValues: BOUNDS,
-                annotationFilter: A
+                videoBoundsValues: videoBounds,
+                annotationFilter: annotationsFilter
             })
-        ).toEqual({ filter_type: 'video', ...BOUNDS, frame_annotation_filter: A });
+        ).toEqual({
+            filter_type: 'video',
+            ...videoBounds,
+            frame_annotation_filter: annotationsFilter
+        });
     });
 });

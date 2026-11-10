@@ -3,8 +3,12 @@ import type {
     MetadataFilter,
     VideoFieldsBoundsView,
     VideoFilter
-} from '$lib/api/lightly_studio_local/types.gen.js';
-import { withFilterOverrides } from '$lib/utils/withFilterOverrides';
+} from '$lib/api/lightly_studio_local';
+import { withFilterOverrides } from '$lib/utils';
+
+interface VideoAnnotationCountsFilter extends VideoFilter {
+    filter_type: 'video';
+}
 
 interface BuildVideoAnnotationCountsFilterParams {
     videoFilter: VideoFilter | null | undefined;
@@ -23,7 +27,7 @@ export function buildVideoAnnotationCountsFilter({
     videoBoundsValues,
     annotationFilter,
     metadataFilters
-}: BuildVideoAnnotationCountsFilterParams): (VideoFilter & { filter_type: 'video' }) | undefined {
+}: BuildVideoAnnotationCountsFilterParams): VideoAnnotationCountsFilter | undefined {
     return withFilterOverrides('video', videoFilter, {
         width: videoBoundsValues?.width,
         height: videoBoundsValues?.height,

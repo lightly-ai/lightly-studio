@@ -1,6 +1,6 @@
 import type { VideoFilter } from '$lib/api/lightly_studio_local';
 import { buildVideoFilter } from '$lib/hooks';
-import { withFilterOverrides } from '$lib/utils/withFilterOverrides';
+import { withFilterOverrides } from '$lib/utils';
 
 type VideoFilterParams = Parameters<typeof buildVideoFilter>[0];
 

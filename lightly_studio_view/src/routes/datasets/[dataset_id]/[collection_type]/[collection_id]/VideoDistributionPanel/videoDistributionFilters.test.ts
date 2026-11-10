@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildVideoDistributionFilters } from './videoDistributionFilters';
 
-const REGION = {
+const region = {
     polygon: [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
@@ -40,10 +40,10 @@ describe('buildVideoDistributionFilters', () => {
     it('passes the plot selection into the base filter', () => {
         const { baseFilter } = buildVideoDistributionFilters({
             collection_id: 'collection-1',
-            filters: { embedding_region: REGION }
+            filters: { embedding_region: region }
         } as never);
 
-        expect(baseFilter?.sample_filter?.embedding_region).toEqual(REGION);
+        expect(baseFilter?.sample_filter?.embedding_region).toEqual(region);
     });
 
     it('has no base filter when only sidebar filters are set', () => {
