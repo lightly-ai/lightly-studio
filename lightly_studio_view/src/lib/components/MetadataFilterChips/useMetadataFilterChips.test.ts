@@ -5,9 +5,11 @@ vi.mock('$lib/hooks', async (importOriginal) => ({
 }));
 
 import { render, screen, waitFor } from '@testing-library/svelte';
+import { tick } from 'svelte';
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useFiltersClearedSignal } from '$lib/hooks';
+import { useDimensions } from '$lib/hooks';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import MetadataFilterChips from './MetadataFilterChips.svelte';
 
@@ -107,6 +109,81 @@ describe('useMetadataFilterChips', () => {
         await waitFor(() =>
             expect(screen.queryByTestId('metadata-filter-chip-confidence')).not.toBeInTheDocument()
         );
+    });
+
+    it('removes chips when the clear-all signal fires before the values are reset', async () => {
+        seed({ narrowed: true });
+        render(MetadataFilterChips);
+        expect(screen.getByTestId('metadata-filter-chip-confidence')).toBeInTheDocument();
+
+        useFiltersClearedSignal().signalFiltersCleared();
+        await tick();
+        storage.updateMetadataValues({
+            confidence: { min: 0, max: 1 },
+            temperature: { min: 10, max: 40 }
+        });
+        await tick();
+
+        expect(screen.queryByTestId('metadata-filter-chip-confidence')).not.toBeInTheDocument();
+    });
+
+    it('removes categorical chips when the clear-all signal fires before the values are reset', async () => {
+        storage.updateCategoricalMetadataValues({ city: ['Berlin'] });
+        render(MetadataFilterChips);
+        expect(screen.getByTestId('metadata-filter-chip-city')).toBeInTheDocument();
+
+        useFiltersClearedSignal().signalFiltersCleared();
+        await tick();
+        storage.updateCategoricalMetadataValues({});
+        await tick();
+
+        expect(screen.queryByTestId('metadata-filter-chip-city')).not.toBeInTheDocument();
+    });
+
+    describe('dimension chips', () => {
+        const full = { min_width: 10, max_width: 100, min_height: 20, max_height: 200 };
+        const { updateDimensionsBounds, updateDimensionsValues } = useDimensions();
+
+        beforeEach(() => {
+            updateDimensionsBounds(full);
+            updateDimensionsValues({ ...full, min_width: 50, max_height: 150 });
+        });
+
+        it('shows width and height chips next to numeric and categorical chips', () => {
+            seed({ narrowed: true });
+            storage.updateCategoricalMetadataValues({ city: ['Berlin'] });
+            render(MetadataFilterChips, { props: { showDimensions: true } });
+
+            expect(screen.getByTestId('metadata-filter-chip-image-width')).toHaveTextContent(
+                '50 – 100px'
+            );
+            expect(screen.getByTestId('metadata-filter-chip-image-height')).toHaveTextContent(
+                '20 – 150px'
+            );
+            expect(screen.getByTestId('metadata-filter-chip-confidence')).toBeInTheDocument();
+            expect(screen.getByTestId('metadata-filter-chip-city')).toBeInTheDocument();
+        });
+
+        it('hides width and height chips unless showDimensions is set', () => {
+            render(MetadataFilterChips);
+
+            expect(
+                screen.queryByTestId('metadata-filter-chip-image-width')
+            ).not.toBeInTheDocument();
+        });
+
+        it('clearing the width chip resets the width filter', async () => {
+            render(MetadataFilterChips, { props: { showDimensions: true } });
+
+            screen.getByLabelText('Clear width').click();
+
+            await waitFor(() =>
+                expect(
+                    screen.queryByTestId('metadata-filter-chip-image-width')
+                ).not.toBeInTheDocument()
+            );
+            expect(get(useDimensions().dimensionsValues)).toEqual({ ...full, max_height: 150 });
+        });
     });
 
     it('formats integer bounds without decimal places', () => {
