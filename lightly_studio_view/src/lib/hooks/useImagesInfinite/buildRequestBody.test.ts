@@ -137,6 +137,22 @@ describe('buildRequestBody', () => {
         });
     });
 
+    describe('wire changes', () => {
+        it('sends no sample filter when nothing is set', () => {
+            const result = buildRequestBody({ collection_id: 'col-1', mode: 'normal' }, 0);
+            expect(result.filters).toEqual({});
+        });
+
+        it('sends no empty metadata filters', () => {
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([]);
+            const result = buildRequestBody(
+                { collection_id: 'col-1', mode: 'normal', metadata_values: {} },
+                0
+            );
+            expect(result.filters?.sample_filter).toBeUndefined();
+        });
+    });
+
     describe('pagination', () => {
         it('uses pageParam as offset', () => {
             const result = buildRequestBody({ collection_id: 'col-1', mode: 'normal' }, 40);
