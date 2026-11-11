@@ -26,6 +26,9 @@ class ComputeTransport(Protocol):
             collection_id: The ID of the collection.
             embedding_model_name: The embedding model. None uses the default model.
             metadata_name: The metadata key for the values.
+
+        Raises:
+            ValueError: If the embedding model does not exist.
         """
 
     def compute_similarity(
@@ -45,6 +48,9 @@ class ComputeTransport(Protocol):
 
         Returns:
             The metadata key for the values.
+
+        Raises:
+            ValueError: If the query tag or the embedding model does not exist.
         """
 
     def sampling(self, config: SamplingConfig, query_expr: QueryExpr | None) -> None:
