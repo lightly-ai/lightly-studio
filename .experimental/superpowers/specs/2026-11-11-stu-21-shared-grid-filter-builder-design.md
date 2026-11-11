@@ -47,11 +47,11 @@ With these helpers, `imageFilter`, `buildVideoFilter` and `getFrameFilter` only 
 
 The PRs are stacked on the base branch:
 
-1. `michal-stu-21-share-one-samplefilter-builder-across-image`: add the shared builder helpers.
-2. `michal-stu-21-image-filter-builder`: build `imageFilter` in `useImageFilters` with the builder.
-3. `michal-stu-21-request-body-builder`: build the image request body with the builder, and close the TODO.
-4. `michal-stu-21-video-frame-filter-builder`: build `buildVideoFilter` and `getFrameFilter` with the builder.
-5. `michal-stu-21-filter-patch-helper`: use `patchFilters` in the setters, and simplify `withFilterOverrides`.
+1. `michal-stu-21-1-share-one-samplefilter-builder-across-image`: add the shared builder helpers.
+2. `michal-stu-21-2-image-filter-builder`: build `imageFilter` in `useImageFilters` with the builder.
+3. `michal-stu-21-3-request-body-builder`: build the image request body with the builder, and close the TODO.
+4. `michal-stu-21-4-video-frame-filter-builder`: build `buildVideoFilter` and `getFrameFilter` with the builder.
+5. `michal-stu-21-5-filter-patch-helper`: use `patchFilters` in the setters, and simplify `withFilterOverrides`.
 
 ## Left to the builder
 
