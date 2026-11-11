@@ -1,5 +1,6 @@
 import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
 - Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
 - Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
 - Pressing Delete or Backspace deletes the selected annotation in editing mode.

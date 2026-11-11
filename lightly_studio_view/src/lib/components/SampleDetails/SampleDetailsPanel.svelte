@@ -7,7 +7,6 @@
         SampleDetailsSidePanel,
         SidePanelToggleButton
     } from '$lib/components';
-    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import BreadcrumbHeaderActions from './BreadcrumbHeaderActions/BreadcrumbHeaderActions.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -292,13 +291,6 @@
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
             <div class="flex items-center gap-1">
-                {#if $isEditingMode}
-                    <ImageAdjustments
-                        bind:brightness={$imageBrightness}
-                        bind:contrast={$imageContrast}
-                        bind:maskOpacity={$maskOpacity}
-                    />
-                {/if}
                 <BreadcrumbHeaderActions {collectionId} />
                 <SidePanelToggleButton />
             </div>
