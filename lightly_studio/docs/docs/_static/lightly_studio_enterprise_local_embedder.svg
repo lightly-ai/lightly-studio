@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1180 620" role="img" aria-labelledby="title desc">
-  <title id="title">Use Your Own Embedding Model with LightlyStudio Enterprise</title>
-  <desc id="desc">A Python script on your machine reads images from your storage, embeds them with your registered embedder, and sends the embeddings to LightlyStudio Enterprise. The embedding plot reads the stored embeddings. Optionally, search sends each query to your own embedding server.</desc>
+  <title id="title">Your Own Embedding Model on Your Machine</title>
+  <desc id="desc">A Python script on your machine reads images from your storage, embeds them with your registered embedder, and sends the embeddings to LightlyStudio Enterprise. The embedding plot reads the stored embeddings. Optionally, search and text axes send each query to your own embedding server.</desc>
   <defs>
     <style>
       .panel-customer { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 2; }
@@ -43,7 +43,7 @@
     <title>Embedding Server (optional)</title>
     <rect class="node-optional" x="50" y="430" width="260" height="92" rx="12" ry="12"/>
     <text class="label" x="180" y="468" text-anchor="middle">Embedding Server</text>
-    <text class="small" x="180" y="493" text-anchor="middle">optional, embeds search queries</text>
+    <text class="small" x="180" y="493" text-anchor="middle">optional, embeds queries</text>
   </g>
 
   <!-- Your machine -->
@@ -72,20 +72,20 @@
     <title>Stored Embeddings</title>
     <rect class="node-data" x="870" y="90" width="260" height="92" rx="12" ry="12"/>
     <text class="label" x="1000" y="128" text-anchor="middle">Stored Embeddings</text>
-    <text class="small" x="1000" y="153" text-anchor="middle">images and object crops</text>
+    <text class="small" x="1000" y="153" text-anchor="middle">images, and crops if supported</text>
   </g>
 
   <g>
     <title>Embedding Plot</title>
     <rect class="node-ui" x="870" y="260" width="260" height="92" rx="12" ry="12"/>
     <text class="label" x="1000" y="298" text-anchor="middle">Embedding Plot</text>
-    <text class="small" x="1000" y="323" text-anchor="middle">works with any model</text>
+    <text class="small" x="1000" y="323" text-anchor="middle">default layout, any model</text>
   </g>
 
   <g>
     <title>Search</title>
     <rect class="node-ui" x="870" y="430" width="260" height="92" rx="12" ry="12"/>
-    <text class="label" x="1000" y="468" text-anchor="middle">Search</text>
+    <text class="label" x="1000" y="468" text-anchor="middle">Search and Text Axes</text>
     <text class="small" x="1000" y="493" text-anchor="middle">text and image queries</text>
   </g>
 
@@ -104,7 +104,7 @@
 
   <!-- Search edge -->
   <line class="edge-search" x1="870" y1="476" x2="316" y2="476" marker-end="url(#arrow-search)"/>
-  <text class="edge-label" x="590" y="464" text-anchor="middle" style="fill: #16a34a;">search query</text>
+  <text class="edge-label" x="590" y="464" text-anchor="middle" style="fill: #16a34a;">query</text>
 
-  <text class="caption" x="590" y="600" text-anchor="middle">Solid arrows: ingestion. Dashed arrow: search with your own model.</text>
+  <text class="caption" x="590" y="600" text-anchor="middle">Solid arrows: ingestion. Dashed arrow: optional, search and text axes with your own model.</text>
 </svg>
