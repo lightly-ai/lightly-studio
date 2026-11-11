@@ -46,8 +46,12 @@ export function usePendingBbox() {
     /** Hides the box, for example when its creation fails. */
     const clear = (token: number) => setBoxes(get(boxes).filter((box) => box.token !== token));
 
-    /** Hides every box, for example when the view moves to another sample. */
-    const clearAll = () => setBoxes([]);
+    /** Hides every box, for example when the view moves to another sample. A box started before
+     *  is no longer the newest, so its creation does not select it on the next sample. */
+    const clearAll = () => {
+        newestToken++;
+        setBoxes([]);
+    };
 
     /** Whether no box was started after this one. */
     const isNewest = (token: number) => token === newestToken;
