@@ -20,9 +20,9 @@ def delete_sequence_track(
 ) -> int | None:
     """Delete the track's cuboids in one annotation source of the sequence.
 
-    The track record itself is removed once no annotation refers to it any more, so a track
-    that still has cuboids in another source or sequence is kept. Deleting annotations is
-    not one database transaction, so a failure can leave some cuboids deleted.
+    The track record itself is removed once no annotations or child tracks refer to it.
+    A track that still has cuboids in another source or sequence is kept. Deleting
+    annotations is not one database transaction, so a failure can leave some cuboids deleted.
 
     Args:
         session: The database session.
@@ -51,9 +51,5 @@ def delete_sequence_track(
         session=session,
         annotation_ids=[annotation.annotation_id for annotation in track.annotations],
     )
-    remaining = annotation_resolver.get_all_by_object_track_id(
-        session=session, object_track_id=track_id
-    )
-    if not remaining:
-        object_track_resolver.delete_by_id(session=session, object_track_id=track_id)
+    object_track_resolver.delete_empty_by_ids(session=session, object_track_ids=[track_id])
     return deleted

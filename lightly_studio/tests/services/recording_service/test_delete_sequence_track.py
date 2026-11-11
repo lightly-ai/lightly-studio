@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver
 from lightly_studio.services import recording_service
 from tests.services.recording_service.test_extend_sequence_track import (
@@ -43,6 +44,47 @@ def test_delete_sequence_track__keeps_other_tracks(db_session: Session) -> None:
     _delete(session=db_session, setup=setup)
 
     assert len(_track_annotations(session=db_session, setup=other)) == 2
+
+
+def test_delete_sequence_track__keeps_parent_with_child_track(db_session: Session) -> None:
+    setup = _create_track(session=db_session, tick_count=3, covered=[0, 1, 2])
+    child_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                object_track_number=2,
+                dataset_id=setup.fixture.sequence_collection.dataset_id,
+                parent_object_track_id=setup.track_id,
+            )
+        ],
+    )[0]
+    child_annotation = _track_annotations(session=db_session, setup=setup)[2]
+    object_track_resolver.add_annotation_to_object_track(
+        session=db_session,
+        annotation_id=child_annotation.annotation_id,
+        object_track_id=child_id,
+    )
+
+    assert _delete(session=db_session, setup=setup) == 2
+    assert (
+        annotation_resolver.get_all_by_object_track_id(
+            session=db_session, object_track_id=setup.track_id
+        )
+        == []
+    )
+
+    remaining = object_track_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=setup.fixture.sequence_collection.dataset_id
+    )
+    assert {track.object_track_id for track in remaining} == {setup.track_id, child_id}
+    child = next(track for track in remaining if track.object_track_id == child_id)
+    assert child.parent_object_track_id == setup.track_id
+    assert (
+        annotation_resolver.get_by_id(
+            session=db_session, annotation_id=child_annotation.annotation_id
+        )
+        is not None
+    )
 
 
 def test_delete_sequence_track__retry_is_rejected(db_session: Session) -> None:
