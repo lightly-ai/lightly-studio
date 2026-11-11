@@ -19,9 +19,7 @@ import DisplayAdjustmentsPopover from './DisplayAdjustmentsPopover.svelte';
 describe('DisplayAdjustmentsPopover', () => {
     it('renders the trigger button with an accessible name', () => {
         render(DisplayAdjustmentsPopover);
-        expect(
-            screen.getByRole('button', { name: 'Display adjustments' })
-        ).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Display adjustments' })).toBeInTheDocument();
     });
 
     it('opens popover with sliders on click', async () => {
