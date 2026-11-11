@@ -107,6 +107,11 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
             editing.hoveredCuboidId = id;
         },
         onCreateCuboid: editing.handleCreateCuboid,
+        isAddingTrack: editing.isAddingTrack,
+        onToggleAddTrack: editing.toggleAddTrack,
+        onExtendTrack: editing.handleExtendTrack,
+        onDeleteTrack: editing.handleDeleteTrack,
+        onStartTrack: editing.handleStartTrack,
         onPreviousFrame: playback.goToPreviousFrame,
         onNextFrame: playback.goToNextFrame,
         onPlayToggle: playback.togglePlayback,

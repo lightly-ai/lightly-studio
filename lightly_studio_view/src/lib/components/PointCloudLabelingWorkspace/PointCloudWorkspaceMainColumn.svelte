@@ -9,10 +9,25 @@
     } from './pointCloudWorkspaceLayoutContext.svelte';
     import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
     import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
+    import { useSequenceTracks } from './FrameTimeline/useSequenceTracks.svelte';
 
     const { cameraPane } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
+    const tracksQuery = useSequenceTracks(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId,
+        displayFrameId: layout.workspace.referenceFrameId || undefined
+    }));
+
+    // Only an untracked cuboid of the loaded tick can start a track, and only while editing.
+    const startableCuboidId = $derived.by(() => {
+        if (!layout.isEditingMode) return null;
+        const cuboid = layout.snapshotAnnotations.find(
+            ({ sample_id }) => sample_id === layout.selectedCuboidId
+        );
+        return cuboid?.cuboid_3d_details && !cuboid.object_track_id ? cuboid.sample_id : null;
+    });
 
     const { tickDetails } = useTickDetails({
         getDatasetId: () => layout.datasetId,
@@ -96,6 +111,8 @@
 <div class="flex-none">
     <FrameTimeline
         ticks={layout.workspace.ticks}
+        tracks={tracksQuery.query.data?.tracks ?? []}
+        selectedAnnotationId={layout.selectedCuboidId}
         currentTick={layout.workspace.currentTick}
         isPlaying={layout.workspace.isPlaying}
         playbackIntervalMs={layout.workspace.playbackIntervalMs}
@@ -107,6 +124,30 @@
         onPlayToggle={layout.onPlayToggle}
         onPlaybackIntervalChange={layout.onPlaybackIntervalChange}
         onSelectTick={layout.onSelectTick}
+        onSelectAnnotation={layout.onSelect}
+        onAddTrack={layout.isEditingMode ? layout.onToggleAddTrack : undefined}
+        isAddingTrack={layout.isAddingTrack}
+        sequenceId={layout.sequenceId}
+        onDeleteTrack={layout.isEditingMode
+            ? async (track) => {
+                  const deleted = await layout.onDeleteTrack({
+                      trackId: track.object_track_id,
+                      annotationSourceId: track.annotation_source_id,
+                      annotationIds: track.annotations.map(({ annotation_id }) => annotation_id)
+                  });
+                  if (!deleted) throw new Error('Track not deleted');
+              }
+            : undefined}
+        onExtendTrack={layout.isEditingMode
+            ? (track, startSeqNumber, endSeqNumber) =>
+                  layout.onExtendTrack({
+                      trackId: track.object_track_id,
+                      annotationSourceId: track.annotation_source_id,
+                      startSeqNumber,
+                      endSeqNumber
+                  })
+            : undefined}
+        onStartTrack={startableCuboidId ? () => layout.onStartTrack(startableCuboidId) : undefined}
         onSeekStart={layout.onSeekStart}
         onSeekEnd={layout.onSeekEnd}
         onPreviousSequence={layout.onPreviousSequence}
