@@ -55,6 +55,35 @@ describe('NumericRangeInputs', () => {
         }
     );
 
+    it.each([
+        { endpoint: 'minimum', draft: '0.7', corrected: '0.8', expected: [0.2, 0.8] },
+        { endpoint: 'maximum', draft: '0.1', corrected: '0.05', expected: [0.05, 0.5] }
+    ])(
+        'clears the $endpoint error when the other bound is corrected',
+        async ({ endpoint, draft, corrected, expected }) => {
+            const { onValueCommit, acknowledge } = setup({
+                integer: false,
+                bound: { min: 0, max: 1 },
+                value: { min: 0.2, max: 0.5 }
+            });
+            const invalid = input(endpoint);
+            const other = input(endpoint === 'minimum' ? 'maximum' : 'minimum');
+            await edit(invalid, draft);
+            expect(invalid).toHaveAttribute('aria-invalid', 'true');
+            await edit(other, corrected);
+            expect(invalid).toHaveAttribute('aria-invalid', 'false');
+            expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+            expect(onValueCommit).toHaveBeenCalledExactlyOnceWith(expected);
+            await acknowledge(expected[0], expected[1]);
+            expect(invalid).toHaveValue(draft);
+            expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+            await fireEvent.blur(invalid);
+            expect(onValueCommit).toHaveBeenLastCalledWith(
+                endpoint === 'minimum' ? [Number(draft), expected[1]] : [expected[0], Number(draft)]
+            );
+        }
+    );
+
     it('composes exact pending edits before acknowledgement', async () => {
         const { min, onValueCommit } = setup({ integer: false, unit: 'px' });
         await edit(min, '200.123');
