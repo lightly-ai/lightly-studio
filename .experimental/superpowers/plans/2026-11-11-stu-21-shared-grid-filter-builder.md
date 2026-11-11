@@ -38,11 +38,11 @@ All PRs are stacked. When a PR is merged, retarget the next one; do not rename b
 
 | PR | Branch | Base | Tasks | Est. LOC (core / tests) |
 | -- | -- | -- | -- | -- |
-| 1 | `michal-stu-21-share-one-samplefilter-builder-across-image` | `michal-stu-23-operator-scope-label-says-filtered-when-no` | 1 (+ spec and this plan) | +90 −35 / +150 |
-| 2 | `michal-stu-21-image-filter-builder` | PR 1 | 2 | +25 −80 / +90 |
-| 3 | `michal-stu-21-request-body-builder` | PR 2 | 3 | +30 −55 / +90 |
-| 4 | `michal-stu-21-video-frame-filter-builder` | PR 3 | 4 | +40 −120 / +130 |
-| 5 | `michal-stu-21-filter-patch-helper` | PR 4 | 5 | +40 −110 / +70 |
+| 1 | `michal-stu-21-1-share-one-samplefilter-builder-across-image` | `michal-stu-23-operator-scope-label-says-filtered-when-no` | 1 (+ spec and this plan) | +90 −35 / +150 |
+| 2 | `michal-stu-21-2-image-filter-builder` | PR 1 | 2 | +25 −80 / +90 |
+| 3 | `michal-stu-21-3-request-body-builder` | PR 2 | 3 | +30 −55 / +90 |
+| 4 | `michal-stu-21-4-video-frame-filter-builder` | PR 3 | 4 | +40 −120 / +130 |
+| 5 | `michal-stu-21-5-filter-patch-helper` | PR 4 | 5 | +40 −110 / +70 |
 
 Each PR does one thing and has under 100 core lines. PR 4 changes two functions, but both are small and use the builder the same way. Do the manual check (Task 6) before opening each PR.
 
