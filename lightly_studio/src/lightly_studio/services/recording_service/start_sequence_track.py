@@ -53,7 +53,7 @@ def start_sequence_track(
             col(AnnotationBaseTable.sample_id) == annotation_id
         )
         if session.get_bind().dialect.name == "postgresql":
-            annotation_query = annotation_query.with_for_update()
+            annotation_query = annotation_query.with_for_update(of=AnnotationBaseTable)
         locked_annotation = session.exec(
             annotation_query.execution_options(populate_existing=True)
         ).first()
