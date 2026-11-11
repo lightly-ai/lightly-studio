@@ -10,6 +10,7 @@ const isEditingMode = writable(false);
 const toggleSampleSelection = vi.fn();
 const handleEscape = vi.fn();
 const deleteWithUndo = vi.fn().mockResolvedValue(true);
+const deleteAnnotation = vi.fn();
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/contexts/SampleDetailsToolbar.svelte')>()),
@@ -35,7 +36,11 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         toggleSampleSelection,
         toggleSampleAnnotationCropSelection: vi.fn(),
         isEditingMode,
+        setIsEditingMode: vi.fn(),
         clearReversibleActions: vi.fn(),
+        addReversibleAction: vi.fn(),
+        reversibleActions: writable([]),
+        executeReversibleAction: vi.fn(),
         lastAnnotationBrushSize: writable({}),
         imageBrightness: writable(0),
         imageContrast: writable(0),
@@ -53,8 +58,32 @@ vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
     useAnnotationSelection: () => ({ selectAnnotation: vi.fn() })
 }));
 
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: vi.fn(() => ({ data: [] }))
+}));
+
+vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
+    useCreateAnnotation: vi.fn(() => ({ createAnnotation: vi.fn() }))
+}));
+
+vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
+    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation }))
+}));
+
+vi.mock('$lib/hooks/useOperatorsDialog/useOperatorsDialog', () => ({
+    useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn(), isOperatorsDialogOpen: writable(false) })
+}));
+vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({
+    useSettingsDialog: () => ({ openSettingsDialog: vi.fn(), isSettingsDialogOpen: writable(false) })
+}));
+vi.mock('$lib/hooks/useSettings', () => ({
+    useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) })
+}));
+
 vi.mock('$lib/hooks', () => ({
-    useDeleteAnnotationWithUndo: () => ({ deleteWithUndo })
+    useDeleteAnnotationWithUndo: () => ({ deleteWithUndo }),
+    useAnnotationCollections: vi.fn(() => ({ data: [] })),
+    usePostHog: () => ({ trackEvent: vi.fn() })
 }));
 
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
@@ -78,11 +107,13 @@ vi.mock('$app/state', () => ({ page: { data: {} } }));
 vi.mock('$lib/components', async () => {
     const stub = (await import('./SampleDetailsPanel.stub.svelte')).default;
     return {
+        Button: stub,
         Card: stub,
         CardContent: stub,
         SampleDetailsSidePanel: stub,
         SidePanelToggleButton: stub
     };
+
 });
 vi.mock('$lib/components/ImageAdjustments', async () => ({
     ImageAdjustments: (await import('./SampleDetailsPanel.stub.svelte')).default

@@ -577,11 +577,13 @@
 </script>
 
 <div class="flex-none">
-    <Header
-        {collection}
-        showTour={onboardingEnabled}
-        onShowTour={() => useOnboarding().requestReplay()}
-    />
+    {#if !(isSampleDetails || isAnnotationDetails || isGroupDetails || isVideoDetails || isFrameDetails || isPointCloudLabeling)}
+        <Header
+            {collection}
+            showTour={onboardingEnabled}
+            onShowTour={() => useOnboarding().requestReplay()}
+        />
+    {/if}
     <MenuDialogHost {isImages} {isVideos} {isPointClouds} {hasEmbeddings} {collection} />
 </div>
 
