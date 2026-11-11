@@ -13,13 +13,7 @@
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
-    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import {
-        countVisibleSources,
-        isOverlayTarget,
-        isTextInputTarget,
-        resolveEffectiveColorBySource
-    } from '$lib/utils';
+    import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
     import {
         groupAnnotationsBySource,
         listAllSourceGroups
@@ -59,7 +53,6 @@
         getIsPanModeEnabled: () => isPanModeEnabled,
         refetch: () => refetch()
     });
-    const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { enforceColoringByClassStore } = useSettings();
@@ -117,25 +110,6 @@
             enforceColoringByClass: $enforceColoringByClassStore
         })
     );
-
-    const handleDeleteKeyDown = (event: KeyboardEvent) => {
-        if (event.key !== 'Delete' && event.key !== 'Backspace') return;
-        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
-        if (!$isEditingMode || !canEdit) return;
-        if (annotationLabelContext.isOnAnnotationDetailsView) return;
-        if (
-            sampleDetailsToolbarContext.status !== 'cursor' &&
-            sampleDetailsToolbarContext.status !== 'drag'
-        )
-            return;
-        const annotation = annotations.find(
-            (candidate) => candidate.sample_id === annotationLabelContext.annotationId
-        );
-        if (!annotation) return;
-
-        event.preventDefault();
-        rowActions.remove(annotation);
-    };
 </script>
 
 {#snippet annotationRow(annotation: AnnotationView)}
@@ -200,5 +174,3 @@
         </div>
     {/if}
 </Segment>
-
-<svelte:window onkeydown={handleDeleteKeyDown} />
