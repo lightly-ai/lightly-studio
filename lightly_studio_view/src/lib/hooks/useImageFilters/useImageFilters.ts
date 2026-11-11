@@ -76,9 +76,7 @@ export const useImageFilters = () => {
 
     // updates only sample ids in the existing filter params
     const updateSampleIds = (sampleIds: string[]) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
@@ -91,9 +89,7 @@ export const useImageFilters = () => {
 
     // updates only the embedding-plot region selection in the existing filter params
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
@@ -104,9 +100,7 @@ export const useImageFilters = () => {
 
     // updates only the confusion-matrix cell in the existing filter params
     const updateConfusionCell = (confusionCell: ConfusionCell | null) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
