@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { getFrameFilter } from './frameFilter';
+import { createMetadataFilters } from '$lib/hooks';
 
-vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
+vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     createMetadataFilters: vi.fn(() => [])
 }));
 
@@ -57,8 +58,7 @@ describe('getFrameFilter', () => {
         });
     });
 
-    it('adds metadata_filters when createMetadataFilters returns data', async () => {
-        const { createMetadataFilters } = await import('../useMetadataFilters/useMetadataFilters');
+    it('adds metadata_filters when createMetadataFilters returns data', () => {
         vi.mocked(createMetadataFilters).mockReturnValueOnce([
             { key: 'temp', value: 10, op: '>=' as const }
         ]);
@@ -80,12 +80,10 @@ describe('getFrameFilter', () => {
     });
 
     describe('pinned output', () => {
-        const M = { key: 'temp', value: 10, op: '>=' as const };
+        const temperatureMetadataFilter = { key: 'temp', value: 10, op: '>=' as const };
 
-        it('pins every field', async () => {
-            const { createMetadataFilters } =
-                await import('../useMetadataFilters/useMetadataFilters');
-            vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
+        it('pins every field', () => {
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
 
             expect(
                 getFrameFilter({
@@ -107,7 +105,7 @@ describe('getFrameFilter', () => {
                     annotations_filter: { filter_type: 'annotations', annotation_label_ids: ['l'] },
                     tag_ids: ['t'],
                     sample_ids: ['s'],
-                    metadata_filters: [M]
+                    metadata_filters: [temperatureMetadataFilter]
                 }
             });
         });
@@ -127,20 +125,18 @@ describe('getFrameFilter', () => {
             expect(getFrameFilter({ collection_id: 'coll-1', video_id: '' })).toEqual(expected);
         });
 
-        it('passes categorical-only metadata', async () => {
-            const { createMetadataFilters } =
-                await import('../useMetadataFilters/useMetadataFilters');
+        it('passes categorical-only metadata', () => {
             vi.mocked(createMetadataFilters).mockClear();
-            vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
-            const C = { color: ['red'] };
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
+            const colorFilters = { color: ['red'] };
 
             const filter = getFrameFilter({
                 collection_id: 'coll-1',
-                filters: { categorical_metadata_values: C }
+                filters: { categorical_metadata_values: colorFilters }
             });
 
-            expect(createMetadataFilters).toHaveBeenCalledWith({}, C);
-            expect(filter?.sample_filter?.metadata_filters).toEqual([M]);
+            expect(createMetadataFilters).toHaveBeenCalledWith({}, colorFilters);
+            expect(filter?.sample_filter?.metadata_filters).toEqual([temperatureMetadataFilter]);
         });
     });
 });
