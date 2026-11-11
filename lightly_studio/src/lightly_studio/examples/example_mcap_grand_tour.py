@@ -1,32 +1,21 @@
-"""Example of how to index the GrandTour MCAP clips into LightlyStudio.
+"""Shows GrandTour MCAP clips from a legged robot in LightlyStudio.
 
-The clips are at https://huggingface.co/datasets/lightly-ai/grand_tour_mcap_clips. They are
-short ros2 MCAP recordings from the GrandTour dataset
-(https://huggingface.co/datasets/leggedrobotics/grand_tour_dataset) of an ANYmal legged
-robot with the Boxi sensor payload. Each clip has these topics:
+The clips (https://huggingface.co/datasets/lightly-ai/grand_tour_mcap_clips) are short ROS 2
+recordings from the GrandTour dataset of an ANYmal robot. Each clip has three cameras
+(front, left, right), two lidars (Hesai, Livox) and the robot transforms, all at 10 Hz.
 
-    /gt_box/hdr_{front,left,right}/image_raw/compressed  sensor_msgs/msg/CompressedImage  10 Hz
-    /gt_box/hdr_{front,left,right}/camera_info           sensor_msgs/msg/CameraInfo
-    /gt_box/hesai/points                                 sensor_msgs/msg/PointCloud2      10 Hz
-    /gt_box/livox/lidar                                  sensor_msgs/msg/PointCloud2      10 Hz
-    /tf_static                                           tf2_msgs/msg/TFMessage
-    /tf                                                  tf2_msgs/msg/TFMessage  odom -> base
+Usage:
+    1. Go to the `lightly_studio` folder.
+    2. Download the clips:
 
-The three cameras and the two lidars are indexed. One recording becomes one sequence of
-groups. Every Hesai point cloud is a tick, and the camera frames and the Livox point cloud
-are paired to it. The viewer shows the `base` and `odom` frames.
+        uv run hf download lightly-ai/grand_tour_mcap_clips --repo-type dataset --local-dir datasets/grand_tour
 
-The example reads the clips from `datasets/grand_tour/`. Download them there:
+    3. Run the example:
 
-    hf download lightly-ai/grand_tour_mcap_clips --repo-type dataset --local-dir datasets/grand_tour
+        uv run src/lightly_studio/examples/example_mcap_grand_tour.py
 
-Or quickly read a clip directly from Hugging Face, without a download:
-
-    EXAMPLES_GRAND_TOUR_MCAP_PATH=hf://datasets/lightly-ai/grand_tour_mcap_clips/grand_tour_2024-11-02-17-43-10.mcap
-
-Set `EXAMPLES_GRAND_TOUR_MCAP_PATH` to an MCAP file, or to a folder of them, to use a
-different path.
-"""
+To use other MCAP files, set `EXAMPLES_GRAND_TOUR_MCAP_PATH` to a file or a folder.
+"""  # noqa: E501
 
 from __future__ import annotations
 
@@ -37,7 +26,6 @@ import lightly_studio as ls
 from lightly_studio.core.mcap.reader import McapFileReader
 from lightly_studio.database import db_manager
 
-# The components of every file: the official files and the converted ones.
 COMPONENTS = [
     ls.McapComponentSpec(
         name="front",
@@ -59,7 +47,7 @@ COMPONENTS = [
     ),
 ]
 
-# The cameras that only the converted files have. Each is indexed when the input has its topic.
+# Indexed only when the input has the topic.
 EXTRA_CAMERAS = [
     ls.McapComponentSpec(
         name=name,
@@ -70,16 +58,12 @@ EXTRA_CAMERAS = [
     for name in ["left", "right"]
 ]
 
-# Frames in the viewer Frame menu when the input has `/tf_static`. The first is the default.
-# `base` is the robot body frame, and the `/tf_static` transforms place every sensor in it.
-# `odom` is fixed to the ground, and the `/tf` transforms place `base` in it.
 TF_STATIC_TOPIC = "/tf_static"
 REFERENCE_FRAME_IDS = ["base", "odom"]
 
 SYNC_COMPONENT = "hesai"
 
-# The cameras and the lidars run at 10 Hz on independent clocks. A frame is at most half a
-# frame interval away from a tick.
+# Half a frame at 10 Hz.
 MAX_PAIRING_DIFF_NS = 50_000_000
 
 
@@ -96,9 +80,7 @@ def _topic_names(path: str) -> set[str]:
 
 env = Env()
 env.read_env()
-# Read as a string, not as a path, so that a URI such as `s3://my-bucket/grand_tour/`
-# survives unchanged.
-mcap_path = env.str("EXAMPLES_GRAND_TOUR_MCAP_PATH", "datasets/grand_tour/")
+mcap_path = env.str("EXAMPLES_GRAND_TOUR_MCAP_PATH", "datasets/grand_tour")
 
 topics = _topic_names(path=mcap_path)
 components = COMPONENTS + [camera for camera in EXTRA_CAMERAS if camera.topic in topics]
