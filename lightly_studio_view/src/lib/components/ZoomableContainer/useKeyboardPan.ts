@@ -127,6 +127,11 @@ export const useKeyboardPan = ({
         if (isTextInputTarget(event.target)) return;
 
         if (isSpaceKey(event)) {
+            if (
+                event.target instanceof HTMLButtonElement &&
+                !getContainerElement()?.contains(event.target)
+            )
+                return;
             event.preventDefault();
             if (event.repeat) return;
 

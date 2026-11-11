@@ -41,12 +41,14 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
 }));
 
 const updateLastAnnotationLabelMock = vi.fn();
-const openSampleDetailsSidePanelMock = vi.fn();
+const panelState = vi.hoisted(() => ({ collapsed: true }));
 
 vi.mock('../useGlobalStorage', () => ({
     useGlobalStorage: () => ({
         updateLastAnnotationLabel: updateLastAnnotationLabelMock,
-        openSampleDetailsSidePanel: openSampleDetailsSidePanelMock
+        openSampleDetailsSidePanel: () => {
+            panelState.collapsed = false;
+        }
     })
 }));
 
@@ -59,8 +61,8 @@ describe('useAnnotationSelection', () => {
         mockAnnotationLabelContext.annotationId = null;
         mockAnnotationLabelContext.lastCreatedAnnotationId = 'prev-id';
 
+        panelState.collapsed = true;
         updateLastAnnotationLabelMock.mockClear();
-        openSampleDetailsSidePanelMock.mockClear();
     });
 
     it.each(['slic', 'smart-select'] as const)(
@@ -191,7 +193,7 @@ describe('useAnnotationSelection', () => {
             annotations
         });
 
-        expect(openSampleDetailsSidePanelMock).toHaveBeenCalledOnce();
+        expect(panelState.collapsed).toBe(false);
     });
 
     it('does not open the side panel when deselecting an annotation', () => {
@@ -213,7 +215,7 @@ describe('useAnnotationSelection', () => {
             annotations
         });
 
-        expect(openSampleDetailsSidePanelMock).not.toHaveBeenCalled();
+        expect(panelState.collapsed).toBe(true);
     });
 
     it('does nothing if annotation is not found', () => {

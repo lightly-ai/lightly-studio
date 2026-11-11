@@ -37,6 +37,7 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount, untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
+    import { cn } from '$lib/utils/shadcn';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
@@ -323,50 +324,48 @@
             </CardContent>
         </Card>
 
-        {#if !$isSampleDetailsSidePanelCollapsed}
-            <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <CardContent className="h-full overflow-y-auto">
-                    {#if video?.sample?.sample_id}
-                        <SegmentTags
-                            tags={video.sample.tags ?? []}
-                            collectionId={datasetId}
-                            sampleId={video.sample.sample_id}
-                            onRefetch={onVideoUpdate}
-                        />
+        <Card className={cn("min-h-0 flex-1 flex-col overflow-hidden", $isSampleDetailsSidePanelCollapsed ? "hidden" : "flex")}>
+            <CardContent className="h-full overflow-y-auto">
+                {#if video?.sample?.sample_id}
+                    <SegmentTags
+                        tags={video.sample.tags ?? []}
+                        collectionId={datasetId}
+                        sampleId={video.sample.sample_id}
+                        onRefetch={onVideoUpdate}
+                    />
+                {/if}
+                <VideoSampleMetadata {video} />
+                <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
+                {#if video?.sample?.sample_id}
+                    <SampleDetailsClassificationSegment
+                        collectionId={(video.sample as SampleView).collection_id!}
+                        annotations={videoClassificationAnnotations}
+                        sampleId={video.sample_id}
+                        refetch={onVideoUpdate}
+                    />
+                {/if}
+                {#if video?.sample?.sample_id}
+                    <SampleDetailsCaptionSegment
+                        refetch={onVideoUpdate}
+                        captions={video?.sample?.captions ?? []}
+                        sampleId={video?.sample?.sample_id}
+                    />
+                {/if}
+                {#if $currentFrame}
+                    {@const frameSample = $currentFrame.sample as SampleView}
+                    {#if frameSample.collection_id && frameSample.sample_id}
+                        {@const frameURL = routeHelpers.toFramesDetails(
+                            datasetId,
+                            'video_frame',
+                            frameSample.collection_id,
+                            frameSample.sample_id,
+                            true
+                        )}
+                        <VideoFrameDetails frame={$currentFrame} {frameURL} />
                     {/if}
-                    <VideoSampleMetadata {video} />
-                    <MetadataSegment metadata_dict={(video?.sample as SampleView).metadata_dict} />
-                    {#if video?.sample?.sample_id}
-                        <SampleDetailsClassificationSegment
-                            collectionId={(video.sample as SampleView).collection_id!}
-                            annotations={videoClassificationAnnotations}
-                            sampleId={video.sample_id}
-                            refetch={onVideoUpdate}
-                        />
-                    {/if}
-                    {#if video?.sample?.sample_id}
-                        <SampleDetailsCaptionSegment
-                            refetch={onVideoUpdate}
-                            captions={video?.sample?.captions ?? []}
-                            sampleId={video?.sample?.sample_id}
-                        />
-                    {/if}
-                    {#if $currentFrame}
-                        {@const frameSample = $currentFrame.sample as SampleView}
-                        {#if frameSample.collection_id && frameSample.sample_id}
-                            {@const frameURL = routeHelpers.toFramesDetails(
-                                datasetId,
-                                'video_frame',
-                                frameSample.collection_id,
-                                frameSample.sample_id,
-                                true
-                            )}
-                            <VideoFrameDetails frame={$currentFrame} {frameURL} />
-                        {/if}
-                    {/if}
-                </CardContent>
-            </Card>
-        {/if}
+                {/if}
+            </CardContent>
+        </Card>
     </div>
 </div>
 
