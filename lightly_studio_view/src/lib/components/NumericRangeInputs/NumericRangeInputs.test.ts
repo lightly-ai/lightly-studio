@@ -55,6 +55,55 @@ describe('NumericRangeInputs', () => {
         }
     );
 
+    it.each([
+        { endpoint: 'minimum', integer: false, message: 'Enter a value between 0.1 and 1.' },
+        { endpoint: 'maximum', integer: false, message: 'Enter a value between 0.2 and 1.' },
+        { endpoint: 'minimum', integer: true, message: 'Enter a whole number between 0 and 800.' }
+    ])(
+        'shows the allowed range for an empty $endpoint (integer: $integer)',
+        async ({ endpoint, integer, message }) => {
+            setup(
+                integer
+                    ? {}
+                    : {
+                          integer: false,
+                          bound: { min: 0.1, max: 1 },
+                          value: { min: 0.2, max: 1 }
+                      }
+            );
+            await edit(input(endpoint), '');
+            expect(screen.getByRole('alert')).toHaveTextContent(message);
+        }
+    );
+
+    it.each([
+        { endpoint: 'minimum', draft: '0.7', corrected: '0.8', expected: [0.7, 0.8] },
+        { endpoint: 'maximum', draft: '0.1', corrected: '0.05', expected: [0.05, 0.1] }
+    ])(
+        'applies the rejected $endpoint draft when the other bound makes it valid',
+        async ({ endpoint, draft, corrected, expected }) => {
+            const { onValueCommit, acknowledge } = setup({
+                integer: false,
+                bound: { min: 0, max: 1 },
+                value: { min: 0.2, max: 0.5 }
+            });
+            const invalid = input(endpoint);
+            const other = input(endpoint === 'minimum' ? 'maximum' : 'minimum');
+            await edit(invalid, draft);
+            expect(invalid).toHaveAttribute('aria-invalid', 'true');
+            await edit(other, corrected);
+            expect(invalid).toHaveAttribute('aria-invalid', 'false');
+            expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+            expect(onValueCommit).toHaveBeenCalledExactlyOnceWith(expected);
+            await acknowledge(expected[0], expected[1]);
+            expect(invalid).toHaveValue(draft);
+            expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+            await fireEvent.blur(invalid);
+            await fireEvent.keyDown(invalid, { key: 'Enter' });
+            expect(onValueCommit).toHaveBeenCalledExactlyOnceWith(expected);
+        }
+    );
+
     it('composes exact pending edits before acknowledgement', async () => {
         const { min, onValueCommit } = setup({ integer: false, unit: 'px' });
         await edit(min, '200.123');
