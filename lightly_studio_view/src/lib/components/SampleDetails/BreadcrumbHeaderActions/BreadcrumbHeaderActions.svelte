@@ -1,13 +1,10 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
+    import { useGlobalStorage, useOperatorsDialog, useSettings, usePostHog } from '$lib/hooks';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
-    import { useSettings } from '$lib/hooks/useSettings';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
-    import { usePostHog } from '$lib/hooks';
     import { isInputElement } from '$lib/utils';
     import { Check, Pencil, Puzzle, Settings, Undo2 } from '@lucide/svelte';
     import { get } from 'svelte/store';
