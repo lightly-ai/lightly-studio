@@ -9,7 +9,7 @@ import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadata
 import type { CategoricalMetadataValues, MetadataValues } from '$lib/services/types';
 import { getAnnotationsFilter } from './getAnnotationsFilter';
 
-export type SampleFilterParts = {
+export interface SampleFilterParts {
     sample_ids?: string[] | null;
     tag_ids?: string[] | null;
     annotation_label_ids?: string[] | null;
@@ -18,7 +18,7 @@ export type SampleFilterParts = {
     confusion_cell?: ConfusionCell | null;
     metadata_filters?: MetadataFilter[] | null;
     query_expr?: QueryExpr | null;
-};
+}
 
 const nonEmpty = <T>(list: T[] | null | undefined): T[] | undefined =>
     list?.length ? list : undefined;
