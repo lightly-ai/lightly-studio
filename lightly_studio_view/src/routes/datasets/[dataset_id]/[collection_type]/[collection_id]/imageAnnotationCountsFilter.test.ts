@@ -97,4 +97,11 @@ describe('buildImageAnnotationCountsFilter', () => {
             sample_filter: { tag_ids: ['t'] }
         });
     });
+
+    it('keeps empty metadata filters', () => {
+        expect(buildImageAnnotationCountsFilter({ ...defaultParams, metadataFilters: [] })).toEqual({
+            filter_type: 'image',
+            sample_filter: { metadata_filters: [] }
+        });
+    });
 });

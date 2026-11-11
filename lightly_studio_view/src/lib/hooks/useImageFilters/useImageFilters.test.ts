@@ -126,6 +126,32 @@ describe('useImageFilters', () => {
             } as typeof normalFilterParams);
         };
 
+        it('updateSampleIds does nothing in classifier mode', () => {
+            const { filterParams, updateSampleIds } = useImageFilters();
+            setParams({ mode: 'classifier' });
+            const before = get(filterParams);
+            updateSampleIds(['s1']);
+            expect(get(filterParams)).toBe(before);
+        });
+
+        it('updateSampleIds clears sample ids for an empty list', () => {
+            const { filterParams, updateSampleIds } = useImageFilters();
+            setParams({});
+            updateSampleIds(['s1']);
+            expect(get(filterParams).filters?.sample_ids).toEqual(['s1']);
+            updateSampleIds([]);
+            expect(get(filterParams).filters?.sample_ids).toBeUndefined();
+        });
+
+        it('updateEmbeddingRegion stores and clears the region', () => {
+            const { filterParams, updateEmbeddingRegion } = useImageFilters();
+            setParams({});
+            updateEmbeddingRegion(REGION);
+            expect(get(filterParams).filters?.embedding_region).toBe(REGION);
+            updateEmbeddingRegion(null);
+            expect(get(filterParams).filters?.embedding_region).toBeUndefined();
+        });
+
         it('returns null without a collection id', () => {
             const { imageFilter } = useImageFilters();
             setParams({ collection_id: undefined });
