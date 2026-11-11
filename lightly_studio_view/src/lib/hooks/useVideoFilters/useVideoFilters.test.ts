@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import { buildVideoFilter, useVideoFilters } from './useVideoFilters';
 import { waitFor } from '@testing-library/svelte';
 import { SortDirection } from '$lib/api/lightly_studio_local';
+import { createMetadataFilters } from '$lib/hooks';
 
 const embeddingRegion = {
     polygon: [
@@ -12,7 +13,7 @@ const embeddingRegion = {
     ]
 };
 
-vi.mock('../useMetadataFilters/useMetadataFilters', () => ({
+vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     createMetadataFilters: vi.fn(() => [])
 }));
 
@@ -120,9 +121,7 @@ describe('useVideoFilters', () => {
             });
         });
 
-        it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', async () => {
-            const { createMetadataFilters } =
-                await import('../useMetadataFilters/useMetadataFilters');
+        it('includes metadata_filters in sample_filter when createMetadataFilters returns filters', () => {
             vi.mocked(createMetadataFilters).mockReturnValueOnce([
                 { key: 'temp', value: 10, op: '>=' as const }
             ]);
@@ -266,9 +265,7 @@ describe('useVideoFilters', () => {
             });
         });
 
-        it('preserves generated metadata filters when geometry is set and cleared', async () => {
-            const { createMetadataFilters } =
-                await import('../useMetadataFilters/useMetadataFilters');
+        it('preserves generated metadata filters when geometry is set and cleared', () => {
             const metadataFilters = [
                 { key: 'temp', value: 10, op: '>=' as const },
                 { key: 'weather', value: ['sunny'], op: 'in' as const }
@@ -389,12 +386,10 @@ describe('useVideoFilters', () => {
 });
 
 describe('buildVideoFilter output', () => {
-    const REGION = embeddingRegion;
-    const M = { key: 'temp', value: 10, op: '>=' as const };
+    const temperatureMetadataFilter = { key: 'temp', value: 10, op: '>=' as const };
 
-    it('pins every field', async () => {
-        const { createMetadataFilters } = await import('../useMetadataFilters/useMetadataFilters');
-        vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
+    it('pins every field', () => {
+        vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
 
         expect(
             buildVideoFilter({
@@ -408,7 +403,7 @@ describe('buildVideoFilter output', () => {
                 filters: {
                     tag_ids: ['t'],
                     sample_ids: ['s'],
-                    embedding_region: REGION,
+                    embedding_region: embeddingRegion,
                     metadata_values: { temp: { min: 10, max: 20 } },
                     annotation_frames_label_ids: ['l']
                 }
@@ -423,8 +418,8 @@ describe('buildVideoFilter output', () => {
             sample_filter: {
                 tag_ids: ['t'],
                 sample_ids: ['s'],
-                embedding_region: REGION,
-                metadata_filters: [M]
+                embedding_region: embeddingRegion,
+                metadata_filters: [temperatureMetadataFilter]
             }
         });
     });
@@ -457,17 +452,17 @@ describe('buildVideoFilter output', () => {
         });
     });
 
-    it('passes categorical-only metadata', async () => {
-        const { createMetadataFilters } = await import('../useMetadataFilters/useMetadataFilters');
-        vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
-        const C = { color: ['red'] };
+    it('passes categorical-only metadata', () => {
+        vi.mocked(createMetadataFilters).mockClear();
+        vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
+        const colorFilters = { color: ['red'] };
 
         const filter = buildVideoFilter({
             collection_id: 'coll-1',
-            filters: { categorical_metadata_values: C }
+            filters: { categorical_metadata_values: colorFilters }
         });
 
-        expect(createMetadataFilters).toHaveBeenCalledWith({}, C);
-        expect(filter?.sample_filter?.metadata_filters).toEqual([M]);
+        expect(createMetadataFilters).toHaveBeenCalledWith({}, colorFilters);
+        expect(filter?.sample_filter?.metadata_filters).toEqual([temperatureMetadataFilter]);
     });
 });

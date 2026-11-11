@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { GRID_PAGE_SIZE } from '$lib/constants';
 import { buildRequestBody } from './buildRequestBody';
-import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import { createMetadataFilters } from '$lib/hooks';
 
 type Params = Parameters<typeof buildRequestBody>[0];
 
