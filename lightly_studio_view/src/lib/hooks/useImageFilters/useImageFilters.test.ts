@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { QueryExpr, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
-import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import { createMetadataFilters } from '$lib/hooks';
 
 const queryExpr = {
     match_expr: {
@@ -105,18 +105,22 @@ describe('useImageFilters', () => {
     });
 
     describe('imageFilter output', () => {
-        const REGION = {
+        const embeddingRegion = {
             polygon: [
                 { x: 0, y: 0 },
                 { x: 1, y: 0 },
                 { x: 0, y: 1 }
             ]
         };
-        const CELL = { evaluation_run_id: 'run-1', gt_label: 'car', pred_label: 'truck' };
-        const M = { filter_type: 'metadata', key: 'k', value: 1 } as unknown as ReturnType<
+        const confusionCell = { evaluation_run_id: 'run-1', gt_label: 'car', pred_label: 'truck' };
+        const metadataFilter = {
+            filter_type: 'metadata',
+            key: 'k',
+            value: 1
+        } as unknown as ReturnType<typeof createMetadataFilters>[number];
+        const categoricalMetadataValues = { cat: ['a'] } as unknown as Parameters<
             typeof createMetadataFilters
-        >[number];
-        const C = { cat: ['a'] } as unknown as Parameters<typeof createMetadataFilters>[1];
+        >[1];
 
         const setParams = (params: object) => {
             const { updateFilterParams } = useImageFilters();
@@ -146,16 +150,16 @@ describe('useImageFilters', () => {
 
         it('pins every field', () => {
             const { imageFilter, updateQueryExpr } = useImageFilters();
-            vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([metadataFilter]);
             updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
             setParams({
                 filters: {
                     dimensions: { min_width: 1, max_width: 2, min_height: 3, max_height: 4 },
                     sample_ids: ['s'],
-                    embedding_region: REGION,
+                    embedding_region: embeddingRegion,
                     annotation_label_ids: ['l'],
                     tag_ids: ['t'],
-                    confusion_cell: CELL
+                    confusion_cell: confusionCell
                 },
                 metadata_values: { k: { min: 0, max: 1 } }
             });
@@ -165,14 +169,14 @@ describe('useImageFilters', () => {
                 height: { min: 3, max: 4 },
                 sample_filter: {
                     sample_ids: ['s'],
-                    embedding_region: REGION,
+                    embedding_region: embeddingRegion,
                     annotations_filter: {
                         filter_type: 'annotations',
                         annotation_label_ids: ['l']
                     },
                     tag_ids: ['t'],
-                    confusion_cell: CELL,
-                    metadata_filters: [M],
+                    confusion_cell: confusionCell,
+                    metadata_filters: [metadataFilter],
                     query_expr: queryExpr
                 }
             });
@@ -204,10 +208,10 @@ describe('useImageFilters', () => {
 
         it('passes categorical-only metadata', () => {
             const { imageFilter } = useImageFilters();
-            vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
-            setParams({ categorical_metadata_values: C });
-            expect(get(imageFilter)?.sample_filter?.metadata_filters).toEqual([M]);
-            expect(createMetadataFilters).toHaveBeenCalledWith({}, C);
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([metadataFilter]);
+            setParams({ categorical_metadata_values: categoricalMetadataValues });
+            expect(get(imageFilter)?.sample_filter?.metadata_filters).toEqual([metadataFilter]);
+            expect(createMetadataFilters).toHaveBeenCalledWith({}, categoricalMetadataValues);
         });
     });
 });
