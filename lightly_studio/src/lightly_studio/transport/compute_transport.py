@@ -10,8 +10,9 @@ from lightly_studio.sampling.sampling_config import SamplingConfig
 
 
 # TODO(Iunir, 11/2026): Add evaluation when its config and result models have no DB imports.
+# TODO(Iunir, 11/2026): Send the order and the slice of the query.
 class ComputeTransport(Protocol):
-    """Runs metadata computations and selection.
+    """Runs metadata computations and sampling.
 
     The server finds the matching samples, so a remote call sends no list of sample IDs.
     """
@@ -46,10 +47,11 @@ class ComputeTransport(Protocol):
             The metadata key for the values.
         """
 
-    def select(self, config: SamplingConfig, query_expr: QueryExpr | None) -> None:
-        """Select samples and tag them with the tag of `config`.
+    def sampling(self, config: SamplingConfig, query_expr: QueryExpr | None) -> None:
+        """Sample from the matching samples and tag the result with the tag of `config`.
 
         Args:
             config: The sampling config. It also sets the collection.
-            query_expr: The samples to select from. None uses all samples of the collection.
+            query_expr: The samples to sample from. None uses all samples of the collection.
+                The order and the slice of a query are not sent.
         """
