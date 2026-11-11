@@ -37,11 +37,13 @@ export function useWorkspacePlayback(
             );
 
             if (buffering.current) {
+                const startIndex = Math.max(0, activeIndex - getAccumulationRadius());
                 return [
                     {
-                        startIndex: Math.max(0, activeIndex - getAccumulationRadius()),
+                        startIndex,
                         endIndex: getWorkspace().ticks.length - 1
-                    }
+                    },
+                    ...(startIndex > 0 ? [{ startIndex: 0, endIndex: startIndex - 1 }] : [])
                 ];
             }
 
@@ -68,13 +70,13 @@ export function useWorkspacePlayback(
         return true;
     };
 
-    const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } =
-        usePointCloudTickNavigation({
-            getWorkspace,
-            getTickNumber: () => getOptions().tickNumber ?? 1,
-            getOnTickChange: () => getOptions().onTickChange ?? (() => undefined),
-            getIsTickBuffered: isTickBuffered
-        });
+    const navigation = usePointCloudTickNavigation({
+        getWorkspace,
+        getTickNumber: () => getOptions().tickNumber ?? 1,
+        getOnTickChange: () => getOptions().onTickChange ?? (() => undefined),
+        getIsTickBuffered: isTickBuffered
+    });
+    const { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback } = navigation;
     const handleSeekStart = () => {
         seekWasPlaying = getWorkspace().isPlaying;
         if (seekWasPlaying) getWorkspace().togglePlayback();
@@ -115,6 +117,14 @@ export function useWorkspacePlayback(
     };
 
     return {
+        get bufferStatus() {
+            return {
+                isWaiting: navigation.isWaitingForData,
+                failedCount: tickPrefetch.errors.size,
+                isRetrying: tickPrefetch.isRetrying,
+                onRetry: tickPrefetch.retryFailed
+            };
+        },
         get bufferedRanges() {
             return tickPrefetch.bufferedRanges;
         },

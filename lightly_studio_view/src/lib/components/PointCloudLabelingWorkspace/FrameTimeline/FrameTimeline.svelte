@@ -1,7 +1,9 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
     import TimelineContent from './TimelineContent/TimelineContent.svelte';
     import TimelineTransportControls from './TimelineTransport/TimelineTransportControls.svelte';
+    import TimelineBufferStatus from './TimelineBufferStatus/TimelineBufferStatus.svelte';
 
     interface BufferRange {
         /** Inclusive zero-based index of the first buffered tick. */
@@ -27,6 +29,7 @@
         onBufferEntireSequenceChange: (enabled: boolean) => void;
         /** Inclusive tick-index ranges whose data is ready for playback. */
         bufferedRanges: readonly BufferRange[];
+        bufferStatus?: ComponentProps<typeof TimelineBufferStatus>['status'];
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
@@ -68,6 +71,7 @@
         bufferEntireSequence,
         onBufferEntireSequenceChange,
         bufferedRanges,
+        bufferStatus,
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
@@ -102,6 +106,7 @@
         {onPreviousSequence}
         {onNextSequence}
     />
+    <TimelineBufferStatus status={bufferStatus} />
     <TimelineContent
         {ticks}
         {tracks}
