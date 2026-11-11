@@ -12,6 +12,7 @@ export {
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useFiltersClearedSignal } from '$lib/hooks/useFiltersClearedSignal/useFiltersClearedSignal';
+export { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export {
     createMetadataFilters,
