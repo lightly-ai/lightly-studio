@@ -111,10 +111,7 @@
 
         if (!$isEditingMode) {
             if (isOnAnnotationDetailsView) {
-                toggleSampleAnnotationCropSelection(
-                    collectionId,
-                    sample.annotations![0].sample_id
-                );
+                toggleSampleAnnotationCropSelection(collectionId, sample.annotations![0].sample_id);
             } else {
                 toggleSampleSelection(sampleId, collectionId);
             }
