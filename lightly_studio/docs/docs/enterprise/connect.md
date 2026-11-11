@@ -87,6 +87,23 @@ for sample in list(dataset)[:3]:
     a local DuckDB file. You do **not** need to call `ls.start_gui()` — the GUI is already
     running on the enterprise server.
 
+## Use Your Own Embedding Model
+
+To embed your data with your own model, register an embedder in the Python script before you
+add data. The model runs on your machine. The script sends only the vectors to the enterprise
+instance.
+
+![Use your own embedding model](../_static/lightly_studio_enterprise_own_embedder.svg){ width="100%" }
+
+- The embedding plot reads the stored vectors, so it works with any model.
+- Search embeds each query in the same space as your data. To search with your own model,
+  serve the model on an embedding server and register it with `ls.register_remote_embedder`.
+  The enterprise server sends each query to this server, so it must be able to reach its URL.
+
+For the embedder interfaces and examples, see
+[Using Your Own Embeddings](../workflows/embeddings.md#using-your-own-embeddings) and
+[Serving an Embedder from a Remote Server](../workflows/embeddings.md#serving-an-embedder-from-a-remote-server).
+
 ## Next Steps
 
 - [Local Storage](local_storage.md) — use local disk or NAS/shared storage in an
