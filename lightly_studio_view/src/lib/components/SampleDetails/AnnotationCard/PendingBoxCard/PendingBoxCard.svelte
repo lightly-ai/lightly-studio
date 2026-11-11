@@ -3,6 +3,7 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { usePendingBoxClass, useStickyClass } from '$lib/hooks';
     import { ClassSearchList, useClassSearchData } from '$lib/components/SampleDetails/SearchList';
+    import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import { AnnotationCardFrame } from '../AnnotationCardFrame';
     import { CardCloseButton } from '../CardCloseButton';
 
@@ -31,9 +32,11 @@
         if (event.button !== 0 || toolbarContext.status === 'drag') return;
         cancel();
     };
-    // Esc drops the box wherever the focus is, before the panel's Esc switches the tool.
+    // Esc drops the box before the panel's Esc switches the tool. A text field or an open menu
+    // keeps its own Esc. The card's search handles Esc itself.
     const handleWindowKeyDown = (event: KeyboardEvent) => {
         if (event.key !== 'Escape' || !$request) return;
+        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
         event.stopPropagation();
         cancel();
     };

@@ -31,4 +31,12 @@ describe('ColorDot', () => {
 
         expect(dotColor()).toBe('rgb(255, 0, 0)');
     });
+
+    it('keeps the custom alpha, like the canvas', () => {
+        useCustomLabelColors().setCustomColor('gt', BLUE, 0.5);
+
+        render(ColorDot, { props: { label: 'gt', testId: 'dot' } });
+
+        expect(dotColor()).toBe('rgba(0, 0, 255, 0.5)');
+    });
 });

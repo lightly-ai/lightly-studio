@@ -1,9 +1,10 @@
-import { fireEvent, render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { get } from 'svelte/store';
 import { useRecentClasses } from '$lib/hooks';
 import { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
+import { fakeLayer } from '../AnnotationCardFrame/fakeLayer.testFixtures';
 import PendingBoxCard from './PendingBoxCard.svelte';
 
 const pickClass = vi.hoisted(() => vi.fn());
@@ -25,10 +26,11 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
 
 // Seeds a pending request, then renders the card for it.
 const setup = (toolbarStatus = 'bounding-box') => {
+    const { layer } = fakeLayer();
     const pending = usePendingBoxClass();
     const result = pending.requestClass({ x: 1, y: 2, width: 30, height: 40 });
     const view = render(PendingBoxCard, {
-        props: { collectionId: 'col-1', getLayer: () => null },
+        props: { collectionId: 'col-1', getLayer: () => layer },
         context: new Map<string, unknown>([
             ['annotation-label', { isDrawing: false }],
             ['sample-details-toolbar-type', { status: toolbarStatus }]
@@ -92,6 +94,7 @@ describe('PendingBoxCard', () => {
 
     it('drops the box on a click outside the card', async () => {
         const { result } = setup();
+        await waitFor(() => expect(screen.getByTestId('pending-box-card')).toBeVisible());
 
         await pointerDown(document.body, 0);
 
@@ -126,6 +129,27 @@ describe('PendingBoxCard', () => {
 
         await expect(result).resolves.toBeNull();
         expect(windowListener).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['a text field', () => document.body.appendChild(document.createElement('input'))],
+        [
+            'an open menu',
+            () => {
+                const menu = document.body.appendChild(document.createElement('div'));
+                menu.setAttribute('role', 'menu');
+                menu.tabIndex = -1;
+                return menu;
+            }
+        ]
+    ])('keeps the box on Esc in %s outside the card', async (_, createTarget) => {
+        setup();
+        const target = createTarget();
+
+        await fireEvent.keyDown(target, { key: 'Escape' });
+        target.remove();
+
+        expect(get(usePendingBoxClass().request)).not.toBeNull();
     });
 
     it('keeps the box on a click inside the card', async () => {
