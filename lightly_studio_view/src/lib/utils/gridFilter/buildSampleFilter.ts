@@ -8,8 +8,9 @@ import type {
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import type { CategoricalMetadataValues, MetadataValues } from '$lib/services/types';
 import { getAnnotationsFilter } from './getAnnotationsFilter';
+import { withoutUndefined } from './withoutUndefined';
 
-export type SampleFilterParts = {
+export interface SampleFilterParts {
     sample_ids?: string[] | null;
     tag_ids?: string[] | null;
     annotation_label_ids?: string[] | null;
@@ -18,7 +19,7 @@ export type SampleFilterParts = {
     confusion_cell?: ConfusionCell | null;
     metadata_filters?: MetadataFilter[] | null;
     query_expr?: QueryExpr | null;
-};
+}
 
 const nonEmpty = <T>(list: T[] | null | undefined): T[] | undefined =>
     list?.length ? list : undefined;
@@ -40,9 +41,7 @@ export function buildSampleFilter(parts: SampleFilterParts): SampleFilter | unde
         metadata_filters: nonEmpty(parts.metadata_filters),
         query_expr: parts.query_expr ?? undefined
     };
-    const result = Object.fromEntries(
-        Object.entries(entries).filter(([, value]) => value !== undefined)
-    ) as SampleFilter;
+    const result = withoutUndefined(entries) as SampleFilter;
     return Object.keys(result).length > 0 ? result : undefined;
 }
 
