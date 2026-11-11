@@ -35,7 +35,7 @@
 </script>
 
 <div
-    class="flex w-full items-center gap-2"
+    class="group flex w-full items-center gap-2"
     title={item.label}
     data-testid="{testId}-item"
     data-item-id={item.id}
