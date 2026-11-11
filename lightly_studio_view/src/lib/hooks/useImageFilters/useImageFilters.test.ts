@@ -157,8 +157,8 @@ describe('useImageFilters', () => {
         it('updateEmbeddingRegion stores and clears the region', () => {
             const { filterParams, updateEmbeddingRegion } = useImageFilters();
             setParams({});
-            updateEmbeddingRegion(REGION);
-            expect(normalFilters(filterParams)?.embedding_region).toBe(REGION);
+            updateEmbeddingRegion(embeddingRegion);
+            expect(normalFilters(filterParams)?.embedding_region).toBe(embeddingRegion);
             updateEmbeddingRegion(null);
             expect(normalFilters(filterParams)?.embedding_region).toBeUndefined();
         });
