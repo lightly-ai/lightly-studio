@@ -34,7 +34,11 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         toggleSampleSelection,
         toggleSampleAnnotationCropSelection: vi.fn(),
         isEditingMode,
+        setIsEditingMode: vi.fn(),
         clearReversibleActions: vi.fn(),
+        addReversibleAction: vi.fn(),
+        reversibleActions: writable([]),
+        executeReversibleAction: vi.fn(),
         lastAnnotationBrushSize: writable({}),
         imageBrightness: writable(0),
         imageContrast: writable(0),
@@ -60,6 +64,25 @@ vi.mock('$lib/hooks/useDeleteAnnotationWithUndo/useDeleteAnnotationWithUndo.svel
     useDeleteAnnotationWithUndo: () => ({ deleteWithUndo })
 }));
 
+vi.mock('$lib/hooks/useOperatorsDialog/useOperatorsDialog', () => ({
+    useOperatorsDialog: () => ({
+        openOperatorsDialog: vi.fn(),
+        isOperatorsDialogOpen: writable(false)
+    })
+}));
+vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({
+    useSettingsDialog: () => ({
+        openSettingsDialog: vi.fn(),
+        isSettingsDialogOpen: writable(false)
+    })
+}));
+vi.mock('$lib/hooks/useSettings', () => ({
+    useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) })
+}));
+vi.mock('$lib/hooks/usePostHog', () => ({
+    usePostHog: () => ({ trackEvent: vi.fn() })
+}));
+
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
     default: () => ({ user: userRole ? { role: userRole } : undefined })
 }));
@@ -70,6 +93,7 @@ vi.mock('$app/state', () => ({ page: { data: {} } }));
 vi.mock('$lib/components', async () => {
     const stub = (await import('./SampleDetailsPanel.stub.svelte')).default;
     return {
+        Button: stub,
         Card: stub,
         CardContent: stub,
         SampleDetailsSidePanel: stub,
