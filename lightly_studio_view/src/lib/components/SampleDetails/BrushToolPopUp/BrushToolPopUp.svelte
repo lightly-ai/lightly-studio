@@ -101,7 +101,7 @@
     "
     >
         <div class="px-2 py-2 text-left">
-            <h3 class="text-sm font-semibold text-foreground">Brush Tool</h3>
+            <h3 class="text-sm font-semibold text-foreground">Mask brush</h3>
         </div>
 
         <div class="px-2">

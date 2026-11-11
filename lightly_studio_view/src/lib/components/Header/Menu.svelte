@@ -65,7 +65,8 @@
     const hasExport = $derived(
         collection.sample_type == 'image' ||
             collection.sample_type == 'video' ||
-            collection.sample_type == 'video_frame'
+            collection.sample_type == 'video_frame' ||
+            collection.sample_type == 'sequence'
     );
 
     const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));

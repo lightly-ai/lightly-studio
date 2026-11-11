@@ -1,6 +1,7 @@
 """This module defines the base annotation model."""
 
 from abc import ABC
+from collections.abc import Mapping
 from datetime import datetime, timezone
 from enum import Enum
 from typing import TYPE_CHECKING, Optional, Union
@@ -207,6 +208,8 @@ class AnnotationView(BaseModel):
     object_track_id: Optional[UUID] = None
     object_track_number: Optional[int] = None
     parent_object_track_number: Optional[int] = None
+    parent_object_track_class_name: Optional[str] = None
+    """Only populated for tick-details responses. ``None`` elsewhere."""
 
     tags: list[AnnotationViewTag] = []
 
@@ -215,6 +218,7 @@ class AnnotationView(BaseModel):
         cls,
         annotation: "AnnotationBaseTable",
         order_value: Optional[float] = None,
+        parent_track_class_names: Optional[Mapping[UUID, str]] = None,
     ) -> "AnnotationView":
         """Convert an AnnotationBaseTable to an AnnotationView.
 
@@ -223,7 +227,16 @@ class AnnotationView(BaseModel):
             order_value: Primary sort value for the current grid sort, when provided by the
                 resolver. Mutually exclusive with the payload view's ``similarity_score``
                 for the grid overlay.
+            parent_track_class_names: Pre-fetched mapping from parent object track ID to
+                class name. When omitted, the parent class name is not populated.
         """
+        parent_track_id = (
+            annotation.object_track.parent_object_track_id if annotation.object_track else None
+        )
+        parent_track_class_name = None
+        if parent_track_class_names is not None and parent_track_id is not None:
+            parent_track_class_name = parent_track_class_names.get(parent_track_id)
+
         return cls(
             parent_sample_id=annotation.parent_sample_id,
             sample_id=annotation.sample_id,
@@ -239,6 +252,7 @@ class AnnotationView(BaseModel):
             parent_object_track_number=annotation.object_track.parent_object_track.object_track_number
             if annotation.object_track and annotation.object_track.parent_object_track
             else None,
+            parent_object_track_class_name=parent_track_class_name,
             temporal_span_details=TemporalSpanView(
                 start_time_s=annotation.temporal_span_details.start_time_s,
                 end_time_s=annotation.temporal_span_details.end_time_s,

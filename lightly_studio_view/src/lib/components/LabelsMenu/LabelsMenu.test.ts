@@ -5,6 +5,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import LabelsMenu from './LabelsMenu.svelte';
 import type { Annotation } from '$lib/types';
 
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
+
 const mocks = vi.hoisted(() => ({
     selectedCollectionIds: null as unknown as Writable<string[]>,
     allSourcesHidden: null as unknown as Writable<boolean>,
@@ -41,6 +45,7 @@ vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     const { writable } = await import('svelte/store');
     return {
         useCustomLabelColors: () => ({
+            customColorsStore: writable({}),
             customLabelColorsStore: writable({}),
             colorVersion: writable(0),
             getCustomColor: () => undefined,
@@ -80,7 +85,8 @@ describe('LabelsMenu', () => {
     ]);
     const defaultProps = {
         annotationFilterRows: twoLabels,
-        onToggleAnnotationFilter: vi.fn()
+        onToggleAnnotationFilter: vi.fn(),
+        onSelectionChange: vi.fn()
     };
 
     beforeEach(() => {
@@ -118,6 +124,22 @@ describe('LabelsMenu', () => {
         expect(screen.getByText('person')).toBeInTheDocument();
     });
 
+    it('selects every class with "Select all"', async () => {
+        const onSelectionChange = vi.fn();
+        render(LabelsMenu, {
+            ...defaultProps,
+            onSelectionChange,
+            annotationFilterRows: writable<Annotation[]>([
+                { label_name: 'car', current_count: 1, total_count: 1, selected: true },
+                { label_name: 'person', current_count: 1, total_count: 1, selected: false }
+            ])
+        });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Select all' }));
+
+        expect(onSelectionChange).toHaveBeenCalledWith(['car', 'person']);
+    });
+
     it('shows a zero count when the filter matches no annotations of a label', () => {
         render(LabelsMenu, {
             ...defaultProps,
@@ -126,7 +148,7 @@ describe('LabelsMenu', () => {
             ])
         });
 
-        expect(screen.getByTestId('label-menu-label-count')).toHaveTextContent('0 of 8');
+        expect(screen.getByTestId('labels-menu-count')).toHaveTextContent('0 of 8');
     });
 
     it('explains the empty list when every annotation source is unchecked', () => {

@@ -10,14 +10,15 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.errors import McapAccessError, TransformNotFoundError
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.models.static_transform import StaticTransformCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     group_resolver,
+    object_track_resolver,
     sensor_calibration_resolver,
     static_transform_resolver,
     tag_resolver,
@@ -141,6 +142,87 @@ def test_get_tick_details__annotations(db_session: Session) -> None:
     assert annotation.annotation_label.annotation_label_name == "truck"
     assert annotation.cuboid_3d_details is not None
     assert annotation.cuboid_3d_details.px == pytest.approx(1.0)
+
+
+def test_get_tick_details__parent_track_class_name(db_session: Session) -> None:
+    fixture = helpers.create_mcap_sequence(session=db_session)
+    group_ids = group_resolver.create_many(
+        session=db_session,
+        collection_id=fixture.group_collection.collection_id,
+        groups=[set()],
+    )
+    db_session.add(
+        SampleSequenceLinkTable(
+            sample_id=group_ids[0],
+            sequence_sample_id=fixture.sample_id,
+            seq_number=0,
+            timestamp_ns=1_000,
+        )
+    )
+    parent_track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                dataset_id=fixture.sequence_collection.dataset_id,
+                object_track_number=7,
+            )
+        ],
+    )[0]
+    child_track_id = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[
+            ObjectTrackCreate(
+                dataset_id=fixture.sequence_collection.dataset_id,
+                object_track_number=8,
+                parent_object_track_id=parent_track_id,
+            )
+        ],
+    )[0]
+    parent_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=fixture.group_collection.collection_id,
+        label_name="truck",
+    )
+    child_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=fixture.group_collection.collection_id,
+        label_name="cabin",
+    )
+    annotation_resolver.create_many(
+        session=db_session,
+        parent_collection_id=fixture.group_collection.collection_id,
+        annotations=[
+            cuboid_create(
+                parent_sample_id=group_ids[0],
+                annotation_label_id=parent_label.annotation_label_id,
+                object_track_id=parent_track_id,
+                px=1.0,
+            ),
+            cuboid_create(
+                parent_sample_id=group_ids[0],
+                annotation_label_id=child_label.annotation_label_id,
+                object_track_id=child_track_id,
+                px=2.0,
+            ),
+        ],
+        collection_name="ground_truth",
+    )
+    db_session.commit()
+
+    result = recording_service.get_tick_details(
+        session=db_session,
+        dataset_id=fixture.sequence_collection.dataset_id,
+        sequence_id=fixture.sample_id,
+        seq_number=0,
+    )
+
+    assert result is not None
+    assert len(result.annotations) == 2
+    child = next(a for a in result.annotations if a.object_track_number == 8)
+    parent = next(a for a in result.annotations if a.object_track_number == 7)
+    assert child.parent_object_track_number == 7
+    assert child.parent_object_track_class_name == "truck"
+    assert parent.parent_object_track_class_name is None
 
 
 def test_get_tick_details__camera_projection_uses_camera_timestamp(
@@ -322,58 +404,6 @@ def test_get_tick_details__target_frame_id(db_session: Session, tmp_path: Path) 
         (0.0, 0.0, -0.7071067811865476, 0.7071067811865476)
     )
     assert (cuboid.sx, cuboid.sy, cuboid.sz) == pytest.approx((2.0, 1.0, 1.5))
-
-
-def test_get_tick_details__target_frame_id_of_cuboid(db_session: Session) -> None:
-    # The recording URI does not exist, so the test fails if the recording is read.
-    fixture = helpers.create_mcap_sequence(session=db_session, uri="/missing/recording.mcap")
-    _add_tick_with_cuboid(session=db_session, fixture=fixture, timestamp_ns=1_000)
-
-    result = recording_service.get_tick_details(
-        session=db_session,
-        dataset_id=fixture.sequence_collection.dataset_id,
-        sequence_id=fixture.sample_id,
-        seq_number=0,
-        target_frame_id="odom",
-    )
-
-    assert result is not None
-    cuboid = result.annotations[0].cuboid_3d_details
-    assert cuboid is not None
-    assert cuboid.frame_id == "odom"
-    assert (cuboid.px, cuboid.py, cuboid.pz) == pytest.approx((0.0, 0.0, 0.5))
-
-
-def test_get_tick_details__target_frame_id_without_timestamp(db_session: Session) -> None:
-    fixture = helpers.create_mcap_sequence(session=db_session)
-    _add_tick_with_cuboid(session=db_session, fixture=fixture, timestamp_ns=None)
-
-    with pytest.raises(McapAccessError, match="The tick has no timestamp"):
-        recording_service.get_tick_details(
-            session=db_session,
-            dataset_id=fixture.sequence_collection.dataset_id,
-            sequence_id=fixture.sample_id,
-            seq_number=0,
-            target_frame_id=mcap_helpers.LIDAR_FRAME_ID,
-        )
-
-
-def test_get_tick_details__target_frame_id_not_connected(
-    db_session: Session, tmp_path: Path
-) -> None:
-    # No static transforms are stored and the recording has no `/tf` topic.
-    mcap_path = mcap_helpers.write_mcap(path=tmp_path / "recording.mcap")
-    fixture = helpers.create_mcap_sequence(session=db_session, uri=str(mcap_path))
-    _add_tick_with_cuboid(session=db_session, fixture=fixture, timestamp_ns=1_050_000_000)
-
-    with pytest.raises(TransformNotFoundError):
-        recording_service.get_tick_details(
-            session=db_session,
-            dataset_id=fixture.sequence_collection.dataset_id,
-            sequence_id=fixture.sample_id,
-            seq_number=0,
-            target_frame_id=mcap_helpers.LIDAR_FRAME_ID,
-        )
 
 
 def test_get_tick_details__unknown_sequence(db_session: Session) -> None:

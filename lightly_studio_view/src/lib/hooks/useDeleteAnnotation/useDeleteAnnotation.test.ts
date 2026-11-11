@@ -22,9 +22,14 @@ vi.mock('$lib/hooks/useInvalidateAnnotationGridQueries', () => ({
 
 describe('useDeleteAnnotation', () => {
     const invalidateQueries = vi.fn();
+    const mockMutateAsync = vi.fn();
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockMutateAsync.mockResolvedValue(undefined);
+        vi.mocked(createMutation).mockReturnValue({
+            mutateAsync: mockMutateAsync
+        } as unknown as ReturnType<typeof createMutation>);
         useInvalidateAnnotationGridQueries.mockReturnValue(invalidateAnnotationGridQueries);
         vi.mocked(useQueryClient).mockReturnValue({
             invalidateQueries
@@ -32,12 +37,6 @@ describe('useDeleteAnnotation', () => {
     });
 
     it('invalidates annotation-bearing grids and evaluation runs after a successful delete', async () => {
-        vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
-        } as unknown as ReturnType<typeof createMutation>);
-
         const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
         await deleteAnnotation('ann-1', 'classification');
 
@@ -49,12 +48,6 @@ describe('useDeleteAnnotation', () => {
     });
 
     it('fires annotation_deleted with collection_id and annotation_type on success', async () => {
-        vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
-        } as unknown as ReturnType<typeof createMutation>);
-
         const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
         await deleteAnnotation('ann-1', 'classification');
 
@@ -65,12 +58,6 @@ describe('useDeleteAnnotation', () => {
     });
 
     it('uses an explicit collection after navigation and includes the annotation type', async () => {
-        vi.mocked(createMutation).mockReturnValue({
-            mutate: (_vars: unknown, opts: { onSuccess: () => void }) => {
-                opts.onSuccess();
-            }
-        } as unknown as ReturnType<typeof createMutation>);
-
         const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'new-col' });
         await deleteAnnotation('ann-1', 'object_detection', 'col-1');
 
@@ -78,5 +65,29 @@ describe('useDeleteAnnotation', () => {
             collection_id: 'col-1',
             annotation_type: 'object_detection'
         });
+    });
+
+    it('calls mutateAsync with only the variables and runs refetch and tracking once', async () => {
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
+        await deleteAnnotation('ann-1', 'classification');
+
+        expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+        expect(mockMutateAsync.mock.calls[0]).toEqual([
+            { path: { collection_id: 'col-1', annotation_id: 'ann-1' } }
+        ]);
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledTimes(1);
+        expect(trackEvent).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects with the same error and does not refetch when mutateAsync rejects', async () => {
+        const error = new Error('boom');
+        mockMutateAsync.mockRejectedValue(error);
+
+        const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => 'col-1' });
+
+        await expect(deleteAnnotation('ann-1', 'classification')).rejects.toBe(error);
+        expect(invalidateAnnotationGridQueries).not.toHaveBeenCalled();
+        expect(invalidateQueries).not.toHaveBeenCalled();
+        expect(trackEvent).not.toHaveBeenCalled();
     });
 });

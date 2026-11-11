@@ -38,6 +38,24 @@ describe('retained sensor geometries', () => {
         expect(disposeFirst).toHaveBeenCalledOnce();
     });
 
+    it('colors each segment from the provided camera-rgb colors', () => {
+        const buffers = createPointCloudFrameBuffers();
+        const cameraColors = new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0]);
+        const result = buffers.update(
+            createSegmentedPointBatch([frame(0), frame(2)]),
+            'camera-rgb',
+            undefined,
+            cameraColors
+        );
+        expect(Array.from(result.geometries[0].getAttribute('color').array)).toEqual([
+            1, 0, 0, 0, 1, 0
+        ]);
+        expect(Array.from(result.geometries[1].getAttribute('color').array)).toEqual([
+            0, 0, 1, 1, 1, 0
+        ]);
+        buffers.dispose();
+    });
+
     it('recolors retained frames when the window-wide intensity range changes', () => {
         const buffers = createPointCloudFrameBuffers();
         const retained = frame(0);

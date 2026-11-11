@@ -5,6 +5,7 @@
     import type { OrthographicCamera, PerspectiveCamera, Plane } from 'three';
     import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
     import type { ColorMode } from '../pointCloudUtils';
+    import type { CuboidGeometry } from '../getPointCloudFrameColors';
     import type { PointBatch } from '../types';
     import type {
         CuboidAnnotation,
@@ -12,12 +13,14 @@
     } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { SceneViewState } from '../sceneViewState';
     import { usePointCloudCamera } from './usePointCloudCamera/usePointCloudCamera.svelte';
+    import { getCameraRgbColors } from '$lib/components/PointCloudLabelingWorkspace/useCameraRgbColors';
     interface Props {
         batch: PointBatch;
         clippingPlanes?: Plane[];
         colorMode: ColorMode;
         pointSize: number;
         intensityRange?: [number, number];
+        highlightCuboid?: CuboidGeometry;
         fitKey?: string;
         camera?: PerspectiveCamera | OrthographicCamera;
         controls?: OrbitControls;
@@ -34,6 +37,7 @@
         colorMode,
         pointSize,
         intensityRange,
+        highlightCuboid,
         fitKey = '',
         camera,
         controls,
@@ -61,13 +65,17 @@
         viewState,
         onViewStateChange
     }));
+    const getCameraColors = getCameraRgbColors();
+    // Rebuild frame geometries and colors when batch, colorMode, intensityRange, or camera RGB change.
     $effect(() => {
         const currentBatch = batch;
         const mode = colorMode;
         const range = intensityRange;
+        const selectedCuboid = highlightCuboid;
+        const cameraColors = mode === 'camera-rgb' ? (getCameraColors() ?? undefined) : undefined;
         if (!currentBatch.segments) void currentBatch.colors;
         untrack(() => {
-            prepared = frameBuffers.update(currentBatch, mode, range);
+            prepared = frameBuffers.update(currentBatch, mode, range, cameraColors, selectedCuboid);
             invalidate();
         });
     });

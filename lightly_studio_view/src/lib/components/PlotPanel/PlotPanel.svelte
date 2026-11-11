@@ -1,8 +1,10 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/utils';
     import { untrack } from 'svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
+    import PlotSelectionChip from './PlotSelectionChip/PlotSelectionChip.svelte';
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
@@ -29,6 +31,7 @@
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import {
         clearPlotSelectionCount,
+        getPlotSelectionCount,
         setPlotSelectionCount
     } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useArrowData } from './useArrowData/useArrowData';
@@ -44,6 +47,7 @@
         NO_CATEGORY_LABEL
     } from './plotCategories';
     import { page } from '$app/state';
+    import { cn } from '$lib/utils';
     import { isAnnotationsRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
     import { useMcapSequenceFilters } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
@@ -51,7 +55,7 @@
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable, get } from 'svelte/store';
+    import { writable, get, readable } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
 
     let { collectionId }: { collectionId: string } = $props();
@@ -75,6 +79,10 @@
     const isSequences = $derived(isPointCloudsRoute(page.route?.id ?? null));
     // Everything that isn't videos, annotations or sequences is the images grid.
     const isImages = $derived(!isVideos && !isAnnotations && !isSequences);
+    const itemLabel = $derived(
+        isAnnotations ? 'annotation' : isVideos ? 'video' : isSequences ? 'sequence' : 'image'
+    );
+    const plotSelectionCount = $derived(getPlotSelectionCount(readable(collectionId)));
 
     // Use appropriate filter hook based on route
     const imageFilters = useImageFilters();
@@ -158,6 +166,7 @@
         plotAxes,
         commitTextAxes
     } = usePlotLayout(untrack(() => collectionId));
+    const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
     const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
 
@@ -503,7 +512,7 @@
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
-            return embeddingsData.error?.message ?? 'Unknown error';
+            return getErrorMessage(embeddingsData.error) ?? 'Unknown error';
         }
         if ($arrowError) {
             return $arrowError;
@@ -578,8 +587,21 @@
                         <PlotAxisLines proxy={overlayProxy} />
                     {/if}
 
-                    {#if $plotLayout === 'text' && $appliedTextAxes}
+                    {#if showAxesLabels && $appliedTextAxes}
                         <PlotAxesLabels axes={$appliedTextAxes} />
+                    {/if}
+
+                    {#if $plotSelectionCount > 0}
+                        <!-- Below the top axis label, which it would overlap on a narrow plot. -->
+                        <div
+                            class={cn('absolute left-2 z-10', showAxesLabels ? 'top-11' : 'top-2')}
+                        >
+                            <PlotSelectionChip
+                                count={$plotSelectionCount}
+                                {itemLabel}
+                                onClear={clearSelection}
+                            />
+                        </div>
                     {/if}
 
                     {#if hoverPreview}

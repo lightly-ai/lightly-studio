@@ -1,9 +1,9 @@
 [project]
 name = "lightly-studio"
-version = "1.2.0"
+version = "1.2.1"
 description = "LightlyStudio is a lightweight, fast, and easy-to-use data exploration tool for data scientists and engineers."
 readme = "USAGE.md"
-requires-python = ">=3.10,<3.15"
+requires-python = ">=3.10,<3.16"
 classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -11,6 +11,7 @@ classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3.15",
     "Operating System :: POSIX :: Linux",
     "Operating System :: MacOS :: MacOS X",
     "Operating System :: Microsoft :: Windows",
@@ -19,14 +20,27 @@ classifiers = [
 dependencies = [
     "alembic>=1.14.0,<2.0",
     "duckdb-engine>=0.15.0,<0.17",
-    "duckdb>=1.2.2,<1.6",
-    # Pandas 3.0 requires Python 3.11 and higher, we have to stay at 2.2 or 2.3.
-    "pandas>=2.2.3,<3.0",
-    "psycopg[binary]>=3.2.4",
+    "duckdb>=1.2.2,<1.6; python_version < '3.11'",
+    "duckdb>=2.0.0,<3.0; python_version >= '3.11'",
+    # Pandas 3 requires Python 3.11+; pandas 3.1 provides Python 3.15 wheels.
+    "pandas>=2.2.3,<3.0; python_version < '3.11'",
+    "pandas>=3.1.0,<4.0; python_version >= '3.11'",
+    "psycopg[binary]>=3.2.4; python_version < '3.15'",
+    "psycopg[binary]>=3.3.6; python_version >= '3.15'",
     "pgvector>=0.4.0,<0.5.0",
-    "fastapi>=0.115.5",
+    "pydantic>=2.12.4; python_version < '3.11'",
+    "pydantic>=2.14.1; python_version >= '3.11'",
+    # NumPy 2.5 requires Python 3.12 and higher.
+    "numpy>=2.2.6; python_version < '3.12'",
+    "numpy>=2.5.4; python_version >= '3.12'",
+    "pillow>=12.3.0; python_version < '3.11'",
+    "pillow>=13.0.0; python_version >= '3.11'",
+    # FastAPI 0.133.0 is the first version that allows starlette 1.x.
+    "fastapi>=0.133.0",
     "fsspec>=2023.1.0",
     "sqlalchemy-utils>=0.41.0",
+    # The floor holds the fixes for the form limit and StaticFiles advisories.
+    "starlette>=1.3.1",
     "sqlmodel>=0.0.22",
     "typing-extensions>=4.12.2",
     "uvicorn>=0.32.1",
@@ -37,19 +51,26 @@ dependencies = [
     "tqdm>=4.65.0",
     "eval-type-backport>=0.2.2",
     "xxhash>=3.5.0",
-    "scikit-learn==1.7.2",
-    "scipy>=1.13.1",
+    "scikit-learn==1.7.2; python_version < '3.11'",
+    "scikit-learn==1.9.1; python_version >= '3.11'",
+    "scipy>=1.13.1; python_version < '3.15'",
+    "scipy>=1.18.1; python_version >= '3.15'",
     "python-multipart>=0.0.20",
     "environs<12.0.0",
     "open-clip-torch>=2.20.0",
-    "torch>=2.6.0",
-    "torchvision>=0.20.0",
+    "torch==2.10.0; python_version < '3.11'",
+    "torch==2.15.0; python_version >= '3.11'",
+    "torchvision==0.25.0; python_version < '3.11'",
+    "torchvision==0.29.2; python_version >= '3.11'",
     # Mundig releases are published to PyPI: https://pypi.org/project/lightly-mundig/
     # To update, bump the pin below and relock:
     # uv lock --upgrade-package lightly-mundig==$version
     "lightly-mundig==0.1.16",
-    "pyarrow>=17.0.0",
-    "av>=10.0.0",
+    "pyarrow>=17.0.0; python_version < '3.11'",
+    "pyarrow>=26.0.0; python_version >= '3.11'",
+    # PyAV 19 requires Python 3.12 and higher.
+    "av>=10.0.0; python_version < '3.12'",
+    "av>=19.0.2; python_version >= '3.12'",
     "requests>=2.32.3",
     "einops>=0.6.0",
     "opencv-python-headless>=4.11.0.86",
@@ -63,8 +84,8 @@ dependencies = [
     "httpx>=0.27.2",
     # MCAP recordings: the core reader plus the message decoder for the
     # schema encoding we read (CDR/ros2msg).
-    "mcap>=1.2.0,<2.0",
-    "mcap-ros2-support>=0.5.0,<0.6",
+    "mcap>=1.6.0,<2.0",
+    "mcap-ros2-support>=0.6.0,<0.7",
 ]
 
 [tool.uv]
@@ -82,6 +103,8 @@ lightly-studio = "lightly_studio.cli:main"
 
 [project.optional-dependencies]
 cloud-storage = [
+    # The default CA bundle to which custom S3 CA certificates are appended.
+    "certifi>=2026.10.19",
     "s3fs>=2023.1.0",
     "gcsfs>=2023.1.0",
     "adlfs>=2023.1.0",
@@ -93,6 +116,7 @@ fal = [
 [dependency-groups]
 dev = [
     "black>=24.8.0",
+    "cryptography>=42.0.0",
     "httpx>=0.27.2",
     "moto[server]>=5.0.0",
     "pytest-mock>=3.14.0",

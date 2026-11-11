@@ -14,15 +14,24 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_BAD_GATEWAY,
     HTTP_STATUS_BAD_REQUEST,
     HTTP_STATUS_CONFLICT,
+    HTTP_STATUS_FORBIDDEN,
     HTTP_STATUS_INTERNAL_SERVER_ERROR,
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_SERVICE_UNAVAILABLE,
+    HTTP_STATUS_UNAUTHORIZED,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUnavailableError
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
-from lightly_studio.errors import NotFoundError, QueryExprError, UnknownImageSizeError
+from lightly_studio.errors import (
+    ExportError,
+    ForbiddenError,
+    NotFoundError,
+    QueryExprError,
+    UnauthenticatedError,
+    UnknownImageSizeError,
+)
 
 # Set up logger for error handling
 logger = logging.getLogger("lightly_studio.api.exceptions")
@@ -38,7 +47,7 @@ def _report_error(
     tracking.track_exception(exc)
 
 
-def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
+def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
     """Register exception handlers for the FastAPI app."""
 
     @app.exception_handler(IntegrityError)
@@ -138,6 +147,23 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             content={"error": str(_exc) or "Resource not found."},
         )
 
+    # An auth failure is an expected client error, so it is logged but not reported.
+    @app.exception_handler(UnauthenticatedError)
+    async def _unauthenticated_error_handler(
+        request: Request, exc: UnauthenticatedError
+    ) -> JSONResponse:
+        """Handle a request without a valid user identity."""
+        logger.warning(f"Unauthenticated request to {request.url.path}: {exc}")
+        return JSONResponse(
+            status_code=HTTP_STATUS_UNAUTHORIZED,
+            content={"error": "The request has no valid user identity."},
+        )
+
+    @app.exception_handler(ForbiddenError)
+    async def _forbidden_error_handler(_request: Request, _exc: ForbiddenError) -> JSONResponse:
+        """Handle a user without the required role."""
+        return JSONResponse(status_code=HTTP_STATUS_FORBIDDEN, content={"error": str(_exc)})
+
     @app.exception_handler(UnknownImageSizeError)
     async def _unknown_image_size_error_handler(
         _request: Request, _exc: UnknownImageSizeError
@@ -159,6 +185,15 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901
             status_code=HTTP_STATUS_BAD_REQUEST,
             content={"error": str(_exc) or "Invalid query expression."},
         )
+
+    @app.exception_handler(ExportError)
+    async def _export_error_handler(_request: Request, _exc: ExportError) -> JSONResponse:
+        """Handle an export that cannot be written."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_BAD_REQUEST,
+        )
+        return JSONResponse(status_code=HTTP_STATUS_BAD_REQUEST, content={"error": str(_exc)})
 
     @app.exception_handler(QueryEmbedderError)
     async def _query_embedder_error_handler(

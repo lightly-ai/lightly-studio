@@ -1,9 +1,11 @@
 <script lang="ts">
     import { useAnnotationLabels } from '$lib/hooks';
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
+    import { LabelNotFound } from '$lib/components/LabelNotFound';
     import { SelectList } from '$lib/components/SelectList';
     import { getSelectionItems } from '$lib/components/SelectList/getSelectionItems';
     import type { ListItem } from '$lib/components/SelectList/types';
-    import { cn } from '$lib/utils';
+    import { cn, trackClassCreatedInPicker } from '$lib/utils';
 
     interface Props {
         collectionId: string;
@@ -21,6 +23,7 @@
         className = ''
     }: Props = $props();
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const items = $derived(getSelectionItems(annotationLabels.data ?? []));
     const selectedItem = $derived.by((): ListItem | undefined => {
         if (value == null) return undefined;
@@ -29,6 +32,8 @@
 </script>
 
 <SelectList
+    onCreate={trackClassCreatedInPicker}
+    allowCreate={canCreateClass}
     {items}
     {selectedItem}
     name="annotation-class"
@@ -38,4 +43,8 @@
     contentClassName="w-full"
     isLoading={annotationLabels.isLoading}
     onSelect={(item) => onChange(item.value)}
-/>
+>
+    {#snippet notFound({ inputValue })}
+        <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
+    {/snippet}
+</SelectList>

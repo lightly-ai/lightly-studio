@@ -36,10 +36,13 @@
                     annotationClasses={data.annotationClasses}
                     annotationSources={data.annotationSources}
                     bind:selectedCuboidId={editing.selectedCuboidId}
+                    sequence={workspace.sequenceSample}
+                    onSequenceTagsChange={workspace.refetchSequenceSample}
                     tick={data.tick}
                     onTagsChange={() => void workspace.tickDetails.refetch()}
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
+                    onLabelChange={editing.handleLabelChange}
                     onDeleteCuboid={presentation.isEditingMode
                         ? editing.handleDeleteCuboid
                         : undefined}

@@ -36,7 +36,7 @@ reference.
 This tutorial uses the 320 px variant, where each image has a shortest side of 320 pixels.
 
 Install LightlyStudio in your Python environment. LightlyStudio works on Windows, Linux,
-and macOS with **Python 3.10 to 3.14**.
+and macOS with **Python 3.10 to 3.15**.
 
 ```bash
 pip install lightly-studio
@@ -206,7 +206,7 @@ also select with these shortcuts:
 | Shift + Cmd + drag (Ctrl on Windows) | Freehand lasso selection. |
 
 Draw around a small group. On release, the image grid scopes to the samples in that
-region, and an **Embedding Plot Filter** entry appears in the sidebar with the count.
+region, and a **Plot Filter** entry appears in the sidebar with the count.
 
 A lasso scopes the grid. It does not create annotations, and the plot keeps showing every
 point, highlighting the ones inside your region.

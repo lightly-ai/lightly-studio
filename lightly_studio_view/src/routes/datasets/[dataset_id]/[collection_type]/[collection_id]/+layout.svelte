@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/utils';
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
@@ -25,6 +26,7 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { setAnnotationClasses } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -339,6 +341,8 @@
         collectionId: collectionId ?? ''
     }));
     const annotationLabelsData = $derived(annotationLabelsQuery?.data);
+    // The route param is the root collection ID; classes point to the dataset table.
+    $effect(() => setAnnotationClasses(collection.dataset_id, annotationLabelsData ?? []));
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -347,6 +351,7 @@
         annotationFilterRows,
         selectedAnnotationFilterNames,
         toggleAnnotationFilterSelection,
+        setAnnotationFilterSelection,
         setAnnotationCounts,
         pruneInvalidSelections
     } = useAnnotationsFilter({
@@ -417,6 +422,8 @@
             queryExpr: isAnnotations ? null : plotFilterQueryExpr
         })
     );
+
+    const categoricalCountsFilter = $derived($imageFilterFromHook ?? undefined);
 
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
@@ -605,40 +612,39 @@
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        <h2
+                            class="flex items-center justify-between px-4 py-2 text-lg font-semibold"
                         >
-                            <h2
-                                class="flex items-center justify-between py-2 text-lg font-semibold"
-                            >
-                                <span class="flex items-center space-x-2">
-                                    <Filter class="size-5" />
-                                    <span>Filters</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <ClearAllFiltersButton
-                                        collectionId={metadataCollectionId}
-                                        {isCaptions}
-                                        {isImages}
-                                        {isVideos}
-                                        {isVideoFrames}
+                            <span class="flex items-center space-x-2">
+                                <Filter class="size-5" />
+                                <span>Filters</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <ClearAllFiltersButton
+                                    collectionId={metadataCollectionId}
+                                    {isCaptions}
+                                    {isImages}
+                                    {isVideos}
+                                    {isVideoFrames}
+                                />
+                                <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                    <Button
+                                        variant="ghost"
+                                        icon={PanelLeftClose}
+                                        ariaLabel="Hide filters"
+                                        buttonProps={{
+                                            onclick: toggleFilterPanelCollapsed,
+                                            'aria-expanded': true,
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
+                                        }}
                                     />
-                                    <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                        <Button
-                                            variant="ghost"
-                                            icon={PanelLeftClose}
-                                            ariaLabel="Hide filters"
-                                            buttonProps={{
-                                                onclick: toggleFilterPanelCollapsed,
-                                                'aria-expanded': true,
-                                                'data-testid': 'filter-panel-collapse',
-                                                class: 'size-6 p-0'
-                                            }}
-                                        />
-                                    </Tooltip>
-                                </span>
-                            </h2>
-
+                                </Tooltip>
+                            </span>
+                        </h2>
+                        <div
+                            class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        >
                             {#if isImages}
                                 <QueryControl
                                     onOpen={() => {
@@ -676,6 +682,8 @@
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>
                                         toggleAnnotationFilterSelection(label, collectionId)}
+                                    onSelectionChange={(labels) =>
+                                        setAnnotationFilterSelection(labels, collectionId)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
                                 />
                             {/if}
@@ -695,7 +703,7 @@
                                         isImageCollection={isImages || isCaptions}
                                         categoricalFilter={isCaptions
                                             ? undefined
-                                            : imageAnnotationCountsFilter}
+                                            : categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesClear={clearCategoricalValues}
@@ -778,7 +786,7 @@
                                         onClose={() => setActivePanel('none')}
                                         {evaluationRuns}
                                         isLoading={evaluationRunsQuery.isLoading}
-                                        error={evaluationRunsQuery.error?.message}
+                                        error={getErrorMessage(evaluationRunsQuery.error)}
                                         datasetId={collection.dataset_id}
                                         {collectionId}
                                     />

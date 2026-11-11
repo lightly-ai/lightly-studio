@@ -173,6 +173,7 @@ vi.mock('$lib/hooks', async () => ({
     useNumericMetadataDistribution: vi.fn(() => ({
         data: { score: { binEdges: [0, 1], counts: [1] } }
     })),
+    useImageFieldDistribution: vi.fn(() => ({ data: undefined, isFetching: false })),
     useCategoricalMetadataDistribution: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -183,6 +184,7 @@ vi.mock('$lib/hooks', async () => ({
     useFeatureFlags: vi.fn(() => ({ featureFlags: writable([]), ready: Promise.resolve() })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
+    setAnnotationClasses: vi.fn(),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
         data: undefined,
         isFetching: false,

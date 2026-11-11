@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
     clearSmartSelect: vi.fn(),
     clearInstances: vi.fn(),
     getSmartSelectParams: undefined as unknown as () => Record<string, unknown>,
-    getInstancesParams: undefined as unknown as () => Record<string, unknown>
+    getInstancesParams: undefined as unknown as () => Record<string, unknown>,
+    stickyClass: { current: 'person' as string | undefined }
 }));
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
@@ -20,8 +21,12 @@ vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => (
         setStatus: (status: string) => (mocks.context.status = status)
     })
 }));
+// The selected annotation's class, which new annotations must not take.
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => ({ context: { annotationLabel: 'person' } })
+    useAnnotationLabelContext: () => ({ context: { annotationLabel: 'dog' } })
+}));
+vi.mock('$lib/hooks/useStickyClass/useStickyClassName.svelte', () => ({
+    useStickyClassName: () => mocks.stickyClass
 }));
 vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => mocks.status
@@ -47,6 +52,8 @@ let cleanup = () => {};
 const setup = (initialStatus = 'smart-select') => {
     const context = $state<typeof mocks.context>({ status: initialStatus, panFrom: undefined });
     const status = $state<typeof mocks.status>({ disabledReason: null });
+    const stickyClass = $state<typeof mocks.stickyClass>({ current: 'person' });
+    mocks.stickyClass = stickyClass;
     mocks.context = context;
     mocks.status = status;
     mocks.isEditingMode = writable(true);
@@ -119,13 +126,33 @@ describe('useAssistedLabelingTools', () => {
         expect(mocks.clearInstances).toHaveBeenCalledOnce();
     });
 
-    it('passes the tool settings and falls back to the annotation label as class', () => {
+    it('resets the inputs after saving and keeps find all instances active', () => {
+        const { tools } = setup('find-instances');
+        tools.state.instancesPrompt = 'cars';
+        tools.state.isDrawingInstancesBox = true;
+
+        const onSaved = mocks.getInstancesParams().onSaved as () => void;
+        onSaved();
+
+        expect(tools.state.instancesPrompt).toBe('');
+        expect(tools.state.isDrawingInstancesBox).toBe(false);
+        expect(mocks.clearInstances).toHaveBeenCalledOnce();
+        expect(tools.activeTool).toBe('find-instances');
+    });
+
+    it('passes the tool settings and falls back to the sticky class as class', () => {
         const { tools } = setup();
         expect(mocks.getSmartSelectParams()).toMatchObject({
             sampleId: 'sample-1',
             annotationClass: 'person'
         });
         expect(mocks.getInstancesParams()).toMatchObject({ annotationClass: 'person' });
+
+        // A class picked elsewhere, for example on the canvas chip, is the new default.
+        mocks.stickyClass.current = 'deer';
+        flushSync();
+        expect(tools.smartSelectClass).toBe('deer');
+        expect(tools.instancesClass).toBe('deer');
 
         tools.state.smartSelectClass = 'car';
         tools.state.instancesClass = 'bus';

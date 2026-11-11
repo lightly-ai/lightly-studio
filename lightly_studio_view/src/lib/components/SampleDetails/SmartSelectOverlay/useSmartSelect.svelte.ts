@@ -128,6 +128,9 @@ export const useSmartSelect = (getParams: () => UseSmartSelectParams) => {
         get canSave() {
             return preview !== null && !isSaving;
         },
+        get isSaving() {
+            return isSaving;
+        },
         get isPending() {
             return mutation.isPending;
         },

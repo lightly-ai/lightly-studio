@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSuperpixelMaskEditor } from '@lightly-ai/slic';
+import { createSuperpixelMaskEditor, toSegmentation } from '@lightly-ai/slic';
 import { createSlicMaskEditor } from './createSlicMaskEditor';
 
 const segmentation = {
@@ -14,6 +14,39 @@ const segmentation = {
 };
 
 describe('createSlicMaskEditor', () => {
+    it.each([false, true])('covers cell corners in reverse: %s', (reverse) => {
+        const editor = createSlicMaskEditor({
+            segmentation: toSegmentation(new Int32Array([0, 1, 0, 0, 0, 0, 0, 0, 0]), 3, 3),
+            width: 3,
+            height: 3
+        });
+        const points = [
+            { x: 0.1, y: 0.1 },
+            { x: 2.1, y: 2.08 }
+        ];
+        if (reverse) points.reverse();
+        editor.beginStroke(points[0]);
+        editor.extendStroke(points[1]);
+        expect(editor.commitStroke()).toEqual(new Uint8Array(9).fill(1));
+    });
+
+    it.each([
+        [133, 1080],
+        [140, 1440]
+    ])('maps %s columns to %s without spill or skipped pixels', (source, width) => {
+        const labels = Int32Array.from({ length: source * 2 }, (_, i) => i);
+        const editor = createSlicMaskEditor({
+            segmentation: toSegmentation(labels, source, 2),
+            width,
+            height: 2
+        });
+        for (let x = 0; x < width; x++) {
+            const preview = editor.beginStroke({ x, y: 0 });
+            expect(preview.mask[x]).toBe(1);
+            expect(preview.mask.subarray(width).some(Boolean)).toBe(false);
+        }
+    });
+
     it('starts with an empty mask and adds a superpixel', () => {
         const editor = createSlicMaskEditor({ segmentation, width: 2, height: 1 });
         expect(editor.getMask()).toEqual(new Uint8Array([0, 0]));

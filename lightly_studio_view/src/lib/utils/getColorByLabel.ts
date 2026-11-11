@@ -39,6 +39,15 @@ const fnv1aHash = (value: string) => {
     return hash >>> 0; // coerce to unsigned 32-bit
 };
 
+export const getDefaultColor = (name: string, alpha: number) => {
+    // Hash the name deterministically into the palette so a given name always maps
+    // to the same color across sessions.
+    const index = fnv1aHash(name) % COLOR_PALETTE.length;
+    const [r, g, b] = COLOR_PALETTE[index];
+
+    return getColorPair({ r, g, b }, alpha);
+};
+
 export const getColorByLabel = (label: string, alpha: number = 1) => {
     alpha = Math.max(0, Math.min(alpha, 1));
 
@@ -52,10 +61,14 @@ export const getColorByLabel = (label: string, alpha: number = 1) => {
         }
     }
 
-    // Hash the label deterministically into the palette so a given label always maps
-    // to the same color across sessions.
-    const index = fnv1aHash(label) % COLOR_PALETTE.length;
-    const [r, g, b] = COLOR_PALETTE[index];
-
-    return getColorPair({ r, g, b }, alpha);
+    return getDefaultColor(label, alpha);
 };
+
+/**
+ * The solid color of a label or annotation source, as the side panel shows it: the custom color
+ * when one is set, else the default. Takes the store value so callers stay reactive.
+ */
+export const getLabelColor = (
+    customColors: Record<string, { color: string } | undefined>,
+    label: string
+): string => customColors[label]?.color ?? getColorByLabel(label, 1).color;

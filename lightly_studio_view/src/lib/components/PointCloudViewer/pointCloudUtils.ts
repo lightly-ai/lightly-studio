@@ -10,7 +10,8 @@ export type ColorMode =
     | 'density'
     | 'height-distance'
     | 'height-density'
-    | 'rgb';
+    | 'rgb'
+    | 'camera-rgb';
 
 /** Neutral gray used as a fallback color for points without explicit data. */
 const NEUTRAL_GRAY = 0.5;
@@ -47,13 +48,13 @@ interface BuildColorBufferParams {
 export function buildColorBuffer(params: BuildColorBufferParams): void {
     const { colorMode, colors, count, pointColors } = params;
 
-    if (colorMode === 'rgb' && pointColors) {
+    if ((colorMode === 'rgb' || colorMode === 'camera-rgb') && pointColors) {
         colors.set(pointColors.subarray(0, count * 3), 0);
         colors.fill(NEUTRAL_GRAY, Math.min(pointColors.length, count * 3), count * 3);
         return;
     }
 
-    if (colorMode === 'none' || colorMode === 'rgb') {
+    if (colorMode === 'none' || colorMode === 'rgb' || colorMode === 'camera-rgb') {
         colors.fill(NEUTRAL_GRAY, 0, count * 3);
         return;
     }

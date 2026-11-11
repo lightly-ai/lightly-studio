@@ -73,3 +73,23 @@ describe('getFieldHover', () => {
         expect(getFieldHover(model as never, { lineNumber: 1, column: 2 } as never)).toBeNull();
     });
 });
+
+it.each([
+    ['tp', 'True positive metric in the selected run.'],
+    ['fp', 'False positive metric in the selected run.'],
+    ['fn', 'False negative metric in the selected run.'],
+    ['disagreement', 'Classification disagreement score in the selected run.'],
+    ['miou', 'Mean intersection over union for semantic segmentation in the selected run.']
+])('documents quoted evaluation metric %s inside nested criteria', async (name, description) => {
+    const { getFieldHover } = await import('./getFieldHover');
+    const text = `sample_evaluation(name = "run1" AND ("${name}" > 0))`;
+    const startColumn = text.indexOf(`"${name}"`) + 2;
+    const model = makeSyntaxDocModel({
+        text,
+        wordAtPosition: { word: name, startColumn, endColumn: startColumn + name.length },
+        includeGetValue: true,
+        includeGetOffsetAt: true
+    });
+    const hover = getFieldHover(model as never, { lineNumber: 1, column: startColumn } as never);
+    expect(hover?.contents).toContainEqual({ value: description });
+});

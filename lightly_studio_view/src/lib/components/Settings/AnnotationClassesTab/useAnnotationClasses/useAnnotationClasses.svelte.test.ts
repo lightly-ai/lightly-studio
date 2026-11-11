@@ -6,9 +6,11 @@ const mocks = vi.hoisted(() => ({
     mutateAsync: vi.fn(),
     invalidateQueries: vi.fn(),
     createQuery: vi.fn(),
-    getCustomColor: vi.fn(),
-    setCustomColor: vi.fn(),
-    deleteCustomColor: vi.fn()
+    renameLastAnnotationLabel: vi.fn(),
+    removeLastAnnotationLabel: vi.fn(),
+    renameRecentClass: vi.fn(),
+    removeRecentClass: vi.fn(),
+    fetchQuery: vi.fn()
 }));
 
 type MutationOptions = { onSettled?: () => unknown };
@@ -30,13 +32,21 @@ vi.mock('@tanstack/svelte-query', () => ({
         mocks.createQuery(getOptions());
         return {};
     },
-    useQueryClient: () => ({ invalidateQueries: mocks.invalidateQueries })
+    useQueryClient: () => ({
+        invalidateQueries: mocks.invalidateQueries,
+        fetchQuery: mocks.fetchQuery
+    })
 }));
-vi.mock('$lib/hooks/useCustomLabelColors', () => ({
-    useCustomLabelColors: () => ({
-        getCustomColor: mocks.getCustomColor,
-        setCustomColor: mocks.setCustomColor,
-        deleteCustomColor: mocks.deleteCustomColor
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => ({
+        renameLastAnnotationLabel: mocks.renameLastAnnotationLabel,
+        removeLastAnnotationLabel: mocks.removeLastAnnotationLabel
+    })
+}));
+vi.mock('$lib/hooks/useRecentClasses/useRecentClasses', () => ({
+    useRecentClasses: () => ({
+        renameRecentClass: mocks.renameRecentClass,
+        removeRecentClass: mocks.removeRecentClass
     })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
@@ -56,39 +66,16 @@ describe('useAnnotationClasses', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mocks.mutateAsync.mockResolvedValue({});
+        mocks.fetchQuery.mockResolvedValue([{ collection_id: 'collection-1' }]);
     });
 
     afterEach(() => cleanup());
 
-    it('renameClass moves the custom color to the new name', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
-        const classes = setup();
-
-        await classes.renameClass('label-1', 'cat', 'kitty');
-
-        expect(mocks.setCustomColor).toHaveBeenCalledWith('kitty', '#ff0000', 0.5);
-        expect(mocks.deleteCustomColor).toHaveBeenCalledWith('cat');
-    });
-
-    it('renameClass keeps the custom color when the name is unchanged', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
-        const classes = setup();
-
-        await classes.renameClass('label-1', 'cat', 'cat');
-
-        expect(mocks.setCustomColor).not.toHaveBeenCalled();
-        expect(mocks.deleteCustomColor).not.toHaveBeenCalled();
-    });
-
-    it('renameClass keeps colors when the rename fails', async () => {
-        mocks.getCustomColor.mockReturnValue({ color: '#ff0000', alpha: 0.5 });
+    it('renameClass rejects when the rename fails', async () => {
         mocks.mutateAsync.mockRejectedValue(new Error('boom'));
         const classes = setup();
 
         await expect(classes.renameClass('label-1', 'cat', 'kitty')).rejects.toThrow('boom');
-
-        expect(mocks.setCustomColor).not.toHaveBeenCalled();
-        expect(mocks.deleteCustomColor).not.toHaveBeenCalled();
     });
 
     it('query is disabled without a collection', () => {
@@ -116,8 +103,85 @@ describe('useAnnotationClasses', () => {
     it('deleteClass refreshes all queries', async () => {
         const classes = setup();
 
-        await classes.deleteClass('label-1');
+        await classes.deleteClass('label-1', 'cat');
 
         expect(mocks.invalidateQueries).toHaveBeenCalledWith();
+    });
+
+    it('renameClass renames the sticky class and the recent classes', async () => {
+        const classes = setup();
+
+        await classes.renameClass('label-1', 'cat', 'kitty');
+
+        expect(mocks.renameLastAnnotationLabel).toHaveBeenCalledWith(
+            'collection-1',
+            'cat',
+            'kitty'
+        );
+        expect(mocks.renameRecentClass).toHaveBeenCalledWith('collection-1', 'cat', 'kitty');
+    });
+
+    it('renames and forgets the class in every collection of the dataset', async () => {
+        mocks.fetchQuery.mockResolvedValue([
+            { collection_id: 'dataset-1' },
+            { collection_id: 'collection-1' }
+        ]);
+        const classes = setup();
+
+        await classes.renameClass('label-1', 'cat', 'kitty');
+        await classes.deleteClass('label-2', 'dog');
+
+        for (const collectionId of ['collection-1', 'dataset-1']) {
+            expect(mocks.renameLastAnnotationLabel).toHaveBeenCalledWith(
+                collectionId,
+                'cat',
+                'kitty'
+            );
+            expect(mocks.renameRecentClass).toHaveBeenCalledWith(collectionId, 'cat', 'kitty');
+            expect(mocks.removeLastAnnotationLabel).toHaveBeenCalledWith(collectionId, 'dog');
+            expect(mocks.removeRecentClass).toHaveBeenCalledWith(collectionId, 'dog');
+        }
+    });
+
+    it('renames the class in the current collection when the hierarchy does not load', async () => {
+        mocks.fetchQuery.mockRejectedValue(new Error('offline'));
+        const classes = setup();
+
+        await classes.renameClass('label-1', 'cat', 'kitty');
+
+        expect(mocks.renameRecentClass).toHaveBeenCalledExactlyOnceWith(
+            'collection-1',
+            'cat',
+            'kitty'
+        );
+    });
+
+    it('renameClass keeps the sticky class when the rename fails', async () => {
+        mocks.mutateAsync.mockRejectedValue(new Error('boom'));
+        const classes = setup();
+
+        await expect(classes.renameClass('label-1', 'cat', 'kitty')).rejects.toThrow('boom');
+
+        expect(mocks.renameLastAnnotationLabel).not.toHaveBeenCalled();
+        expect(mocks.renameRecentClass).not.toHaveBeenCalled();
+    });
+
+    it('deleteClass forgets the class as sticky and recent class', async () => {
+        const classes = setup();
+
+        await classes.deleteClass('label-1', 'cat');
+
+        expect(mocks.removeLastAnnotationLabel).toHaveBeenCalledWith('collection-1', 'cat');
+        expect(mocks.removeRecentClass).toHaveBeenCalledWith('collection-1', 'cat');
+    });
+
+    it('deleteClass keeps the sticky class when the delete fails', async () => {
+        mocks.mutateAsync.mockRejectedValue(new Error('boom'));
+        const classes = setup();
+
+        await expect(classes.deleteClass('label-1', 'cat')).rejects.toThrow('boom');
+
+        expect(mocks.removeLastAnnotationLabel).not.toHaveBeenCalled();
+        expect(mocks.removeRecentClass).not.toHaveBeenCalled();
     });
 });

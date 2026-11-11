@@ -2,16 +2,32 @@ import { getTickDetailsQueryKey } from '$lib/api/lightly_studio_local/@tanstack/
 import { getTickDetails } from '$lib/api/lightly_studio_local/sdk.gen';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 
-interface TickDetailsOptionsParams {
+interface TickDetailsSequenceParams {
     /** Dataset that owns the sequence. */
     datasetId: string;
     /** Sequence whose tick details should be fetched. */
     sequenceId: string;
+}
+
+interface TickDetailsOptionsParams extends TickDetailsSequenceParams {
     /** Zero-based tick position in the sequence. */
     seqNumber: number;
     /** Optional target frame for transforming annotations. */
     displayFrameId?: string;
 }
+
+/**
+ * A partial query key that matches all tick-details queries for the given dataset and
+ * sequence, regardless of tick number or display frame. Use with
+ * `queryClient.invalidateQueries` after a mutation that affects annotations across all
+ * ticks in a sequence (e.g. re-labeling an object track).
+ */
+export const getTickDetailsSequenceQueryKey = ({
+    datasetId,
+    sequenceId
+}: TickDetailsSequenceParams) => [
+    { _id: 'getTickDetails', path: { dataset_id: datasetId, sequence_id: sequenceId } }
+];
 
 /** Builds the tick-details query used by both the visible workspace and prefetching. */
 export const getTickDetailsOptions = ({

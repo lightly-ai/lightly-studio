@@ -47,7 +47,7 @@ FLOCI_GCP_ENV := STORAGE_EMULATOR_HOST=http://localhost:$(FLOCI_GCP_PORT)
 
 # Installs the uv version that `required-version` in pyproject.toml pins, so a local
 # `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
-UV_VERSION := 0.12.6
+UV_VERSION := 0.13.6
 
 .PHONY: install-uv
 install-uv:
@@ -430,6 +430,11 @@ demo-mcap-urls:
 
 .PHONY: test
 test: build
+	$(MAKE) test-without-build
+
+# Runs the tests with the current build. CI builds in its own step, to time it separately.
+.PHONY: test-without-build
+test-without-build:
 	@echo "Running tests..."
 	PYTHONPATH=$(PWD) uv run pytest -n auto
 
@@ -450,6 +455,10 @@ test-coverage:
 
 .PHONY: test-postgres
 test-postgres: build
+	$(MAKE) test-postgres-without-build
+
+.PHONY: test-postgres-without-build
+test-postgres-without-build:
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres -n 3
 
