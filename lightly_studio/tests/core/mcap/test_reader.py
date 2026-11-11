@@ -114,6 +114,40 @@ class TestMcapFileReader:
         ]
         assert all(locator.keyframe_log_time_ns is None for locator in lidar_locators)
 
+    def test_get_frame_locators__image_is_its_own_keyframe(self, tmp_path: Path) -> None:
+        path = helpers.write_mcap_with_images(
+            tmp_path / "images.mcap",
+            frames=[
+                (1_000_000_000, helpers.encoded_image(gray_level=0)),
+                (1_100_000_000, helpers.encoded_image(gray_level=255)),
+            ],
+        )
+
+        with McapFileReader(path) as reader:
+            reader.load_data_for_topics([helpers.CAMERA_IMAGE_TOPIC])
+            locators = reader.get_frame_locators(helpers.CAMERA_IMAGE_TOPIC)
+
+        assert [locator.log_time_ns for locator in locators] == [1_000_000_000, 1_100_000_000]
+        assert [locator.keyframe_log_time_ns for locator in locators] == [
+            1_000_000_000,
+            1_100_000_000,
+        ]
+        assert [locator.capture_timestamp_ns for locator in locators] == [
+            1_000_000_000,
+            1_100_000_000,
+        ]
+
+    def test_get_topic(self, reader: McapFileReader) -> None:
+        video_topic = next(
+            topic for topic in reader.get_topics() if topic.name == helpers.CAMERA_VIDEO_TOPIC
+        )
+
+        assert reader.get_topic(channel_id=video_topic.channel_id) == video_topic
+
+    def test_get_topic__unknown_channel(self, reader: McapFileReader) -> None:
+        with pytest.raises(ChannelNotFoundError):
+            reader.get_topic(channel_id=999)
+
     def test_get_frame_locators__capture_timestamp_differs_from_log_time(
         self, tmp_path: Path
     ) -> None:

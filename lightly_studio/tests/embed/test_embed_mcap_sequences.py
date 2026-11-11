@@ -8,7 +8,7 @@ import pytest
 from PIL import Image
 from pytest_mock import MockerFixture
 
-from lightly_studio.core.mcap import add_mcaps, compressed_video
+from lightly_studio.core.mcap import add_mcaps, compressed_image, compressed_video
 from lightly_studio.core.mcap.component import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.database import db_manager
@@ -29,6 +29,12 @@ VIDEO_SPEC = McapComponentSpec(
     mcap_data_type=McapDataType.VIDEO_FRAME,
     topic=helpers.CAMERA_VIDEO_TOPIC,
     camera_info_topic=helpers.CAMERA_INFO_TOPIC,
+)
+IMAGE_COMPONENT = "front_image"
+IMAGE_SPEC = McapComponentSpec(
+    name=IMAGE_COMPONENT,
+    mcap_data_type=McapDataType.VIDEO_FRAME,
+    topic=helpers.CAMERA_IMAGE_TOPIC,
 )
 POINT_CLOUD_SPEC = McapComponentSpec(
     name=POINT_CLOUD_COMPONENT,
@@ -69,6 +75,49 @@ def test_embed_mcap_sequences(
 
     # The recording has 2 keyframes, fewer than 8, so both are decoded.
     assert to_image.call_count == len(helpers.VIDEO_KEYFRAME_LOG_TIMES_NS)
+    model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session, collection_id=dataset.collection_id
+    )
+    assert model_id is not None
+    rows = sample_embedding_resolver.get_by_sample_ids(
+        session=session, sample_ids=[sequence_sample_id], embedding_model_id=model_id
+    )
+    assert [row.sample_id for row in rows] == [sequence_sample_id]
+
+
+def test_embed_mcap_sequences__compressed_image_camera(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+    mocker: MockerFixture,
+) -> None:
+    components = [IMAGE_SPEC]
+    dataset = McapDataset.create(components=components, name="perception")
+    # Every image is a keyframe and a tick.
+    image_log_times_ns = (1_000_000_000, 1_100_000_000, 1_200_000_000)
+    mcap_path = helpers.write_mcap_with_images(
+        tmp_path / "images.mcap",
+        frames=[
+            (log_time_ns, helpers.encoded_image(gray_level=128))
+            for log_time_ns in image_log_times_ns
+        ],
+    )
+    sequence_sample_id = add_mcaps.index_recording(
+        dataset=dataset,
+        mcap_path=str(mcap_path),
+        sync_component=IMAGE_COMPONENT,
+        components=components,
+    )
+    to_image = mocker.spy(compressed_image, "to_image")
+    session = db_manager.persistent_session()
+
+    embed_mcap_sequences.embed_mcap_sequences(
+        session=session,
+        collection_id=dataset.collection_id,
+        sequence_sample_ids=[sequence_sample_id],
+        frames_per_sequence=8,
+    )
+
+    assert to_image.call_count == len(image_log_times_ns)
     model_id = collection_embedding_model_resolver.get_default_by_collection_id(
         session=session, collection_id=dataset.collection_id
     )

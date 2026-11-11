@@ -137,11 +137,9 @@ class McapFileReader:
             McapAccessError: If the file has messages but no chunk index to locate them.
         """
         unique_topics = list(dict.fromkeys(topics))
-        video_topics = {
-            topic
-            for topic in unique_topics
-            if self._topic_index.require_topic_info(topic).kind is TopicKind.VIDEO
-        }
+        kinds = {topic: self._topic_index.require_topic_info(topic).kind for topic in unique_topics}
+        video_topics = {topic for topic, kind in kinds.items() if kind is TopicKind.VIDEO}
+        image_topics = {topic for topic, kind in kinds.items() if kind is TopicKind.IMAGE}
         self._topic_index.require_chunk_index()
         scan = FrameScanner(
             mcap_reader=self._reader, decoder=self._decoder, path=self.path
@@ -149,6 +147,7 @@ class McapFileReader:
             request=TopicScanRequest(
                 topics=unique_topics,
                 video_topics=video_topics,
+                image_topics=image_topics,
                 start_time_ns=start_time_ns,
                 end_time_ns=end_time_ns,
                 static_transform_topic=static_transform_topic,
@@ -503,6 +502,16 @@ class McapFileReader:
         return session.iter_decoded_messages(
             mcap_reader=self._reader, topics=self._topic_index, path=self.path, topic=topic
         )
+
+    def get_topic(self, channel_id: int) -> TopicInfo:
+        """Returns the topic of a channel.
+
+        Like `get_topics`, only reads the file's summary section.
+
+        Raises:
+            ChannelNotFoundError: If the channel id is not in the file.
+        """
+        return self._topic_index.require_channel_info(channel_id)
 
     def get_topics(self) -> list[TopicInfo]:
         """Returns the topics of the file, ordered by name.
