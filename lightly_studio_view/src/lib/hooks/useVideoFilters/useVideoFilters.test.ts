@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { get } from 'svelte/store';
-import { useVideoFilters } from './useVideoFilters';
+import { buildVideoFilter, useVideoFilters } from './useVideoFilters';
 import { waitFor } from '@testing-library/svelte';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 
@@ -385,5 +385,89 @@ describe('useVideoFilters', () => {
 
             expect(get(videoSortBy)).toBeNull();
         });
+    });
+});
+
+describe('buildVideoFilter output', () => {
+    const REGION = embeddingRegion;
+    const M = { key: 'temp', value: 10, op: '>=' as const };
+
+    it('pins every field', async () => {
+        const { createMetadataFilters } = await import('../useMetadataFilters/useMetadataFilters');
+        vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
+
+        expect(
+            buildVideoFilter({
+                collection_id: 'coll-1',
+                video_bounds: {
+                    width: { min: 1, max: 9 },
+                    height: { min: 2, max: 8 },
+                    fps: { min: 24, max: 60 },
+                    duration_s: { min: 0.5, max: 120 }
+                },
+                filters: {
+                    tag_ids: ['t'],
+                    sample_ids: ['s'],
+                    embedding_region: REGION,
+                    metadata_values: { temp: { min: 10, max: 20 } },
+                    annotation_frames_label_ids: ['l']
+                }
+            })
+        ).toEqual({
+            filter_type: 'video',
+            width: { min: 1, max: 9 },
+            height: { min: 2, max: 8 },
+            fps: { min: 24, max: 60 },
+            duration_s: { min: 0.5, max: 120 },
+            frame_annotation_filter: { filter_type: 'annotations', annotation_label_ids: ['l'] },
+            sample_filter: {
+                tag_ids: ['t'],
+                sample_ids: ['s'],
+                embedding_region: REGION,
+                metadata_filters: [M]
+            }
+        });
+    });
+
+    it('returns only the filter type when nothing is set', () => {
+        expect(buildVideoFilter({ collection_id: 'coll-1', filters: {} })).toEqual({
+            filter_type: 'video'
+        });
+    });
+
+    it('drops empty lists', () => {
+        expect(
+            buildVideoFilter({
+                collection_id: 'coll-1',
+                filters: { tag_ids: [], sample_ids: [], annotation_frames_label_ids: [] }
+            })
+        ).toEqual({ filter_type: 'video' });
+    });
+
+    it('puts frame labels in frame_annotation_filter', () => {
+        expect(
+            buildVideoFilter({
+                collection_id: 'coll-1',
+                filters: { annotation_frames_label_ids: ['l'], tag_ids: ['t'] }
+            })
+        ).toEqual({
+            filter_type: 'video',
+            frame_annotation_filter: { filter_type: 'annotations', annotation_label_ids: ['l'] },
+            sample_filter: { tag_ids: ['t'] }
+        });
+    });
+
+    it('passes categorical-only metadata', async () => {
+        const { createMetadataFilters } = await import('../useMetadataFilters/useMetadataFilters');
+        vi.mocked(createMetadataFilters).mockReturnValueOnce([M]);
+        const C = { color: ['red'] };
+
+        const filter = buildVideoFilter({
+            collection_id: 'coll-1',
+            filters: { categorical_metadata_values: C }
+        });
+
+        expect(createMetadataFilters).toHaveBeenCalledWith({}, C);
+        expect(filter?.sample_filter?.metadata_filters).toEqual([M]);
     });
 });
