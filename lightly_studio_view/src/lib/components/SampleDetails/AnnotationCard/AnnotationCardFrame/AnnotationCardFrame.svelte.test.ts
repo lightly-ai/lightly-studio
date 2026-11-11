@@ -75,10 +75,23 @@ describe('AnnotationCardFrame', () => {
     it('reports a pointer press outside the card only', async () => {
         const onPointerDownOutside = vi.fn();
         renderFrame({}, undefined, { onPointerDownOutside });
+        await waitFor(() => expect(screen.getByTestId('frame')).toBeVisible());
 
         await fireEvent.pointerDown(screen.getByText('body'));
         expect(onPointerDownOutside).not.toHaveBeenCalled();
         await fireEvent.pointerDown(document.body);
         expect(onPointerDownOutside).toHaveBeenCalledOnce();
+    });
+
+    it('ignores a pointer press while hidden, like the click that brings the box back', async () => {
+        const onPointerDownOutside = vi.fn();
+        const { layer, setMatrix } = fakeLayer();
+        renderFrame({}, layer, { onPointerDownOutside });
+        setMatrix({ a: 1, d: 1, e: 2000, f: 0 });
+        await waitFor(() => expect(screen.getByTestId('frame')).not.toBeVisible());
+
+        await fireEvent.pointerDown(document.body);
+
+        expect(onPointerDownOutside).not.toHaveBeenCalled();
     });
 });

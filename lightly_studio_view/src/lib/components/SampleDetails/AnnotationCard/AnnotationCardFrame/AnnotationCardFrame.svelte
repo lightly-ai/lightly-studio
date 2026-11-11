@@ -56,8 +56,9 @@
         if (isVisible && card) untrack(() => onShow?.(card));
     });
 
+    // A hidden card ignores clicks, so a click that brings the box back, like fit zoom, keeps it.
     const handleWindowPointerDown = (event: PointerEvent) => {
-        if (!onPointerDownOutside) return;
+        if (!onPointerDownOutside || !isVisible) return;
         if (event.target instanceof Node && panel?.contains(event.target)) return;
         onPointerDownOutside(event);
     };
