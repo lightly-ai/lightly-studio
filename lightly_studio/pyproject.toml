@@ -158,6 +158,7 @@ exclude = [
     "datasets/",
     "vendor/",
     "scripts/download_coco_subset.py",
+    "scripts/mcap/",
 ]
 plugins = ["pydantic.mypy"]
 # Allows passing an abstract embedder interface, such as `TextEmbedder`, as `type[T]`.
