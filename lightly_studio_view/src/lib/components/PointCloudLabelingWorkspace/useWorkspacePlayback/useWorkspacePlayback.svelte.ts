@@ -1,4 +1,5 @@
 import { fromStore } from 'svelte/store';
+import { untrack } from 'svelte';
 import { useMcapTickPrefetchScheduler } from '$lib/hooks';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { getMcapTickPrefetchRange } from '$lib/hooks/useMcapTickDetailsPrefetch/getMcapTickPrefetchRange';
@@ -19,7 +20,22 @@ export function useWorkspacePlayback(
     const buffering = fromStore(bufferEntireSequence);
     let seekWasPlaying = false;
     let bufferingSeekVersion = $state(0);
-    let selectedBufferingTick = $state<number | undefined>();
+    let bufferingStart = $state<{ scope: string; seqNumber: number }>();
+    const bufferingScope = $derived(
+        `${getOptions().datasetId}/${getOptions().sequenceId}/${getWorkspace().referenceFrameId || 'sensor'}`
+    );
+    const bufferingStartTick = $derived(
+        bufferingStart?.scope === bufferingScope
+            ? bufferingStart.seqNumber
+            : getWorkspace().currentTick
+    );
+    $effect(() => {
+        const scope = bufferingScope;
+        const enabled = buffering.current;
+        untrack(() => {
+            bufferingStart = enabled ? { scope, seqNumber: getWorkspace().currentTick } : undefined;
+        });
+    });
     const tickPrefetch = useMcapTickPrefetchScheduler({
         getDatasetId: () => getOptions().datasetId,
         getSequenceId: () => getOptions().sequenceId,
@@ -29,9 +45,9 @@ export function useWorkspacePlayback(
         // Changing the mode creates a new session, which cancels the old queue. This is important
         // when turning off whole-sequence buffering: its remaining chunks must not continue loading.
         getRequestId: () =>
-            `${getOptions().datasetId}/${getOptions().sequenceId}/playback/${getWorkspace().referenceFrameId || 'sensor'}/${buffering.current ? `entire/${selectedBufferingTick ?? getWorkspace().currentTick}` : `window/${bufferingSeekVersion}`}`,
+            `${getOptions().datasetId}/${getOptions().sequenceId}/playback/${getWorkspace().referenceFrameId || 'sensor'}/${buffering.current ? `entire/${bufferingStartTick}` : `window/${bufferingSeekVersion}`}`,
         getRanges: () => {
-            const activeTick = selectedBufferingTick ?? getWorkspace().currentTick;
+            const activeTick = buffering.current ? bufferingStartTick : getWorkspace().currentTick;
             const activeIndex = getWorkspace().ticks.findIndex(
                 (tick) => tick.seq_number === activeTick
             );
@@ -86,7 +102,7 @@ export function useWorkspacePlayback(
         seekWasPlaying = false;
     };
     const handleSelectTick = (seqNumber: number) => {
-        selectedBufferingTick = seqNumber;
+        if (buffering.current) bufferingStart = { scope: bufferingScope, seqNumber };
         bufferingSeekVersion += 1;
         goToFrame(seqNumber);
     };
