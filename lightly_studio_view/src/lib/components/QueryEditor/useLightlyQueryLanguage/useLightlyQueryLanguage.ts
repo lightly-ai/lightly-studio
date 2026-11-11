@@ -15,6 +15,7 @@ import {
     parseLightlyQuery,
     type QueryExprTranslationResult
 } from '../language/query-expr-translation';
+import { findUnknownTagMarkers } from './findUnknownTagMarkers';
 import { lexerErrorToMarker, type LexerErrorLike } from './lexerErrorToMarker';
 import { parserErrorToMarker, type ParserErrorLike } from './parserErrorToMarker';
 import { getModelQuerySource, modelSampleTypes } from './modelQueryScope';
@@ -47,27 +48,29 @@ export interface UseLightlyQueryLanguageReturn {
      * (`status: 'error'`). Intended for one-off translation outside the editor
      * lifecycle (e.g. on Save). */
     translateQuery: (value: string, sampleType?: 'image' | 'video') => QueryExprTranslationResult;
+    /** Sets the tag names that exist in the collection and re-validates the
+     * attached models. Pass `undefined` while the names are unknown to skip
+     * the tag check. */
+    setTagNames: (names: string[] | undefined) => void;
 }
 
 export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
     const services = getServices();
     const parser = services.LightlyQuery.parser.LangiumParser;
+    const attachedModels = new Set<monaco.editor.ITextModel>();
+    let tagNames: ReadonlySet<string> | undefined;
 
     function validate(model: monaco.editor.ITextModel): void {
         const { text, lineOffset } = getModelQuerySource(model);
         const result = parser.parse<Query>(text);
-        const markers = [
+        const errorMarkers = [
             ...result.lexerErrors.map((e) => lexerErrorToMarker(e as LexerErrorLike)),
             ...result.parserErrors.map((e) => parserErrorToMarker(e as ParserErrorLike))
-        ].map((marker) => ({
-            ...marker,
-            startLineNumber: Math.max(1, marker.startLineNumber - lineOffset),
-            endLineNumber: Math.max(1, marker.endLineNumber - lineOffset)
-        }));
+        ].map((marker) => shiftMarkerLines(marker, lineOffset));
         const scopeError = getQueryScopeError(result.value, modelSampleTypes.get(model));
-        if (markers.length === 0 && scopeError) {
+        if (errorMarkers.length === 0 && scopeError) {
             const start = result.value.$cstNode?.range.start;
-            markers.push(
+            errorMarkers.push(
                 parserErrorToMarker({
                     message: scopeError,
                     token: {
@@ -77,16 +80,24 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
                 })
             );
         }
-        monaco.editor.setModelMarkers(model, MARKER_OWNER, markers);
+        // Tag warnings come after the scope check so that they do not hide a scope error.
+        const tagMarkers = tagNames
+            ? findUnknownTagMarkers({ query: result.value, tagNames }).map((marker) =>
+                  shiftMarkerLines(marker, lineOffset)
+              )
+            : [];
+        monaco.editor.setModelMarkers(model, MARKER_OWNER, [...errorMarkers, ...tagMarkers]);
     }
 
     function attach(model: monaco.editor.ITextModel, sampleType?: 'image' | 'video'): () => void {
         if (sampleType) modelSampleTypes.set(model, sampleType);
+        attachedModels.add(model);
         validate(model);
         const sub = model.onDidChangeContent(() => validate(model));
         return () => {
             sub.dispose();
             modelSampleTypes.delete(model);
+            attachedModels.delete(model);
             monaco.editor.setModelMarkers(model, MARKER_OWNER, []);
         };
     }
@@ -98,5 +109,22 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
         return parseLightlyQuery(parser, value, sampleType);
     }
 
-    return { attach, translateQuery };
+    function setTagNames(names: string[] | undefined): void {
+        tagNames = names && new Set(names);
+        attachedModels.forEach(validate);
+    }
+
+    return { attach, translateQuery, setTagNames };
+}
+
+/** Moves a marker up by the lines of the hidden scope prefix, so it lands on the visible query. */
+function shiftMarkerLines(
+    marker: monaco.editor.IMarkerData,
+    lineOffset: number
+): monaco.editor.IMarkerData {
+    return {
+        ...marker,
+        startLineNumber: Math.max(1, marker.startLineNumber - lineOffset),
+        endLineNumber: Math.max(1, marker.endLineNumber - lineOffset)
+    };
 }

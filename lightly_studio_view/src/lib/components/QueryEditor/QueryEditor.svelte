@@ -14,6 +14,9 @@
         sampleType?: 'image' | 'video';
         height?: string;
         readOnly?: boolean;
+        /** Names of the tags that exist. Unknown tags in the query get a warning.
+         * Leave undefined to skip the check. */
+        tagNames?: string[];
         onSave?: (value: string, parsed: QueryExprTranslationResult) => void;
         /** Extra controls in the footer, before the apply button. Needs `onSave`. */
         footerActions?: Snippet;
@@ -25,6 +28,7 @@
         sampleType,
         height = '320px',
         readOnly = false,
+        tagNames,
         onSave,
         footerActions
     }: QueryEditorProps = $props();
@@ -33,7 +37,9 @@
 
     let containerEl: HTMLDivElement | null = null;
 
-    const { mount, translateQuery } = useQueryEditor();
+    const { mount, translateQuery, setTagNames } = useQueryEditor();
+
+    $effect(() => setTagNames(tagNames));
 
     function formatTranslationErrors(
         result: Extract<QueryExprTranslationResult, { status: 'error' }>
