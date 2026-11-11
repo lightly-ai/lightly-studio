@@ -54,7 +54,7 @@
 </script>
 
 <Segment title="Annotation Classes">
-    <div class="width-full min-w-0 space-y-2">
+    <div class="space-y-2">
         {#if $allSourcesHidden}
             <!-- The rows are empty here because every source is unchecked, not because the
                  dataset has no annotations. Say so, otherwise the message below sends the user

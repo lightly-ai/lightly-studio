@@ -176,9 +176,9 @@ describe('useAnnotationsFilter', () => {
         selectedAnnotationFilterIds.set(new Set(['id-1', 'stale-id']));
         const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
 
-        setAnnotationFilterSelection([]);
+        setAnnotationFilterSelection(['cat']);
 
-        expect(get(selectedAnnotationFilterIds).size).toBe(0);
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
     });
 
     it('setAnnotationFilterSelection tracks each changed label', () => {
