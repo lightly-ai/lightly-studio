@@ -11,6 +11,7 @@
             value: { control: 'text' },
             height: { control: 'text' },
             readOnly: { control: 'boolean' },
+            tagNames: { control: 'object' },
             onSave: { action: 'save' }
         }
     });
@@ -20,6 +21,16 @@
     name="Default"
     args={{
         height: '320px',
+        onSave: fn()
+    }}
+/>
+
+<Story
+    name="Unknown tag"
+    args={{
+        height: '320px',
+        value: '"tran" IN tags',
+        tagNames: ['train', 'val'],
         onSave: fn()
     }}
 />

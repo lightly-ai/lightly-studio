@@ -112,5 +112,9 @@ export const useQueryEditor = () => {
         };
     };
 
-    return { mount, translateQuery: language.translateQuery };
+    return {
+        mount,
+        translateQuery: language.translateQuery,
+        setTagNames: language.setTagNames
+    };
 };

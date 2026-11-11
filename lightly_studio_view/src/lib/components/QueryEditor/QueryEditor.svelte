@@ -16,6 +16,9 @@ AND object_detection(class_name = "person" AND x > 10)
         value?: string;
         height?: string;
         readOnly?: boolean;
+        /** Names of the tags that exist. Unknown tags in the query get a warning.
+         * Leave undefined to skip the check. */
+        tagNames?: string[];
         onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
     }
 
@@ -23,6 +26,7 @@ AND object_detection(class_name = "person" AND x > 10)
         value: valueProp,
         height = '320px',
         readOnly = false,
+        tagNames,
         onSave
     }: QueryEditorProps = $props();
 
@@ -30,7 +34,9 @@ AND object_detection(class_name = "person" AND x > 10)
 
     let containerEl: HTMLDivElement | null = null;
 
-    const { mount, translateQuery } = useQueryEditor();
+    const { mount, translateQuery, setTagNames } = useQueryEditor();
+
+    $effect(() => setTagNames(tagNames));
 
     function formatTranslationErrors(
         result: Extract<QueryExprTranslationResult, { status: 'error' }>

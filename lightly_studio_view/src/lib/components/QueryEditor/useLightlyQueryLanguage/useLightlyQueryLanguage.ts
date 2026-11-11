@@ -5,6 +5,7 @@
  * is a synchronous call into `parseLightlyQuery`. */
 
 import * as monaco from 'monaco-editor';
+import type { Query } from '../language/generated/ast.js';
 import {
     createLightlyQueryServices,
     type LightlyQueryServicesBundle
@@ -13,6 +14,7 @@ import {
     parseLightlyQuery,
     type QueryExprTranslationResult
 } from '../language/query-expr-translation';
+import { findUnknownTagMarkers } from './findUnknownTagMarkers';
 import { lexerErrorToMarker, type LexerErrorLike } from './lexerErrorToMarker';
 import { parserErrorToMarker, type ParserErrorLike } from './parserErrorToMarker';
 
@@ -44,26 +46,35 @@ export interface UseLightlyQueryLanguageReturn {
      * (`status: 'error'`). Intended for one-off translation outside the editor
      * lifecycle (e.g. on Save). */
     translateQuery: (value: string) => QueryExprTranslationResult;
+    /** Sets the tag names that exist in the collection and re-validates the
+     * attached models. Pass `undefined` while the names are unknown to skip
+     * the tag check. */
+    setTagNames: (names: string[] | undefined) => void;
 }
 
 export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
     const services = getServices();
     const parser = services.LightlyQuery.parser.LangiumParser;
+    const attachedModels = new Set<monaco.editor.ITextModel>();
+    let tagNames: ReadonlySet<string> | undefined;
 
     function validate(model: monaco.editor.ITextModel): void {
         const result = parser.parse(model.getValue());
         const markers = [
             ...result.lexerErrors.map((e) => lexerErrorToMarker(e as LexerErrorLike)),
-            ...result.parserErrors.map((e) => parserErrorToMarker(e as ParserErrorLike))
+            ...result.parserErrors.map((e) => parserErrorToMarker(e as ParserErrorLike)),
+            ...(tagNames ? findUnknownTagMarkers({ query: result.value as Query, tagNames }) : [])
         ];
         monaco.editor.setModelMarkers(model, MARKER_OWNER, markers);
     }
 
     function attach(model: monaco.editor.ITextModel): () => void {
+        attachedModels.add(model);
         validate(model);
         const sub = model.onDidChangeContent(() => validate(model));
         return () => {
             sub.dispose();
+            attachedModels.delete(model);
             monaco.editor.setModelMarkers(model, MARKER_OWNER, []);
         };
     }
@@ -72,5 +83,10 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
         return parseLightlyQuery(parser, value);
     }
 
-    return { attach, translateQuery };
+    function setTagNames(names: string[] | undefined): void {
+        tagNames = names && new Set(names);
+        attachedModels.forEach(validate);
+    }
+
+    return { attach, translateQuery, setTagNames };
 }

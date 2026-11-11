@@ -19,7 +19,7 @@ const mount = vi.fn(
 );
 
 vi.mock('./useQueryEditor', () => ({
-    useQueryEditor: () => ({ mount, translateQuery })
+    useQueryEditor: () => ({ mount, translateQuery, setTagNames: vi.fn() })
 }));
 
 vi.mock('svelte-sonner', () => ({
