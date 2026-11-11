@@ -37,7 +37,7 @@ This tutorial walks through these steps in order, using a single Python script, 
 
 To follow this tutorial, make sure you have:
 
-- Python 3.11 or newer
+- Python 3.11–3.15
 
 ## Installation
 

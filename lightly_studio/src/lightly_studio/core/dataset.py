@@ -5,10 +5,8 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
-from typing import Any, Generic, Self
+from typing import Any, Generic, Self, TypeVar
 from uuid import UUID
-
-from typing_extensions import TypeVar
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression

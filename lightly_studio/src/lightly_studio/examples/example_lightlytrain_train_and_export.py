@@ -8,8 +8,8 @@ the student into LightlyStudio.
 The student is 5.5M parameters against the teacher's 85.7M, so it is much cheaper
 to run for every image you embed.
 
-LightlyTrain is a separate install. This script needs Python 3.11.4+
-or 3.12+, because it passes ``filter`` to ``tarfile.extractall``:
+LightlyTrain is a separate install. This script supports Python 3.11 to 3.15.
+On Python 3.11, use 3.11.4 or later because it passes ``filter`` to ``tarfile.extractall``:
 
     pip install lightly-train lightly-studio
 
@@ -58,7 +58,7 @@ def download_dataset() -> None:
     if not EXTRACT_DONE.exists():
         with tarfile.open(ARCHIVE) as tar:
             # filter="data" refuses members that would write outside DATA_DIR.
-            # It needs Python 3.11.4+ or 3.12+, and is the default from 3.14.
+            # On Python 3.11, it needs 3.11.4 or later. It is the default from 3.14.
             tar.extractall(DATA_DIR, filter="data")
         EXTRACT_DONE.touch()
 
