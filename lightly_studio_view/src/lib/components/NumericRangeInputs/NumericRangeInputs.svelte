@@ -54,7 +54,14 @@
         drafts[index] = String(number);
         pending = range.map((n, i) => (i === index ? number : n));
         const other = 1 - index;
-        if (errors[other]) errors[other] = validate(other, pending);
+        if (errors[other]) {
+            errors[other] = validate(other, pending);
+            if (!errors[other]) {
+                pending[other] = Number(drafts[other]);
+                drafts[other] = String(pending[other]);
+                dirty[other] = false;
+            }
+        }
         onValueCommit(pending);
     };
 

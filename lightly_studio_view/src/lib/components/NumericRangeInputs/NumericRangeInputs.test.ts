@@ -56,10 +56,10 @@ describe('NumericRangeInputs', () => {
     );
 
     it.each([
-        { endpoint: 'minimum', draft: '0.7', corrected: '0.8', expected: [0.2, 0.8] },
-        { endpoint: 'maximum', draft: '0.1', corrected: '0.05', expected: [0.05, 0.5] }
+        { endpoint: 'minimum', draft: '0.7', corrected: '0.8', expected: [0.7, 0.8] },
+        { endpoint: 'maximum', draft: '0.1', corrected: '0.05', expected: [0.05, 0.1] }
     ])(
-        'clears the $endpoint error when the other bound is corrected',
+        'applies the rejected $endpoint draft when the other bound makes it valid',
         async ({ endpoint, draft, corrected, expected }) => {
             const { onValueCommit, acknowledge } = setup({
                 integer: false,
@@ -78,9 +78,8 @@ describe('NumericRangeInputs', () => {
             expect(invalid).toHaveValue(draft);
             expect(screen.queryByRole('alert')).not.toBeInTheDocument();
             await fireEvent.blur(invalid);
-            expect(onValueCommit).toHaveBeenLastCalledWith(
-                endpoint === 'minimum' ? [Number(draft), expected[1]] : [expected[0], Number(draft)]
-            );
+            await fireEvent.keyDown(invalid, { key: 'Enter' });
+            expect(onValueCommit).toHaveBeenCalledExactlyOnceWith(expected);
         }
     );
 
