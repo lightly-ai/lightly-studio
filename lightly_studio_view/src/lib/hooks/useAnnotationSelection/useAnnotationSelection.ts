@@ -13,7 +13,7 @@ export function useAnnotationSelection() {
     } = useAnnotationLabelContext();
 
     const { context: toolbarContext, setStatus } = useSampleDetailsToolbarContext();
-    const { updateLastAnnotationLabel, openSampleDetailsSidePanel } = useGlobalStorage();
+    const { openSampleDetailsSidePanel } = useGlobalStorage();
 
     function selectAnnotation({
         annotationId,

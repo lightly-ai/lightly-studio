@@ -324,7 +324,12 @@
             </CardContent>
         </Card>
 
-        <Card className={cn("min-h-0 flex-1 flex-col overflow-hidden", $isSampleDetailsSidePanelCollapsed ? "hidden" : "flex")}>
+        <Card
+            className={cn(
+                'min-h-0 flex-1 flex-col overflow-hidden',
+                $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+            )}
+        >
             <CardContent className="h-full overflow-y-auto">
                 {#if video?.sample?.sample_id}
                     <SegmentTags
