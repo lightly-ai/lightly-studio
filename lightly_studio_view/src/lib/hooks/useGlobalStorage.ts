@@ -371,6 +371,9 @@ export const useGlobalStorage = () => {
                 return state;
             });
         },
+        replaceSelectedAnnotationFilterIds: (annotationFilterIds: Iterable<string>) => {
+            selectedAnnotationFilterIds.set(new Set(annotationFilterIds));
+        },
         clearSelectedAnnotationFilterIds: () => {
             selectedAnnotationFilterIds.update((state) => {
                 state.clear();
