@@ -139,6 +139,9 @@
 
     /** Space toggles the selection, or starts pan mode while editing. */
     const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        // Let the browser handle Space on buttons (e.g. popover triggers) natively.
+        if (event.target instanceof HTMLButtonElement) return;
+
         // Space would scroll the page.
         event.preventDefault();
         event.stopPropagation();
