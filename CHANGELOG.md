@@ -20,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: `dataset.evaluate().metrics(run_id)` includes the per-class and mean average precision of object-detection runs created with `compute_average_precision=True`, averaged over the IoU thresholds 0.50 to 0.95 and at each threshold.
 - Type exact minimum and maximum values for numeric metadata filters alongside the sliders.
 - Type exact image width, image height, and video frame number filter values alongside the sliders.
+- Type exact video width, height, FPS, and duration filter values alongside the sliders.
 
 ### Changed
 
