@@ -18,6 +18,7 @@
         batch={props.batch}
         cameraCuboid={props.cameraMode === 'perspective' ? undefined : selectedCuboid}
         {clippingPlanes}
+        highlightCuboid={selectedCuboid}
         colorMode={props.colorMode}
         pointSize={props.pointSize}
         intensityRange={props.intensityRange}

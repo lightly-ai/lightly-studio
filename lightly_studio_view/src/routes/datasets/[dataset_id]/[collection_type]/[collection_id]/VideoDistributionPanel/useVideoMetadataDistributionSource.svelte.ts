@@ -1,3 +1,4 @@
+import { getErrorMessage } from '$lib/utils';
 import { fromStore } from 'svelte/store';
 import type { VideoFilter } from '$lib/api/lightly_studio_local';
 import {
@@ -118,7 +119,9 @@ export function useVideoMetadataDistributionSource(
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,
             // The filtered query draws the foreground bars, so its failure must show too.
-            categoricalError: (categoricalQuery.error ?? categoricalFilteredQuery.error)?.message
+            categoricalError: getErrorMessage(
+                categoricalQuery.error ?? categoricalFilteredQuery.error
+            )
         });
     });
 

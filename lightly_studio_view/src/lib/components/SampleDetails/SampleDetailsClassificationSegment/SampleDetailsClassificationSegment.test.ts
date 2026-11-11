@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { toast } from 'svelte-sonner';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsClassificationSegment from './SampleDetailsClassificationSegment.svelte';
+import { AnnotationClassNotAvailableError } from '$lib/hooks/useCreateLabel/useCreateLabel';
 import SampleDetailsSidePanelAnnotation from '$lib/components/SampleDetails/SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
 
 vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
@@ -105,7 +106,8 @@ vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
     useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: mocks.deleteAnnotation }))
 }));
 
-vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
+vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useCreateLabel/useCreateLabel')>()),
     useCreateLabel: vi.fn(() => ({ createLabel: mocks.createLabel }))
 }));
 
@@ -552,6 +554,7 @@ describe('SampleDetailsClassificationSegment', () => {
         });
 
         it('creates the class first when the typed name is new', async () => {
+            mocks.userRole = 'editor';
             mocks.createLabel.mockResolvedValue({
                 annotation_label_id: 'label-otter',
                 annotation_label_name: 'otter'
@@ -568,6 +571,22 @@ describe('SampleDetailsClassificationSegment', () => {
             );
             expect(mocks.createAnnotation).toHaveBeenCalledWith(
                 expect.objectContaining({ annotation_label_id: 'label-otter' })
+            );
+        });
+
+        it('shows the class error when the class cannot be created', async () => {
+            mocks.userRole = 'editor';
+            mocks.createLabel.mockRejectedValue(new AnnotationClassNotAvailableError('zebra'));
+            const user = await openDraftRow();
+
+            await user.type(screen.getByTestId('select-list-input'), 'zebra{Enter}');
+
+            await waitFor(() => expect(toast.error).toHaveBeenCalled());
+            expect(mocks.createLabel).toHaveBeenCalled();
+            expect(mocks.createAnnotation).not.toHaveBeenCalled();
+            expect(toast.error).toHaveBeenCalledTimes(1);
+            expect(toast.error).toHaveBeenCalledWith(
+                'Class "zebra" is no longer available. Choose another class.'
             );
         });
 

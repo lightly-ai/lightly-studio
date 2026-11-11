@@ -1,4 +1,4 @@
-import type { QueryExpr } from '$lib/api/lightly_studio_local';
+import type { EvaluationMetricNotExpr, QueryExpr } from '$lib/api/lightly_studio_local';
 import {
     isBooleanExpression,
     isEvaluationMetricComparison,
@@ -12,7 +12,8 @@ type SampleEvaluationExpression = Extract<
     QueryExpr['match_expr'],
     { type: 'sample_evaluation_match_expr' }
 >;
-type MetricExpression = NonNullable<SampleEvaluationExpression['criteria']>[number];
+// The `child` union keeps the `type` discriminator, unlike the `criteria` items.
+type MetricExpression = EvaluationMetricNotExpr['child'];
 
 export function translateSampleEvaluation(expr: SampleEvaluationQuery): SampleEvaluationExpression {
     return {
