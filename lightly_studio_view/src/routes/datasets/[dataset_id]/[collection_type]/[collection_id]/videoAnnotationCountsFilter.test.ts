@@ -85,9 +85,11 @@ describe('buildVideoAnnotationCountsFilter', () => {
     });
 
     it('keeps empty metadata filters', () => {
-        expect(buildVideoAnnotationCountsFilter({ ...defaultParams, metadataFilters: [] })).toEqual({
-            filter_type: 'video',
-            sample_filter: { metadata_filters: [] }
-        });
+        expect(buildVideoAnnotationCountsFilter({ ...defaultParams, metadataFilters: [] })).toEqual(
+            {
+                filter_type: 'video',
+                sample_filter: { metadata_filters: [] }
+            }
+        );
     });
 });

@@ -49,5 +49,4 @@ export {
     oklchHueWheelColor
 } from './colorConvert';
 export { trackAnnotationClassEvent, trackClassCreatedInPicker } from './trackAnnotationClassEvent';
-export { dimensionRanges } from './gridFilter';
-export { withFilterOverrides } from './withFilterOverrides';
+export { dimensionRanges, withFilterOverrides } from './gridFilter';

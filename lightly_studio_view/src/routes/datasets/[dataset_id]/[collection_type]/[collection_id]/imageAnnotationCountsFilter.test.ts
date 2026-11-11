@@ -99,9 +99,11 @@ describe('buildImageAnnotationCountsFilter', () => {
     });
 
     it('keeps empty metadata filters', () => {
-        expect(buildImageAnnotationCountsFilter({ ...defaultParams, metadataFilters: [] })).toEqual({
-            filter_type: 'image',
-            sample_filter: { metadata_filters: [] }
-        });
+        expect(buildImageAnnotationCountsFilter({ ...defaultParams, metadataFilters: [] })).toEqual(
+            {
+                filter_type: 'image',
+                sample_filter: { metadata_filters: [] }
+            }
+        );
     });
 });
