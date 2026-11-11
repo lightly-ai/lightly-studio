@@ -453,6 +453,7 @@ describe('buildVideoFilter output', () => {
     });
 
     it('passes categorical-only metadata', () => {
+        vi.mocked(createMetadataFilters).mockClear();
         vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
         const colorFilters = { color: ['red'] };
 
