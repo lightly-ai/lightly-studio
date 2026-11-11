@@ -7,7 +7,6 @@
         SampleDetailsSidePanel,
         SidePanelToggleButton
     } from '$lib/components';
-    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -74,9 +73,6 @@
         toggleSampleSelection,
         clearReversibleActions,
         lastAnnotationBrushSize,
-        imageBrightness,
-        imageContrast,
-        maskOpacity,
         toggleSampleAnnotationCropSelection,
         isSampleDetailsSidePanelCollapsed,
         openSampleDetailsSidePanel
@@ -259,16 +255,7 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            <div class="flex items-center gap-2">
-                {#if $isEditingMode}
-                    <ImageAdjustments
-                        bind:brightness={$imageBrightness}
-                        bind:contrast={$imageContrast}
-                        bind:maskOpacity={$maskOpacity}
-                    />
-                {/if}
-                <SidePanelToggleButton />
-            </div>
+            <SidePanelToggleButton />
         </div>
         <Separator class="bg-border-hard" />
 
