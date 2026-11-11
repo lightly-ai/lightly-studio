@@ -24,7 +24,7 @@ class IngestionTransport(Protocol):
         tag_depth: int,
         limit: int | None,
     ) -> None:
-        """Add the images in a folder to a collection.
+        """Add the raw images from a path to a collection.
 
         Args:
             collection_id: The ID of the collection.
@@ -45,7 +45,7 @@ class IngestionTransport(Protocol):
         target_fps: float | None,
         limit: int | None,
     ) -> None:
-        """Add the videos in a folder to a collection.
+        """Add the raw videos from a path to a collection.
 
         Args:
             collection_id: The ID of the collection.
@@ -60,7 +60,7 @@ class IngestionTransport(Protocol):
     def add_images(self, collection_id: UUID, paths: Sequence[str], embed: bool) -> dict[str, UUID]:
         """Add images from a list of file paths to a collection.
 
-        Label imports use it, for example COCO or YOLO, and then add the annotations.
+        Ingestion of annotated data uses it, for example COCO or YOLO, then adds the annotations.
 
         Args:
             collection_id: The ID of the collection.
@@ -82,7 +82,7 @@ class IngestionTransport(Protocol):
     ) -> dict[str, UUID]:
         """Add videos from a list of file paths to a collection.
 
-        Label imports use it, for example YouTube-VIS, and then add the annotations.
+        Ingestion of annotated data uses it, for example YouTube-VIS, then adds the annotations.
 
         Args:
             collection_id: The ID of the collection.
