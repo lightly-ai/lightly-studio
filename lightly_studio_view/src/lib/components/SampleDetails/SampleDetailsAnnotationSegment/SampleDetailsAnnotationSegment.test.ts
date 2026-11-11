@@ -1,5 +1,5 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { render, screen, within } from '@testing-library/svelte';
+import { fireEvent, render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
@@ -15,7 +15,15 @@ const mocks = vi.hoisted(() => ({
     lastCreatedAnnotationId: null as string | null,
     enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
-    userRole: 'labeler' as string | undefined
+    userRole: 'labeler' as string | undefined,
+    annotationId: null as string | null,
+    isOnAnnotationDetailsView: false,
+    deleteAnnotation: vi.fn(),
+    toolbarContext: {
+        status: 'cursor' as string,
+        brush: { mode: 'brush' as string, size: 50 },
+        slic: { level: 'medium' as string, status: 'idle' as string }
+    }
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -27,6 +35,18 @@ vi.mock(
         return { default: module.default };
     }
 );
+
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
+    useSampleDetailsToolbarContext: () => ({ context: mocks.toolbarContext })
+}));
+
+vi.mock('svelte-sonner', () => ({
+    toast: { success: vi.fn(), error: vi.fn() }
+}));
+
+vi.mock('$lib/services/addAnnotationDeleteToUndoStack', () => ({
+    addAnnotationDeleteToUndoStack: vi.fn()
+}));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
@@ -64,10 +84,11 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     useAnnotationLabelContext: vi.fn(() => ({
         context: {
-            annotationId: null,
+            annotationId: mocks.annotationId,
             lockedAnnotationIds: new Set<string>(),
             lastCreatedAnnotationId: mocks.lastCreatedAnnotationId,
-            annotationType: null
+            annotationType: null,
+            isOnAnnotationDetailsView: mocks.isOnAnnotationDetailsView
         },
         setAnnotationId: vi.fn(),
         setAnnotationLabel: vi.fn(),
@@ -85,7 +106,7 @@ vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
 }));
 
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
-    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: vi.fn() }))
+    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: mocks.deleteAnnotation }))
 }));
 
 vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
@@ -143,6 +164,9 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
+        mocks.annotationId = null;
+        mocks.isOnAnnotationDetailsView = false;
+        mocks.toolbarContext.status = 'cursor';
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
 
@@ -592,6 +616,121 @@ describe('SampleDetailsAnnotationSegment', () => {
             render(SampleDetailsAnnotationSegment, { props: defaultProps });
 
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent('No annotations.');
+        });
+    });
+
+    describe('delete shortcut', () => {
+        const annotationA1 = createAnnotation('a1', groundTruthSource.collection_id, 'cat');
+
+        const renderWithSelectedAnnotation = () => {
+            mocks.isEditingMode.set(true);
+            mocks.annotationId = 'a1';
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: [annotationA1] }
+            });
+        };
+
+        it('deletes the selected annotation on Delete key', () => {
+            renderWithSelectedAnnotation();
+
+            fireEvent.keyDown(window, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).toHaveBeenCalledWith('a1', 'object_detection');
+        });
+
+        it('deletes the selected annotation on Backspace key', () => {
+            renderWithSelectedAnnotation();
+
+            fireEvent.keyDown(window, { key: 'Backspace' });
+
+            expect(mocks.deleteAnnotation).toHaveBeenCalledWith('a1', 'object_detection');
+        });
+
+        it('does nothing in view mode', () => {
+            mocks.annotationId = 'a1';
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: [annotationA1] }
+            });
+
+            fireEvent.keyDown(window, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+        });
+
+        it('does nothing without labeler role', () => {
+            mocks.userRole = 'viewer';
+            renderWithSelectedAnnotation();
+
+            fireEvent.keyDown(window, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when no annotation is selected', () => {
+            mocks.isEditingMode.set(true);
+            mocks.annotationId = null;
+            render(SampleDetailsAnnotationSegment, {
+                props: { ...defaultProps, annotations: [annotationA1] }
+            });
+
+            fireEvent.keyDown(window, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when typing in a text input', () => {
+            renderWithSelectedAnnotation();
+            const input = document.createElement('input');
+            document.body.appendChild(input);
+
+            fireEvent.keyDown(input, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+            input.remove();
+        });
+
+        it('does nothing when an overlay is open', () => {
+            renderWithSelectedAnnotation();
+            const dialog = document.createElement('div');
+            dialog.setAttribute('role', 'dialog');
+            const button = document.createElement('button');
+            dialog.appendChild(button);
+            document.body.appendChild(dialog);
+
+            fireEvent.keyDown(button, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+            dialog.remove();
+        });
+
+        it.each(['bounding-box', 'brush', 'eraser', 'slic', 'smart-select', 'find-instances'])(
+            'does nothing when toolbar is in %s state',
+            (status) => {
+                mocks.toolbarContext.status = status;
+                renderWithSelectedAnnotation();
+
+                fireEvent.keyDown(window, { key: 'Delete' });
+
+                expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+            }
+        );
+
+        it('does nothing on annotation details view', () => {
+            mocks.isOnAnnotationDetailsView = true;
+            renderWithSelectedAnnotation();
+
+            fireEvent.keyDown(window, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).not.toHaveBeenCalled();
+        });
+
+        it('deletes in drag toolbar state', () => {
+            mocks.toolbarContext.status = 'drag';
+            renderWithSelectedAnnotation();
+
+            fireEvent.keyDown(window, { key: 'Delete' });
+
+            expect(mocks.deleteAnnotation).toHaveBeenCalledWith('a1', 'object_detection');
         });
     });
 });

@@ -16,8 +16,14 @@
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
-    import { countVisibleSources, resolveEffectiveColorBySource } from '$lib/utils';
+    import {
+        countVisibleSources,
+        isOverlayTarget,
+        isTextInputTarget,
+        resolveEffectiveColorBySource
+    } from '$lib/utils';
     import {
         areAllAnnotationsHidden,
         computeSeededHiddenIds,
@@ -57,6 +63,7 @@
         setLockedAnnotationIds
     } = useAnnotationLabelContext();
 
+    const { context: sampleDetailsToolbarContext } = useSampleDetailsToolbarContext();
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
     const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
@@ -205,6 +212,22 @@
             hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
         });
     };
+
+    const handleDeleteKeyDown = (event: KeyboardEvent) => {
+        if (event.key !== 'Delete' && event.key !== 'Backspace') return;
+        if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
+        if (!$isEditingMode || !canEdit) return;
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+        if (!annotationLabelContext.annotationId) return;
+        if (
+            sampleDetailsToolbarContext.status !== 'cursor' &&
+            sampleDetailsToolbarContext.status !== 'drag'
+        )
+            return;
+
+        event.preventDefault();
+        handleDeleteAnnotation(annotationLabelContext.annotationId);
+    };
 </script>
 
 {#snippet annotationRow(annotation: AnnotationView)}
@@ -295,3 +318,5 @@
         </div>
     {/if}
 </Segment>
+
+<svelte:window onkeydown={handleDeleteKeyDown} />
