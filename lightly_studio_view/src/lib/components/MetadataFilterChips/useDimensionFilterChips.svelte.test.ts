@@ -1,7 +1,7 @@
 import { afterEach, expect, it } from 'vitest';
 import { flushSync } from 'svelte';
 import { get } from 'svelte/store';
-import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+import { useDimensions } from '$lib/hooks';
 import { useDimensionFilterChips } from './useDimensionFilterChips.svelte';
 
 let cleanup: (() => void) | undefined;

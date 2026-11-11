@@ -1,7 +1,11 @@
 import { fromStore } from 'svelte/store';
-import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+import { useDimensions } from '$lib/hooks';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
-import { useRangeChips, type Range, type RangeMap } from './useRangeChips.svelte';
+import { useRangeChips } from './useRangeChips.svelte';
+
+type RangeChipsParams = Parameters<typeof useRangeChips>[0];
+type RangeMap = ReturnType<RangeChipsParams['getBounds']>;
+type Range = Parameters<RangeChipsParams['setRange']>[1];
 
 const toRanges = (dimensions: DimensionBounds | null): RangeMap =>
     dimensions
@@ -12,7 +16,7 @@ const toRanges = (dimensions: DimensionBounds | null): RangeMap =>
         : {};
 
 /** Chips for the image width and height filters, with the metadata chip behaviour. */
-export function useDimensionFilterChips() {
+export function useDimensionFilterChips(): ReturnType<typeof useRangeChips> {
     const { dimensionsBounds, dimensionsValues, updateDimensionsValues } = useDimensions();
     const bounds = fromStore(dimensionsBounds);
     const values = fromStore(dimensionsValues);

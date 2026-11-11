@@ -1,13 +1,17 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { flushSync } from 'svelte';
-import { useRangeChips, type RangeMap } from './useRangeChips.svelte';
+import { useFiltersClearedSignal } from '$lib/hooks';
+import { useRangeChips } from './useRangeChips.svelte';
 
-const bounds: RangeMap = { confidence: { min: 0, max: 1 } };
+type RangeMap = ReturnType<Parameters<typeof useRangeChips>[0]['getBounds']>;
+
+const defaultBounds: RangeMap = { confidence: { min: 0, max: 1 } };
 
 let cleanup: (() => void) | undefined;
 
 const setup = (initial: RangeMap) => {
     let values = $state<RangeMap>(initial);
+    let bounds = $state<RangeMap>(defaultBounds);
     const setRange = vi.fn((key: string, range: { min: number; max: number }) => {
         values = { ...values, [key]: range };
     });
@@ -22,7 +26,13 @@ const setup = (initial: RangeMap) => {
         });
     });
     flushSync();
-    return { hook, setRange, onChanged, setValues: (next: RangeMap) => (values = next) };
+    return {
+        hook,
+        setRange,
+        onChanged,
+        setValues: (next: RangeMap) => (values = next),
+        setBounds: (next: RangeMap) => (bounds = next)
+    };
 };
 
 describe('useRangeChips', () => {
@@ -68,5 +78,28 @@ describe('useRangeChips', () => {
         hook.handleToggle('confidence', true);
         expect(setRange).toHaveBeenLastCalledWith('confidence', { min: 0.25, max: 0.75 });
         expect(onChanged).toHaveBeenLastCalledWith('confidence', 'enabled');
+    });
+
+    it('forgets a remembered range when the bounds of its key change', () => {
+        const { hook, setValues, setBounds } = setup({ confidence: { min: 0.25, max: 0.75 } });
+
+        setValues({ confidence: { min: 0, max: 1 } });
+        flushSync();
+        expect(hook.chips).toHaveLength(1);
+
+        setBounds({ confidence: { min: 0, max: 2 } });
+        setValues({ confidence: { min: 0, max: 2 } });
+        flushSync();
+        expect(hook.chips).toEqual([]);
+    });
+
+    it('forgets all ranges when all filters are cleared', () => {
+        const { hook, setValues } = setup({ confidence: { min: 0.25, max: 0.75 } });
+
+        useFiltersClearedSignal().signalFiltersCleared();
+        setValues({ confidence: { min: 0, max: 1 } });
+        flushSync();
+
+        expect(hook.chips).toEqual([]);
     });
 });
