@@ -26,7 +26,8 @@ const mockAnnotationLabelContext = {
     lastCreatedAnnotationId: null as string | null,
     isDrawing: false,
     isErasing: false,
-    isOnAnnotationDetailsView: false
+    isOnAnnotationDetailsView: false,
+    annotationSourceBlockedReason: null as string | null
 };
 
 const settingsStore = writable({
@@ -98,7 +99,53 @@ describe('SampleDetailsToolbar', () => {
         mockAnnotationLabelContext.isDrawing = false;
         mockAnnotationLabelContext.isErasing = false;
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
+        mockAnnotationLabelContext.annotationSourceBlockedReason = null;
         assistedLabelingStatus.disabledReason = null;
+    });
+
+    describe('while new annotations are blocked', () => {
+        beforeEach(() => {
+            mockAnnotationLabelContext.annotationSourceBlockedReason = 'Pick a source.';
+        });
+
+        it('disables the create tools and explains why', async () => {
+            const { getByLabelText, getByRole } = render(SampleDetailsToolbar);
+
+            for (const label of [
+                'Bounding Box Tool',
+                'Mask brush',
+                'Smart select',
+                'Find all instances'
+            ]) {
+                expect(getByLabelText(label)).toBeDisabled();
+            }
+            expect(getByLabelText('Selection')).toBeEnabled();
+            expect(getByLabelText('Drag')).toBeEnabled();
+
+            await fireEvent.keyDown(window, { key: 'b' });
+            expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+
+            await fireEvent.pointerEnter(getByLabelText('Bounding Box Tool').parentElement!);
+            expect(getByRole('tooltip')).toHaveTextContent('Pick a source.');
+        });
+
+        it('switches an active create tool to the cursor', () => {
+            mockSampleDetailsToolbarContext.status = 'bounding-box';
+
+            render(SampleDetailsToolbar);
+
+            expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
+        });
+
+        it('keeps the brush in the annotation details view, which only edits', () => {
+            mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
+            mockSampleDetailsToolbarContext.status = 'brush';
+
+            const { getByLabelText } = render(SampleDetailsToolbar);
+
+            expect(getByLabelText('Mask brush')).toBeEnabled();
+            expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        });
     });
 
     it('starts in cursor mode and resets annotation state on mount', () => {
