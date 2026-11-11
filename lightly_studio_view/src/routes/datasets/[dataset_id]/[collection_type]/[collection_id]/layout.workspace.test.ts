@@ -30,11 +30,13 @@ vi.mock('$lib/workers/maskRendererPool', () => ({
 vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
     clearAnnotationPlotSelection: vi.fn()
 }));
-vi.mock('$lib/utils/buildImageFilter', () => ({
-    buildImageFilter: vi.fn(() => ({}))
+vi.mock('./imageAnnotationCountsFilter', () => ({
+    buildImageAnnotationCountsFilter: vi.fn(() => ({}))
+}));
+vi.mock('./videoAnnotationCountsFilter', () => ({
+    buildVideoAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/utils/buildAnnotationCountsFilters', () => ({
-    buildVideoAnnotationCountsFilter: vi.fn(() => ({})),
     buildVideoFrameAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/components/GridItem', () => ({
