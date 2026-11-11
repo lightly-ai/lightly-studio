@@ -12,8 +12,8 @@ interface Params {
 }
 
 /**
- * Class change, move and delete for the selected annotation, with the same undo as the side
- * panel. Call during component init: it reads the annotation label context.
+ * Class change, move and delete for the selected annotation, each with undo. Call during
+ * component init: it reads the annotation label context.
  */
 export const useAnnotationCardActions = (getParams: () => Params) => {
     const getCollectionId = () => getParams().collectionId;
@@ -44,7 +44,7 @@ export const useAnnotationCardActions = (getParams: () => Params) => {
     // The move copies the annotation and deletes the original, so the card follows the copy.
     const moveTo = async (sourceName: string) => {
         const { annotation, refetch } = getParams();
-        const copyId = await moves.moveByCopy(annotation, sourceName);
+        const copyId = await moves.moveByCopy(annotation, sourceName, refetch);
         if (copyId === null) return false;
         setAnnotationId(copyId);
         refetch();

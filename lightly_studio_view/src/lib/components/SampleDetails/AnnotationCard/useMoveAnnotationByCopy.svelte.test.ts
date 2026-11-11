@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { ReversibleAction } from '$lib/hooks/useReversibleActions';
 import { useMoveAnnotationByCopy } from './useMoveAnnotationByCopy.svelte';
 
 const mocks = vi.hoisted(() => ({
@@ -8,7 +9,9 @@ const mocks = vi.hoisted(() => ({
     error: vi.fn(),
     labels: undefined as
         | { annotation_label_name: string; annotation_label_id: string }[]
-        | undefined
+        | undefined,
+    sources: undefined as { collection_id: string; name: string }[] | undefined,
+    undoActions: [] as ReversibleAction[]
 }));
 vi.mock('$lib/hooks', () => ({
     useAnnotationLabels: () => ({
@@ -16,8 +19,16 @@ vi.mock('$lib/hooks', () => ({
             return mocks.labels;
         }
     }),
+    useAnnotationCollections: () => ({
+        get data() {
+            return mocks.sources;
+        }
+    }),
     useCreateAnnotation: () => ({ createAnnotation: mocks.create }),
-    useDeleteAnnotation: () => ({ deleteAnnotation: mocks.remove })
+    useDeleteAnnotation: () => ({ deleteAnnotation: mocks.remove }),
+    useGlobalStorage: () => ({
+        addReversibleAction: (action: ReversibleAction) => mocks.undoActions.push(action)
+    })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.error } }));
 
@@ -37,11 +48,15 @@ describe('useMoveAnnotationByCopy', () => {
     beforeEach(() => {
         vi.resetAllMocks();
         mocks.labels = [{ annotation_label_name: 'car', annotation_label_id: 'class' }];
+        mocks.sources = [{ collection_id: 'predictions', name: 'predictions' }];
+        mocks.undoActions = [];
         mocks.remove.mockResolvedValue(undefined);
     });
 
     const moves = useMoveAnnotationByCopy(() => 'images');
-    const { moveByCopy } = moves;
+    const refetch = vi.fn();
+    const moveByCopy = (annotation: AnnotationView, sourceName: string) =>
+        moves.moveByCopy(annotation, sourceName, refetch);
     const isMoving = () => moves.isMoving;
 
     it('copies the box into the source, then deletes the original', async () => {
@@ -127,5 +142,48 @@ describe('useMoveAnnotationByCopy', () => {
 
         expect(mocks.create).not.toHaveBeenCalled();
         expect(mocks.remove).not.toHaveBeenCalled();
+    });
+
+    it('adds an undo that puts the original back in its source and deletes the copy', async () => {
+        mocks.create.mockResolvedValue({ sample_id: 'copy', annotation_type: 'object_detection' });
+        await moveByCopy(box, 'gt');
+        mocks.create.mockClear();
+        mocks.remove.mockClear();
+
+        await mocks.undoActions[0].execute();
+
+        expect(mocks.create).toHaveBeenCalledExactlyOnceWith(
+            expect.objectContaining({ annotation_collection_name: 'predictions', ...bounds })
+        );
+        expect(mocks.remove).toHaveBeenCalledExactlyOnceWith('copy', 'object_detection');
+        expect(refetch).toHaveBeenCalled();
+    });
+
+    it('adds an undo that only deletes the copy when the original stayed', async () => {
+        mocks.create.mockResolvedValue({ sample_id: 'copy', annotation_type: 'object_detection' });
+        mocks.remove.mockRejectedValueOnce(new Error('offline'));
+        await moveByCopy(box, 'gt');
+        mocks.create.mockClear();
+
+        await mocks.undoActions[0].execute();
+
+        expect(mocks.create).not.toHaveBeenCalled();
+        expect(mocks.remove).toHaveBeenLastCalledWith('copy', 'object_detection');
+    });
+
+    it('adds no undo when the copy fails', async () => {
+        mocks.create.mockRejectedValue(new Error('offline'));
+
+        await moveByCopy(box, 'gt');
+
+        expect(mocks.undoActions).toEqual([]);
+    });
+
+    it('copies nothing while the sources load', async () => {
+        mocks.sources = undefined;
+
+        expect(await moveByCopy(box, 'gt')).toBeNull();
+
+        expect(mocks.create).not.toHaveBeenCalled();
     });
 });

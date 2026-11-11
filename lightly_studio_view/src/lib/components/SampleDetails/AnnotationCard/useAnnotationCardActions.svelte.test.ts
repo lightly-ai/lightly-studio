@@ -75,7 +75,7 @@ describe('useAnnotationCardActions', () => {
 
         expect(await moveTo('gt')).toBe(true);
 
-        expect(mocks.moveByCopy).toHaveBeenCalledWith(annotation, 'gt');
+        expect(mocks.moveByCopy).toHaveBeenCalledWith(annotation, 'gt', mocks.refetch);
         expect(mocks.setAnnotationId).toHaveBeenCalledWith('copy');
         expect(mocks.refetch).toHaveBeenCalled();
     });
