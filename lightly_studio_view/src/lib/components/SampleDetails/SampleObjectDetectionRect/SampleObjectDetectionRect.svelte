@@ -25,6 +25,7 @@
         usePostHog,
         useStickyClassName
     } from '$lib/hooks';
+    import { createLabelIdLookup } from './createLabelIdLookup';
     import { usePendingBbox } from './usePendingBbox';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
@@ -209,24 +210,18 @@
         return stickyClass.current ?? requestClass(bbox);
     };
 
-    // Classes created here, so the next box finds them before the class list refetches.
-    const createdLabelIds = new Map<string, string>();
-
     // The ID of the class with the name. A new name creates the class.
-    const getLabelId = async (className: string): Promise<string> => {
+    const getLabelId = createLabelIdLookup({
         // Wait for the class list, so an existing class does not count as missing.
-        const labelList = labels.data ?? (await labels.refetch()).data;
-        const existing =
-            labelList?.find((label) => label.annotation_label_name === className)
-                ?.annotation_label_id ?? createdLabelIds.get(className);
-        if (existing) return existing;
-        const label = await createLabel({
-            dataset_id: datasetId,
-            annotation_label_name: className
-        });
-        createdLabelIds.set(className, label.annotation_label_id!);
-        return label.annotation_label_id!;
-    };
+        getLabels: async () => labels.data ?? (await labels.refetch()).data ?? [],
+        createLabel: async (className) => {
+            const label = await createLabel({
+                dataset_id: datasetId,
+                annotation_label_name: className
+            });
+            return label.annotation_label_id!;
+        }
+    });
 
     const onBoxCreated = (newAnnotation: AnnotationView, pendingToken: number) => {
         if (sample.annotations.length == 0) refetchRootCollection();
