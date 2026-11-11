@@ -5,7 +5,7 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import AdjustmentSlider from '../ImageAdjustments/AdjustmentSlider/AdjustmentSlider.svelte';
+    import { AdjustmentSlider } from '../ImageAdjustments';
 
     const { imageBrightness, imageContrast, maskOpacity } = useGlobalStorage();
 
@@ -24,11 +24,12 @@
 
 <Popover>
     <Tooltip content="Display adjustments" position="top" noTriggerRole>
-        <PopoverTrigger asChild>
+        <PopoverTrigger>
             {#snippet child({ props })}
                 <button
                     {...props}
                     class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-muted/80 shadow-md backdrop-blur-sm"
+                    aria-label="Display adjustments"
                     data-testid="display-adjustments-trigger"
                 >
                     <Sun class="size-4 text-muted-foreground" />
