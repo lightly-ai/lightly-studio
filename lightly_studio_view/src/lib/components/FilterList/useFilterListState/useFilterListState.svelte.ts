@@ -49,10 +49,15 @@ export function useFilterListState({
             return shown;
         },
         get nextPageCount() {
-            return getPaged() ? Math.max(0, Math.min(PAGE_SIZE, matching.length - shownCount)) : 0;
+            return Math.min(PAGE_SIZE, matching.length - shown.length);
         },
+        /** Reveals the next page of hidden rows, skipping selected rows that are already shown. */
         showMore() {
-            shownCount += PAGE_SIZE;
+            let revealed = 0;
+            while (shownCount < matching.length && revealed < PAGE_SIZE) {
+                if (!matching[shownCount].selected) revealed++;
+                shownCount++;
+            }
         }
     };
 }

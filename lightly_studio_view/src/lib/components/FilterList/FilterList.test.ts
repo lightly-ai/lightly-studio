@@ -123,6 +123,25 @@ describe('FilterList', () => {
         expect(screen.getByText('Item 99')).toBeInTheDocument();
     });
 
+    it('shows 50 more hidden rows when selected rows are already visible', async () => {
+        const items = makeItems(120).map((item, index) => ({ ...item, selected: index === 99 }));
+        renderList({ items });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Show 50 more' }));
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(101);
+        await userEvent.click(screen.getByRole('button', { name: 'Show 19 more' }));
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(120);
+    });
+
+    it('hides "Show more" when only selected rows were past the page', () => {
+        const items = makeItems(60).map((item, index) => ({ ...item, selected: index >= 50 }));
+        renderList({ items });
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(60);
+        expect(screen.queryByRole('button', { name: /more/ })).not.toBeInTheDocument();
+    });
+
     it('renders all rows when paging is off', () => {
         renderList({ items: makeItems(120), paged: false });
 
