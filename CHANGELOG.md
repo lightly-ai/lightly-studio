@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
 - Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
 - Pressing Delete or Backspace deletes the selected annotation in editing mode.
+- Edit, Undo, Plugins and Settings actions are now in the breadcrumb row on sample detail pages.
 
 ### Changed
 
