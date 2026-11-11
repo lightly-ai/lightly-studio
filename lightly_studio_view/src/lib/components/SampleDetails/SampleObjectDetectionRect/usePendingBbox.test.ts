@@ -64,13 +64,14 @@ describe('usePendingBbox', () => {
         expect(pending.isNewest(tokenB)).toBe(true);
     });
 
-    it('hides every box on clearAll', () => {
+    it('hides every box on clearAll, and none of them is the newest', () => {
         const pending = usePendingBbox();
         pending.start(BOX_A);
-        pending.start(BOX_B);
+        const tokenB = pending.start(BOX_B);
 
         pending.clearAll();
 
         expect(shownBoxes(pending)).toEqual([]);
+        expect(pending.isNewest(tokenB)).toBe(false);
     });
 });
