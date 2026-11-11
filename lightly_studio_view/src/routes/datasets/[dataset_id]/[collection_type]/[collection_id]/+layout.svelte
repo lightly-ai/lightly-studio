@@ -8,7 +8,6 @@
         DatasetGridHeader,
         Footer,
         LabelsMenu,
-        MetadataFilterChips,
         Onboarding,
         SelectionPill,
         ShowFiltersButton,
@@ -701,11 +700,6 @@
 
                             {#if isImages || isVideos || isVideoFrames || isCaptions}
                                 {#key collectionId}
-                                    <MetadataFilterChips
-                                        collectionId={metadataCollectionId}
-                                        isImageCollection={isImages || isCaptions}
-                                        categoricalKeys={categoricalMetadataKeys}
-                                    />
                                     <CombinedMetadataDimensionsFilters
                                         collectionId={metadataCollectionId}
                                         showDimensions={!isCaptions}

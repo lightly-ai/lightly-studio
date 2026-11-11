@@ -265,17 +265,10 @@ describe('useMetadataFilterChips', () => {
         expect(trackEvent).not.toHaveBeenCalled();
     });
 
-    it('leaves categorical selections to the sidebar instead of rendering chips', () => {
+    it('renders categorical selections as chips like numeric filters', () => {
         storage.updateCategoricalMetadataValues({ location_type: ['city', 'rural'] });
-        render(MetadataFilterChips, {
-            props: {
-                collectionId: 'col-1',
-                isImageCollection: true,
-                categoricalKeys: ['location_type']
-            }
-        });
+        render(MetadataFilterChips, { props: { collectionId: 'col-1' } });
 
-        expect(screen.queryByTestId('metadata-filter-chip-location_type')).not.toBeInTheDocument();
-        expect(get(storage.categoricalMetadataValues).location_type).toEqual(['city', 'rural']);
+        expect(screen.getByTestId('metadata-filter-chip-location_type')).toBeInTheDocument();
     });
 });
