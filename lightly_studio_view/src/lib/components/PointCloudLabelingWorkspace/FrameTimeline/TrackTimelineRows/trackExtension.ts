@@ -10,11 +10,11 @@ export function getTrackExtent(runs: readonly TrackRun[]): { first: number; last
     return first && last ? { first: first.startIndex, last: last.endIndex } : null;
 }
 
-/** The tick index under a horizontal pointer position, clamped to the bar. */
+/** The tick boundary under a horizontal pointer position, clamped to the bar. */
 export function tickIndexAt(clientX: number, bar: { left: number; width: number }, count: number) {
     if (bar.width <= 0 || count <= 0) return 0;
     const index = Math.floor(((clientX - bar.left) / bar.width) * count);
-    return Math.min(count - 1, Math.max(0, index));
+    return Math.min(count, Math.max(0, index));
 }
 
 /**

@@ -4,27 +4,33 @@ import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
-const { cloudQuery, tickDetails, summaryState, schedulerParams, updateAnnotations } = vi.hoisted(
-    () => ({
-        cloudQuery: {
-            data: undefined as unknown,
-            isLoading: false,
-            isError: false,
-            refetch: vi.fn()
-        },
-        tickDetails: { data: undefined, isLoading: false, refetch: vi.fn() },
-        summaryState: { isLoading: false },
-        schedulerParams: {
-            current: undefined as
-                | {
-                      getRequestId: () => string;
-                      getRanges: () => readonly { startIndex: number; endIndex: number }[];
-                  }
-                | undefined
-        },
-        updateAnnotations: vi.fn()
-    })
-);
+const {
+    cloudQuery,
+    tickDetails,
+    summaryState,
+    schedulerParams,
+    updateAnnotations,
+    invalidateQueries
+} = vi.hoisted(() => ({
+    cloudQuery: {
+        data: undefined as unknown,
+        isLoading: false,
+        isError: false,
+        refetch: vi.fn()
+    },
+    tickDetails: { data: undefined, isLoading: false, refetch: vi.fn() },
+    summaryState: { isLoading: false },
+    schedulerParams: {
+        current: undefined as
+            | {
+                  getRequestId: () => string;
+                  getRanges: () => readonly { startIndex: number; endIndex: number }[];
+              }
+            | undefined
+    },
+    updateAnnotations: vi.fn(),
+    invalidateQueries: vi.fn()
+}));
 
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
     useUpdateAnnotationsMutation: () => ({ updateAnnotations })
@@ -32,7 +38,7 @@ vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', 
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
-    useQueryClient: () => ({ invalidateQueries: vi.fn() })
+    useQueryClient: () => ({ invalidateQueries })
 }));
 
 vi.mock('./SceneViewport/SceneViewport.svelte', async () => ({
@@ -357,6 +363,14 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(screen.getByTestId('workspace-tool-rail')).toBeInTheDocument();
 
         await waitFor(() => expect(tickDetails.refetch).toHaveBeenCalledOnce());
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: [
+                {
+                    _id: 'getSequenceTracks',
+                    path: { dataset_id: 'dataset-1', sequence_id: 'sequence-1' }
+                }
+            ]
+        });
         expect(updateAnnotations).toHaveBeenCalledWith([
             expect.objectContaining({
                 annotation_id: 'annotation-1',

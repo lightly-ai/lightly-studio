@@ -66,7 +66,10 @@ export function useWorkspaceEditing(
 
     const { handleCuboidTransform } = useUpdateCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
-        onUpdated: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+        onUpdated: async () => {
+            void refreshTracks();
+            await getWorkspace().tickDetails.refetch({ throwOnError: true });
+        }
     });
 
     const { handleLabelChange } = useUpdateCuboidClass({

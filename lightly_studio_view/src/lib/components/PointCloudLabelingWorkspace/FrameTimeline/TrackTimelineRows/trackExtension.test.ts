@@ -19,19 +19,20 @@ describe('trackExtension', () => {
         ).toEqual({ first: 1, last: 4 });
     });
 
-    it('snaps the pointer to a tick and clamps to the bar', () => {
+    it('snaps the pointer to a tick boundary and clamps to the bar', () => {
         const bar = { left: 100, width: 500 };
         expect(tickIndexAt(100, bar, 5)).toBe(0);
         expect(tickIndexAt(350, bar, 5)).toBe(2);
-        expect(tickIndexAt(9999, bar, 5)).toBe(4);
+        expect(tickIndexAt(600, bar, 5)).toBe(5);
+        expect(tickIndexAt(9999, bar, 5)).toBe(5);
         expect(tickIndexAt(0, bar, 5)).toBe(0);
     });
 
-    it('only proposes outward changes', () => {
+    it('proposes extensions and reductions using tick boundaries', () => {
         expect(proposeExtent(extent, 'start', 0)).toEqual({ first: 0, last: 2 });
-        expect(proposeExtent(extent, 'start', 2)).toEqual(extent);
-        expect(proposeExtent(extent, 'end', 4)).toEqual({ first: 1, last: 4 });
-        expect(proposeExtent(extent, 'end', 1)).toEqual(extent);
+        expect(proposeExtent(extent, 'start', 2)).toEqual({ first: 2, last: 2 });
+        expect(proposeExtent(extent, 'end', 5)).toEqual({ first: 1, last: 4 });
+        expect(proposeExtent(extent, 'end', 1)).toEqual({ first: 1, last: 1 });
     });
 
     it('maps a proposal to seq numbers, or null when nothing changes', () => {

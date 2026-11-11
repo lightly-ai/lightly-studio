@@ -56,11 +56,9 @@ export function useTrackExtendDrag({
         const bar = getBar();
         if (!edge || !extent || !bar) return;
         const rect = bar.getBoundingClientRect();
-        proposed = proposeExtent(
-            extent,
-            edge,
-            tickIndexAt(event.clientX - pointerOffset, rect, getTicks().length)
-        );
+        const count = getTicks().length;
+        const index = tickIndexAt(event.clientX - pointerOffset, rect, count);
+        proposed = proposeExtent(extent, edge, edge === 'end' ? index : Math.min(count - 1, index));
     }
 
     function finish(commit: boolean) {

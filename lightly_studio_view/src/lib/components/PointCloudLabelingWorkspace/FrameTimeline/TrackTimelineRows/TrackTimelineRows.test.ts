@@ -134,7 +134,7 @@ describe('TrackTimelineRows', () => {
             const handle = screen.getByTestId('track-extend-end');
 
             await pointer(handle, 'pointerdown', 400);
-            await pointer(handle, 'pointermove', 590);
+            await pointer(handle, 'pointermove', 600);
             expect(screen.getByTestId('track-extend-preview')).toBeTruthy();
             expect(screen.getByRole('tooltip')).toHaveTextContent('Ticks 3–6');
             expect(handle).toHaveStyle({ left: '100%' });
@@ -147,7 +147,7 @@ describe('TrackTimelineRows', () => {
             expect(screen.queryByRole('tooltip')).toBeNull();
         });
 
-        it('commits nothing when the handle is dragged back inside the track', async () => {
+        it('shrinks the track when the start handle is dragged inside it', async () => {
             const onExtendTrack = vi.fn();
             const { container } = render(TrackTimelineRows, {
                 props: { ...props, onExtendTrack }
@@ -159,7 +159,7 @@ describe('TrackTimelineRows', () => {
             await pointer(handle, 'pointermove', 450);
             await pointer(handle, 'pointerup');
 
-            expect(onExtendTrack).not.toHaveBeenCalled();
+            expect(onExtendTrack).toHaveBeenCalledWith(wideTrack, 3, 3);
         });
 
         it('cancels the drag without committing', async () => {
