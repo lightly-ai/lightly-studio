@@ -90,15 +90,16 @@ for sample in list(dataset)[:3]:
 ## Use Your Own Embedding Model
 
 To embed your data with your own model, register an embedder in the Python script before you
-add data. The model runs on your machine. The script sends only the vectors to the enterprise
-instance.
+add data. The model runs on your machine. The script sends the vectors to the enterprise
+instance, together with the file paths and metadata of the samples.
 
 ![Use your own embedding model](../_static/lightly_studio_enterprise_own_embedder.svg){ width="100%" }
 
-- The embedding plot reads the stored vectors, so it works with any model.
-- Search embeds each query in the same space as your data. To search with your own model,
-  serve the model on an embedding server and register it with `ls.register_remote_embedder`.
-  The enterprise server sends each query to this server, so it must be able to reach its URL.
+- The default embedding plot reads the stored vectors, so it works with any model.
+- Search and text axes embed each query in the same space as your data. To use them with
+  your own model, serve the model on an embedding server and register it with
+  `ls.register_remote_embedder`. The Python client contacts this server when you register
+  it, and the enterprise server sends each query to it. Both must be able to reach its URL.
 
 For the embedder interfaces and examples, see
 [Using Your Own Embeddings](../workflows/embeddings.md#using-your-own-embeddings) and

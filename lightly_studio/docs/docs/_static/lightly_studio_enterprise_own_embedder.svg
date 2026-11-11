@@ -89,7 +89,7 @@
     <text class="small" x="1000" y="493" text-anchor="middle">text and image queries</text>
   </g>
 
-  <!-- Import edges -->
+  <!-- Ingestion edges -->
   <line class="edge" x1="310" y1="136" x2="444" y2="136" marker-end="url(#arrow)"/>
   <text class="edge-label" x="380" y="124" text-anchor="middle">images</text>
 
@@ -106,5 +106,5 @@
   <line class="edge-search" x1="870" y1="476" x2="316" y2="476" marker-end="url(#arrow-search)"/>
   <text class="edge-label" x="590" y="464" text-anchor="middle" style="fill: #16a34a;">search query</text>
 
-  <text class="caption" x="590" y="600" text-anchor="middle">Solid arrows: import. Dashed arrow: search with your own model.</text>
+  <text class="caption" x="590" y="600" text-anchor="middle">Solid arrows: ingestion. Dashed arrow: search with your own model.</text>
 </svg>
