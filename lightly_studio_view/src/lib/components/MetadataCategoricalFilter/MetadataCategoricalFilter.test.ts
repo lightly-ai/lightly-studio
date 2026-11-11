@@ -24,7 +24,7 @@ const defaultProps = {
 };
 
 describe('MetadataCategoricalFilter', () => {
-    it('keeps field values collapsed until the values dropdown is opened', async () => {
+    it('shows the values of a list field inline, under its heading', async () => {
         const onToggle = vi.fn();
         render(MetadataCategoricalFilter, {
             props: {
@@ -41,18 +41,41 @@ describe('MetadataCategoricalFilter', () => {
 
         const field = screen.getByTestId('metadata-categorical-filter');
         expect(within(field).getByRole('heading', { name: 'location' })).toBeVisible();
-        const trigger = within(field).getByTestId('metadata-categorical-filter-trigger');
-        expect(trigger).toBeVisible();
-        expect(within(field).queryByRole('checkbox')).toBeNull();
-
-        await fireEvent.click(trigger);
-        expect(screen.getByText('city')).toBeVisible();
-        expect(screen.getByText('rural')).toBeVisible();
+        expect(within(field).queryByTestId('metadata-categorical-filter-trigger')).toBeNull();
 
         await fireEvent.click(
-            screen.getByRole('checkbox', { name: 'Select value city, 3 samples' })
+            within(field).getByRole('checkbox', { name: 'Select value city, 3 samples' })
         );
         expect(onToggle).toHaveBeenCalledWith('city');
+    });
+
+    it('collapses a list field and shows how many values are selected', async () => {
+        const onToggleExpanded = vi.fn();
+        const listProps = {
+            ...defaultProps,
+            layout: 'list' as const,
+            fieldLabel: 'location',
+            selectedValues: ['city', 'rural'],
+            buckets: [
+                { id: 'city', kind: 'value' as const, value: 'city', label: 'city', count: 3 },
+                { id: 'rural', kind: 'value' as const, value: 'rural', label: 'rural', count: 2 }
+            ],
+            onToggleExpanded
+        };
+        const { rerender } = render(MetadataCategoricalFilter, {
+            props: { ...listProps, expanded: true }
+        });
+
+        const field = screen.getByTestId('metadata-categorical-filter');
+        expect(within(field).getByRole('status')).toHaveTextContent('2 selected');
+        expect(within(field).getAllByRole('checkbox')).toHaveLength(2);
+
+        await fireEvent.click(within(field).getByRole('button', { name: 'location' }));
+        expect(onToggleExpanded).toHaveBeenCalledOnce();
+
+        await rerender({ ...listProps, expanded: false });
+        expect(within(field).queryByRole('checkbox')).toBeNull();
+        expect(within(field).getByRole('status')).toHaveTextContent('2 selected');
     });
 
     it('shows the initial load error and retry action when no values have loaded', async () => {
@@ -71,9 +94,6 @@ describe('MetadataCategoricalFilter', () => {
         expect(screen.getByRole('alert')).toBeVisible();
         await fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
         expect(onRetry).toHaveBeenCalledOnce();
-
-        await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
-        expect(screen.getAllByText(/Could not load metadata distribution/)).toHaveLength(2);
     });
 
     it('keeps the summary and the chevron as direct children of the trigger', () => {
@@ -223,7 +243,7 @@ describe('MetadataCategoricalFilter', () => {
         expect(screen.getByText('Not in current results')).toBeVisible();
     });
 
-    it('shows "Select all" and "Clear" for values and renders 50 rows at a time', async () => {
+    it('shows "Select all" and "Clear" for list values and renders 50 rows at a time', async () => {
         const manyBuckets: CategoricalMetadataBucket[] = Array.from({ length: 60 }, (_, index) => ({
             id: `value-${index}`,
             kind: 'value' as const,
@@ -232,20 +252,27 @@ describe('MetadataCategoricalFilter', () => {
             count: 1
         }));
         const onSetValues = vi.fn();
+        const onClear = vi.fn();
         render(MetadataCategoricalFilter, {
-            props: { ...defaultProps, buckets: manyBuckets, onSetValues }
+            props: {
+                ...defaultProps,
+                layout: 'list',
+                buckets: manyBuckets,
+                selectedValues: ['value-0'],
+                onSetValues,
+                onClear
+            }
         });
 
-        await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
-        expect(screen.getByRole('button', { name: 'Select all' })).toBeVisible();
-        expect(screen.getByRole('button', { name: 'Clear' })).toBeVisible();
         expect(screen.getAllByTestId('metadata-value-list-item')).toHaveLength(50);
-
         await fireEvent.click(screen.getByRole('button', { name: 'Show 10 more' }));
         expect(screen.getAllByTestId('metadata-value-list-item')).toHaveLength(60);
 
         await fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
         expect(onSetValues).toHaveBeenCalledOnce();
         expect(onSetValues).toHaveBeenCalledWith(manyBuckets.map((bucket) => bucket.label));
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Clear' }));
+        expect(onClear).toHaveBeenCalledOnce();
     });
 });
