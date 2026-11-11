@@ -38,7 +38,7 @@
         const min = index === 0 ? bound.min : range[0];
         const max = index === 0 ? range[1] : bound.max;
         if (!Number.isFinite(number) || (integer && !Number.isInteger(number))) {
-            return integer ? 'Enter a whole number.' : 'Enter a number.';
+            return `Enter a ${integer ? 'whole number' : 'value'} between ${min} and ${max}.`;
         }
         return number < min || number > max ? `Enter a value between ${min} and ${max}.` : '';
     };
