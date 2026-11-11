@@ -100,7 +100,11 @@
     {/each}
     {#each errors as error, index}
         {#if error}
-            <p id="{id}-{index}-error" role="alert" class="col-span-2 text-sm text-destructive">
+            <p
+                id="{id}-{index}-error"
+                role="alert"
+                class="col-span-2 text-sm text-destructive-text"
+            >
                 {index === 0 ? 'Min' : 'Max'}: {error}
             </p>
         {/if}
