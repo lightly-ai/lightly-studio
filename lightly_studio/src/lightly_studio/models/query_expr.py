@@ -4,12 +4,11 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal, TypeAlias
+from typing import Annotated, Literal, Self, TypeAlias
 
 import pydantic
 from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictInt, StrictStr
 from pydantic_core import PydanticCustomError
-from typing_extensions import Self
 
 
 class EqualityComparisonOperator(str, Enum):
