@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
 from collections.abc import Callable, Iterator
-from contextlib import contextmanager
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
@@ -35,6 +35,15 @@ class CountData:
     Source B: image 2 person, image 3 car.
     Image tag 1 is on image 1, image tag 2 is on images 2 and 3.
     The annotation tag is on the first source A annotation.
+
+    Attributes:
+        collection_id: ID of the image collection.
+        image_ids: Sample IDs of images 1, 2 and 3.
+        source_a_id: ID of the source A annotation collection.
+        car_label_id: ID of the "car" annotation class.
+        image_tag_ids: IDs of image tags 1 and 2.
+        annotation_tag_id: ID of the annotation tag.
+        source_a_annotation_ids: Sample IDs of the source A annotations, in creation order.
     """
 
     collection_id: UUID
@@ -159,7 +168,7 @@ def create_images_in_plot(
     return collection_id, images
 
 
-@contextmanager
+@contextlib.contextmanager
 def record_statements(session: Session) -> Iterator[list[str]]:
     """Collect the SQL text of each statement that the session executes."""
     statements: list[str] = []
