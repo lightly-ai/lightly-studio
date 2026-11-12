@@ -93,3 +93,23 @@ it.each([
     const hover = getFieldHover(model as never, { lineNumber: 1, column: startColumn } as never);
     expect(hover?.contents).toContainEqual({ value: description });
 });
+
+it('documents video fields without a prefix and preserves the hover range', async () => {
+    const { getFieldHover } = await import('./getFieldHover');
+    const { modelSampleTypes } = await import('../modelQueryScope');
+    const model = makeSyntaxDocModel({
+        text: 'width > 10',
+        wordAtPosition: { word: 'width', startColumn: 1, endColumn: 6 },
+        includeGetValue: true,
+        includeGetOffsetAt: true
+    });
+    modelSampleTypes.set(model as never, 'video');
+    const hover = getFieldHover(model as never, { lineNumber: 1, column: 2 } as never);
+    expect(hover?.contents).toContainEqual({ value: '```\nVideo.width: int\n```' });
+    expect(hover?.range).toMatchObject({
+        startLineNumber: 1,
+        endLineNumber: 1,
+        startColumn: 1,
+        endColumn: 6
+    });
+});

@@ -53,6 +53,7 @@ self.MonacoEnvironment = {
 
 interface MountOptions {
     value: string;
+    sampleType?: 'image' | 'video';
     readOnly?: boolean;
     onChange?: (value: string) => void;
 }
@@ -112,7 +113,7 @@ export const useQueryEditor = () => {
             scrollBeyondLastLine: false
         });
 
-        const detachLanguage = language.attach(model);
+        const detachLanguage = language.attach(model, options.sampleType);
         const contentSub = model.onDidChangeContent(() => {
             options.onChange?.(model.getValue());
         });
