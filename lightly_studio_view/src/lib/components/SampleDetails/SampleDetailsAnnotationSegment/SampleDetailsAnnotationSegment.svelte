@@ -205,7 +205,6 @@
             hidden: areAllAnnotationsHidden(sourceAnnotations, annotationsIdsToHide)
         });
     };
-
 </script>
 
 {#snippet annotationRow(annotation: AnnotationView)}

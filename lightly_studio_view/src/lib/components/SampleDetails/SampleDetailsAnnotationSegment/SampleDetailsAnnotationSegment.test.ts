@@ -1,5 +1,5 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { fireEvent, render, screen, within } from '@testing-library/svelte';
+import { render, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
@@ -618,5 +618,4 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent('No annotations.');
         });
     });
-
 });
