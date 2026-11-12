@@ -10,7 +10,7 @@ class TestLocalTransport:
     def test_collections(self) -> None:
         assert isinstance(LocalTransport().collections, LocalCollectionTransport)
 
-    @pytest.mark.parametrize("area", ["samples", "tags", "metadata"])
+    @pytest.mark.parametrize("area", ["samples", "tags", "metadata", "annotations", "ingestion"])
     def test_area__not_implemented(self, area: str) -> None:
         with pytest.raises(AttributeError, match=r"does not exist yet"):
             getattr(LocalTransport(), area)
