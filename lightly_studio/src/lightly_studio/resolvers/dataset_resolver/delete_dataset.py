@@ -53,6 +53,7 @@ from lightly_studio.models.group_component_definition import (
     GroupComponentDefinitionTable,
 )
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.labeling_model import LabelingModelTable
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.mcap_group_component_definition import (
     McapGroupComponentDefinitionTable,
@@ -156,6 +157,7 @@ def delete_dataset(
     # Must precede embedding_model and collections (FKs to both, deleted below and in step 6).
     _delete_collection_embedding_models(session=session, dataset_id=dataset_id)
     _delete_embedding_models(session=session, dataset_id=dataset_id)
+    _delete_labeling_models(session=session, dataset_id=dataset_id)
     _delete_object_tracks(session=session, dataset_id=dataset_id)
     _delete_evaluation_runs(session=session, dataset_id=dataset_id)
     _delete_export_jobs(session=session, dataset_id=dataset_id)
@@ -496,6 +498,14 @@ def _delete_embedding_models(session: Session, dataset_id: UUID) -> None:
     """Delete embedding models for the dataset."""
     session.exec(
         delete(EmbeddingModelTable).where(col(EmbeddingModelTable.dataset_id) == dataset_id),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_labeling_models(session: Session, dataset_id: UUID) -> None:
+    """Delete the saved labeling models of the dataset."""
+    session.exec(
+        delete(LabelingModelTable).where(col(LabelingModelTable.dataset_id) == dataset_id),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )
 
