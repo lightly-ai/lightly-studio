@@ -57,15 +57,5 @@ export default ts.config(
         // The performance tests print their measurements.
         files: ['e2e/**'],
         rules: { 'no-console': 'off' }
-    },
-    {
-        // Legacy files. Remove a file from this list when you convert it to `$app/state`.
-        files: [
-            'src/lib/components/Operator/OperatorDialog.svelte',
-            'src/lib/components/Operator/OperatorsMenu.svelte',
-            'src/routes/+error.svelte',
-            'src/routes/error.test.ts'
-        ],
-        rules: { 'no-restricted-imports': 'off' }
     }
 );
