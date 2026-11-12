@@ -241,16 +241,6 @@ def test_count_image_annotations_by_sample_tags__empty_selection(db_session: Ses
     assert result == []
 
 
-def _create_invalid_tag_id(
-    session: Session,
-    invalid_tag_case: str,
-) -> UUID:
-    if invalid_tag_case == "missing":
-        return uuid.uuid4()
-    foreign_collection = create_collection(session=session)
-    return create_tag(session=session, collection_id=foreign_collection.collection_id).tag_id
-
-
 @pytest.mark.parametrize("count_mode", [AnnotationCountMode.OBJECTS, AnnotationCountMode.SAMPLES])
 @pytest.mark.parametrize("annotation_type", [None, AnnotationType.OBJECT_DETECTION])
 @pytest.mark.parametrize("build_filter", annotation_count_cases.BUILD_FILTERS)
@@ -374,3 +364,13 @@ def test_count_image_annotations_by_sample_tags__sources_with_embedding_region(
     assert [[(row.label_name, row.count) for row in series.counts] for series in result] == [
         [("car", 2)]
     ]
+
+
+def _create_invalid_tag_id(
+    session: Session,
+    invalid_tag_case: str,
+) -> UUID:
+    if invalid_tag_case == "missing":
+        return uuid.uuid4()
+    foreign_collection = create_collection(session=session)
+    return create_tag(session=session, collection_id=foreign_collection.collection_id).tag_id
