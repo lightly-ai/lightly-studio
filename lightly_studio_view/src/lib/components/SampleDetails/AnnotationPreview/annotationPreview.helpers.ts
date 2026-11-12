@@ -1,5 +1,6 @@
-// Used when neither the selected class nor a hint gives a class name.
 import { getErrorMessage } from '$lib/api/ApiError';
+
+// Used when neither the selected class nor a hint gives a class name.
 const FALLBACK_CLASS_NAME = 'object';
 
 // A selected class wins as is, even with a blank name. A blank hint falls back.

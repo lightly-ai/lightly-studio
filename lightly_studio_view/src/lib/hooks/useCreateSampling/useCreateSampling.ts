@@ -133,9 +133,7 @@ export function useCreateSampling(params: UseCreateSamplingParams) {
 
             return false;
         } catch (error) {
-            // API functions return { data, error } and don't throw, so this
-            // only fires for unexpected runtime bugs in the hook itself.
-            console.error('Unexpected error in useCreateSampling.submit:', error);
+            console.error('Failed to create sampling:', error);
             toast.error('Failed to create sampling: ' + getErrorMessage(error, 'Unknown error'));
             return false;
         } finally {

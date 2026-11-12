@@ -65,7 +65,7 @@ describe('loadDimensionBounds', () => {
 
         await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
             data: undefined,
-            error: 'Error loading dimension bounds: ApiError: Not Found'
+            error: 'Error loading dimension bounds: Not Found'
         });
     });
 
@@ -77,7 +77,7 @@ describe('loadDimensionBounds', () => {
 
         await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
             data: undefined,
-            error: 'Error loading dimension bounds: Error: No dimension bounds data'
+            error: 'Error loading dimension bounds: No dimension bounds data'
         });
     });
 
@@ -86,7 +86,7 @@ describe('loadDimensionBounds', () => {
 
         await expect(loadDimensionBounds({ collection_id: '1' })).resolves.toEqual({
             data: undefined,
-            error: 'Error loading dimension bounds: oops'
+            error: 'Error loading dimension bounds: Unknown error'
         });
     });
 });

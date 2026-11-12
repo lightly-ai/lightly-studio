@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from './ApiError';
 import { client } from './lightly_studio_local/client.gen';
+import { registerApiErrorInterceptor } from './registerApiErrorInterceptor';
 
 // setupTests.ts registers the interceptor, as hooks.client.ts does in the app.
 const get = (fetch: typeof globalThis.fetch) => client.get({ url: '/items', fetch });
@@ -31,5 +32,18 @@ describe('registerApiErrorInterceptor', () => {
             );
 
         await expect(get(fetch)).rejects.toBeInstanceOf(SyntaxError);
+    });
+
+    it('keeps the ApiError if it is registered twice', async () => {
+        registerApiErrorInterceptor();
+        const fetch = vi
+            .fn()
+            .mockResolvedValue(
+                Response.json({ detail: { type: 'gone', message: 'Gone' } }, { status: 410 })
+            );
+
+        const { error } = await get(fetch);
+
+        expect(error).toMatchObject({ message: 'Gone', type: 'gone' });
     });
 });

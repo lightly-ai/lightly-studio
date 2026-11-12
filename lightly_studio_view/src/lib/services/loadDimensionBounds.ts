@@ -1,3 +1,4 @@
+import { getErrorMessage } from '$lib/api/ApiError';
 import { getImageDimensions } from '$lib/api/lightly_studio_local';
 import type { LoadResult } from './types';
 
@@ -42,7 +43,7 @@ export const loadDimensionBounds = async ({
 
         result.data = response.data as DimensionBounds;
     } catch (e) {
-        result.error = 'Error loading dimension bounds: ' + String(e);
+        result.error = 'Error loading dimension bounds: ' + getErrorMessage(e, 'Unknown error');
     }
 
     return result;

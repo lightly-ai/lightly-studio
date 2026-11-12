@@ -4,7 +4,6 @@ export * from './groupAnnotationLabels';
 export * from './countVisibleSources';
 export * from './getColorByLabel';
 export * from './getColorBySource';
-export * from './getApiErrorMessage';
 export * from './namePerCollection';
 export * from './getSimilarityColor';
 export * from './formatter';

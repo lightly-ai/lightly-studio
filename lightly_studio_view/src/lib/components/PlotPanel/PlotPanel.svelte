@@ -511,7 +511,7 @@
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
-            return embeddingsData.error?.message ?? 'Unknown error';
+            return embeddingsData.error?.message || 'Unknown error';
         }
         if ($arrowError) {
             return $arrowError;

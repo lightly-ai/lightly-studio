@@ -24,23 +24,28 @@ export class ApiError extends Error {
     }
 }
 
-/** Returns the message of an error, or `fallback` if the error is not an `Error`. */
+/** Returns the message of an error, or `fallback` if the error has no message. */
 export const getErrorMessage = (error: unknown, fallback: string): string =>
-    error instanceof Error ? error.message : fallback;
+    (error instanceof Error && error.message) || fallback;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
     typeof value === 'object' && value !== null;
 
 const getStringField = (value: unknown, field: string): string | undefined => {
     const fieldValue = isRecord(value) ? value[field] : undefined;
-    return typeof fieldValue === 'string' ? fieldValue : undefined;
+    return getText(fieldValue);
 };
 
+const getText = (value: unknown): string | undefined =>
+    typeof value === 'string' && value ? value : undefined;
+
 const getBodyMessage = (body: unknown): string | undefined => {
-    if (typeof body === 'string') return body || undefined;
-    if (!isRecord(body)) return undefined;
-    if (typeof body.error === 'string') return body.error;
-    if (typeof body.detail === 'string') return body.detail;
-    if (Array.isArray(body.detail)) return getStringField(body.detail[0], 'msg');
-    return getStringField(body.detail, 'message');
+    if (!isRecord(body)) return getText(body);
+    const detail = Array.isArray(body.detail) ? body.detail[0] : body.detail;
+    return (
+        getText(body.error) ??
+        getText(body.detail) ??
+        getStringField(detail, 'msg') ??
+        getStringField(detail, 'message')
+    );
 };

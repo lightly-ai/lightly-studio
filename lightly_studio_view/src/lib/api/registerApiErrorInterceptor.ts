@@ -10,6 +10,9 @@ import { client } from './lightly_studio_local/client.gen';
  */
 export const registerApiErrorInterceptor = (): void => {
     client.interceptors.error.use((error, response) => {
+        if (error instanceof ApiError) {
+            return error;
+        }
         if (!response || response.ok) {
             throw error;
         }

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Button, FormField } from '$lib/components';
     import { Input } from '$lib/components/ui/input';
+    import { getErrorMessage } from '$lib/api/ApiError';
     import { exportCollectionSceneUpdateWrite } from '$lib/api/lightly_studio_local';
 
     type WriteBody = Parameters<typeof exportCollectionSceneUpdateWrite>[0]['body'];
@@ -39,7 +40,7 @@
             if (!response.data) throw new Error('Unexpected empty response data');
             writtenUris = response.data.uris;
         } catch (e) {
-            writeError = `Export failed: ${String(e)}`;
+            writeError = `Export failed: ${getErrorMessage(e, 'Unknown error')}`;
         } finally {
             isWriting = false;
         }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ApiError } from './ApiError';
+import { ApiError, getErrorMessage } from './ApiError';
 
 describe('ApiError.fromResponseBody', () => {
     it('reads the message from an error body', () => {
@@ -33,5 +33,14 @@ describe('ApiError.fromResponseBody', () => {
         expect(error.message).toBe('Request failed with status 422.');
         expect(error.status).toBe(422);
         expect(ApiError.fromResponseBody('', 502).message).toBe('Request failed with status 502.');
+        expect(ApiError.fromResponseBody({ error: '', detail: 'Gone' }, 410).message).toBe('Gone');
+    });
+});
+
+describe('getErrorMessage', () => {
+    it('falls back if the error has no message', () => {
+        expect(getErrorMessage(new Error('Failed'), 'Unknown error')).toBe('Failed');
+        expect(getErrorMessage(new Error(''), 'Unknown error')).toBe('Unknown error');
+        expect(getErrorMessage('Failed', 'Unknown error')).toBe('Unknown error');
     });
 });
