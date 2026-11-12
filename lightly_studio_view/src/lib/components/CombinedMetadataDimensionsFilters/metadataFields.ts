@@ -2,7 +2,7 @@ import type { CategoricalMetadataValue } from '$lib/services/types';
 import { formatFloat, formatInteger } from '$lib/utils';
 
 export type Range = { min: number; max: number };
-export type RangeSource = 'dimension' | 'numeric';
+export type RangeSource = 'dimension' | 'video' | 'frame' | 'numeric';
 
 export interface RangeField {
     kind: 'range';
