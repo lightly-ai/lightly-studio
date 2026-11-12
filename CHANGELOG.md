@@ -20,7 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
-- Each metadata field in the filter panel has a checkbox and shows its filter value. Active fields move to the top.
+- Each metadata field in the filter panel has a checkbox and shows its filter value. Active fields move to the top, and the metadata filter chips are removed.
 
 ### Deprecated
 
