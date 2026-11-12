@@ -25,17 +25,9 @@ mymodule.foo()
 c = MyClass()
 ```
 
-Put all imports at the top of the file. Do not import inside a function, a method, or a class.
-Ruff rule `PLC0415` checks this. Do not add `# noqa: PLC0415` to break an import cycle or to make
-a module load faster; move the shared code to a module that both sides can import.
-
-```python
-# Bad
-def export(samples: Sequence[Sample]) -> None:
-    from mypackage import writer
-
-    writer.write(samples)
-```
+Put all imports at the top of the file. Ruff rule `PLC0415` checks this. Do not add
+`# noqa: PLC0415` to break an import cycle or to make a module load faster; move the shared code
+to a module that both sides can import.
 
 Exceptions from the guidelines:
 - An import inside a function is allowed only for an optional dependency that is possibly not
@@ -156,26 +148,7 @@ Exceptions may apply occasionally. Such logic should be accompanied by a comment
 
 ## Docstrings
 
-### Function and method-level Docstrings
-
-We use Google style docstrings.
-
-```python
-def foo(bar: int) -> str:
-    """Summary of function here.
-
-    Longer function information...
-
-    Args:
-        bar: Description of the argument `bar`.
-
-    Returns:
-        Description of the return value.
-
-    Raises:
-        ValueError: Description of the error that may be raised.
-    """
-```
+We use Google style docstrings. Ruff checks the format.
 
 ### Class-level Docstrings
 
@@ -223,18 +196,10 @@ class SampleClass:
 
 # Typing
 
-All our code must be typed.
+Ruff and mypy enforce typed code and the modern typing syntax. This section has only the rules
+that they do not check.
 
-- Use Python 3.10+ syntax for built-ins. Do not use `Optional` or `Union`.
-    - Good: `lst: list[int]`, bad: `lst: typing.List[int]`
-    - Good: `path: str | None`, bad: `path: typing.Optional[str]`
-    - Good: `value: int | str`, bad: `value: typing.Union[int, str]`
-- Use built in ABCs
-    - Use `Sequence` and `Mapping` for immutable `list` and `dict`
-    - Import from collections.abc:
-        - Good: `from collections.abc import Sequence, Mapping`
-        - Bad: `from typing import Sequence, Mapping`
-        - Rationale: The latter is deprecated by PEP 585
+- Use `Sequence` and `Mapping` for immutable `list` and `dict`.
 - Use abstract inputs and concrete outputs:
     - Good (note: toy example, it could accept and return Iterable in this case):
         
