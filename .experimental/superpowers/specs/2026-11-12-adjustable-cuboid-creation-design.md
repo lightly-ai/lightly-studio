@@ -82,16 +82,18 @@ New files in `lightly_studio_view/src/lib/components/PointCloudLabelingWorkspace
 |---|---|---|
 | `cuboidDraft.ts` | Holds the draft step (idle → dragging footprint → setting height (3D only) → done) and turns pointer positions into a box (centre and size). Also builds the default quick-drop box. | Nothing; pure functions |
 | `fitCuboidToPoints.ts` | Given a rectangle, the missing axis and point positions, returns the extent and centre on that axis, or the fallback. | A `Float32Array` of positions |
-| `CuboidDraftTarget.svelte` | Replaces `GroundPlaneClickTarget`. Captures pointer-down, move, up, Escape and right-click on the invisible plane and forwards them to `cuboidDraft`. | `cuboidDraft`, existing `getCuboidCreationPlane` |
+| `useCuboidDraft/useCuboidDraft.svelte.ts` | Owns the pointer and keyboard listeners (pointer-down, move, up, Escape, right-click) and the draft step; emits the finished placement. Tested through a harness, like `useCuboidFaceResize`. | `cuboidDraft`, `fitCuboidToPoints` |
+| `CuboidDraftTarget.svelte` | Replaces `GroundPlaneClickTarget`. Renders the invisible plane and the preview, and connects them to `useCuboidDraft`. | `useCuboidDraft`, existing `getCuboidCreationPlane` |
 | `CuboidDraftPreview.svelte` | Renders a translucent box while a draft is active. | The current draft box |
 
 Changes to existing code:
 
-- `useCreateCuboidAnnotation` takes a finished box (centre and size) instead of a
-  ground position. `computeDefaultCuboidSize` moves into `cuboidDraft.ts`; a click
-  produces the same box that is created today.
+- `useCreateCuboidAnnotation` takes a placement instead of a ground position:
+  either a drop point (click) or a finished box (drag). `computeDefaultCuboidSize`
+  moves into `cuboidDraft.ts`; the hook calls it with the current frame's bounds,
+  so a click produces the same box that is created today.
 - `onCreateCuboid` in `CuboidLayer`, its props and `useWorkspaceEditing` changes
-  its argument from a position to a box.
+  its argument from a position to a placement.
 - `CuboidLayer` receives the current frame's point positions and passes them to
   the fit.
 - `GroundPlaneClickTarget.svelte` is removed. `cuboidCreationPlane.ts` stays.
@@ -104,7 +106,7 @@ Data flow:
 2. `cuboidDraft` exposes the current box → `CuboidDraftPreview`.
 3. On completion in an orthographic view, `fitCuboidToPoints` supplies the third
    dimension.
-4. The finished box goes to `onCreateCuboid`; the rest of the flow is unchanged.
+4. The placement goes to `onCreateCuboid`; the rest of the flow is unchanged.
 
 The backend and the API do not change.
 
