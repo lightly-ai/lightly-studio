@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.3.0\] - 2026-11-12
+
+### Added
+
 - Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
 - Python SDK: Added Python 3.15 support.
 - Python SDK: `McapDataset.add_labels_from_folder` accepts `overwrite=True` to replace the annotations of recordings that already have annotations.
@@ -33,10 +47,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
 - Python SDK: BREAKING: `multi_strategies` accepts only the built-in sampling strategies, and `SamplingStrategy` is removed. Type strategy lists as `Sequence[Strategy]` from `lightly_studio.sampling.sampling_config`.
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Renaming an annotation class that has annotations no longer fails on DuckDB. If your DuckDB database was created before this version, re-index your data to get the fix.
@@ -46,8 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The value counts of categorical metadata now match the filters of the images grid.
 - Zooming with the mouse wheel or trackpad works while the Smart select tool is active.
 - Parts of a segmentation mask stroke that land on locked annotations no longer trim other annotations' masks.
-
-### Security
 
 ## \[1.2.1\] - 2026-11-02
 
