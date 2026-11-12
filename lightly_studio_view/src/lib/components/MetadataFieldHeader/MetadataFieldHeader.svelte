@@ -4,6 +4,8 @@
     import X from '@lucide/svelte/icons/x';
     import { Button as IconButton } from '$lib/components/ui/button';
     import { Checkbox } from '$lib/components/ui/checkbox';
+    import { highlightRange, splitMatch } from '$lib/components/FilterList/filterList.helpers';
+    import { getFieldSearchContext } from './fieldSearchContext';
 
     interface Props {
         /** Field name as stored, e.g. `split` or `Width`. */
@@ -35,6 +37,9 @@
         onClear
     }: Props = $props();
 
+    const getSearch = getFieldSearchContext();
+    const [before, match, after] = $derived(splitMatch(title, highlightRange(title, getSearch())));
+
     function handleCheckedChange(next: boolean | 'indeterminate') {
         if (next === true) {
             if (!expanded) onToggleExpanded?.();
@@ -65,7 +70,11 @@
                 {:else}
                     <ChevronRight class="size-4 shrink-0" />
                 {/if}
-                <span class="truncate">{title}</span>
+                <span class="truncate"
+                    >{before}{#if match}<mark class="rounded-sm bg-primary/25 text-foreground"
+                            >{match}</mark
+                        >{/if}{after}</span
+                >
             </button>
         {:else}
             {title}
