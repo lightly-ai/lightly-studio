@@ -31,14 +31,9 @@
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
-    import { useAnnotationCollections } from '$lib/hooks';
-    import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
-    import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
-    import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
+    import { useDeleteAnnotationWithUndo } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
-    import { toast } from 'svelte-sonner';
 
     const {
         sampleId,
@@ -80,7 +75,6 @@
     const {
         toggleSampleSelection,
         clearReversibleActions,
-        addReversibleAction,
         lastAnnotationBrushSize,
         toggleSampleAnnotationCropSelection,
         isSampleDetailsSidePanelCollapsed,
@@ -109,11 +103,7 @@
 
     const { user } = useAuth();
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
-    const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
-    const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => collectionId });
-    const { deleteAnnotation } = useDeleteAnnotation({ getCollectionId: () => collectionId });
-    const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
-    const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
+    const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
 
     let isPanModeEnabled = $state(false);
 
@@ -143,7 +133,7 @@
         }
     };
 
-    const handleDeleteKeyDown = (event: KeyboardEvent) => {
+    const handleDeleteKeyDown = async (event: KeyboardEvent) => {
         if (!$isEditingMode || !canEdit) return;
         if (annotationLabelContext.isOnAnnotationDetailsView) return;
         if (!annotationLabelContext.annotationId) return;
@@ -157,29 +147,12 @@
 
         const annotationId = annotationLabelContext.annotationId;
         const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
-        if (!annotation || !annotationLabels.data) return;
+        if (!annotation) return;
 
-        addAnnotationDeleteToUndoStack({
-            annotation,
-            labels: annotationLabels.data,
-            sources: annotationSources,
-            addReversibleAction,
-            createAnnotation,
-            refetch
-        });
-
-        deleteAnnotation(annotationId, annotation.annotation_type)
-            .then(() => {
-                toast.success('Annotation deleted successfully');
-                refetch();
-                if (annotationLabelContext.annotationId === annotationId) {
-                    annotationLabelContext.annotationId = null;
-                }
-            })
-            .catch((error) => {
-                toast.error('Failed to delete annotation. Please try again.');
-                console.error('Error deleting annotation:', error);
-            });
+        const deleted = await deleteWithUndo(annotation, refetch);
+        if (deleted && annotationLabelContext.annotationId === annotationId) {
+            annotationLabelContext.annotationId = null;
+        }
     };
 
     // Handle keyboard events

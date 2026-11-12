@@ -9,7 +9,7 @@ const mockAnnotationLabelContext: Record<string, unknown> = {};
 const isEditingMode = writable(false);
 const toggleSampleSelection = vi.fn();
 const handleEscape = vi.fn();
-const deleteAnnotation = vi.fn().mockResolvedValue(undefined);
+const deleteWithUndo = vi.fn().mockResolvedValue(true);
 
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/contexts/SampleDetailsToolbar.svelte')>()),
@@ -36,7 +36,6 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         toggleSampleAnnotationCropSelection: vi.fn(),
         isEditingMode,
         clearReversibleActions: vi.fn(),
-        addReversibleAction: vi.fn(),
         lastAnnotationBrushSize: writable({}),
         imageBrightness: writable(0),
         imageContrast: writable(0),
@@ -54,20 +53,8 @@ vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
     useAnnotationSelection: () => ({ selectAnnotation: vi.fn() })
 }));
 
-vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: vi.fn(() => ({ data: [] }))
-}));
-
-vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
-    useCreateAnnotation: vi.fn(() => ({ createAnnotation: vi.fn() }))
-}));
-
-vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
-    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation }))
-}));
-
 vi.mock('$lib/hooks', () => ({
-    useAnnotationCollections: vi.fn(() => ({ data: [] }))
+    useDeleteAnnotationWithUndo: () => ({ deleteWithUndo })
 }));
 
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
@@ -83,10 +70,6 @@ vi.mock('$lib/hooks/useAuth/hasMinimumRole', () => ({
 
 vi.mock('svelte-sonner', () => ({
     toast: { success: vi.fn(), error: vi.fn() }
-}));
-
-vi.mock('$lib/services/addAnnotationDeleteToUndoStack', () => ({
-    addAnnotationDeleteToUndoStack: vi.fn()
 }));
 
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
@@ -189,7 +172,10 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
     describe('delete shortcut', () => {
         const annotationA1 = {
             sample_id: 'a1',
-            annotation_type: 'object_detection',
+            parent_sample_id: 'sample-1',
+            annotation_collection_id: 'col-1',
+            created_at: new Date('2024-01-01T00:00:00Z'),
+            annotation_type: 'object_detection' as const,
             annotation_label: { annotation_label_name: 'cat' }
         };
 
@@ -211,20 +197,21 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
             renderWithSelectedAnnotation();
 
             await fireEvent.keyDown(window, { key: 'Delete' });
-
-            expect(deleteAnnotation).toHaveBeenCalledWith('a1', 'object_detection');
+            await vi.waitFor(() => {
+                expect(mockAnnotationLabelContext.annotationId).toBeNull();
+            });
         });
 
         it('deletes the selected annotation on Backspace key', async () => {
             renderWithSelectedAnnotation();
 
             await fireEvent.keyDown(window, { key: 'Backspace' });
-
-            expect(deleteAnnotation).toHaveBeenCalledWith('a1', 'object_detection');
+            await vi.waitFor(() => {
+                expect(mockAnnotationLabelContext.annotationId).toBeNull();
+            });
         });
 
         it('does nothing in view mode', async () => {
-            mockAnnotationLabelContext.annotationId = 'a1';
             render(SampleDetailsPanel, {
                 props: {
                     ...defaultProps,
@@ -234,10 +221,11 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
                     }
                 }
             });
+            mockAnnotationLabelContext.annotationId = 'a1';
 
             await fireEvent.keyDown(window, { key: 'Delete' });
 
-            expect(deleteAnnotation).not.toHaveBeenCalled();
+            expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         });
 
         it('does nothing without labeler role', async () => {
@@ -246,7 +234,7 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
 
             await fireEvent.keyDown(window, { key: 'Delete' });
 
-            expect(deleteAnnotation).not.toHaveBeenCalled();
+            expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         });
 
         it('does nothing when no annotation is selected', async () => {
@@ -264,7 +252,7 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
 
             await fireEvent.keyDown(window, { key: 'Delete' });
 
-            expect(deleteAnnotation).not.toHaveBeenCalled();
+            expect(mockAnnotationLabelContext.annotationId).toBeNull();
         });
 
         it('does nothing when typing in a text input', async () => {
@@ -274,7 +262,7 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
 
             await fireEvent.keyDown(input, { key: 'Delete' });
 
-            expect(deleteAnnotation).not.toHaveBeenCalled();
+            expect(mockAnnotationLabelContext.annotationId).toBe('a1');
             input.remove();
         });
 
@@ -288,7 +276,7 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
 
             await fireEvent.keyDown(button, { key: 'Delete' });
 
-            expect(deleteAnnotation).not.toHaveBeenCalled();
+            expect(mockAnnotationLabelContext.annotationId).toBe('a1');
             dialog.remove();
         });
 
@@ -300,7 +288,7 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
 
                 await fireEvent.keyDown(window, { key: 'Delete' });
 
-                expect(deleteAnnotation).not.toHaveBeenCalled();
+                expect(mockAnnotationLabelContext.annotationId).toBe('a1');
             }
         );
 
@@ -310,7 +298,7 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
 
             await fireEvent.keyDown(window, { key: 'Delete' });
 
-            expect(deleteAnnotation).not.toHaveBeenCalled();
+            expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         });
 
         it('deletes in drag toolbar state', async () => {
@@ -318,8 +306,9 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
             renderWithSelectedAnnotation();
 
             await fireEvent.keyDown(window, { key: 'Delete' });
-
-            expect(deleteAnnotation).toHaveBeenCalledWith('a1', 'object_detection');
+            await vi.waitFor(() => {
+                expect(mockAnnotationLabelContext.annotationId).toBeNull();
+            });
         });
     });
 });
