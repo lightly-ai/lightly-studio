@@ -6,14 +6,13 @@ import logging
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from typing import NoReturn
 from uuid import UUID, uuid4
 
 import numpy as np
 import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
-from typing_extensions import Never
+from typing_extensions import assert_never
 
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import (
@@ -629,7 +628,7 @@ def _add_strategy_to_mundig(
             strength=strat.strength,
         )
     else:
-        _raise_unknown_strategy(strat=strat)
+        assert_never(strat)
 
 
 def _add_similarity_to_mundig(
@@ -685,11 +684,3 @@ def _get_query_embeddings(
             f"{strat.embedding_model_name}."
         )
     return query_embeddings
-
-
-def _raise_unknown_strategy(strat: Never) -> NoReturn:
-    """Raise an error for a strategy that has no dispatch branch.
-
-    The ``Never`` type makes mypy report a strategy type that is not dispatched.
-    """
-    raise ValueError(f"Sampling strategy of type {type(strat)} is unknown.")

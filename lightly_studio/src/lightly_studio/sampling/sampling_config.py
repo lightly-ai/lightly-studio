@@ -16,23 +16,20 @@ MetadataValueName = Union[str, bool]
 MetadataValueToTarget = dict[MetadataValueName, float]
 
 
-class SamplingStrategy(BaseModel):
-    """Shared fields of the sampling strategies.
-
-    SamplingConfig accepts only the strategies in ``Strategy``, not other subclasses.
-    """
+class _SamplingStrategyBase(BaseModel):
+    """Shared fields of the sampling strategies."""
 
     strength: float = 1.0
 
 
-class EmbeddingDiversityStrategy(SamplingStrategy):
+class EmbeddingDiversityStrategy(_SamplingStrategyBase):
     """Sampling strategy based on embedding diversity."""
 
-    strategy_name: Literal["diversity"] = "diversity"
+    strategy_name: Literal["diversity"] = Field(default="diversity", frozen=True)
     embedding_model_name: str | None = None
 
 
-class EmbeddingDeduplicationStrategy(SamplingStrategy):
+class EmbeddingDeduplicationStrategy(_SamplingStrategyBase):
     """Sampling strategy that removes near-duplicates based on embedding distance.
 
     Selects samples that are spread out in embedding space and stops selecting
@@ -40,35 +37,35 @@ class EmbeddingDeduplicationStrategy(SamplingStrategy):
     ``stopping_condition_minimum_distance`` to the already selected samples.
     """
 
-    strategy_name: Literal["deduplication"] = "deduplication"
+    strategy_name: Literal["deduplication"] = Field(default="deduplication", frozen=True)
     embedding_model_name: str | None = None
     stopping_condition_minimum_distance: float = Field(ge=0)
 
 
-class EmbeddingSimilarityStrategy(SamplingStrategy):
+class EmbeddingSimilarityStrategy(_SamplingStrategyBase):
     """Sampling strategy based on embedding similarity to a tagged query set."""
 
-    strategy_name: Literal["similarity"] = "similarity"
+    strategy_name: Literal["similarity"] = Field(default="similarity", frozen=True)
     query_tag_name: str
     embedding_model_name: str | None = None
 
 
-class MetadataWeightingStrategy(SamplingStrategy):
+class MetadataWeightingStrategy(_SamplingStrategyBase):
     """Sampling strategy based on metadata weighting."""
 
-    strategy_name: Literal["weights"] = "weights"
+    strategy_name: Literal["weights"] = Field(default="weights", frozen=True)
     metadata_key: str
 
 
-class AnnotationClassBalancingStrategy(SamplingStrategy):
+class AnnotationClassBalancingStrategy(_SamplingStrategyBase):
     """Sampling strategy based on class balancing."""
 
-    strategy_name: Literal["balance"] = "balance"
+    strategy_name: Literal["balance"] = Field(default="balance", frozen=True)
     target_distribution: AnnotationClassToTarget | Literal["uniform"] | Literal["input"]
     annotation_source_id: UUID | None = None
 
 
-class MetadataBalancingStrategy(SamplingStrategy):
+class MetadataBalancingStrategy(_SamplingStrategyBase):
     """Sampling strategy that balances the selection over one categorical metadata key.
 
     Balances a single ``string`` or ``boolean`` key over at most 100 values. Combine one
@@ -82,15 +79,15 @@ class MetadataBalancingStrategy(SamplingStrategy):
     to 1.0.
     """
 
-    strategy_name: Literal["metadata_balance"] = "metadata_balance"
+    strategy_name: Literal["metadata_balance"] = Field(default="metadata_balance", frozen=True)
     metadata_key: str
     target_distribution: MetadataValueToTarget | Literal["uniform"] | Literal["input"]
 
 
-class SubpartDiversityStrategy(SamplingStrategy):
+class SubpartDiversityStrategy(_SamplingStrategyBase):
     """Sampling strategy based on diversity of annotation subparts (crops)."""
 
-    strategy_name: Literal["subpart_diversity"] = "subpart_diversity"
+    strategy_name: Literal["subpart_diversity"] = Field(default="subpart_diversity", frozen=True)
     embedding_model_name: str | None = None
     annotation_source_id: UUID | None = None
 
