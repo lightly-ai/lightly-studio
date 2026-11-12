@@ -46,4 +46,23 @@ describe('MetadataFilterItem', () => {
         await fireEvent.click(screen.getByRole('button', { name: 'score' }));
         expect(onToggleExpanded).toHaveBeenCalledOnce();
     });
+
+    it('shows the checkbox state and summary it is given', () => {
+        render(MetadataFilterItem, {
+            props: {
+                metadataKey: 'score',
+                bound: { min: 0, max: 10 },
+                value: { min: 2, max: 5 },
+                onValueCommit: vi.fn(),
+                checked: true,
+                summary: '2 – 5',
+                onClear: vi.fn(),
+                expanded: false,
+                onToggleExpanded: vi.fn()
+            }
+        });
+
+        expect(screen.getByRole('checkbox', { name: 'score filter' })).toBeChecked();
+        expect(screen.getByText('2 – 5')).toBeInTheDocument();
+    });
 });

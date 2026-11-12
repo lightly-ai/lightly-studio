@@ -49,4 +49,71 @@ describe('MetadataFieldHeader', () => {
 
         expect(onRemove).toHaveBeenCalledOnce();
     });
+
+    it('shows checkbox and summary for an active field', () => {
+        render(MetadataFieldHeader, {
+            props: {
+                title: 'width',
+                checked: true,
+                summary: '200px – 640px',
+                onClear: vi.fn(),
+                expanded: false,
+                onToggleExpanded: vi.fn()
+            }
+        });
+
+        expect(screen.getByRole('checkbox', { name: 'width filter' })).toBeChecked();
+        expect(screen.getByText('200px – 640px')).toBeInTheDocument();
+    });
+
+    it('hides the summary for an inactive field', () => {
+        render(MetadataFieldHeader, {
+            props: { title: 'width', checked: false, summary: 'x', onClear: vi.fn() }
+        });
+
+        expect(screen.getByRole('checkbox', { name: 'width filter' })).not.toBeChecked();
+        expect(screen.queryByText('x')).toBeNull();
+    });
+
+    it('hides the summary of an active field while it is expanded', () => {
+        render(MetadataFieldHeader, {
+            props: { title: 'width', checked: true, summary: 'x', expanded: true, onClear: vi.fn() }
+        });
+
+        expect(screen.queryByText('x')).toBeNull();
+    });
+
+    it('unchecking calls onClear', async () => {
+        const onClear = vi.fn();
+        render(MetadataFieldHeader, { props: { title: 'width', checked: true, onClear } });
+
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'width filter' }));
+
+        expect(onClear).toHaveBeenCalledOnce();
+    });
+
+    it('checking a collapsed field expands it and does not clear', async () => {
+        const onClear = vi.fn();
+        const onToggleExpanded = vi.fn();
+        render(MetadataFieldHeader, {
+            props: { title: 'width', checked: false, expanded: false, onClear, onToggleExpanded }
+        });
+
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'width filter' }));
+
+        expect(onToggleExpanded).toHaveBeenCalledOnce();
+        expect(onClear).not.toHaveBeenCalled();
+        expect(screen.getByRole('checkbox', { name: 'width filter' })).not.toBeChecked();
+    });
+
+    it('checking an expanded field does nothing', async () => {
+        const onToggleExpanded = vi.fn();
+        render(MetadataFieldHeader, {
+            props: { title: 'width', checked: false, expanded: true, onToggleExpanded }
+        });
+
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'width filter' }));
+
+        expect(onToggleExpanded).not.toHaveBeenCalled();
+    });
 });

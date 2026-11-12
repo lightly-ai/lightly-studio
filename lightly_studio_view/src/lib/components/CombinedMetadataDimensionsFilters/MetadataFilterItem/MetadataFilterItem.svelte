@@ -21,6 +21,12 @@
         expanded?: boolean;
         /** Lets the user show or hide the slider from the field header. */
         onToggleExpanded?: () => void;
+        /** Shows a checkbox before the title. `true` when the range filters. */
+        checked?: boolean;
+        /** Short value of the active filter, shown in the header. */
+        summary?: string;
+        /** Resets the range to its bounds when the checkbox is unchecked. */
+        onClear?: () => void;
     }
 
     const {
@@ -31,7 +37,10 @@
         title,
         unit = '',
         expanded = true,
-        onToggleExpanded
+        onToggleExpanded,
+        checked,
+        summary,
+        onClear
     }: MetadataFilterItemProps = $props();
 
     const isInteger = $derived(Number.isInteger(bound.min) && Number.isInteger(bound.max));
@@ -59,7 +68,14 @@
 </script>
 
 <div class="space-y-1">
-    <MetadataFieldHeader title={title ?? metadataKey} {expanded} {onToggleExpanded} />
+    <MetadataFieldHeader
+        title={title ?? metadataKey}
+        {expanded}
+        {onToggleExpanded}
+        {checked}
+        {summary}
+        {onClear}
+    />
     {#if expanded}
         <div class="pl-6">
             <div class="flex justify-between text-sm text-diffuse-foreground">

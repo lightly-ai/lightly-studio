@@ -49,7 +49,7 @@ describe('MetadataCategoricalFilter', () => {
         expect(onToggle).toHaveBeenCalledWith('city');
     });
 
-    it('collapses a list field and shows how many values are selected', async () => {
+    it('collapses a list field and hides its values', async () => {
         const onToggleExpanded = vi.fn();
         const listProps = {
             ...defaultProps,
@@ -67,7 +67,6 @@ describe('MetadataCategoricalFilter', () => {
         });
 
         const field = screen.getByTestId('metadata-categorical-filter');
-        expect(within(field).getByRole('status')).toHaveTextContent('2 selected');
         expect(within(field).getAllByRole('checkbox')).toHaveLength(2);
 
         await fireEvent.click(within(field).getByRole('button', { name: 'location' }));
@@ -75,7 +74,55 @@ describe('MetadataCategoricalFilter', () => {
 
         await rerender({ ...listProps, expanded: false });
         expect(within(field).queryByRole('checkbox')).toBeNull();
-        expect(within(field).getByRole('status')).toHaveTextContent('2 selected');
+    });
+
+    describe('list header', () => {
+        const city = { id: 'city', kind: 'value' as const, value: 'city', label: 'city', count: 3 };
+        const rural = {
+            id: 'rural',
+            kind: 'value' as const,
+            value: 'rural',
+            label: 'rural',
+            count: 2
+        };
+        const town = { id: 'town', kind: 'value' as const, value: 'town', label: 'town', count: 1 };
+        const listProps = {
+            ...defaultProps,
+            layout: 'list' as const,
+            fieldLabel: 'location',
+            checked: true,
+            selectedValues: ['city', 'rural']
+        };
+
+        it('shows "2 of 3" when values are loaded', () => {
+            render(MetadataCategoricalFilter, {
+                props: { ...listProps, buckets: [city, rural, town], expanded: false }
+            });
+            expect(screen.getByText('2 of 3')).toBeVisible();
+        });
+
+        it('shows no summary until the values are loaded', () => {
+            render(MetadataCategoricalFilter, {
+                props: { ...listProps, buckets: [], expanded: false }
+            });
+            expect(screen.queryByText(/ of |selected/)).not.toBeInTheDocument();
+        });
+
+        it('calls onClearField when the checkbox is unchecked', async () => {
+            const onClearField = vi.fn();
+            render(MetadataCategoricalFilter, {
+                props: { ...listProps, buckets: [city, rural, town], onClearField }
+            });
+            await fireEvent.click(screen.getByRole('checkbox', { name: 'location filter' }));
+            expect(onClearField).toHaveBeenCalledOnce();
+        });
+
+        it('shows no checkbox in the header when checked is not set', () => {
+            render(MetadataCategoricalFilter, {
+                props: { ...listProps, checked: undefined, buckets: [], selectedValues: [] }
+            });
+            expect(screen.queryByRole('checkbox', { name: 'location filter' })).toBeNull();
+        });
     });
 
     it('shows the initial load error and retry action when no values have loaded', async () => {

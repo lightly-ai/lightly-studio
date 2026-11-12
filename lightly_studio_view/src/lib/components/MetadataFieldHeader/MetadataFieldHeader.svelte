@@ -1,6 +1,7 @@
 <script lang="ts">
     import { ChevronDown, ChevronRight, X } from '@lucide/svelte';
     import { Button as IconButton } from '$lib/components/ui/button';
+    import { Checkbox } from '$lib/components/ui/checkbox';
 
     interface Props {
         /** Field name as stored, e.g. `split` or `Width`. */
@@ -13,12 +14,42 @@
         onToggleExpanded?: () => void;
         /** Shows a remove button that takes the field out of the filters. */
         onRemove?: () => void;
+        /** Shows a checkbox before the title. `true` when the field has an active filter. */
+        checked?: boolean;
+        /** Short value of the active filter. Shows only when `checked` and collapsed. */
+        summary?: string;
+        /** Called when the checkbox is unchecked. */
+        onClear?: () => void;
     }
 
-    const { title, status, expanded = true, onToggleExpanded, onRemove }: Props = $props();
+    const {
+        title,
+        status,
+        expanded = true,
+        onToggleExpanded,
+        onRemove,
+        checked,
+        summary,
+        onClear
+    }: Props = $props();
+
+    function handleCheckedChange(next: boolean | 'indeterminate') {
+        if (next === true) {
+            if (!expanded) onToggleExpanded?.();
+            return;
+        }
+        onClear?.();
+    }
 </script>
 
 <div class="flex min-h-6 items-center justify-between gap-2">
+    {#if checked !== undefined}
+        <Checkbox
+            bind:checked={() => checked === true, () => {}}
+            onCheckedChange={handleCheckedChange}
+            aria-label={`${title} filter`}
+        />
+    {/if}
     <h3 class="min-w-0 flex-1 truncate text-sm font-medium" {title}>
         {#if onToggleExpanded}
             <button
@@ -41,6 +72,11 @@
     <div class="flex shrink-0 items-center gap-1">
         {#if status}
             <span class="text-xs text-muted-foreground" role="status">{status}</span>
+        {/if}
+        {#if checked && summary && !expanded}
+            <span class="max-w-32 truncate text-xs text-muted-foreground" title={summary}>
+                {summary}
+            </span>
         {/if}
         {#if onRemove}
             <IconButton
