@@ -14,6 +14,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Every filter list in the filter panel has a search, "Select all" and "Clear".
 - The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
 
+- Python SDK: Label images in the GUI with your own model. Subclass `ls.LabelingModel` and call `ls.register_labeling_model` before `ls.start_gui`. The new "Label with model" tool shows the suggested annotations, and you save the correct ones.
+
 ### Changed
 
 - Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
