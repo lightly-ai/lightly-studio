@@ -1,6 +1,6 @@
 ---
 name: clean-code
-description: Read before writing, refactoring, or reviewing code in any language in this repository. Gives the checkable clean-code rules for names, function shape, nesting, boolean flags, side effects, file size, dead code, duplication, error handling, assertions, lint suppressions, and comments.
+description: Read before writing, refactoring, or reviewing code in any language in this repository. Gives the checkable clean-code rules for names, function shape, nesting, boolean flags, side effects, file size, dead code, duplication, error handling, lint suppressions, and comments.
 ---
 
 # Clean Code
@@ -69,8 +69,6 @@ def export_json(samples):
 
 - Do not catch an exception that you do not handle. Do not write a bare `except Exception` or an
   empty `catch`.
-- Do not use `assert` outside tests, also not to narrow a type. Use standard control flow or an
-  explicit exception.
 
 ## Comments
 
