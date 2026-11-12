@@ -21,6 +21,12 @@ See the [Label with Your Own Model page](../workflows/labeling_models.md) for mo
     options:
         members: [register_labeling_model]
 
+## register_remote_labeling_model
+
+::: lightly_studio.assisted_labeling.public_api
+    options:
+        members: [register_remote_labeling_model]
+
 ## LabelingModel
 
 ::: lightly_studio_serve.labeling_model
@@ -38,3 +44,15 @@ See the [Label with Your Own Model page](../workflows/labeling_models.md) for mo
 ::: lightly_studio_serve.types
     options:
         members: [PredictedAnnotation]
+
+## Serving
+
+Serve a labeling model with [`serve`](embeddings.md#serving) from `lightly_studio_serve`. Pass
+the model as `labeling_model`. The server then has these endpoints:
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /v1/labeling/describe` | The model ID, the task, the annotation classes and the readiness. |
+| `POST /v1/labeling/predict` | The predicted annotations of one image. |
+
+The wire models are in `lightly_studio_serve.labeling_protocol`.
