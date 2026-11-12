@@ -84,7 +84,8 @@ class VideoFilter(GridFilterBase):
 
     def _apply_annotation_filter(self, query: QueryType) -> QueryType:
         """For videos, annotation filters match frame or direct video annotations."""
-        assert self.frame_annotation_filter is not None
+        if self.frame_annotation_filter is None:
+            raise RuntimeError("Expected `self.frame_annotation_filter` to be set.")
 
         frame_filtered_video_ids_subquery = select(VideoFrameTable.parent_sample_id)
         frame_filtered_video_ids_subquery = (
