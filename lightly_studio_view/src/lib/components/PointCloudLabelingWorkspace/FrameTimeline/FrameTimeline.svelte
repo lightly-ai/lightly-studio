@@ -99,6 +99,7 @@
         {onBufferEntireSequenceChange}
         {isPlaying}
         {playbackIntervalMs}
+        bufferStatus={bufferStatus}
         {onPreviousFrame}
         {onNextFrame}
         {onPlayToggle}
@@ -106,7 +107,6 @@
         {onPreviousSequence}
         {onNextSequence}
     />
-    <TimelineBufferStatus status={bufferStatus} />
     <TimelineContent
         {ticks}
         {tracks}
