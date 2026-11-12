@@ -23,10 +23,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Point clouds
-    - Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
-    - Python SDK: `McapDataset.add_labels_from_folder` accepts `overwrite=True` to replace the annotations of recordings that already have annotations.
-
 - Annotations
     - A new "Annotation classes" tab in the settings to add, find, rename, recolor and delete the annotation classes of a dataset.
     - Annotation class colors are saved in the dataset and shared by all users of it.
@@ -50,7 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Annotations
     - The class for new annotations is remembered per collection across browser sessions and follows class renames and deletions. Selecting an existing annotation no longer changes it.
     - Users with the labeler or viewer role can only choose existing annotation classes in the labeling tools.
-    - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
+    - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data. Enterprise users are not affected.
 
 - Embedding plot
     - Embedding plots color faster when no filters are active and when coloring image and crop embeddings by annotation class.
@@ -60,9 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Python SDK: BREAKING: `multi_strategies` accepts only the built-in sampling strategies, and `SamplingStrategy` is removed. Type strategy lists as `Sequence[Strategy]` from `lightly_studio.sampling.sampling_config`.
 
 ### Fixed
-
-- Point clouds
-    - The previous and next buttons of a point cloud sequence now follow the tags, the embedding plot selection, and the text search of the point clouds grid.
 
 - Annotations
     - Renaming an annotation class that has annotations no longer fails on DuckDB. If your DuckDB database was created before this version, re-index your data to get the fix.
