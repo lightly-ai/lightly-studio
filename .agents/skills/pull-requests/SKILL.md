@@ -71,7 +71,8 @@ fix: keep the selected tag when the grid reloads
   `lightly_studio_serve` and `fast_track`, run `make static-checks` and `make test` in the package
   folder.
 - Open the PR as a draft while the work is not complete. The guardrails and the E2E tests do
-  not run on a draft. To run the E2E tests on a draft, add the `run-e2e` label and push again.
+  not run on a draft. To run the E2E tests on a draft, add the `run-e2e` label and push again. The
+  `run-e2e-postgres` label also runs them, together with the Postgres tests.
 - Propose the reviewer who knows the changed files best, from `git log` of those files. Use the
   same reviewer for each PR of a stack.
 
