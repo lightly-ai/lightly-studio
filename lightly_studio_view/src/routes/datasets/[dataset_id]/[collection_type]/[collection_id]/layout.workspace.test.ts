@@ -146,7 +146,11 @@ vi.mock('$lib/hooks/useVideosBounds/useVideosBounds.js', () => ({
     useVideoBounds: vi.fn(() => ({ videoBoundsValues: writable({}) }))
 }));
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
-    useImageFilters: vi.fn(() => ({ imageFilter: writable(null) }))
+    useImageFilters: vi.fn(() => ({
+        imageFilter: writable(null),
+        imageQueryExpression: writable(null),
+        updateQueryExpr: vi.fn()
+    }))
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: vi.fn(() => ({ videoFilter: writable(null), filterParams: writable(null) })),
