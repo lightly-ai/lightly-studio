@@ -12,10 +12,10 @@ from PIL.Image import Image
 
 from lightly_studio_serve import labeling_protocol
 from lightly_studio_serve.embedder import TextEmbedder
-from lightly_studio_serve.labeling_model import LabelingModel, ModelTask
+from lightly_studio_serve.labeling import LabelingModel, ModelTask, PredictedAnnotation
 from lightly_studio_serve.labeling_protocol import PredictionsResponse
 from lightly_studio_serve.server import create_app
-from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec, PredictedAnnotation
+from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
 WIDTH = 3
 HEIGHT = 2
@@ -161,7 +161,7 @@ def test_predict__not_an_image() -> None:
 
     response = _post_predict(client=client, threshold="0.5", image=b"not an image")
 
-    assert response.status_code == 422  # noqa: PLR2004
+    assert response.status_code == 422
     assert response.json() == {"detail": "The image cannot be decoded."}
     assert model.received == []
 
