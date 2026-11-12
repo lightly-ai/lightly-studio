@@ -195,6 +195,46 @@ def test_count_image_annotations_by_collection__samples_mode_with_filter(
     }
 
 
+# The (label, current, total) counts of each case, worked out by hand from create_count_data.
+# Source A: car and person on image 1, car on image 2, car classification on image 3.
+# Source B: person on image 2, car on image 3. Widths: 100, 200, 300.
+# Image tag 1 is on image 1. The annotation tag is on the source A car on image 1.
+EXPECTED_COUNTS = {
+    "no_filter": [("car", 4, 4), ("person", 2, 2)],
+    "empty_image_filter": [("car", 4, 4), ("person", 2, 2)],
+    "sources_only": [("car", 3, 3), ("person", 1, 1)],
+    "empty_source_list": [("car", 4, 4), ("person", 2, 2)],
+    "empty_annotations_filter": [("car", 4, 4), ("person", 2, 2)],
+    "sources_and_image_tag": [("car", 1, 3), ("person", 1, 1)],
+    "sources_and_width": [("car", 2, 3), ("person", 0, 1)],
+    "sources_and_image_region": [("car", 1, 3), ("person", 1, 1)],
+    "sources_and_label": [("car", 3, 3), ("person", 1, 1)],
+    # Images 1 and 2 have an object detection in source A; image 3 has a classification only.
+    "sources_and_type": [("car", 2, 3), ("person", 1, 1)],
+    "sources_and_annotation_tag": [("car", 1, 3), ("person", 1, 1)],
+    "sources_and_annotation_ids": [("car", 1, 3), ("person", 1, 1)],
+    "sources_and_empty_annotation_region": [("car", 0, 3), ("person", 0, 1)],
+    "sources_and_annotation_region": [("car", 1, 3), ("person", 1, 1)],
+}
+
+
+@pytest.mark.parametrize(
+    ("case_id", "expected"),
+    [pytest.param(case_id, expected, id=case_id) for case_id, expected in EXPECTED_COUNTS.items()],
+)
+def test_count_image_annotations_by_collection__counts_by_hand(
+    db_session: Session, case_id: str, expected: list[tuple[str, int, int]]
+) -> None:
+    data = annotation_count_cases.create_count_data(session=db_session)
+    build_filter = annotation_count_cases.BUILD_FILTER_BY_ID[case_id]
+
+    counts = image_resolver.count_image_annotations_by_collection(
+        session=db_session, collection_id=data.collection_id, image_filter=build_filter(data)
+    )
+
+    assert counts == expected
+
+
 @pytest.mark.parametrize("count_mode", [AnnotationCountMode.OBJECTS, AnnotationCountMode.SAMPLES])
 @pytest.mark.parametrize("annotation_type", [None, AnnotationType.OBJECT_DETECTION])
 @pytest.mark.parametrize("build_filter", annotation_count_cases.BUILD_FILTERS)
