@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Python SDK: Label images in the GUI with your own model. Subclass `ls.LabelingModel` and call `ls.register_labeling_model` before `ls.start_gui`. The new "Label with model" tool shows the suggested annotations, and you save the correct ones.
 
+- Python SDK: Run a labeling model on a remote server. Serve it with `lightly_studio_serve.serve(labeling_model=...)` and connect a dataset with `ls.register_remote_labeling_model`.
+
 ### Changed
 
 - Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
