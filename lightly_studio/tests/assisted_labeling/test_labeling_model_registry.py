@@ -21,12 +21,14 @@ class TestLabelingModelRegistry:
     def test_register__replaces_same_id(self, caplog: pytest.LogCaptureFixture) -> None:
         registry = LabelingModelRegistry()
         old = StubLabelingModel(model_id="m")
+        other = StubLabelingModel(model_id="x")
         new = StubLabelingModel(model_id="m")
 
         registry.register(model=old)
+        registry.register(model=other)
         registry.register(model=new)
 
-        assert registry.list_models() == [new]
+        assert registry.list_models() == [new, other]
         assert "Replacing labeling model 'm'." in caplog.text
 
     def test_get(self) -> None:

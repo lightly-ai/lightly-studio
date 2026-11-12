@@ -11,7 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class LabelingModelRegistry:
-    """Stores the labeling models of this process by model ID, in registration order."""
+    """Stores the labeling models of this process by model ID, in registration order.
+
+    A model that replaces a model with the same ID keeps the position of the old model.
+    """
 
     def __init__(self) -> None:
         """Create an empty registry."""
@@ -19,7 +22,7 @@ class LabelingModelRegistry:
         self._lock = threading.Lock()
 
     def register(self, model: LabelingModel) -> None:
-        """Register a model. A model with the same ID is replaced."""
+        """Register a model. A model with the same ID is replaced and keeps its position."""
         model_id = model.model_id
         with self._lock:
             if model_id in self._model_id_to_model:
@@ -32,7 +35,7 @@ class LabelingModelRegistry:
             return self._model_id_to_model.get(model_id)
 
     def list_models(self) -> list[LabelingModel]:
-        """Return all models in registration order."""
+        """Return all models in the order of their first registration."""
         with self._lock:
             return list(self._model_id_to_model.values())
 
