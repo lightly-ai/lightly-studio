@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Protocol, TypeVar, Union
+from typing import Protocol, TypeVar
 
 from typing_extensions import assert_never
 
@@ -64,7 +64,7 @@ from lightly_studio.models.sort_direction import SortDirection
 
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
-Number = Union[int, float]
+Number = int | float
 
 
 class _EqualityField(Protocol[T_contra]):  # noqa: PLW1641
