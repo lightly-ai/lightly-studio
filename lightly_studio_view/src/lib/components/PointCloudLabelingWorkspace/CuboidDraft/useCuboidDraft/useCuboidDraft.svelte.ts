@@ -65,6 +65,8 @@ interface Draft {
     currentWorld: Vector3;
     /** Signed width of the footprint, set in the width step. */
     width: number;
+    /** True after the pointer gave a height in the height step. */
+    hasPointerHeight: boolean;
 }
 
 /** Below this horizontal view length the height plane is almost parallel to the rays. */
@@ -112,7 +114,8 @@ export function useCuboidDraft({
             startWorld,
             currentScreen: startScreen,
             currentWorld: startWorld,
-            width: 0
+            width: 0,
+            hasPointerHeight: false
         };
         // Capture works because OrbitControls registers its listener before interactivity(),
         // as in useCuboidFaceResize.
@@ -189,15 +192,16 @@ export function useCuboidDraft({
     function updateHeight(active: Draft, event: PointerEvent): void {
         const footprint = getFootprint(active);
         const plane = createHeightPlane(getFootprintBox(footprint).center, camera.current);
-        if (!plane) {
-            // The camera looks straight down, so the pointer cannot give a height.
-            const extent = fitFootprintHeight(footprint, active.batch);
-            show(getFootprintBox(footprint, extent));
+        const hit = plane && raycastPlane(event, plane);
+        if (hit) {
+            active.hasPointerHeight = true;
+            show(getFootprintBox(footprint, getHeightExtent(active.startWorld[2], hit.z)));
             return;
         }
-        const hit = raycastPlane(event, plane);
-        if (!hit) return;
-        show(getFootprintBox(footprint, getHeightExtent(active.startWorld[2], hit.z)));
+        // The pointer gives no height when the camera looks straight down or the ray misses
+        // the plane. The last pointer height stays; without one, the points give the height.
+        if (active.hasPointerHeight) return;
+        show(getFootprintBox(footprint, fitFootprintHeight(footprint, active.batch)));
     }
 
     function update(active: Draft, event: PointerEvent): void {

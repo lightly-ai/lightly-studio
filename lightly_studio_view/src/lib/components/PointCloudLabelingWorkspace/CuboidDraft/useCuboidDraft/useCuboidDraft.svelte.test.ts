@@ -371,6 +371,28 @@ describe('useCuboidDraft', () => {
             ]);
         });
 
+        it('fits the height to the points when the first pointer ray misses the height plane', () => {
+            // The camera looks almost straight down. The footprint centre is below the screen
+            // centre and the pointer above it, so the ray leaves the height plane behind.
+            const camera = new PerspectiveCamera(90, 1, 0.1, 100);
+            camera.position.set(0, 0, 10);
+            camera.lookAt(0, 0.1, 0);
+            camera.updateMatrixWorld();
+            const batch = createBatch([
+                [1, -1, 0.5],
+                [1, -1, 2]
+            ]);
+            const { draft } = setup({ cameraMode: 'perspective', camera, batch });
+            pressAt(draft, 200, 260, [0, -3, 0]);
+            canvas.dispatchEvent(pointer('pointermove', 240, 260));
+            canvas.dispatchEvent(pointer('pointerup', 240, 260));
+            canvas.dispatchEvent(pointer('pointermove', 240, 180));
+            click(240, 180);
+            expect(draft.previewBox?.size[2]).toBeCloseTo(1.5);
+            click(240, 180);
+            expect(onCreate.mock.calls[0][0].size[2]).toBeCloseTo(1.5);
+        });
+
         it('keeps the last preview when the ray misses the ground', () => {
             const { draft } = setup({
                 cameraMode: 'perspective',
