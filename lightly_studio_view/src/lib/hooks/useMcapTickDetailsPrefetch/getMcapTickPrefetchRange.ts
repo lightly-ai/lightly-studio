@@ -20,7 +20,8 @@ export function getMcapTickPrefetchRange({
 }: GetMcapTickPrefetchRangeParams): TickRange[] {
     if (activeIndex < 0 || activeIndex >= tickCount || tickCount === 0) return [];
 
-    const count = Math.max(1, Math.floor(prefetchTickCount));
+    // Playback needs the next tick before it can leave the current one.
+    const count = Math.max(2, Math.floor(prefetchTickCount));
     return [
         {
             startIndex: Math.max(0, activeIndex - accumulationRadius),

@@ -9,7 +9,7 @@
 
     interface Props extends Pick<
         Parameters<typeof useCuboidFaceResize>[0],
-        'onResizeStart' | 'onResizeCancel' | 'onResizeEnd'
+        'onResizeStart' | 'onResizeCancel' | 'onResizePreview' | 'onResizeEnd'
     > {
         annotation: ReturnType<Parameters<typeof useCuboidFaceResize>[0]['getAnnotation']>;
         baseColor: string;
@@ -22,6 +22,7 @@
         cameraMode = 'perspective',
         onResizeStart,
         onResizeCancel,
+        onResizePreview,
         onResizeEnd
     }: Props = $props();
     const faces = $derived(getEditableCuboidFaces(cameraMode));
@@ -30,6 +31,7 @@
             getAnnotation: () => annotation,
             onResizeStart: () => onResizeStart?.(),
             onResizeCancel: () => onResizeCancel?.(),
+            onResizePreview: (payload) => onResizePreview(payload),
             onResizeEnd: (payload) => onResizeEnd?.(payload)
         });
     const highlightColor = $derived(new Color(baseColor).lerp(new Color(0xffffff), 0.65));

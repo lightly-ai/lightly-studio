@@ -246,11 +246,12 @@ describe('computeCameraPlacement', () => {
         expect(placement.target).toEqual([10, 0, 0]);
     });
 
-    it('uses only the provided bounds', () => {
-        const bounds = new Box3(new Vector3(0, 0, 0), new Vector3(10, 10, 10));
+    it('places the orbit target on the floor of the bounds', () => {
+        const bounds = new Box3(new Vector3(0, 0, -1), new Vector3(10, 10, 9));
 
         const placement = computeCameraPlacement(bounds);
 
-        expect(placement.target).toEqual([5, 5, 5]);
+        expect(placement.target).toEqual([5, 5, -1]);
+        expect(placement.position).toEqual([12.5, 12.5, 14]);
     });
 });

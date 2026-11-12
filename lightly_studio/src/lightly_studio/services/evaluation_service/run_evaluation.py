@@ -9,7 +9,6 @@ and reused by other callers.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Union
 
 from sqlmodel import Session
 
@@ -26,12 +25,12 @@ from lightly_studio.models.evaluation_run import EvaluationTaskType
 from lightly_studio.resolvers import collection_resolver, image_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
-EvaluationConfig = Union[
-    ObjectDetectionEvaluationConfig,
-    ClassificationEvaluationConfig,
-    InstanceSegmentationEvaluationConfig,
-    SemanticSegmentationEvaluationConfig,
-]
+EvaluationConfig = (
+    ObjectDetectionEvaluationConfig
+    | ClassificationEvaluationConfig
+    | InstanceSegmentationEvaluationConfig
+    | SemanticSegmentationEvaluationConfig
+)
 
 
 def run_evaluation(  # noqa: PLR0913

@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
     register: vi.fn(),
     setMonarchTokensProvider: vi.fn(),
+    setLanguageConfiguration: vi.fn(),
     registerHoverProvider: vi.fn(),
     defineTheme: vi.fn(),
     createModel: vi.fn(),
@@ -21,6 +22,7 @@ vi.mock('monaco-editor', () => ({
     languages: {
         register: mocks.register,
         setMonarchTokensProvider: mocks.setMonarchTokensProvider,
+        setLanguageConfiguration: mocks.setLanguageConfiguration,
         registerHoverProvider: mocks.registerHoverProvider
     },
     editor: {
@@ -205,6 +207,24 @@ describe('useQueryEditor', () => {
         const uris = mocks.uriParse.mock.calls.map((c) => c[0] as string);
         expect(uris.length).toBeGreaterThanOrEqual(2);
         expect(new Set(uris).size).toBe(uris.length);
+    });
+
+    it('registers surrounding pairs so typing an opening character wraps the selection', async () => {
+        // Monaco setup runs once per module, so load a fresh module to observe it.
+        vi.resetModules();
+        const freshModule = await import('./useQueryEditor');
+        const { mount } = freshModule.useQueryEditor();
+
+        mount(document.createElement('div'), { value: '' });
+
+        expect(mocks.setLanguageConfiguration).toHaveBeenCalledWith('lightly-query', {
+            surroundingPairs: [
+                { open: '(', close: ')' },
+                { open: '[', close: ']' },
+                { open: '"', close: '"' },
+                { open: "'", close: "'" }
+            ]
+        });
     });
 
     it('exposes the language service translateQuery function', () => {

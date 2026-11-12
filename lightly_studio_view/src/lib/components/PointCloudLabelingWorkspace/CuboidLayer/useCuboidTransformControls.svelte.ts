@@ -9,6 +9,7 @@ interface Params {
         object: Object3D,
         snapshot: ReturnType<typeof captureTransformSnapshot>
     ) => void;
+    onTransformPreview?: (object: Object3D) => void;
     onInteractionStart?: () => void;
     onInteractionCancel?: () => void;
 }
@@ -29,6 +30,7 @@ export function useCuboidTransformControls(params: Params): void {
 
         function onObjectChange(): void {
             changed = true;
+            if (parent.current) params.onTransformPreview?.(parent.current);
         }
 
         function onMouseUp(): void {
