@@ -50,6 +50,11 @@ tag_name = "evaluated_samples"
 dataset.query()[:10].add_tag(tag_name)
 tagged_evaluation_query = dataset.query().match(ImageSampleField.tags.contains(tag_name))
 
+# Tags for the distribution panel comparison. The first two overlap on [16:32].
+dataset.query()[:32].add_tag("distribution_reviewed")
+dataset.query()[16:48].add_tag("distribution_priority")
+dataset.query()[:0].add_tag("distribution_empty")
+
 evaluation_config = ObjectDetectionEvaluationConfig(
     iou_threshold=0.5,
     classwise=True,

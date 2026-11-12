@@ -262,14 +262,6 @@ jobs:
             success_key: e2e-success-evaluations
             artifact_name: Playwright Report (Evaluations)
             postgres: false
-          - name: Distribution
-            index_script: index_distribution.py
-            playwright_project: distribution
-            shard: "1/1"
-            success_marker: .e2e-success-distribution
-            success_key: e2e-success-distribution
-            artifact_name: Playwright Report (Distribution)
-            postgres: false
     steps: &end-to-end-steps
       - name: Checkout Code
         uses: actions/checkout@v7
