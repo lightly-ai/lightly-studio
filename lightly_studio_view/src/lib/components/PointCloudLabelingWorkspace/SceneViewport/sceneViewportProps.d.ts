@@ -1,4 +1,4 @@
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { Snippet } from 'svelte';
 import type { ColorMode, PointBatch, SceneViewState } from '$lib/components/PointCloudViewer';
 import type {

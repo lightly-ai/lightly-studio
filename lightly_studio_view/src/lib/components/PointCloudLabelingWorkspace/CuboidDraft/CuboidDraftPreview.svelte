@@ -1,5 +1,6 @@
 <script lang="ts">
     import { T } from '@threlte/core';
+    import { onDestroy } from 'svelte';
     import { BoxGeometry, EdgesGeometry } from 'three';
     import type { CuboidBox } from './cuboidDraft';
 
@@ -10,20 +11,31 @@
     }
 
     let { box }: Props = $props();
-    const geometry = $derived(new BoxGeometry(...box.size));
-    const edges = $derived(new EdgesGeometry(geometry));
+    // One unit box scaled to the draft, so pointer moves do not allocate geometries.
+    const geometry = new BoxGeometry(1, 1, 1);
+    const edges = new EdgesGeometry(geometry);
 
-    $effect(() => {
-        return () => {
-            geometry.dispose();
-            edges.dispose();
-        };
+    onDestroy(() => {
+        geometry.dispose();
+        edges.dispose();
     });
 </script>
 
-<T.Mesh position={[...box.center]} {geometry}>
-    <T.MeshBasicMaterial color="white" transparent opacity={0.2} depthWrite={false} />
+<!-- Draw on top so the preview stays visible through dense point-cloud regions. -->
+<T.Mesh position={[...box.center]} scale={[...box.size]} {geometry} renderOrder={999}>
+    <T.MeshBasicMaterial
+        color="white"
+        transparent
+        opacity={0.2}
+        depthWrite={false}
+        depthTest={false}
+    />
 </T.Mesh>
-<T.LineSegments position={[...box.center]} geometry={edges}>
-    <T.LineBasicMaterial color="white" />
+<T.LineSegments
+    position={[...box.center]}
+    scale={[...box.size]}
+    geometry={edges}
+    renderOrder={1000}
+>
+    <T.LineBasicMaterial color="white" depthTest={false} />
 </T.LineSegments>

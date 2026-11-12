@@ -1,4 +1,4 @@
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import { getContext, setContext } from 'svelte';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import type { ColorMode } from '$lib/components/PointCloudViewer';

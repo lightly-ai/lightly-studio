@@ -185,6 +185,40 @@ describe('useCuboidDraft', () => {
         expect(draft.previewBox).toBeNull();
     });
 
+    it.each(['shiftKey', 'ctrlKey', 'metaKey'])(
+        'leaves a pointer-down with %s to the camera',
+        (modifier) => {
+            const { draft } = setup();
+            const nativeEvent = pointer('pointerdown', 225, 175);
+            Object.defineProperty(nativeEvent, modifier, { value: true });
+            draft.handlePlanePointerDown({ point: { x: 0.5, y: 0.5, z: 0 }, nativeEvent });
+            canvas.dispatchEvent(pointer('pointermove', 325, 125));
+            canvas.dispatchEvent(pointer('pointerup', 325, 125));
+            expect(canvas.setPointerCapture).not.toHaveBeenCalled();
+            expect(draft.previewBox).toBeNull();
+            expect(onCreate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('clears the preview when the pointer returns near the start', () => {
+        const { draft } = setup();
+        dragInTopView(draft);
+        expect(draft.previewBox).not.toBeNull();
+        canvas.dispatchEvent(pointer('pointermove', 226, 176));
+        expect(draft.previewBox).toBeNull();
+        canvas.dispatchEvent(pointer('pointerup', 226, 176));
+        expect(onCreate).toHaveBeenCalledWith({ kind: 'drop', position: [0.5, 0.5, 0] });
+    });
+
+    it('creates nothing after a long drag whose rays all miss the plane', () => {
+        // The top-view plane is horizontal; this camera's rays above the horizon never reach it.
+        const { draft } = setup({ camera: createHorizontalCamera() });
+        pressAt(draft, 200, 300, [0, 0, 0]);
+        canvas.dispatchEvent(pointer('pointermove', 250, 100));
+        canvas.dispatchEvent(pointer('pointerup', 250, 100));
+        expect(onCreate).not.toHaveBeenCalled();
+    });
+
     it('keeps the last preview when the ray misses the plane', () => {
         const { draft } = setup({ cameraMode: 'perspective', camera: createHorizontalCamera() });
         pressAt(draft, 200, 300, [0, 0, 0]);

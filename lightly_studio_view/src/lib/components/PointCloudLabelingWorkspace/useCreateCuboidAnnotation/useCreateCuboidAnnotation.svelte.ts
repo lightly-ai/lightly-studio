@@ -11,11 +11,11 @@ import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
 import type { Bounds3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
-import {
-    getDefaultCuboidBox,
-    type CuboidBox,
-    type CuboidPlacement
-} from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+import type {
+    CuboidBox,
+    CuboidPlacement
+} from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import { getDefaultCuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
 
 interface SceneFrame {
     bounds: Bounds3 | null;

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+    import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
     import { untrack } from 'svelte';
     import { useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';

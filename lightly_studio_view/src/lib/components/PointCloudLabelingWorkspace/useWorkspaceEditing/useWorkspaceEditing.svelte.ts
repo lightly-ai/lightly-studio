@@ -13,7 +13,7 @@ import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 import type { WorkspaceTool } from '../domain';
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 
 /** Shared annotation selection, tools, and persistence for every scene viewport. */
 export function useWorkspaceEditing(
@@ -154,9 +154,15 @@ export function useWorkspaceEditing(
         });
     }
 
+    function setActiveTool(tool: WorkspaceTool): void {
+        activeTool = tool;
+        // Orthographic cameras fit a selected cuboid's frame, so drawing needs a world-aligned view.
+        if (tool === 'create-cuboid') selectedCuboidId = null;
+    }
+
     function toggleAddTrack(): void {
         addingTrack = !addingTrack;
-        activeTool = addingTrack ? 'create-cuboid' : 'select';
+        setActiveTool(addingTrack ? 'create-cuboid' : 'select');
     }
 
     const displayedAnnotations = fromStore(annotations);
@@ -185,7 +191,7 @@ export function useWorkspaceEditing(
             return activeTool;
         },
         set activeTool(value: WorkspaceTool) {
-            activeTool = value;
+            setActiveTool(value);
             addingTrack = false;
         },
         get isAddingTrack() {

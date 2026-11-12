@@ -2,7 +2,7 @@
     import { T } from '@threlte/core';
     import type { Bounds3, CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { PointBatch } from '$lib/components/PointCloudViewer';
-    import { getCuboidCreationPlane } from '../GroundPlane/GroundPlaneClickTarget/cuboidCreationPlane';
+    import { getCuboidCreationPlane } from './cuboidCreationPlane';
     import type { CuboidPlacement } from './cuboidDraft';
     import CuboidDraftPreview from './CuboidDraftPreview.svelte';
     import { useCuboidDraft } from './useCuboidDraft';

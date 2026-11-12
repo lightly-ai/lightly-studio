@@ -1,5 +1,9 @@
-import type { Bounds3, CameraMode, Vector3 } from '../../domain';
-import { computeGroundPlaneLayout } from '../groundPlaneLayout';
+import type {
+    Bounds3,
+    CameraMode,
+    Vector3
+} from '$lib/components/PointCloudLabelingWorkspace/domain';
+import { computeGroundPlaneLayout } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane/groundPlaneLayout';
 
 /** Defines creation plane shared by this module. */
 interface CreationPlane {

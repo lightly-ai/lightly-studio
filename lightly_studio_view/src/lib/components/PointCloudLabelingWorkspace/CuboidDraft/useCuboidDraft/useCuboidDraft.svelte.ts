@@ -54,6 +54,8 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
 
     function handlePlanePointerDown({ point, nativeEvent }: PlanePointerEvent): void {
         if (nativeEvent.button !== 0) return;
+        // OrbitControls pans on a modifier + left-drag, so leave those to the camera.
+        if (nativeEvent.shiftKey || nativeEvent.ctrlKey || nativeEvent.metaKey) return;
         discardDraft();
         const cameraMode = getCameraMode();
         const startWorld: Vector3 = [point.x, point.y, point.z];
@@ -68,6 +70,8 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
             currentScreen: startScreen,
             currentWorld: startWorld
         };
+        // Capture works because OrbitControls registers its listener before interactivity(),
+        // as in useCuboidFaceResize.
         canvas.setPointerCapture(nativeEvent.pointerId);
         addListeners();
     }
@@ -78,13 +82,15 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
 
     function updateDraft(event: PointerEvent): void {
         if (!draft) return;
+        draft.currentScreen = { x: event.clientX, y: event.clientY };
+        if (!isDrag(draft.startScreen, draft.currentScreen)) {
+            previewBox = null;
+            return;
+        }
         const hit = raycastPlane(event, draft.plane);
         if (!hit) return;
-        draft.currentScreen = { x: event.clientX, y: event.clientY };
         draft.currentWorld = [hit.x, hit.y, hit.z];
-        if (isDrag(draft.startScreen, draft.currentScreen)) {
-            previewBox = getDraftBox(getRectangle(draft));
-        }
+        previewBox = getDraftBox(getRectangle(draft));
     }
 
     function raycastPlane(event: PointerEvent, plane: Plane): ThreeVector3 | null {
@@ -101,7 +107,8 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
         if (!isDrag(active.startScreen, active.currentScreen)) {
             return { kind: 'drop', position: active.startWorld };
         }
-        if (active.cameraMode === 'perspective') return null;
+        // A drag whose rays never hit the plane has no rectangle to create.
+        if (active.cameraMode === 'perspective' || !previewBox) return null;
         const rectangle = getRectangle(active);
         return {
             kind: 'box',

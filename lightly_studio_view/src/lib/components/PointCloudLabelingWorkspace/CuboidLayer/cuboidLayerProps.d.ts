@@ -1,4 +1,4 @@
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type * as Domain from '../domain';
 import type { createCuboidTransformState } from './cuboidTransformState';
