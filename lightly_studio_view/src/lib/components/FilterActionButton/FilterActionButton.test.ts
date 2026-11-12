@@ -13,4 +13,15 @@ describe('FilterActionButton', () => {
 
         expect(onclick).toHaveBeenCalledOnce();
     });
+
+    it('does not call onclick when disabled', async () => {
+        const onclick = vi.fn();
+        render(FilterActionButton, { label: 'Clear', icon: Eye, onclick, disabled: true });
+
+        const button = screen.getByRole('button', { name: 'Clear' });
+        expect(button).toBeDisabled();
+        await userEvent.click(button);
+
+        expect(onclick).not.toHaveBeenCalled();
+    });
 });

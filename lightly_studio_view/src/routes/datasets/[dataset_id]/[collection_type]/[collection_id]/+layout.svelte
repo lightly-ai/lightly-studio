@@ -720,7 +720,6 @@
                                         showDimensions={!isCaptions}
                                         {isVideos}
                                         {isVideoFrames}
-                                        isImageCollection={isImages || isCaptions}
                                         {categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}

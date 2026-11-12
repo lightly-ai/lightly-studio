@@ -1,15 +1,15 @@
 <script lang="ts">
+    import { X } from '@lucide/svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import CategoricalMetadataFilters from '$lib/components/CategoricalMetadataFilters/CategoricalMetadataFilters.svelte';
-    import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+    import { FilterActionButton } from '$lib/components/FilterActionButton';
+    import { useCategoricalFieldCounts } from '$lib/components/CategoricalMetadataFilters/useCategoricalFieldCounts.svelte';
     import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
-    import type { CategoricalMetadataValue, MetadataValues } from '$lib/services/types';
-    import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
-    import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
     import { Input } from '$lib/components/ui/input';
-    import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
+    import MetadataFieldRow from './MetadataFieldRow.svelte';
     import { MANY_FIELDS, isFieldExpanded, matchesFieldSearch } from './metadataFieldList';
+    import { isFieldActive, orderByActive } from './metadataFields';
+    import { useMetadataFieldList } from './useMetadataFieldList.svelte';
 
     interface Props {
         /** Collection whose metadata fields are listed. */
@@ -22,7 +22,6 @@
         isVideoFrames?: boolean;
         /** Called when any filter range changes, with the field name and new min/max values. */
         onFilterChanged?: (fieldName: string, min: number, max: number) => void;
-        isImageCollection?: boolean;
         /** Filter for the categorical value counts. `undefined` counts all samples. */
         categoricalCountsFilter?: MetadataValueCountsFilter;
         categoricalKeys?: string[];
@@ -37,7 +36,6 @@
         isVideos = false,
         isVideoFrames = false,
         onFilterChanged,
-        isImageCollection = false,
         categoricalCountsFilter,
         categoricalKeys = [],
         onCategoricalValueToggle,
@@ -45,69 +43,44 @@
         onCategoricalValuesClear
     }: Props = $props();
 
-    // Dimension filters logic
-    const {
-        dimensionsBounds: bounds,
-        dimensionsValues: values,
-        updateDimensionsValues: onChange
-    } = useDimensions();
+    const list = useMetadataFieldList({
+        getCollectionId: () => collectionId,
+        getShowImageDimensions: () => showDimensions && !isVideos && !isVideoFrames,
+        getIsVideos: () => isVideos,
+        getIsVideoFrames: () => isVideoFrames,
+        getCategoricalKeys: () => categoricalKeys,
+        onRangeCommitted: (key, min, max) => onFilterChanged?.(key, min, max)
+    });
 
-    // Width and height use the same slider field as numeric metadata.
-    const handleDimensionCommit = (dimension: string, [min, max]: number[]) => {
-        if (!$values) return;
-        onChange(
-            dimension === 'width'
-                ? { ...$values, min_width: min, max_width: max }
-                : { ...$values, min_height: min, max_height: max }
-        );
-        onFilterChanged?.(dimension, min, max);
-    };
-
-    // Metadata filters logic
-    const { metadataBounds, metadataValues, updateMetadataValues } = $derived.by(() =>
-        useMetadataFilters(collectionId)
-    );
-
-    const numericalMetadata = $derived.by(() =>
-        Object.keys($metadataBounds).filter((key) => {
-            const bound = $metadataBounds[key];
-            const value = $metadataValues[key];
-            return (
-                bound &&
-                value &&
-                typeof bound.min === 'number' &&
-                typeof bound.max === 'number' &&
-                typeof value.min === 'number' &&
-                typeof value.max === 'number'
-            );
-        })
-    );
-    const handleMetadataValueCommit = (metadataKey: string, newValues: number[]): void => {
-        const currentValues: MetadataValues = { ...$metadataValues };
-        currentValues[metadataKey] = { min: newValues[0], max: newValues[1] };
-        updateMetadataValues(currentValues);
-        onFilterChanged?.(metadataKey, newValues[0], newValues[1]);
-    };
-
-    // Every field is listed, with one rule for showing, collapsing and searching them.
-    const showImageDimensions = $derived(
-        showDimensions && !isVideos && !isVideoFrames && !!$bounds && !!$values
-    );
-    const categoricalFields = $derived(isImageCollection ? categoricalKeys : []);
-    const fieldCount = $derived(
-        (showImageDimensions ? 2 : 0) + numericalMetadata.length + categoricalFields.length
-    );
     let fieldSearch = $state('');
     let expandedOverrides = $state<Record<string, boolean>>({});
-    const isExpanded = (field: string) => isFieldExpanded(expandedOverrides, field, fieldCount);
-    const toggleExpanded = (field: string) => {
-        expandedOverrides = { ...expandedOverrides, [field]: !isExpanded(field) };
+    const fieldCount = $derived(list.fields.length);
+    const isExpanded = (id: string) => isFieldExpanded(expandedOverrides, id, fieldCount);
+    const toggleExpanded = (id: string) => {
+        expandedOverrides = { ...expandedOverrides, [id]: !isExpanded(id) };
     };
-    const matches = (field: string) => matchesFieldSearch(field, fieldSearch);
+
+    const ordered = $derived(
+        orderByActive(list.fields.filter((field) => matchesFieldSearch(field.title, fieldSearch)))
+    );
+    const hasActiveField = $derived(list.fields.some(isFieldActive));
+
+    // Expanded fields show their values and active fields their "N of M" summary, so only
+    // those categorical fields are requested.
+    const counts = useCategoricalFieldCounts(() => ({
+        collectionId,
+        filter: categoricalCountsFilter,
+        fields: ordered.fields
+            .filter(
+                (field) =>
+                    field.kind === 'categorical' && (isExpanded(field.id) || isFieldActive(field))
+            )
+            .map((field) => field.key)
+    }));
 </script>
 
-<!-- All metadata filters share one section with one collapsible field per key. Numeric
-     fields, width and height use a slider, categorical fields a value list. -->
+<!-- All metadata filters share one section: active fields first, then a line, then the other
+     fields. Ranges use a slider, categorical fields a value list. -->
 <Segment title="Metadata">
     <div class="space-y-4">
         {#if fieldCount > MANY_FIELDS}
@@ -119,56 +92,35 @@
                 class="h-8"
             />
         {/if}
+        <div class="flex">
+            <FilterActionButton
+                label="Clear"
+                icon={X}
+                onclick={list.resetAll}
+                disabled={!hasActiveField}
+            />
+        </div>
 
-        {#if showImageDimensions && $bounds && $values}
-            {#each [{ key: 'width', title: 'Width' }, { key: 'height', title: 'Height' }] as dimension (dimension.key)}
-                {#if matches(dimension.title)}
-                    <MetadataFilterItem
-                        metadataKey={dimension.key}
-                        title={dimension.title}
-                        unit="px"
-                        bound={dimension.key === 'width'
-                            ? { min: $bounds.min_width, max: $bounds.max_width }
-                            : { min: $bounds.min_height, max: $bounds.max_height }}
-                        value={dimension.key === 'width'
-                            ? { min: $values.min_width, max: $values.max_width }
-                            : { min: $values.min_height, max: $values.max_height }}
-                        onValueCommit={handleDimensionCommit}
-                        expanded={isExpanded(dimension.title)}
-                        onToggleExpanded={() => toggleExpanded(dimension.title)}
-                    />
+        <div class="space-y-4">
+            {#each ordered.fields as field, index (field.id)}
+                {@const expanded = isExpanded(field.id)}
+                {#if index === ordered.activeCount && ordered.activeCount > 0}
+                    <hr data-testid="metadata-active-separator" class="border-border" />
                 {/if}
+                <div data-field-id={field.id}>
+                    <MetadataFieldRow
+                        {field}
+                        {expanded}
+                        onToggleExpanded={() => toggleExpanded(field.id)}
+                        {counts}
+                        onCommitRange={(range) => list.commitRange(field.id, range)}
+                        onReset={() => list.reset(field.id)}
+                        {onCategoricalValueToggle}
+                        {onCategoricalValuesSet}
+                        {onCategoricalValuesClear}
+                    />
+                </div>
             {/each}
-        {:else if isVideos}
-            <VideoFieldBoundsFilters {onFilterChanged} />
-        {/if}
-
-        {#if isVideoFrames}
-            <VideoFrameBoundsFilter {onFilterChanged} />
-        {/if}
-
-        {#each numericalMetadata.filter(matches) as metadataKey (metadataKey)}
-            <MetadataFilterItem
-                {metadataKey}
-                bound={$metadataBounds[metadataKey]}
-                value={$metadataValues[metadataKey]}
-                onValueCommit={handleMetadataValueCommit}
-                expanded={isExpanded(metadataKey)}
-                onToggleExpanded={() => toggleExpanded(metadataKey)}
-            />
-        {/each}
-
-        {#if categoricalFields.length > 0}
-            <CategoricalMetadataFilters
-                {collectionId}
-                filter={categoricalCountsFilter}
-                fields={categoricalFields.filter(matches)}
-                {isExpanded}
-                onToggleExpanded={toggleExpanded}
-                onValueToggle={onCategoricalValueToggle}
-                onValuesSet={onCategoricalValuesSet}
-                onValuesClear={onCategoricalValuesClear}
-            />
-        {/if}
+        </div>
     </div>
 </Segment>
