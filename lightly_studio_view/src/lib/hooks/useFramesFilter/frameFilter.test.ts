@@ -125,9 +125,11 @@ describe('getFrameFilter', () => {
             expect(getFrameFilter({ collection_id: 'coll-1', video_id: '' })).toEqual(expected);
         });
 
-        it('passes categorical-only metadata', () => {
-            vi.mocked(createMetadataFilters).mockClear();
-            vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
+        it('passes categorical-only metadata', async () => {
+            const actual = await vi.importActual<
+                typeof import('$lib/hooks/useMetadataFilters/useMetadataFilters')
+            >('$lib/hooks/useMetadataFilters/useMetadataFilters');
+            vi.mocked(createMetadataFilters).mockImplementationOnce(actual.createMetadataFilters);
             const colorFilters = { color: ['red'] };
 
             const filter = getFrameFilter({
@@ -135,8 +137,9 @@ describe('getFrameFilter', () => {
                 filters: { categorical_metadata_values: colorFilters }
             });
 
-            expect(createMetadataFilters).toHaveBeenCalledWith({}, colorFilters);
-            expect(filter?.sample_filter?.metadata_filters).toEqual([temperatureMetadataFilter]);
+            expect(filter?.sample_filter?.metadata_filters).toEqual([
+                { key: 'color', op: 'in', value: ['red'] }
+            ]);
         });
     });
 });
