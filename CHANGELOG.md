@@ -37,8 +37,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Typing `(`, `[`, `"` or `'` in the query editor wraps the selected text in that pair.
 
 - Evaluation
-    - Python SDK: Store the per-class average precision of object-detection runs at each IoU threshold when `compute_average_precision=True` is set in `ObjectDetectionEvaluationConfig`.
-    - Python SDK: `dataset.evaluate().metrics(run_id)` includes the per-class and mean average precision of object-detection runs created with `compute_average_precision=True`, averaged over the IoU thresholds 0.50 to 0.95 and at each threshold.
+    - Python SDK: Compute per-class and mean average precision for object detection with `compute_average_precision=True` in `ObjectDetectionEvaluationConfig`. Read the results with `dataset.evaluate().metrics(run_id)`, averaged over IoU thresholds 0.50 to 0.95 and at each threshold.
 
 - Embedding plot
     - The embedding plot shows the active plot filter and lets you clear it right on the plot.
@@ -50,13 +49,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Annotations
     - The class for new annotations is remembered per collection across browser sessions and follows class renames and deletions. Selecting an existing annotation no longer changes it.
-    - Improved labeling tool names, layout, and buttons.
     - Users with the labeler or viewer role can only choose existing annotation classes in the labeling tools.
     - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
 
 - Embedding plot
-    - Coloring image and crop embeddings by annotation class is faster by reducing repeated work when loading annotation labels.
-    - Embedding plots color faster when no filters are active.
+    - Embedding plots color faster when no filters are active and when coloring image and crop embeddings by annotation class.
 
 - Other
     - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
