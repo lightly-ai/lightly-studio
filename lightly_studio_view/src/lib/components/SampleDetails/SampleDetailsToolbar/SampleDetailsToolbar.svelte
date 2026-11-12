@@ -73,7 +73,10 @@
             routeId: page.route.id
         })
     );
-    const labelingModels = useLabelingModels(() => isOnAssistedLabelingView);
+    const labelingModels = useLabelingModels(() => ({
+        collectionId: page.params.collection_id!,
+        enabled: isOnAssistedLabelingView
+    }));
     const showAssistedLabelingTools = $derived(
         isOnAssistedLabelingView && assistedLabelingStatus.disabledReason === null
     );

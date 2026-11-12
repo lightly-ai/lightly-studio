@@ -8,13 +8,24 @@ interface UseLabelingModelsReturn {
     readonly isAvailable: boolean;
 }
 
-// Each caller is a query observer that polls on its own, so each caller passes getEnabled.
-export const useLabelingModels = (getEnabled: () => boolean): UseLabelingModelsReturn => {
-    const query = createQuery(() => ({
-        ...getLabelingModelsOptions(),
-        enabled: getEnabled(),
-        refetchInterval: ({ state }) => getLabelingModelsRefetchInterval(state.data)
-    }));
+interface UseLabelingModelsParams {
+    collectionId: string;
+    enabled: boolean;
+}
+
+// Loads the labeling models that can run on the images of the collection. Each caller is a
+// query observer that polls on its own, so each caller passes `enabled`.
+export const useLabelingModels = (
+    getParams: () => UseLabelingModelsParams
+): UseLabelingModelsReturn => {
+    const query = createQuery(() => {
+        const { collectionId, enabled } = getParams();
+        return {
+            ...getLabelingModelsOptions({ query: { collection_id: collectionId } }),
+            enabled,
+            refetchInterval: ({ state }) => getLabelingModelsRefetchInterval(state.data)
+        };
+    });
     const models = $derived(query.data?.models ?? []);
 
     return {

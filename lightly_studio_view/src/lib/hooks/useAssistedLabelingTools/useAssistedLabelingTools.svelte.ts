@@ -42,12 +42,13 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const assistedLabelingStatus = useAssistedLabelingStatus();
     const { context, setStatus } = useSampleDetailsToolbarContext();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
-    const labelingModels = useLabelingModels(() =>
-        isAssistedLabelingView({
+    const labelingModels = useLabelingModels(() => ({
+        collectionId: getParams().collectionId,
+        enabled: isAssistedLabelingView({
             isOnAnnotationDetailsView: annotationLabelContext.isOnAnnotationDetailsView,
             routeId: page.route.id
         })
-    );
+    }));
     const isEditingMode = fromStore(useGlobalStorage().isEditingMode);
     const state = new AssistedLabelingToolState();
     const stickyClass = useStickyClassName(() => getParams().collectionId);

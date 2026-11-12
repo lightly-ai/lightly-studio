@@ -9,7 +9,8 @@ from uuid import UUID
 import pytest
 from fastapi.testclient import TestClient
 from httpx import Response
-from lightly_studio_serve.labeling import ModelTask, PredictedAnnotation
+from lightly_studio_serve import server
+from lightly_studio_serve.labeling import LabelingModel, ModelTask, PredictedAnnotation
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
@@ -20,9 +21,13 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_SERVICE_UNAVAILABLE,
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
-from lightly_studio.assisted_labeling import labeling_model_registry
+from lightly_studio.assisted_labeling import labeling_model_registry, remote_runner_cache
 from lightly_studio.assisted_labeling.labeling_model_registry import LabelingModelRegistry
+from lightly_studio.assisted_labeling.remote_runner_cache import RemoteRunnerCache
+from lightly_studio.embed.remote import connection
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.labeling_model import LabelingModelCreate
+from lightly_studio.resolvers import labeling_model_resolver
 from tests.assisted_labeling import helpers
 from tests.assisted_labeling.helpers import StubLabelingModel
 from tests.helpers_resolvers import create_collection, create_image
@@ -42,7 +47,7 @@ def model_registry(mocker: MockerFixture) -> LabelingModelRegistry:
 
 
 def test_get_labeling_models(
-    test_client: TestClient, model_registry: LabelingModelRegistry
+    media_test_client: TestClient, model_registry: LabelingModelRegistry, db_session: Session
 ) -> None:
     model_registry.register(
         model=StubLabelingModel(
@@ -50,7 +55,10 @@ def test_get_labeling_models(
         )
     )
 
-    response = test_client.get("/api/annotate/models")
+    collection = create_collection(session=db_session)
+    response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(collection.collection_id)}
+    )
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {
@@ -60,22 +68,30 @@ def test_get_labeling_models(
 
 
 @pytest.mark.usefixtures("model_registry")
-def test_get_labeling_models__none_registered(test_client: TestClient) -> None:
-    response = test_client.get("/api/annotate/models")
+def test_get_labeling_models__none_registered(
+    media_test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+    response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(collection.collection_id)}
+    )
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {"models": [], "has_loading_models": False}
 
 
 def test_get_labeling_models__not_ready(
-    test_client: TestClient, model_registry: LabelingModelRegistry
+    media_test_client: TestClient, model_registry: LabelingModelRegistry, db_session: Session
 ) -> None:
     loading_model = StubLabelingModel(model_id="loading")
     loading_model.is_ready = False
     model_registry.register(model=loading_model)
     model_registry.register(model=StubLabelingModel(model_id="loaded"))
 
-    response = test_client.get("/api/annotate/models")
+    collection = create_collection(session=db_session)
+    response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(collection.collection_id)}
+    )
 
     assert response.status_code == HTTP_STATUS_OK
     assert [model["id"] for model in response.json()["models"]] == ["loaded"]
@@ -83,11 +99,14 @@ def test_get_labeling_models__not_ready(
 
 
 def test_get_labeling_models__ready_during_request(
-    test_client: TestClient, model_registry: LabelingModelRegistry
+    media_test_client: TestClient, model_registry: LabelingModelRegistry, db_session: Session
 ) -> None:
     model_registry.register(model=helpers.ReadyOnSecondReadModel(model_id="late"))
 
-    response = test_client.get("/api/annotate/models")
+    collection = create_collection(session=db_session)
+    response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(collection.collection_id)}
+    )
 
     assert response.status_code == HTTP_STATUS_OK
     # The model is either in the list or counted as loading, so the GUI polls for it.
@@ -95,12 +114,15 @@ def test_get_labeling_models__ready_during_request(
 
 
 def test_get_labeling_models__faulty_model(
-    test_client: TestClient, model_registry: LabelingModelRegistry
+    media_test_client: TestClient, model_registry: LabelingModelRegistry, db_session: Session
 ) -> None:
     model_registry.register(model=_TaskRaisesModel(model_id="faulty"))
     model_registry.register(model=StubLabelingModel(model_id="working"))
 
-    response = test_client.get("/api/annotate/models")
+    collection = create_collection(session=db_session)
+    response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(collection.collection_id)}
+    )
 
     assert response.status_code == HTTP_STATUS_OK
     assert [model["id"] for model in response.json()["models"]] == ["working"]
@@ -385,3 +407,104 @@ def _post_model_preview(
         },
     )
     return response
+
+
+@pytest.mark.usefixtures("model_registry")
+def test_get_labeling_models__unknown_collection(media_test_client: TestClient) -> None:
+    response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(uuid.UUID(int=5))}
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+
+
+@pytest.mark.usefixtures("model_registry")
+def test_get_labeling_models__saved_server(
+    db_session: Session, media_test_client: TestClient, mocker: MockerFixture
+) -> None:
+    _serve_labeling_model(
+        mocker=mocker,
+        model=StubLabelingModel(model_id="remote-detector", class_names=["car"]),
+    )
+    collection = create_collection(session=db_session)
+    other_collection = create_collection(session=db_session, collection_name="other")
+    _save_server(session=db_session, dataset_id=collection.dataset_id, model_id="remote-detector")
+
+    response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(collection.collection_id)}
+    )
+    other_response = media_test_client.get(
+        "/api/annotate/models", params={"collection_id": str(other_collection.collection_id)}
+    )
+
+    assert response.json() == {
+        "models": [{"id": "remote-detector", "task": "object_detection", "class_names": ["car"]}],
+        "has_loading_models": False,
+    }
+    assert other_response.json() == {"models": [], "has_loading_models": False}
+
+
+@pytest.mark.usefixtures("model_registry")
+def test_create_model_annotation_preview__saved_server(
+    db_session: Session, media_test_client: TestClient, mocker: MockerFixture, tmp_path: Path
+) -> None:
+    model = StubLabelingModel(
+        model_id="remote-detector",
+        class_names=["car"],
+        predictions=[PredictedAnnotation(class_name="car", box=(10.0, 5.0, 30.0, 25.0), score=0.8)],
+    )
+    _serve_labeling_model(mocker=mocker, model=model)
+    collection = create_collection(session=db_session)
+    _save_server(session=db_session, dataset_id=collection.dataset_id, model_id="remote-detector")
+    image = _create_png_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        tmp_path=tmp_path,
+        width=100,
+        height=50,
+    )
+
+    response = media_test_client.post(
+        "/api/annotate/models/predict",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "model_id": "remote-detector",
+            "threshold": 0.3,
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert model.thresholds == [0.3]
+    assert [pil_image.size for pil_image in model.images] == [(100, 50)]
+    assert response.json() == {
+        "predictions": [
+            {
+                "class_name": "car",
+                "bbox": {"x": 10, "y": 5, "width": 20, "height": 20},
+                "segmentation_mask": None,
+                "score": 0.8,
+            }
+        ]
+    }
+
+
+def _serve_labeling_model(mocker: MockerFixture, model: LabelingModel) -> None:
+    """Serve ``model`` to every client that opens, and start with an empty runner cache."""
+    mocker.patch.object(remote_runner_cache, "_cache", RemoteRunnerCache())
+    mocker.patch.object(
+        connection,
+        "build_client",
+        side_effect=lambda url: TestClient(
+            server.create_app(labeling_model=model), base_url=url, follow_redirects=False
+        ),
+    )
+
+
+def _save_server(session: Session, dataset_id: UUID, model_id: str) -> None:
+    labeling_model_resolver.set_remote(
+        session=session,
+        labeling_model=LabelingModelCreate(
+            dataset_id=dataset_id, model_id=model_id, url="https://labeling.test"
+        ),
+    )
