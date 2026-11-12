@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
 - Brightness, contrast and mask-opacity sliders are now in a popover next to the zoom controls and available outside editing mode.
+- Pressing Delete or Backspace deletes the selected annotation in editing mode.
 - Python SDK: Added Python 3.15 support.
 - Python SDK: `McapDataset.add_labels_from_folder` accepts `overwrite=True` to replace the annotations of recordings that already have annotations.
 - The embedding plot shows the active plot filter and lets you clear it right on the plot.

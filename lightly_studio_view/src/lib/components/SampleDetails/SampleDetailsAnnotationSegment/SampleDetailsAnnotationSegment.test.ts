@@ -15,7 +15,15 @@ const mocks = vi.hoisted(() => ({
     lastCreatedAnnotationId: null as string | null,
     enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
-    userRole: 'labeler' as string | undefined
+    userRole: 'labeler' as string | undefined,
+    annotationId: null as string | null,
+    isOnAnnotationDetailsView: false,
+    deleteAnnotation: vi.fn(),
+    toolbarContext: {
+        status: 'cursor' as string,
+        brush: { mode: 'brush' as string, size: 50 },
+        slic: { level: 'medium' as string, status: 'idle' as string }
+    }
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -27,6 +35,18 @@ vi.mock(
         return { default: module.default };
     }
 );
+
+vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', () => ({
+    useSampleDetailsToolbarContext: () => ({ context: mocks.toolbarContext })
+}));
+
+vi.mock('svelte-sonner', () => ({
+    toast: { success: vi.fn(), error: vi.fn() }
+}));
+
+vi.mock('$lib/services/addAnnotationDeleteToUndoStack', () => ({
+    addAnnotationDeleteToUndoStack: vi.fn()
+}));
 
 vi.mock('$lib/hooks/useAnnotationCollections/useAnnotationCollections', () => ({
     useAnnotationCollections: vi.fn(() => ({ data: mocks.collections }))
@@ -64,10 +84,11 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
     useAnnotationLabelContext: vi.fn(() => ({
         context: {
-            annotationId: null,
+            annotationId: mocks.annotationId,
             lockedAnnotationIds: new Set<string>(),
             lastCreatedAnnotationId: mocks.lastCreatedAnnotationId,
-            annotationType: null
+            annotationType: null,
+            isOnAnnotationDetailsView: mocks.isOnAnnotationDetailsView
         },
         setAnnotationId: vi.fn(),
         setAnnotationLabel: vi.fn(),
@@ -85,7 +106,7 @@ vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
 }));
 
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
-    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: vi.fn() }))
+    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: mocks.deleteAnnotation }))
 }));
 
 vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
@@ -143,6 +164,9 @@ describe('SampleDetailsAnnotationSegment', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.isEditingMode.set(false);
         mocks.userRole = 'labeler';
+        mocks.annotationId = null;
+        mocks.isOnAnnotationDetailsView = false;
+        mocks.toolbarContext.status = 'cursor';
         useAnnotationSourceGroupState().sourceGroupStates.set({});
     });
 

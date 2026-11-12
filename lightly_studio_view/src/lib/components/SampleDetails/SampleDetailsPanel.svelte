@@ -31,6 +31,9 @@
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
+    import { useDeleteAnnotationWithUndo } from '$lib/hooks';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 
     const {
         sampleId,
@@ -98,6 +101,10 @@
 
     const { selectAnnotation } = useAnnotationSelection();
 
+    const { user } = useAuth();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
+
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
@@ -126,6 +133,28 @@
         }
     };
 
+    const handleDeleteKeyDown = async (event: KeyboardEvent) => {
+        if (!$isEditingMode || !canEdit) return;
+        if (annotationLabelContext.isOnAnnotationDetailsView) return;
+        if (!annotationLabelContext.annotationId) return;
+        if (
+            sampleDetailsToolbarContext.status !== 'cursor' &&
+            sampleDetailsToolbarContext.status !== 'drag'
+        )
+            return;
+
+        event.preventDefault();
+
+        const annotationId = annotationLabelContext.annotationId;
+        const annotation = sample.annotations?.find((a) => a.sample_id === annotationId);
+        if (!annotation) return;
+
+        const deleted = await deleteWithUndo(annotation, refetch);
+        if (deleted && annotationLabelContext.annotationId === annotationId) {
+            annotationLabelContext.annotationId = null;
+        }
+    };
+
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         // Typing in a field or in an overlay must not trigger the shortcuts behind it.
@@ -146,6 +175,10 @@
                 break;
             case ' ':
                 handleSpaceKey(event);
+                break;
+            case 'Delete':
+            case 'Backspace':
+                handleDeleteKeyDown(event);
                 break;
         }
 
