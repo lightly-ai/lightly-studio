@@ -39,7 +39,7 @@ class AssistedLabelingToolState {
 // tool when edit mode ends or assisted labeling becomes unusable.
 export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToolsParams) => {
     const assistedLabelingStatus = useAssistedLabelingStatus();
-    const labelingModels = useLabelingModels();
+    const labelingModels = useLabelingModels(() => getParams().collectionId);
     const { context, setStatus } = useSampleDetailsToolbarContext();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
     const isEditingMode = fromStore(useGlobalStorage().isEditingMode);
