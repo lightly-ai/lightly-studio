@@ -7,7 +7,6 @@
         SampleDetailsSidePanel,
         SidePanelToggleButton
     } from '$lib/components';
-    import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -74,9 +73,6 @@
         toggleSampleSelection,
         clearReversibleActions,
         lastAnnotationBrushSize,
-        imageBrightness,
-        imageContrast,
-        maskOpacity,
         toggleSampleAnnotationCropSelection,
         isSampleDetailsSidePanelCollapsed,
         openSampleDetailsSidePanel
@@ -106,6 +102,30 @@
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
     let previousAnnotationType: AnnotationType | null | undefined;
+    const handleSpaceKey = (event: KeyboardEvent) => {
+        // Let the browser handle Space on buttons (e.g. popover triggers) natively.
+        if (event.target instanceof HTMLButtonElement) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+
+        if (!$isEditingMode) {
+            if (isOnAnnotationDetailsView) {
+                toggleSampleAnnotationCropSelection(collectionId, sample.annotations![0].sample_id);
+            } else {
+                toggleSampleSelection(sampleId, collectionId);
+            }
+        } else {
+            if (!isPanModeEnabled) {
+                previousAnnotationType = annotationLabelContext.annotationType;
+                sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
+                sampleDetailsToolbarContext.status = 'drag';
+                annotationLabelContext.annotationType = null;
+            }
+            isPanModeEnabled = true;
+        }
+    };
+
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
         // Typing in a field or in an overlay must not trigger the shortcuts behind it.
@@ -124,31 +144,8 @@
                     handleEscape();
                 }
                 break;
-            // Add spacebar handling for selection toggle
-            case ' ': // Space key
-                // Prevent default space behavior (like page scrolling)
-                event.preventDefault();
-                event.stopPropagation();
-
-                // Toggle selection based on context
-                if (!$isEditingMode) {
-                    if (isOnAnnotationDetailsView) {
-                        toggleSampleAnnotationCropSelection(
-                            collectionId,
-                            sample.annotations![0].sample_id
-                        );
-                    } else {
-                        toggleSampleSelection(sampleId, collectionId);
-                    }
-                } else {
-                    if (!isPanModeEnabled) {
-                        previousAnnotationType = annotationLabelContext.annotationType;
-                        sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
-                        sampleDetailsToolbarContext.status = 'drag';
-                        annotationLabelContext.annotationType = null;
-                    }
-                    isPanModeEnabled = true;
-                }
+            case ' ':
+                handleSpaceKey(event);
                 break;
         }
 
@@ -259,16 +256,7 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            <div class="flex items-center gap-2">
-                {#if $isEditingMode}
-                    <ImageAdjustments
-                        bind:brightness={$imageBrightness}
-                        bind:contrast={$imageContrast}
-                        bind:maskOpacity={$maskOpacity}
-                    />
-                {/if}
-                <SidePanelToggleButton />
-            </div>
+            <SidePanelToggleButton />
         </div>
         <Separator class="bg-border-hard" />
 

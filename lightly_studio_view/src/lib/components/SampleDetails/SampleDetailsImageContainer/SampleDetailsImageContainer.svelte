@@ -33,6 +33,7 @@
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
+    import { DisplayAdjustmentsPopover } from '$lib/components/DisplayAdjustmentsPopover';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -277,15 +278,18 @@
         <AssistedLabelingPopUps {collectionId} {assistedLabeling} />
     {/snippet}
     {#snippet zoomPanelRightContent()}
-        {#if $isPending}
-            <div
-                class="pointer-events-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-muted/80 px-2.5 text-sm text-muted-foreground shadow-md backdrop-blur-sm"
-                data-testid="finish-brush-loading-indicator"
-            >
-                <LoaderCircle class="size-4 animate-spin" />
-                <span>Saving</span>
-            </div>
-        {/if}
+        <div class="flex items-center gap-2">
+            {#if $isPending}
+                <div
+                    class="pointer-events-auto inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-muted/80 px-2.5 text-sm text-muted-foreground shadow-md backdrop-blur-sm"
+                    data-testid="finish-brush-loading-indicator"
+                >
+                    <LoaderCircle class="size-4 animate-spin" />
+                    <span>Saving</span>
+                </div>
+            {/if}
+            <DisplayAdjustmentsPopover />
+        </div>
     {/snippet}
     {#snippet zoomableContent({ scale })}
         <!-- SVG filter, because Safari does not scale an <img> with a CSS filter in a <foreignObject> -->
