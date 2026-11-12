@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import importlib
 from datetime import datetime, timezone
-from unittest import mock
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.evaluation.image_dataset_evaluate import (
@@ -72,7 +72,7 @@ def test_run_evaluation__generates_default_name(db_session: Session) -> None:
 
 
 def test_run_evaluation__default_names_are_collision_safe(
-    db_session: Session, monkeypatch: pytest.MonkeyPatch
+    db_session: Session, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
 ) -> None:
     # Two triggers for the same task/dataset within the same second: identical
     # down to the second, differing only in microseconds. Without sub-second
@@ -84,7 +84,7 @@ def test_run_evaluation__default_names_are_collision_safe(
     run_evaluation_module = importlib.import_module(
         "lightly_studio.services.evaluation_service.run_evaluation"
     )
-    monkeypatch.setattr(run_evaluation_module, "datetime", mock.Mock(now=lambda _tz: next(times)))
+    monkeypatch.setattr(run_evaluation_module, "datetime", mocker.Mock(now=lambda _tz: next(times)))
 
     for _ in range(2):
         evaluation_service.run_evaluation(
