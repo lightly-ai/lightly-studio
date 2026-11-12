@@ -47,6 +47,9 @@ interface Draft {
     footprint?: DraftRectangle;
 }
 
+/** Below this horizontal view length the height plane is almost parallel to the rays. */
+const MIN_HORIZONTAL_VIEW_LENGTH = 1e-3;
+
 const CANVAS_EVENTS = [
     'pointerdown',
     'pointermove',
@@ -148,7 +151,8 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
     function onPointerUp(event: PointerEvent): void {
         if (!draft || draft.footprint || event.pointerId !== draft.pointerId) return;
         updateDraft(event);
-        if (draft.cameraMode === 'perspective' && isDrag(draft.startScreen, draft.currentScreen)) {
+        const hasFootprint = isDrag(draft.startScreen, draft.currentScreen) && previewBox !== null;
+        if (draft.cameraMode === 'perspective' && hasFootprint) {
             startHeightStep(draft);
             return;
         }
@@ -160,7 +164,7 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
     function onPointerDown(event: PointerEvent): void {
         if (!draft?.footprint) return;
         if (event.button === 2) discardDraft();
-        if (event.button !== 0) return;
+        if (event.button !== 0 || hasCameraModifier(event)) return;
         const box = previewBox;
         savingClick = event;
         discardDraft();
@@ -232,10 +236,10 @@ function createDraftPlane(cameraMode: CameraMode, startWorld: Vector3): Plane {
     return new Plane().setFromNormalAndCoplanarPoint(normal, new ThreeVector3(...startWorld));
 }
 
-/** Vertical plane through the footprint centre facing the camera; null when looking straight down. */
+/** Vertical plane through the footprint centre facing the camera; null when looking almost straight down. */
 function createHeightPlane(footprint: DraftRectangle, camera: Camera): Plane | null {
     const normal = camera.getWorldDirection(new ThreeVector3()).setZ(0);
-    if (normal.length() === 0) return null;
+    if (normal.length() < MIN_HORIZONTAL_VIEW_LENGTH) return null;
     const centre = new ThreeVector3(...footprint.min).add(new ThreeVector3(...footprint.max));
     return new Plane().setFromNormalAndCoplanarPoint(
         normal.normalize(),

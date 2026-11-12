@@ -117,8 +117,8 @@ function dragInTopView(draft: Draft) {
  * Drags a footprint from world (0, -8, 0) to world (2, -6, 0) on the ground with the horizontal
  * camera and releases it, which starts the height step in the perspective view.
  */
-function startHeightStep() {
-    const { draft } = setup({ cameraMode: 'perspective', camera: createHorizontalCamera() });
+function startHeightStep(camera = createHorizontalCamera()) {
+    const { draft } = setup({ cameraMode: 'perspective', camera });
     pressAt(draft, 200, 300, [0, -8, 0]);
     canvas.dispatchEvent(pointer('pointermove', 300, 250));
     canvas.dispatchEvent(pointer('pointerup', 300, 250));
@@ -197,6 +197,41 @@ describe('useCuboidDraft', () => {
             expect(onCreate).not.toHaveBeenCalled();
         }
     );
+
+    it('ignores pointer movement while the camera looks almost straight down', () => {
+        const camera = createHorizontalCamera();
+        const draft = startHeightStep(camera);
+        const preview = draft.previewBox;
+        // Horizontal part of the view direction is about 5e-4.
+        camera.up.set(0, 1, 0);
+        camera.position.set(1, -7.5, 10);
+        camera.lookAt(1, -7.495, 0);
+        camera.updateMatrixWorld();
+        canvas.dispatchEvent(pointer('pointermove', 200, 150));
+        expect(draft.previewBox).toEqual(preview);
+    });
+
+    it.each(['shiftKey', 'ctrlKey', 'metaKey'])(
+        'does not save the height step on a pointer-down with %s',
+        (modifier) => {
+            const draft = startHeightStep();
+            const click = pointer('pointerdown', 200, 100);
+            Object.defineProperty(click, modifier, { value: true });
+            canvas.dispatchEvent(click);
+            expect(onCreate).not.toHaveBeenCalled();
+            expect(draft.previewBox).not.toBeNull();
+        }
+    );
+
+    it('starts no height step after a footprint drag whose rays all miss the ground', () => {
+        const { draft } = setup({ cameraMode: 'perspective', camera: createHorizontalCamera() });
+        pressAt(draft, 200, 300, [0, -8, 0]);
+        canvas.dispatchEvent(pointer('pointermove', 250, 100));
+        canvas.dispatchEvent(pointer('pointerup', 250, 100));
+        expect(draft.previewBox).toBeNull();
+        canvas.dispatchEvent(pointer('pointerdown', 250, 100));
+        expect(onCreate).not.toHaveBeenCalled();
+    });
 
     it('does not start a second draft during the height step', () => {
         const draft = startHeightStep();
