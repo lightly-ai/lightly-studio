@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
     import { untrack } from 'svelte';
     import { useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
@@ -22,7 +23,7 @@
         groundPlaneBounds: Domain.Bounds3;
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
-        onCreateCuboid?: (position: Domain.Vector3) => void;
+        onCreateCuboid?: (placement: CuboidPlacement) => void;
         onCuboidTransform?: (
             payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
         ) => void;
@@ -100,7 +101,7 @@
     <GroundPlaneClickTarget
         bounds={groundPlaneBounds}
         {cameraMode}
-        onclick={(p) => onCreateCuboid?.(p)}
+        onclick={(p) => onCreateCuboid?.({ kind: 'drop', position: p })}
     />
 {/if}
 

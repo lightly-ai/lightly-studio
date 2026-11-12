@@ -12,7 +12,8 @@ import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
-import type { Vector3, WorkspaceTool } from '../domain';
+import type { WorkspaceTool } from '../domain';
+import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
 
 /** Shared annotation selection, tools, and persistence for every scene viewport. */
 export function useWorkspaceEditing(
@@ -141,9 +142,9 @@ export function useWorkspaceEditing(
         }
     }
 
-    async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
+    async function handleCreateCuboid(placement: CuboidPlacement): Promise<void> {
         const asTrack = addingTrack;
-        await createCuboidAnnotation(groundPosition, async (annotationId) => {
+        await createCuboidAnnotation(placement, async (annotationId) => {
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
             selectedCuboidId = annotationId;
             activeTool = 'select';

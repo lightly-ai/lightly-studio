@@ -1,4 +1,5 @@
 <script lang="ts">
+    import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
     import { cn } from '$lib/utils';
     import { resolveSceneViewportProps } from './resolveSceneViewportProps';
     import type { Snippet } from 'svelte';
@@ -9,7 +10,6 @@
         Bounds3,
         CuboidAnnotation,
         CuboidHandle,
-        Vector3,
         CameraMode,
         WorkspaceTool
     } from '../domain';
@@ -37,7 +37,7 @@
         showActiveBorder?: boolean;
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
-        onCreateCuboid?: (position: Vector3) => void;
+        onCreateCuboid?: (placement: CuboidPlacement) => void;
         onCuboidTransform?: Parameters<typeof resolveSceneViewportProps>[0]['onCuboidTransform'];
         onPreviousTick?: () => void;
         onNextTick?: () => void;

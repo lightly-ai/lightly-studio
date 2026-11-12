@@ -10,7 +10,12 @@ import {
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
-import type { Bounds3, Vector3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
+import type { Bounds3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
+import {
+    getDefaultCuboidBox,
+    type CuboidBox,
+    type CuboidPlacement
+} from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
 
 interface SceneFrame {
     bounds: Bounds3 | null;
@@ -26,14 +31,14 @@ interface Params {
 
 interface CreateCuboidParams {
     frame: SceneFrame | null;
-    groundPosition: Vector3;
+    box: CuboidBox;
     labelId: string;
     sampleId: string;
 }
 
 interface UseCreateCuboidAnnotationReturn {
     handleCreateCuboid: (
-        groundPosition: Vector3,
+        placement: CuboidPlacement,
         onCreated: (annotationId: string) => void | Promise<void>
     ) => Promise<void>;
     showSelectClassDialog: ReturnType<typeof useSelectClassDialog>['open'];
@@ -44,38 +49,28 @@ interface UseCreateCuboidAnnotationReturn {
 
 const ZERO_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
 
-function computeDefaultCuboidSize(bounds: Bounds3): number {
-    const diagonal = Math.hypot(
-        bounds.max[0] - bounds.min[0],
-        bounds.max[1] - bounds.min[1],
-        bounds.max[2] - bounds.min[2]
-    );
-    return Math.max(diagonal * 0.02, 0.1);
-}
-
 function buildCuboidInput({
     frame,
-    groundPosition,
+    box,
     labelId,
     sampleId
 }: CreateCuboidParams): AnnotationCreateInput {
-    const size = computeDefaultCuboidSize(frame?.bounds ?? ZERO_BOUNDS);
     return {
         parent_sample_id: sampleId,
         annotation_type: 'cuboid_3d',
         annotation_label_id: labelId,
         cuboid_3d: {
             frame_id: frame?.frameId ?? '',
-            px: groundPosition[0],
-            py: groundPosition[1],
-            pz: groundPosition[2] + size / 2,
+            px: box.center[0],
+            py: box.center[1],
+            pz: box.center[2],
             qx: 0,
             qy: 0,
             qz: 0,
             qw: 1,
-            sx: size,
-            sy: size,
-            sz: size
+            sx: box.size[0],
+            sy: box.size[1],
+            sz: box.size[2]
         }
     };
 }
@@ -153,25 +148,29 @@ export function useCreateCuboidAnnotation({
     }
 
     async function saveCuboid(
-        groundPosition: Vector3,
+        box: CuboidBox,
         sampleId: string,
         labelId: string,
         frame: SceneFrame | null
     ): Promise<string> {
-        const input = buildCuboidInput({ frame, groundPosition, labelId, sampleId });
+        const input = buildCuboidInput({ frame, box, labelId, sampleId });
         const annotation = await createAnnotation(input);
         toast.success('Annotation created successfully');
         return annotation.sample_id;
     }
 
     async function handleCreateCuboid(
-        groundPosition: Vector3,
+        placement: CuboidPlacement,
         onCreated: (annotationId: string) => void | Promise<void>
     ): Promise<void> {
         const collectionId = getCollectionId();
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
+        const box =
+            placement.kind === 'box'
+                ? placement.box
+                : getDefaultCuboidBox(placement.position, capturedFrame?.bounds ?? ZERO_BOUNDS);
         const labelName = await selectAnnotationLabel(collectionId);
         if (!labelName) return;
         // Cancel if the active tick changed while the class dialog was open.
@@ -182,7 +181,7 @@ export function useCreateCuboidAnnotation({
         if (getTickSampleId() !== sampleId || getCollectionId() !== collectionId) return;
         let annotationId: string;
         try {
-            annotationId = await saveCuboid(groundPosition, sampleId, labelId, capturedFrame);
+            annotationId = await saveCuboid(box, sampleId, labelId, capturedFrame);
         } catch {
             toast.error('Failed to create annotation. Please try again.');
             return;

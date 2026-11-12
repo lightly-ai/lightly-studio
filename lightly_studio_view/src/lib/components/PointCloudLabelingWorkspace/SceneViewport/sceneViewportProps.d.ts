@@ -1,3 +1,4 @@
+import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
 import type { Snippet } from 'svelte';
 import type { ColorMode, PointBatch, SceneViewState } from '$lib/components/PointCloudViewer';
 import type {
@@ -6,7 +7,6 @@ import type {
     Bounds3,
     CuboidAnnotation,
     CuboidHandle,
-    Vector3,
     CameraMode,
     WorkspaceTool
 } from '../domain';
@@ -59,7 +59,7 @@ export interface SceneViewportProps {
     /** Fires when the pointer enters or leaves a cuboid. */
     onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
     /** Fires when the user clicks the ground plane in create-cuboid mode. */
-    onCreateCuboid?: (position: Vector3) => void;
+    onCreateCuboid?: (placement: CuboidPlacement) => void;
     /** Reports a completed annotation gizmo transform before it is committed. */
     onCuboidTransform?: CuboidLayerProps['onCuboidTransform'];
     /** Fires on the left arrow key. */

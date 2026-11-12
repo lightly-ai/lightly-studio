@@ -1,14 +1,9 @@
+import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
 import { getContext, setContext } from 'svelte';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import type { ColorMode } from '$lib/components/PointCloudViewer';
 import type { PointCloudWorkspaceContext } from './provider/types';
-import type {
-    AnnotationClass,
-    AnnotationSource,
-    CuboidAnnotation,
-    Vector3,
-    WorkspaceTool
-} from './domain';
+import type { AnnotationClass, AnnotationSource, CuboidAnnotation, WorkspaceTool } from './domain';
 import type { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
 import type { createWorkspaceController } from './createWorkspaceController.svelte';
 
@@ -91,7 +86,7 @@ export interface PointCloudWorkspaceLayoutState {
     /** Updates the cuboid shown by hover feedback. */
     onHover: (annotationId: string | null) => void;
     /** Creates an annotation at a world-space placement point. */
-    onCreateCuboid: (position: Vector3) => void | Promise<void>;
+    onCreateCuboid: (placement: CuboidPlacement) => void | Promise<void>;
     /** Whether the next created cuboid also starts a new object track. */
     isAddingTrack: boolean;
     /** Arms or cancels creating a new object track with its first cuboid. */
