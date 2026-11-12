@@ -61,7 +61,8 @@ Thin endpoints may call resolvers directly. Services are mainly for cross-entity
 - `api/routes/api/exceptions.py` has the handlers that convert these errors to HTTP responses. A
   new error class needs a handler there.
 - Do not raise `HTTPException`. Existing routes that raise it are legacy; do not copy them, and
-  convert a route when you change it.
+  convert a route when you change it. The conversion changes the key of the response body from
+  `detail` to `error`, so update the tests and the frontend code that read `detail`.
 - Use the `HTTP_STATUS_*` constants from `api/routes/api/status.py`, not numeric literals.
 - Do not catch an exception in a resolver or a service to convert it. Let it go to the `api/`
   layer.
@@ -89,7 +90,7 @@ Schema is created with `SQLModel.metadata.create_all()` on startup.
 
 ### PostgreSQL and Alembic
 
-A change to a `*Table` model needs an Alembic revision: `make migration-revision-postgresql MSG=<name>`.
+A change to a `*Table` model needs an Alembic revision. In `lightly_studio/`, run `make migration-revision-postgresql MSG=<name>`. The command replaces the local `lightly-studio-postgres` container, and the data in it is lost.
 See `lightly_studio/MIGRATIONS.md` for full details on Alembic setup, startup behavior, adding schema changes, and validation.
 
 ## Build and generated artifacts
