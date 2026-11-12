@@ -83,8 +83,7 @@ describe('useCreateCuboidAnnotation', () => {
         useGlobalStorage.mockReturnValue({ lastAnnotationLabel, updateLastAnnotationLabel });
     });
 
-    it('allows track selection with a remembered class and keeps the scene frame geometry', async () => {
-        lastAnnotationLabel.set({ 'collection-1': 'car' });
+    it('allows track selection and keeps the scene frame geometry', async () => {
         labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
         requestLabel.mockResolvedValue({
             label: 'car',

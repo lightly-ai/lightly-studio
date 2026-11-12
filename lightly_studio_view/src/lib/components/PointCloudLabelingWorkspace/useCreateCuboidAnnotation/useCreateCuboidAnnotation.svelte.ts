@@ -8,6 +8,7 @@ import {
     useSelectClassDialog,
     useTracks
 } from '$lib/hooks';
+import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
@@ -102,6 +103,8 @@ export function useCreateCuboidAnnotation({
     async function selectAnnotationLabel(
         collectionId: string
     ): Promise<{ label: string; track?: TrackSelection } | null> {
+        const stored = get(lastAnnotationLabel)[collectionId] ?? null;
+        if (stored) return { label: stored };
         const selection = await requestLabel();
         if (!selection?.label) return null;
         updateLastAnnotationLabel(collectionId, selection.label);
