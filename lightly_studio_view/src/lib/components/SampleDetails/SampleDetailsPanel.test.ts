@@ -71,10 +71,16 @@ vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
 }));
 
 vi.mock('$lib/hooks/useOperatorsDialog/useOperatorsDialog', () => ({
-    useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn(), isOperatorsDialogOpen: writable(false) })
+    useOperatorsDialog: () => ({
+        openOperatorsDialog: vi.fn(),
+        isOperatorsDialogOpen: writable(false)
+    })
 }));
 vi.mock('$lib/hooks/useSettingsDialog/useSettingsDialog', () => ({
-    useSettingsDialog: () => ({ openSettingsDialog: vi.fn(), isSettingsDialogOpen: writable(false) })
+    useSettingsDialog: () => ({
+        openSettingsDialog: vi.fn(),
+        isSettingsDialogOpen: writable(false)
+    })
 }));
 vi.mock('$lib/hooks/useSettings', () => ({
     useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) })
@@ -113,7 +119,6 @@ vi.mock('$lib/components', async () => {
         SampleDetailsSidePanel: stub,
         SidePanelToggleButton: stub
     };
-
 });
 vi.mock('$lib/components/ImageAdjustments', async () => ({
     ImageAdjustments: (await import('./SampleDetailsPanel.stub.svelte')).default
