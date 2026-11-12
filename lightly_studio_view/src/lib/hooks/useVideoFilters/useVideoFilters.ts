@@ -14,6 +14,10 @@ import type {
     VideoSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
+import type { useImageFilters } from '$lib/hooks';
+type QueryExpression = NonNullable<
+    Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0]
+>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFilterParams = {
@@ -30,6 +34,7 @@ export type VideoFilterParams = {
 };
 
 const filterParams = writable<VideoFilterParams | null>(null);
+const videoQueryExpression = writable<QueryExpression | null>(null);
 
 const videoBoundsFields = (
     bounds: VideoFieldsBoundsView | null | undefined
@@ -43,7 +48,10 @@ const videoBoundsFields = (
           }
         : {};
 
-export const buildVideoFilter = ($filterParams: VideoFilterParams | null): VideoFilter | null => {
+export const buildVideoFilter = (
+    $filterParams: VideoFilterParams | null,
+    queryExpression?: QueryExpression | null
+): VideoFilter | null => {
     if (!$filterParams?.collection_id) {
         return null;
     }
@@ -62,13 +70,16 @@ export const buildVideoFilter = ($filterParams: VideoFilterParams | null): Video
             sample_ids: f.sample_ids,
             embedding_region: f.embedding_region,
             tag_ids: f.tag_ids,
-            metadata_filters: toMetadataFilters(f.metadata_values, f.categorical_metadata_values)
+            metadata_filters: toMetadataFilters(f.metadata_values, f.categorical_metadata_values),
+            query_expr: queryExpression?.query_expr
         })
     );
 };
 
-const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
-    buildVideoFilter($filterParams)
+const videoFilter = derived(
+    [filterParams, videoQueryExpression],
+    ([$filterParams, $videoQueryExpression]) =>
+        buildVideoFilter($filterParams, $videoQueryExpression)
 );
 
 const videoSortBy = writable<VideoSortFieldExpr[] | null>([
@@ -81,7 +92,14 @@ const videoSortBy = writable<VideoSortFieldExpr[] | null>([
 
 export const useVideoFilters = () => {
     const updateFilterParams = (params: VideoFilterParams) => {
+        if (params?.collection_id !== get(filterParams)?.collection_id) {
+            videoQueryExpression.set(null);
+        }
         filterParams.set(params);
+    };
+
+    const updateQueryExpr = (expr?: QueryExpression) => {
+        videoQueryExpression.set(expr ?? null);
     };
 
     const updateSampleIds = (sampleIds: string[]) => {
@@ -120,6 +138,8 @@ export const useVideoFilters = () => {
     };
 
     return {
+        videoQueryExpression,
+        updateQueryExpr,
         filterParams,
         videoFilter,
         videoSortBy,

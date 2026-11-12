@@ -4,7 +4,7 @@ from abc import ABC
 from collections.abc import Mapping
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -84,10 +84,10 @@ class AnnotationBaseTable(SQLModel, table=True):
         foreign_key="annotation_label.annotation_label_id", index=True
     )
 
-    confidence: Optional[float] = None
+    confidence: float | None = None
     parent_sample_id: UUID = Field(foreign_key="sample.sample_id", index=True)
 
-    object_track_id: Optional[UUID] = Field(
+    object_track_id: UUID | None = Field(
         default=None, foreign_key="object_track.object_track_id", index=True
     )
 
@@ -153,27 +153,27 @@ class AnnotationCreate(ABC, SQLModel):
     # Required properties for all annotations.
     annotation_label_id: UUID
     annotation_type: AnnotationType
-    confidence: Optional[float] = None
+    confidence: float | None = None
     parent_sample_id: UUID
 
     # Optional tracking association.
-    object_track_id: Optional[UUID] = None
+    object_track_id: UUID | None = None
 
     # Optional properties for object detection.
-    x: Optional[int] = None
-    y: Optional[int] = None
-    width: Optional[int] = None
-    height: Optional[int] = None
+    x: int | None = None
+    y: int | None = None
+    width: int | None = None
+    height: int | None = None
 
     # Optional properties for segmentation.
-    segmentation_mask: Optional[list[int]] = None
+    segmentation_mask: list[int] | None = None
 
     # Optional properties for temporal annotations.
-    start_time_s: Optional[float] = None
-    end_time_s: Optional[float] = None
+    start_time_s: float | None = None
+    end_time_s: float | None = None
 
     # Optional properties for cuboid_3d.
-    cuboid_3d: Optional[Cuboid3DCreate] = None
+    cuboid_3d: Cuboid3DCreate | None = None
 
 
 class AnnotationView(BaseModel):
@@ -197,18 +197,18 @@ class AnnotationView(BaseModel):
     annotation_collection_id: UUID
     annotation_type: AnnotationType
     annotation_label: AnnotationLabel
-    confidence: Optional[float] = None
-    order_value: Optional[float] = None
+    confidence: float | None = None
+    order_value: float | None = None
     created_at: datetime
 
-    object_detection_details: Optional[ObjectDetectionAnnotationView] = None
-    cuboid_3d_details: Optional[Cuboid3DAnnotationView] = None
-    segmentation_details: Optional[SegmentationAnnotationView] = None
-    temporal_span_details: Optional[TemporalSpanView] = None
-    object_track_id: Optional[UUID] = None
-    object_track_number: Optional[int] = None
-    parent_object_track_number: Optional[int] = None
-    parent_object_track_class_name: Optional[str] = None
+    object_detection_details: ObjectDetectionAnnotationView | None = None
+    cuboid_3d_details: Cuboid3DAnnotationView | None = None
+    segmentation_details: SegmentationAnnotationView | None = None
+    temporal_span_details: TemporalSpanView | None = None
+    object_track_id: UUID | None = None
+    object_track_number: int | None = None
+    parent_object_track_number: int | None = None
+    parent_object_track_class_name: str | None = None
     """Only populated for tick-details responses. ``None`` elsewhere."""
 
     tags: list[AnnotationViewTag] = []
@@ -217,8 +217,8 @@ class AnnotationView(BaseModel):
     def from_annotation_table(
         cls,
         annotation: "AnnotationBaseTable",
-        order_value: Optional[float] = None,
-        parent_track_class_names: Optional[Mapping[UUID, str]] = None,
+        order_value: float | None = None,
+        parent_track_class_names: Mapping[UUID, str] | None = None,
     ) -> "AnnotationView":
         """Convert an AnnotationBaseTable to an AnnotationView.
 
@@ -308,7 +308,7 @@ class AnnotationViewsWithCount(BaseModel):
 
     annotations: list[AnnotationView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(..., alias="nextCursor")
+    next_cursor: int | None = PydanticField(..., alias="nextCursor")
 
 
 class SampleAnnotationView(BaseModel):
@@ -355,9 +355,9 @@ class AnnotationWithPayloadView(BaseModel):
 
     parent_sample_type: SampleType
     annotation: AnnotationView
-    parent_sample_data: Union[ImageAnnotationView, VideoFrameAnnotationView]
+    parent_sample_data: ImageAnnotationView | VideoFrameAnnotationView
     # Set when results are ordered by embedding similarity search.
-    similarity_score: Optional[float] = None
+    similarity_score: float | None = None
 
 
 class AnnotationWithPayloadAndCountView(BaseModel):
@@ -367,7 +367,7 @@ class AnnotationWithPayloadAndCountView(BaseModel):
 
     annotations: list[AnnotationWithPayloadView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")
 
 
 class SampleAnnotationDetailsView(BaseModel):
@@ -447,4 +447,4 @@ class AnnotationDetailsWithPayloadView(BaseModel):
 
     parent_sample_type: SampleType
     annotation: AnnotationView
-    parent_sample_data: Union[ImageAnnotationDetailsView, VideoFrameAnnotationDetailsView]
+    parent_sample_data: ImageAnnotationDetailsView | VideoFrameAnnotationDetailsView

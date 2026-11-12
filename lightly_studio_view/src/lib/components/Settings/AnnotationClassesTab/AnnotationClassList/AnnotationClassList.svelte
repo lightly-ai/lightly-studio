@@ -20,8 +20,8 @@
         showEmptyHint: boolean;
         highlightedId: string | null;
         onAdd: () => void;
-        onRename: (labelId: string, name: string) => Promise<unknown>;
-        onDelete: (labelId: string) => Promise<unknown>;
+        onRename: (labelId: string, oldName: string, name: string) => Promise<unknown>;
+        onDelete: (labelId: string, name: string) => Promise<unknown>;
     }
 
     const {
@@ -59,8 +59,17 @@
             name={annotationClass.annotation_label_name}
             isHighlighted={annotationClass.annotation_label_id === highlightedId}
             annotationCount={annotationClass.annotation_count}
-            onRename={(name) => onRename(annotationClass.annotation_label_id!, name)}
-            onDelete={() => onDelete(annotationClass.annotation_label_id!)}
+            onRename={(name) =>
+                onRename(
+                    annotationClass.annotation_label_id!,
+                    annotationClass.annotation_label_name,
+                    name
+                )}
+            onDelete={() =>
+                onDelete(
+                    annotationClass.annotation_label_id!,
+                    annotationClass.annotation_label_name
+                )}
         />
     {/each}
     {#if addName && !isAddEnterTarget}

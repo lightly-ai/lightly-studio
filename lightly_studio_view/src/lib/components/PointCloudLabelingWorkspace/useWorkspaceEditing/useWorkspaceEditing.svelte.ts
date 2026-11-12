@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/svelte-query';
 import { fromStore } from 'svelte/store';
 import type { PointCloudWorkspaceContext } from '../provider/types';
 import type { WorkspaceOptions } from '../workspaceOptions';
@@ -5,7 +6,11 @@ import type { useWorkspaceSceneData } from '../useWorkspaceSceneData/useWorkspac
 import { useCreateCuboidAnnotation } from '../useCreateCuboidAnnotation';
 import { useDeleteCuboidAnnotation } from '../useDeleteCuboidAnnotation';
 import { useUpdateCuboidAnnotation } from '../useUpdateCuboidAnnotation';
+import { useStartSequenceTrack } from '../useStartSequenceTrack';
+import { useExtendSequenceTrack } from '../useExtendSequenceTrack';
+import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
+import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 import type { Vector3, WorkspaceTool } from '../domain';
 
@@ -16,9 +21,20 @@ export function useWorkspaceEditing(
     getData: () => ReturnType<typeof useWorkspaceSceneData>,
     getIsEditingMode: () => boolean
 ) {
+    const queryClient = useQueryClient();
+    // Track bars show which ticks have annotations, so refresh them when that changes.
+    const refreshTracks = () =>
+        queryClient.invalidateQueries({
+            queryKey: getSequenceTracksSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            })
+        });
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
+    // The next cuboid placed with the create tool also starts a new object track.
+    let addingTrack = $state(false);
     const {
         handleCreateCuboid: createCuboidAnnotation,
         showSelectClassDialog,
@@ -50,15 +66,51 @@ export function useWorkspaceEditing(
 
     const { handleCuboidTransform } = useUpdateCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
-        onUpdated: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+        onUpdated: async () => {
+            void refreshTracks();
+            await getWorkspace().tickDetails.refetch({ throwOnError: true });
+        }
     });
 
     const { handleLabelChange } = useUpdateCuboidClass({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         getDatasetId: () => getOptions().datasetId,
         getSequenceId: () => getOptions().sequenceId,
-        onUpdated: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+        onUpdated: async () => {
+            void refreshTracks();
+            await getWorkspace().tickDetails.refetch({ throwOnError: true });
+        }
     });
+
+    const { handleStartTrack } = useStartSequenceTrack({
+        getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
+        onStarted: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+    });
+
+    const { handleExtendTrack } = useExtendSequenceTrack({
+        getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
+        onExtended: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+    });
+
+    const { handleDeleteTrack: deleteTrack } = useDeleteSequenceTrack({
+        getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
+        onDeleted: () => getWorkspace().tickDetails.refetch({ throwOnError: true })
+    });
+
+    async function handleDeleteTrack(params: {
+        trackId: string;
+        annotationSourceId: string;
+        annotationIds: readonly string[];
+    }): Promise<boolean> {
+        const deleted = await deleteTrack(params);
+        if (deleted && selectedCuboidId && params.annotationIds.includes(selectedCuboidId)) {
+            selectedCuboidId = null;
+        }
+        return deleted;
+    }
 
     const transforms = createCuboidTransformState({
         onTransform: (payload) => handleCuboidTransform(payload)
@@ -82,6 +134,7 @@ export function useWorkspaceEditing(
     async function handleDeleteCuboid(cuboidId: string): Promise<void> {
         const deleted = await deleteCuboidAnnotation(cuboidId);
         if (!deleted) return;
+        void refreshTracks();
         await getWorkspace().tickDetails.refetch();
         if (selectedCuboidId === cuboidId) {
             selectedCuboidId = null;
@@ -89,11 +142,20 @@ export function useWorkspaceEditing(
     }
 
     async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
+        const asTrack = addingTrack;
         await createCuboidAnnotation(groundPosition, async (annotationId) => {
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
             selectedCuboidId = annotationId;
             activeTool = 'select';
+            addingTrack = false;
+            // A failed attach leaves a plain cuboid, never an empty track.
+            if (asTrack) await handleStartTrack(annotationId);
         });
+    }
+
+    function toggleAddTrack(): void {
+        addingTrack = !addingTrack;
+        activeTool = addingTrack ? 'create-cuboid' : 'select';
     }
 
     const displayedAnnotations = fromStore(annotations);
@@ -123,12 +185,20 @@ export function useWorkspaceEditing(
         },
         set activeTool(value: WorkspaceTool) {
             activeTool = value;
+            addingTrack = false;
         },
+        get isAddingTrack() {
+            return addingTrack && activeTool === 'create-cuboid';
+        },
+        toggleAddTrack,
         get effectiveTool() {
             return getIsEditingMode() ? activeTool : ('select' as const);
         },
         handleCreateCuboid,
         handleDeleteCuboid,
+        handleStartTrack,
+        handleExtendTrack,
+        handleDeleteTrack,
         handleLabelChange,
         panelCuboidTransform
     };

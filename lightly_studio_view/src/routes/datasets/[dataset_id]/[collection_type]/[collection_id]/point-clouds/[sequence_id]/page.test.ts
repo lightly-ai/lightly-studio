@@ -15,6 +15,30 @@ const adjacentSequences = vi.hoisted(() => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: vi.fn() })
+}));
+
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useStartSequenceTrack', () => ({
+    useStartSequenceTrack: () => ({ handleStartTrack: vi.fn() })
+}));
+
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useExtendSequenceTrack', () => ({
+    useExtendSequenceTrack: () => ({ handleExtendTrack: vi.fn() })
+}));
+
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useDeleteSequenceTrack', () => ({
+    useDeleteSequenceTrack: () => ({ handleDeleteTrack: vi.fn() })
+}));
+
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/FrameTimeline/useSequenceTracks.svelte',
+    () => ({
+        useSequenceTracks: () => ({ query: { data: { tracks: [] } } })
+    })
+);
+
 vi.mock('$app/state', () => ({
     page: {
         url: new URL(

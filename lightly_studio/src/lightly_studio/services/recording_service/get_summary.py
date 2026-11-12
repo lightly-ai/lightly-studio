@@ -41,7 +41,8 @@ def get_mcap_sequence_summary(
 
     sample = sample_resolver.get_by_id(session=session, sample_id=sequence_id)
     # The sequence exists, `get_info` checks it.
-    assert sample is not None
+    if sample is None:
+        raise RuntimeError("Expected `sample` to be set.")
     start_log_time_ns = mcap_resolver.get_start_log_time_ns(
         session=session, sequence_id=sequence_id
     )

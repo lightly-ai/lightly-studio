@@ -31,6 +31,8 @@
         /** Renders instead of the row whose id is `customRowId`, e.g. a rename input. */
         customRow?: Snippet<[FilterListItem]>;
         customRowId?: string | null;
+        /** Whether long lists render in pages of 50 rows. Turn off for short lists like tags. */
+        paged?: boolean;
     }
 
     const {
@@ -46,10 +48,15 @@
         leading,
         trailing,
         customRow,
-        customRowId = null
+        customRowId = null,
+        paged = true
     }: Props = $props();
 
-    const list = useFilterListState({ getItems: () => items, getShowSearch: () => showSearch });
+    const list = useFilterListState({
+        getItems: () => items,
+        getShowSearch: () => showSearch,
+        getPaged: () => paged
+    });
     const pinnedVisible = $derived(!!pinnedItem && matchesSearch(pinnedItem, list.search));
 </script>
 

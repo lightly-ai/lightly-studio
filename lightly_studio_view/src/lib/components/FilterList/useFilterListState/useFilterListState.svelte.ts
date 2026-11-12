@@ -7,15 +7,20 @@ const PAGE_SIZE = 50;
 interface UseFilterListStateParams {
     getItems: () => FilterListItem[];
     getShowSearch: () => boolean | undefined;
+    getPaged: () => boolean;
 }
 
 /** Search and paging state of a FilterList. */
-export function useFilterListState({ getItems, getShowSearch }: UseFilterListStateParams) {
+export function useFilterListState({
+    getItems,
+    getShowSearch,
+    getPaged
+}: UseFilterListStateParams) {
     let search = $state('');
     let shownCount = $state(PAGE_SIZE);
 
     const matching = $derived(getItems().filter((item) => matchesSearch(item, search)));
-    const shown = $derived(matching.slice(0, shownCount));
+    const shown = $derived(getPaged() ? matching.slice(0, shownCount) : matching);
 
     return {
         get search() {

@@ -1,6 +1,6 @@
 """Utility functions for building database queries."""
 
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy import or_
@@ -20,12 +20,12 @@ class VideoFilter(GridFilterBase):
     """Encapsulates filter parameters for querying videos."""
 
     filter_type: Literal["video"] = "video"
-    width: Optional[FilterDimensions] = None
-    height: Optional[FilterDimensions] = None
-    fps: Optional[FloatRange] = None
-    duration_s: Optional[FloatRange] = None
-    sample_filter: Optional[SampleFilter] = None
-    frame_annotation_filter: Optional[AnnotationsFilter] = None
+    width: FilterDimensions | None = None
+    height: FilterDimensions | None = None
+    fps: FloatRange | None = None
+    duration_s: FloatRange | None = None
+    sample_filter: SampleFilter | None = None
+    frame_annotation_filter: AnnotationsFilter | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""
@@ -84,7 +84,8 @@ class VideoFilter(GridFilterBase):
 
     def _apply_annotation_filter(self, query: QueryType) -> QueryType:
         """For videos, annotation filters match frame or direct video annotations."""
-        assert self.frame_annotation_filter is not None
+        if self.frame_annotation_filter is None:
+            raise RuntimeError("Expected `self.frame_annotation_filter` to be set.")
 
         frame_filtered_video_ids_subquery = select(VideoFrameTable.parent_sample_id)
         frame_filtered_video_ids_subquery = (
