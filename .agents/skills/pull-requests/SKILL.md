@@ -25,7 +25,9 @@ fix: keep the selected tag when the grid reloads
 - Aim for less than 100 added lines of core logic.
 - The guardrail does not count `uv.lock`, the `package-lock.json` files,
   `lightly_studio/tests/benchmarks/`, and `lightly_studio/src/lightly_studio/vendor/`.
-- Measure before each push: `git diff --numstat $(git merge-base origin/main HEAD)`.
+- Measure the committed changes before each push:
+  `git diff --numstat $(git merge-base origin/main HEAD) HEAD`. For a stacked PR, use the parent
+  branch in place of `origin/main`.
 - The limit is a target, not a hard rule. Split a larger change into stacked PRs if each part is
   reviewable alone. Do not split one coherent change only to fit; a larger PR gets a human review.
 
@@ -56,11 +58,18 @@ fix: keep the selected tag when the grid reloads
 
 - Added a unit test for `useTags`.
 - Reloaded the grid with a selected tag in the GUI.
+
+## Did you update [CHANGELOG.md](../CHANGELOG.md)?
+
+- [x] Yes
+- [ ] Not needed (internal change)
 ```
 
 ## Before You Open the PR
 
-- Run the checks in the Validation section of `AGENTS.md` for each package that you changed.
+- Run the checks in the Validation section of `AGENTS.md` for each package that you changed. For
+  `lightly_studio_serve` and `fast_track`, run `make static-checks` and `make test` in the package
+  folder.
 - Open the PR as a draft while the work is not complete. The guardrails do not run on a draft.
 - Propose the reviewer who knows the changed files best, from `git log` of those files. Use the
   same reviewer for each PR of a stack.
