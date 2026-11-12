@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Lock or unlock all annotations of a sample at once in edit mode, from the Annotations panel header or from the header of each annotation source.
 - Python SDK: Add polygon annotations from COCO and YOLO with `annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION`.
 - Python SDK: Label images in the GUI with your own model. Subclass `ls.LabelingModel`, call `ls.register_labeling_model` before `ls.start_gui`, and use the new "Auto-label" tool to save the correct suggested annotations.
+- Python SDK: Run a labeling model on a remote server. Serve it with `lightly_studio_serve.serve(labeling_model=...)` and connect a dataset with `ls.register_remote_labeling_model`.
 
 ### Changed
 - Segmentation evaluation reports an error for annotation sources with polygons.
