@@ -1,6 +1,6 @@
 ---
 name: python-guide
-description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, assertions only for type narrowing outside tests, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
+description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, no assertions outside tests, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
 ---
 
 # Python Code Guidelines
@@ -40,6 +40,8 @@ def export(samples: Sequence[Sample]) -> None:
 Exceptions from the guidelines:
 - An import inside a function is allowed only for an optional dependency that is possibly not
   installed, for example `pgvector`. Add `# noqa: PLC0415`.
+- A file in `models/` can import other model files at the bottom of the file, with
+  `# noqa: E402`. This breaks the import cycles between tables that refer to each other.
 - We allow direct function import from `typing`, `dataclasses`, `abc`, `sqlmodel`, `sqlalchemy`
 - In tests, we allow direct function import from `tests.helpers_resolvers`,
   `tests.resolvers.video.helpers`, and `tests.resolvers.evaluation_sample_metric_resolver.helpers`
@@ -89,7 +91,8 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 ## Comments
 
 Code must be self-descriptive. Write a comment only for a reason that the code cannot show.
-Keep an inline comment to one line and put more detail in the docstring.
+Keep an inline comment short, one line if possible. A longer comment is acceptable for inner
+logic that names cannot explain. The contract of the function goes in the docstring.
 
 Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current state, not the change. Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
 
@@ -106,29 +109,25 @@ Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current s
 
 ## Assertions
 
-Do not use `assert` outside tests, with one exception: to narrow a type that mypy cannot infer.
+Do not use `assert` outside tests. Use standard control flow or an explicit exception. Mypy
+narrows a type from these patterns as well as from `assert`.
 
-- Raise an exception for a condition that can fail, also for an internal error. Python removes
-  assertions with the `-O` flag, and an `AssertionError` does not tell the caller what to do.
-- Use `assert` for mypy only if the surrounding code makes sure that the condition is true.
+- Python removes assertions with the `-O` flag, and an `AssertionError` does not tell the caller
+  what to do.
+- Raise an exception for a condition that can fail, also for an internal error.
+- To narrow a type for mypy, check the value and raise.
 - Do not check that a variable follows its type hint.
 
 ```python
-# Bad: The condition can fail.
-sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
+# Bad
 assert sample is not None
-assert len(values) >= 2
+assert isinstance(data, int)
 
 # Good
 if sample is None:
     raise ValueError(f"Sample {sample_id} does not exist.")
-if len(values) < 2:
-    raise ValueError("At least 2 values are necessary.")
-
-# Good: The filter makes sure that the value is set, but mypy cannot infer it.
-for video in videos_with_fps:
-    assert video.fps is not None
-    duration_s = video.frame_count / video.fps
+if not isinstance(data, int):
+    raise TypeError(f"Expected int, got {type(data).__name__}")
 ```
 
 ## Positional vs. Keyword Arguments
