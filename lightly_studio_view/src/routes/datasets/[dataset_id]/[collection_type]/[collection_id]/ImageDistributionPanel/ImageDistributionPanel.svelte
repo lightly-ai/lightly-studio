@@ -24,7 +24,6 @@
     } from '$lib/hooks/useImageFieldDistribution';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import { buildDistributionSources } from '../distributionSources';
     import {
         selectHistogramRange,
@@ -39,9 +38,10 @@
         selectComparisonSampleTags,
         selectNumericMetadataKeys
     } from '../metadataDistributionSource';
+    import { buildDistributionBaseFilter } from './distributionBaseFilter';
     import { applyImageFieldRange, selectImageFieldRanges } from './imageFieldRanges';
 
-    type ImageDistributionFilter = ReturnType<typeof buildImageFilter>;
+    type ImageDistributionFilter = ReturnType<typeof buildDistributionBaseFilter>;
 
     interface Props {
         collectionId: string;
@@ -98,19 +98,9 @@
     // stable as sidebar filters are applied.  Filtering is communicated through
     // bar colour (green = in selection, grey = out of selection) rather than
     // through shrinking bars, which loses the original distribution context.
-    // Tag / sample / confusion-cell / query context is kept so the distributions
+    // Tag / sample / confusion-cell / query / plot selection context is kept so the distributions
     // stay scoped to the collection the user is currently exploring.
-    const distributionBaseFilter = $derived(
-        buildImageFilter({
-            dimensionsValues: null,
-            annotationFilter: undefined,
-            metadataFilters: undefined,
-            sampleIds: $imageFilter?.sample_filter?.sample_ids ?? [],
-            tagIds: $imageFilter?.sample_filter?.tag_ids ?? [],
-            confusionCell: $imageFilter?.sample_filter?.confusion_cell ?? null,
-            queryExpr: $imageFilter?.sample_filter?.query_expr ?? null
-        })
-    );
+    const distributionBaseFilter = $derived(buildDistributionBaseFilter($imageFilter));
 
     // With every annotation source unchecked, the class distribution has nothing to show,
     // whichever count query it came from.
