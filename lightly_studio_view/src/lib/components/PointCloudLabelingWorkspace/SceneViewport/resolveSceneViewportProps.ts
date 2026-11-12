@@ -35,7 +35,6 @@ export function resolveSceneViewportProps({
     cameraMode = 'perspective',
     isScaleSource = false,
     showNavigationHelpers = true,
-    showAnnotationTooltips = true,
     showActiveBorder = false,
     viewState = null,
     onViewStateChange
@@ -65,7 +64,6 @@ export function resolveSceneViewportProps({
         cameraMode,
         isScaleSource,
         showNavigationHelpers,
-        showAnnotationTooltips,
         showActiveBorder,
         viewState,
         onViewStateChange

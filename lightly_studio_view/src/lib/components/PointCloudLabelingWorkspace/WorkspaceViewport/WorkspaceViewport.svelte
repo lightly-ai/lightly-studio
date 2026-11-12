@@ -30,7 +30,6 @@
     transforms={layout.transforms}
     pointSize={layout.pointSize}
     showNavigationHelpers={layout.showNavigationHelpers}
-    showAnnotationTooltips={layout.showAnnotationTooltips}
     showActiveBorder={layout.showOrthographicViews}
     selectedAnnotationId={layout.selectedCuboidId}
     hoveredAnnotationId={layout.hoveredCuboidId}
