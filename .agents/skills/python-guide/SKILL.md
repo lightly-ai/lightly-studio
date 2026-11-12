@@ -25,7 +25,21 @@ mymodule.foo()
 c = MyClass()
 ```
 
+Put all imports at the top of the file. Do not import inside a function, a method, or a class.
+Ruff rule `PLC0415` checks this. Do not add `# noqa: PLC0415` to break an import cycle or to make
+a module load faster; move the shared code to a module that both sides can import.
+
+```python
+# Bad
+def export(samples: Sequence[Sample]) -> None:
+    from mypackage import writer
+
+    writer.write(samples)
+```
+
 Exceptions from the guidelines:
+- An import inside a function is allowed only for an optional dependency that is possibly not
+  installed, for example `pgvector`. Add `# noqa: PLC0415`.
 - We allow direct function import from `typing`, `dataclasses`, `abc`, `sqlmodel`, `sqlalchemy`
 - In tests, we allow direct function import from `tests.helpers_resolvers`,
   `tests.resolvers.video.helpers`, and `tests.resolvers.evaluation_sample_metric_resolver.helpers`
