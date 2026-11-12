@@ -99,18 +99,6 @@ Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current s
 ...
 ```
 
-## Assertions
-
-Ruff forbids `assert` outside tests. Use standard control flow or an explicit exception. Mypy
-narrows a type from these patterns as well as from `assert`.
-
-```python
-if sample is None:
-    raise ValueError(f"Sample {sample_id} does not exist.")
-if not isinstance(data, int):
-    raise TypeError(f"Expected int, got {type(data).__name__}")
-```
-
 ## Positional vs. Keyword Arguments
 
 Call functions using keyword arguments, whether or not the arguments are declared keyword-only with `*`. Do not declare arguments as keyword-only with `*` in our code.
