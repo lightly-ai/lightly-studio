@@ -1,6 +1,6 @@
 ---
 name: python-guide
-description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, no assertions outside tests, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
+description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
 ---
 
 # Python Code Guidelines
@@ -101,21 +101,10 @@ Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current s
 
 ## Assertions
 
-Do not use `assert` outside tests. Use standard control flow or an explicit exception. Mypy
+Ruff forbids `assert` outside tests. Use standard control flow or an explicit exception. Mypy
 narrows a type from these patterns as well as from `assert`.
 
-- Python removes assertions with the `-O` flag, and an `AssertionError` does not tell the caller
-  what to do.
-- Raise an exception for a condition that can fail, also for an internal error.
-- To narrow a type for mypy, check the value and raise.
-- Do not check that a variable follows its type hint.
-
 ```python
-# Bad
-assert sample is not None
-assert isinstance(data, int)
-
-# Good
 if sample is None:
     raise ValueError(f"Sample {sample_id} does not exist.")
 if not isinstance(data, int):
@@ -208,11 +197,6 @@ that they do not check.
             return [x + suffix for x in lst]
         ```
         
-- Be specific when ignoring a type error
-    - Good: `def foo(x: Any) -> None:  # type: ignore[misc]`
-    - Bad: `def foo(x: Any) -> None:  # type: ignore`
-    - Rationale: Ignoring all type errors might miss an error that was not intended.
-        
 - Torch typing
     - Type all tensors with `from torch import Tensor`
     - Note that things like `FloatTensor` and `LongTensor` should NOT be used as they are deprecated and cannot be typed by mypy.
@@ -271,10 +255,9 @@ with pytest.raises(ValueError, match=r"does not match"):
     dataset.add_images_from_path(path=tmp_path / "second")
 ```
 
-### Tests must use pytest (NOT unittest)
+### Use `MockerFixture` for mocking
 
-- Don't import unittest. Pytest is more modern.
-- Use MockerFixture for mocking.
+Ruff forbids `unittest` imports.
 
 ```python
 from pytest_mock import MockerFixture
