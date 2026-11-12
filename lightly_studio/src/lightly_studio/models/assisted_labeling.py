@@ -6,6 +6,7 @@ from typing import Annotated
 from uuid import UUID
 
 import pydantic
+from lightly_studio_serve.labeling_model import ModelTask
 from pydantic import BaseModel, StringConstraints
 from pydantic_core import PydanticCustomError
 
@@ -147,6 +148,26 @@ class InstancesAnnotationResponse(BaseModel):
     """Instance previews sorted by descending score."""
 
     predictions: list[AnnotationPreview]
+
+
+class LabelingModelView(BaseModel):
+    """A labeling model that the GUI can run.
+
+    Attributes:
+        id: Unique ID of the model.
+        task: The kind of annotations that the model predicts.
+        class_names: Names of the annotation classes that the model can predict.
+    """
+
+    id: str
+    task: ModelTask
+    class_names: list[str]
+
+
+class LabelingModelsView(BaseModel):
+    """The labeling models that the GUI can run. Empty if no model is registered."""
+
+    models: list[LabelingModelView]
 
 
 class ModelAnnotationRequest(BaseModel):
