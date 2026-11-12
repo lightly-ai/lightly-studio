@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
+import { flushSync } from 'svelte';
 import { OrthographicCamera } from 'three';
 import CuboidDraftTarget from './CuboidDraftTarget.svelte';
 
@@ -53,11 +54,12 @@ function pointer(type: string, clientX: number, clientY: number, button = 0): Po
 }
 
 /** Presses on the plane at world (0.5, 0.5, 0) and drags to world (2.5, 1.5, 0). */
-function dragOnPlane(button = 0): void {
+function dragOnPlane(button = 0, onHighlightChange?: (box: unknown) => void): void {
     render(CuboidDraftTarget, {
         props: {
             bounds: { min: [-4, -4, 0], max: [4, 4, 2] },
             cameraMode: 'top',
+            onHighlightChange,
             onCreateCuboid
         }
     });
@@ -80,6 +82,20 @@ describe('CuboidDraftTarget', () => {
         expect(box.yaw).toBeCloseTo(Math.atan2(1, 2));
         expect(box.size[0]).toBeCloseTo(Math.sqrt(5));
         expect(box.size[1]).toBeCloseTo(2 / Math.sqrt(5));
+    });
+
+    it('reports the highlight region while drawing and clears it at the end', () => {
+        const onHighlightChange = vi.fn();
+        dragOnPlane(0, onHighlightChange);
+        canvas.dispatchEvent(pointer('pointerup', 325, 125));
+        canvas.dispatchEvent(pointer('pointermove', 325, 75));
+        flushSync();
+        expect(onHighlightChange).toHaveBeenLastCalledWith(
+            expect.objectContaining({ yaw: expect.closeTo(Math.atan2(1, 2)) })
+        );
+        canvas.dispatchEvent(pointer('pointerdown', 325, 75));
+        flushSync();
+        expect(onHighlightChange).toHaveBeenLastCalledWith(null);
     });
 
     it.each(['Escape', 'context menu', 'right-button drag'])(

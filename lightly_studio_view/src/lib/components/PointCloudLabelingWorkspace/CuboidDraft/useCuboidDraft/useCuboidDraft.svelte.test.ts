@@ -179,6 +179,17 @@ describe('useCuboidDraft', () => {
             expect(box.yaw).toBe(0);
         });
 
+        it('highlights the points along the whole depth of the rectangle', () => {
+            const { draft } = setup({ cameraMode: 'side', camera: createSideCamera() });
+            pressAt(draft, 200, 200, [0, 0, 0]);
+            canvas.dispatchEvent(pointer('pointermove', 300, 150));
+            expect(draft.highlightBox?.size).toEqual([
+                Infinity,
+                expect.closeTo(2),
+                expect.closeTo(1)
+            ]);
+        });
+
         it('creates nothing on a click without a drag', () => {
             const { draft } = setup({ cameraMode: 'side', camera: createSideCamera() });
             pressAt(draft, 200, 200, [0, 0, 0]);
@@ -197,6 +208,21 @@ describe('useCuboidDraft', () => {
             expect(onCreate).not.toHaveBeenCalled();
             expect(draft.previewBox?.size).toEqual([expect.closeTo(2), 0.1, 0.1]);
             expect(draft.previewBox?.yaw).toBeCloseTo(0);
+        });
+
+        it('highlights no points for the side and a column of points for the width', () => {
+            const { draft } = setup();
+            dragSide(draft);
+            expect(draft.highlightBox).toBeNull();
+            canvas.dispatchEvent(pointer('pointerup', 300, 200));
+            canvas.dispatchEvent(pointer('pointermove', 300, 150));
+            expect(draft.highlightBox?.size).toEqual([
+                expect.closeTo(2),
+                expect.closeTo(1),
+                Infinity
+            ]);
+            click(300, 150);
+            expect(draft.highlightBox).toBeNull();
         });
 
         it('creates an angled box fitted to the points after the width click', () => {
@@ -292,6 +318,12 @@ describe('useCuboidDraft', () => {
             const draft = startHeightStep();
             expect(onCreate).not.toHaveBeenCalled();
             expect(draft.previewBox?.size[2]).toBeCloseTo(0.1);
+        });
+
+        it('highlights the points up to the height in the height step', () => {
+            const draft = startHeightStep();
+            canvas.dispatchEvent(pointer('pointermove', 200, 100));
+            expect(draft.highlightBox).toEqual(draft.previewBox);
         });
 
         it('creates the box with the height under the pointer on the last click', () => {

@@ -33,6 +33,7 @@ export function useWorkspaceEditing(
         });
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
+    let draftCuboid = $state.raw<CuboidBox | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
     // The next cuboid placed with the create tool also starts a new object track.
     let addingTrack = $state(false);
@@ -185,6 +186,12 @@ export function useWorkspaceEditing(
         },
         set hoveredCuboidId(value) {
             hoveredCuboidId = value;
+        },
+        get draftCuboid() {
+            return draftCuboid;
+        },
+        set draftCuboid(value) {
+            draftCuboid = value;
         },
         get activeTool() {
             return activeTool;

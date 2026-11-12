@@ -61,6 +61,8 @@ export interface PointCloudWorkspaceLayoutState {
     selectedCuboidId: string | null;
     /** Hovered cuboid identifier, or null. */
     hoveredCuboidId: string | null;
+    /** Region of the cuboid being drawn, or null; its points are highlighted in every viewport. */
+    draftCuboid: CuboidBox | null;
     /** Camera channels currently visible in the strip. */
     selectedCameraChannelIds: number[];
     /** Whether the camera strip is reduced to its header. */
@@ -87,6 +89,8 @@ export interface PointCloudWorkspaceLayoutState {
     onSelect: (annotationId: string | null) => void;
     /** Updates the cuboid shown by hover feedback. */
     onHover: (annotationId: string | null) => void;
+    /** Updates the region of the cuboid being drawn. */
+    onCuboidDraftChange: (box: CuboidBox | null) => void;
     /** Creates an annotation from a drawn box. */
     onCreateCuboid: (box: CuboidBox) => void | Promise<void>;
     /** Whether the next created cuboid also starts a new object track. */

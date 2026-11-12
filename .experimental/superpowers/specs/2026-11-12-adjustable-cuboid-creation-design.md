@@ -59,6 +59,14 @@ Height is the Z of the intersection between the pointer ray and a vertical plane
 through the footprint centre that faces the camera, minus the ground Z. When the
 camera looks straight down, the height is fitted to the points, as in the top view.
 
+### Highlight of the points in the draft
+
+While a cuboid is drawn, the points that it takes in are highlighted in every
+viewport. The other points keep their color. The first side has no area, so it
+highlights nothing. The width step and the side and front rectangle highlight
+the whole column of points along the axis that is not drawn yet. The height
+step highlights the points up to the current height.
+
 ### Keyboard rotation of the 3D camera
 
 Q and E orbit the camera around the vertical axis through the view target. The

@@ -7,6 +7,8 @@ export interface CuboidGeometry {
     center: readonly [number, number, number];
     size: readonly [number, number, number];
     rotation: readonly [number, number, number, number];
+    /** Keeps the points outside at full color. By default they are dimmed. */
+    keepOutside?: boolean;
 }
 
 interface HighlightCacheEntry {
@@ -86,7 +88,9 @@ function blendCuboidColors(
             halfSize,
             inverseRotation
         );
-        blendPointColor(highlighted, offset, isInside, highlightColor);
+        if (isInside || !cuboid.keepOutside) {
+            blendPointColor(highlighted, offset, isInside, highlightColor);
+        }
     }
     return highlighted;
 }
@@ -131,7 +135,8 @@ function sameCuboid(a: CuboidGeometry, b: CuboidGeometry): boolean {
     return (
         a.center.every((value, index) => value === b.center[index]) &&
         a.size.every((value, index) => value === b.size[index]) &&
-        a.rotation.every((value, index) => value === b.rotation[index])
+        a.rotation.every((value, index) => value === b.rotation[index]) &&
+        a.keepOutside === b.keepOutside
     );
 }
 

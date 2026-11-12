@@ -11,6 +11,22 @@
         props.cuboids.find((annotation) => annotation.id === props.selectedAnnotationId)
     );
     const clippingPlanes = $derived(getAnnotationPointClipping(props.cameraMode, selectedCuboid));
+    // While a cuboid is drawn, the points that it takes in are highlighted in every viewport.
+    const draftHighlight = $derived(
+        props.draftCuboid
+            ? {
+                  center: props.draftCuboid.center,
+                  size: props.draftCuboid.size,
+                  rotation: [
+                      0,
+                      0,
+                      Math.sin(props.draftCuboid.yaw / 2),
+                      Math.cos(props.draftCuboid.yaw / 2)
+                  ] as const,
+                  keepOutside: true
+              }
+            : undefined
+    );
 </script>
 
 <Canvas>
@@ -18,7 +34,7 @@
         batch={props.batch}
         cameraCuboid={props.cameraMode === 'perspective' ? undefined : selectedCuboid}
         {clippingPlanes}
-        highlightCuboid={selectedCuboid}
+        highlightCuboid={draftHighlight ?? selectedCuboid}
         colorMode={props.colorMode}
         pointSize={props.pointSize}
         intensityRange={props.intensityRange}
@@ -48,6 +64,7 @@
         onselect={props.onselect}
         onhover={props.onhover}
         onCreateCuboid={props.onCreateCuboid}
+        onCuboidDraftChange={props.onCuboidDraftChange}
         onCuboidTransform={props.onCuboidTransform}
     />
 </Canvas>

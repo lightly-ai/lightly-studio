@@ -12,6 +12,7 @@ import {
     getMissingAxis,
     hasAngledFootprint,
     isDrag,
+    type Axis,
     type CuboidBox,
     type DraftFootprint,
     type ScreenPoint
@@ -35,6 +36,11 @@ interface Params {
 interface CuboidDraftReturn {
     /** Box to preview, or null when no draft is visible. */
     readonly previewBox: CuboidBox | null;
+    /**
+     * Region whose points the draft takes in, or null before the draft has an area. It has no
+     * limit along the axis that is not drawn yet.
+     */
+    readonly highlightBox: CuboidBox | null;
     handlePlanePointerDown: (event: PlanePointerEvent) => void;
 }
 
@@ -83,6 +89,7 @@ export function useCuboidDraft({
     const raycaster = new Raycaster();
     let draft: Draft | null = null;
     let previewBox = $state<CuboidBox | null>(null);
+    let highlightBox = $state<CuboidBox | null>(null);
     /** Click that ended a draft; it also reaches the plane mesh and must not start a new draft. */
     let finishingClick: PointerEvent | null = null;
 
@@ -132,29 +139,51 @@ export function useCuboidDraft({
         return raycaster.ray.intersectPlane(plane, new ThreeVector3());
     }
 
+    /** Shows the box. The points inside it are highlighted, without a limit along `openAxis`. */
+    function show(box: CuboidBox, openAxis?: Axis | 'none'): void {
+        previewBox = box;
+        if (openAxis === 'none') {
+            highlightBox = null;
+            return;
+        }
+        const size: [number, number, number] = [...box.size];
+        if (openAxis !== undefined) size[openAxis] = Infinity;
+        highlightBox = { ...box, size };
+    }
+
+    function hide(): void {
+        previewBox = null;
+        highlightBox = null;
+    }
+
     /** Moves the second point of the rectangle or of the first side. */
     function updateEnd(active: Draft, event: PointerEvent): void {
         active.currentScreen = { x: event.clientX, y: event.clientY };
         if (!hasExtent(active)) {
-            previewBox = null;
+            hide();
             return;
         }
         const hit = raycastPlane(event, active.plane);
         if (!hit) return;
         active.currentWorld = [hit.x, hit.y, hit.z];
-        previewBox =
-            active.step === 'side'
-                ? getFootprintBox(getFootprint(active))
-                : getDraftBox(
-                      getDraftRectangle(active.cameraMode, active.startWorld, active.currentWorld)
-                  );
+        if (active.step === 'side') {
+            // A side has no area yet, so it takes in no points.
+            show(getFootprintBox(getFootprint(active)), 'none');
+            return;
+        }
+        const rectangle = getDraftRectangle(
+            active.cameraMode,
+            active.startWorld,
+            active.currentWorld
+        );
+        show(getDraftBox(rectangle), rectangle.missingAxis);
     }
 
     function updateWidth(active: Draft, event: PointerEvent): void {
         const hit = raycastPlane(event, active.plane);
         if (!hit) return;
         active.width = getFootprintWidth(getFootprint(active), [hit.x, hit.y, hit.z]);
-        previewBox = getFootprintBox(getFootprint(active));
+        show(getFootprintBox(getFootprint(active)), 2);
     }
 
     function updateHeight(active: Draft, event: PointerEvent): void {
@@ -163,12 +192,12 @@ export function useCuboidDraft({
         if (!plane) {
             // The camera looks straight down, so the pointer cannot give a height.
             const extent = fitFootprintHeight(footprint, active.batch);
-            previewBox = getFootprintBox(footprint, extent);
+            show(getFootprintBox(footprint, extent));
             return;
         }
         const hit = raycastPlane(event, plane);
         if (!hit) return;
-        previewBox = getFootprintBox(footprint, getHeightExtent(active.startWorld[2], hit.z));
+        show(getFootprintBox(footprint, getHeightExtent(active.startWorld[2], hit.z)));
     }
 
     function update(active: Draft, event: PointerEvent): void {
@@ -270,7 +299,7 @@ export function useCuboidDraft({
         if (!draft) return;
         const { pointerId } = draft;
         draft = null;
-        previewBox = null;
+        hide();
         removeListeners();
         if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
     }
@@ -286,6 +315,9 @@ export function useCuboidDraft({
     return {
         get previewBox() {
             return previewBox;
+        },
+        get highlightBox() {
+            return highlightBox;
         },
         handlePlanePointerDown
     };

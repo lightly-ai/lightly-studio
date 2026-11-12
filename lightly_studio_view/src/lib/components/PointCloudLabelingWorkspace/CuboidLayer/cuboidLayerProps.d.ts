@@ -30,6 +30,8 @@ export interface CuboidLayerProps {
     tick?: number;
     /** Creates an annotation from a drawn box. */
     onCreateCuboid?: (box: CuboidBox) => void;
+    /** Reports the region whose points a cuboid draft takes in, or null without one. */
+    onCuboidDraftChange?: (box: CuboidBox | null) => void;
     /** Reports a completed gizmo transform before it is committed. */
     onCuboidTransform?: (
         payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]

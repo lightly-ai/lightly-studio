@@ -27,6 +27,7 @@
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         onCreateCuboid?: (box: CuboidBox) => void;
+        onCuboidDraftChange?: (box: CuboidBox | null) => void;
         onCuboidTransform?: (
             payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
         ) => void;
@@ -48,6 +49,7 @@
         onselect,
         onhover,
         onCreateCuboid,
+        onCuboidDraftChange,
         onCuboidTransform
     }: Props = $props();
 
@@ -108,6 +110,7 @@
         {cameraMode}
         batch={pointBatch}
         {tick}
+        onHighlightChange={(box) => onCuboidDraftChange?.(box)}
         onCreateCuboid={(p) => onCreateCuboid?.(p)}
     />
 {/if}

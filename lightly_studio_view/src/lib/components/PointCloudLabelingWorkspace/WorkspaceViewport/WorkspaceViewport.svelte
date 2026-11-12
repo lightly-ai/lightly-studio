@@ -41,6 +41,8 @@
     onselect={layout.onSelect}
     onhover={(id) => layout.onHover(id)}
     onCreateCuboid={layout.onCreateCuboid}
+    draftCuboid={layout.draftCuboid}
+    onCuboidDraftChange={layout.onCuboidDraftChange}
     onPreviousTick={cameraMode === 'perspective' ? layout.onPreviousFrame : undefined}
     onNextTick={cameraMode === 'perspective' ? layout.onNextFrame : undefined}
 >

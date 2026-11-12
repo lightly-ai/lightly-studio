@@ -62,6 +62,10 @@ export interface SceneViewportProps {
     onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
     /** Creates an annotation from a drawn box. */
     onCreateCuboid?: (box: CuboidBox) => void;
+    /** Region of a cuboid draft, drawn in any viewport; its points are highlighted. */
+    draftCuboid?: CuboidBox | null;
+    /** Reports the region whose points a cuboid draft takes in, or null without one. */
+    onCuboidDraftChange?: (box: CuboidBox | null) => void;
     /** Reports a completed annotation gizmo transform before it is committed. */
     onCuboidTransform?: CuboidLayerProps['onCuboidTransform'];
     /** Fires on the left arrow key. */

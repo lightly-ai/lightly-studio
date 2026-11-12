@@ -39,6 +39,8 @@
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
         onCreateCuboid?: (box: CuboidBox) => void;
+        draftCuboid?: CuboidBox | null;
+        onCuboidDraftChange?: (box: CuboidBox | null) => void;
         onCuboidTransform?: Parameters<typeof resolveSceneViewportProps>[0]['onCuboidTransform'];
         onPreviousTick?: () => void;
         onNextTick?: () => void;

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { T } from '@threlte/core';
+    import { onDestroy } from 'svelte';
     import type { Bounds3, CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { PointBatch } from '$lib/components/PointCloudViewer';
     import { getCuboidCreationPlane } from './cuboidCreationPlane';
@@ -17,11 +18,20 @@
         batch?: PointBatch;
         /** Timeline tick on display. A change discards the draft. */
         tick?: number;
+        /** Fires when the region whose points the draft takes in changes; null when there is none. */
+        onHighlightChange?: (box: CuboidBox | null) => void;
         /** Fires with the drawn box when the last step completes. */
         onCreateCuboid: (box: CuboidBox) => void;
     }
 
-    let { bounds, cameraMode = 'perspective', batch, tick, onCreateCuboid }: Props = $props();
+    let {
+        bounds,
+        cameraMode = 'perspective',
+        batch,
+        tick,
+        onHighlightChange,
+        onCreateCuboid
+    }: Props = $props();
     const layout = $derived(getCuboidCreationPlane(bounds, cameraMode));
     const draft = useCuboidDraft({
         getCameraMode: () => cameraMode,
@@ -29,6 +39,11 @@
         getTick: () => tick,
         onCreate: (box) => onCreateCuboid(box)
     });
+
+    $effect(() => {
+        onHighlightChange?.(draft.highlightBox);
+    });
+    onDestroy(() => onHighlightChange?.(null));
 </script>
 
 {#if layout}

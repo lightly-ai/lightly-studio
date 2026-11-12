@@ -88,6 +88,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         colorMode: presentation.colorMode,
         selectedCuboidId: editing.selectedCuboidId,
         hoveredCuboidId: editing.hoveredCuboidId,
+        draftCuboid: editing.draftCuboid,
         selectedCameraChannelIds: cameraSelection.selectedChannelIds,
         cameraStripCollapsed: cameraPane.collapsed,
         bufferEntireSequence: playback.bufferEntireSequence,
@@ -106,6 +107,9 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         },
         onHover: (id) => {
             editing.hoveredCuboidId = id;
+        },
+        onCuboidDraftChange: (box) => {
+            editing.draftCuboid = box;
         },
         onCreateCuboid: editing.handleCreateCuboid,
         isAddingTrack: editing.isAddingTrack,
