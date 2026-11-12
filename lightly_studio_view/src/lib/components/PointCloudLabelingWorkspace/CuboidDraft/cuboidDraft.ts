@@ -1,22 +1,17 @@
-import type {
-    Bounds3,
-    CameraMode,
-    Vector3
-} from '$lib/components/PointCloudLabelingWorkspace/domain';
+import type { CameraMode, Vector3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
 
 /** Pointer travel in screen pixels from which a press counts as a drag. */
 export const DRAG_THRESHOLD_PX = 4;
 /** Smallest allowed size of a cuboid along any axis. */
 export const MIN_CUBOID_EXTENT = 0.1;
 
-const DEFAULT_CUBOID_DIAGONAL_RATIO = 0.02;
-
 export interface CuboidBox {
     center: Vector3;
+    /** Extent along the box's own X (heading), Y and Z axes. */
     size: Vector3;
+    /** Heading: rotation around the vertical axis in radians. */
+    yaw: number;
 }
-
-export type CuboidPlacement = { kind: 'drop'; position: Vector3 } | { kind: 'box'; box: CuboidBox };
 
 export type Axis = 0 | 1 | 2;
 
@@ -28,6 +23,16 @@ export interface DraftRectangle {
     /** Lower and upper corner; both carry planeCoordinate on the missing axis. */
     min: Vector3;
     max: Vector3;
+}
+
+/** Ground footprint of an angled draft: one drawn side, widened sideways. */
+export interface DraftFootprint {
+    /** First point of the drawn side; its Z is the ground height. */
+    start: Vector3;
+    /** Second point of the drawn side. The heading points from start to end. */
+    end: Vector3;
+    /** Signed width; positive is to the left of the heading. */
+    width: number;
 }
 
 export interface AxisExtent {
@@ -95,24 +100,57 @@ export function getDraftBox(rectangle: DraftRectangle, extent?: AxisExtent): Cub
     if (!extent) {
         center[missingAxis] = planeCoordinate;
     }
-    return { center, size };
+    return { center, size, yaw: 0 };
 }
 
-/** Extent of a footprint raised from its plane to the given world Z. */
-export function getHeightExtent(rectangle: DraftRectangle, z: number): AxisExtent {
-    const { planeCoordinate } = rectangle;
-    return { min: planeCoordinate, max: Math.max(z, planeCoordinate + MIN_CUBOID_EXTENT) };
+/** Extent of a footprint raised from the ground to the given world Z. */
+export function getHeightExtent(groundZ: number, z: number): AxisExtent {
+    return { min: groundZ, max: Math.max(z, groundZ + MIN_CUBOID_EXTENT) };
 }
 
-export function getDefaultCuboidBox(position: Vector3, bounds: Bounds3): CuboidBox {
-    const diagonal = Math.hypot(
-        bounds.max[0] - bounds.min[0],
-        bounds.max[1] - bounds.min[1],
-        bounds.max[2] - bounds.min[2]
-    );
-    const edge = Math.max(diagonal * DEFAULT_CUBOID_DIAGONAL_RATIO, MIN_CUBOID_EXTENT);
+/** Whether the camera mode draws an angled footprint in steps, not one rectangle. */
+export function hasAngledFootprint(cameraMode: CameraMode): boolean {
+    return cameraMode === 'top' || cameraMode === 'perspective';
+}
+
+/** Heading of the drawn side and its length on the ground. */
+export function getFootprintSide(footprint: Pick<DraftFootprint, 'start' | 'end'>) {
+    const dx = footprint.end[0] - footprint.start[0];
+    const dy = footprint.end[1] - footprint.start[1];
+    const length = Math.hypot(dx, dy);
+    return { length, yaw: length > 0 ? Math.atan2(dy, dx) : 0 };
+}
+
+/** Signed distance of a point from the drawn side; positive is to the left of the heading. */
+export function getFootprintWidth(
+    footprint: Pick<DraftFootprint, 'start' | 'end'>,
+    point: Vector3
+): number {
+    const { yaw } = getFootprintSide(footprint);
+    const dx = point[0] - footprint.start[0];
+    const dy = point[1] - footprint.start[1];
+    return dy * Math.cos(yaw) - dx * Math.sin(yaw);
+}
+
+/** Box over the footprint: flat on the ground, or with the given vertical extent. */
+export function getFootprintBox(footprint: DraftFootprint, extent?: AxisExtent): CuboidBox {
+    const { start, width } = footprint;
+    const { length, yaw } = getFootprintSide(footprint);
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
+    const low = extent?.min ?? start[2];
+    const high = extent?.max ?? start[2];
     return {
-        center: [position[0], position[1], position[2] + edge / 2],
-        size: [edge, edge, edge]
+        center: [
+            start[0] + (cos * length - sin * width) / 2,
+            start[1] + (sin * length + cos * width) / 2,
+            (low + high) / 2
+        ],
+        size: [
+            Math.max(length, MIN_CUBOID_EXTENT),
+            Math.max(Math.abs(width), MIN_CUBOID_EXTENT),
+            Math.max(high - low, MIN_CUBOID_EXTENT)
+        ],
+        yaw
     };
 }

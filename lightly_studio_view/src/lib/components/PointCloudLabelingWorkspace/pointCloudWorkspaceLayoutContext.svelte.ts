@@ -1,4 +1,4 @@
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import { getContext, setContext } from 'svelte';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import type { ColorMode } from '$lib/components/PointCloudViewer';
@@ -87,8 +87,8 @@ export interface PointCloudWorkspaceLayoutState {
     onSelect: (annotationId: string | null) => void;
     /** Updates the cuboid shown by hover feedback. */
     onHover: (annotationId: string | null) => void;
-    /** Creates an annotation from a click drop point or a drawn box. */
-    onCreateCuboid: (placement: CuboidPlacement) => void | Promise<void>;
+    /** Creates an annotation from a drawn box. */
+    onCreateCuboid: (box: CuboidBox) => void | Promise<void>;
     /** Whether the next created cuboid also starts a new object track. */
     isAddingTrack: boolean;
     /** Arms or cancels creating a new object track with its first cuboid. */

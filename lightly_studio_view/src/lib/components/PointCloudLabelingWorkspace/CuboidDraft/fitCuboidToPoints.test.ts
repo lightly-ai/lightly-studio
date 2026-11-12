@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import { getDraftRectangle } from './cuboidDraft';
-import { fitMissingAxis } from './fitCuboidToPoints';
+import { fitFootprintHeight, fitMissingAxis } from './fitCuboidToPoints';
 
 const batch = (points: number[], count = points.length / 3): PointBatch => ({
     positions: new Float32Array(points),
@@ -42,5 +42,32 @@ describe('fitMissingAxis', () => {
     it('centres on the plane in side and front views when no point is inside', () => {
         const side = getDraftRectangle('side', [5, 0, 0], [5, 4, 2]);
         expect(fitMissingAxis(side, undefined)).toEqual({ min: 4, max: 6 });
+    });
+});
+
+describe('fitFootprintHeight', () => {
+    // Side along the diagonal from (0, 0) to (2, 2), widened by √2 to the left: corners (-1, 1), (1, 3).
+    const footprint = { start: [0, 0, -1], end: [2, 2, -1], width: Math.SQRT2 } as const;
+
+    it('fits Z to the points inside the turned footprint', () => {
+        // (0, 2) is inside. (2, 0) is inside the axis-aligned bounds only.
+        const points = [0, 2, 0.25, 1, 2, 1.75, 2, 0, 50];
+        expect(fitFootprintHeight(footprint, batch(points))).toEqual({ min: 0.25, max: 1.75 });
+    });
+    it('fits a footprint widened to the right', () => {
+        const right = { ...footprint, width: -Math.SQRT2 };
+        expect(fitFootprintHeight(right, batch([2, 0, 0.5, 0, 2, 50]))).toEqual({
+            min: 0.5,
+            max: 0.5
+        });
+    });
+    it('rests on the ground with the shorter side as height when no point is inside', () => {
+        const extent = fitFootprintHeight(footprint, batch([9, 9, 9]));
+        expect(extent.min).toBe(-1);
+        expect(extent.max).toBeCloseTo(-1 + Math.SQRT2);
+    });
+    it('reads every segment of a segmented batch', () => {
+        const segmented = { ...batch([]), segments: [batch([0, 2, 0.5]), batch([1, 2, 1.5])] };
+        expect(fitFootprintHeight(footprint, segmented)).toEqual({ min: 0.5, max: 1.5 });
     });
 });

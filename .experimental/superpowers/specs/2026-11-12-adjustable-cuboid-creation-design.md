@@ -18,12 +18,16 @@ interaction follows the box-creation pattern of Blender and 3ds Max.
 
 ## Behaviour
 
+Revised on 2026-11-12 after the first review of the feature: the cuboid gets its
+heading while it is drawn, and the quick-drop click is removed.
+
 | Situation | Behaviour |
 |---|---|
-| Drag in top, side or front view | One drag draws a rectangle. The third dimension is fitted to the points inside it. Release saves. |
-| Drag in the 3D (perspective) view | Drag draws the footprint on the ground. Release, move the mouse to set the height, click to save. |
-| Click without dragging | Quick-drop of the default-size cube, as today. |
-| Orientation | Always world-aligned (identity quaternion). Users rotate afterwards with the Rotate tool. |
+| Top view | 1. Press on the first point and drag along one side of the object; release fixes the side. It sets the heading and the length. 2. Move the mouse and click to fix the width. The height is fitted to the points inside the footprint. |
+| 3D (perspective) view | Steps 1 and 2 as in the top view, on the ground. 3. Move the mouse and click to fix the height. |
+| Side or front view | One drag draws a rectangle. The third dimension is fitted to the points inside it. Release saves. The box is world-aligned. |
+| Click without dragging | Top and 3D views: the click sets the first point, and the next click sets the end of the side. Side and front views: nothing. There is no quick-drop cube. |
+| Orientation | Top and 3D views: the heading points from the first point to the end of the drawn side (rotation around the vertical axis). Side and front views: world-aligned. |
 | Cancel | Escape or right-click at any step before saving. Changing the tool or the tick also discards the draft. |
 
 After a draw completes, the flow is unchanged: class dialog if no class is
@@ -35,30 +39,29 @@ track when "add track" is on.
 A pointer-down followed by a pointer-up less than 4 screen pixels away is a click.
 Anything else is a drag.
 
-### Orthographic views
+### Fit to points
 
-| View | Rectangle sets | Fitted to points |
+| View | Drawn | Fitted to points |
 |---|---|---|
-| Top | X, Y | Z (height) |
-| Side | Y, Z | X (depth) |
-| Front | X, Z | Y (depth) |
+| Top | Angled footprint in X and Y | Z (height) |
+| Side | Rectangle in Y, Z | X (depth) |
+| Front | Rectangle in X, Z | Y (depth) |
 
-- The fit takes every point whose two in-plane coordinates fall inside the
-  rectangle and sets the box limits on the remaining axis to the minimum and
-  maximum of those points.
-- If no point falls inside, the third dimension equals the shorter side of the
-  rectangle. In the top view the box rests on the ground plane. In the side and
-  front views it is centred on the scene's depth midpoint (the current creation
-  plane).
+- The fit takes every point inside the drawn footprint or rectangle and sets the
+  box limits on the remaining axis to the minimum and maximum of those points.
+- If no point falls inside, the third dimension equals the shorter side. In the
+  top view the box rests on the ground plane. In the side and front views it is
+  centred on the scene's depth midpoint (the current creation plane).
 
-### 3D view
+### Height step in the 3D view
 
-1. Pointer-down and drag: the footprint rectangle is drawn on the ground plane.
-   The preview is flat.
-2. Pointer-up: the draft enters the height step. Height is the Z of the
-   intersection between the pointer ray and a vertical plane through the
-   footprint centre that faces the camera, minus the ground Z.
-3. Click: confirm and save.
+Height is the Z of the intersection between the pointer ray and a vertical plane
+through the footprint centre that faces the camera, minus the ground Z.
+
+### Keyboard rotation of the 3D camera
+
+Q and E orbit the camera around the vertical axis through the view target. The
+camera height does not change.
 
 ### Size limits
 
@@ -80,7 +83,7 @@ New files in `lightly_studio_view/src/lib/components/PointCloudLabelingWorkspace
 
 | File | Purpose | Depends on |
 |---|---|---|
-| `cuboidDraft.ts` | Holds the draft step (idle → dragging footprint → setting height (3D only) → done) and turns pointer positions into a box (centre and size). Also builds the default quick-drop box. | Nothing; pure functions |
+| `cuboidDraft.ts` | Turns pointer positions into a box (centre, size and heading) for an axis-aligned rectangle or an angled footprint. | Nothing; pure functions |
 | `fitCuboidToPoints.ts` | Given a rectangle, the missing axis and point positions, returns the extent and centre on that axis, or the fallback. | A `Float32Array` of positions |
 | `useCuboidDraft/useCuboidDraft.svelte.ts` | Owns the pointer and keyboard listeners (pointer-down, move, up, Escape, right-click) and the draft step; emits the finished placement. Tested through a harness, like `useCuboidFaceResize`. | `cuboidDraft`, `fitCuboidToPoints` |
 | `CuboidDraftTarget.svelte` | Replaces `GroundPlaneClickTarget`. Renders the invisible plane and the preview, and connects them to `useCuboidDraft`. | `useCuboidDraft`, existing `getCuboidCreationPlane` |
@@ -88,12 +91,10 @@ New files in `lightly_studio_view/src/lib/components/PointCloudLabelingWorkspace
 
 Changes to existing code:
 
-- `useCreateCuboidAnnotation` takes a placement instead of a ground position:
-  either a drop point (click) or a finished box (drag). `computeDefaultCuboidSize`
-  moves into `cuboidDraft.ts`; the hook calls it with the current frame's bounds,
-  so a click produces the same box that is created today.
+- `useCreateCuboidAnnotation` takes the drawn box (centre, size and heading)
+  instead of a ground position. The default-size cube is removed.
 - `onCreateCuboid` in `CuboidLayer`, its props and `useWorkspaceEditing` changes
-  its argument from a position to a placement.
+  its argument from a position to a box.
 - `CuboidLayer` receives the current frame's point positions and passes them to
   the fit.
 - `GroundPlaneClickTarget.svelte` is removed. `cuboidCreationPlane.ts` stays.
@@ -134,14 +135,12 @@ Two pull requests, each useful on its own:
 
 1. **Drawing in orthographic views.** Draft module without the height step,
    point fit, preview, replacement of `GroundPlaneClickTarget`, new argument for
-   `useCreateCuboidAnnotation`, click as quick-drop. In the 3D view only the click
-   works after this PR, as today; a drag there creates nothing. `CHANGELOG.md` entry.
+   `useCreateCuboidAnnotation`. `CHANGELOG.md` entry.
 2. **Drawing in the 3D view.** Height step in the draft, footprint drag on the
    ground, click to confirm. `CHANGELOG.md` entry.
 
 ## Out of scope
 
-- Setting the heading while drawing.
 - Outlier filtering in the point fit.
 - A click that repeats the size of the last cuboid.
 - A modifier key for setting the third dimension by hand in orthographic views.

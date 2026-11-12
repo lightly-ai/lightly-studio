@@ -10,15 +10,9 @@ import {
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
-import type { Bounds3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
-import type {
-    CuboidBox,
-    CuboidPlacement
-} from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
-import { getDefaultCuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 
 interface SceneFrame {
-    bounds: Bounds3 | null;
     frameId: string;
 }
 
@@ -38,7 +32,7 @@ interface CreateCuboidParams {
 
 interface UseCreateCuboidAnnotationReturn {
     handleCreateCuboid: (
-        placement: CuboidPlacement,
+        box: CuboidBox,
         onCreated: (annotationId: string) => void | Promise<void>
     ) => Promise<void>;
     showSelectClassDialog: ReturnType<typeof useSelectClassDialog>['open'];
@@ -46,8 +40,6 @@ interface UseCreateCuboidAnnotationReturn {
     handleClassDialogCancel: ReturnType<typeof useSelectClassDialog>['handleCancel'];
     labels: ReturnType<typeof useAnnotationLabels>;
 }
-
-const ZERO_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
 
 function buildCuboidInput({
     frame,
@@ -64,10 +56,11 @@ function buildCuboidInput({
             px: box.center[0],
             py: box.center[1],
             pz: box.center[2],
+            // The heading is a rotation around the vertical axis.
             qx: 0,
             qy: 0,
-            qz: 0,
-            qw: 1,
+            qz: Math.sin(box.yaw / 2),
+            qw: Math.cos(box.yaw / 2),
             sx: box.size[0],
             sy: box.size[1],
             sz: box.size[2]
@@ -160,17 +153,13 @@ export function useCreateCuboidAnnotation({
     }
 
     async function handleCreateCuboid(
-        placement: CuboidPlacement,
+        box: CuboidBox,
         onCreated: (annotationId: string) => void | Promise<void>
     ): Promise<void> {
         const collectionId = getCollectionId();
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
-        const box =
-            placement.kind === 'box'
-                ? placement.box
-                : getDefaultCuboidBox(placement.position, capturedFrame?.bounds ?? ZERO_BOUNDS);
         const labelName = await selectAnnotationLabel(collectionId);
         if (!labelName) return;
         // Cancel if the active tick changed while the class dialog was open.

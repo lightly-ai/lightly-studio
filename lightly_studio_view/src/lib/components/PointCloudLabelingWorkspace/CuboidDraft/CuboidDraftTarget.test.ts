@@ -70,27 +70,28 @@ function dragOnPlane(button = 0): void {
 }
 
 describe('CuboidDraftTarget', () => {
-    it('creates a box from a drag on the plane', () => {
+    it('creates an angled box from a dragged side and a width click', () => {
         dragOnPlane();
         canvas.dispatchEvent(pointer('pointerup', 325, 125));
+        canvas.dispatchEvent(pointer('pointermove', 325, 75));
+        canvas.dispatchEvent(pointer('pointerdown', 325, 75));
         expect(onCreateCuboid).toHaveBeenCalledOnce();
-        const placement = onCreateCuboid.mock.calls[0][0];
-        expect(placement.kind).toBe('box');
-        expect(placement.box.center[0]).toBeCloseTo(1.5);
-        expect(placement.box.center[1]).toBeCloseTo(1);
-        expect(placement.box.size[0]).toBeCloseTo(2);
-        expect(placement.box.size[1]).toBeCloseTo(1);
+        const box = onCreateCuboid.mock.calls[0][0];
+        expect(box.yaw).toBeCloseTo(Math.atan2(1, 2));
+        expect(box.size[0]).toBeCloseTo(Math.sqrt(5));
+        expect(box.size[1]).toBeCloseTo(2 / Math.sqrt(5));
     });
 
     it.each(['Escape', 'context menu', 'right-button drag'])(
         'creates nothing after %s',
         (cancel) => {
             dragOnPlane(cancel === 'right-button drag' ? 2 : 0);
+            canvas.dispatchEvent(pointer('pointerup', 325, 125));
             if (cancel === 'Escape')
                 window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
             if (cancel === 'context menu')
                 canvas.dispatchEvent(pointer('contextmenu', 325, 125, 2));
-            canvas.dispatchEvent(pointer('pointerup', 325, 125));
+            canvas.dispatchEvent(pointer('pointerdown', 325, 75));
             expect(onCreateCuboid).not.toHaveBeenCalled();
         }
     );

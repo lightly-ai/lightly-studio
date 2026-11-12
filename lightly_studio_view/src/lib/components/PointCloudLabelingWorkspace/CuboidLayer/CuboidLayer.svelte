@@ -1,5 +1,5 @@
 <script lang="ts">
-    import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+    import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
     import { untrack } from 'svelte';
     import { useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
@@ -26,7 +26,7 @@
         tick?: number;
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
-        onCreateCuboid?: (placement: CuboidPlacement) => void;
+        onCreateCuboid?: (box: CuboidBox) => void;
         onCuboidTransform?: (
             payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
         ) => void;

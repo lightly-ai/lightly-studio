@@ -1,5 +1,10 @@
 import type { PointBatch } from '$lib/components/PointCloudViewer';
-import type { AxisExtent, DraftRectangle } from './cuboidDraft';
+import {
+    getFootprintSide,
+    type AxisExtent,
+    type DraftFootprint,
+    type DraftRectangle
+} from './cuboidDraft';
 
 /** Extent of the missing axis from the points inside the rectangle, or the fallback. */
 export function fitMissingAxis(
@@ -28,6 +33,39 @@ export function fitMissingAxis(
         return { min: low, max: high };
     }
     return getFallbackExtent(rectangle);
+}
+
+/** Vertical extent of the points inside an angled footprint, or the fallback. */
+export function fitFootprintHeight(
+    footprint: DraftFootprint,
+    batch: PointBatch | undefined
+): AxisExtent {
+    const { start, width } = footprint;
+    const { length, yaw } = getFootprintSide(footprint);
+    const cos = Math.cos(yaw);
+    const sin = Math.sin(yaw);
+    const minAcross = Math.min(0, width);
+    const maxAcross = Math.max(0, width);
+
+    let low = Infinity;
+    let high = -Infinity;
+    for (const { positions, count } of batch ? (batch.segments ?? [batch]) : []) {
+        for (let i = 0; i < count; i++) {
+            const dx = positions[i * 3] - start[0];
+            const dy = positions[i * 3 + 1] - start[1];
+            const along = dx * cos + dy * sin;
+            const across = dy * cos - dx * sin;
+            if (along < 0 || along > length || across < minAcross || across > maxAcross) continue;
+            const z = positions[i * 3 + 2];
+            if (z < low) low = z;
+            if (z > high) high = z;
+        }
+    }
+    if (low <= high) {
+        return { min: low, max: high };
+    }
+    // Without points the box rests on the ground and is as high as its shorter side.
+    return { min: start[2], max: start[2] + Math.min(length, Math.abs(width)) };
 }
 
 function getFallbackExtent(rectangle: DraftRectangle): AxisExtent {

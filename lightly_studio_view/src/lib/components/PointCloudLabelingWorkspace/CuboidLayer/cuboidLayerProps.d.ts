@@ -1,4 +1,4 @@
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type * as Domain from '../domain';
 import type { createCuboidTransformState } from './cuboidTransformState';
@@ -28,8 +28,8 @@ export interface CuboidLayerProps {
     pointBatch?: PointBatch;
     /** Timeline tick on display. A change discards a cuboid draft. */
     tick?: number;
-    /** Creates an annotation from a click drop point or a drawn box. */
-    onCreateCuboid?: (placement: CuboidPlacement) => void;
+    /** Creates an annotation from a drawn box. */
+    onCreateCuboid?: (box: CuboidBox) => void;
     /** Reports a completed gizmo transform before it is committed. */
     onCuboidTransform?: (
         payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]

@@ -77,7 +77,7 @@ describe('CuboidLayer draft target', () => {
         });
     });
 
-    it('forwards created placements to onCreateCuboid', () => {
+    it('forwards the drawn box to onCreateCuboid', () => {
         draftTarget.props = null;
         const onCreateCuboid = vi.fn();
         render(CuboidLayer, {
@@ -90,11 +90,11 @@ describe('CuboidLayer draft target', () => {
                 onCreateCuboid
             }
         });
-        const placement = { kind: 'drop', position: [1, 2, 3] } as const;
+        const box = { center: [1, 2, 3], size: [1, 1, 1], yaw: 0 };
         const { onCreateCuboid: forward } = draftTarget.props as unknown as {
-            onCreateCuboid: (p: typeof placement) => void;
+            onCreateCuboid: (drawn: typeof box) => void;
         };
-        forward(placement);
-        expect(onCreateCuboid).toHaveBeenCalledExactlyOnceWith(placement);
+        forward(box);
+        expect(onCreateCuboid).toHaveBeenCalledExactlyOnceWith(box);
     });
 });

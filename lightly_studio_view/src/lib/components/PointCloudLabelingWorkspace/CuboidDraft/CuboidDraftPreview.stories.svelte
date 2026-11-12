@@ -9,7 +9,7 @@
         component: CuboidDraftPreview,
         tags: ['autodocs'],
         parameters: { layout: 'fullscreen' },
-        args: { box: { center: [0, 0, 1], size: [4, 3, 2] } }
+        args: { box: { center: [0, 0, 1], size: [4, 3, 2], yaw: Math.PI / 6 } }
     });
 </script>
 
@@ -18,7 +18,7 @@
     parameters={{
         docs: {
             description: {
-                story: 'Translucent white box with white edges shown while a cuboid is being drawn.'
+                story: 'Translucent white box with white edges, turned to its heading, shown while a cuboid is being drawn.'
             }
         }
     }}

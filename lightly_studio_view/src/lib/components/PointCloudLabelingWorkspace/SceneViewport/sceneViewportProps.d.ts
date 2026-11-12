@@ -1,4 +1,4 @@
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { Snippet } from 'svelte';
 import type { ColorMode, PointBatch, SceneViewState } from '$lib/components/PointCloudViewer';
 import type {
@@ -60,8 +60,8 @@ export interface SceneViewportProps {
     onselect?: (annotationId: string | null) => void;
     /** Fires when the pointer enters or leaves a cuboid. */
     onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
-    /** Creates an annotation from a click drop point or a drawn box. */
-    onCreateCuboid?: (placement: CuboidPlacement) => void;
+    /** Creates an annotation from a drawn box. */
+    onCreateCuboid?: (box: CuboidBox) => void;
     /** Reports a completed annotation gizmo transform before it is committed. */
     onCuboidTransform?: CuboidLayerProps['onCuboidTransform'];
     /** Fires on the left arrow key. */

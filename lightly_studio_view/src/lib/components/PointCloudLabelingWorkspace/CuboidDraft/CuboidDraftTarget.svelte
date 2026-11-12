@@ -3,11 +3,11 @@
     import type { Bounds3, CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { PointBatch } from '$lib/components/PointCloudViewer';
     import { getCuboidCreationPlane } from './cuboidCreationPlane';
-    import type { CuboidPlacement } from './cuboidDraft';
+    import type { CuboidBox } from './cuboidDraft';
     import CuboidDraftPreview from './CuboidDraftPreview.svelte';
     import { useCuboidDraft } from './useCuboidDraft';
 
-    /** Invisible plane that turns a click or drag into a cuboid placement. */
+    /** Invisible plane on which the user draws a cuboid in steps. */
     interface Props {
         /** Retained bounds that keep the plane aligned with the visible ground plane. */
         bounds: Bounds3;
@@ -17,8 +17,8 @@
         batch?: PointBatch;
         /** Timeline tick on display. A change discards the draft. */
         tick?: number;
-        /** Fires with the placement when a click or drag completes. */
-        onCreateCuboid: (placement: CuboidPlacement) => void;
+        /** Fires with the drawn box when the last step completes. */
+        onCreateCuboid: (box: CuboidBox) => void;
     }
 
     let { bounds, cameraMode = 'perspective', batch, tick, onCreateCuboid }: Props = $props();
@@ -27,7 +27,7 @@
         getCameraMode: () => cameraMode,
         getBatch: () => batch,
         getTick: () => tick,
-        onCreate: (placement) => onCreateCuboid(placement)
+        onCreate: (box) => onCreateCuboid(box)
     });
 </script>
 

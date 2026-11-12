@@ -22,7 +22,13 @@
 </script>
 
 <!-- Draw on top so the preview stays visible through dense point-cloud regions. -->
-<T.Mesh position={[...box.center]} scale={[...box.size]} {geometry} renderOrder={999}>
+<T.Mesh
+    position={[...box.center]}
+    rotation={[0, 0, box.yaw]}
+    scale={[...box.size]}
+    {geometry}
+    renderOrder={999}
+>
     <T.MeshBasicMaterial
         color="white"
         transparent
@@ -33,6 +39,7 @@
 </T.Mesh>
 <T.LineSegments
     position={[...box.center]}
+    rotation={[0, 0, box.yaw]}
     scale={[...box.size]}
     geometry={edges}
     renderOrder={1000}

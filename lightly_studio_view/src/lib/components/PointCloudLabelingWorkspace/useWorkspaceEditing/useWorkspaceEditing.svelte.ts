@@ -13,7 +13,7 @@ import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 import type { WorkspaceTool } from '../domain';
-import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 
 /** Shared annotation selection, tools, and persistence for every scene viewport. */
 export function useWorkspaceEditing(
@@ -55,7 +55,6 @@ export function useWorkspaceEditing(
             const frame = getData().snapshot?.frame;
             return frame
                 ? {
-                      bounds: frame.bounds,
                       // Use the first channel's frameId — the top-level frameId on a merged
                       // frame is a comma-joined composite ("odom,odom") that does not match
                       // the per-channel frameIds used by the scene filter.
@@ -142,9 +141,9 @@ export function useWorkspaceEditing(
         }
     }
 
-    async function handleCreateCuboid(placement: CuboidPlacement): Promise<void> {
+    async function handleCreateCuboid(box: CuboidBox): Promise<void> {
         const asTrack = addingTrack;
-        await createCuboidAnnotation(placement, async (annotationId) => {
+        await createCuboidAnnotation(box, async (annotationId) => {
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
             selectedCuboidId = annotationId;
             activeTool = 'select';

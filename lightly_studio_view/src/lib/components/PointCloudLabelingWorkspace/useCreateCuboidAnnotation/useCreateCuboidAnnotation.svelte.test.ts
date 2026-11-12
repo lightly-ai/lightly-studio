@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import { AnnotationClassNotAvailableError } from '$lib/hooks/useCreateLabel/useCreateLabel';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import { useCreateCuboidAnnotation } from './useCreateCuboidAnnotation.svelte';
 type Params = Parameters<typeof useCreateCuboidAnnotation>[0];
 
@@ -59,14 +60,12 @@ describe('useCreateCuboidAnnotation', () => {
         data: [] as { annotation_label_name: string; annotation_label_id: string }[],
         refetch: vi.fn()
     };
+    const box = { center: [0, 0, 0.5], size: [1, 1, 1], yaw: 0 } satisfies CuboidBox;
     const params: Params = {
         getCollectionId: () => 'collection-1',
         getDatasetId: () => 'dataset-1',
         getTickSampleId: () => 'sample-1',
-        getSceneFrame: () => ({
-            bounds: { min: [0, 0, 0], max: [10, 10, 10] },
-            frameId: 'lidar-front'
-        })
+        getSceneFrame: () => ({ frameId: 'lidar-front' })
     };
 
     beforeEach(() => {
@@ -83,13 +82,13 @@ describe('useCreateCuboidAnnotation', () => {
         useGlobalStorage.mockReturnValue({ lastAnnotationLabel, updateLastAnnotationLabel });
     });
 
-    it('creates a cuboid with the remembered class and scene frame geometry', async () => {
+    it('creates a cuboid with the remembered class, the scene frame and the drawn box', async () => {
         lastAnnotationLabel.set({ 'collection-1': 'car' });
         labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
         const onCreated = vi.fn();
 
         await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [2, 3, 4] },
+            { center: [1, 2, 3], size: [4, 5, 6], yaw: Math.PI / 2 },
             onCreated
         );
 
@@ -100,55 +99,29 @@ describe('useCreateCuboidAnnotation', () => {
                 parent_sample_id: 'sample-1',
                 annotation_type: 'cuboid_3d',
                 annotation_label_id: 'label-1',
-                cuboid_3d: expect.objectContaining({
+                cuboid_3d: {
                     frame_id: 'lidar-front',
-                    px: 2,
-                    py: 3,
-                    pz: expect.closeTo(4 + Math.sqrt(300) * 0.01),
-                    sx: expect.closeTo(Math.sqrt(300) * 0.02),
-                    sy: expect.closeTo(Math.sqrt(300) * 0.02),
-                    sz: expect.closeTo(Math.sqrt(300) * 0.02)
-                })
+                    px: 1,
+                    py: 2,
+                    pz: 3,
+                    qx: 0,
+                    qy: 0,
+                    qz: expect.closeTo(Math.SQRT1_2),
+                    qw: expect.closeTo(Math.SQRT1_2),
+                    sx: 4,
+                    sy: 5,
+                    sz: 6
+                }
             })
         );
         expect(onCreated).toHaveBeenCalledWith('annotation-1');
         expect(toast.success).toHaveBeenCalledWith('Annotation created successfully');
     });
 
-    it('saves a drawn box with its own centre and size', async () => {
-        lastAnnotationLabel.set({ 'collection-1': 'car' });
-        labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
-
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'box', box: { center: [1, 2, 3], size: [4, 5, 6] } },
-            vi.fn()
-        );
-
-        expect(createAnnotation).toHaveBeenCalledWith(
-            expect.objectContaining({
-                cuboid_3d: expect.objectContaining({
-                    px: 1,
-                    py: 2,
-                    pz: 3,
-                    sx: 4,
-                    sy: 5,
-                    sz: 6,
-                    qx: 0,
-                    qy: 0,
-                    qz: 0,
-                    qw: 1
-                })
-            })
-        );
-    });
-
     it('asks for a class, creates it, and remembers the selection', async () => {
         const onCreated = vi.fn();
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            onCreated
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, onCreated);
 
         expect(requestLabel).toHaveBeenCalledOnce();
         expect(createLabel).toHaveBeenCalledWith({
@@ -166,11 +139,11 @@ describe('useCreateCuboidAnnotation', () => {
         await useCreateCuboidAnnotation({
             ...params,
             getCollectionId: () => undefined
-        }).handleCreateCuboid({ kind: 'drop', position: [0, 0, 0] }, vi.fn());
+        }).handleCreateCuboid(box, vi.fn());
         await useCreateCuboidAnnotation({
             ...params,
             getTickSampleId: () => undefined
-        }).handleCreateCuboid({ kind: 'drop', position: [0, 0, 0] }, vi.fn());
+        }).handleCreateCuboid(box, vi.fn());
 
         expect(requestLabel).not.toHaveBeenCalled();
         expect(createLabel).not.toHaveBeenCalled();
@@ -180,10 +153,7 @@ describe('useCreateCuboidAnnotation', () => {
     it('does not create an annotation when class selection is cancelled', async () => {
         requestLabel.mockResolvedValue(null);
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            vi.fn()
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
 
         expect(createLabel).not.toHaveBeenCalled();
         expect(createAnnotation).not.toHaveBeenCalled();
@@ -200,7 +170,7 @@ describe('useCreateCuboidAnnotation', () => {
         await useCreateCuboidAnnotation({
             ...params,
             getTickSampleId: () => sampleId
-        }).handleCreateCuboid({ kind: 'drop', position: [0, 0, 0] }, vi.fn());
+        }).handleCreateCuboid(box, vi.fn());
 
         expect(createAnnotation).not.toHaveBeenCalled();
     });
@@ -210,10 +180,7 @@ describe('useCreateCuboidAnnotation', () => {
         labels.data = undefined as unknown as typeof labels.data;
         labels.refetch = vi.fn().mockResolvedValue({ isError: true, data: undefined });
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            vi.fn()
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
 
         expect(labels.refetch).toHaveBeenCalledOnce();
         expect(createAnnotation).not.toHaveBeenCalled();
@@ -234,7 +201,7 @@ describe('useCreateCuboidAnnotation', () => {
             ...params,
             getTickSampleId: () => sampleId,
             getCollectionId: () => collectionId
-        }).handleCreateCuboid({ kind: 'drop', position: [0, 0, 0] }, vi.fn());
+        }).handleCreateCuboid(box, vi.fn());
 
         expect(createAnnotation).not.toHaveBeenCalled();
     });
@@ -247,10 +214,7 @@ describe('useCreateCuboidAnnotation', () => {
         });
         const onCreated = vi.fn();
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            onCreated
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, onCreated);
 
         expect(labels.refetch).toHaveBeenCalledOnce();
         expect(createLabel).not.toHaveBeenCalled();
@@ -262,10 +226,7 @@ describe('useCreateCuboidAnnotation', () => {
     it('shows an error when creating the annotation class fails', async () => {
         createLabel.mockRejectedValue(new Error('request failed'));
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            vi.fn()
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
 
         expect(toast.error).toHaveBeenCalledWith(
             'Failed to create annotation class. Please try again.'
@@ -277,10 +238,7 @@ describe('useCreateCuboidAnnotation', () => {
         lastAnnotationLabel.set({ 'collection-1': 'car' });
         createLabel.mockRejectedValue(new AnnotationClassNotAvailableError('car'));
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            vi.fn()
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
 
         expect(toast.error).toHaveBeenCalledTimes(1);
         expect(toast.error).toHaveBeenCalledWith(
@@ -294,10 +252,10 @@ describe('useCreateCuboidAnnotation', () => {
         createLabel.mockRejectedValue(new AnnotationClassNotAvailableError('car'));
         const { handleCreateCuboid } = useCreateCuboidAnnotation(params);
 
-        await handleCreateCuboid({ kind: 'drop', position: [0, 0, 0] }, vi.fn());
+        await handleCreateCuboid(box, vi.fn());
         expect(requestLabel).not.toHaveBeenCalled();
 
-        await handleCreateCuboid({ kind: 'drop', position: [0, 0, 0] }, vi.fn());
+        await handleCreateCuboid(box, vi.fn());
         expect(requestLabel).toHaveBeenCalledOnce();
     });
 
@@ -306,10 +264,7 @@ describe('useCreateCuboidAnnotation', () => {
         labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
         createAnnotation.mockRejectedValue(new Error('request failed'));
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            vi.fn()
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
 
         expect(toast.error).toHaveBeenCalledWith('Failed to create annotation. Please try again.');
     });
@@ -319,10 +274,7 @@ describe('useCreateCuboidAnnotation', () => {
         labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
         const onCreated = vi.fn().mockRejectedValue(new Error('refresh failed'));
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid(
-            { kind: 'drop', position: [0, 0, 0] },
-            onCreated
-        );
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, onCreated);
 
         expect(createAnnotation).toHaveBeenCalledOnce();
         expect(onCreated).toHaveBeenCalledWith('annotation-1');
