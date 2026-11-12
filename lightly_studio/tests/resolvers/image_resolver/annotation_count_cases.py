@@ -130,6 +130,51 @@ def create_count_data(session: Session) -> CountData:
     )
 
 
+def create_images_in_plot(
+    session: Session, coordinates: list[tuple[float, float]]
+) -> tuple[UUID, list[ImageTable]]:
+    """Create one embedded image per entry of ``coordinates`` in a saved 2D plot."""
+    collection_id = helpers_resolvers.create_collection(session=session).collection_id
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=session,
+        collection_id=collection_id,
+        embedding_dimension=3,
+        set_as_default=True,
+    )
+    images = helpers_resolvers.create_samples_with_embeddings(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        images_and_embeddings=[
+            (ImageStub(path=f"sample_{i}.png"), [float(i) + 0.1, 0.2, 0.3])
+            for i in range(len(coordinates))
+        ],
+    )
+    helpers_resolvers.create_saved_plot(
+        session=session,
+        collection_id=collection_id,
+        embedding_model_id=embedding_model.embedding_model_id,
+        coordinates={image.sample_id: point for image, point in zip(images, coordinates)},
+    )
+    return collection_id, images
+
+
+@contextmanager
+def record_statements(session: Session) -> Iterator[list[str]]:
+    """Collect the SQL text of each statement that the session executes."""
+    statements: list[str] = []
+
+    def listener(_conn: Any, _cursor: Any, statement: str, *_: Any) -> None:
+        statements.append(statement)
+
+    engine = session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        yield statements
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+
+
 def _on_sample_filter(annotations_filter: AnnotationsFilter) -> ImageFilter:
     return ImageFilter(sample_filter=SampleFilter(annotations_filter=annotations_filter))
 
@@ -248,49 +293,6 @@ CASES: list[Any] = [
 # The same cases without their group, for tests that check counts only.
 BUILD_FILTERS: list[Any] = [pytest.param(case.values[1], id=case.id) for case in CASES]
 
+BUILD_FILTER_BY_ID: dict[str, Any] = {case.id: case.values[1] for case in CASES}
+
 BuildFilter = Callable[[CountData], "ImageFilter | None"]
-
-
-def create_images_in_plot(
-    session: Session, coordinates: list[tuple[float, float]]
-) -> tuple[UUID, list[ImageTable]]:
-    """Create one embedded image per entry of ``coordinates`` in a saved 2D plot."""
-    collection_id = helpers_resolvers.create_collection(session=session).collection_id
-    embedding_model = helpers_resolvers.create_embedding_model(
-        session=session,
-        collection_id=collection_id,
-        embedding_dimension=3,
-        set_as_default=True,
-    )
-    images = helpers_resolvers.create_samples_with_embeddings(
-        session=session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        images_and_embeddings=[
-            (ImageStub(path=f"sample_{i}.png"), [float(i) + 0.1, 0.2, 0.3])
-            for i in range(len(coordinates))
-        ],
-    )
-    helpers_resolvers.create_saved_plot(
-        session=session,
-        collection_id=collection_id,
-        embedding_model_id=embedding_model.embedding_model_id,
-        coordinates={image.sample_id: point for image, point in zip(images, coordinates)},
-    )
-    return collection_id, images
-
-
-@contextmanager
-def record_statements(session: Session) -> Iterator[list[str]]:
-    """Collect the SQL text of each statement that the session executes."""
-    statements: list[str] = []
-
-    def listener(_conn: Any, _cursor: Any, statement: str, *_: Any) -> None:
-        statements.append(statement)
-
-    engine = session.get_bind()
-    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
-    try:
-        yield statements
-    finally:
-        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
