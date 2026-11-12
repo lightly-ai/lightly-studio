@@ -1,7 +1,12 @@
 <script lang="ts">
     import { afterNavigate } from '$app/navigation';
     import { page } from '$app/state';
-    import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
+    import {
+        Card,
+        CardContent,
+        SampleDetailsSidePanel,
+        SidePanelToggleButton
+    } from '$lib/components';
     import { ImageAdjustments } from '$lib/components/ImageAdjustments';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -72,7 +77,9 @@
         imageBrightness,
         imageContrast,
         maskOpacity,
-        toggleSampleAnnotationCropSelection
+        toggleSampleAnnotationCropSelection,
+        isSampleDetailsSidePanelCollapsed,
+        openSampleDetailsSidePanel
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
@@ -237,6 +244,13 @@
         annotationLabelContext.annotationLabel = $lastAnnotationLabel[collectionId];
         annotationLabelContext.annotationSource = $lastAnnotationSource[collectionId];
     });
+
+    // Auto-open the side panel when an annotation is created while collapsed.
+    $effect(() => {
+        if (annotationLabelContext.lastCreatedAnnotationId) {
+            openSampleDetailsSidePanel();
+        }
+    });
 </script>
 
 {#if sample}
@@ -245,13 +259,16 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            {#if $isEditingMode}
-                <ImageAdjustments
-                    bind:brightness={$imageBrightness}
-                    bind:contrast={$imageContrast}
-                    bind:maskOpacity={$maskOpacity}
-                />
-            {/if}
+            <div class="flex items-center gap-2">
+                {#if $isEditingMode}
+                    <ImageAdjustments
+                        bind:brightness={$imageBrightness}
+                        bind:contrast={$imageContrast}
+                        bind:maskOpacity={$maskOpacity}
+                    />
+                {/if}
+                <SidePanelToggleButton />
+            </div>
         </div>
         <Separator class="bg-border-hard" />
 
@@ -293,25 +310,27 @@
                     </CardContent>
                 </Card>
             </div>
-            <div class="relative w-[375px]">
-                {#if sidePanelItem}
-                    {@render sidePanelItem()}
-                {:else}
-                    <SampleDetailsSidePanel
-                        bind:annotationsIdsToHide
-                        {sample}
-                        onUpdate={refetch}
-                        {collectionId}
-                        {isPanModeEnabled}
-                    >
-                        {#snippet metadataItem()}
-                            {#if metadataValue}
-                                {@render metadataValue()}
-                            {/if}
-                        {/snippet}
-                    </SampleDetailsSidePanel>
-                {/if}
-            </div>
+            {#if !$isSampleDetailsSidePanelCollapsed}
+                <div class="relative w-[375px]">
+                    {#if sidePanelItem}
+                        {@render sidePanelItem()}
+                    {:else}
+                        <SampleDetailsSidePanel
+                            bind:annotationsIdsToHide
+                            {sample}
+                            onUpdate={refetch}
+                            {collectionId}
+                            {isPanModeEnabled}
+                        >
+                            {#snippet metadataItem()}
+                                {#if metadataValue}
+                                    {@render metadataValue()}
+                                {/if}
+                            {/snippet}
+                        </SampleDetailsSidePanel>
+                    {/if}
+                </div>
+            {/if}
         </div>
     </div>
 {:else}

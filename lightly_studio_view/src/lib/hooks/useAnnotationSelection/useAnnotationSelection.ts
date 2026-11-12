@@ -1,6 +1,7 @@
 import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 export function useAnnotationSelection() {
     const {
@@ -12,6 +13,7 @@ export function useAnnotationSelection() {
     } = useAnnotationLabelContext();
 
     const { context: toolbarContext, setStatus } = useSampleDetailsToolbarContext();
+    const { openSampleDetailsSidePanel } = useGlobalStorage();
 
     function selectAnnotation({
         annotationId,
@@ -38,7 +40,11 @@ export function useAnnotationSelection() {
 
         setLastCreatedAnnotationId(null);
 
-        setAnnotationId(context.annotationId === annotationId ? null : annotationId);
+        const isDeselecting = context.annotationId === annotationId;
+        if (!isDeselecting) {
+            openSampleDetailsSidePanel();
+        }
+        setAnnotationId(isDeselecting ? null : annotationId);
     }
 
     return {
