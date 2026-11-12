@@ -1,70 +1,74 @@
 ---
 name: pull-requests
-description: Read when opening a pull request, writing a PR description, splitting work into PRs, or deciding whether a change is too large to review. Covers the size targets, the one-purpose-per-PR rule, what makes a PR reviewable on its own, and the exceptions for dependency bumps, codemods, migrations, and generated files.
+description: Read when opening a pull request, writing a PR title or description, splitting work into PRs, or deciding whether a change is too large to review. Covers the title format, the Fast Track size limit and how to measure it, the one-purpose-per-PR rule, the description template, the changelog checkbox, and the exceptions for dependency bumps, codemods, migrations, and generated files.
 ---
 
 # Pull Request Guidelines
 
-Break changes down into small, focused pull requests that can be easily reviewed.
-As a rule of thumb, a PR should be reviewable in under 15 minutes.
+A reviewer must be able to review a PR in less than 15 minutes.
 
-## Guidelines
+## Title
 
-### 1. Keep PRs Small
+Use a Conventional Commits prefix and an imperative sentence:
 
-- Ideal PR size is under 100 changed lines. Under 200 lines is usually acceptable. Larger
-  changes should be split into multiple PRs unless there is a reason not to.
-- It is okay to have a larger PR if it is mostly mechanical changes, such as generated files, test
-  data, or formatting. But the core PR logic should ideally remain under 100 lines.
-- Use stacked PRs to work on larger features without being blocked by review.
+- `feat:` for new behavior, `fix:` for a bug fix.
+- `refactor:`, `test:`, `docs:`, `chore:` for changes that users do not see.
 
-### 2. One Purpose Per PR
+```
+feat: store per-class average precision of object-detection runs
+fix: keep the selected tag when the grid reloads
+```
 
-- A pull request should do one thing only. Do not mix unrelated changes in the same PR.
-- Minor improvements to the neighborhood of the main change are ok, but larger refactors
-  should be in a separate PR.
+## Size
 
-### 3. Every PR Must Be Reviewable on Its Own
+- The Fast Track guardrail fails a PR that adds more than 215 lines. Deleted lines do not count.
+- Aim for less than 100 added lines of core logic.
+- The guardrail does not count `uv.lock`, the `package-lock.json` files,
+  `lightly_studio/tests/benchmarks/`, and `lightly_studio/src/lightly_studio/vendor/`.
+- Measure before each push: `git diff --numstat $(git merge-base origin/main HEAD)`.
+- Split a larger change into stacked PRs.
 
-A reviewer should be able to understand what changed, why, and how it was validated. That usually
-means:
+## One Purpose
 
-- In the code
-   - clear comments for non-obvious logic
-   - TODO comments for future work
-   - tests for new behavior when appropriate
-   - updated docs when user-facing behavior changed
-   - no unrelated formatting or cleanup noise
-- In the PR on GitHub
-   - clear PR description
-   - screenshots or recordings for UI changes
-   - line comments for non-obvious code changes
+- A PR does one thing. Do not mix unrelated changes.
+- Put a refactor in a different PR from a behavior change. A small cleanup next to the main
+  change is acceptable.
+- Add tests for new behavior in the same PR. Move them to a second PR only if the first PR
+  becomes too large.
 
-In some cases, the tests or a docs change may be in a separate PR if it would be too large to
-review together.
+## Description
 
-### 4. Description & Suggested Reviewers
+- Use the sections of `.github/pull_request_template.md`. Do not add other sections.
+- Keep the description short: a few bullets that give the problem and the solution. Write them
+  for a reader who does not know the code.
+- Write in ASD-STE100 Simplified Technical English: short sentences, active voice, present tense.
+- Tick one changelog box. A change that users see needs an entry; see the changelog skill.
+- Add screenshots or a recording for a GUI change.
 
-- Follow `.github/pull_request_template.md`. Keep the description short and human readable.
-- Propose a few short bullet points that say which problem the PR addresses and how it is solved.
-  Write them so that a reader who does not know the code can follow.
-- Assign the reviewer most likely to help, based on `git blame`/`git log` history of the touched
-  files or lines, and recommend an alternative one at the end of the description.
-- For a stack of PRs, prefer the same reviewer(s) for each item in the stack, unless the items
-  can be reviewed independently.
+```markdown
+## What has changed and why?
+
+- The grid lost the selected tag after a reload.
+- The tag selection now comes from the URL, not from component state.
+
+## How has it been tested?
+
+- Added a unit test for `useTags`.
+- Reloaded the grid with a selected tag in the GUI.
+```
+
+## Before You Open the PR
+
+- Run the checks in the Validation section of `AGENTS.md` for each package that you changed.
+- Open the PR as a draft while the work is not complete. The guardrails do not run on a draft.
+- Propose the reviewer who knows the changed files best, from `git log` of those files. Use the
+  same reviewer for each PR of a stack.
 
 ## Exceptions
 
-Some PRs will not fit the normal shape. Examples:
+Dependency upgrades, mechanical codemods, large test updates, migrations, and generated files can
+be larger than the limit. For these PRs:
 
-- dependency upgrades
-- mechanical codemods
-- large test updates
-- schema or migration changes
-- generated files
-
-In those cases, optimize for reviewer clarity:
-
-- explain why the PR is large
-- separate mechanical and logical changes where possible
-- call out risk areas explicitly
+- Say in the description why the PR is large.
+- Keep mechanical changes and logic changes in different commits or PRs.
+- Name the risk areas.
