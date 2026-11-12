@@ -108,7 +108,8 @@ def _check_public(parsed: SplitResult) -> None:
             f"server must be reached over TLS."
         )
     host = parsed.hostname
-    assert host is not None
+    if host is None:
+        raise RuntimeError("Expected `host` to be set.")
     # `169.254.169.254`, the metadata endpoint of the cloud, is link-local.
     for address in _resolved_addresses(host=host):
         if _reaches_this_network(address=address):

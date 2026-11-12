@@ -275,7 +275,8 @@ def to_jpeg(
     """
     picture = _scaled_jpeg_frame(frame=frame, width=width, height=height)
     codec = av.CodecContext.create("mjpeg", "w")
-    assert isinstance(codec, VideoCodecContext)
+    if not isinstance(codec, VideoCodecContext):
+        raise TypeError(f"Expected VideoCodecContext, got {type(codec).__name__}")
     codec.width = picture.width
     codec.height = picture.height
     codec.pix_fmt = picture.format.name
@@ -400,7 +401,8 @@ def _output_size(frame: VideoFrame, width: int | None, height: int | None) -> tu
     if width is None and height is None:
         return frame.width, frame.height
     if width is None:
-        assert height is not None
+        if height is None:
+            raise RuntimeError("Expected `height` to be set.")
         return max(1, round(frame.width * height / frame.height)), height
     if height is None:
         return width, max(1, round(frame.height * width / frame.width))
