@@ -10,6 +10,14 @@ import { useSyntaxDocumentation } from './useLightlyQueryLanguage/useSyntaxDocum
 const LIGHTLY_QUERY_LANGUAGE_ID = 'lightly-query';
 const LIGHTLY_QUERY_THEME_ID = 'lightly-query-theme';
 
+/** Pairs that wrap the selected text when the user types the opening character. */
+const SURROUNDING_PAIRS: monaco.languages.IAutoClosingPair[] = [
+    { open: '(', close: ')' },
+    { open: '[', close: ']' },
+    { open: '"', close: '"' },
+    { open: "'", close: "'" }
+];
+
 /** Regex source for the STRING terminal in the generated Monarch grammar. */
 const STRING_REGEX_SOURCE = `"([^"\\\\\\n\\r]|\\\\.)*"|'([^'\\\\\\n\\r]|\\\\.)*'`;
 
@@ -54,6 +62,11 @@ let monacoSetupDone = false;
 const setupMonaco = () => {
     if (monacoSetupDone) return;
     monaco.languages.register({ id: LIGHTLY_QUERY_LANGUAGE_ID });
+    // Only surrounding pairs are set. Auto-closing pairs stay off, so typing
+    // an opening character with no selection inserts only that character.
+    monaco.languages.setLanguageConfiguration(LIGHTLY_QUERY_LANGUAGE_ID, {
+        surroundingPairs: SURROUNDING_PAIRS
+    });
     monaco.languages.setMonarchTokensProvider(
         LIGHTLY_QUERY_LANGUAGE_ID,
         patchStringToken(lightlyQueryMonarch as monaco.languages.IMonarchLanguage)

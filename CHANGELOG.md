@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type exact minimum and maximum values for numeric metadata filters alongside the sliders.
 - Type exact image width, image height, and video frame number filter values alongside the sliders.
 - Type exact video width, height, FPS, and duration filter values alongside the sliders.
+- Typing `(`, `[`, `"` or `'` in the query editor wraps the selected text in that pair.
 
 ### Changed
 
