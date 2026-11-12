@@ -12,6 +12,8 @@ function waitForImageListResponse(page: Page): Promise<Response> {
 async function typeAndApply(page: Page, query: string): Promise<void> {
     await page.locator('.monaco-editor .view-lines').first().click();
     await page.keyboard.press('ControlOrMeta+a');
+    // Delete the selection first: typing a quote or bracket over it wraps it instead.
+    await page.keyboard.press('Backspace');
     await page.keyboard.type(query);
 
     const refetchPromise = waitForImageListResponse(page);

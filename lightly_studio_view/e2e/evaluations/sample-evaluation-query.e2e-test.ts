@@ -8,6 +8,8 @@ const TAGGED_SAMPLE_COUNT = 10;
 async function typeQuery(page: Page, query: string): Promise<void> {
     await page.locator('.monaco-editor .view-lines').first().click();
     await page.keyboard.press('ControlOrMeta+a');
+    // Delete the selection first: typing a quote or bracket over it wraps it instead.
+    await page.keyboard.press('Backspace');
     await page.keyboard.type(query);
     await page.keyboard.press('Escape');
 }
