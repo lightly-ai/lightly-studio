@@ -36,16 +36,16 @@ export function lspToMonacoCompletion<Scope extends keyof typeof SCOPES>(
 
     let range: monaco.IRange | monaco.languages.CompletionItemRanges = fallbackRange;
     let insertText = item.insertText ?? label;
-    if (textEdit && 'range' in textEdit) {
-        range = toMonacoRange(textEdit.range, lineOffset);
-        insertText = textEdit.newText;
-    } else if (textEdit && 'insert' in textEdit && 'replace' in textEdit) {
+    if (textEdit) {
         // InsertReplaceEdit: preserve dual-range semantics so Monaco can insert
         // when typing in-place and replace when completing over a wider span.
-        range = {
-            insert: toMonacoRange(textEdit.insert, lineOffset),
-            replace: toMonacoRange(textEdit.replace, lineOffset)
-        };
+        range =
+            'range' in textEdit
+                ? toMonacoRange(textEdit.range, lineOffset)
+                : {
+                      insert: toMonacoRange(textEdit.insert, lineOffset),
+                      replace: toMonacoRange(textEdit.replace, lineOffset)
+                  };
         insertText = textEdit.newText;
     }
 
