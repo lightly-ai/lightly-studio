@@ -12,6 +12,7 @@ import numpy as np
 import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
+from typing_extensions import assert_never
 
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import (
@@ -38,6 +39,7 @@ from lightly_studio.sampling.sampling_config import (
     MetadataBalancingStrategy,
     MetadataWeightingStrategy,
     SamplingConfig,
+    Strategy,
     SubpartDiversityStrategy,
 )
 from lightly_studio.utils import batching
@@ -539,7 +541,7 @@ def _get_subpart_embeddings(
 def _add_strategy_to_mundig(
     session: Session,
     context: _SamplingContext,
-    strat: object,
+    strat: Strategy,
     mundig: Mundig,
 ) -> None:
     """Resolve one sampling strategy and add it to Mundig."""
@@ -626,7 +628,7 @@ def _add_strategy_to_mundig(
             strength=strat.strength,
         )
     else:
-        raise ValueError(f"Sampling strategy of type {type(strat)} is unknown.")
+        assert_never(strat)  # pragma: no cover - validation allows only known strategies
 
 
 def _add_similarity_to_mundig(

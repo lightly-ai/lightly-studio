@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/utils';
     import { browser } from '$app/environment';
     import { page } from '$app/state';
     import {
@@ -348,6 +349,7 @@
         annotationFilterRows,
         selectedAnnotationFilterNames,
         toggleAnnotationFilterSelection,
+        setAnnotationFilterSelection,
         setAnnotationCounts,
         pruneInvalidSelections
     } = useAnnotationsFilter({
@@ -662,6 +664,8 @@
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>
                                         toggleAnnotationFilterSelection(label, collectionId)}
+                                    onSelectionChange={(labels) =>
+                                        setAnnotationFilterSelection(labels, collectionId)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
                                 />
                             {/if}
@@ -764,7 +768,7 @@
                                         onClose={() => setActivePanel('none')}
                                         {evaluationRuns}
                                         isLoading={evaluationRunsQuery.isLoading}
-                                        error={evaluationRunsQuery.error?.message}
+                                        error={getErrorMessage(evaluationRunsQuery.error)}
                                         datasetId={collection.dataset_id}
                                         {collectionId}
                                     />

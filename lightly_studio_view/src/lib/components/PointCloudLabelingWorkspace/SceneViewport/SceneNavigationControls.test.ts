@@ -12,7 +12,7 @@ it('shows controls for the active projection and releases held input when it los
     });
     try {
         expect(screen.getByRole('button', { name: 'Move forward (W)' })).toBeTruthy();
-        expect(screen.queryByRole('button', { name: 'Rotate left (Q)' })).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Rotate left' })).toBeNull();
         await fireEvent.keyDown(window, { key: 'w' });
         expect(onNavigation).toHaveBeenLastCalledWith({
             action: 'forward',

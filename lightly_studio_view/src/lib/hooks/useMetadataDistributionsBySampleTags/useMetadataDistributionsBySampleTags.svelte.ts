@@ -1,6 +1,7 @@
 import { createQueries } from '@tanstack/svelte-query';
 import type {
     HistogramView,
+    HttpValidationError,
     MetadataHistogramsRequest,
     MetadataValueCountsView
 } from '$lib/api/lightly_studio_local';
@@ -39,7 +40,7 @@ interface MetadataComparisonParams {
 interface MetadataQueryResult {
     data?: unknown;
     isFetching: boolean;
-    error: Error | null;
+    error: HttpValidationError | null;
 }
 
 export interface SampleTagMetadataDistributions {
@@ -147,7 +148,7 @@ const combineSampleTagResults = (
 ): {
     data: SampleTagMetadataDistributions[];
     isFetching: boolean;
-    error: Error | null;
+    error: HttpValidationError | null;
 } => ({
     data: sampleTags.flatMap((tag, index): SampleTagMetadataDistributions[] => {
         const response = results[index]?.data;

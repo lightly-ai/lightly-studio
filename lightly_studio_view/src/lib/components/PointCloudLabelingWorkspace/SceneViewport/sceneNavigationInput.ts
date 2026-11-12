@@ -9,8 +9,6 @@ import {
 interface Params {
     /** Identifies the viewport receiving navigation commands. */
     navigationId?: symbol;
-    /** Enables perspective camera rotation actions. */
-    allowRotation?: () => boolean;
     /** Whether this viewport currently owns navigation input. */
     isActive?: () => boolean;
     /** Reports navigation steps and held-action transitions for visual feedback. */
@@ -20,16 +18,13 @@ interface Params {
 export function createSceneNavigationInput({
     isActive = () => true,
     onAction,
-    navigationId,
-    allowRotation = () => true
+    navigationId
 }: Params = {}) {
     const keyActions: Record<string, SceneNavigationAction> = {
         w: 'forward',
         a: 'left',
         s: 'backward',
-        d: 'right',
-        q: 'rotate-left',
-        e: 'rotate-right'
+        d: 'right'
     };
     let holdDelay: ReturnType<typeof setTimeout> | undefined;
     let holdAction: SceneNavigationAction | undefined;
@@ -82,7 +77,6 @@ export function createSceneNavigationInput({
             const key = event.key.toLowerCase();
             const action = keyActions[key];
             if (!action || pressedKeys.has(key)) return;
-            if (!allowRotation() && (action === 'rotate-left' || action === 'rotate-right')) return;
             if (!isActive()) return;
             pressedKeys.add(key);
             event.preventDefault();

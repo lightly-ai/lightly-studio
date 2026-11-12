@@ -7,8 +7,6 @@ interface Params {
     isActive: boolean;
     /** Routes commands to the corresponding camera. */
     navigationId?: symbol;
-    /** Enables perspective camera rotation shortcuts. */
-    allowRotation?: boolean;
 }
 /** Tracks held navigation actions and clears them when viewport ownership changes. */
 export function useNavigationHighlight(getProps: () => Params) {
@@ -24,7 +22,6 @@ export function useNavigationHighlight(getProps: () => Params) {
     const input = createSceneNavigationInput({
         isActive: () => getProps().isActive,
         navigationId: untrack(() => getProps().navigationId),
-        allowRotation: () => getProps().allowRotation ?? true,
         onAction: setHighlight
     });
     onMount(input.mount);

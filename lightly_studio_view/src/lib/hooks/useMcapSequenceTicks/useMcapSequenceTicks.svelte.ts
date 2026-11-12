@@ -1,5 +1,5 @@
 import { getTicksOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import type { TickListView } from '$lib/api/lightly_studio_local/types.gen';
+import type { GetTicksError, TickListView } from '$lib/api/lightly_studio_local/types.gen';
 import { createQuery, useQueryClient, type CreateQueryResult } from '@tanstack/svelte-query';
 
 interface UseMcapSequenceTicksParams {
@@ -9,7 +9,7 @@ interface UseMcapSequenceTicksParams {
 }
 
 interface UseMcapSequenceTicksResult {
-    ticks: CreateQueryResult<TickListView, Error>;
+    ticks: CreateQueryResult<TickListView, GetTicksError>;
     refetch: () => void;
 }
 

@@ -215,7 +215,8 @@ def _build_label_id_to_category(
 def _annotation_to_single_obj_det(
     annotation: AnnotationBaseTable, label_id_to_category: dict[UUID, Category]
 ) -> SingleObjectDetection:
-    assert annotation.object_detection_details is not None
+    if annotation.object_detection_details is None:
+        raise RuntimeError("Expected `annotation.object_detection_details` to be set.")
     box = BoundingBox(
         xmin=annotation.object_detection_details.x,
         ymin=annotation.object_detection_details.y,

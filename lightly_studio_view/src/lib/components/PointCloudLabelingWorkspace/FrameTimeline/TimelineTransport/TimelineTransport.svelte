@@ -3,6 +3,8 @@
     import { Button } from '$lib/components';
     import { Select } from '$lib/components/Select';
     import { Checkbox } from '$lib/components/ui/checkbox';
+    import type { ComponentProps } from 'svelte';
+    import TimelineBufferStatus from '../TimelineBufferStatus/TimelineBufferStatus.svelte';
 
     /** Playback interval at 1x speed, i.e. 10 Hz. */
     const BASE_INTERVAL_MS = 100;
@@ -19,6 +21,7 @@
     interface Props {
         /** One-based `Frame n / total`, or an em-dash placeholder when the sequence is empty. */
         frameLabel: string;
+        bufferStatus?: ComponentProps<typeof TimelineBufferStatus>['status'];
         /** Whether the complete sequence should be prefetched. */
         bufferEntireSequence: boolean;
         /** Called when the complete-sequence buffering option changes. */
@@ -47,6 +50,7 @@
 
     let {
         frameLabel,
+        bufferStatus,
         bufferEntireSequence,
         onBufferEntireSequenceChange,
         isPlaying,
@@ -130,6 +134,9 @@
         }}
     />
     <span class="ml-2 text-xs text-muted-foreground">{frameLabel}</span>
+    <div class="ml-auto flex items-center gap-2">
+        <TimelineBufferStatus status={bufferStatus} />
+    </div>
     <label class="ml-3 flex items-center gap-1.5 text-xs text-muted-foreground">
         <Checkbox
             aria-label="Buffer entire sequence"
