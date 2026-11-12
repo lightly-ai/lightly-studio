@@ -7,6 +7,7 @@
         SampleDetailsSidePanel,
         SidePanelToggleButton
     } from '$lib/components';
+    import BreadcrumbHeaderActions from './BreadcrumbHeaderActions/BreadcrumbHeaderActions.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -289,7 +290,10 @@
             {#if datasetCollection}
                 {@render breadcrumb({ collection: datasetCollection })}
             {/if}
-            <SidePanelToggleButton />
+            <div class="flex items-center gap-1">
+                <BreadcrumbHeaderActions {collectionId} />
+                <SidePanelToggleButton />
+            </div>
         </div>
         <Separator class="bg-border-hard" />
 
