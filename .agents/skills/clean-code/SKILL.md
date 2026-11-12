@@ -71,7 +71,8 @@ def export_json(samples):
 
 - Do not catch an exception that you do not handle. Do not write a bare `except Exception` or an
   empty `catch`.
-- Do not use `assert` outside tests. Raise an exception for a condition that can fail.
+- Do not use `assert` outside tests. Raise an exception for a condition that can fail. The one
+  exception is an `assert` that narrows a type for mypy; see the Python guide.
 
 ## Comments
 
