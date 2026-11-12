@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Annotation class counts in the image sidebar load faster when you filter by annotation source.
+- Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
 
 ### Deprecated
 

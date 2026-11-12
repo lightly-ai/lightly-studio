@@ -241,7 +241,7 @@ def test_count_image_annotations_by_collection__matches_unstripped_counts(
 
 
 @pytest.mark.parametrize(("group", "build_filter"), annotation_count_cases.CASES)
-def test_count_image_annotations_by_collection__parent_in_only_when_needed(
+def test_count_image_annotations_by_collection__statements(
     db_session: Session, group: str, build_filter: BuildFilter
 ) -> None:
     data = annotation_count_cases.create_count_data(session=db_session)
@@ -255,6 +255,8 @@ def test_count_image_annotations_by_collection__parent_in_only_when_needed(
             session=db_session, collection_id=data.collection_id, image_filter=image_filter
         )
 
+    # Skip cases run the total only. The others also run the current.
+    assert len(statements) == (1 if group == "skip" else 2)
     has_parent_in = any(annotation_count_cases.PARENT_IN_MARKER in s for s in statements)
     assert has_parent_in == (group == "keep")
     # The caller's filter keeps its source selection.
