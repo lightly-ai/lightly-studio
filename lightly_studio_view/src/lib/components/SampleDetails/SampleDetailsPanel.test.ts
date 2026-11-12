@@ -191,7 +191,10 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
     describe('delete shortcut', () => {
         const annotationA1 = {
             sample_id: 'a1',
-            annotation_type: 'object_detection',
+            parent_sample_id: 'sample-1',
+            annotation_collection_id: 'col-1',
+            created_at: new Date('2024-01-01T00:00:00Z'),
+            annotation_type: 'object_detection' as const,
             annotation_label: { annotation_label_name: 'cat' }
         };
 
