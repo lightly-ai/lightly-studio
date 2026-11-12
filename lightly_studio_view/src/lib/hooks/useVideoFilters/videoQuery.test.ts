@@ -48,4 +48,15 @@ describe('video query filters', () => {
         expect(get(filters.videoQueryExpression)).toBeNull();
         expect(get(filters.videoFilter)?.sample_filter?.query_expr).toBeUndefined();
     });
+
+    it('clears image queries on collection changes without changing the video query', () => {
+        const filters = useImageFilters();
+        filters.updateFilterParams({ collection_id: 'first', mode: 'normal' });
+        filters.updateQueryExpr({ ...expression, query_expr_str: 'width > 100' });
+        useVideoFilters().updateQueryExpr(expression);
+        filters.updateFilterParams({ collection_id: 'second', mode: 'normal' });
+
+        expect(get(filters.imageQueryExpression)).toBeNull();
+        expect(get(useVideoFilters().videoQueryExpression)).toEqual(expression);
+    });
 });
