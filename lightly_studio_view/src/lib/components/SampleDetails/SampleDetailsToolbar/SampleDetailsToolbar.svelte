@@ -9,9 +9,18 @@
     import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
-    import { MousePointer, Hand, Brush, Bot, Layers3, WandSparkles } from '@lucide/svelte';
+    import {
+        MousePointer,
+        Hand,
+        Brush,
+        Bot,
+        Layers3,
+        ScanSearch,
+        WandSparkles
+    } from '@lucide/svelte';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
+    import { useLabelingModels } from '$lib/hooks/useLabelingModels';
     import { isFrameDetailsRoute } from '$lib/routes';
     import { page } from '$app/state';
 
@@ -60,11 +69,16 @@
     } = useSampleDetailsToolbarContext();
 
     const assistedLabelingStatus = useAssistedLabelingStatus();
+    const labelingModels = useLabelingModels();
     // Assisted labeling supports images only, not video frames.
+    const isAssistedLabelingView = $derived(
+        !annotationLabelContext.isOnAnnotationDetailsView && !isFrameDetailsRoute(page.route.id)
+    );
     const showAssistedLabelingTools = $derived(
-        !annotationLabelContext.isOnAnnotationDetailsView &&
-            !isFrameDetailsRoute(page.route.id) &&
-            assistedLabelingStatus.disabledReason === null
+        isAssistedLabelingView && assistedLabelingStatus.disabledReason === null
+    );
+    const showLabelWithModelTool = $derived(
+        isAssistedLabelingView && labelingModels.disabledReason === null
     );
 
     const items = $derived<ToolbarItem[]>([
@@ -121,6 +135,13 @@
             icon: Layers3,
             hint: 'Finds all objects that match a text prompt.',
             visible: showAssistedLabelingTools
+        },
+        {
+            id: 'label-with-model',
+            label: 'Label with model',
+            icon: ScanSearch,
+            hint: 'Labels the image with your own model.',
+            visible: showLabelWithModelTool
         }
     ]);
 
@@ -251,6 +272,7 @@
                 break;
             case 'smart-select':
             case 'find-instances':
+            case 'label-with-model':
                 setStatus(tool);
                 break;
         }
