@@ -3,7 +3,7 @@
     import CategoricalMetadataFilters from '$lib/components/CategoricalMetadataFilters/CategoricalMetadataFilters.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import type { ImageFilter } from '$lib/api/lightly_studio_local';
+    import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
     import type { CategoricalMetadataValue, MetadataValues } from '$lib/services/types';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
@@ -23,7 +23,8 @@
         /** Called when any filter range changes, with the field name and new min/max values. */
         onFilterChanged?: (fieldName: string, min: number, max: number) => void;
         isImageCollection?: boolean;
-        categoricalFilter?: ImageFilter;
+        /** Filter for the categorical value counts. `undefined` counts all samples. */
+        categoricalCountsFilter?: MetadataValueCountsFilter;
         categoricalKeys?: string[];
         onCategoricalValueToggle: (field: string, value: CategoricalMetadataValue) => void;
         onCategoricalValuesSet: (field: string, values: CategoricalMetadataValue[]) => void;
@@ -37,7 +38,7 @@
         isVideoFrames = false,
         onFilterChanged,
         isImageCollection = false,
-        categoricalFilter,
+        categoricalCountsFilter,
         categoricalKeys = [],
         onCategoricalValueToggle,
         onCategoricalValuesSet,
@@ -160,7 +161,7 @@
         {#if categoricalFields.length > 0}
             <CategoricalMetadataFilters
                 {collectionId}
-                filter={categoricalFilter}
+                filter={categoricalCountsFilter}
                 fields={categoricalFields.filter(matches)}
                 {isExpanded}
                 onToggleExpanded={toggleExpanded}

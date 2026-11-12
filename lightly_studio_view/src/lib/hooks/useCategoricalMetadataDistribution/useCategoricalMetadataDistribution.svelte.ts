@@ -59,7 +59,7 @@ export const selectCategoricalDistributions = (
     );
 
 /** An image or video filter, tagged with its `filter_type`. */
-type MetadataValueCountsFilter = NonNullable<MetadataValueCountsRequest['filters']>;
+export type MetadataValueCountsFilter = NonNullable<MetadataValueCountsRequest['filters']>;
 
 export interface CategoricalMetadataDistributionOptions {
     collectionId: string;

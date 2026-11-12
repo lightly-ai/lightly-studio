@@ -48,6 +48,7 @@
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
     import type { CategoricalMetadataValue } from '$lib/services/types';
+    import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -424,7 +425,15 @@
         })
     );
 
-    const categoricalCountsFilter = $derived($imageFilterFromHook ?? undefined);
+    const categoricalCountsFilter = $derived.by((): MetadataValueCountsFilter | undefined => {
+        if (isImages && $imageFilterFromHook) {
+            return { ...$imageFilterFromHook, filter_type: 'image' };
+        }
+        if (isVideos && $videoFilterFromHook) {
+            return { ...$videoFilterFromHook, filter_type: 'video' };
+        }
+        return undefined;
+    });
 
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
@@ -712,9 +721,7 @@
                                         {isVideos}
                                         {isVideoFrames}
                                         isImageCollection={isImages || isCaptions}
-                                        categoricalFilter={isCaptions
-                                            ? undefined
-                                            : categoricalCountsFilter}
+                                        {categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
                                         onCategoricalValuesSet={setCategoricalValues}
