@@ -424,6 +424,18 @@ describe('useCuboidDraft', () => {
         }
     );
 
+    it('prevents the context menu that follows a right-click cancellation, once', () => {
+        const { draft } = setup();
+        drawSideAndWidth(draft);
+        click(300, 150, 2);
+        const menu = pointer('contextmenu', 300, 150, 2);
+        canvas.dispatchEvent(menu);
+        expect(menu.defaultPrevented).toBe(true);
+        const laterMenu = pointer('contextmenu', 300, 150, 2);
+        canvas.dispatchEvent(laterMenu);
+        expect(laterMenu.defaultPrevented).toBe(false);
+    });
+
     it('prevents the context menu during a draft', () => {
         const { draft } = setup();
         dragSide(draft);

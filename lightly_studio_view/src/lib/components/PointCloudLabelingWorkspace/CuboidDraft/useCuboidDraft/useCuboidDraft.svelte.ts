@@ -260,11 +260,19 @@ export function useCuboidDraft({
     function onPointerDown(event: PointerEvent): void {
         // The pointer-down that started the draft is still pressed.
         if (!draft || draft.isPressed) return;
-        if (event.button === 2) discardDraft();
+        if (event.button === 2) {
+            // The context menu event comes after this one, when the draft listeners are gone.
+            canvas.addEventListener('contextmenu', preventContextMenu, { once: true });
+            discardDraft();
+        }
         if (event.button !== 0 || hasCameraModifier(event)) return;
         finishingClick = event;
         update(draft, event);
         confirmStep(draft, event);
+    }
+
+    function preventContextMenu(event: Event): void {
+        event.preventDefault();
     }
 
     function onContextMenu(event: Event): void {
@@ -314,7 +322,10 @@ export function useCuboidDraft({
         if (draft && (batch !== draft.batch || tick !== draft.tick)) discardDraft();
     });
 
-    onMount(() => discardDraft);
+    onMount(() => () => {
+        discardDraft();
+        canvas.removeEventListener('contextmenu', preventContextMenu);
+    });
 
     return {
         get previewBox() {

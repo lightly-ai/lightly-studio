@@ -20,7 +20,8 @@
         /**
          * Fires when the region whose points the draft takes in changes; null when there is none.
          * It does not fire when this component is destroyed, because a state write during teardown
-         * stalls the update that destroys it. The owner drops the highlight with the tool instead.
+         * stalls the update that destroys it. The owner drops the highlight with the tool and when
+         * the orthographic viewports are removed.
          */
         onHighlightChange?: (box: CuboidBox | null) => void;
         /** Fires with the drawn box when the last step completes. */
