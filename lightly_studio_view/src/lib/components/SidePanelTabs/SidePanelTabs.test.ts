@@ -21,11 +21,11 @@ describe('SidePanelTabs', () => {
         setActivePanel.mockClear();
     });
 
-    it('renders the Query button only when isImages is true', () => {
+    it('renders the Query button only when supportsQuery is true', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: true
@@ -37,7 +37,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
+                supportsQuery: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: false
@@ -50,7 +50,7 @@ describe('SidePanelTabs', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
+                supportsQuery: false,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: false,
                 supportsDistribution: false
@@ -62,7 +62,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
+                supportsQuery: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: false
@@ -75,7 +75,7 @@ describe('SidePanelTabs', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: true,
                 supportsDistribution: true
@@ -87,7 +87,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: true
@@ -100,7 +100,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: true
@@ -116,7 +116,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: true
@@ -131,7 +131,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
+                supportsQuery: false,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: false,
                 supportsDistribution: false
@@ -146,7 +146,7 @@ describe('SidePanelTabs', () => {
         const { unmount } = render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: false,
+                supportsQuery: false,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: true
@@ -158,7 +158,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: false
@@ -171,7 +171,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: false,
                 supportsDistribution: true
@@ -186,7 +186,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: false,
                 supportsEvaluation: true,
                 supportsDistribution: true
@@ -202,7 +202,7 @@ describe('SidePanelTabs', () => {
         render(SidePanelTabs, {
             props: {
                 collectionId: 'col1',
-                isImages: true,
+                supportsQuery: true,
                 hasMediaWithEmbeddings: true,
                 supportsEvaluation: true,
                 supportsDistribution: true

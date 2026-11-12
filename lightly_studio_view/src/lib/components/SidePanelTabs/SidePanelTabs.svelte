@@ -6,14 +6,14 @@
 
     interface Props {
         collectionId: string;
-        isImages: boolean;
+        supportsQuery: boolean;
         hasMediaWithEmbeddings: boolean;
         supportsEvaluation: boolean;
         supportsDistribution: boolean;
     }
     const {
         collectionId,
-        isImages,
+        supportsQuery,
         hasMediaWithEmbeddings,
         supportsEvaluation,
         supportsDistribution
@@ -47,7 +47,7 @@
             </button>
         </Tooltip>
     {/if}
-    {#if isImages}
+    {#if supportsQuery}
         <Tooltip
             content="Write a query expression to filter your dataset"
             position="left"

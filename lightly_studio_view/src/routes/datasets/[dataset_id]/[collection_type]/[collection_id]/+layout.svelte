@@ -165,6 +165,7 @@
     const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
+    const supportsQuery = $derived(isImages || isVideos);
     const canSelectAll = $derived(isImages || isVideos || isVideoFrames || isAnnotations);
     const showAnnotationVisibilityToggle = $derived(
         isAnnotations || isImages || isVideos || isVideoFrames
@@ -368,11 +369,23 @@
 
     const {
         imageFilter: imageFilterFromHook,
+        filterParams: imageFilterParams,
         imageQueryExpression,
-        updateQueryExpr
+        updateQueryExpr: updateImageQueryExpr
     } = useImageFilters();
 
-    const { videoFilter: videoFilterFromHook } = useVideoFilters();
+    const {
+        videoFilter: videoFilterFromHook,
+        filterParams: videoFilterParams,
+        videoQueryExpression,
+        updateQueryExpr: updateVideoQueryExpr
+    } = useVideoFilters();
+    const queryExpression = $derived.by(() => {
+        const params = isVideos ? $videoFilterParams : $imageFilterParams;
+        if (params?.collection_id !== collectionId) return null;
+        return isVideos ? $videoQueryExpression : $imageQueryExpression;
+    });
+    const updateQueryExpr = $derived(isVideos ? updateVideoQueryExpr : updateImageQueryExpr);
     const plotFilterVideoSampleIds = $derived(
         $videoFilterFromHook?.sample_filter?.sample_ids ?? []
     );
@@ -501,7 +514,13 @@
     const hasFilterPanel = $derived(isCollectionGrid || isCaptions);
 
     const panelIsVisible = $derived(
-        isPanelVisible($activePanel, isImages, hasMediaWithEmbeddings, supportsDistribution)
+        isPanelVisible(
+            $activePanel,
+            isImages,
+            hasMediaWithEmbeddings,
+            supportsDistribution,
+            supportsQuery
+        )
     );
 
     // False only once annotation labels have loaded and come back empty — not
@@ -636,16 +655,20 @@
                         <div
                             class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
                         >
-                            {#if isImages}
-                                <QueryControl
-                                    queryExpression={$imageQueryExpression}
-                                    {updateQueryExpr}
-                                    onOpen={() => {
-                                        setActivePanel(
-                                            $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
-                                        );
-                                    }}
-                                />
+                            {#if supportsQuery}
+                                {#key collectionId}
+                                    <QueryControl
+                                        {queryExpression}
+                                        {updateQueryExpr}
+                                        onOpen={() => {
+                                            setActivePanel(
+                                                $activePanel === 'queryEditor'
+                                                    ? 'none'
+                                                    : 'queryEditor'
+                                            );
+                                        }}
+                                    />
+                                {/key}
                             {/if}
 
                             <div>
@@ -792,14 +815,16 @@
                                         <PlotPanel {collectionId} />
                                     {/key}
                                 {/await}
-                            {:else if $activePanel === 'queryEditor' && isImages}
+                            {:else if $activePanel === 'queryEditor' && supportsQuery}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel
-                                        sampleType="image"
-                                        queryExpression={$imageQueryExpression}
-                                        {updateQueryExpr}
-                                        onClose={() => setActivePanel('none')}
-                                    />
+                                    {#key collectionId}
+                                        <QueryEditorPanel
+                                            sampleType={isVideos ? 'video' : 'image'}
+                                            {queryExpression}
+                                            {updateQueryExpr}
+                                            onClose={() => setActivePanel('none')}
+                                        />
+                                    {/key}
                                 {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}
@@ -852,7 +877,7 @@
                 <div data-testid="side-panel-tabs" class="contents">
                     <SidePanelTabs
                         {collectionId}
-                        {isImages}
+                        {supportsQuery}
                         {hasMediaWithEmbeddings}
                         {supportsEvaluation}
                         {supportsDistribution}

@@ -26,8 +26,9 @@ describe('isPanelVisible', () => {
         expect(isPanelVisible('embeddingPlot', false, false, false)).toBe(false);
     });
 
-    it('queryEditor panel is visible on images route only', () => {
+    it('queryEditor panel is visible on image and video grids', () => {
         expect(isPanelVisible('queryEditor', true, false, true)).toBe(true);
+        expect(isPanelVisible('queryEditor', false, false, true, true)).toBe(true);
         expect(isPanelVisible('queryEditor', false, false, false)).toBe(false);
     });
 
