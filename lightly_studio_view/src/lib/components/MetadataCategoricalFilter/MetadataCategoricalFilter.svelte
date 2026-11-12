@@ -24,6 +24,10 @@
         expanded?: boolean;
         /** List layout only: lets the user show or hide the values. */
         onToggleExpanded?: () => void;
+        /** List layout only: shows a checkbox that is checked when the field has an active filter. */
+        checked?: boolean;
+        /** List layout only: clears the field filter when the checkbox is unchecked. */
+        onClearField?: () => void;
     }
 
     const {
@@ -40,7 +44,9 @@
         onRemove,
         layout = 'dropdown',
         expanded = true,
-        onToggleExpanded
+        onToggleExpanded,
+        checked,
+        onClearField
     }: Props = $props();
 
     const options = $derived(buildOptions(buckets, selectedValues));
@@ -55,12 +61,10 @@
                 )
               : `${selectedValues.length} selected`
     );
-    const status = $derived(
-        updating
-            ? 'Updating…'
-            : selectedValues.length > 0
-              ? `${selectedValues.length} selected`
-              : undefined
+    const status = $derived(updating ? 'Updating…' : undefined);
+    // No summary until the values load, so the total in "N of M" is known.
+    const headerSummary = $derived(
+        buckets.length > 0 ? `${selectedValues.length} of ${buckets.length}` : undefined
     );
     const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
 </script>
@@ -76,6 +80,9 @@
     {onRemove}
     {expanded}
     {onToggleExpanded}
+    {checked}
+    {headerSummary}
+    {onClearField}
 >
     {#snippet children()}
         <MetadataCategoricalFilterOptions
