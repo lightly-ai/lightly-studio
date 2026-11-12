@@ -26,6 +26,8 @@ SKILLS_BY_PATH = [
     ("lightly_studio_view/", (".ts", ".svelte"), ["frontend-guide", "clean-code"]),
     ("CHANGELOG.md", (".md",), ["changelog"]),
     ("lightly_studio_serve/CHANGELOG.md", (".md",), ["changelog"]),
+    # Fallback: all other code files in the repository.
+    ("", (".py", ".ts", ".svelte"), ["clean-code"]),
 ]
 
 
