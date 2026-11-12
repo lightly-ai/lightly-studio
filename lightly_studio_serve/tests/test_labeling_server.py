@@ -161,7 +161,7 @@ def test_predict__not_an_image() -> None:
 
     response = _post_predict(client=client, threshold="0.5", image=b"not an image")
 
-    assert response.status_code == 422  # noqa: PLR2004
+    assert response.status_code == 422
     assert response.json() == {"detail": "The image cannot be decoded."}
     assert model.received == []
 
