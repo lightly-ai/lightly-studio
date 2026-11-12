@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Python SDK: Label images in the GUI with your own model. Subclass `ls.LabelingModel` and call `ls.register_labeling_model` before `ls.start_gui`. The new "Label with model" tool shows the suggested annotations, and you save the correct ones.
+- Python SDK: Run a labeling model on a remote server. Serve it with `lightly_studio_serve.serve(labeling_model=...)` and connect a dataset with `ls.register_remote_labeling_model`.
 - Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
 - Python SDK: Added Python 3.15 support.
 - Python SDK: `McapDataset.add_labels_from_folder` accepts `overwrite=True` to replace the annotations of recordings that already have annotations.
