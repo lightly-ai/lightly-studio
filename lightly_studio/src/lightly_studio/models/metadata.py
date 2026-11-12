@@ -83,10 +83,8 @@ def validate_type_compatibility(expected_type: str, value: Any) -> bool:
         return expected_type == "null"
 
     # Check complex types.
-    if expected_type in COMPLEX_METADATA_TYPES:
-        expected_complex_cls = COMPLEX_METADATA_TYPES[expected_type]
-        if expected_complex_cls is None:
-            raise RuntimeError("Expected `expected_complex_cls` to be set.")
+    expected_complex_cls = COMPLEX_METADATA_TYPES.get(expected_type)
+    if expected_complex_cls is not None:
         return isinstance(value, expected_complex_cls)
 
     # Check simple types

@@ -398,11 +398,9 @@ def _scaled_jpeg_frame(frame: VideoFrame, width: int | None, height: int | None)
 
 def _output_size(frame: VideoFrame, width: int | None, height: int | None) -> tuple[int, int]:
     """Returns the output size, preserving aspect ratio when one side is omitted."""
-    if width is None and height is None:
-        return frame.width, frame.height
     if width is None:
         if height is None:
-            raise RuntimeError("Expected `height` to be set.")
+            return frame.width, frame.height
         return max(1, round(frame.width * height / frame.height)), height
     if height is None:
         return width, max(1, round(frame.height * width / frame.width))
