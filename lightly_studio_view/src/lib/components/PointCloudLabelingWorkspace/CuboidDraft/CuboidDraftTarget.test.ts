@@ -98,6 +98,21 @@ describe('CuboidDraftTarget', () => {
         expect(onHighlightChange).toHaveBeenLastCalledWith(null);
     });
 
+    it('does not write to its owner while it is destroyed', () => {
+        const onHighlightChange = vi.fn();
+        const { unmount } = render(CuboidDraftTarget, {
+            props: {
+                bounds: { min: [-4, -4, 0], max: [4, 4, 2] },
+                onHighlightChange,
+                onCreateCuboid
+            }
+        });
+        flushSync();
+        onHighlightChange.mockClear();
+        unmount();
+        expect(onHighlightChange).not.toHaveBeenCalled();
+    });
+
     it.each(['Escape', 'context menu', 'right-button drag'])(
         'creates nothing after %s',
         (cancel) => {

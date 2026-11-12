@@ -88,7 +88,8 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         colorMode: presentation.colorMode,
         selectedCuboidId: editing.selectedCuboidId,
         hoveredCuboidId: editing.hoveredCuboidId,
-        draftCuboid: editing.draftCuboid,
+        // The draft target does not clear its highlight on teardown, so it ends with the tool.
+        draftCuboid: editing.effectiveTool === 'create-cuboid' ? editing.draftCuboid : null,
         selectedCameraChannelIds: cameraSelection.selectedChannelIds,
         cameraStripCollapsed: cameraPane.collapsed,
         bufferEntireSequence: playback.bufferEntireSequence,

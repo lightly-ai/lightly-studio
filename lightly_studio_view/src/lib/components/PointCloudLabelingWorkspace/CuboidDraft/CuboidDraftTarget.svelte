@@ -1,6 +1,5 @@
 <script lang="ts">
     import { T } from '@threlte/core';
-    import { onDestroy } from 'svelte';
     import type { Bounds3, CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { PointBatch } from '$lib/components/PointCloudViewer';
     import { getCuboidCreationPlane } from './cuboidCreationPlane';
@@ -18,7 +17,11 @@
         batch?: PointBatch;
         /** Timeline tick on display. A change discards the draft. */
         tick?: number;
-        /** Fires when the region whose points the draft takes in changes; null when there is none. */
+        /**
+         * Fires when the region whose points the draft takes in changes; null when there is none.
+         * It does not fire when this component is destroyed, because a state write during teardown
+         * stalls the update that destroys it. The owner drops the highlight with the tool instead.
+         */
         onHighlightChange?: (box: CuboidBox | null) => void;
         /** Fires with the drawn box when the last step completes. */
         onCreateCuboid: (box: CuboidBox) => void;
@@ -43,7 +46,6 @@
     $effect(() => {
         onHighlightChange?.(draft.highlightBox);
     });
-    onDestroy(() => onHighlightChange?.(null));
 </script>
 
 {#if layout}
