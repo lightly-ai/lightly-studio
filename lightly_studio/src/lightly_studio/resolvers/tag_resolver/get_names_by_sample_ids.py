@@ -27,6 +27,7 @@ def get_names_by_sample_ids(session: Session, sample_ids: Sequence[UUID]) -> dic
     )
     result: dict[UUID, list[str]] = {}
     for sample_id, name in session.exec(stmt).all():
-        assert sample_id is not None
+        if sample_id is None:
+            raise RuntimeError("Expected `sample_id` to be set.")
         result.setdefault(sample_id, []).append(name)
     return result

@@ -12,6 +12,8 @@ function waitForImageListResponse(page: Page): Promise<Response> {
 async function typeAndApply(page: Page, query: string): Promise<void> {
     await page.locator('.monaco-editor .view-lines').first().click();
     await page.keyboard.press('ControlOrMeta+a');
+    // Delete the selection first: typing a quote or bracket over it wraps it instead.
+    await page.keyboard.press('Backspace');
     await page.keyboard.type(query);
 
     const refetchPromise = waitForImageListResponse(page);
@@ -105,6 +107,21 @@ test.describe('query editor', () => {
         await expect
             .poll(() => samplesPage.getSamples().count())
             .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
+    });
+
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    test('typing an opening parenthesis wraps the selected text', async ({ samplesPage, page }) => {
+        // The samplesPage fixture navigates to the samples grid.
+        await page.getByTestId('side-panel-tabs-query').click();
+        const editorLines = page.locator('.monaco-editor .view-lines').first();
+        await editorLines.click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.type('width > 0');
+
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.type('(');
+
+        await expect(editorLines).toHaveText('(width > 0)');
     });
 
     test('syntax error shows toast and Apply stays enabled', async ({ samplesPage, page }) => {

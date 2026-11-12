@@ -89,7 +89,8 @@ class DiscreteColorScale(Generic[T]):
             plus a final "Other" category grouping the remainder.
         """
         value_list = list(values)
-        assert len(set(value_list)) == len(value_list), "Color legend values must be unique"
+        if len(set(value_list)) != len(value_list):
+            raise RuntimeError("Color legend values must be unique")
 
         # Slots [start_cat, MAX_LEGEND_SLOTS) are available for categories.
         max_individual = MAX_LEGEND_SLOTS - start_cat

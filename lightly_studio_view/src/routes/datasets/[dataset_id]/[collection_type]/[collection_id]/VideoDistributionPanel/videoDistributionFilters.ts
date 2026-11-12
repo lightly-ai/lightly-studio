@@ -12,13 +12,16 @@ const withFilterType = (value: VideoFilter | null) =>
  * Builds the two filters of the video distribution panel from the filter params of the
  * videos grid.
  */
-export function buildVideoDistributionFilters(filterParams: VideoFilterParams) {
+export function buildVideoDistributionFilters(
+    filterParams: VideoFilterParams,
+    queryExpression?: Parameters<typeof buildVideoFilter>[1]
+) {
     const videoFilter = buildVideoFilter(filterParams);
     return {
-        // The filter of the videos grid, with every sidebar filter applied.
-        filter: withFilterType(videoFilter),
-        // The grid filter without the sidebar filters, so the totals stay stable. It keeps the
-        // tags, sample ids and plot selection.
+        // The filter of the videos grid, with every sidebar filter and the query applied.
+        filter: withFilterType(buildVideoFilter(filterParams, queryExpression)),
+        // The grid filter without the sidebar filters and the query, so the totals stay
+        // stable. It keeps the tags, sample ids and plot selection.
         baseFilter: withFilterOverrides('video', videoFilter, {
             width: undefined,
             height: undefined,
