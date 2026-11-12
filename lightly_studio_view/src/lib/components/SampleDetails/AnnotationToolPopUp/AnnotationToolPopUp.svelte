@@ -11,9 +11,15 @@
         title: string;
         collectionId: string;
         annotationClass?: string | null;
-        onAnnotationClassChange: (value: string) => void;
+        // Without it, the class select is hidden, e.g. when a model sets the classes.
+        onAnnotationClassChange?: (value: string) => void;
         saveAs: SaveAs;
+        // False hides the save as toggle, e.g. when the previews have no masks.
+        showSaveAs?: boolean;
         onSaveAsChange: (saveAs: SaveAs) => void;
+        // False hides everything below the tool controls, e.g. before a tool has results.
+        showSaveControls?: boolean;
+        saveLabel?: string;
         canSave: boolean;
         isSaving?: boolean;
         onSave: () => void;
@@ -28,6 +34,9 @@
         onAnnotationClassChange,
         saveAs,
         onSaveAsChange,
+        showSaveAs = true,
+        showSaveControls = true,
+        saveLabel = 'Done',
         canSave,
         isSaving = false,
         onSave,
@@ -53,47 +62,53 @@
 
         {@render children()}
 
-        <div class="h-px bg-border"></div>
+        {#if showSaveControls}
+            <div class="h-px bg-border"></div>
 
-        <AnnotationClassSelect
-            {collectionId}
-            value={annotationClass}
-            onChange={onAnnotationClassChange}
-            label="Annotation class"
-            className="h-8"
-        />
+            {#if onAnnotationClassChange}
+                <AnnotationClassSelect
+                    {collectionId}
+                    value={annotationClass}
+                    onChange={onAnnotationClassChange}
+                    label="Annotation class"
+                    className="h-8"
+                />
+            {/if}
 
-        <div
-            class="flex overflow-hidden rounded-md border border-border"
-            role="group"
-            aria-label="Save as"
-        >
-            {#each saveAsOptions as option (option.value)}
-                <Button
-                    variant="ghost"
-                    class={cn(
-                        'h-8 flex-1 gap-1 rounded-none',
-                        saveAs === option.value
-                            ? 'bg-primary/20 text-primary hover:bg-primary/20 hover:text-primary'
-                            : 'text-muted-foreground'
-                    )}
-                    aria-label={`Save as ${option.label}`}
-                    aria-pressed={saveAs === option.value}
-                    onclick={() => onSaveAsChange(option.value)}
+            {#if showSaveAs}
+                <div
+                    class="flex overflow-hidden rounded-md border border-border"
+                    role="group"
+                    aria-label="Save as"
                 >
-                    <option.icon />
-                    {option.label}
-                </Button>
-            {/each}
-        </div>
+                    {#each saveAsOptions as option (option.value)}
+                        <Button
+                            variant="ghost"
+                            class={cn(
+                                'h-8 flex-1 gap-1 rounded-none',
+                                saveAs === option.value
+                                    ? 'bg-primary/20 text-primary hover:bg-primary/20 hover:text-primary'
+                                    : 'text-muted-foreground'
+                            )}
+                            aria-label={`Save as ${option.label}`}
+                            aria-pressed={saveAs === option.value}
+                            onclick={() => onSaveAsChange(option.value)}
+                        >
+                            <option.icon />
+                            {option.label}
+                        </Button>
+                    {/each}
+                </div>
+            {/if}
 
-        <div class="flex gap-1.5">
-            <Button class="h-8 flex-1" disabled={!canSave || isSaving} onclick={onSave}
-                >{isSaving ? 'Saving…' : 'Done'}</Button
-            >
-            <Button variant="outline" class="h-8 flex-1" disabled={isSaving} onclick={onClear}
-                >Reset</Button
-            >
-        </div>
+            <div class="flex gap-1.5">
+                <Button class="h-8 flex-1" disabled={!canSave || isSaving} onclick={onSave}
+                    >{isSaving ? 'Saving…' : saveLabel}</Button
+                >
+                <Button variant="outline" class="h-8 flex-1" disabled={isSaving} onclick={onClear}
+                    >Reset</Button
+                >
+            </div>
+        {/if}
     </div>
 </div>
