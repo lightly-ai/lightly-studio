@@ -99,7 +99,7 @@
         {onBufferEntireSequenceChange}
         {isPlaying}
         {playbackIntervalMs}
-        bufferStatus={bufferStatus}
+        {bufferStatus}
         {onPreviousFrame}
         {onNextFrame}
         {onPlayToggle}
