@@ -59,6 +59,9 @@ def count_image_annotations_by_sample_tags(  # noqa: PLR0913
     annotation_collection_ids = annotation_count_helpers.get_annotation_collection_ids(
         image_filter=image_filter,
     )
+    stripped_filter = annotation_count_helpers.strip_source_only_annotations_filter(
+        image_filter=image_filter,
+    )
     class_names = list(
         annotation_count_helpers.get_total_counts(
             session=session,
@@ -72,7 +75,7 @@ def count_image_annotations_by_sample_tags(  # noqa: PLR0913
         session=session,
         collection_id=collection_id,
         sample_tag_ids=sample_tag_ids,
-        image_filter=image_filter,
+        image_filter=stripped_filter,
         annotation_type=annotation_type,
         annotation_collection_ids=annotation_collection_ids,
         count_mode=count_mode,
