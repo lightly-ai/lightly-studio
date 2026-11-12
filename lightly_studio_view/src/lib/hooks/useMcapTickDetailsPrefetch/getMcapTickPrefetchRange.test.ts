@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { getMcapTickPrefetchRange } from './getMcapTickPrefetchRange';
 
 describe('getMcapTickPrefetchRange', () => {
+    it.each([0, 1])('includes the next tick when the prefetch count is %s', (prefetchTickCount) => {
+        expect(
+            getMcapTickPrefetchRange({ activeIndex: 5, tickCount: 20, prefetchTickCount })
+        ).toEqual([{ startIndex: 5, endIndex: 6 }]);
+        expect(
+            getMcapTickPrefetchRange({
+                activeIndex: 5,
+                tickCount: 20,
+                prefetchTickCount,
+                accumulationRadius: 2
+            })
+        ).toEqual([{ startIndex: 3, endIndex: 8 }]);
+    });
     it('buffers the neighbors needed by accumulated frames, clamping at sequence boundaries', () => {
         expect(
             getMcapTickPrefetchRange({

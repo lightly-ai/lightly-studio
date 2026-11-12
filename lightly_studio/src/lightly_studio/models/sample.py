@@ -13,10 +13,8 @@ from sqlmodel import Field, Relationship, SQLModel
 class SampleTagLinkTable(SQLModel, table=True):
     """Model to define links between Sample and Tag Many-to-Many."""
 
-    sample_id: Optional[UUID] = Field(
-        default=None, foreign_key="sample.sample_id", primary_key=True
-    )
-    tag_id: Optional[UUID] = Field(
+    sample_id: UUID | None = Field(default=None, foreign_key="sample.sample_id", primary_key=True)
+    tag_id: UUID | None = Field(
         default=None, foreign_key="tag.tag_id", primary_key=True, index=True
     )
 
@@ -139,7 +137,7 @@ class SampleViewsWithCount(BaseModel):
     samples: list[SampleView] = PydanticField(..., alias="data")
     total_count: int
     total_caption_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")
 
 
 # Import at the bottom to:

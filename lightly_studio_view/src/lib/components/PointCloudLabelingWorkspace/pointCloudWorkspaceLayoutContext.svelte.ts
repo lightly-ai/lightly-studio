@@ -69,6 +69,8 @@ export interface PointCloudWorkspaceLayoutState {
     bufferEntireSequence: boolean;
     /** Inclusive tick ranges ready for playback. */
     bufferedRanges: readonly BufferRange[];
+    /** Playback waiting state and recovery for failed background loads. */
+    bufferStatus?: ReturnType<typeof createWorkspaceController>['playback']['bufferStatus'];
     /** Persists the collapsed state reported by the camera pane. */
     onCameraStripCollapsedChange: (collapsed: boolean) => void;
     /** Updates orthographic projection visibility. */

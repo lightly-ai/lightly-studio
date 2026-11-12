@@ -9,6 +9,7 @@ const {
     tickDetails,
     summaryState,
     schedulerParams,
+    prefetchState,
     updateAnnotations,
     invalidateQueries
 } = vi.hoisted(() => ({
@@ -29,6 +30,13 @@ const {
             | undefined
     },
     updateAnnotations: vi.fn(),
+    prefetchState: {
+        bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
+        errors: new Map<number, unknown>(),
+        isRetrying: false,
+        retryFailed: vi.fn().mockResolvedValue(undefined),
+        cancel: vi.fn()
+    },
     invalidateQueries: vi.fn()
 }));
 
@@ -98,11 +106,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
 vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte', () => ({
     useMcapTickPrefetchScheduler: (params: typeof schedulerParams.current) => {
         schedulerParams.current = params ?? undefined;
-        return {
-            bufferedRanges: [{ startIndex: 0, endIndex: 1 }],
-            errors: new Map(),
-            cancel: vi.fn()
-        };
+        return prefetchState;
     }
 }));
 
@@ -220,6 +224,8 @@ describe('PointCloudLabelingWorkspace', () => {
         tickDetails.isLoading = false;
         summaryState.isLoading = false;
         schedulerParams.current = undefined;
+        prefetchState.bufferedRanges = [{ startIndex: 0, endIndex: 1 }];
+        prefetchState.errors.clear();
         sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
         sessionStorage.removeItem('lightlyStudio_pointCloudShowAnnotationTooltips');
         sessionStorage.removeItem('lightlyStudio_pointCloudAccumulate');
@@ -485,6 +491,27 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(onTickChange).toHaveBeenLastCalledWith(1);
     });
 
+    it('shows when playback is waiting for an unbuffered frame and lets the user pause', async () => {
+        prefetchState.bufferedRanges = [];
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Play frames' }));
+        expect(screen.getByText('Buffering…')).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Pause frames' }));
+
+        expect(screen.queryByText('Buffering…')).not.toBeInTheDocument();
+    });
+
+    it('offers to retry frames that failed during background buffering', async () => {
+        prefetchState.errors.set(1, new Error('Failed to load'));
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+
+        expect(screen.getByText('1 frame failed to load.')).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Retry failed frames' }));
+
+        expect(prefetchState.retryFailed).toHaveBeenCalledOnce();
+    });
+
     it('plays through ticks at the selected interval and stops at the end', async () => {
         vi.useFakeTimers();
         render(PointCloudLabelingWorkspace, { props: defaultProps });
@@ -520,7 +547,7 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 0, endIndex: 1 }]);
     });
 
-    it('starts whole-sequence buffering at the selected tick', async () => {
+    it('starts whole-sequence buffering at the selected tick and wraps to earlier ticks', async () => {
         const user = userEvent.setup();
         render(PointCloudLabelingWorkspace, { props: defaultProps });
 
@@ -542,7 +569,10 @@ describe('PointCloudLabelingWorkspace', () => {
         expect(schedulerParams.current?.getRequestId()).toBe(
             'dataset-1/sequence-1/playback/sensor/entire/1'
         );
-        expect(schedulerParams.current?.getRanges()).toEqual([{ startIndex: 1, endIndex: 1 }]);
+        expect(schedulerParams.current?.getRanges()).toEqual([
+            { startIndex: 1, endIndex: 1 },
+            { startIndex: 0, endIndex: 0 }
+        ]);
     });
 
     it.each([
