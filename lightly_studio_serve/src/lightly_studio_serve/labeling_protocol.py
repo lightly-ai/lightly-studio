@@ -36,6 +36,10 @@ IMAGE_FIELD_NAME = "image"
 # The multipart field that holds the confidence threshold, as a decimal number.
 THRESHOLD_FIELD_NAME = "threshold"
 
+# The status of an image that the server cannot decode. A number, because starlette
+# renamed its constant for this status.
+STATUS_UNUSABLE_INPUT = 422
+
 _FiniteFloat = Annotated[float, Field(allow_inf_nan=False)]
 
 

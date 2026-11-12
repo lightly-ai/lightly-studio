@@ -10,6 +10,7 @@ from __future__ import annotations
 import secrets
 from abc import ABC, abstractmethod
 from collections.abc import Collection
+from typing import Protocol
 
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
@@ -17,7 +18,6 @@ from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from lightly_studio_serve import protocol
-from lightly_studio_serve.embedder import Embedder
 
 # RFC 7235 makes the scheme case-insensitive, so the check lowers the one it reads.
 _BEARER_SCHEME = "bearer"
@@ -144,21 +144,29 @@ class RequestSizeLimit(_HttpMiddleware):
         return receive_counted
 
 
-class Readiness(_HttpMiddleware):
-    """Rejects a request to an embed path while the model is still loading.
+class _Model(Protocol):
+    """An embedder or a labeling model. Both report whether the weights are loaded."""
 
-    ``/v1/describe`` is not among the paths. A client polls it to learn when to retry.
+    @property
+    def ready(self) -> bool:
+        """Whether the model can answer requests."""
+
+
+class Readiness(_HttpMiddleware):
+    """Rejects a request to a model path while the model is still loading.
+
+    The describe paths are not among the paths. A client polls them to learn when to retry.
     """
 
-    def __init__(self, app: ASGIApp, embedder: Embedder, paths: Collection[str]) -> None:
-        """Guard ``paths`` while ``embedder`` reports that it is not ready."""
+    def __init__(self, app: ASGIApp, model: _Model, paths: Collection[str]) -> None:
+        """Guard ``paths`` while ``model`` reports that it is not ready."""
         super().__init__(app=app)
-        self.embedder = embedder
+        self.model = model
         self.paths = frozenset(paths)
 
     async def handle(self, scope: Scope, receive: Receive, send: Send) -> None:
         """Answer 503 while the model loads. Otherwise pass the request on."""
-        if scope["path"] not in self.paths or self.embedder.ready:
+        if scope["path"] not in self.paths or self.model.ready:
             await self.app(scope, receive, send)
             return
         await _UNAVAILABLE(scope, receive, send)
