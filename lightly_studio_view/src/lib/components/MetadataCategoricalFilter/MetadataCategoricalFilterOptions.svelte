@@ -42,9 +42,10 @@
     );
     const showSearch = $derived(buckets.filter((bucket) => bucket.kind === 'value').length > 5);
     const hasOtherAggregate = $derived(buckets.some((bucket) => bucket.kind === 'other'));
+    // In list mode the status line below the field already reports a load error.
     const emptyText = $derived(
         listMode && error
-            ? 'Could not load metadata distribution.'
+            ? undefined
             : listMode && loading
               ? 'Loading…'
               : listMode
