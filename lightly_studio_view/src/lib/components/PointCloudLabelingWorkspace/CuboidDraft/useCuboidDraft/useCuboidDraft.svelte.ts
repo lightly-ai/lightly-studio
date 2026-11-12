@@ -160,7 +160,13 @@ export function useCuboidDraft({
     function updateHeight(active: Draft, event: PointerEvent): void {
         const footprint = getFootprint(active);
         const plane = createHeightPlane(getFootprintBox(footprint).center, camera.current);
-        const hit = plane && raycastPlane(event, plane);
+        if (!plane) {
+            // The camera looks straight down, so the pointer cannot give a height.
+            const extent = fitFootprintHeight(footprint, active.batch);
+            previewBox = getFootprintBox(footprint, extent);
+            return;
+        }
+        const hit = raycastPlane(event, plane);
         if (!hit) return;
         previewBox = getFootprintBox(footprint, getHeightExtent(active.startWorld[2], hit.z));
     }
@@ -177,7 +183,7 @@ export function useCuboidDraft({
     }
 
     /** Fixes the current step with a release or a click and moves to the next one. */
-    function confirmStep(active: Draft): void {
+    function confirmStep(active: Draft, event: PointerEvent): void {
         if (active.step === 'rectangle') {
             // A drag whose rays never hit the plane has no rectangle to create.
             if (!hasExtent(active) || !previewBox) return finish(null);
@@ -196,6 +202,8 @@ export function useCuboidDraft({
         const footprint = getFootprint(active);
         if (active.step === 'width' && active.cameraMode === 'perspective') {
             active.step = 'height';
+            // Show a height at once, so that the next click never saves the flat footprint.
+            updateHeight(active, event);
             return;
         }
         if (active.step === 'width') {
@@ -213,7 +221,7 @@ export function useCuboidDraft({
         if (!draft?.isPressed || event.pointerId !== draft.pointerId) return;
         draft.isPressed = false;
         update(draft, event);
-        confirmStep(draft);
+        confirmStep(draft, event);
     }
 
     function onPointerDown(event: PointerEvent): void {
@@ -223,7 +231,7 @@ export function useCuboidDraft({
         if (event.button !== 0 || hasCameraModifier(event)) return;
         finishingClick = event;
         update(draft, event);
-        confirmStep(draft);
+        confirmStep(draft, event);
     }
 
     function onContextMenu(event: Event): void {

@@ -66,6 +66,10 @@ describe('fitFootprintHeight', () => {
         expect(extent.min).toBe(-1);
         expect(extent.max).toBeCloseTo(-1 + Math.SQRT2);
     });
+    it('keeps a thin footprint without points on the ground at the minimum height', () => {
+        const thin = { ...footprint, width: 0.02 };
+        expect(fitFootprintHeight(thin, undefined)).toEqual({ min: -1, max: -0.9 });
+    });
     it('reads every segment of a segmented batch', () => {
         const segmented = { ...batch([]), segments: [batch([0, 2, 0.5]), batch([1, 2, 1.5])] };
         expect(fitFootprintHeight(footprint, segmented)).toEqual({ min: 0.5, max: 1.5 });

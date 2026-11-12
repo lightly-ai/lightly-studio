@@ -56,7 +56,8 @@ Anything else is a drag.
 ### Height step in the 3D view
 
 Height is the Z of the intersection between the pointer ray and a vertical plane
-through the footprint centre that faces the camera, minus the ground Z.
+through the footprint centre that faces the camera, minus the ground Z. When the
+camera looks straight down, the height is fitted to the points, as in the top view.
 
 ### Keyboard rotation of the 3D camera
 
@@ -120,13 +121,14 @@ errors. A cancelled draft saves nothing.
 
 | Unit | Checks |
 |---|---|
-| `cuboidDraft.ts` | Click versus drag threshold; box from two corners for each view; 3D height step; 0.1 minimum; cancel from every step |
-| `fitCuboidToPoints.ts` | Fit on each axis; points outside the rectangle are ignored; fallback when no point is inside |
-| `CuboidDraftTarget.svelte` | A drag calls `onCreateCuboid` with a box; Escape and right-click create nothing |
-| `useCreateCuboidAnnotation` | Existing tests move to the box argument |
-| `CuboidLayer`, workspace scene | Existing click tests still pass: a click creates the default cube |
+| `cuboidDraft.ts` | Click versus drag threshold; box from two corners for the side and front views; angled footprint and its width; height extent; 0.1 minimum |
+| `fitCuboidToPoints.ts` | Fit on each axis and inside an angled footprint; points outside are ignored; fallback when no point is inside |
+| `useCuboidDraft` | Side, width and height steps; fitted height in the top view; a click without a drag creates nothing; cancel from every step |
+| `CuboidDraftTarget.svelte` | A dragged side and a width click call `onCreateCuboid` with a box; Escape and right-click create nothing |
+| `useCreateCuboidAnnotation` | Saves the centre, size and heading of the drawn box |
 
-A Storybook story covers `CuboidDraftPreview`. The change is also checked by hand
+Storybook stories cover `CuboidDraftPreview` and, with a sample point cloud, drawing
+in each view (`CuboidDraftTarget`). The change is also checked by hand
 in the app in all four views.
 
 ## Delivery

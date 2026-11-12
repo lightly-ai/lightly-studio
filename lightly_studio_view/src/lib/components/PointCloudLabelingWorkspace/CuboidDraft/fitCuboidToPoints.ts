@@ -1,5 +1,6 @@
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import {
+    MIN_CUBOID_EXTENT,
     getFootprintSide,
     type AxisExtent,
     type DraftFootprint,
@@ -64,8 +65,10 @@ export function fitFootprintHeight(
     if (low <= high) {
         return { min: low, max: high };
     }
-    // Without points the box rests on the ground and is as high as its shorter side.
-    return { min: start[2], max: start[2] + Math.min(length, Math.abs(width)) };
+    // Without points the box rests on the ground and is as high as its shorter side. The
+    // minimum size applies here, so that the box does not grow below the ground later.
+    const height = Math.max(Math.min(length, Math.abs(width)), MIN_CUBOID_EXTENT);
+    return { min: start[2], max: start[2] + height };
 }
 
 function getFallbackExtent(rectangle: DraftRectangle): AxisExtent {

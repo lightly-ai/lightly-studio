@@ -44,6 +44,15 @@ function createSideCamera(): Camera {
     return camera;
 }
 
+/** Looks straight down from z = 10; pixel (200, 200) is the origin, 20 px per meter on the ground. */
+function createDownCamera(): Camera {
+    const camera = new PerspectiveCamera(90, 1, 0.1, 100);
+    camera.position.set(0, 0, 10);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    return camera;
+}
+
 /** Looks along +Y at height 1; pixels above the vertical center point above the horizon. */
 function createHorizontalCamera(): Camera {
     const camera = new PerspectiveCamera(90, 1, 0.1, 100);
@@ -303,6 +312,30 @@ describe('useCuboidDraft', () => {
                 expect.closeTo(Math.sqrt(8)),
                 expect.closeTo(Math.sqrt(8)),
                 expect.closeTo(3)
+            ]);
+        });
+
+        it('fits the height to the points when the camera looks straight down', () => {
+            const batch = createBatch([
+                [1, 0.5, 0.5],
+                [1, 0.5, 2]
+            ]);
+            const { draft } = setup({
+                cameraMode: 'perspective',
+                camera: createDownCamera(),
+                batch
+            });
+            pressAt(draft, 200, 200, [0, 0, 0]);
+            canvas.dispatchEvent(pointer('pointermove', 240, 200));
+            canvas.dispatchEvent(pointer('pointerup', 240, 200));
+            canvas.dispatchEvent(pointer('pointermove', 240, 180));
+            click(240, 180);
+            expect(draft.previewBox?.size[2]).toBeCloseTo(1.5);
+            click(240, 180);
+            expect(onCreate.mock.calls[0][0].size).toEqual([
+                expect.closeTo(2),
+                expect.closeTo(1),
+                expect.closeTo(1.5)
             ]);
         });
 
