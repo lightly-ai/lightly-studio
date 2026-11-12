@@ -501,10 +501,13 @@ jobs:
           mode: end
 
   # Postgres runs the same tests as the DuckDB jobs above, so pull requests skip it to save
-  # runners. The merge queue runs it before merge.
+  # runners. The merge queue runs it before merge. To run it on a pull request, add the
+  # `run-e2e-postgres` label and push again.
   end-to-end-postgres:
     name: End2End Test (${{ matrix.name }})
-    if: github.event_name != 'pull_request'
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'run-e2e-postgres')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     needs:
@@ -605,7 +608,8 @@ jobs:
         if: >-
           needs.check-success.outputs.skip != 'true' &&
           (needs.end-to-end.result != 'success' ||
-          (github.event_name != 'pull_request' && needs.end-to-end-postgres.result != 'success') ||
+          (needs.end-to-end-postgres.result != 'success' &&
+          needs.end-to-end-postgres.result != 'skipped') ||
           (needs.end-to-end-after-merge.result != 'success' &&
           needs.end-to-end-after-merge.result != 'skipped'))
         run: |
@@ -613,12 +617,12 @@ jobs:
           exit 1
 
       - name: Create e2e success marker for all matrix jobs
-        # A pull request skips Postgres, so it must not mark the whole run as passed.
+        # Without Postgres, the marker would skip a later run with the `run-e2e-postgres` label.
         if: needs.end-to-end.result == 'success' && needs.end-to-end-postgres.result == 'success'
         run: touch .e2e-success-all
 
       - name: Save e2e success marker for all matrix jobs
-        # A pull request skips Postgres, so it must not mark the whole run as passed.
+        # Without Postgres, the marker would skip a later run with the `run-e2e-postgres` label.
         if: needs.end-to-end.result == 'success' && needs.end-to-end-postgres.result == 'success'
         uses: actions/cache/save@v6
         with:
