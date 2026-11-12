@@ -8,6 +8,7 @@ from .get_current_counts import get_current_counts
 from .get_total_counts import get_total_counts
 from .resolve_embedding_region import resolve_embedding_region
 from .restrict_to_annotation_sources import restrict_to_annotation_sources
+from .strip_source_only_annotations_filter import strip_source_only_annotations_filter
 
 __all__ = [
     "build_count_expression",
@@ -20,4 +21,5 @@ __all__ = [
     "get_total_counts",
     "resolve_embedding_region",
     "restrict_to_annotation_sources",
+    "strip_source_only_annotations_filter",
 ]
