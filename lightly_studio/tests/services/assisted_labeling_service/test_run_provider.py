@@ -43,7 +43,7 @@ def test_segment(mocker: MockerFixture, caplog: pytest.LogCaptureFixture) -> Non
 
     assert predictions == [prediction]
     assert provider.prompts == [PROMPT]
-    assert f"Segmented sample {image.sample_id} in" in caplog.text
+    assert f"Ran segment_interactive on sample {image.sample_id} in" in caplog.text
     (event,) = reported
     assert event.user_email == "ada@example.com"
     assert event.service is usage_reporter.UsageService.AUTOLABELING
