@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -12,7 +12,7 @@ AnnotationsClassName = str
 AnnotationClassToTarget = dict[AnnotationsClassName, float]
 
 # Values of a boolean key can be named either as booleans or as their lowercase names.
-MetadataValueName = Union[str, bool]
+MetadataValueName = str | bool
 MetadataValueToTarget = dict[MetadataValueName, float]
 
 
@@ -113,14 +113,12 @@ class SubpartDiversityStrategy(SamplingStrategy):
 
 
 Strategy = Annotated[
-    Union[
-        AnnotationClassBalancingStrategy,
-        EmbeddingDeduplicationStrategy,
-        EmbeddingDiversityStrategy,
-        EmbeddingSimilarityStrategy,
-        MetadataBalancingStrategy,
-        MetadataWeightingStrategy,
-        SubpartDiversityStrategy,
-    ],
+    AnnotationClassBalancingStrategy
+    | EmbeddingDeduplicationStrategy
+    | EmbeddingDiversityStrategy
+    | EmbeddingSimilarityStrategy
+    | MetadataBalancingStrategy
+    | MetadataWeightingStrategy
+    | SubpartDiversityStrategy,
     Field(discriminator="strategy_name"),
 ]
