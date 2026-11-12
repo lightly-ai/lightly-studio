@@ -6,15 +6,21 @@
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import { useTags } from '$lib/hooks/useTags/useTags';
 
     interface Props {
         /** Invoked when the user clicks the close button in the panel header. */
         onClose: () => void;
+        /** Collection whose tags the editor validates tag names against. */
+        collectionId: string;
     }
 
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
-    const { onClose }: Props = $props();
+    const { onClose, collectionId }: Props = $props();
+    const { tags, isLoading, error } = $derived(useTags({ collection_id: collectionId }));
+    // Skip the tag check until the tags are known, to avoid false warnings.
+    const tagNames = $derived($isLoading || $error ? undefined : $tags.map((tag) => tag.name));
     const { imageQueryExpression, updateQueryExpr } = useImageFilters();
     const queryClient = useQueryClient();
 
@@ -82,6 +88,7 @@
     <QueryEditor
         height="100%"
         value={$imageQueryExpression?.query_expr_str}
+        {tagNames}
         onSave={handleQueryEditorValueChange}
     />
 </div>
