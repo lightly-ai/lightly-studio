@@ -92,6 +92,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         cameraStripCollapsed: cameraPane.collapsed,
         bufferEntireSequence: playback.bufferEntireSequence,
         bufferedRanges: playback.bufferedRanges,
+        bufferStatus: playback.bufferStatus,
         onCameraStripCollapsedChange: cameraPane.setCollapsed,
         onToggleOrthographicProjections: presentation.toggleOrthographicProjections,
         onPointSizeChange: presentation.setPointSize,

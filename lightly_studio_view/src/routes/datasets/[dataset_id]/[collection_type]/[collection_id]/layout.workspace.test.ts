@@ -30,11 +30,13 @@ vi.mock('$lib/workers/maskRendererPool', () => ({
 vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
     clearAnnotationPlotSelection: vi.fn()
 }));
-vi.mock('$lib/utils/buildImageFilter', () => ({
-    buildImageFilter: vi.fn(() => ({}))
+vi.mock('./imageAnnotationCountsFilter', () => ({
+    buildImageAnnotationCountsFilter: vi.fn(() => ({}))
+}));
+vi.mock('./videoAnnotationCountsFilter', () => ({
+    buildVideoAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/utils/buildAnnotationCountsFilters', () => ({
-    buildVideoAnnotationCountsFilter: vi.fn(() => ({})),
     buildVideoFrameAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/components/GridItem', () => ({
@@ -146,7 +148,11 @@ vi.mock('$lib/hooks/useVideosBounds/useVideosBounds.js', () => ({
     useVideoBounds: vi.fn(() => ({ videoBoundsValues: writable({}) }))
 }));
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
-    useImageFilters: vi.fn(() => ({ imageFilter: writable(null) }))
+    useImageFilters: vi.fn(() => ({
+        imageFilter: writable(null),
+        imageQueryExpression: writable(null),
+        updateQueryExpr: vi.fn()
+    }))
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: vi.fn(() => ({ videoFilter: writable(null), filterParams: writable(null) })),

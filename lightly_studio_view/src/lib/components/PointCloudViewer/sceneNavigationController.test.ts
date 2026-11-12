@@ -96,6 +96,27 @@ describe('scene navigation controller', () => {
         }
     );
 
+    it.each([
+        { action: 'forward' as const, sign: 1 },
+        { action: 'backward' as const, sign: -1 }
+    ])('moves a perspective camera $action along its view direction', ({ action, sign }) => {
+        const position = camera.position.clone();
+        const view = controls.target.clone().sub(position).normalize();
+        navigateScene(action);
+        advance(180);
+        const move = camera.position.clone().sub(position);
+        expect(move.clone().normalize().dot(view)).toBeCloseTo(sign);
+        expect(controls.target.distanceTo(move)).toBeCloseTo(0);
+    });
+
+    it('keeps sideways movement level when the camera looks down', () => {
+        const position = camera.position.clone();
+        navigateScene('right');
+        advance(180);
+        expect(camera.position.z).toBeCloseTo(position.z);
+        expect(controls.target.z).toBeCloseTo(0);
+    });
+
     it('cancels all held actions and removes the subscription on disposal', () => {
         startSceneNavigation('left');
         startSceneNavigation('rotate-right');

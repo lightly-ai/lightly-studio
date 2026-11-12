@@ -1,7 +1,7 @@
 """Common type definitions for the lightly_studio package."""
 
 from pathlib import Path
-from typing import Any, TypeVar, Union
+from typing import Any, TypeVar
 from uuid import UUID
 
 from sqlmodel.sql.expression import Select, SelectOfScalar
@@ -42,4 +42,4 @@ QueryType = TypeVar(
     Select[tuple[McapGroupSequenceTable, float]],
 )
 
-PathLike = Union[str, Path]
+PathLike = str | Path

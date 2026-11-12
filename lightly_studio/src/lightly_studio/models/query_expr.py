@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Literal, TypeAlias, Union
+from typing import Annotated, Literal, TypeAlias
 
 import pydantic
 from pydantic import BaseModel, Field, StrictBool, StrictFloat, StrictInt, StrictStr
@@ -161,12 +161,10 @@ class EvaluationMetricNotExpr(BaseModel):
 
 
 SampleEvaluationMetricExpr: TypeAlias = Annotated[
-    Union[
-        EvaluationMetricComparisonExpr,
-        EvaluationMetricAndExpr,
-        EvaluationMetricOrExpr,
-        EvaluationMetricNotExpr,
-    ],
+    EvaluationMetricComparisonExpr
+    | EvaluationMetricAndExpr
+    | EvaluationMetricOrExpr
+    | EvaluationMetricNotExpr,
     Field(discriminator="type"),
 ]
 
@@ -264,25 +262,23 @@ class NotExpr(BaseModel):
 
 
 MatchExpr: TypeAlias = Annotated[
-    Union[
-        StringExpr,
-        IntegerExpr,
-        DatetimeExpr,
-        OrdinalFloatExpr,
-        EqualityFloatExpr,
-        TagsContainsExpr,
-        MetadataComparisonExpr,
-        SampleEvaluationMatchExpr,
-        ConfusionMatchExpr,
-        FalsePositiveMatchExpr,
-        FalseNegativeMatchExpr,
-        ClassificationMatchExpr,
-        ObjectDetectionMatchExpr,
-        SegmentationMaskMatchExpr,
-        AndExpr,
-        OrExpr,
-        NotExpr,
-    ],
+    StringExpr
+    | IntegerExpr
+    | DatetimeExpr
+    | OrdinalFloatExpr
+    | EqualityFloatExpr
+    | TagsContainsExpr
+    | MetadataComparisonExpr
+    | SampleEvaluationMatchExpr
+    | ConfusionMatchExpr
+    | FalsePositiveMatchExpr
+    | FalseNegativeMatchExpr
+    | ClassificationMatchExpr
+    | ObjectDetectionMatchExpr
+    | SegmentationMaskMatchExpr
+    | AndExpr
+    | OrExpr
+    | NotExpr,
     Field(discriminator="type"),
 ]
 

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from pydantic import BaseModel, Field
@@ -40,7 +40,7 @@ class AnnotationColorBy(BaseModel):
 
 
 ColorBy = Annotated[
-    Union[TagColorBy, MetadataFieldColorBy, AnnotationColorBy],
+    TagColorBy | MetadataFieldColorBy | AnnotationColorBy,
     Field(discriminator="type"),
 ]
 
