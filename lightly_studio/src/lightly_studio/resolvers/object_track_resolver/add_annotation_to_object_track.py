@@ -18,6 +18,7 @@ def add_annotation_to_object_track(
     session: Session,
     annotation_id: UUID,
     object_track_id: UUID,
+    commit: bool = True,
 ) -> AnnotationBaseTable:
     """Link an existing annotation to a object track by setting its object_track_id.
 
@@ -25,6 +26,7 @@ def add_annotation_to_object_track(
         session: Database session for executing the operation.
         annotation_id: UUID of the annotation to link.
         object_track_id: UUID of the object track to link the annotation to.
+        commit: Whether to commit the transaction after the update.
 
     Returns:
         The updated annotation with object_track_id set.
@@ -47,4 +49,5 @@ def add_annotation_to_object_track(
         session=session,
         annotation=annotation,
         fields_to_update={"object_track_id": object_track_id},
+        commit=commit,
     )

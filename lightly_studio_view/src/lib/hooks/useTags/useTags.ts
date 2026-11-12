@@ -17,6 +17,8 @@ interface UseTagsReturn {
     clearTagsSelected: () => void;
     clearTagSelected: (tagId: string) => void;
     setTagSelected: (tagId: string, isSelected: boolean) => void;
+    /** Replaces the whole tag selection of the collection in one update and tracks each change. */
+    setTagsSelected: (tagIds: string[]) => void;
     loadTags: () => Promise<void>;
     tagSelectionToggle: (tagId: string) => void;
     isLoading: Readable<boolean>;
@@ -112,14 +114,14 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         });
     };
 
-    const clearTagsSelected = () => {
-        tagsSelectedByCollection.update((selectedByCollection) => {
-            return {
-                ...selectedByCollection,
-                [collection_id]: new Set()
-            };
-        });
+    const replaceTagsSelected = (tagIds: Iterable<string>) => {
+        tagsSelectedByCollection.update((selectedByCollection) => ({
+            ...selectedByCollection,
+            [collection_id]: new Set(tagIds)
+        }));
     };
+
+    const clearTagsSelected = () => replaceTagsSelected([]);
 
     const clearTagSelected = (tagId: string) => {
         tagsSelectedByCollection.update((selectedByCollection) => {
@@ -148,12 +150,33 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         });
     };
 
+    const setTagsSelected = (tagIds: string[]) => {
+        const previous = get(tagsSelectedByCollection)[collection_id] ?? new Set<string>();
+        const next = new Set(tagIds);
+        replaceTagsSelected(next);
+
+        const tagNames = new Map(
+            (get(tagsData)[collection_id] ?? []).map((tag) => [tag.tag_id, tag.name])
+        );
+        const track = (tagId: string, action: 'selected' | 'unselected') =>
+            trackEvent('grid_filter_toggled', {
+                collection_id,
+                filter_type: 'tag',
+                filter_value: tagNames.get(tagId) ?? tagId,
+                action,
+                active_count: next.size
+            });
+        next.forEach((tagId) => !previous.has(tagId) && track(tagId, 'selected'));
+        previous.forEach((tagId) => !next.has(tagId) && track(tagId, 'unselected'));
+    };
+
     return {
         tags: readonly(tags),
         loadTags,
         tagsSelected: readonly(tagsSelectedForCollection),
         tagSelectionToggle,
         setTagSelected,
+        setTagsSelected,
         clearTagsSelected,
         clearTagSelected,
         isLoading: readonly(isLoading),

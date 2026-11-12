@@ -5,6 +5,8 @@ import { derived, get, writable } from 'svelte/store';
 import type { TagView as Tag } from '$lib/services/types';
 import type { ClassifierInfo } from '$lib/services/types';
 import { useSessionStorage } from './useSessionStorage/useSessionStorage';
+import { useLocalStorage } from './useLocalStorage/useLocalStorage';
+import { removeForCollection, renameForCollection } from '$lib/utils/namePerCollection';
 import type { MetadataInfo } from '$lib/services/types';
 import type { MetadataBounds } from '$lib/services/types';
 import type { MetadataValues } from '$lib/services/types';
@@ -68,8 +70,8 @@ const categoricalMetadataValues = useSessionStorage<CategoricalMetadataValues>(
 );
 const metadataInfo = useSessionStorage<MetadataInfo[]>('lightlyStudio_metadata_info', []);
 
-// Store the most recently selected annotation label.
-const lastAnnotationLabel = useSessionStorage<Record<string, string>>(
+// Store the class for the next annotation, kept across sessions.
+const lastAnnotationLabel = useLocalStorage<Record<string, string>>(
     'lightlyStudio_last_annotation_label',
     {}
 );
@@ -369,6 +371,9 @@ export const useGlobalStorage = () => {
                 return state;
             });
         },
+        replaceSelectedAnnotationFilterIds: (annotationFilterIds: Iterable<string>) => {
+            selectedAnnotationFilterIds.set(new Set(annotationFilterIds));
+        },
         clearSelectedAnnotationFilterIds: () => {
             selectedAnnotationFilterIds.update((state) => {
                 state.clear();
@@ -441,6 +446,13 @@ export const useGlobalStorage = () => {
                 return value;
             });
         },
+        // Keeps the class for new annotations right when Settings renames or deletes the class.
+        renameLastAnnotationLabel: (collectionId: string, oldName: string, newName: string) =>
+            lastAnnotationLabel.update((value) =>
+                renameForCollection(value, collectionId, oldName, newName)
+            ),
+        removeLastAnnotationLabel: (collectionId: string, name: string) =>
+            lastAnnotationLabel.update((value) => removeForCollection(value, collectionId, name)),
         lastAnnotationSource,
         updateLastAnnotationSource: (collectionId: string, source: string) => {
             lastAnnotationSource.update((value) => {
@@ -448,6 +460,9 @@ export const useGlobalStorage = () => {
                 return value;
             });
         },
+        // Follows a delete of the source that new annotations go to.
+        removeLastAnnotationSource: (collectionId: string, name: string) =>
+            lastAnnotationSource.update((value) => removeForCollection(value, collectionId, name)),
         lastAnnotationBrushSize,
         updateLastAnnotationBrushSize: (collectionId: string, size: number) => {
             lastAnnotationBrushSize.update((value) => {

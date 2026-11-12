@@ -74,6 +74,8 @@ export interface PointCloudWorkspaceLayoutState {
     bufferEntireSequence: boolean;
     /** Inclusive tick ranges ready for playback. */
     bufferedRanges: readonly BufferRange[];
+    /** Playback waiting state and recovery for failed background loads. */
+    bufferStatus?: ReturnType<typeof createWorkspaceController>['playback']['bufferStatus'];
     /** Persists the collapsed state reported by the camera pane. */
     onCameraStripCollapsedChange: (collapsed: boolean) => void;
     /** Updates orthographic projection visibility. */
@@ -92,6 +94,25 @@ export interface PointCloudWorkspaceLayoutState {
     onHover: (annotationId: string | null) => void;
     /** Creates an annotation at a world-space placement point. */
     onCreateCuboid: (position: Vector3) => void | Promise<void>;
+    /** Whether the next created cuboid also starts a new object track. */
+    isAddingTrack: boolean;
+    /** Arms or cancels creating a new object track with its first cuboid. */
+    onToggleAddTrack: () => void;
+    /** Extends a track onto the ticks from `startSeqNumber` to `endSeqNumber`. */
+    onExtendTrack: (params: {
+        trackId: string;
+        annotationSourceId: string;
+        startSeqNumber: number;
+        endSeqNumber: number;
+    }) => void | Promise<unknown>;
+    /** Deletes a track with its cuboids; resolves to whether it was deleted. */
+    onDeleteTrack: (params: {
+        trackId: string;
+        annotationSourceId: string;
+        annotationIds: readonly string[];
+    }) => Promise<boolean>;
+    /** Starts an object track from an untracked cuboid. */
+    onStartTrack: (annotationId: string) => void | Promise<unknown>;
     /** Navigates to the previous tick. */
     onPreviousFrame: () => void;
     /** Navigates to the next tick. */

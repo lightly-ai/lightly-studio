@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/utils';
     import DatasetDistributionPanel from '$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import type { CategoryCount } from '$lib/components/BarChart';
@@ -222,7 +223,7 @@
             groupLabel: 'Annotation type',
             valueNoun: countMode === AnnotationCountMode.SAMPLES ? 'samples' : 'annotations',
             comparisonLoading: activeClassComparisonQuery?.isFetching,
-            comparisonError: activeClassComparisonQuery?.error?.message
+            comparisonError: getErrorMessage(activeClassComparisonQuery?.error)
         };
 
         // Use the distribution-specific "all" query so the "All types" group
@@ -397,9 +398,9 @@
                 metadataHistogramsQuery.isFetching || imageFieldHistogramsQuery.isFetching,
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,
-            categoricalError: categoricalMetadataQuery.error?.message,
+            categoricalError: getErrorMessage(categoricalMetadataQuery.error),
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
-            comparisonError: metadataTagDistributionsQuery.error?.message
+            comparisonError: getErrorMessage(metadataTagDistributionsQuery.error)
         })
     );
 

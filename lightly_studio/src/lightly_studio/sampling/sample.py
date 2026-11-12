@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from typing import Final, Literal
 from uuid import UUID
 
@@ -18,7 +18,7 @@ from lightly_studio.sampling.sampling_config import (
     MetadataValueToTarget,
     MetadataWeightingStrategy,
     SamplingConfig,
-    SamplingStrategy,
+    Strategy,
     SubpartDiversityStrategy,
 )
 from lightly_studio.sampling.sampling_via_db import sampling_via_database
@@ -358,7 +358,7 @@ class Sampling:
         self,
         n_samples_to_select: int,
         sampling_result_tag_name: str,
-        sampling_strategies: list[SamplingStrategy],
+        sampling_strategies: Sequence[Strategy],
         preselected_tag_name: str | None = None,
         selected_sequence_length: int | None = None,
     ) -> None:

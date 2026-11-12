@@ -33,7 +33,7 @@
             id={`${name}-label`}
             for={name}
             class="min-w-0 flex-1 truncate text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-            data-testid="tags-menu-label"
+            data-testid="checkbox-label"
             title={label}
         >
             {label}

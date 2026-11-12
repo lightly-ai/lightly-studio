@@ -1,6 +1,6 @@
 """Count video annotations by video collection."""
 
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -30,8 +30,8 @@ class CountAnnotationsView(BaseModel):
 def count_video_frame_annotations_by_video_collection(
     session: Session,
     collection_id: UUID,
-    filters: Optional[VideoFilter] = None,
-    annotation_type: Optional[AnnotationType] = None,
+    filters: VideoFilter | None = None,
+    annotation_type: AnnotationType | None = None,
 ) -> list[CountAnnotationsView]:
     """Count annotations attached to videos, including frame and direct video labels.
 
@@ -107,7 +107,7 @@ def count_video_frame_annotations_by_video_collection(
 
 
 def _build_label_video_pairs_subquery(
-    collection_id: UUID, annotation_type: Optional[AnnotationType] = None
+    collection_id: UUID, annotation_type: AnnotationType | None = None
 ) -> Any:
     """Return (label_id, video_id) pairs from frame and direct video annotations.
 

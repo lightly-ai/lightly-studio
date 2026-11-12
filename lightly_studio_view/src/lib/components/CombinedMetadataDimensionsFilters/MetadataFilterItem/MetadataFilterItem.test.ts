@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
 import MetadataFilterItem from './MetadataFilterItem.svelte';
 
@@ -18,6 +18,7 @@ describe('MetadataFilterItem', () => {
                     metadataKey: 'solar_angle',
                     bound: solarAngle,
                     value: { ...solarAngle },
+                    isInteger: false,
                     onValueCommit
                 }
             })
@@ -28,4 +29,32 @@ describe('MetadataFilterItem', () => {
         // Should not commit a filter just from mounting.
         expect(onValueCommit).not.toHaveBeenCalled();
     });
+
+    const ranges = [
+        {
+            bound: { min: 0, max: 1 },
+            value: { min: 0.123456789, max: 0.876543219 },
+            isInteger: false
+        },
+        {
+            bound: { min: 0, max: 28_000_000 },
+            value: { min: 12345, max: 27_000_001 },
+            isInteger: true
+        }
+    ];
+    it.each(ranges.flatMap((props) => [0, 1].map((thumb) => ({ ...props, thumb }))))(
+        'preserves the opposite endpoint when moving thumb $thumb: $isInteger',
+        async ({ thumb, ...props }) => {
+            const onValueCommit = vi.fn();
+            render(MetadataFilterItem, { ...props, metadataKey: 'score', onValueCommit });
+            const slider = screen.getAllByRole('slider')[thumb];
+            const key = thumb === 0 ? 'ArrowRight' : 'ArrowLeft';
+            await fireEvent.keyDown(slider, { key });
+            await fireEvent.keyUp(slider, { key });
+            expect(onValueCommit).toHaveBeenLastCalledWith('score', [
+                thumb === 0 ? expect.any(Number) : props.value.min,
+                thumb === 1 ? expect.any(Number) : props.value.max
+            ]);
+        }
+    );
 });
