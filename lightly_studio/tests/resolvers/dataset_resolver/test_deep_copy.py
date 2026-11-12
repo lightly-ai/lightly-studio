@@ -16,6 +16,7 @@ from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricC
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.labeling_model import LabelingModelCreate
 from lightly_studio.models.mcap_group_component_definition import (
     McapDataType,
     McapGroupComponentDefinitionTable,
@@ -39,6 +40,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
     image_resolver,
+    labeling_model_resolver,
     mcap_group_sequence_resolver,
     metadata_resolver,
     object_track_resolver,
@@ -454,6 +456,40 @@ def test_deep_copy__with_embeddings(db_session: Session) -> None:
     original_sample_ids = {img1.sample_id, img2.sample_id}
     copied_sample_ids = {emb.sample_id for emb in copied_embeddings}
     assert original_sample_ids.isdisjoint(copied_sample_ids)
+
+
+def test_deep_copy__with_labeling_model(db_session: Session) -> None:
+    original = create_collection(session=db_session, collection_name="original")
+    other = create_collection(session=db_session, collection_name="other")
+    saved = labeling_model_resolver.set_remote(
+        session=db_session,
+        labeling_model=LabelingModelCreate(
+            dataset_id=original.dataset_id,
+            model_id="car-detector",
+            url="http://labeling.test",
+            api_key="secret",
+        ),
+    )
+    labeling_model_resolver.set_remote(
+        session=db_session,
+        labeling_model=LabelingModelCreate(
+            dataset_id=other.dataset_id, model_id="other-detector", url="http://other.test"
+        ),
+    )
+
+    copied = dataset_resolver.deep_copy(
+        session=db_session, dataset_id=original.dataset_id, copy_name="copied"
+    )
+
+    (copied_model,) = labeling_model_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=copied.dataset_id
+    )
+    assert copied_model.labeling_model_id != saved.labeling_model_id
+    assert (copied_model.model_id, copied_model.url, copied_model.api_key) == (
+        "car-detector",
+        "http://labeling.test",
+        "secret",
+    )
 
 
 def test_deep_copy__with_default_embedding_space(db_session: Session) -> None:

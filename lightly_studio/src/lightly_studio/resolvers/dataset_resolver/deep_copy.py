@@ -59,6 +59,7 @@ from lightly_studio.models.group_component_definition import (
     GroupComponentDefinitionTable,
 )
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.labeling_model import LabelingModelTable
 from lightly_studio.models.mcap import McapTable
 from lightly_studio.models.mcap_group_component_definition import (
     McapGroupComponentDefinitionTable,
@@ -136,6 +137,9 @@ def deep_copy(
     _copy_object_tracks(session=session, new_dataset_id=new_dataset_id)
     _copy_annotation_labels(session=session, new_dataset_id=new_dataset_id)
     _copy_embedding_models(session=session, new_dataset_id=new_dataset_id, now=now)
+    _copy_labeling_models(
+        session=session, old_dataset_id=dataset_id, new_dataset_id=new_dataset_id, now=now
+    )
     _copy_samples(session=session, now=now)
     _copy_evaluation_runs(session=session, new_dataset_id=new_dataset_id, now=now)
 
@@ -514,6 +518,27 @@ def _copy_embedding_models(session: Session, new_dataset_id: UUID, now: datetime
         target=EmbeddingModelTable,
         source=src,
         from_clause=from_clause,
+        overrides=overrides,
+    )
+
+
+def _copy_labeling_models(
+    session: Session, old_dataset_id: UUID, new_dataset_id: UUID, now: datetime
+) -> None:
+    """Copy the saved labeling models, with new ids and the new dataset_id."""
+    table = _table(LabelingModelTable)
+    # No other table references a labeling model, so the copy needs no id map.
+    src = sa_select(table).where(table.c["dataset_id"] == old_dataset_id).subquery("src")
+    overrides = {
+        "labeling_model_id": func.gen_random_uuid(),
+        "dataset_id": literal(new_dataset_id),
+        "created_at": literal(now),
+    }
+    _copy_table(
+        session=session,
+        target=LabelingModelTable,
+        source=src,
+        from_clause=src,
         overrides=overrides,
     )
 
