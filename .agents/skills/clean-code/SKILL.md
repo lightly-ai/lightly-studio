@@ -55,16 +55,14 @@ def export_json(samples):
 
 ## Size
 
-- The linters set the complexity limits: ruff `C90` and `PL` for Python, and
-  `eslint.complexity.config.js` for the frontend. Both use a cyclomatic complexity of 10.
-- Do not add `noqa`, `type: ignore`, or `eslint-disable` to pass a complexity check. Split the
-  code.
+- The linters check the complexity. Do not add `noqa` or `eslint-disable` to pass the check.
+  Split the code.
 - If a function is longer than approximately 20 lines, make sure that it still does one thing.
 - Keep a file under 400 lines. The frontend guide has a lower limit for components.
 
 ## Dead Code and Duplication
 
-- Delete dead code and commented-out code. Do not keep an unused argument for later.
+- Delete dead code and commented-out code.
 - Extract duplicated code at the third copy, not before.
 
 ## Errors
