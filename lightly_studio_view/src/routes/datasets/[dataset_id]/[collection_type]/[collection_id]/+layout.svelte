@@ -364,7 +364,11 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { imageFilter: imageFilterFromHook } = useImageFilters();
+    const {
+        imageFilter: imageFilterFromHook,
+        imageQueryExpression,
+        updateQueryExpr
+    } = useImageFilters();
 
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
 
@@ -629,6 +633,8 @@
                         >
                             {#if isImages}
                                 <QueryControl
+                                    queryExpression={$imageQueryExpression}
+                                    {updateQueryExpr}
                                     onOpen={() => {
                                         setActivePanel(
                                             $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
@@ -783,7 +789,12 @@
                                 {/await}
                             {:else if $activePanel === 'queryEditor' && isImages}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                    <QueryEditorPanel
+                                        sampleType="image"
+                                        queryExpression={$imageQueryExpression}
+                                        {updateQueryExpr}
+                                        onClose={() => setActivePanel('none')}
+                                    />
                                 {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}
