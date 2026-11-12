@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Type exact minimum and maximum values for numeric metadata filters alongside the sliders.
 - Type exact image width, image height, and video frame number filter values alongside the sliders.
 - Type exact video width, height, FPS, and duration filter values alongside the sliders.
+- Typing `(`, `[`, `"` or `'` in the query editor wraps the selected text in that pair.
 
 ### Changed
 
@@ -31,6 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Users with the labeler or viewer role can only choose existing annotation classes in the labeling tools.
 - BREAKING: Annotation classes have new database fields for their custom color. DuckDB databases created with an earlier version are not upgraded and stop working. Re-index your data.
 - Python SDK: BREAKING: Upgraded scikit-learn to 1.9.1 on Python 3.11 and newer. Retrain saved random-forest classifiers created with scikit-learn 1.7.2 before loading them in the upgraded environment.
+- Python SDK: BREAKING: `multi_strategies` accepts only the built-in sampling strategies, and `SamplingStrategy` is removed. Type strategy lists as `Sequence[Strategy]` from `lightly_studio.sampling.sampling_config`.
 
 ### Deprecated
 
