@@ -12,7 +12,7 @@ from enum import Enum
 
 from PIL.Image import Image
 
-from lightly_studio_serve.types import PredictedAnnotation
+from lightly_studio_serve.labeling.types import PredictedAnnotation
 
 
 class ModelTask(str, Enum):
