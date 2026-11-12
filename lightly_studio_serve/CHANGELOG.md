@@ -12,7 +12,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Python 3.15 support.
-- `LabelingModel`, the base class for a model that labels images in the LightlyStudio GUI.
 
 ### Changed
 
