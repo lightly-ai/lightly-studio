@@ -6,6 +6,7 @@
     import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { Input } from '$lib/components/ui/input';
+    import { setFieldSearchContext } from '$lib/components/MetadataFieldHeader/fieldSearchContext';
     import MetadataFieldRow from './MetadataFieldRow.svelte';
     import { MANY_FIELDS, isFieldExpanded, matchesFieldSearch } from './metadataFieldList';
     import { isFieldActive, orderByActive } from './metadataFields';
@@ -54,6 +55,15 @@
     });
 
     let fieldSearch = $state('');
+    setFieldSearchContext(() => fieldSearch);
+    let rowsElement = $state<HTMLElement>();
+    let rowsMinHeight = $state<number>();
+    // While searching, the rows keep their height so the search box does not move.
+    const setFieldSearch = (value: string) => {
+        if (!fieldSearch && value) rowsMinHeight = rowsElement?.offsetHeight;
+        if (!value) rowsMinHeight = undefined;
+        fieldSearch = value;
+    };
     let expandedOverrides = $state<Record<string, boolean>>({});
     const fieldCount = $derived(list.fields.length);
     const isExpanded = (id: string) => isFieldExpanded(expandedOverrides, id, fieldCount);
@@ -92,7 +102,7 @@
         {#if fieldCount > MANY_FIELDS}
             <Input
                 value={fieldSearch}
-                oninput={(event) => (fieldSearch = event.currentTarget.value)}
+                oninput={(event) => setFieldSearch(event.currentTarget.value)}
                 placeholder="Search metadata fields…"
                 aria-label="Search metadata fields"
                 class="h-8"
@@ -107,7 +117,11 @@
             />
         </div>
 
-        <div class="space-y-4">
+        <div
+            class="space-y-4"
+            bind:this={rowsElement}
+            style:min-height={rowsMinHeight ? `${rowsMinHeight}px` : undefined}
+        >
             {#each ordered.fields as field, index (field.id)}
                 {@const expanded = isExpanded(field.id)}
                 {#if index === ordered.activeCount && ordered.activeCount > 0}

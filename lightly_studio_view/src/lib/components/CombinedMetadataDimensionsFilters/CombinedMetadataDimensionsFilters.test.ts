@@ -150,6 +150,26 @@ describe('CombinedMetadataDimensionsFilters', () => {
         await fireEvent.input(search, { target: { value: 'alpha' } });
 
         expect(rowOrder(container)).toEqual(['numeric:alpha_2', '---', 'numeric:alpha_1']);
+        const marks = [...container.querySelectorAll('mark')].map((mark) => mark.textContent);
+        expect(marks).toEqual(['alpha', 'alpha']);
+    });
+
+    it('keeps the list height while searching so the search box does not move', async () => {
+        const keys = ['alpha_1', 'alpha_2', 'beta_1', 'beta_2', 'beta_3', 'gamma', 'delta'];
+        const storage = useGlobalStorage();
+        storage.updateMetadataBounds(Object.fromEntries(keys.map((k) => [k, { min: 0, max: 10 }])));
+        storage.updateMetadataValues(Object.fromEntries(keys.map((k) => [k, { min: 0, max: 10 }])));
+        const height = vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(400);
+        const { container } = render(CombinedMetadataDimensionsFilters, defaultProps);
+        const rows = container.querySelector('[data-field-id]')!.parentElement!;
+        const search = screen.getByRole('textbox', { name: 'Search metadata fields' });
+
+        await fireEvent.input(search, { target: { value: 'alpha' } });
+        expect(rows.style.minHeight).toBe('400px');
+
+        await fireEvent.input(search, { target: { value: '' } });
+        expect(rows.style.minHeight).toBe('');
+        height.mockRestore();
     });
 
     it('requests value counts for a collapsed active categorical field', () => {
