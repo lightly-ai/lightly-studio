@@ -55,8 +55,9 @@ def export_json(samples):
 
 ## Size
 
-- The linters check the complexity. Do not add `noqa` or `eslint-disable` to pass the check.
-  Split the code.
+- Do not add `noqa`, `type: ignore`, or `eslint-disable` to pass a lint or type check. Fix the
+  code; for a complexity error, split the function. A suppression is acceptable only for an
+  exception that a language guide lists.
 - If a function is longer than approximately 20 lines, make sure that it still does one thing.
 - Keep a file under 400 lines. The frontend guide has a lower limit for components.
 
