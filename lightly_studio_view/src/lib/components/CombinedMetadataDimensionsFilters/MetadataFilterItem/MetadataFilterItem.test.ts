@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
 import MetadataFilterItem from './MetadataFilterItem.svelte';
 
@@ -23,9 +23,27 @@ describe('MetadataFilterItem', () => {
             })
         ).not.toThrow();
 
-        expect(screen.getByText('solar angle')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'solar_angle' })).toBeInTheDocument();
 
         // Should not commit a filter just from mounting.
         expect(onValueCommit).not.toHaveBeenCalled();
+    });
+
+    it('hides the slider while collapsed and toggles from the field name', async () => {
+        const onToggleExpanded = vi.fn();
+        render(MetadataFilterItem, {
+            props: {
+                metadataKey: 'score',
+                bound: { min: 0, max: 1 },
+                value: { min: 0, max: 1 },
+                onValueCommit: vi.fn(),
+                expanded: false,
+                onToggleExpanded
+            }
+        });
+
+        expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'score' }));
+        expect(onToggleExpanded).toHaveBeenCalledOnce();
     });
 });
