@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import io
 from collections.abc import Sequence
 from uuid import UUID
 
 from lightly_studio_serve.labeling_model import LabelingModel, ModelTask
 from lightly_studio_serve.types import PredictedAnnotation
+from PIL import Image as PILImage
 from PIL.Image import Image
 
 from lightly_studio.assisted_labeling.provider import (
@@ -50,7 +52,7 @@ def make_prompt(
 
 
 class StubLabelingModel(LabelingModel):
-    """A labeling model that returns fixed predictions and records the thresholds it got."""
+    """A labeling model that records its inputs, then returns fixed predictions or raises."""
 
     def __init__(
         self,
@@ -58,11 +60,14 @@ class StubLabelingModel(LabelingModel):
         task: ModelTask = ModelTask.OBJECT_DETECTION,
         class_names: Sequence[str] = (),
         predictions: Sequence[PredictedAnnotation] = (),
+        error: Exception | None = None,
     ) -> None:
         self._model_id = model_id
         self._task = task
         self._class_names = list(class_names)
         self._predictions = list(predictions)
+        self._error = error
+        self.images: list[Image] = []
         self.thresholds: list[float] = []
 
     @property
@@ -79,8 +84,18 @@ class StubLabelingModel(LabelingModel):
 
     def predict(
         self,
-        image: Image,  # noqa: ARG002
+        image: Image,
         threshold: float,
     ) -> list[PredictedAnnotation]:
+        self.images.append(image)
         self.thresholds.append(threshold)
+        if self._error is not None:
+            raise self._error
         return self._predictions
+
+
+def png_bytes(width: int, height: int) -> bytes:
+    """Return the content of a black PNG file of the size."""
+    buffer = io.BytesIO()
+    PILImage.new(mode="RGB", size=(width, height)).save(buffer, format="PNG")
+    return buffer.getvalue()
