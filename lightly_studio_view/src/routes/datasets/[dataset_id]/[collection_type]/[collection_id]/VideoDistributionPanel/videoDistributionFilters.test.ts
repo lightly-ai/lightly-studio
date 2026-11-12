@@ -2,6 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { buildVideoDistributionFilters } from './videoDistributionFilters';
 
 describe('buildVideoDistributionFilters', () => {
+    it('includes the active query in filtered counts while keeping base totals stable', () => {
+        const expression = {
+            query_expr: { match_expr: { type: 'and' as const, children: [] } },
+            query_expr_str: 'duration_s > 10'
+        };
+        const { filter, baseFilter } = buildVideoDistributionFilters(
+            { collection_id: 'videos' },
+            expression
+        );
+
+        expect(filter?.sample_filter?.query_expr).toEqual(expression.query_expr);
+        expect(baseFilter?.sample_filter?.query_expr).toBeUndefined();
+    });
     it('returns no filters without filter params', () => {
         expect(buildVideoDistributionFilters(null)).toEqual({
             filter: undefined,
