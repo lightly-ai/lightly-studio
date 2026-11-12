@@ -8,8 +8,11 @@ interface UseLabelingModelsReturn {
     readonly disabledReason: string | null;
 }
 
-export const useLabelingModels = (): UseLabelingModelsReturn => {
-    const query = createQuery(() => getLabelingModelsOptions());
+// Loads the labeling models that can run on the images of the collection.
+export const useLabelingModels = (getCollectionId: () => string): UseLabelingModelsReturn => {
+    const query = createQuery(() =>
+        getLabelingModelsOptions({ query: { collection_id: getCollectionId() } })
+    );
     const models = $derived(query.data?.models ?? []);
     const disabledReason = $derived(
         getLabelingModelsDisabledReason({ models: query.data, isError: query.isError })

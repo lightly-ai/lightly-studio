@@ -106,6 +106,10 @@ class RemoteLabelingModelRunner:
         """Names of the annotation classes that the model can predict."""
         return self._description.class_names
 
+    def close(self) -> None:
+        """Close the client of the runner."""
+        self._client.close()
+
     def predict(self, image: ProviderImage, threshold: float) -> list[PredictedAnnotation]:
         """Send the image file to the server and return its predictions.
 
