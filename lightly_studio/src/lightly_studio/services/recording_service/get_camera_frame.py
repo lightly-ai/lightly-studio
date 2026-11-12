@@ -344,7 +344,8 @@ def _encode_through(
 def _store_held_frame(decoder: VideoDecoder, jpeg_id: JpegId) -> bytes:
     """Caches the picture the decoder already holds, then releases it."""
     frame = decoder.frame(log_time_ns=jpeg_id.log_time_ns)
-    assert frame is not None
+    if frame is None:
+        raise RuntimeError("Expected `frame` to be set.")
     data = _store_jpeg(jpeg_id=jpeg_id, frame=frame)
     decoder.release_frames_up_to(log_time_ns=jpeg_id.log_time_ns)
     return data

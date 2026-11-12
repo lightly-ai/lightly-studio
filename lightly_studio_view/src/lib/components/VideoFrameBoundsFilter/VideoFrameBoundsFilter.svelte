@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { formatInteger } from '$lib/utils';
+    import { NumericRangeInputs } from '$lib/components/NumericRangeInputs';
     import { Slider } from '$lib/components/ui/slider/index.js';
     import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 
@@ -30,10 +30,13 @@
 {#if $videoFramesBounds && $videoFramesBoundsValues}
     <div class="space-y-1">
         <h2 class="text-md">Frame number</h2>
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatInteger($videoFramesBoundsValues.frame_number.min)}</span>
-            <span>{formatInteger($videoFramesBoundsValues.frame_number.max)}</span>
-        </div>
+        <NumericRangeInputs
+            label="Frame number"
+            bound={$videoFramesBounds.frame_number}
+            value={$videoFramesBoundsValues.frame_number}
+            integer
+            onValueCommit={handleChangeFrameNumber}
+        />
         <div class="relative p-2">
             <Slider
                 type="multiple"

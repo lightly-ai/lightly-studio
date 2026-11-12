@@ -17,16 +17,16 @@ Create Date: 2026-08-18 00:00:00.000000
 
 import logging
 from collections.abc import Sequence
-from typing import Any, Union
+from typing import Any
 
 import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "4f6a7b8c9d0e"
-down_revision: Union[str, Sequence[str], None] = "a3b4c5d6e7f8"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | Sequence[str] | None = "a3b4c5d6e7f8"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 _INDEX_NAME = "uq_collection_name_root"
 

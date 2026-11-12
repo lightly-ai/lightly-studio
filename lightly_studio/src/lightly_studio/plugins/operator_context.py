@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Annotated, Union
+from typing import Annotated
 from uuid import UUID
 
 from pydantic import Field
@@ -24,14 +24,7 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 # first-listed member silently wins. The discriminator removes that ambiguity, so
 # every payload MUST include ``filter_type``.
 AnyFilter = Annotated[
-    Union[
-        ImageFilter,
-        VideoFrameFilter,
-        VideoFilter,
-        AnnotationsFilter,
-        GroupFilter,
-        SampleFilter,
-    ],
+    ImageFilter | VideoFrameFilter | VideoFilter | AnnotationsFilter | GroupFilter | SampleFilter,
     Field(discriminator="filter_type"),
 ]
 

@@ -5,6 +5,8 @@
  * is a synchronous call into `parseLightlyQuery`. */
 
 import * as monaco from 'monaco-editor';
+import type { Query } from '../language/generated/ast';
+import { getQueryScopeError } from '../language/getQueryScopeError';
 import {
     createLightlyQueryServices,
     type LightlyQueryServicesBundle
@@ -15,6 +17,7 @@ import {
 } from '../language/query-expr-translation';
 import { lexerErrorToMarker, type LexerErrorLike } from './lexerErrorToMarker';
 import { parserErrorToMarker, type ParserErrorLike } from './parserErrorToMarker';
+import { getModelQuerySource, modelSampleTypes } from './modelQueryScope';
 
 const LANGUAGE_ID = 'lightly-query';
 const MARKER_OWNER = LANGUAGE_ID;
@@ -38,12 +41,12 @@ export interface UseLightlyQueryLanguageReturn {
      * pass, subscribes to content changes to keep diagnostics in sync, and
      * publishes errors as Monaco markers. Returns a cleanup function that
      * disposes the subscription and clears any markers this hook owns. */
-    attach: (model: monaco.editor.ITextModel) => () => void;
+    attach: (model: monaco.editor.ITextModel, sampleType?: 'image' | 'video') => () => void;
     /** Synchronously parses a query string and returns either the translated
      * backend `QueryExpr` (`status: 'ok'`) or the collected lexer/parser errors
      * (`status: 'error'`). Intended for one-off translation outside the editor
      * lifecycle (e.g. on Save). */
-    translateQuery: (value: string) => QueryExprTranslationResult;
+    translateQuery: (value: string, sampleType?: 'image' | 'video') => QueryExprTranslationResult;
 }
 
 export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
@@ -51,25 +54,48 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
     const parser = services.LightlyQuery.parser.LangiumParser;
 
     function validate(model: monaco.editor.ITextModel): void {
-        const result = parser.parse(model.getValue());
+        const { text, lineOffset } = getModelQuerySource(model);
+        const result = parser.parse<Query>(text);
         const markers = [
             ...result.lexerErrors.map((e) => lexerErrorToMarker(e as LexerErrorLike)),
             ...result.parserErrors.map((e) => parserErrorToMarker(e as ParserErrorLike))
-        ];
+        ].map((marker) => ({
+            ...marker,
+            startLineNumber: Math.max(1, marker.startLineNumber - lineOffset),
+            endLineNumber: Math.max(1, marker.endLineNumber - lineOffset)
+        }));
+        const scopeError = getQueryScopeError(result.value, modelSampleTypes.get(model));
+        if (markers.length === 0 && scopeError) {
+            const start = result.value.$cstNode?.range.start;
+            markers.push(
+                parserErrorToMarker({
+                    message: scopeError,
+                    token: {
+                        startLine: (start?.line ?? 0) + 1,
+                        startColumn: (start?.character ?? 0) + 1
+                    }
+                })
+            );
+        }
         monaco.editor.setModelMarkers(model, MARKER_OWNER, markers);
     }
 
-    function attach(model: monaco.editor.ITextModel): () => void {
+    function attach(model: monaco.editor.ITextModel, sampleType?: 'image' | 'video'): () => void {
+        if (sampleType) modelSampleTypes.set(model, sampleType);
         validate(model);
         const sub = model.onDidChangeContent(() => validate(model));
         return () => {
             sub.dispose();
+            modelSampleTypes.delete(model);
             monaco.editor.setModelMarkers(model, MARKER_OWNER, []);
         };
     }
 
-    function translateQuery(value: string): QueryExprTranslationResult {
-        return parseLightlyQuery(parser, value);
+    function translateQuery(
+        value: string,
+        sampleType?: 'image' | 'video'
+    ): QueryExprTranslationResult {
+        return parseLightlyQuery(parser, value, sampleType);
     }
 
     return { attach, translateQuery };

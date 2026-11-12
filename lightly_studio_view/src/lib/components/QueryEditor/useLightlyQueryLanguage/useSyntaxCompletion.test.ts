@@ -139,6 +139,45 @@ describe('useSyntaxCompletion', () => {
         mocks.build.mockResolvedValue(undefined);
     });
 
+    it('completes implicit video queries at visible positions', async () => {
+        const { provideCompletionItems } = await loadAndAttach([
+            {
+                label: 'AND',
+                textEdit: {
+                    newText: 'AND',
+                    range: {
+                        start: { line: 1, character: 16 },
+                        end: { line: 1, character: 17 }
+                    }
+                }
+            }
+        ]);
+        const { modelSampleTypes } = await import('./modelQueryScope');
+        const model = makeModel('duration_s > 10 A', { startColumn: 17, endColumn: 18 });
+        modelSampleTypes.set(model as never, 'video');
+        const result = await provideCompletionItems(
+            model as never,
+            { lineNumber: 1, column: 18 } as never
+        );
+        const labels = result.suggestions.map((item) => item.label);
+        expect(labels).toContain('duration_s');
+        expect(labels).toContain('fps');
+        expect(labels).not.toContain('created_at');
+        const completion = result.suggestions.find((item) => item.label === 'AND')!;
+        expect(completion.range).toEqual({
+            startLineNumber: 1,
+            endLineNumber: 1,
+            startColumn: 17,
+            endColumn: 18
+        });
+        const image = await provideCompletionItems(
+            makeModel('') as never,
+            { lineNumber: 1, column: 1 } as never
+        );
+        expect(image.suggestions.map((item) => item.label)).toContain('created_at');
+        expect(image.suggestions.map((item) => item.label)).not.toContain('duration_s');
+    });
+
     it('registers a Monaco completion provider with the supplied languageId and trigger characters', async () => {
         const { languageId, triggerCharacters } = await loadAndAttach([]);
 

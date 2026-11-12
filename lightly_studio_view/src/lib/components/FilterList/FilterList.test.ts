@@ -115,6 +115,13 @@ describe('FilterList', () => {
         expect(screen.getAllByTestId('filter-list-item')).toHaveLength(100);
     });
 
+    it('renders all rows when paging is off', () => {
+        renderList({ items: makeItems(120), paged: false });
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(120);
+        expect(screen.queryByRole('button', { name: /more/ })).not.toBeInTheDocument();
+    });
+
     it('goes back to the first page when the search changes', async () => {
         renderList({ items: makeItems(120) });
 

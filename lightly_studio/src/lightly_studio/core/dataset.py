@@ -302,7 +302,8 @@ def load_root_collection(
     collection = collection_resolver.get_by_id(
         session=db_manager.persistent_session(), collection_id=collection_id
     )
-    assert collection is not None
+    if collection is None:
+        raise RuntimeError("Expected `collection` to be set.")
     if collection.sample_type != sample_type:
         raise ValueError(
             f"Dataset with name '{name}' already exists with sample type "
