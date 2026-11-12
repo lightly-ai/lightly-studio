@@ -43,5 +43,29 @@ export default ts.config(
             'src/lib/components/QueryEditor/language-server-worker.ts'
         ]
     },
-    storybook.configs['flat/recommended']
+    storybook.configs['flat/recommended'],
+    {
+        rules: {
+            'no-console': ['error', { allow: ['warn', 'error'] }],
+            'no-restricted-imports': [
+                'error',
+                { paths: [{ name: '$app/stores', message: 'Use $app/state.' }] }
+            ]
+        }
+    },
+    {
+        // The performance tests print their measurements.
+        files: ['e2e/**'],
+        rules: { 'no-console': 'off' }
+    },
+    {
+        // Legacy files. Remove a file from this list when you convert it to `$app/state`.
+        files: [
+            'src/lib/components/Operator/OperatorDialog.svelte',
+            'src/lib/components/Operator/OperatorsMenu.svelte',
+            'src/routes/+error.svelte',
+            'src/routes/error.test.ts'
+        ],
+        rules: { 'no-restricted-imports': 'off' }
+    }
 );
