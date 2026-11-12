@@ -1,6 +1,6 @@
 ---
 name: python-guide
-description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, no assertions outside tests, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
+description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, assertions only for type narrowing outside tests, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
 ---
 
 # Python Code Guidelines
@@ -106,15 +106,16 @@ Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current s
 
 ## Assertions
 
-Do not use `assert` outside tests. Python removes assertions with the `-O` flag, and an
-`AssertionError` does not tell the caller what to do.
+Do not use `assert` outside tests, with one exception: to narrow a type that mypy cannot infer.
 
-- Raise an exception for a condition that can fail, also for an internal error.
-- To narrow a type for mypy, check the value and raise.
+- Raise an exception for a condition that can fail, also for an internal error. Python removes
+  assertions with the `-O` flag, and an `AssertionError` does not tell the caller what to do.
+- Use `assert` for mypy only if the surrounding code makes sure that the condition is true.
 - Do not check that a variable follows its type hint.
 
 ```python
-# Bad
+# Bad: The condition can fail.
+sample = sample_resolver.get_by_id(session=session, sample_id=sample_id)
 assert sample is not None
 assert len(values) >= 2
 
@@ -123,6 +124,11 @@ if sample is None:
     raise ValueError(f"Sample {sample_id} does not exist.")
 if len(values) < 2:
     raise ValueError("At least 2 values are necessary.")
+
+# Good: The filter makes sure that the value is set, but mypy cannot infer it.
+for video in videos_with_fps:
+    assert video.fps is not None
+    duration_s = video.frame_count / video.fps
 ```
 
 ## Positional vs. Keyword Arguments
