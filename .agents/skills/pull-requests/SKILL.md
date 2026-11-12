@@ -26,7 +26,8 @@ fix: keep the selected tag when the grid reloads
 - The guardrail does not count `uv.lock`, the `package-lock.json` files,
   `lightly_studio/tests/benchmarks/`, and `lightly_studio/src/lightly_studio/vendor/`.
 - Measure before each push: `git diff --numstat $(git merge-base origin/main HEAD)`.
-- Split a larger change into stacked PRs.
+- The limit is a target, not a hard rule. Split a larger change into stacked PRs if each part is
+  reviewable alone. Do not split one coherent change only to fit; a larger PR gets a human review.
 
 ## One Purpose
 
