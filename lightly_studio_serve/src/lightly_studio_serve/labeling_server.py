@@ -18,14 +18,13 @@ from pydantic import ValidationError
 
 from lightly_studio_serve import labeling_protocol, protocol, validation
 from lightly_studio_serve.errors import LabelingModelError
-from lightly_studio_serve.labeling_model import LabelingModel
+from lightly_studio_serve.labeling import LabelingModel, PredictedAnnotation
 from lightly_studio_serve.labeling_protocol import (
     LabelingDescribeResponse,
     PredictionsResponse,
     WirePrediction,
 )
 from lightly_studio_serve.protocol import ServerLimits
-from lightly_studio_serve.types import PredictedAnnotation
 
 logger = logging.getLogger(__name__)
 

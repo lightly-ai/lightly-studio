@@ -34,7 +34,7 @@ from lightly_studio_serve.embedder import (
     VideoBytesEmbedder,
 )
 from lightly_studio_serve.errors import EmbedderContractError, LabelingModelError
-from lightly_studio_serve.labeling_model import LabelingModel
+from lightly_studio_serve.labeling import LabelingModel
 from lightly_studio_serve.middleware import BearerAuth, Readiness, RequestSizeLimit
 from lightly_studio_serve.protocol import (
     DescribeResponse,
