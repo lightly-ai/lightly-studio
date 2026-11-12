@@ -628,7 +628,7 @@ def _add_strategy_to_mundig(
             strength=strat.strength,
         )
     else:
-        assert_never(strat)
+        assert_never(strat)  # pragma: no cover - validation allows only known strategies
 
 
 def _add_similarity_to_mundig(
