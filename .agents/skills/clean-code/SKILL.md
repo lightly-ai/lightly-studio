@@ -71,14 +71,15 @@ def export_json(samples):
 
 - Do not catch an exception that you do not handle. Do not write a bare `except Exception` or an
   empty `catch`.
-- Do not use `assert` outside tests. Raise an exception for a condition that can fail. The one
-  exception is an `assert` that narrows a type for mypy; see the Python guide.
+- Do not use `assert` outside tests, also not to narrow a type. Use standard control flow or an
+  explicit exception.
 
 ## Comments
 
 - The code says what it does. A comment gives a reason that the code cannot show.
 - If a comment says what the code does, rename or extract until the comment is not necessary.
-- Keep an inline comment to one line. Put more detail in the docstring.
+- Keep an inline comment short, one line if possible. A longer comment is acceptable for inner
+  logic that names cannot explain. The contract of the function goes in the docstring.
 - Describe the current state, not the change.
 - Write comments, docstrings, and error messages in ASD-STE100 Simplified Technical English:
   short sentences, active voice, present tense, and one meaning for each word.
