@@ -10,6 +10,10 @@ import type {
     VideoSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
+import type { useImageFilters } from '$lib/hooks';
+type QueryExpression = NonNullable<
+    Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0]
+>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFilterParams = {
@@ -26,89 +30,75 @@ export type VideoFilterParams = {
 };
 
 const filterParams = writable<VideoFilterParams | null>(null);
+const videoQueryExpression = writable<QueryExpression | null>(null);
 
-export const buildVideoFilter = ($filterParams: VideoFilterParams | null): VideoFilter | null => {
+export const buildVideoFilter = (
+    $filterParams: VideoFilterParams | null,
+    queryExpression?: QueryExpression | null
+): VideoFilter | null => {
     if (!$filterParams?.collection_id) {
         return null;
     }
 
-    const filters: VideoFilter = {
-        filter_type: 'video'
-    };
-
-    // Add video-specific bounds (width, height, fps, duration_s)
-    if ($filterParams.video_bounds) {
-        const bounds = $filterParams.video_bounds;
-
-        if (bounds.width) {
-            filters.width = {
-                min: bounds.width.min ?? undefined,
-                max: bounds.width.max ?? undefined
-            };
-        }
-
-        if (bounds.height) {
-            filters.height = {
-                min: bounds.height.min ?? undefined,
-                max: bounds.height.max ?? undefined
-            };
-        }
-
-        if (bounds.fps) {
-            filters.fps = bounds.fps;
-        }
-
-        if (bounds.duration_s) {
-            filters.duration_s = bounds.duration_s;
-        }
+    const filters = buildVideoBounds($filterParams.video_bounds);
+    const sampleFilter = buildSampleFilter($filterParams.filters ?? {});
+    if (queryExpression?.query_expr) {
+        sampleFilter.query_expr = queryExpression.query_expr;
     }
-
-    const sampleFilter: SampleFilter = {};
-
-    const sampleIds = $filterParams.filters?.sample_ids;
-    if (sampleIds && sampleIds.length > 0) {
-        sampleFilter.sample_ids = sampleIds;
-    }
-
-    const embeddingRegion = $filterParams.filters?.embedding_region;
-    if (embeddingRegion) {
-        sampleFilter.embedding_region = embeddingRegion;
-    }
-
-    const tagIds = $filterParams.filters?.tag_ids;
-    if (tagIds && tagIds.length > 0) {
-        sampleFilter.tag_ids = tagIds;
-    }
-
-    if (
-        $filterParams.filters?.metadata_values ||
-        $filterParams.filters?.categorical_metadata_values
-    ) {
-        const metadataFilters = createMetadataFilters(
-            $filterParams.filters.metadata_values ?? {},
-            $filterParams.filters.categorical_metadata_values ?? {}
-        );
-        if (metadataFilters.length > 0) {
-            sampleFilter.metadata_filters = metadataFilters;
-        }
-    }
-
     if (Object.keys(sampleFilter).length > 0) {
         filters.sample_filter = sampleFilter;
     }
     const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
-    if (annotationFramesLabelIds && annotationFramesLabelIds.length > 0) {
+    if (annotationFramesLabelIds?.length) {
         filters.frame_annotation_filter = {
             filter_type: 'annotations',
             annotation_label_ids: annotationFramesLabelIds
         } satisfies AnnotationsFilter;
     }
-
-    return Object.keys(filters).length > 0 ? filters : null;
+    return filters;
 };
 
-const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
-    buildVideoFilter($filterParams)
+const buildVideoBounds = (bounds: VideoFilterParams['video_bounds']): VideoFilter => {
+    const filters: VideoFilter = { filter_type: 'video' };
+    if (!bounds) return filters;
+    if (bounds.width) {
+        filters.width = {
+            min: bounds.width.min ?? undefined,
+            max: bounds.width.max ?? undefined
+        };
+    }
+    if (bounds.height) {
+        filters.height = {
+            min: bounds.height.min ?? undefined,
+            max: bounds.height.max ?? undefined
+        };
+    }
+    if (bounds.fps) filters.fps = bounds.fps;
+    if (bounds.duration_s) filters.duration_s = bounds.duration_s;
+    return filters;
+};
+
+const buildSampleFilter = (filters: NonNullable<VideoFilterParams['filters']>): SampleFilter => {
+    const sampleFilter = buildMetadataFilter(filters);
+    if (filters.sample_ids?.length) sampleFilter.sample_ids = filters.sample_ids;
+    if (filters.embedding_region) sampleFilter.embedding_region = filters.embedding_region;
+    if (filters.tag_ids?.length) sampleFilter.tag_ids = filters.tag_ids;
+    return sampleFilter;
+};
+
+const buildMetadataFilter = (filters: NonNullable<VideoFilterParams['filters']>): SampleFilter => {
+    if (!filters.metadata_values && !filters.categorical_metadata_values) return {};
+    const metadataFilters = createMetadataFilters(
+        filters.metadata_values ?? {},
+        filters.categorical_metadata_values ?? {}
+    );
+    return metadataFilters.length > 0 ? { metadata_filters: metadataFilters } : {};
+};
+
+const videoFilter = derived(
+    [filterParams, videoQueryExpression],
+    ([$filterParams, $videoQueryExpression]) =>
+        buildVideoFilter($filterParams, $videoQueryExpression)
 );
 
 const videoSortBy = writable<VideoSortFieldExpr[] | null>([
@@ -121,7 +111,14 @@ const videoSortBy = writable<VideoSortFieldExpr[] | null>([
 
 export const useVideoFilters = () => {
     const updateFilterParams = (params: VideoFilterParams) => {
+        if (params?.collection_id !== get(filterParams)?.collection_id) {
+            videoQueryExpression.set(null);
+        }
         filterParams.set(params);
+    };
+
+    const updateQueryExpr = (expr?: QueryExpression) => {
+        videoQueryExpression.set(expr ?? null);
     };
 
     const updateSampleIds = (sampleIds: string[]) => {
@@ -160,6 +157,8 @@ export const useVideoFilters = () => {
     };
 
     return {
+        videoQueryExpression,
+        updateQueryExpr,
         filterParams,
         videoFilter,
         videoSortBy,

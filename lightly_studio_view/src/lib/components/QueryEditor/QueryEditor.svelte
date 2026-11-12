@@ -4,16 +4,12 @@
     import { Button } from '$lib/components';
 
     import { useQueryEditor } from './useQueryEditor';
+    import { getDefaultQuery } from './getDefaultQuery';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
-
-    const LIGHTLY_QUERY_DEFAULT_VALUE = `# Example query
-width < 500
-AND "reviewed" IN tags
-AND object_detection(class_name = "person" AND x > 10)
-`;
 
     interface QueryEditorProps {
         value?: string;
+        sampleType?: 'image' | 'video';
         height?: string;
         readOnly?: boolean;
         onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
@@ -21,12 +17,13 @@ AND object_detection(class_name = "person" AND x > 10)
 
     let {
         value: valueProp,
+        sampleType,
         height = '320px',
         readOnly = false,
         onSave
     }: QueryEditorProps = $props();
 
-    const initialValue = $derived(valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE);
+    const initialValue = $derived(valueProp ?? getDefaultQuery(sampleType));
 
     let containerEl: HTMLDivElement | null = null;
 
@@ -46,7 +43,7 @@ AND object_detection(class_name = "person" AND x > 10)
     }
 
     function handleSave() {
-        const translationResult = translateQuery(draftValue);
+        const translationResult = translateQuery(draftValue, sampleType);
         if (translationResult.status === 'error') {
             toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
             return;
@@ -61,6 +58,7 @@ AND object_detection(class_name = "person" AND x > 10)
         return mount(containerEl, {
             value: initialValue,
             readOnly,
+            sampleType,
             onChange: (next) => {
                 draftValue = next;
             }
