@@ -65,11 +65,9 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
-    import {
-        buildVideoAnnotationCountsFilter,
-        buildVideoFrameAnnotationCountsFilter
-    } from '$lib/utils/buildAnnotationCountsFilters';
+    import { buildImageAnnotationCountsFilter } from './imageAnnotationCountsFilter';
+    import { buildVideoAnnotationCountsFilter } from './videoAnnotationCountsFilter';
+    import { buildVideoFrameAnnotationCountsFilter } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import ClearAllFiltersButton from '$lib/components/ClearAllFiltersButton';
@@ -366,23 +364,13 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { imageFilter: imageFilterFromHook } = useImageFilters();
+    const {
+        imageFilter: imageFilterFromHook,
+        imageQueryExpression,
+        updateQueryExpr
+    } = useImageFilters();
 
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
-    const plotFilterImageSampleIds = $derived(
-        $imageFilterFromHook?.sample_filter?.sample_ids ?? []
-    );
-    const plotFilterVideoSampleIds = $derived(
-        $videoFilterFromHook?.sample_filter?.sample_ids ?? []
-    );
-    // Query, tag and confusion-cell selections live on the shared image filter's
-    // sample_filter. Pull them out so the distribution counts track them too
-    // (previously only sample_ids from this filter were forwarded).
-    const plotFilterTagIds = $derived($imageFilterFromHook?.sample_filter?.tag_ids ?? []);
-    const plotFilterConfusionCell = $derived(
-        $imageFilterFromHook?.sample_filter?.confusion_cell ?? null
-    );
-    const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
 
     // Fill the annotation source filter for whatever collection is on screen. Every grid draws
     // its boxes against this one selection, so seeding only from the images-grid menu left the
@@ -408,18 +396,16 @@
         };
     });
 
-    // Image-count filter shared by the mix and per-type distribution queries so
-    // the distribution plot tracks the active filters (dimensions, labels,
-    // metadata, query, tags, confusion cell and annotation sources).
+    // Image-count filter shared by the mix and per-type distribution queries so the counts
+    // track the active filters: the plot selection (sample ids, embedding region), tags, query,
+    // confusion cell, dimensions, labels, metadata and annotation sources.
     const imageAnnotationCountsFilter = $derived(
-        buildImageFilter({
+        buildImageAnnotationCountsFilter({
+            imageFilter: $imageFilterFromHook,
+            isAnnotations,
             dimensionsValues: $dimensionsValues,
             annotationFilter: annotationFilterForCounts,
-            metadataFilters,
-            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
-            tagIds: isAnnotations ? [] : plotFilterTagIds,
-            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
-            queryExpr: isAnnotations ? null : plotFilterQueryExpr
+            metadataFilters
         })
     );
 
@@ -442,10 +428,10 @@
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
         collectionId,
         filter: buildVideoAnnotationCountsFilter({
+            videoFilter: $videoFilterFromHook,
             metadataFilters,
             annotationFilter: $annotationFilterStore,
-            videoBoundsValues: $videoBoundsValues,
-            sampleIds: plotFilterVideoSampleIds
+            videoBoundsValues: $videoBoundsValues
         }),
         enabled: isVideos && !$allSourcesHidden
     }));
@@ -647,6 +633,8 @@
                         >
                             {#if isImages}
                                 <QueryControl
+                                    queryExpression={$imageQueryExpression}
+                                    {updateQueryExpr}
                                     onOpen={() => {
                                         setActivePanel(
                                             $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
@@ -801,7 +789,12 @@
                                 {/await}
                             {:else if $activePanel === 'queryEditor' && isImages}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                    <QueryEditorPanel
+                                        sampleType="image"
+                                        queryExpression={$imageQueryExpression}
+                                        {updateQueryExpr}
+                                        onClose={() => setActivePanel('none')}
+                                    />
                                 {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}

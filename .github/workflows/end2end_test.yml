@@ -5,6 +5,9 @@ on:
     branches:
       - main
   pull_request:
+    # Drafts skip the tests, so rerun when the draft state changes: `ready_for_review` starts the
+    # tests, and the run for `converted_to_draft` cancels a running one via `concurrency`.
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   merge_group:
   workflow_dispatch:
 
@@ -32,7 +35,13 @@ jobs:
     timeout-minutes: 5
     outputs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
-      skip: ${{ steps.cache-success-all.outputs.cache-hit == 'true' }}
+      # Draft pull requests skip the tests. To run them on a draft, add the `run-e2e` or
+      # `run-e2e-postgres` label and push again.
+      skip: >-
+        ${{ (github.event.pull_request.draft == true &&
+        !contains(github.event.pull_request.labels.*.name, 'run-e2e') &&
+        !contains(github.event.pull_request.labels.*.name, 'run-e2e-postgres')) ||
+        steps.cache-success-all.outputs.cache-hit == 'true' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
