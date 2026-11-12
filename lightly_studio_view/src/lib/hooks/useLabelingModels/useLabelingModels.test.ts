@@ -19,10 +19,12 @@ describe('useLabelingModels', () => {
     it('queries the models and returns them without a disabled reason', () => {
         const createQuerySpy = vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue(queryResult);
 
-        const labelingModels = useLabelingModels();
+        const labelingModels = useLabelingModels(() => 'collection-1');
 
         const options = createQuerySpy.mock.calls[0][0]() as CreateQueryOptions;
-        expect(options.queryKey).toEqual(getLabelingModelsOptions().queryKey);
+        expect(options.queryKey).toEqual(
+            getLabelingModelsOptions({ query: { collection_id: 'collection-1' } }).queryKey
+        );
         expect(labelingModels.models).toEqual([model]);
         expect(labelingModels.disabledReason).toBeNull();
     });

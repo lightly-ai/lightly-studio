@@ -69,7 +69,7 @@
     } = useSampleDetailsToolbarContext();
 
     const assistedLabelingStatus = useAssistedLabelingStatus();
-    const labelingModels = useLabelingModels();
+    const labelingModels = useLabelingModels(() => page.params.collection_id!);
     // Assisted labeling supports images only, not video frames.
     const isAssistedLabelingView = $derived(
         !annotationLabelContext.isOnAnnotationDetailsView && !isFrameDetailsRoute(page.route.id)
