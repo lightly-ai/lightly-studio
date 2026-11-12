@@ -26,6 +26,8 @@ export interface CuboidLayerProps {
     onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
     /** Points of the current tick, used to fit a drawn cuboid. */
     pointBatch?: PointBatch;
+    /** Timeline tick on display. A change discards a cuboid draft. */
+    tick?: number;
     /** Creates an annotation from a click drop point or a drawn box. */
     onCreateCuboid?: (placement: CuboidPlacement) => void;
     /** Reports a completed gizmo transform before it is committed. */

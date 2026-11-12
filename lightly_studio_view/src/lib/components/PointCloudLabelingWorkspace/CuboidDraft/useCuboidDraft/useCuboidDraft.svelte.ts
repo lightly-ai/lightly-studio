@@ -23,6 +23,8 @@ interface PlanePointerEvent {
 interface Params {
     getCameraMode: () => CameraMode;
     getBatch: () => PointBatch | undefined;
+    /** Timeline tick on display. The batch stays the same while the next tick loads. */
+    getTick: () => number | undefined;
     onCreate: (placement: CuboidPlacement) => void;
 }
 
@@ -36,6 +38,7 @@ interface Draft {
     pointerId: number;
     cameraMode: CameraMode;
     batch: PointBatch | undefined;
+    tick: number | undefined;
     plane: Plane;
     startScreen: ScreenPoint;
     startWorld: Vector3;
@@ -45,7 +48,12 @@ interface Draft {
 
 const CANVAS_EVENTS = ['pointermove', 'pointerup', 'pointercancel', 'lostpointercapture'] as const;
 
-export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): CuboidDraftReturn {
+export function useCuboidDraft({
+    getCameraMode,
+    getBatch,
+    getTick,
+    onCreate
+}: Params): CuboidDraftReturn {
     const { camera, renderer } = useThrelte();
     const canvas = renderer.domElement;
     const raycaster = new Raycaster();
@@ -64,6 +72,7 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
             pointerId: nativeEvent.pointerId,
             cameraMode,
             batch: getBatch(),
+            tick: getTick(),
             plane: createDraftPlane(cameraMode, startWorld),
             startScreen,
             startWorld,
@@ -141,7 +150,8 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
         const pointerEvent = event as PointerEvent;
         if (event.type === 'pointermove') onPointerMove(pointerEvent);
         else if (event.type === 'pointerup') onPointerUp(pointerEvent);
-        else discardDraft();
+        // A cancel or a capture loss of a different pointer must not end this draft.
+        else if (pointerEvent.pointerId === draft?.pointerId) discardDraft();
     }
 
     function addListeners(): void {
@@ -167,7 +177,8 @@ export function useCuboidDraft({ getCameraMode, getBatch, onCreate }: Params): C
 
     $effect(() => {
         const batch = getBatch();
-        if (draft && batch !== draft.batch) discardDraft();
+        const tick = getTick();
+        if (draft && (batch !== draft.batch || tick !== draft.tick)) discardDraft();
     });
 
     onMount(() => discardDraft);

@@ -21,6 +21,7 @@
 
 <SceneViewport
     batch={layout.sceneFrame?.batch}
+    tick={layout.workspace.currentTick}
     colorMode={layout.colorMode}
     pointCloudBounds={layout.sceneFrame?.bounds ?? undefined}
     fitKey={layout.fitKey}

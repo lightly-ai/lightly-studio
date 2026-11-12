@@ -23,6 +23,7 @@
         cameraMode?: Domain.CameraMode;
         groundPlaneBounds: Domain.Bounds3;
         pointBatch?: PointBatch;
+        tick?: number;
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         onCreateCuboid?: (placement: CuboidPlacement) => void;
@@ -43,6 +44,7 @@
         cameraMode = 'perspective',
         groundPlaneBounds,
         pointBatch,
+        tick,
         onselect,
         onhover,
         onCreateCuboid,
@@ -105,6 +107,7 @@
         bounds={groundPlaneBounds}
         {cameraMode}
         batch={pointBatch}
+        {tick}
         onCreateCuboid={(p) => onCreateCuboid?.(p)}
     />
 {/if}

@@ -15,15 +15,18 @@
         cameraMode?: CameraMode;
         /** Points of the current tick, used to fit a drawn cuboid. */
         batch?: PointBatch;
+        /** Timeline tick on display. A change discards the draft. */
+        tick?: number;
         /** Fires with the placement when a click or drag completes. */
         onCreateCuboid: (placement: CuboidPlacement) => void;
     }
 
-    let { bounds, cameraMode = 'perspective', batch, onCreateCuboid }: Props = $props();
+    let { bounds, cameraMode = 'perspective', batch, tick, onCreateCuboid }: Props = $props();
     const layout = $derived(getCuboidCreationPlane(bounds, cameraMode));
     const draft = useCuboidDraft({
         getCameraMode: () => cameraMode,
         getBatch: () => batch,
+        getTick: () => tick,
         onCreate: (placement) => onCreateCuboid(placement)
     });
 </script>
