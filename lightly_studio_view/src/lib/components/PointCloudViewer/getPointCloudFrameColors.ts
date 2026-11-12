@@ -29,27 +29,37 @@ export function getPointCloudFrameColors(
     highlightCuboid?: CuboidGeometry
 ): Float32Array[] {
     const segments = batch.segments ?? [batch];
-    let frameColors: Float32Array[];
-    if (mode === 'camera-rgb') {
-        // Camera RGB colors are computed over the whole accumulation window; split per segment.
-        // Without colors yet (async), fall back to neutral so points stay visible.
-        frameColors = !cameraColors
-            ? segments.map((segment) => getPointCloudColors(segment, 'none'))
-            : splitColors(cameraColors, segments);
-    } else if (mode === 'intensity') {
-        const range = intensityRange ?? getWindowIntensityRange(segments);
-        frameColors = segments.map((segment) => getPointCloudColors(segment, mode, range));
-    } else if (mode === 'none' || mode === 'rgb') {
-        const hasColors = segments.every((segment) => !segment.count || segment.colors);
-        const effectiveMode = mode === 'rgb' && !hasColors ? 'none' : mode;
-        frameColors = segments.map((segment) => getPointCloudColors(segment, effectiveMode));
-    } else {
-        frameColors = splitColors(getPointCloudColors(batch, mode, intensityRange), segments);
-    }
+    const frameColors = getBaseFrameColors(batch, segments, mode, intensityRange, cameraColors);
     if (!highlightCuboid) return frameColors;
     return segments.map((segment, index) =>
         getHighlightedColors(segment, frameColors[index], highlightCuboid)
     );
+}
+
+function getBaseFrameColors(
+    batch: PointBatch,
+    segments: readonly PointBatch[],
+    mode: ColorMode,
+    intensityRange?: [number, number],
+    cameraColors?: Float32Array
+): Float32Array[] {
+    if (mode === 'camera-rgb') {
+        // Camera RGB colors are computed over the whole accumulation window; split per segment.
+        // Without colors yet (async), fall back to neutral so points stay visible.
+        return !cameraColors
+            ? segments.map((segment) => getPointCloudColors(segment, 'none'))
+            : splitColors(cameraColors, segments);
+    }
+    if (mode === 'intensity') {
+        const range = intensityRange ?? getWindowIntensityRange(segments);
+        return segments.map((segment) => getPointCloudColors(segment, mode, range));
+    }
+    if (mode === 'none' || mode === 'rgb') {
+        const hasColors = segments.every((segment) => !segment.count || segment.colors);
+        const effectiveMode = mode === 'rgb' && !hasColors ? 'none' : mode;
+        return segments.map((segment) => getPointCloudColors(segment, effectiveMode));
+    }
+    return splitColors(getPointCloudColors(batch, mode, intensityRange), segments);
 }
 
 function getHighlightedColors(
