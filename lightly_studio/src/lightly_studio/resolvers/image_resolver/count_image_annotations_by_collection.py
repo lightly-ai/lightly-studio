@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.resolvers.image_filter import ImageFilter
-from lightly_studio.resolvers.image_resolver import annotation_count_helpers, annotation_count_types
+from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
 
 
@@ -47,17 +47,20 @@ def count_image_annotations_by_collection(
     annotation_collection_ids = annotation_count_helpers.get_annotation_collection_ids(
         image_filter=image_filter,
     )
+    stripped_filter = annotation_count_helpers.strip_source_only_annotations_filter(
+        image_filter=image_filter,
+    )
     total_counts = annotation_count_helpers.get_total_counts(
         session=session,
         collection_id=collection_id,
         annotation_type=annotation_type,
-        count_mode=annotation_count_types.AnnotationCountMode(count_mode.value),
+        count_mode=count_mode,
         annotation_collection_ids=annotation_collection_ids,
     )
     current_counts = annotation_count_helpers.get_current_counts(
         session=session,
         collection_id=collection_id,
-        image_filter=image_filter,
+        image_filter=stripped_filter,
         annotation_type=annotation_type,
         annotation_collection_ids=annotation_collection_ids,
         count_mode=count_mode,
