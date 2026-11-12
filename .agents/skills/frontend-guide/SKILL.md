@@ -99,7 +99,7 @@ export function useData(params: UseDataParams): UseDataReturn {
 }
 ```
 
-- Import API types from the generated client in `$lib/api/lightly_studio_local`. Do not edit that folder or `src/lib/components/ui` by hand.
+- Import API types from the generated client in `$lib/api/lightly_studio_local`. Do not edit that folder by hand.
 - Do not declare a type that repeats one that exists. Derive it from source code using utility types:
 
 ```typescript
