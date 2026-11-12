@@ -129,9 +129,9 @@ _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
 }
 
-# Annotation confidence is stored in a nullable column, but still supports
-# ordinal numeric comparisons in the query language.
+# Nullable numeric columns support ordinal comparisons in the query language.
 _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
+    ("video", "duration_s"): VideoSampleField.duration_s,
     ("classification", "confidence"): ClassificationField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
     ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
@@ -145,6 +145,7 @@ _ALL_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
 
 _EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
+    ("video", "fps"): VideoSampleField.fps,
 }
 
 _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
