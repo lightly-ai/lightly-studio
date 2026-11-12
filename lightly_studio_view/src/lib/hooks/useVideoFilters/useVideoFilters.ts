@@ -10,7 +10,7 @@ import type {
     VideoSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
-import type { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+import type { useImageFilters } from '$lib/hooks';
 type QueryExpression = NonNullable<
     Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0]
 >;
