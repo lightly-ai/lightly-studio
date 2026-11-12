@@ -48,8 +48,7 @@
         video_bounds: $videoBoundsValues
     });
 
-    const { filterParams, videoQueryExpression, videoSortBy, updateFilterParams } =
-        useVideoFilters();
+    const { filterParams, videoSortBy, updateFilterParams } = useVideoFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local videos parameters
@@ -72,9 +71,7 @@
 
     const currentVideoFilter = $derived.by(() => {
         const paramsWithSelection = mergeExternalFilters(videosParams, $filterParams);
-        const queryExpression =
-            $filterParams?.collection_id === collectionId ? $videoQueryExpression : null;
-        return buildVideoFilter(paramsWithSelection, queryExpression) ?? {};
+        return buildVideoFilter(paramsWithSelection) ?? {};
     });
 
     const { data, query, loadMore, totalCount } = useVideos(() => ({
@@ -125,13 +122,7 @@
 
     // TODO(Mihnea, 09/2026): hash the effective metadata filters, not raw $filterParams.
     // Same fix as Images.svelte's filterHash.
-    const filterHash = $derived(
-        JSON.stringify({
-            filters: $filterParams,
-            query: $videoQueryExpression?.query_expr,
-            sortBy: $videoSortBy
-        })
-    );
+    const filterHash = $derived(JSON.stringify({ filters: $filterParams, sortBy: $videoSortBy }));
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
         initialize();
