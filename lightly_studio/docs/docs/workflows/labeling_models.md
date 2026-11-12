@@ -54,6 +54,46 @@ not thread-safe.
 
 See `examples/example_labeling_model.py` for a runnable example with a LightlyTrain model.
 
+## Run the model on a remote server
+
+Use a remote server when the model must not run in the process of LightlyStudio. For example,
+the model needs its own GPU or its own dependency versions.
+
+**1. Serve the model.** Install `lightly-studio-serve` on the server and serve the same
+`LabelingModel` class:
+
+```python
+from lightly_studio_serve import serve
+
+serve(labeling_model=MyModel(), port=8080, api_key="your-secret-key")
+```
+
+`serve` binds `127.0.0.1:8080` by default. Use TLS for any other address, because each
+request carries the API key; `serve` and LightlyStudio warn about plain HTTP. See the
+[`lightly_studio_serve` README](https://github.com/lightly-ai/lightly-studio/blob/main/lightly_studio_serve/README.md)
+for TLS and limits.
+
+**2. Connect the dataset.** Register the server once for the dataset:
+
+```python
+ls.register_remote_labeling_model(
+    dataset=dataset, url="http://gpu-box:8080", api_key="your-secret-key"
+)
+```
+
+The dataset stores the URL and the API key, so a later process shows the model in the GUI with
+no registration. Call the function again to change the URL or the key.
+
+!!! warning "The API key is stored in plain text"
+    The dataset stores the API key in plain text. Everyone who can read the database can read
+    the key.
+
+If a model that `register_labeling_model` registered has the same `model_id` as a saved server,
+the registered model is used. A server that cannot be reached is not shown in the GUI.
+LightlyStudio tries it again after 30 seconds.
+
+See `examples/example_remote_labeling_model.py` for a runnable example.
+
 ## Label an image
 
 1. Open an image and click `Edit annotations`.
