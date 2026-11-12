@@ -9,6 +9,7 @@
     import MetadataFieldRow from './MetadataFieldRow.svelte';
     import { MANY_FIELDS, isFieldExpanded, matchesFieldSearch } from './metadataFieldList';
     import { isFieldActive, orderByActive } from './metadataFields';
+    import { keepFocusOnMove } from './keepFocusOnMove.svelte';
     import { useMetadataFieldList } from './useMetadataFieldList.svelte';
 
     interface Props {
@@ -63,6 +64,11 @@
     const ordered = $derived(
         orderByActive(list.fields.filter((field) => matchesFieldSearch(field.title, fieldSearch)))
     );
+    let listElement = $state<HTMLElement>();
+    keepFocusOnMove(
+        () => listElement,
+        () => ordered.fields.map((field) => field.id)
+    );
     const hasActiveField = $derived(list.fields.some(isFieldActive));
 
     // Expanded fields show their values and active fields their "N of M" summary, so only
@@ -82,7 +88,7 @@
 <!-- All metadata filters share one section: active fields first, then a line, then the other
      fields. Ranges use a slider, categorical fields a value list. -->
 <Segment title="Metadata">
-    <div class="space-y-4">
+    <div class="space-y-4" bind:this={listElement}>
         {#if fieldCount > MANY_FIELDS}
             <Input
                 value={fieldSearch}
