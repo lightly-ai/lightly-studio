@@ -1,4 +1,5 @@
 import type { CuboidPlacement } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft/cuboidDraft';
+import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type * as Domain from '../domain';
 import type { createCuboidTransformState } from './cuboidTransformState';
 /** Annotation rendering and editing inputs for one viewport's cuboid layer. */
@@ -23,7 +24,9 @@ export interface CuboidLayerProps {
     onselect?: (annotationId: string | null) => void;
     /** Updates hovered annotation and handle feedback. */
     onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
-    /** Creates an annotation at a world-space placement point. */
+    /** Points of the current tick, used to fit a drawn cuboid. */
+    pointBatch?: PointBatch;
+    /** Creates an annotation from a click drop point or a drawn box. */
     onCreateCuboid?: (placement: CuboidPlacement) => void;
     /** Reports a completed gizmo transform before it is committed. */
     onCuboidTransform?: (

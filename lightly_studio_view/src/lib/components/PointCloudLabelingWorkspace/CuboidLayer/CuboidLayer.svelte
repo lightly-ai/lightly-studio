@@ -5,7 +5,8 @@
     import { interactivity } from '@threlte/extras';
     import type * as Domain from '../domain';
     import type { createCuboidTransformState } from './cuboidTransformState';
-    import { GroundPlaneClickTarget } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
+    import { CuboidDraftTarget } from '../CuboidDraft';
+    import type { PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidItem from './CuboidItem/CuboidItem.svelte';
     import { provideCuboidLayerContext } from './cuboidLayerContext';
     import { createCuboidHoverTracker } from './cuboidHoverTracker';
@@ -21,6 +22,7 @@
         activeTool?: Domain.WorkspaceTool;
         cameraMode?: Domain.CameraMode;
         groundPlaneBounds: Domain.Bounds3;
+        pointBatch?: PointBatch;
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
         onCreateCuboid?: (placement: CuboidPlacement) => void;
@@ -40,6 +42,7 @@
         activeTool = 'select',
         cameraMode = 'perspective',
         groundPlaneBounds,
+        pointBatch,
         onselect,
         onhover,
         onCreateCuboid,
@@ -98,10 +101,11 @@
 </script>
 
 {#if activeTool === 'create-cuboid'}
-    <GroundPlaneClickTarget
+    <CuboidDraftTarget
         bounds={groundPlaneBounds}
         {cameraMode}
-        onclick={(p) => onCreateCuboid?.({ kind: 'drop', position: p })}
+        batch={pointBatch}
+        onCreateCuboid={(p) => onCreateCuboid?.(p)}
     />
 {/if}
 

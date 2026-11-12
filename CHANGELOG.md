@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Draw a cuboid by dragging a rectangle in the top, side or front view of the point cloud workspace. The remaining dimension is fitted to the points inside the rectangle.
 - Highlight points inside a selected cuboid and dim the surrounding point cloud to make the selection easier to inspect.
 - Python SDK: Added Python 3.15 support.
 - Python SDK: `McapDataset.add_labels_from_folder` accepts `overwrite=True` to replace the annotations of recordings that already have annotations.

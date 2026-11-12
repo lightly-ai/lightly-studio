@@ -58,7 +58,7 @@ export interface SceneViewportProps {
     onselect?: (annotationId: string | null) => void;
     /** Fires when the pointer enters or leaves a cuboid. */
     onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
-    /** Fires when the user clicks the ground plane in create-cuboid mode. */
+    /** Creates an annotation from a click drop point or a drawn box. */
     onCreateCuboid?: (placement: CuboidPlacement) => void;
     /** Reports a completed annotation gizmo transform before it is committed. */
     onCuboidTransform?: CuboidLayerProps['onCuboidTransform'];

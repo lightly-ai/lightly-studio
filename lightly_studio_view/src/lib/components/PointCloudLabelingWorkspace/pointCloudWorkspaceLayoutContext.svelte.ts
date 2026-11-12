@@ -85,7 +85,7 @@ export interface PointCloudWorkspaceLayoutState {
     onSelect: (annotationId: string | null) => void;
     /** Updates the cuboid shown by hover feedback. */
     onHover: (annotationId: string | null) => void;
-    /** Creates an annotation at a world-space placement point. */
+    /** Creates an annotation from a click drop point or a drawn box. */
     onCreateCuboid: (placement: CuboidPlacement) => void | Promise<void>;
     /** Whether the next created cuboid also starts a new object track. */
     isAddingTrack: boolean;
