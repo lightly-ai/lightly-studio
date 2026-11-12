@@ -61,20 +61,22 @@
 <div class="space-y-1">
     <MetadataFieldHeader title={title ?? metadataKey} {expanded} {onToggleExpanded} />
     {#if expanded}
-        <div class="flex justify-between text-sm text-diffuse-foreground">
-            <span>{formatValue(value.min)}{unit}</span>
-            <span>{formatValue(value.max)}{unit}</span>
-        </div>
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-{metadataKey}"
-                min={0}
-                max={ticks}
-                step={1}
-                value={sliderValue}
-                onValueCommit={handleValueCommit}
-            />
+        <div class="pl-6">
+            <div class="flex justify-between text-sm text-diffuse-foreground">
+                <span>{formatValue(value.min)}{unit}</span>
+                <span>{formatValue(value.max)}{unit}</span>
+            </div>
+            <div class="relative p-2">
+                <Slider
+                    type="multiple"
+                    class="filter-{metadataKey}"
+                    min={0}
+                    max={ticks}
+                    step={1}
+                    value={sliderValue}
+                    onValueCommit={handleValueCommit}
+                />
+            </div>
         </div>
     {/if}
 </div>

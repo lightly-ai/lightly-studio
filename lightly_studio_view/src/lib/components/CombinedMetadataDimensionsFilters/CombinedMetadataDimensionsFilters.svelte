@@ -1,15 +1,15 @@
 <script lang="ts">
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Slider } from '$lib/components/ui/slider/index.js';
     import CategoricalMetadataFilters from '$lib/components/CategoricalMetadataFilters/CategoricalMetadataFilters.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import type { ImageFilter } from '$lib/api/lightly_studio_local';
     import type { CategoricalMetadataValue, MetadataValues } from '$lib/services/types';
-    import { formatInteger } from '$lib/utils';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
+    import { Input } from '$lib/components/ui/input';
     import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
+    import { MANY_FIELDS, isFieldExpanded, matchesFieldSearch } from './metadataFieldList';
 
     interface Props {
         /** Collection whose metadata fields are listed. */
@@ -51,26 +51,15 @@
         updateDimensionsValues: onChange
     } = useDimensions();
 
-    const handleChangeWidth = (newValues: number[]) => {
+    // Width and height use the same slider field as numeric metadata.
+    const handleDimensionCommit = (dimension: string, [min, max]: number[]) => {
         if (!$values) return;
-        onChange({
-            min_width: newValues[0],
-            max_width: newValues[1],
-            min_height: $values.min_height,
-            max_height: $values.max_height
-        });
-        onFilterChanged?.('width', newValues[0], newValues[1]);
-    };
-
-    const handleChangeHeight = (newValues: number[]) => {
-        if (!$values) return;
-        onChange({
-            min_width: $values.min_width,
-            max_width: $values.max_width,
-            min_height: newValues[0],
-            max_height: newValues[1]
-        });
-        onFilterChanged?.('height', newValues[0], newValues[1]);
+        onChange(
+            dimension === 'width'
+                ? { ...$values, min_width: min, max_width: max }
+                : { ...$values, min_height: min, max_height: max }
+        );
+        onFilterChanged?.(dimension, min, max);
     };
 
     // Metadata filters logic
@@ -98,58 +87,57 @@
         updateMetadataValues(currentValues);
         onFilterChanged?.(metadataKey, newValues[0], newValues[1]);
     };
+
+    // Every field is listed, with one rule for showing, collapsing and searching them.
+    const showImageDimensions = $derived(
+        showDimensions && !isVideos && !isVideoFrames && !!$bounds && !!$values
+    );
+    const categoricalFields = $derived(isImageCollection ? categoricalKeys : []);
+    const fieldCount = $derived(
+        (showImageDimensions ? 2 : 0) + numericalMetadata.length + categoricalFields.length
+    );
+    let fieldSearch = $state('');
+    let expandedOverrides = $state<Record<string, boolean>>({});
+    const isExpanded = (field: string) => isFieldExpanded(expandedOverrides, field, fieldCount);
+    const toggleExpanded = (field: string) => {
+        expandedOverrides = { ...expandedOverrides, [field]: !isExpanded(field) };
+    };
+    const matches = (field: string) => matchesFieldSearch(field, fieldSearch);
 </script>
 
+<!-- All metadata filters share one section with one collapsible field per key. Numeric
+     fields, width and height use a slider, categorical fields a value list. -->
 <Segment title="Metadata">
     <div class="space-y-4">
-        {#if isImageCollection && categoricalKeys.length > 0}
-            <CategoricalMetadataFilters
-                {collectionId}
-                filter={categoricalFilter}
-                {categoricalKeys}
-                onValueToggle={onCategoricalValueToggle}
-                onValuesSet={onCategoricalValuesSet}
-                onValuesClear={onCategoricalValuesClear}
+        {#if fieldCount > MANY_FIELDS}
+            <Input
+                value={fieldSearch}
+                oninput={(event) => (fieldSearch = event.currentTarget.value)}
+                placeholder="Search metadata fields…"
+                aria-label="Search metadata fields"
+                class="h-8"
             />
         {/if}
 
-        {#if showDimensions && !isVideos && !isVideoFrames && $bounds && $values}
-            <!-- Dimension Filters -->
-            <div class="space-y-1">
-                <h2 class="text-md">Width</h2>
-                <div class="flex justify-between text-sm text-diffuse-foreground">
-                    <span>{formatInteger($values.min_width)}px</span>
-                    <span>{formatInteger($values.max_width)}px</span>
-                </div>
-                <div class="relative p-2">
-                    <Slider
-                        type="multiple"
-                        class="filter-width"
-                        min={$bounds.min_width}
-                        max={$bounds.max_width}
-                        value={[$values.min_width, $values.max_width]}
-                        onValueCommit={handleChangeWidth}
+        {#if showImageDimensions && $bounds && $values}
+            {#each [{ key: 'width', title: 'Width' }, { key: 'height', title: 'Height' }] as dimension (dimension.key)}
+                {#if matches(dimension.title)}
+                    <MetadataFilterItem
+                        metadataKey={dimension.key}
+                        title={dimension.title}
+                        unit="px"
+                        bound={dimension.key === 'width'
+                            ? { min: $bounds.min_width, max: $bounds.max_width }
+                            : { min: $bounds.min_height, max: $bounds.max_height }}
+                        value={dimension.key === 'width'
+                            ? { min: $values.min_width, max: $values.max_width }
+                            : { min: $values.min_height, max: $values.max_height }}
+                        onValueCommit={handleDimensionCommit}
+                        expanded={isExpanded(dimension.title)}
+                        onToggleExpanded={() => toggleExpanded(dimension.title)}
                     />
-                </div>
-            </div>
-
-            <div class="space-y-1">
-                <h2 class="text-md">Height</h2>
-                <div class="flex justify-between text-sm text-diffuse-foreground">
-                    <span>{formatInteger($values.min_height)}px</span>
-                    <span>{formatInteger($values.max_height)}px</span>
-                </div>
-                <div class="relative p-2">
-                    <Slider
-                        type="multiple"
-                        class="filter-height"
-                        min={$bounds.min_height}
-                        max={$bounds.max_height}
-                        value={[$values.min_height, $values.max_height]}
-                        onValueCommit={handleChangeHeight}
-                    />
-                </div>
-            </div>
+                {/if}
+            {/each}
         {:else if isVideos}
             <VideoFieldBoundsFilters {onFilterChanged} />
         {/if}
@@ -158,15 +146,28 @@
             <VideoFrameBoundsFilter {onFilterChanged} />
         {/if}
 
-        {#if numericalMetadata.length > 0}
-            {#each numericalMetadata as metadataKey (metadataKey)}
-                <MetadataFilterItem
-                    {metadataKey}
-                    bound={$metadataBounds[metadataKey]}
-                    value={$metadataValues[metadataKey]}
-                    onValueCommit={handleMetadataValueCommit}
-                />
-            {/each}
+        {#each numericalMetadata.filter(matches) as metadataKey (metadataKey)}
+            <MetadataFilterItem
+                {metadataKey}
+                bound={$metadataBounds[metadataKey]}
+                value={$metadataValues[metadataKey]}
+                onValueCommit={handleMetadataValueCommit}
+                expanded={isExpanded(metadataKey)}
+                onToggleExpanded={() => toggleExpanded(metadataKey)}
+            />
+        {/each}
+
+        {#if categoricalFields.length > 0}
+            <CategoricalMetadataFilters
+                {collectionId}
+                filter={categoricalFilter}
+                fields={categoricalFields.filter(matches)}
+                {isExpanded}
+                onToggleExpanded={toggleExpanded}
+                onValueToggle={onCategoricalValueToggle}
+                onValuesSet={onCategoricalValuesSet}
+                onValuesClear={onCategoricalValuesClear}
+            />
         {/if}
     </div>
 </Segment>

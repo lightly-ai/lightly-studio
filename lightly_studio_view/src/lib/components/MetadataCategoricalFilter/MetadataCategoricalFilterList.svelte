@@ -18,6 +18,8 @@
 <div class="space-y-1" data-testid="metadata-categorical-filter">
     <MetadataFieldHeader title={fieldLabel} {status} {expanded} {onToggleExpanded} {onRemove} />
     {#if expanded}
-        {@render children()}
+        <div class="pl-6">
+            {@render children()}
+        </div>
     {/if}
 </div>
