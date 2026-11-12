@@ -22,4 +22,12 @@ describe('buildGridFilter', () => {
             sample_filter: { tag_ids: ['t'] }
         });
     });
+
+    it('ignores reserved keys passed in fields', () => {
+        const fields = { width: {}, filter_type: 'video', sample_filter: { tag_ids: ['old'] } };
+        expect(buildGridFilter('image', fields, undefined)).toStrictEqual({
+            filter_type: 'image',
+            width: {}
+        });
+    });
 });

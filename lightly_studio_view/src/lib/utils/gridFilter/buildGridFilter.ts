@@ -21,9 +21,9 @@ export function buildGridFilter<T extends keyof GridFilterByType>(
     fields: Omit<GridFilterByType[T], 'filter_type' | 'sample_filter'>,
     sampleFilter: SampleFilter | undefined
 ): GridFilterByType[T] & { filter_type: T } {
-    return {
+    return withoutUndefined({
+        ...fields,
         filter_type: filterType,
-        ...withoutUndefined(fields),
-        ...(sampleFilter && { sample_filter: sampleFilter })
-    } as GridFilterByType[T] & { filter_type: T };
+        sample_filter: sampleFilter
+    }) as GridFilterByType[T] & { filter_type: T };
 }

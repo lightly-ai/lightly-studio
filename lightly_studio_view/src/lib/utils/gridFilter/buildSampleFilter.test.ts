@@ -1,19 +1,15 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import { describe, expect, it } from 'vitest';
+import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { buildSampleFilter, toMetadataFilters } from './buildSampleFilter';
 
-vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
-    createMetadataFilters: vi.fn(() => [{ key: 'created' }])
-}));
-
-const REGION = {
+const region = {
     polygon: [
         { x: 0, y: 0 },
         { x: 1, y: 0 },
         { x: 0, y: 1 }
     ]
 };
-const CELL = { evaluation_run_id: 'run-1', gt_label: 'car', pred_label: 'truck' };
+const cell = { evaluation_run_id: 'run-1', gt_label: 'car', pred_label: 'truck' };
 
 describe('buildSampleFilter', () => {
     it('returns undefined for no parts', () => {
@@ -54,7 +50,7 @@ describe('buildSampleFilter', () => {
     });
 
     it('passes the embedding region through unchanged', () => {
-        expect(buildSampleFilter({ embedding_region: REGION })?.embedding_region).toBe(REGION);
+        expect(buildSampleFilter({ embedding_region: region })?.embedding_region).toBe(region);
     });
 
     it('drops null values', () => {
@@ -72,8 +68,8 @@ describe('buildSampleFilter', () => {
                 tag_ids: ['t'],
                 annotation_label_ids: ['l'],
                 annotation_collection_ids: ['c'],
-                embedding_region: REGION,
-                confusion_cell: CELL,
+                embedding_region: region,
+                confusion_cell: cell,
                 metadata_filters,
                 query_expr
             })
@@ -85,8 +81,8 @@ describe('buildSampleFilter', () => {
                 annotation_label_ids: ['l'],
                 collection_ids: ['c']
             },
-            embedding_region: REGION,
-            confusion_cell: CELL,
+            embedding_region: region,
+            confusion_cell: cell,
             metadata_filters,
             query_expr
         });
@@ -94,20 +90,17 @@ describe('buildSampleFilter', () => {
 });
 
 describe('toMetadataFilters', () => {
-    beforeEach(() => {
-        vi.mocked(createMetadataFilters).mockClear();
-    });
-
     it('returns undefined without values', () => {
         expect(toMetadataFilters()).toBeUndefined();
-        expect(createMetadataFilters).not.toHaveBeenCalled();
     });
 
-    it('calls createMetadataFilters when either is set', () => {
-        const a = { min: 1, max: 2 };
-        expect(toMetadataFilters({ a })).toEqual([{ key: 'created' }]);
-        expect(createMetadataFilters).toHaveBeenLastCalledWith({ a }, {});
-        toMetadataFilters(undefined, { b: [] });
-        expect(createMetadataFilters).toHaveBeenLastCalledWith({}, { b: [] });
+    it('converts numeric and categorical values', () => {
+        useGlobalStorage().updateMetadataBounds({ temp: { min: 0, max: 100 } });
+        expect(toMetadataFilters({ temp: { min: 10, max: 100 } })).toEqual([
+            { key: 'temp', value: 10, op: '>=' }
+        ]);
+        expect(toMetadataFilters(undefined, { color: ['red'] })).toEqual([
+            { key: 'color', value: ['red'], op: 'in' }
+        ]);
     });
 });
