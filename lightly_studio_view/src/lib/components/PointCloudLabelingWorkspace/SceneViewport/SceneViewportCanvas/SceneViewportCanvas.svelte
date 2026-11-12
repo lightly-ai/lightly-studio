@@ -41,6 +41,7 @@
         transforms={props.transforms}
         groundPlaneBounds={interaction.groundPlaneBounds}
         pointBatch={props.batch}
+        tick={props.tick}
         selectedAnnotationId={props.selectedAnnotationId}
         hoveredAnnotationId={props.hoveredAnnotationId}
         activeTool={props.activeTool}

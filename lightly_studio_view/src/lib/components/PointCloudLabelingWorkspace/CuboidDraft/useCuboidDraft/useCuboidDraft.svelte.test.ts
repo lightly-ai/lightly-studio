@@ -52,7 +52,7 @@ function createBatch(points: number[][]): PointBatch {
     };
 }
 
-function pointer(type: string, clientX: number, clientY: number, button = 0) {
+function pointer(type: string, clientX: number, clientY: number, button = 0, pointerId = 7) {
     const event = new MouseEvent(type, {
         clientX,
         clientY,
@@ -60,7 +60,7 @@ function pointer(type: string, clientX: number, clientY: number, button = 0) {
         buttons: 1,
         cancelable: true
     });
-    Object.defineProperty(event, 'pointerId', { value: 7 });
+    Object.defineProperty(event, 'pointerId', { value: pointerId });
     return event as PointerEvent;
 }
 
@@ -80,6 +80,7 @@ function setup({ cameraMode = 'top', camera = createTopCamera(), batch }: SetupO
         props: {
             getCameraMode: () => cameraMode,
             getBatch: () => batch,
+            getTick: () => 0,
             onCreate,
             onReady: (draft: Draft) => {
                 ref.current = draft;
@@ -337,4 +338,25 @@ describe('useCuboidDraft', () => {
         canvas.dispatchEvent(pointer('pointerup', 325, 125));
         expect(onCreate).not.toHaveBeenCalled();
     });
+
+    it('discards the draft when the tick changes and the batch stays', async () => {
+        const { draft, rerender } = setup();
+        dragInTopView(draft);
+        await rerender({ getTick: () => 1 });
+        expect(draft.previewBox).toBeNull();
+        canvas.dispatchEvent(pointer('pointerup', 325, 125));
+        expect(onCreate).not.toHaveBeenCalled();
+    });
+
+    it.each(['pointercancel', 'lostpointercapture'])(
+        'keeps the draft on %s of a different pointer',
+        (type) => {
+            const { draft } = setup();
+            dragInTopView(draft);
+            canvas.dispatchEvent(pointer(type, 325, 125, 0, 8));
+            expect(draft.previewBox).not.toBeNull();
+            canvas.dispatchEvent(pointer('pointerup', 325, 125));
+            expect(onCreate).toHaveBeenCalledTimes(1);
+        }
+    );
 });

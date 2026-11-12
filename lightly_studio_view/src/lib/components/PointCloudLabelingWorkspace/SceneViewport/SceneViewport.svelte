@@ -18,6 +18,7 @@
         header?: Snippet;
         tools?: Snippet;
         batch?: PointBatch;
+        tick?: number;
         colorMode?: ColorMode;
         pointSize?: number;
         intensityRange?: [number, number];

@@ -20,6 +20,8 @@ export interface SceneViewportProps {
     tools?: Snippet;
     /** Point positions and intensities consumed by the existing renderer. */
     batch?: PointBatch;
+    /** Timeline tick on display. A change discards a cuboid draft. */
+    tick?: number;
     /** Strategy used to color the point cloud. */
     colorMode?: ColorMode;
     /** Screen-space point size in CSS pixels. */
