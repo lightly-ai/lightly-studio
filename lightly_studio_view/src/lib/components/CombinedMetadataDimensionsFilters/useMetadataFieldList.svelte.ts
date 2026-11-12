@@ -77,6 +77,7 @@ export function useMetadataFieldList(
     const metadataStores = useMetadataFilters();
     const metadataBounds = fromStore(metadataStores.metadataBounds);
     const metadataValues = fromStore(metadataStores.metadataValues);
+    const metadataInfo = fromStore(metadataStores.metadataInfo);
     const categoricalValues = fromStore(metadataStores.categoricalMetadataValues);
 
     // The video hooks and the metadata hook fetch their bounds when given a collection id.
@@ -97,6 +98,7 @@ export function useMetadataFieldList(
                 key: 'width',
                 title: 'Width',
                 unit: 'px',
+                integer: true,
                 bound: { min: bounds.min_width, max: bounds.max_width },
                 value: { min: values.min_width, max: values.max_width }
             }),
@@ -105,6 +107,7 @@ export function useMetadataFieldList(
                 key: 'height',
                 title: 'Height',
                 unit: 'px',
+                integer: true,
                 bound: { min: bounds.min_height, max: bounds.max_height },
                 value: { min: values.min_height, max: values.max_height }
             })
@@ -121,6 +124,7 @@ export function useMetadataFieldList(
                 key,
                 title,
                 unit,
+                integer: key === 'width' || key === 'height',
                 bound: bounds[key],
                 value: values[key]
             });
@@ -142,6 +146,7 @@ export function useMetadataFieldList(
                 key: 'frame_number',
                 title: 'Frame number',
                 unit: '',
+                integer: true,
                 bound: bounds.frame_number,
                 value: values.frame_number
             })
@@ -159,9 +164,19 @@ export function useMetadataFieldList(
                 typeof bound.max === 'number' &&
                 typeof value.min === 'number' &&
                 typeof value.max === 'number';
-            return isNumeric
-                ? [rangeField({ source: 'numeric', key, title: key, unit: '', bound, value })]
-                : [];
+            if (!isNumeric) return [];
+            const type = metadataInfo.current.find((info) => info.name === key)?.type;
+            return [
+                rangeField({
+                    source: 'numeric',
+                    key,
+                    title: key,
+                    unit: '',
+                    integer: type === 'integer',
+                    bound,
+                    value
+                })
+            ];
         });
 
     // A metadata key can be any string, e.g. `constructor`, so read only own keys.
