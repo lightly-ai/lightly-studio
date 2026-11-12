@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import re
-from unittest.mock import ANY
 from uuid import uuid4
 
 import pytest
@@ -88,7 +87,7 @@ def test_get_metadata_info__omits_histograms(
     assert metadata["min"] == 0.0
     assert metadata["max"] == 1.0
     assert metadata.get("histogram") is None
-    assert resolver.call_args.kwargs == {"session": ANY, "collection_id": collection_id}
+    assert resolver.call_args.kwargs == {"session": mocker.ANY, "collection_id": collection_id}
 
 
 def test_get_metadata_info__empty_response(test_client: TestClient, mocker: MockerFixture) -> None:
@@ -194,7 +193,7 @@ def test_get_metadata_value_counts(
         }
     }
     resolver.assert_called_once_with(
-        session=ANY, collection_id=collection_id, filters=ANY, fields=None, limit=20
+        session=mocker.ANY, collection_id=collection_id, filters=mocker.ANY, fields=None, limit=20
     )
     assert resolver.call_args.kwargs["collection_id"] == collection_id
     called_filters = resolver.call_args.kwargs["filters"]
@@ -266,7 +265,7 @@ def test_get_metadata_value_counts__optional_body(
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == {}
     resolver.assert_called_once_with(
-        session=ANY, collection_id=collection_id, filters=None, fields=None, limit=20
+        session=mocker.ANY, collection_id=collection_id, filters=None, fields=None, limit=20
     )
 
 
@@ -286,7 +285,7 @@ def test_get_metadata_value_counts__limit(
     )
     assert response.status_code == HTTP_STATUS_OK
     resolver.assert_called_once_with(
-        session=ANY, collection_id=collection_id, filters=None, fields=["city"], limit=limit
+        session=mocker.ANY, collection_id=collection_id, filters=None, fields=["city"], limit=limit
     )
 
 
