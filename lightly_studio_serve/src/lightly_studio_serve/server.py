@@ -1,9 +1,9 @@
-"""Makes the HTTP endpoints of the protocol from an embedder.
+"""Makes the HTTP endpoints of the protocol from an embedder, a labeling model, or both.
 
 ``create_app`` reads the capability classes that the embedder implements. It mounts one
-endpoint for each class, and it always mounts ``/v1/describe``. ``serve`` runs that
-application with uvicorn. Version 1 serves the ``texts``, ``images/bytes`` and
-``videos/bytes`` transports.
+endpoint for each class, and ``/v1/describe``. ``serve`` runs that application with
+uvicorn. Version 1 serves the ``texts``, ``images/bytes`` and ``videos/bytes`` transports.
+A labeling model gets the endpoints of ``lightly_studio_serve.labeling_server``.
 
 The ASGI middleware in ``lightly_studio_serve.middleware`` applies the bearer token, the
 readiness of the model and the request size limit. That middleware runs before the router.
@@ -25,7 +25,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, Response
 from fastapi.security import HTTPBearer
 
-from lightly_studio_serve import protocol, validation
+from lightly_studio_serve import labeling_server, protocol, validation
 from lightly_studio_serve.embedder import (
     Capability,
     Embedder,
@@ -33,7 +33,8 @@ from lightly_studio_serve.embedder import (
     TextEmbedder,
     VideoBytesEmbedder,
 )
-from lightly_studio_serve.errors import EmbedderContractError
+from lightly_studio_serve.errors import EmbedderContractError, LabelingModelError
+from lightly_studio_serve.labeling_model import LabelingModel
 from lightly_studio_serve.middleware import BearerAuth, Readiness, RequestSizeLimit
 from lightly_studio_serve.protocol import (
     DescribeResponse,
@@ -66,20 +67,21 @@ class _Mount:
 
 # PLR0913: A customer sets each argument of `serve`. A config object moves the same list.
 def serve(  # noqa: PLR0913
-    embedder: Embedder,
+    embedder: Embedder | None = None,
     host: str = "127.0.0.1",
     port: int = 8080,
     api_key: str | None = None,
     limits: ServerLimits | None = None,
     ssl_certfile: str | Path | None = None,
     ssl_keyfile: str | Path | None = None,
+    labeling_model: LabelingModel | None = None,
 ) -> None:
-    """Serve an embedder over HTTP until the process stops.
+    """Serve an embedder, a labeling model, or both over HTTP until the process stops.
 
     Args:
-        embedder: The model to serve. Its capability classes set which endpoints
-            exist. A text-only embedder has no image route and no video route. It
-            must accept calls from more than one thread.
+        embedder: The embedder to serve, or ``None``. Its capability classes set which
+            endpoints exist. A text-only embedder has no image route and no video
+            route. It must accept calls from more than one thread.
         host: The interface to bind. The default binds loopback only. Give
             ``"0.0.0.0"`` to accept requests from other hosts.
         port: The TCP port to bind.
@@ -96,12 +98,15 @@ def serve(  # noqa: PLR0913
             clear text. ``serve`` gives a warning when it has no certificate.
         ssl_keyfile: The private key for ``ssl_certfile``. Omit it if the
             certificate file already holds the key.
+        labeling_model: The labeling model to serve, or ``None``. It must accept
+            calls from more than one thread.
 
     Raises:
-        ValueError: If ``api_key`` is an empty or blank string, if you give
-            ``ssl_keyfile`` without ``ssl_certfile``, if ``limits`` names a
-            ``max_batch_size`` that the multipart parser cannot deliver, or if the
-            embedder implements no capability that version 1 serves.
+        ValueError: If you give no embedder and no labeling model, if ``api_key`` is an
+            empty or blank string, if you give ``ssl_keyfile`` without
+            ``ssl_certfile``, if ``limits`` names a ``max_batch_size`` that the
+            multipart parser cannot deliver, or if the embedder implements no
+            capability that version 1 serves.
     """
     if ssl_keyfile is not None and ssl_certfile is None:
         raise ValueError("ssl_keyfile was given without ssl_certfile, so TLS cannot start.")
@@ -109,68 +114,93 @@ def serve(  # noqa: PLR0913
         _warn_public_bind(
             host=host, has_api_key=api_key is not None, has_tls=ssl_certfile is not None
         )
-    app = create_app(embedder=embedder, api_key=api_key, limits=limits)
+    app = create_app(
+        embedder=embedder, api_key=api_key, limits=limits, labeling_model=labeling_model
+    )
     uvicorn.run(app, host=host, port=port, ssl_certfile=ssl_certfile, ssl_keyfile=ssl_keyfile)
 
 
 def create_app(
-    embedder: Embedder,
+    embedder: Embedder | None = None,
     api_key: str | None = None,
     limits: ServerLimits | None = None,
+    labeling_model: LabelingModel | None = None,
 ) -> FastAPI:
     """Build the application ``serve`` runs.
 
     Use this function to mount the protocol in an application of your own. You can
-    also use it to test an embedder with a test client and no open port.
+    also use it to test a model with a test client and no open port.
 
     Args:
-        embedder: The model to serve. Its capability classes set which endpoints
-            exist. A text-only embedder has no image route and no video route. It
-            must accept calls from more than one thread.
+        embedder: The embedder to serve, or ``None``. Its capability classes set which
+            endpoints exist. A text-only embedder has no image route and no video
+            route. It must accept calls from more than one thread.
         api_key: The token that a client must send as
             ``Authorization: Bearer <api_key>``. The server trims the whitespace
             around the token, because a client cannot send it, and it gives a
             warning when it does.
         limits: The limits to report and to apply. The default is 999 items and
             32 MiB for each request.
+        labeling_model: The labeling model to serve, or ``None``. It must accept
+            calls from more than one thread.
 
     Returns:
         An application that serves ``/v1/describe`` and the capabilities of the
-        embedder.
+        embedder, the labeling endpoints of the labeling model, or both.
 
     Raises:
-        ValueError: If ``api_key`` is an empty or blank string, because such a server
-            looks authenticated but accepts an empty token, if ``limits`` names a
-            ``max_batch_size`` that the multipart parser cannot deliver, or if the
-            embedder implements no capability that version 1 serves.
+        ValueError: If you give no embedder and no labeling model, if ``api_key`` is an
+            empty or blank string, because such a server looks authenticated but
+            accepts an empty token, if ``limits`` names a ``max_batch_size`` that the
+            multipart parser cannot deliver, or if the embedder implements no
+            capability that version 1 serves.
     """
+    if embedder is None and labeling_model is None:
+        raise ValueError("Give an embedder, a labeling_model, or both. Got neither.")
     if api_key is not None:
         api_key = _trimmed_api_key(api_key=api_key)
     resolved_limits = limits if limits is not None else ServerLimits()
     _check_max_batch_size(limits=resolved_limits)
-    app = FastAPI(title="LightlyStudio embedding server")
+    app = FastAPI(title="LightlyStudio model server")
     app.add_exception_handler(EmbedderContractError, _handle_contract_error)
+    app.add_exception_handler(LabelingModelError, _handle_contract_error)
     app.add_exception_handler(RequestValidationError, _handle_invalid_request)
     app.add_exception_handler(Exception, _handle_embedder_error)
     # The dependency enforces nothing, `BearerAuth` does. It writes the scheme into the
     # schema, so that the interactive documentation can send a token.
     security = [] if api_key is None else [Depends(HTTPBearer(auto_error=False))]
     router = APIRouter(dependencies=security)
-    _mount_describe(router=router, embedder=embedder, limits=resolved_limits)
-    embed_paths = _mount_embed_routes(router=router, embedder=embedder, limits=resolved_limits)
+    # Innermost first, so the server checks the token before it looks at a body at all.
+    app.add_middleware(RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
+    if embedder is not None:
+        embed_paths = _mount_embedder(router=router, embedder=embedder, limits=resolved_limits)
+        app.add_middleware(Readiness, model=embedder, paths=embed_paths)
+    if labeling_model is not None:
+        labeling_paths = labeling_server.mount_labeling_routes(
+            router=router, labeling_model=labeling_model, limits=resolved_limits
+        )
+        app.add_middleware(Readiness, model=labeling_model, paths=labeling_paths)
+    if api_key is not None:
+        app.add_middleware(BearerAuth, api_key=api_key, open_paths=_documentation_paths(app=app))
+    app.include_router(router)
+    return app
+
+
+def _mount_embedder(router: APIRouter, embedder: Embedder, limits: ServerLimits) -> frozenset[str]:
+    """Mount the describe endpoint and the embed endpoints, and name the embed paths.
+
+    Raises:
+        ValueError: If the embedder implements no capability that version 1 serves.
+    """
+    _mount_describe(router=router, embedder=embedder, limits=limits)
+    embed_paths = _mount_embed_routes(router=router, embedder=embedder, limits=limits)
     if not embed_paths:
         served = [base.__name__ for base, _ in _SERVED_CAPABILITIES]
         raise ValueError(
             f"{type(embedder).__name__} implements no capability that version 1 serves, so "
             f"the server would have no embed endpoint. Implement one of {served}."
         )
-    # Innermost first, so the server checks the token before it looks at a body at all.
-    app.add_middleware(RequestSizeLimit, max_request_bytes=resolved_limits.max_request_bytes)
-    app.add_middleware(Readiness, embedder=embedder, paths=embed_paths)
-    if api_key is not None:
-        app.add_middleware(BearerAuth, api_key=api_key, open_paths=_documentation_paths(app=app))
-    app.include_router(router)
-    return app
+    return embed_paths
 
 
 def _trimmed_api_key(api_key: str) -> str:
@@ -346,7 +376,7 @@ def _check_batch_size(item_count: int, limits: ServerLimits) -> None:
 
 
 def _handle_contract_error(_request: Request, exc: Exception) -> Response:
-    """Answer 500 and name the result of the embedder. Do not send that result."""
+    """Answer 500 and name the problem of the model. Do not send its result."""
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": str(exc)}
     )
