@@ -1,9 +1,10 @@
-"""Shared value types for the embedding paths.
+"""Shared value types for the embedding and labeling paths.
 
 Holds the model-agnostic types passed to and returned by embedders:
-``EmbeddingSpaceSpec``, ``EmbeddingResult`` and ``ImageCrop``. They live in their
-own module so any caller can depend on them without importing the ``Embedder``
-classes.
+``EmbeddingSpaceSpec``, ``EmbeddingResult`` and ``ImageCrop``. It also holds
+``PredictedAnnotation``, which a labeling model returns. They live in their own
+module so any caller can depend on them without importing the ``Embedder`` or
+``LabelingModel`` classes.
 """
 
 from __future__ import annotations
@@ -78,3 +79,25 @@ class ImageCrop:
 
     height: int
     """Crop height in pixels."""
+
+
+@dataclass(frozen=True)
+class PredictedAnnotation:
+    """An annotation that a labeling model predicted, before the user saves it.
+
+    <span class="doc-badge doc-badge--beta">Beta</span>
+
+    H is the image height and W is the image width, in pixels.
+    """
+
+    class_name: str
+    """Name of the predicted annotation class."""
+
+    box: tuple[float, float, float, float]
+    """Bounding box ``(x_min, y_min, x_max, y_max)`` in pixels."""
+
+    score: float
+    """Confidence score, from 0 to 1."""
+
+    mask: NDArray[np.bool_] | None = None
+    """Mask of shape ``(H, W)`` and dtype ``np.bool_``, or None for a model without masks."""
