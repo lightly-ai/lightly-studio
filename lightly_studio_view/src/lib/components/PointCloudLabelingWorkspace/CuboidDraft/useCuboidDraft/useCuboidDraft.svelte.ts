@@ -1,15 +1,17 @@
 import { useThrelte } from '@threlte/core';
 import { onMount } from 'svelte';
-import { Plane, Raycaster, Vector2, Vector3 as ThreeVector3 } from 'three';
+import { Plane, Raycaster, Vector2, Vector3 as ThreeVector3, type Camera } from 'three';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import type { CameraMode, Vector3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
 import {
     getDraftBox,
     getDraftRectangle,
+    getHeightExtent,
     getMissingAxis,
     isDrag,
     type CuboidBox,
     type CuboidPlacement,
+    type DraftRectangle,
     type ScreenPoint
 } from '../cuboidDraft';
 import { fitMissingAxis } from '../fitCuboidToPoints';
@@ -44,9 +46,20 @@ interface Draft {
     startWorld: Vector3;
     currentScreen: ScreenPoint;
     currentWorld: Vector3;
+    /** Footprint whose height is being set; unset while the footprint is dragged. */
+    footprint?: DraftRectangle;
 }
 
-const CANVAS_EVENTS = ['pointermove', 'pointerup', 'pointercancel', 'lostpointercapture'] as const;
+/** Below this horizontal view length the height plane is almost parallel to the rays. */
+const MIN_HORIZONTAL_VIEW_LENGTH = 1e-3;
+
+const CANVAS_EVENTS = [
+    'pointerdown',
+    'pointermove',
+    'pointerup',
+    'pointercancel',
+    'lostpointercapture'
+] as const;
 
 export function useCuboidDraft({
     getCameraMode,
@@ -59,11 +72,12 @@ export function useCuboidDraft({
     const raycaster = new Raycaster();
     let draft: Draft | null = null;
     let previewBox = $state<CuboidBox | null>(null);
+    /** Click that saved a height step; it also reaches the plane mesh and must not start a draft. */
+    let savingClick: PointerEvent | null = null;
 
     function handlePlanePointerDown({ point, nativeEvent }: PlanePointerEvent): void {
-        if (nativeEvent.button !== 0) return;
-        // OrbitControls pans on a modifier + left-drag, so leave those to the camera.
-        if (nativeEvent.shiftKey || nativeEvent.ctrlKey || nativeEvent.metaKey) return;
+        if (nativeEvent.button !== 0 || draft?.footprint || nativeEvent === savingClick) return;
+        if (hasCameraModifier(nativeEvent)) return;
         discardDraft();
         const cameraMode = getCameraMode();
         const startWorld: Vector3 = [point.x, point.y, point.z];
@@ -112,12 +126,25 @@ export function useCuboidDraft({
         return raycaster.ray.intersectPlane(plane, new ThreeVector3());
     }
 
+    function updateHeight(event: PointerEvent, footprint: DraftRectangle): void {
+        const plane = createHeightPlane(footprint, camera.current);
+        const hit = plane && raycastPlane(event, plane);
+        if (!hit) return;
+        previewBox = getDraftBox(footprint, getHeightExtent(footprint, hit.z));
+    }
+
+    function startHeightStep(active: Draft): void {
+        const footprint = getRectangle(active);
+        active.footprint = footprint;
+        previewBox = getDraftBox(footprint, getHeightExtent(footprint, footprint.planeCoordinate));
+    }
+
     function getPlacement(active: Draft): CuboidPlacement | null {
         if (!isDrag(active.startScreen, active.currentScreen)) {
             return { kind: 'drop', position: active.startWorld };
         }
         // A drag whose rays never hit the plane has no rectangle to create.
-        if (active.cameraMode === 'perspective' || !previewBox) return null;
+        if (!previewBox) return null;
         const rectangle = getRectangle(active);
         return {
             kind: 'box',
@@ -126,15 +153,31 @@ export function useCuboidDraft({
     }
 
     function onPointerMove(event: PointerEvent): void {
-        if (event.pointerId === draft?.pointerId) updateDraft(event);
+        if (draft?.footprint) updateHeight(event, draft.footprint);
+        else if (event.pointerId === draft?.pointerId) updateDraft(event);
     }
 
     function onPointerUp(event: PointerEvent): void {
-        if (!draft || event.pointerId !== draft.pointerId) return;
+        if (!draft || draft.footprint || event.pointerId !== draft.pointerId) return;
         updateDraft(event);
+        const hasFootprint = isDrag(draft.startScreen, draft.currentScreen) && previewBox !== null;
+        if (draft.cameraMode === 'perspective' && hasFootprint) {
+            startHeightStep(draft);
+            return;
+        }
         const placement = getPlacement(draft);
         discardDraft();
         if (placement) onCreate(placement);
+    }
+
+    function onPointerDown(event: PointerEvent): void {
+        if (!draft?.footprint) return;
+        if (event.button === 2) discardDraft();
+        if (event.button !== 0 || hasCameraModifier(event)) return;
+        const box = previewBox;
+        savingClick = event;
+        discardDraft();
+        if (box) onCreate({ kind: 'box', box });
     }
 
     function onContextMenu(event: Event): void {
@@ -148,10 +191,13 @@ export function useCuboidDraft({
 
     function onCanvasEvent(event: Event): void {
         const pointerEvent = event as PointerEvent;
-        if (event.type === 'pointermove') onPointerMove(pointerEvent);
+        if (event.type === 'pointerdown') onPointerDown(pointerEvent);
+        else if (event.type === 'pointermove') onPointerMove(pointerEvent);
         else if (event.type === 'pointerup') onPointerUp(pointerEvent);
         // A cancel or a capture loss of a different pointer must not end this draft.
-        else if (pointerEvent.pointerId === draft?.pointerId) discardDraft();
+        else if (pointerEvent.pointerId !== draft?.pointerId) return;
+        // Releasing the footprint drag ends its pointer capture; the height step goes on.
+        else if (event.type !== 'lostpointercapture' || !draft?.footprint) discardDraft();
     }
 
     function addListeners(): void {
@@ -191,8 +237,24 @@ export function useCuboidDraft({
     };
 }
 
+/** OrbitControls pans on a modifier + left-drag, so those pointer-downs belong to the camera. */
+function hasCameraModifier(event: PointerEvent): boolean {
+    return event.shiftKey || event.ctrlKey || event.metaKey;
+}
+
 function createDraftPlane(cameraMode: CameraMode, startWorld: Vector3): Plane {
     const normal = new ThreeVector3();
     normal.setComponent(getMissingAxis(cameraMode), 1);
     return new Plane().setFromNormalAndCoplanarPoint(normal, new ThreeVector3(...startWorld));
+}
+
+/** Vertical plane through the footprint centre facing the camera; null when looking almost straight down. */
+function createHeightPlane(footprint: DraftRectangle, camera: Camera): Plane | null {
+    const normal = camera.getWorldDirection(new ThreeVector3()).setZ(0);
+    if (normal.length() < MIN_HORIZONTAL_VIEW_LENGTH) return null;
+    const centre = new ThreeVector3(...footprint.min).add(new ThreeVector3(...footprint.max));
+    return new Plane().setFromNormalAndCoplanarPoint(
+        normal.normalize(),
+        centre.multiplyScalar(0.5)
+    );
 }

@@ -114,6 +114,18 @@ function dragInTopView(draft: Draft) {
     canvas.dispatchEvent(pointer('pointermove', 325, 125));
 }
 
+/**
+ * Drags a footprint from world (0, -8, 0) to world (2, -6, 0) on the ground with the horizontal
+ * camera and releases it, which starts the height step in the perspective view.
+ */
+function startHeightStep(camera = createHorizontalCamera()) {
+    const { draft } = setup({ cameraMode: 'perspective', camera });
+    pressAt(draft, 200, 300, [0, -8, 0]);
+    canvas.dispatchEvent(pointer('pointermove', 300, 250));
+    canvas.dispatchEvent(pointer('pointerup', 300, 250));
+    return draft;
+}
+
 describe('useCuboidDraft', () => {
     it('drops a default cuboid on a click', () => {
         const { draft } = setup();
@@ -146,11 +158,98 @@ describe('useCuboidDraft', () => {
         expect(draft.previewBox).toBeNull();
     });
 
-    it('creates nothing after a drag in the perspective view', () => {
-        const { draft } = setup({ cameraMode: 'perspective' });
-        dragInTopView(draft);
-        canvas.dispatchEvent(pointer('pointerup', 325, 125));
+    it('keeps the footprint preview after the drag in the perspective view', () => {
+        const draft = startHeightStep();
         expect(onCreate).not.toHaveBeenCalled();
+        expect(draft.previewBox).not.toBeNull();
+    });
+
+    it('sets the height from pointer movement and saves on click', () => {
+        const draft = startHeightStep();
+        canvas.dispatchEvent(pointer('pointermove', 200, 100));
+        canvas.dispatchEvent(pointer('pointerdown', 200, 100));
+        expect(onCreate).toHaveBeenCalledOnce();
+        const placement = onCreate.mock.calls[0][0];
+        expect(placement.kind).toBe('box');
+        expect(placement.box.size[2]).toBeGreaterThan(0.1);
+        expect(placement.box.center[2]).toBeCloseTo(placement.box.size[2] / 2);
+        expect(draft.previewBox).toBeNull();
+    });
+
+    it('keeps the height step when the drag releases its pointer capture', () => {
+        const draft = startHeightStep();
+        canvas.dispatchEvent(pointer('lostpointercapture', 300, 250));
+        expect(draft.previewBox).not.toBeNull();
+        canvas.dispatchEvent(pointer('pointerdown', 200, 100));
+        expect(onCreate).toHaveBeenCalledOnce();
+    });
+
+    it.each(['Escape', 'contextmenu', 'right pointer-down', 'pointercancel'])(
+        'discards the height step on %s',
+        (reason) => {
+            const draft = startHeightStep();
+            if (reason === 'Escape')
+                window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+            else if (reason === 'right pointer-down')
+                canvas.dispatchEvent(pointer('pointerdown', 200, 100, 2));
+            else canvas.dispatchEvent(pointer(reason, 200, 100));
+            expect(draft.previewBox).toBeNull();
+            canvas.dispatchEvent(pointer('pointerdown', 200, 100));
+            expect(onCreate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('ignores pointer movement while the camera looks almost straight down', () => {
+        const camera = createHorizontalCamera();
+        const draft = startHeightStep(camera);
+        const preview = draft.previewBox;
+        // Horizontal part of the view direction is about 5e-4.
+        camera.up.set(0, 1, 0);
+        camera.position.set(1, -7.5, 10);
+        camera.lookAt(1, -7.495, 0);
+        camera.updateMatrixWorld();
+        canvas.dispatchEvent(pointer('pointermove', 200, 150));
+        expect(draft.previewBox).toEqual(preview);
+    });
+
+    it.each(['shiftKey', 'ctrlKey', 'metaKey'])(
+        'does not save the height step on a pointer-down with %s',
+        (modifier) => {
+            const draft = startHeightStep();
+            const click = pointer('pointerdown', 200, 100);
+            Object.defineProperty(click, modifier, { value: true });
+            canvas.dispatchEvent(click);
+            expect(onCreate).not.toHaveBeenCalled();
+            expect(draft.previewBox).not.toBeNull();
+        }
+    );
+
+    it('starts no height step after a footprint drag whose rays all miss the ground', () => {
+        const { draft } = setup({ cameraMode: 'perspective', camera: createHorizontalCamera() });
+        pressAt(draft, 200, 300, [0, -8, 0]);
+        canvas.dispatchEvent(pointer('pointermove', 250, 100));
+        canvas.dispatchEvent(pointer('pointerup', 250, 100));
+        expect(draft.previewBox).toBeNull();
+        canvas.dispatchEvent(pointer('pointerdown', 250, 100));
+        expect(onCreate).not.toHaveBeenCalled();
+    });
+
+    it('does not start a second draft during the height step', () => {
+        const draft = startHeightStep();
+        const preview = draft.previewBox;
+        pressAt(draft, 100, 300, [-1, -8, 0]);
+        expect(draft.previewBox).toEqual(preview);
+        canvas.dispatchEvent(pointer('pointermove', 200, 100));
+        expect(draft.previewBox?.size[2]).toBeGreaterThan(0.1);
+    });
+
+    it('does not start a new draft from the click that saves the height step', () => {
+        const draft = startHeightStep();
+        const click = pointer('pointerdown', 200, 100);
+        canvas.dispatchEvent(click);
+        draft.handlePlanePointerDown({ point: { x: 0, y: -8, z: 0 }, nativeEvent: click });
+        canvas.dispatchEvent(pointer('pointermove', 300, 250));
+        expect(onCreate).toHaveBeenCalledOnce();
         expect(draft.previewBox).toBeNull();
     });
 

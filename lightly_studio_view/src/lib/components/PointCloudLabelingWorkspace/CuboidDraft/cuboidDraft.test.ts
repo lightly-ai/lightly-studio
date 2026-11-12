@@ -3,6 +3,7 @@ import {
     getDefaultCuboidBox,
     getDraftBox,
     getDraftRectangle,
+    getHeightExtent,
     getMissingAxis,
     isDrag
 } from './cuboidDraft';
@@ -70,6 +71,17 @@ describe('getDraftBox', () => {
         const box = getDraftBox(thin, { min: 0, max: 1 });
         expect(box.size[0]).toBe(0.1);
         expect(box.center[0]).toBeCloseTo(1.005);
+    });
+});
+
+describe('getHeightExtent', () => {
+    it('raises the footprint from its plane to the pointer height', () => {
+        const r = getDraftRectangle('perspective', [0, 0, -1], [4, 2, -1]);
+        expect(getHeightExtent(r, 1.5)).toEqual({ min: -1, max: 1.5 });
+    });
+    it('keeps the 0.1 minimum when the pointer is below the plane', () => {
+        const r = getDraftRectangle('perspective', [0, 0, -1], [4, 2, -1]);
+        expect(getHeightExtent(r, -3)).toEqual({ min: -1, max: -0.9 });
     });
 });
 

@@ -98,6 +98,12 @@ export function getDraftBox(rectangle: DraftRectangle, extent?: AxisExtent): Cub
     return { center, size };
 }
 
+/** Extent of a footprint raised from its plane to the given world Z. */
+export function getHeightExtent(rectangle: DraftRectangle, z: number): AxisExtent {
+    const { planeCoordinate } = rectangle;
+    return { min: planeCoordinate, max: Math.max(z, planeCoordinate + MIN_CUBOID_EXTENT) };
+}
+
 export function getDefaultCuboidBox(position: Vector3, bounds: Bounds3): CuboidBox {
     const diagonal = Math.hypot(
         bounds.max[0] - bounds.min[0],
