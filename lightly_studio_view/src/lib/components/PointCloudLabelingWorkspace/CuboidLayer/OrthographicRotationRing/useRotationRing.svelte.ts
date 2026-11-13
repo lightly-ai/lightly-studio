@@ -23,6 +23,8 @@ export function useRotationRing(params: Params) {
     ): void {
         if (event.nativeEvent.button !== 0 || !parent.current || drag) return;
         event.stopPropagation();
+        // Keep TransformControls on the same element from taking pointer capture.
+        event.nativeEvent.stopImmediatePropagation();
         params.onInteractionStart?.();
         drag = createRotationDrag({
             object: parent.current,
