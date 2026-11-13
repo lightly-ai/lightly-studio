@@ -130,6 +130,39 @@ describe('useImageFilters', () => {
             } as typeof normalFilterParams);
         };
 
+        const normalFilters = (
+            filterParams: ReturnType<typeof useImageFilters>['filterParams']
+        ) => {
+            const params = get(filterParams);
+            return params.mode === 'normal' ? params.filters : undefined;
+        };
+
+        it('updateSampleIds does nothing in classifier mode', () => {
+            const { filterParams, updateSampleIds } = useImageFilters();
+            setParams({ mode: 'classifier' });
+            const before = get(filterParams);
+            updateSampleIds(['s1']);
+            expect(get(filterParams)).toBe(before);
+        });
+
+        it('updateSampleIds clears sample ids for an empty list', () => {
+            const { filterParams, updateSampleIds } = useImageFilters();
+            setParams({});
+            updateSampleIds(['s1']);
+            expect(normalFilters(filterParams)?.sample_ids).toEqual(['s1']);
+            updateSampleIds([]);
+            expect(normalFilters(filterParams)?.sample_ids).toBeUndefined();
+        });
+
+        it('updateEmbeddingRegion stores and clears the region', () => {
+            const { filterParams, updateEmbeddingRegion } = useImageFilters();
+            setParams({});
+            updateEmbeddingRegion(embeddingRegion);
+            expect(normalFilters(filterParams)?.embedding_region).toBe(embeddingRegion);
+            updateEmbeddingRegion(null);
+            expect(normalFilters(filterParams)?.embedding_region).toBeUndefined();
+        });
+
         it('returns null without a collection id', () => {
             const { imageFilter } = useImageFilters();
             setParams({ collection_id: undefined });

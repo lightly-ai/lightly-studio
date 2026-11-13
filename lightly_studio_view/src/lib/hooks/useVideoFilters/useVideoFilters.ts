@@ -4,7 +4,8 @@ import {
     buildSampleFilter,
     getAnnotationsFilter,
     toMetadataFilters,
-    toRange
+    toRange,
+    patchFilters
 } from '$lib/utils/gridFilter';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
@@ -108,14 +109,9 @@ export const useVideoFilters = () => {
             return;
         }
 
-        const newParams: VideoFilterParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
-            }
-        };
-        filterParams.set(newParams);
+        filterParams.set(
+            patchFilters(params, { sample_ids: sampleIds.length > 0 ? sampleIds : undefined })
+        );
     };
 
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
@@ -124,13 +120,7 @@ export const useVideoFilters = () => {
             return;
         }
 
-        filterParams.set({
-            ...params,
-            filters: {
-                ...params.filters,
-                embedding_region: embeddingRegion ?? undefined
-            }
-        });
+        filterParams.set(patchFilters(params, { embedding_region: embeddingRegion ?? undefined }));
     };
 
     const updateSortBy = (sort: VideoSortFieldExpr[] | null) => {

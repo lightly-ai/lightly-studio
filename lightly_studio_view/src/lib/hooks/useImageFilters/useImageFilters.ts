@@ -3,7 +3,8 @@ import {
     buildGridFilter,
     buildSampleFilter,
     dimensionRanges,
-    toMetadataFilters
+    toMetadataFilters,
+    patchFilters
 } from '$lib/utils/gridFilter';
 import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import { SortDirection } from '$lib/api/lightly_studio_local';
@@ -75,65 +76,37 @@ export const useImageFilters = () => {
 
     // updates only sample ids in the existing filter params
     const updateSampleIds = (sampleIds: string[]) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
         }
 
-        const newParams: ImagesInfiniteParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
-            }
-        };
-
-        filterParams.set(newParams);
+        filterParams.set(
+            patchFilters(params, { sample_ids: sampleIds.length > 0 ? sampleIds : undefined })
+        );
     };
 
     // updates only the embedding-plot region selection in the existing filter params
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
         }
 
-        const newParams: ImagesInfiniteParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                embedding_region: embeddingRegion ?? undefined
-            }
-        };
-
-        filterParams.set(newParams);
+        filterParams.set(patchFilters(params, { embedding_region: embeddingRegion ?? undefined }));
     };
 
     // updates only the confusion-matrix cell in the existing filter params
     const updateConfusionCell = (confusionCell: ConfusionCell | null) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
         }
 
-        const newParams: ImagesInfiniteParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                confusion_cell: confusionCell ?? undefined
-            }
-        };
-
-        filterParams.set(newParams);
+        filterParams.set(patchFilters(params, { confusion_cell: confusionCell ?? undefined }));
     };
 
     const updateSortBy = (sort: ImageSortExpr[] | null) => {
