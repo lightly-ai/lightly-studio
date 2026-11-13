@@ -49,7 +49,7 @@ describe('useExportDownload', () => {
         const prepare = vi.fn().mockRejectedValue(new Error('API error'));
         const { errorMessage, handleDownload } = useExportDownload(prepare);
         await handleDownload();
-        expect(get(errorMessage)).toBe('Export failed: Error: API error');
+        expect(get(errorMessage)).toBe('Export failed: API error');
     });
 
     it('clears errorMessage at the start of the next download attempt', async () => {
@@ -59,7 +59,7 @@ describe('useExportDownload', () => {
             .mockResolvedValueOnce(undefined);
         const { errorMessage, handleDownload } = useExportDownload(prepare);
         await handleDownload();
-        expect(get(errorMessage)).toBe('Export failed: Error: fail');
+        expect(get(errorMessage)).toBe('Export failed: fail');
         await handleDownload();
         expect(get(errorMessage)).toBe('');
     });

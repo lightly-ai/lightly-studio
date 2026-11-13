@@ -2,8 +2,7 @@ import type { InfiniteData } from '@tanstack/svelte-query';
 import { infiniteQueryOptions } from '@tanstack/svelte-query';
 import {
     readAnnotationsWithPayload,
-    type AnnotationWithPayloadAndCountView,
-    type ReadAnnotationsWithPayloadError
+    type AnnotationWithPayloadAndCountView
 } from '$lib/api/lightly_studio_local';
 import type { AnnotationsInfiniteParams, AnnotationsInfiniteQueryKey } from './types';
 
@@ -30,7 +29,7 @@ export const createAnnotationsInfiniteOptions = (params: AnnotationsInfinitePara
 
     return infiniteQueryOptions<
         AnnotationWithPayloadAndCountView,
-        ReadAnnotationsWithPayloadError,
+        Error,
         InfiniteData<AnnotationWithPayloadAndCountView>,
         AnnotationsInfiniteQueryKey,
         number

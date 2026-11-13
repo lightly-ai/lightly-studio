@@ -7,6 +7,7 @@ import { recomputeEvaluationRun, updateRun } from '$lib/api/lightly_studio_local
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { ANNOTATIONS_INFINITE_QUERY_KEY_ROOT } from '$lib/hooks/useAnnotationsInfinite';
 import { toast } from 'svelte-sonner';
+import { getErrorMessage } from '$lib/api/ApiError';
 
 interface UseRecomputeEvaluationRunParams {
     /** The dataset the evaluation run belongs to. */
@@ -56,9 +57,7 @@ export const useRecomputeEvaluationRun = (getParams: () => UseRecomputeEvaluatio
                     });
                 },
                 onError: (error) => {
-                    const message =
-                        (error as { error?: string })?.error ?? 'Failed to recompute evaluation';
-                    toast.error(message);
+                    toast.error(getErrorMessage(error, 'Failed to recompute evaluation'));
                 }
             }
         );

@@ -48,7 +48,7 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         })
             .then((response) => {
                 if (response.error) {
-                    throw new Error(JSON.stringify(response.error));
+                    throw response.error;
                 }
                 if (response.data) {
                     const validTagIds = response.data.map((tag) => tag.tag_id);
