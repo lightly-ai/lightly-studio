@@ -50,8 +50,6 @@ export interface SceneViewportProps {
     isScaleSource?: boolean;
     /** Whether navigation buttons and shortcut hints are shown. */
     showNavigationHelpers?: boolean;
-    /** Whether hovered annotation metadata is shown in this viewport. */
-    showAnnotationTooltips?: boolean;
     /** Shows the subtle active-view border in multi-view layouts. */
     showActiveBorder?: boolean;
     /** Fires when the user selects or deselects a cuboid. */

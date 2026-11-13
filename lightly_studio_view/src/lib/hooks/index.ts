@@ -1,4 +1,6 @@
 export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
+export { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+export { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';

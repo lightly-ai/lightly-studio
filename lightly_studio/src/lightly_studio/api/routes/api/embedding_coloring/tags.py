@@ -94,7 +94,8 @@ def _assign_categories(
     # slots when a sample carries multiple tags grouped into that category.
     for tag_id in ordered_tag_ids:
         category = scale.value_to_category(tag_id)
-        assert category is not None
+        if category is None:
+            raise RuntimeError("Expected `category` to be set.")
         for sample_id in samples_by_tag[tag_id]:
             sample_categories = categories.get(sample_id)
             if sample_categories is not None:

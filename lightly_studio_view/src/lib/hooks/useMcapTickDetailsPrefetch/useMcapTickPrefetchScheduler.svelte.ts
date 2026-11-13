@@ -1,5 +1,6 @@
 import { onDestroy } from 'svelte';
 import { getTickIndexes } from './getTickIndexes';
+import { getBufferedTickRanges } from './getBufferedTickRanges';
 import { prefetchInChunks } from './prefetchInChunks';
 import { useMcapTickDetailsPrefetch } from './useMcapTickDetailsPrefetch.svelte';
 import type { McapTickPrefetchSchedulerParams } from './types';
@@ -39,6 +40,20 @@ export const useMcapTickPrefetchScheduler = ({
     // The same request ID means “continue filling the same buffer”.
     // A new request ID means “start a different buffer”, such as after a jump.
     let currentRequestId: string | undefined;
+    let isRetrying = $state(false);
+
+    const retryFailed = async () => {
+        if (isRetrying || executor.errors.size === 0) return;
+        isRetrying = true;
+        try {
+            await executor.prefetchRanges({
+                requestId: getRequestId(),
+                ranges: getBufferedTickRanges(new Set(executor.errors.keys()))
+            });
+        } finally {
+            isRetrying = false;
+        }
+    };
 
     $effect(() => {
         if (!getEnabled()) return;
@@ -76,6 +91,10 @@ export const useMcapTickPrefetchScheduler = ({
 
     return {
         cancel,
+        retryFailed,
+        get isRetrying() {
+            return isRetrying;
+        },
         get bufferedRanges() {
             return executor.bufferedRanges;
         },

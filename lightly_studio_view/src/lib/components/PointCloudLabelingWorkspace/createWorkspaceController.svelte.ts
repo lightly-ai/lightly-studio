@@ -83,7 +83,6 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         showOrthographicViews: presentation.showOrthographicViews,
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
-        showAnnotationTooltips: presentation.showAnnotationTooltips,
         accumulation,
         colorMode: presentation.colorMode,
         selectedCuboidId: editing.selectedCuboidId,
@@ -92,11 +91,11 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         cameraStripCollapsed: cameraPane.collapsed,
         bufferEntireSequence: playback.bufferEntireSequence,
         bufferedRanges: playback.bufferedRanges,
+        bufferStatus: playback.bufferStatus,
         onCameraStripCollapsedChange: cameraPane.setCollapsed,
         onToggleOrthographicProjections: presentation.toggleOrthographicProjections,
         onPointSizeChange: presentation.setPointSize,
         onToggleNavigationHelpers: presentation.setShowNavigationHelpers,
-        onToggleAnnotationTooltips: presentation.setShowAnnotationTooltips,
         onToolChange: (tool) => {
             editing.activeTool = tool;
         },
@@ -107,6 +106,11 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
             editing.hoveredCuboidId = id;
         },
         onCreateCuboid: editing.handleCreateCuboid,
+        isAddingTrack: editing.isAddingTrack,
+        onToggleAddTrack: editing.toggleAddTrack,
+        onExtendTrack: editing.handleExtendTrack,
+        onDeleteTrack: editing.handleDeleteTrack,
+        onStartTrack: editing.handleStartTrack,
         onPreviousFrame: playback.goToPreviousFrame,
         onNextFrame: playback.goToNextFrame,
         onPlayToggle: playback.togglePlayback,

@@ -1,5 +1,6 @@
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -49,6 +50,53 @@ def test_get_all_videos(test_client: TestClient, db_session: Session) -> None:
     assert result["total_count"] == 2
     assert data[0]["file_path_abs"].endswith("sample1.mp4")
     assert data[1]["file_path_abs"].endswith("sample2.mp4")
+
+
+@pytest.mark.parametrize(
+    ("query_spec", "expected_names"),
+    [
+        (("duration_s", "ordinal_float_expr", ">", 10), ["long.mp4"]),
+        (("duration_s", "ordinal_float_expr", ">=", 10), ["boundary.mp4", "long.mp4"]),
+        (("duration_s", "ordinal_float_expr", "<", 10), ["short.mp4"]),
+        (("duration_s", "ordinal_float_expr", "<=", 10), ["boundary.mp4", "short.mp4"]),
+        (("duration_s", "ordinal_float_expr", "==", 10), ["boundary.mp4"]),
+        (("duration_s", "ordinal_float_expr", "!=", 10), ["long.mp4", "short.mp4"]),
+        (("fps", "equality_float_expr", "==", 30), ["boundary.mp4", "unknown.mp4"]),
+        (("fps", "equality_float_expr", "!=", 30), ["long.mp4", "short.mp4"]),
+    ],
+)
+def test_get_all_videos__numeric_query(
+    test_client: TestClient,
+    db_session: Session,
+    query_spec: tuple[str, str, str, int],
+    expected_names: list[str],
+) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    create_videos(
+        session=db_session,
+        collection_id=collection.collection_id,
+        videos=[
+            VideoStub(path="/videos/unknown.mp4", duration_s=None, fps=30),
+            VideoStub(path="/videos/short.mp4", duration_s=5, fps=20),
+            VideoStub(path="/videos/boundary.mp4", duration_s=10, fps=30),
+            VideoStub(path="/videos/long.mp4", duration_s=12.5, fps=60),
+        ],
+    )
+    field, expression_type, operator, value = query_spec
+    expression = {
+        "type": expression_type,
+        "field": {"table": "video", "name": field},
+        "operator": operator,
+        "value": value,
+    }
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/video/",
+        json={"filter": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+    )
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["total_count"] == len(expected_names)
+    assert sorted(video["file_name"] for video in result["data"]) == expected_names
 
 
 def test_get_all_videos__with_sort_by_video_field(

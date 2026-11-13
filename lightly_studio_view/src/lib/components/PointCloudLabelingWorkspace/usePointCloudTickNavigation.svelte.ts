@@ -117,5 +117,21 @@ export function usePointCloudTickNavigation({
         }, intervalMs);
     });
 
-    return { goToPreviousFrame, goToNextFrame, goToFrame, togglePlayback };
+    return {
+        goToPreviousFrame,
+        goToNextFrame,
+        goToFrame,
+        togglePlayback,
+        get isWaitingForData() {
+            const workspace = getWorkspace();
+            return (
+                workspace.isPlaying &&
+                workspace.status === 'ready' &&
+                workspace.ticks.length > 0 &&
+                !workspace.tickDetails.isError &&
+                !(workspace.cloudPointFrame.isEnabled && workspace.cloudPointFrame.isError) &&
+                !canAdvance
+            );
+        }
+    };
 }

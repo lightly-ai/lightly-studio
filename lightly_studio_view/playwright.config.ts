@@ -54,10 +54,6 @@ export default defineConfig({
             expect: { timeout: 15_000 }
         },
         {
-            name: 'distribution',
-            testDir: './e2e/distribution'
-        },
-        {
             name: 'remote-embedder',
             testDir: './e2e/remote-embedder'
         }

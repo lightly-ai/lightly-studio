@@ -1,3 +1,4 @@
+import { getErrorMessage } from '$lib/api/ApiError';
 import { writable, type Readable } from 'svelte/store';
 
 interface UseExportDownloadReturn {
@@ -38,7 +39,7 @@ export function useExportDownload(prepare: () => Promise<void>): UseExportDownlo
         try {
             await prepare();
         } catch (e) {
-            errorMessage.set(`Export failed: ${String(e)}`);
+            errorMessage.set(`Export failed: ${getErrorMessage(e, 'Unknown error')}`);
         } finally {
             isLoading.set(false);
         }

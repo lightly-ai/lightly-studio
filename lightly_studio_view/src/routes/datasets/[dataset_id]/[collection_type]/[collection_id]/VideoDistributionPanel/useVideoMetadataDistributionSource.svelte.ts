@@ -1,5 +1,4 @@
 import type { CategoricalMetadataValue } from '$lib/services/types';
-import { getErrorMessage } from '$lib/utils';
 import { fromStore } from 'svelte/store';
 import type { VideoFilter } from '$lib/api/lightly_studio_local';
 import {
@@ -25,7 +24,7 @@ interface UseVideoMetadataDistributionSourceParams {
     collectionId: string;
     /** The filter of the videos grid, with every sidebar filter applied. */
     filter: MetadataFilter;
-    /** Only the tags and sample ids of the grid, so the totals stay stable. */
+    /** The grid filter without the sidebar filters, so the totals stay stable. */
     baseFilter: MetadataFilter;
     histogramBinCount: number;
     /** The source and group that the panel shows. Only the shown metadata key is fetched. */
@@ -120,9 +119,7 @@ export function useVideoMetadataDistributionSource(
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,
             // The filtered query draws the foreground bars, so its failure must show too.
-            categoricalError: getErrorMessage(
-                categoricalQuery.error ?? categoricalFilteredQuery.error
-            )
+            categoricalError: (categoricalQuery.error ?? categoricalFilteredQuery.error)?.message
         });
     });
 

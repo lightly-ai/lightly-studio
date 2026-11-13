@@ -43,14 +43,14 @@ indent-width = 4
 target-version = "py310"
 
 [lint]
-# Allow Optional and Union annotations and preserve existing iterator behavior.
-ignore = ["UP007", "UP045", "B905", "RUF007"]
+# Preserve existing iterator behavior.
+ignore = ["B905", "RUF007"]
 # Allow unused variables when underscore-prefixed.
 dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
 # Enable Pyflakes (`F`) and a subset of the pycodestyle (`E`)  codes by default.
 # Unlike Flake8, Ruff doesn't enable pycodestyle warnings (`W`) or
 # McCabe complexity (`C901`) by default.
-select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T10", "PIE", "PT", "RET", "SLF", "SIM", "TID", "ARG", "PL", "RUF"]
+select = ["E", "F", "W", "C90", "I", "N", "D", "UP", "B", "A", "C4", "DTZ", "T10", "PIE", "PT", "RET", "SLF", "SIM", "TID", "ARG", "PL", "RUF", "S101", "PGH003", "TD002", "TD004"]
 
 # Allow fix for all enabled rules (when `--fix`) is provided.
 fixable = ["ALL"]
@@ -65,7 +65,7 @@ pydocstyle = { "convention" = "google" }
 [lint.per-file-ignores]
 # Ignore `D104` in `__init__.py`.
 "__init__.py" = ["D104"]
-"tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "PLR2004", "SLF001"]
+"tests/**/*.py" = ["D100", "D101", "D102", "D103", "D107", "PLR2004", "S101", "SLF001"]
 
 
 [format]
@@ -100,3 +100,6 @@ docstring-code-line-length = "dynamic"
 
 [lint.pep8-naming]
 classmethod-decorators = ["pydantic.validator", "pydantic.model_validator"]
+
+[lint.flake8-tidy-imports.banned-api]
+"unittest".msg = "Use pytest and the `mocker` fixture of pytest-mock."

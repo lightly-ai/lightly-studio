@@ -11,26 +11,22 @@
         showOrthographicViews: boolean;
         pointSize: number;
         showNavigationHelpers: boolean;
-        showAnnotationTooltips: boolean;
         disabled?: boolean;
         accumulation?: ComponentProps<typeof AccumulationSettings>;
         onToggle: (showOrthographicViews: boolean) => void;
         onPointSizeChange: (pointSize: number) => void;
         onToggleNavigationHelpers: (show: boolean) => void;
-        onToggleAnnotationTooltips: (show: boolean) => void;
     }
 
     let {
         showOrthographicViews,
         pointSize,
         showNavigationHelpers,
-        showAnnotationTooltips,
         disabled = false,
         accumulation,
         onToggle,
         onPointSizeChange,
-        onToggleNavigationHelpers,
-        onToggleAnnotationTooltips
+        onToggleNavigationHelpers
     }: Props = $props();
     let open = $state(false);
 </script>
@@ -73,14 +69,6 @@
                 onCheckedChange={(checked) => onToggleNavigationHelpers(checked === true)}
             />
             <span>Show navigation helpers</span>
-        </label>
-        <label class="flex items-center gap-2 border-t pt-3 text-sm">
-            <Checkbox
-                checked={showAnnotationTooltips}
-                aria-label="Show annotation tooltips"
-                onCheckedChange={(checked) => onToggleAnnotationTooltips(checked === true)}
-            />
-            <span>Show annotation tooltips</span>
         </label>
         {#if accumulation}
             <AccumulationSettings

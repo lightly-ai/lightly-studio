@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { getErrorMessage } from '$lib/utils';
     import { validate as validateUUID } from 'uuid';
     import CategoricalMetadataFieldPicker from '$lib/components/CategoricalMetadataFieldPicker/CategoricalMetadataFieldPicker.svelte';
     import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
@@ -7,6 +6,7 @@
     import type { ImageFilter } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { CategoricalMetadataValue } from '$lib/services/types';
+    import { withAllValues } from './withAllValues';
 
     interface Props {
         collectionId: string;
@@ -46,7 +46,15 @@
         fields: visibleFields,
         enabled: validateUUID(collectionId) && visibleFields.length > 0
     }));
+    // Lists every value of each field; `categoricalQuery` only provides the counts.
+    const allValuesQuery = useCategoricalMetadataDistribution(() => ({
+        collectionId,
+        filter: { filter_type: 'image' },
+        fields: visibleFields,
+        enabled: validateUUID(collectionId) && visibleFields.length > 0
+    }));
     const distributions = $derived(categoricalQuery.data ?? {});
+    const allValues = $derived(allValuesQuery.data ?? {});
     const loading = $derived(
         categoricalQuery.isFetching &&
             (categoricalQuery.isLoading || categoricalQuery.isPlaceholderData)
@@ -69,11 +77,11 @@
     <MetadataCategoricalFilter
         layout="list"
         fieldLabel={field}
-        buckets={distributions[field] ?? []}
+        buckets={withAllValues(distributions[field] ?? [], allValues[field] ?? [])}
         selectedValues={$categoricalMetadataValues[field] ?? []}
         {loading}
         {updating}
-        error={getErrorMessage(categoricalQuery.error)}
+        error={categoricalQuery.error?.message}
         onRetry={() => categoricalQuery.refetch()}
         onToggle={(value) => onValueToggle(field, value)}
         onSetValues={(values) => onValuesSet(field, values)}

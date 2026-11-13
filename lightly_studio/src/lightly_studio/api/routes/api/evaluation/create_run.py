@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Path
@@ -79,12 +79,10 @@ class InstanceSegmentationEvaluationRunCreateRequest(_EvaluationRunCreateRequest
 
 
 EvaluationRunCreateRequest = Annotated[
-    Union[
-        ObjectDetectionEvaluationRunCreateRequest,
-        ClassificationEvaluationRunCreateRequest,
-        InstanceSegmentationEvaluationRunCreateRequest,
-        SemanticSegmentationEvaluationRunCreateRequest,
-    ],
+    ObjectDetectionEvaluationRunCreateRequest
+    | ClassificationEvaluationRunCreateRequest
+    | InstanceSegmentationEvaluationRunCreateRequest
+    | SemanticSegmentationEvaluationRunCreateRequest,
     Field(discriminator="task_type"),
 ]
 

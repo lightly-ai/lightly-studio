@@ -45,8 +45,8 @@ FLOCI_GCP_PREFIX ?= recordings
 FLOCI_GCP_MCAP_FILES ?= datasets/mcap/perception.mcap
 FLOCI_GCP_ENV := STORAGE_EMULATOR_HOST=http://localhost:$(FLOCI_GCP_PORT)
 
-# Installs the uv version that `required-version` in pyproject.toml pins, so a local
-# `uv lock` writes the same file the workflows do. Keep the version in sync with that pin.
+# Installs the uv version used by CI. `required-version` in pyproject.toml sets
+# the minimum supported local uv version.
 UV_VERSION := 0.13.6
 
 .PHONY: install-uv
@@ -150,14 +150,6 @@ start-e2e-with-predictions: build
 start-e2e-evaluations: build
 	@echo "Starting server for e2e tests with evaluations..."
 	uv run e2e-tests/index_evaluations.py
-
-# Content is controlled via env vars (all default to true), e.g.:
-#   ADD_METADATA=false make start-e2e-distribution
-#   ADD_CLASSIFICATIONS=false ADD_OBJECT_DETECTIONS=false ADD_SEGMENTATIONS=false make start-e2e-distribution
-.PHONY: start-e2e-distribution
-start-e2e-distribution: build
-	@echo "Starting server for e2e distribution tests (toggles: ADD_CLASSIFICATIONS, ADD_OBJECT_DETECTIONS, ADD_SEGMENTATIONS, ADD_METADATA)..."
-	uv run e2e-tests/index_distribution.py
 
 .PHONY: start-e2e-video-groups
 start-e2e-video-groups: build
@@ -310,6 +302,7 @@ ifeq ($(OS),Windows_NT)
 		New-Item -ItemType File -Path 'src\lightly_studio\dist_lightly_studio_view_app\index.html' -Force | Out-Null; \
 		Write-Host 'Exporting schema for API...'; \
 		uv run src/lightly_studio/export_schema.py; \
+		if ($$LASTEXITCODE -ne 0) { Remove-Item -Path 'src\lightly_studio\dist_lightly_studio_view_app' -Recurse -Force -ErrorAction SilentlyContinue; exit 1 }; \
 		Remove-Item -Path 'src\lightly_studio\dist_lightly_studio_view_app' -Recurse -Force -ErrorAction SilentlyContinue; \
 		Set-Content -Path '$(SCHEMA_CACHE_FILE)' -Value $$currentHash \
 	}"
@@ -320,7 +313,7 @@ else
 		mkdir -p src/lightly_studio/dist_lightly_studio_view_app; \
 		touch src/lightly_studio/dist_lightly_studio_view_app/index.html; \
 		echo "Exporting schema for API..."; \
-		uv run src/lightly_studio/export_schema.py; \
+		uv run src/lightly_studio/export_schema.py || { rm -rf src/lightly_studio/dist_lightly_studio_view_app; exit 1; }; \
 		rm -rf src/lightly_studio/dist_lightly_studio_view_app; \
 		echo "$$CURRENT_HASH" > $(SCHEMA_CACHE_FILE); \
 	else \
