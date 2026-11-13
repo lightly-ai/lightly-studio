@@ -1,4 +1,5 @@
 <script lang="ts">
+    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
     import { onMount } from 'svelte';
