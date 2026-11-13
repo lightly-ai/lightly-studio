@@ -9,63 +9,33 @@ const EMPTY_BATCH: PointBatch = {
 };
 const EMPTY_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
 
+const DEFAULTS = {
+    batch: EMPTY_BATCH,
+    colorMode: 'none',
+    pointSize: 2,
+    cuboids: [],
+    annotationClasses: [],
+    annotationSources: [],
+    pointCloudBounds: EMPTY_BOUNDS,
+    selectedAnnotationId: null,
+    hoveredAnnotationId: null,
+    activeTool: 'select',
+    draftCuboid: null,
+    cameraMode: 'perspective',
+    isScaleSource: false,
+    showNavigationHelpers: true,
+    showActiveBorder: false,
+    viewState: null
+} satisfies Partial<SceneViewportProps>;
+
+type ResolvedSceneViewportProps = SceneViewportProps &
+    Required<Pick<SceneViewportProps, keyof typeof DEFAULTS>>;
+
 /** Resolves optional viewport inputs for canvas and overlay consumers. */
-export function resolveSceneViewportProps({
-    header,
-    tools,
-    batch = EMPTY_BATCH,
-    colorMode = 'none',
-    pointSize = 2,
-    intensityRange,
-    cuboids = [],
-    annotationClasses = [],
-    annotationSources = [],
-    transforms,
-    pointCloudBounds = EMPTY_BOUNDS,
-    fitKey,
-    selectedAnnotationId = null,
-    hoveredAnnotationId = null,
-    activeTool = 'select',
-    onselect,
-    onhover,
-    onCreateCuboid,
-    onCuboidTransform,
-    onPreviousTick,
-    onNextTick,
-    cameraMode = 'perspective',
-    isScaleSource = false,
-    showNavigationHelpers = true,
-    showActiveBorder = false,
-    viewState = null,
-    onViewStateChange
-}: SceneViewportProps) {
-    return {
-        header,
-        tools,
-        batch,
-        colorMode,
-        pointSize,
-        intensityRange,
-        cuboids,
-        annotationClasses,
-        annotationSources,
-        transforms,
-        pointCloudBounds,
-        fitKey,
-        selectedAnnotationId,
-        hoveredAnnotationId,
-        activeTool,
-        onselect,
-        onhover,
-        onCreateCuboid,
-        onCuboidTransform,
-        onPreviousTick,
-        onNextTick,
-        cameraMode,
-        isScaleSource,
-        showNavigationHelpers,
-        showActiveBorder,
-        viewState,
-        onViewStateChange
-    };
+export function resolveSceneViewportProps(props: SceneViewportProps): ResolvedSceneViewportProps {
+    // An input that is passed as undefined gets its default, like an input that is not passed.
+    const defined = Object.fromEntries(
+        Object.entries(props).filter(([, value]) => value !== undefined)
+    ) as SceneViewportProps;
+    return { ...DEFAULTS, ...defined };
 }

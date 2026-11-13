@@ -1,14 +1,9 @@
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import { getContext, setContext } from 'svelte';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
 import type { ColorMode } from '$lib/components/PointCloudViewer';
 import type { PointCloudWorkspaceContext } from './provider/types';
-import type {
-    AnnotationClass,
-    AnnotationSource,
-    CuboidAnnotation,
-    Vector3,
-    WorkspaceTool
-} from './domain';
+import type { AnnotationClass, AnnotationSource, CuboidAnnotation, WorkspaceTool } from './domain';
 import type { createCuboidTransformState } from './CuboidLayer/cuboidTransformState';
 import type { createWorkspaceController } from './createWorkspaceController.svelte';
 
@@ -64,6 +59,8 @@ export interface PointCloudWorkspaceLayoutState {
     selectedCuboidId: string | null;
     /** Hovered cuboid identifier, or null. */
     hoveredCuboidId: string | null;
+    /** Region of the cuboid being drawn, or null; its points are highlighted in every viewport. */
+    draftCuboid: CuboidBox | null;
     /** Camera channels currently visible in the strip. */
     selectedCameraChannelIds: number[];
     /** Whether the camera strip is reduced to its header. */
@@ -88,8 +85,10 @@ export interface PointCloudWorkspaceLayoutState {
     onSelect: (annotationId: string | null) => void;
     /** Updates the cuboid shown by hover feedback. */
     onHover: (annotationId: string | null) => void;
-    /** Creates an annotation at a world-space placement point. */
-    onCreateCuboid: (position: Vector3) => void | Promise<void>;
+    /** Updates the region of the cuboid being drawn. */
+    onCuboidDraftChange: (box: CuboidBox | null) => void;
+    /** Creates an annotation from a drawn box. */
+    onCreateCuboid: (box: CuboidBox, selectClass?: boolean) => void | Promise<void>;
     /** Whether the next created cuboid also starts a new object track. */
     isAddingTrack: boolean;
     /** Arms or cancels creating a new object track with its first cuboid. */
