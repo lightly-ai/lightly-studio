@@ -1,15 +1,24 @@
 import { derived, get, writable } from 'svelte/store';
-import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import {
+    buildGridFilter,
+    buildSampleFilter,
+    getAnnotationsFilter,
+    toMetadataFilters,
+    toRange,
+    patchFilters
+} from '$lib/utils/gridFilter';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
-    AnnotationsFilter,
     EmbeddingRegion,
-    SampleFilter,
     VideoFilter,
     VideoFieldsBoundsView,
     VideoSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
+import type { useImageFilters } from '$lib/hooks';
+type QueryExpression = NonNullable<
+    Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0]
+>;
 type MetadataValues = Record<string, { min: number; max: number }>;
 
 export type VideoFilterParams = {
@@ -26,89 +35,52 @@ export type VideoFilterParams = {
 };
 
 const filterParams = writable<VideoFilterParams | null>(null);
+const videoQueryExpression = writable<QueryExpression | null>(null);
 
-export const buildVideoFilter = ($filterParams: VideoFilterParams | null): VideoFilter | null => {
+const videoBoundsFields = (
+    bounds: VideoFieldsBoundsView | null | undefined
+): Pick<VideoFilter, 'width' | 'height' | 'fps' | 'duration_s'> =>
+    bounds
+        ? {
+              width: toRange(bounds.width),
+              height: toRange(bounds.height),
+              fps: bounds.fps,
+              duration_s: bounds.duration_s
+          }
+        : {};
+
+export const buildVideoFilter = (
+    $filterParams: VideoFilterParams | null,
+    queryExpression?: QueryExpression | null
+): VideoFilter | null => {
     if (!$filterParams?.collection_id) {
         return null;
     }
 
-    const filters: VideoFilter = {
-        filter_type: 'video'
-    };
+    const f = $filterParams.filters ?? {};
 
-    // Add video-specific bounds (width, height, fps, duration_s)
-    if ($filterParams.video_bounds) {
-        const bounds = $filterParams.video_bounds;
-
-        if (bounds.width) {
-            filters.width = {
-                min: bounds.width.min ?? undefined,
-                max: bounds.width.max ?? undefined
-            };
-        }
-
-        if (bounds.height) {
-            filters.height = {
-                min: bounds.height.min ?? undefined,
-                max: bounds.height.max ?? undefined
-            };
-        }
-
-        if (bounds.fps) {
-            filters.fps = bounds.fps;
-        }
-
-        if (bounds.duration_s) {
-            filters.duration_s = bounds.duration_s;
-        }
-    }
-
-    const sampleFilter: SampleFilter = {};
-
-    const sampleIds = $filterParams.filters?.sample_ids;
-    if (sampleIds && sampleIds.length > 0) {
-        sampleFilter.sample_ids = sampleIds;
-    }
-
-    const embeddingRegion = $filterParams.filters?.embedding_region;
-    if (embeddingRegion) {
-        sampleFilter.embedding_region = embeddingRegion;
-    }
-
-    const tagIds = $filterParams.filters?.tag_ids;
-    if (tagIds && tagIds.length > 0) {
-        sampleFilter.tag_ids = tagIds;
-    }
-
-    if (
-        $filterParams.filters?.metadata_values ||
-        $filterParams.filters?.categorical_metadata_values
-    ) {
-        const metadataFilters = createMetadataFilters(
-            $filterParams.filters.metadata_values ?? {},
-            $filterParams.filters.categorical_metadata_values ?? {}
-        );
-        if (metadataFilters.length > 0) {
-            sampleFilter.metadata_filters = metadataFilters;
-        }
-    }
-
-    if (Object.keys(sampleFilter).length > 0) {
-        filters.sample_filter = sampleFilter;
-    }
-    const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
-    if (annotationFramesLabelIds && annotationFramesLabelIds.length > 0) {
-        filters.frame_annotation_filter = {
-            filter_type: 'annotations',
-            annotation_label_ids: annotationFramesLabelIds
-        } satisfies AnnotationsFilter;
-    }
-
-    return Object.keys(filters).length > 0 ? filters : null;
+    return buildGridFilter(
+        'video',
+        {
+            ...videoBoundsFields($filterParams.video_bounds),
+            frame_annotation_filter: getAnnotationsFilter({
+                annotation_label_ids: f.annotation_frames_label_ids
+            })
+        },
+        buildSampleFilter({
+            sample_ids: f.sample_ids,
+            embedding_region: f.embedding_region,
+            tag_ids: f.tag_ids,
+            metadata_filters: toMetadataFilters(f.metadata_values, f.categorical_metadata_values),
+            query_expr: queryExpression?.query_expr
+        })
+    );
 };
 
-const videoFilter = derived(filterParams, ($filterParams): VideoFilter | null =>
-    buildVideoFilter($filterParams)
+const videoFilter = derived(
+    [filterParams, videoQueryExpression],
+    ([$filterParams, $videoQueryExpression]) =>
+        buildVideoFilter($filterParams, $videoQueryExpression)
 );
 
 const videoSortBy = writable<VideoSortFieldExpr[] | null>([
@@ -121,7 +93,14 @@ const videoSortBy = writable<VideoSortFieldExpr[] | null>([
 
 export const useVideoFilters = () => {
     const updateFilterParams = (params: VideoFilterParams) => {
+        if (params?.collection_id !== get(filterParams)?.collection_id) {
+            videoQueryExpression.set(null);
+        }
         filterParams.set(params);
+    };
+
+    const updateQueryExpr = (expr?: QueryExpression) => {
+        videoQueryExpression.set(expr ?? null);
     };
 
     const updateSampleIds = (sampleIds: string[]) => {
@@ -130,14 +109,9 @@ export const useVideoFilters = () => {
             return;
         }
 
-        const newParams: VideoFilterParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
-            }
-        };
-        filterParams.set(newParams);
+        filterParams.set(
+            patchFilters(params, { sample_ids: sampleIds.length > 0 ? sampleIds : undefined })
+        );
     };
 
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
@@ -146,13 +120,7 @@ export const useVideoFilters = () => {
             return;
         }
 
-        filterParams.set({
-            ...params,
-            filters: {
-                ...params.filters,
-                embedding_region: embeddingRegion ?? undefined
-            }
-        });
+        filterParams.set(patchFilters(params, { embedding_region: embeddingRegion ?? undefined }));
     };
 
     const updateSortBy = (sort: VideoSortFieldExpr[] | null) => {
@@ -160,6 +128,8 @@ export const useVideoFilters = () => {
     };
 
     return {
+        videoQueryExpression,
+        updateQueryExpr,
         filterParams,
         videoFilter,
         videoSortBy,

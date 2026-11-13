@@ -26,7 +26,7 @@ class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
     name: str = Field(index=True)
-    parent_collection_id: Optional[UUID] = Field(
+    parent_collection_id: UUID | None = Field(
         default=None,
         foreign_key="collection.collection_id",
         index=True,

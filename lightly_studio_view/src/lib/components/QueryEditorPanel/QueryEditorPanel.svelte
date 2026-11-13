@@ -5,17 +5,23 @@
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
-    import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import type { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+
+    import QuerySyntaxHelp from './QuerySyntaxHelp.svelte';
 
     interface Props {
         /** Invoked when the user clicks the close button in the panel header. */
         onClose: () => void;
+        sampleType: 'image' | 'video';
+        queryExpression:
+            | Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0]
+            | null;
+        updateQueryExpr: ReturnType<typeof useImageFilters>['updateQueryExpr'];
     }
 
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
-    const { onClose }: Props = $props();
-    const { imageQueryExpression, updateQueryExpr } = useImageFilters();
+    const { onClose, sampleType, queryExpression, updateQueryExpr }: Props = $props();
     const queryClient = useQueryClient();
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
@@ -52,36 +58,12 @@
                 }}
             />
         </div>
-        <Typography
-            variant="body2"
-            component="div"
-            className="mt-1 min-w-0 break-words text-muted-foreground [&_code]:break-all"
-        >
-            <p>Write a query expression to filter your dataset. Available syntax:</p>
-            <ul class="my-1 ml-4 list-disc space-y-1">
-                <li>Logical operations: <code>AND</code>, <code>OR</code>, <code>NOT</code></li>
-                <li>
-                    Image fields: <code>file_name</code>, <code>file_path_abs</code>,
-                    <code>width</code>, <code>height</code>, <code>created_at</code>
-                </li>
-                <li>Metadata: <code>metadata["quality_score"] &gt;= 0.8</code></li>
-                <li>
-                    Sample evaluation: <code
-                        >sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code
-                    >
-                </li>
-                <li>Tag membership: <code>"tag_name" IN tags</code></li>
-                <li>
-                    Annotation conditions: <code>segmentation_mask(…)</code>,
-                    <code>object_detection(…)</code>, <code>classification(…)</code>
-                </li>
-            </ul>
-            <p>Tip: Completion hints will appear as you type a space or a left parenthesis.</p>
-        </Typography>
+        <QuerySyntaxHelp {sampleType} />
     </div>
     <QueryEditor
         height="100%"
-        value={$imageQueryExpression?.query_expr_str}
+        {sampleType}
+        value={queryExpression?.query_expr_str}
         onSave={handleQueryEditorValueChange}
     />
 </div>

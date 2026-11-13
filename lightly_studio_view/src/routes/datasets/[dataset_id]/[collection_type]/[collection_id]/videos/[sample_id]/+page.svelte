@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { getErrorMessage } from '$lib/utils';
     import { useCollectionWithChildren, useVideo } from '$lib/hooks';
     import type { PageData } from './$types';
     import {
@@ -85,5 +84,5 @@
 {:else if $isLoading}
     <Spinner />
 {:else if $error}
-    <Alert title="Error loading video">{getErrorMessage($error)}</Alert>
+    <Alert title="Error loading video">{$error.message}</Alert>
 {/if}

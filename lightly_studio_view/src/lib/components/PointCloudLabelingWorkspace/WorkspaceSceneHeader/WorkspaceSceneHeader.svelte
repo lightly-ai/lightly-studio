@@ -23,11 +23,9 @@
             showOrthographicViews={layout.showOrthographicViews}
             pointSize={layout.pointSize}
             showNavigationHelpers={layout.showNavigationHelpers}
-            showAnnotationTooltips={layout.showAnnotationTooltips}
             onToggle={layout.onToggleOrthographicProjections}
             onPointSizeChange={layout.onPointSizeChange}
             onToggleNavigationHelpers={layout.onToggleNavigationHelpers}
-            onToggleAnnotationTooltips={layout.onToggleAnnotationTooltips}
         />
     {/snippet}
 </WorkspacePanelHeader>

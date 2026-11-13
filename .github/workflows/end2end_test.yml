@@ -5,6 +5,9 @@ on:
     branches:
       - main
   pull_request:
+    # Drafts skip the tests, so rerun when the draft state changes: `ready_for_review` starts the
+    # tests, and the run for `converted_to_draft` cancels a running one via `concurrency`.
+    types: [opened, synchronize, reopened, ready_for_review, converted_to_draft]
   merge_group:
   workflow_dispatch:
 
@@ -32,7 +35,13 @@ jobs:
     timeout-minutes: 5
     outputs:
       file-hash: ${{ steps.file-hash.outputs.hash }}
-      skip: ${{ steps.cache-success-all.outputs.cache-hit == 'true' }}
+      # Draft pull requests skip the tests. To run them on a draft, add the `run-e2e` or
+      # `run-e2e-merge-queue` label and push again.
+      skip: >-
+        ${{ (github.event.pull_request.draft == true &&
+        !contains(github.event.pull_request.labels.*.name, 'run-e2e') &&
+        !contains(github.event.pull_request.labels.*.name, 'run-e2e-merge-queue')) ||
+        steps.cache-success-all.outputs.cache-hit == 'true' }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -237,14 +246,6 @@ jobs:
             success_key: e2e-success-videos
             artifact_name: Playwright Report (Videos)
             postgres: false
-          - name: Groups
-            index_script: index_groups.py
-            playwright_project: groups
-            shard: "1/1"
-            success_marker: .e2e-success-groups
-            success_key: e2e-success-groups
-            artifact_name: Playwright Report (Groups)
-            postgres: false
           - name: Evaluations
             index_script: index_evaluations.py
             playwright_project: evaluations
@@ -253,62 +254,6 @@ jobs:
             success_key: e2e-success-evaluations
             artifact_name: Playwright Report (Evaluations)
             postgres: false
-          - name: Distribution
-            index_script: index_distribution.py
-            playwright_project: distribution
-            shard: "1/1"
-            success_marker: .e2e-success-distribution
-            success_key: e2e-success-distribution
-            artifact_name: Playwright Report (Distribution)
-            postgres: false
-          - name: General Postgres 1 of 3
-            index_script: index_general.py
-            playwright_project: general
-            shard: "1/3"
-            success_marker: .e2e-success-general-postgres-1
-            success_key: e2e-success-general-postgres-1
-            artifact_name: Playwright Report (General Postgres 1)
-            postgres: true
-          - name: General Postgres 2 of 3
-            index_script: index_general.py
-            playwright_project: general
-            shard: "2/3"
-            success_marker: .e2e-success-general-postgres-2
-            success_key: e2e-success-general-postgres-2
-            artifact_name: Playwright Report (General Postgres 2)
-            postgres: true
-          - name: General Postgres 3 of 3
-            index_script: index_general.py
-            playwright_project: general
-            shard: "3/3"
-            success_marker: .e2e-success-general-postgres-3
-            success_key: e2e-success-general-postgres-3
-            artifact_name: Playwright Report (General Postgres 3)
-            postgres: true
-          - name: Videos Postgres
-            index_script: index_video.py
-            playwright_project: videos
-            shard: "1/1"
-            success_marker: .e2e-success-videos-postgres
-            success_key: e2e-success-videos-postgres
-            artifact_name: Playwright Report (Videos Postgres)
-            postgres: true
-
-    services:
-      postgres:
-        image: ${{ matrix.postgres && 'pgvector/pgvector:0.8.1-pg18-bookworm' || '' }}
-        env:
-          POSTGRES_USER: lightly
-          POSTGRES_PASSWORD: lightly
-          POSTGRES_DB: lightly_studio
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -h 127.0.0.1 -U lightly -d lightly_studio"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps: &end-to-end-steps
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -548,6 +493,81 @@ jobs:
         with:
           mode: end
 
+  # Pull requests skip this job to save runners; Postgres runs the same tests as the DuckDB jobs
+  # above. The merge queue runs it before merge. To run it on a pull request, add the
+  # `run-e2e-merge-queue` label and push again.
+  end-to-end-merge-queue:
+    name: End2End Test (${{ matrix.name }})
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'run-e2e-merge-queue')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs:
+      - check-success
+      - prepare-caches
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: General Postgres 1 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "1/3"
+            success_marker: .e2e-success-general-postgres-1
+            success_key: e2e-success-general-postgres-1
+            artifact_name: Playwright Report (General Postgres 1)
+            postgres: true
+          - name: General Postgres 2 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "2/3"
+            success_marker: .e2e-success-general-postgres-2
+            success_key: e2e-success-general-postgres-2
+            artifact_name: Playwright Report (General Postgres 2)
+            postgres: true
+          - name: General Postgres 3 of 3
+            index_script: index_general.py
+            playwright_project: general
+            shard: "3/3"
+            success_marker: .e2e-success-general-postgres-3
+            success_key: e2e-success-general-postgres-3
+            artifact_name: Playwright Report (General Postgres 3)
+            postgres: true
+          - name: Videos Postgres
+            index_script: index_video.py
+            playwright_project: videos
+            shard: "1/1"
+            success_marker: .e2e-success-videos-postgres
+            success_key: e2e-success-videos-postgres
+            artifact_name: Playwright Report (Videos Postgres)
+            postgres: true
+          - name: Groups
+            index_script: index_groups.py
+            playwright_project: groups
+            shard: "1/1"
+            success_marker: .e2e-success-groups
+            success_key: e2e-success-groups
+            artifact_name: Playwright Report (Groups)
+            postgres: false
+
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg18-bookworm
+        env:
+          POSTGRES_USER: lightly
+          POSTGRES_PASSWORD: lightly
+          POSTGRES_DB: lightly_studio
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -h 127.0.0.1 -U lightly -d lightly_studio"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps: *end-to-end-steps
+
   # Runs after merge and on manual dispatch, not on pull requests.
   end-to-end-after-merge:
     name: End2End Test (${{ matrix.name }})
@@ -581,6 +601,7 @@ jobs:
       - check-success
       - prepare-caches
       - end-to-end
+      - end-to-end-merge-queue
       - end-to-end-after-merge
     if: always()
     steps:
@@ -588,6 +609,8 @@ jobs:
         if: >-
           needs.check-success.outputs.skip != 'true' &&
           (needs.end-to-end.result != 'success' ||
+          (needs.end-to-end-merge-queue.result != 'success' &&
+          needs.end-to-end-merge-queue.result != 'skipped') ||
           (needs.end-to-end-after-merge.result != 'success' &&
           needs.end-to-end-after-merge.result != 'skipped'))
         run: |
@@ -595,11 +618,13 @@ jobs:
           exit 1
 
       - name: Create e2e success marker for all matrix jobs
-        if: needs.end-to-end.result == 'success'
+        # Without this job, the marker would skip a later run with the `run-e2e-merge-queue` label.
+        if: needs.end-to-end.result == 'success' && needs.end-to-end-merge-queue.result == 'success'
         run: touch .e2e-success-all
 
       - name: Save e2e success marker for all matrix jobs
-        if: needs.end-to-end.result == 'success'
+        # Without this job, the marker would skip a later run with the `run-e2e-merge-queue` label.
+        if: needs.end-to-end.result == 'success' && needs.end-to-end-merge-queue.result == 'success'
         uses: actions/cache/save@v6
         with:
           path: .e2e-success-all

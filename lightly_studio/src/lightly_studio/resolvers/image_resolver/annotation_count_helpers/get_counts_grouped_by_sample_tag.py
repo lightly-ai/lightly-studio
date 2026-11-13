@@ -45,6 +45,7 @@ def get_counts_grouped_by_sample_tag(  # noqa: PLR0913
     )
     result: dict[tuple[UUID, str], int] = {}
     for tag_id, label_name, count in session.exec(query).all():
-        assert tag_id is not None
+        if tag_id is None:
+            raise RuntimeError("Expected `tag_id` to be set.")
         result[(tag_id, label_name)] = count
     return result

@@ -80,11 +80,11 @@ class Metadata:  # noqa: PLW1641
         """Create less than or equal filter."""
         return MetadataFilter(key=self.key, op="<=", value=value)
 
-    def __eq__(self, value: Any) -> MetadataFilter:  # type: ignore
+    def __eq__(self, value: Any) -> MetadataFilter:  # type: ignore[override]
         """Create equality filter."""
         return MetadataFilter(key=self.key, op="==", value=value)
 
-    def __ne__(self, value: Any) -> MetadataFilter:  # type: ignore
+    def __ne__(self, value: Any) -> MetadataFilter:  # type: ignore[override]
         """Create not equal filter."""
         return MetadataFilter(key=self.key, op="!=", value=value)
 
