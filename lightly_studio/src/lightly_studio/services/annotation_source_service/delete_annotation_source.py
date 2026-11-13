@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.errors import AnnotationSourceInUseError
-from lightly_studio.export import export_artifact
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -101,14 +100,9 @@ def _delete_source(session: Session, source: CollectionTable) -> int:
     for child_id in child_ids:
         sample_resolver.delete_caption_samples(session=session, collection_id=child_id)
     for collection_id in [*child_ids, source_id]:
-        export_paths = collection_resolver.delete_dependent_rows(
-            session=session, collection_id=collection_id
-        )
+        collection_resolver.delete_dependent_rows(session=session, collection_id=collection_id)
         # DuckDB rejects the delete of the collection in the transaction that deleted its
         # referencing rows, so commit first.
         session.commit()
         collection_resolver.delete(session=session, collection_id=collection_id)
-        # Remove the files only after the commit, so that a rollback keeps no job without a file.
-        for export_path in export_paths:
-            export_artifact.remove_export_artifact(export_path=export_path)
     return deleted_count

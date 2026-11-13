@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from sqlmodel import Session
 
@@ -65,19 +63,17 @@ def test_delete_annotation_source(db_session: Session) -> None:
     assert [annotation.sample_id for annotation in remaining] == [gt.sample_id]
 
 
-def test_delete_annotation_source__export_file(db_session: Session, tmp_path: Path) -> None:
+def test_delete_annotation_source__export_job(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     (pred,) = helpers.create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
-    export_path = tmp_path / "predictions.json"
-    export_path.write_text("{}")
-    export_job_resolver.create(
+    export_key = export_job_resolver.create(
         session=db_session,
         collection_id=pred.annotation_collection_id,
-        export_path=str(export_path),
-    )
+        export_path="/tmp/predictions.json",
+    ).export_key
 
     annotation_source_service.delete_annotation_source(
         session=db_session,
@@ -85,7 +81,7 @@ def test_delete_annotation_source__export_file(db_session: Session, tmp_path: Pa
         annotation_source_id=pred.annotation_collection_id,
     )
 
-    assert not export_path.exists()
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
 
 
 def test_delete_annotation_source__empty_source(db_session: Session) -> None:
