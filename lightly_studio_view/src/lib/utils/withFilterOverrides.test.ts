@@ -4,7 +4,7 @@ import type {
     FilterDimensions,
     ImageFilter
 } from '$lib/api/lightly_studio_local';
-import { imageDimensionRanges, withFilterOverrides } from './withFilterOverrides';
+import { withFilterOverrides } from './withFilterOverrides';
 
 const region = {
     polygon: [
@@ -114,17 +114,5 @@ describe('withFilterOverrides', () => {
             sample_filter: { annotations_filter: undefined }
         });
         expect(base).toEqual(copy);
-    });
-});
-
-describe('imageDimensionRanges', () => {
-    it('returns undefined ranges for null bounds', () => {
-        expect(imageDimensionRanges(null)).toEqual({ width: undefined, height: undefined });
-    });
-
-    it('maps bounds to ranges', () => {
-        expect(
-            imageDimensionRanges({ min_width: 10, max_width: 20, min_height: 30, max_height: 40 })
-        ).toEqual({ width: { min: 10, max: 20 }, height: { min: 30, max: 40 } });
     });
 });

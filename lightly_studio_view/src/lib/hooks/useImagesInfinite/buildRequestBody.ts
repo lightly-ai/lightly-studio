@@ -1,7 +1,7 @@
 import type { ReadImagesRequest } from '$lib/api/lightly_studio_local';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { GRID_PAGE_SIZE } from '$lib/constants';
-import { getAnnotationsFilter } from './getAnnotationsFilter';
+import { getAnnotationsFilter } from '$lib/utils/gridFilter';
 import type { ClassifierSamples, ImagesInfiniteParams, NormalModeFilters } from './types';
 
 const buildBaseBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => ({

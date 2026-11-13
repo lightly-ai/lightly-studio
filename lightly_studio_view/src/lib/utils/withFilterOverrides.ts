@@ -1,5 +1,4 @@
-import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
-import type { FilterDimensions, SampleFilter } from '$lib/api/lightly_studio_local';
+import type { SampleFilter } from '$lib/api/lightly_studio_local';
 
 type FilterOverrides<F> = {
     [K in Exclude<keyof F, 'filter_type' | 'sample_filter'>]?: F[K];
@@ -51,25 +50,4 @@ export function withFilterOverrides<
         return undefined;
     }
     return { ...result, filter_type: filterType } as F & { filter_type: T };
-}
-
-interface ImageDimensionRanges {
-    width: FilterDimensions | undefined;
-    height: FilterDimensions | undefined;
-}
-
-/** Converts image dimension bounds into width and height filter ranges. */
-export function imageDimensionRanges(
-    bounds: DimensionBounds | null | undefined
-): ImageDimensionRanges {
-    return {
-        width:
-            bounds && (bounds.min_width !== undefined || bounds.max_width !== undefined)
-                ? { min: bounds.min_width, max: bounds.max_width }
-                : undefined,
-        height:
-            bounds && (bounds.min_height !== undefined || bounds.max_height !== undefined)
-                ? { min: bounds.min_height, max: bounds.max_height }
-                : undefined
-    };
 }
