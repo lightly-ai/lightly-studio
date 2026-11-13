@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import socket as socket_module
+from pathlib import Path
 from socket import AF_INET, SOCK_STREAM, socket
 
 import pytest
@@ -11,6 +12,7 @@ from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 
 from lightly_studio.api.app import app
+from lightly_studio.api.routes import webapp
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
@@ -64,7 +66,14 @@ def test_server_initialization() -> None:
     assert server.port == port
 
 
-def test_server_static_webapp() -> None:
+def test_server_static_webapp(mocker: MockerFixture, tmp_path: Path) -> None:
+    # Stub files instead of a real webapp build, so the test does not need the frontend build
+    (tmp_path / "index.html").write_text("<html></html>")
+    (tmp_path / "favicon.png").write_bytes(b"png")
+    (tmp_path / "_app").mkdir()
+    (tmp_path / "_app" / "version.json").write_text("{}")
+    mocker.patch.object(webapp, "webapp_dir", tmp_path)
+    mocker.patch.object(webapp, "index_file", tmp_path / "index.html")
     client = TestClient(app)
 
     # check webapp index file being returned for all non-file paths
