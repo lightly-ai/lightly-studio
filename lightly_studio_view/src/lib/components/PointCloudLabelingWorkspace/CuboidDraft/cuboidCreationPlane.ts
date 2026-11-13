@@ -25,7 +25,13 @@ export function getCuboidCreationPlane(
     if (size <= 0) return null;
     if (cameraMode === 'perspective' || cameraMode === 'top') {
         const ground = computeGroundPlaneLayout(bounds);
-        return ground ? { center: ground.center, rotation: [0, 0, 0], size } : null;
+        if (!ground) return null;
+        const groundHeight = cameraMode === 'perspective' ? 0 : ground.center[2];
+        return {
+            center: [ground.center[0], ground.center[1], groundHeight],
+            rotation: [0, 0, 0],
+            size
+        };
     }
     return {
         center: [
