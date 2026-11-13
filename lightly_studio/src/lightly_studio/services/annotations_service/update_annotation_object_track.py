@@ -7,7 +7,6 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -74,15 +73,10 @@ def _create_track(session: Session, collection_id: UUID) -> UUID:
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise ValueError(f"Annotation source {collection_id} not found.")
-    track_number = object_track_resolver.next_track_number(
+    track = object_track_resolver.create_with_next_number(
         session=session, dataset_id=collection.dataset_id
     )
-    return object_track_resolver.create_many(
-        session=session,
-        tracks=[
-            ObjectTrackCreate(object_track_number=track_number, dataset_id=collection.dataset_id)
-        ],
-    )[0]
+    return track.object_track_id
 
 
 def _assign_track(

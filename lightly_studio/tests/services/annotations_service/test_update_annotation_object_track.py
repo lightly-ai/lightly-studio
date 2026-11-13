@@ -9,7 +9,7 @@ import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.resolvers import annotation_resolver, collection_resolver, object_track_resolver
 from lightly_studio.resolvers.annotation_resolver import annotation_helper
@@ -503,7 +503,9 @@ def test_update_annotation_object_track__annotation_disappeared_after_update(
     original_get_by_id = annotation_resolver.get_by_id
     call_count = 0
 
-    def get_by_id_then_none(session: Session, annotation_id: uuid.UUID) -> None:
+    def get_by_id_then_none(
+        session: Session, annotation_id: uuid.UUID
+    ) -> AnnotationBaseTable | None:
         nonlocal call_count
         call_count += 1
         if call_count == 1:
