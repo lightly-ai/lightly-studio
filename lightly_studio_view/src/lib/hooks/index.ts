@@ -126,3 +126,11 @@ export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationCl
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
+export { useAnnotationTarget } from '$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte';
+export { useSetTargetSource } from '$lib/hooks/useAnnotationTarget/useSetTargetSource';
+export { DEFAULT_SOURCE_NAME } from '$lib/hooks/useAnnotationTarget/resolveTargetSource';
+export {
+    LOADING_SOURCES_MESSAGE,
+    PICK_SOURCE_MESSAGE
+} from '$lib/hooks/useAnnotationTarget/messages';
+export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
