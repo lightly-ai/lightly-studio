@@ -1,10 +1,14 @@
 import { derived, get, writable } from 'svelte/store';
-import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import {
+    buildGridFilter,
+    buildSampleFilter,
+    getAnnotationsFilter,
+    toMetadataFilters,
+    toRange
+} from '$lib/utils/gridFilter';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
-    AnnotationsFilter,
     EmbeddingRegion,
-    SampleFilter,
     VideoFilter,
     VideoFieldsBoundsView,
     VideoSortFieldExpr
@@ -32,6 +36,18 @@ export type VideoFilterParams = {
 const filterParams = writable<VideoFilterParams | null>(null);
 const videoQueryExpression = writable<QueryExpression | null>(null);
 
+const videoBoundsFields = (
+    bounds: VideoFieldsBoundsView | null | undefined
+): Pick<VideoFilter, 'width' | 'height' | 'fps' | 'duration_s'> =>
+    bounds
+        ? {
+              width: toRange(bounds.width),
+              height: toRange(bounds.height),
+              fps: bounds.fps,
+              duration_s: bounds.duration_s
+          }
+        : {};
+
 export const buildVideoFilter = (
     $filterParams: VideoFilterParams | null,
     queryExpression?: QueryExpression | null
@@ -40,59 +56,24 @@ export const buildVideoFilter = (
         return null;
     }
 
-    const filters = buildVideoBounds($filterParams.video_bounds);
-    const sampleFilter = buildSampleFilter($filterParams.filters ?? {});
-    if (queryExpression?.query_expr) {
-        sampleFilter.query_expr = queryExpression.query_expr;
-    }
-    if (Object.keys(sampleFilter).length > 0) {
-        filters.sample_filter = sampleFilter;
-    }
-    const annotationFramesLabelIds = $filterParams.filters?.annotation_frames_label_ids;
-    if (annotationFramesLabelIds?.length) {
-        filters.frame_annotation_filter = {
-            filter_type: 'annotations',
-            annotation_label_ids: annotationFramesLabelIds
-        } satisfies AnnotationsFilter;
-    }
-    return filters;
-};
+    const f = $filterParams.filters ?? {};
 
-const buildVideoBounds = (bounds: VideoFilterParams['video_bounds']): VideoFilter => {
-    const filters: VideoFilter = { filter_type: 'video' };
-    if (!bounds) return filters;
-    if (bounds.width) {
-        filters.width = {
-            min: bounds.width.min ?? undefined,
-            max: bounds.width.max ?? undefined
-        };
-    }
-    if (bounds.height) {
-        filters.height = {
-            min: bounds.height.min ?? undefined,
-            max: bounds.height.max ?? undefined
-        };
-    }
-    if (bounds.fps) filters.fps = bounds.fps;
-    if (bounds.duration_s) filters.duration_s = bounds.duration_s;
-    return filters;
-};
-
-const buildSampleFilter = (filters: NonNullable<VideoFilterParams['filters']>): SampleFilter => {
-    const sampleFilter = buildMetadataFilter(filters);
-    if (filters.sample_ids?.length) sampleFilter.sample_ids = filters.sample_ids;
-    if (filters.embedding_region) sampleFilter.embedding_region = filters.embedding_region;
-    if (filters.tag_ids?.length) sampleFilter.tag_ids = filters.tag_ids;
-    return sampleFilter;
-};
-
-const buildMetadataFilter = (filters: NonNullable<VideoFilterParams['filters']>): SampleFilter => {
-    if (!filters.metadata_values && !filters.categorical_metadata_values) return {};
-    const metadataFilters = createMetadataFilters(
-        filters.metadata_values ?? {},
-        filters.categorical_metadata_values ?? {}
+    return buildGridFilter(
+        'video',
+        {
+            ...videoBoundsFields($filterParams.video_bounds),
+            frame_annotation_filter: getAnnotationsFilter({
+                annotation_label_ids: f.annotation_frames_label_ids
+            })
+        },
+        buildSampleFilter({
+            sample_ids: f.sample_ids,
+            embedding_region: f.embedding_region,
+            tag_ids: f.tag_ids,
+            metadata_filters: toMetadataFilters(f.metadata_values, f.categorical_metadata_values),
+            query_expr: queryExpression?.query_expr
+        })
     );
-    return metadataFilters.length > 0 ? { metadata_filters: metadataFilters } : {};
 };
 
 const videoFilter = derived(
