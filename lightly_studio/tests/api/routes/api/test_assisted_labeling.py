@@ -406,6 +406,20 @@ def test_get_labeling_models__none_registered(test_client: TestClient) -> None:
     assert response.json() == {"models": []}
 
 
+def test_get_labeling_models__not_ready(
+    test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    loading_model = StubLabelingModel(model_id="loading")
+    loading_model.is_ready = False
+    model_registry.register(model=loading_model)
+    model_registry.register(model=StubLabelingModel(model_id="loaded"))
+
+    response = test_client.get("/api/annotate/models")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert [model["id"] for model in response.json()["models"]] == ["loaded"]
+
+
 def test_create_model_annotation_preview(
     db_session: Session,
     media_test_client: TestClient,
@@ -466,6 +480,29 @@ def test_create_model_annotation_preview__unknown_model(
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
     assert response.json() == {"error": "No labeling model with ID 'm' is registered."}
+
+
+def test_create_model_annotation_preview__not_ready(
+    db_session: Session, media_test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model = StubLabelingModel(model_id="m")
+    model.is_ready = False
+    model_registry.register(model=model)
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+
+    response = media_test_client.post(
+        "/api/annotate/model",
+        json={
+            "collection_id": str(collection.collection_id),
+            "sample_id": str(image.sample_id),
+            "model_id": "m",
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
+    assert response.json() == {"error": "The labeling model 'm' is still loading. Try again later."}
+    assert model.thresholds == []
 
 
 def test_create_model_annotation_preview__model_error(
