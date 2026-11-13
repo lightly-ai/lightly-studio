@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Box, Hand, Move, MousePointer2, Rotate3d, RotateCw, Scan } from '@lucide/svelte';
+    import { Box, Move, MousePointer2, RotateCw, Scan } from '@lucide/svelte';
     import { Toolbar, type ToolbarItem } from '$lib/components/ui/toolbar';
     import type { WorkspaceTool } from '../domain';
 
@@ -11,13 +11,11 @@
     const { activeTool = 'select', onToolChange = () => {} }: Props = $props();
 
     const items: ToolbarItem[] = [
-        { id: 'select', label: 'Select', icon: MousePointer2 },
+        { id: 'select', label: 'Select cuboid', icon: MousePointer2 },
         { id: 'create-cuboid', label: 'Create cuboid', icon: Box },
-        { id: 'translate', label: 'Move', icon: Move },
-        { id: 'rotate', label: 'Rotate', icon: RotateCw },
-        { id: 'resize', label: 'Resize', icon: Scan },
-        { id: 'pan', label: 'Pan', icon: Hand, disabledReason: 'Coming soon' },
-        { id: 'orbit', label: 'Orbit', icon: Rotate3d, disabledReason: 'Coming soon' }
+        { id: 'translate', label: 'Move cuboid', icon: Move },
+        { id: 'rotate', label: 'Rotate cuboid', icon: RotateCw },
+        { id: 'resize', label: 'Resize cuboid', icon: Scan }
     ];
 </script>
 
