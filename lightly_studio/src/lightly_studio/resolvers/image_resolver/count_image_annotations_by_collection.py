@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.image_resolver import annotation_count_helpers
 from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
@@ -57,14 +58,20 @@ def count_image_annotations_by_collection(
         count_mode=count_mode,
         annotation_collection_ids=annotation_collection_ids,
     )
-    current_counts = annotation_count_helpers.get_current_counts(
-        session=session,
-        collection_id=collection_id,
-        image_filter=stripped_filter,
-        annotation_type=annotation_type,
-        annotation_collection_ids=annotation_collection_ids,
-        count_mode=count_mode,
-    )
+    # The filter returns the probe unchanged if it adds no condition. Then the current counts
+    # are the totals.
+    probe = select(SampleTable.sample_id)
+    if stripped_filter is None or stripped_filter.apply(query=probe) is probe:
+        current_counts = total_counts
+    else:
+        current_counts = annotation_count_helpers.get_current_counts(
+            session=session,
+            collection_id=collection_id,
+            image_filter=stripped_filter,
+            annotation_type=annotation_type,
+            annotation_collection_ids=annotation_collection_ids,
+            count_mode=count_mode,
+        )
     return [
         (label, current_counts.get(label, 0), total_count)
         for label, total_count in total_counts.items()
