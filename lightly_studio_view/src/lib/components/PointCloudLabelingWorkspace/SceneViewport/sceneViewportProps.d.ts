@@ -1,3 +1,4 @@
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { Snippet } from 'svelte';
 import type { ColorMode, PointBatch, SceneViewState } from '$lib/components/PointCloudViewer';
 import type {
@@ -6,7 +7,6 @@ import type {
     Bounds3,
     CuboidAnnotation,
     CuboidHandle,
-    Vector3,
     CameraMode,
     WorkspaceTool
 } from '../domain';
@@ -20,6 +20,8 @@ export interface SceneViewportProps {
     tools?: Snippet;
     /** Point positions and intensities consumed by the existing renderer. */
     batch?: PointBatch;
+    /** Timeline tick on display. A change discards a cuboid draft. */
+    tick?: number;
     /** Strategy used to color the point cloud. */
     colorMode?: ColorMode;
     /** Screen-space point size in CSS pixels. */
@@ -50,16 +52,18 @@ export interface SceneViewportProps {
     isScaleSource?: boolean;
     /** Whether navigation buttons and shortcut hints are shown. */
     showNavigationHelpers?: boolean;
-    /** Whether hovered annotation metadata is shown in this viewport. */
-    showAnnotationTooltips?: boolean;
     /** Shows the subtle active-view border in multi-view layouts. */
     showActiveBorder?: boolean;
     /** Fires when the user selects or deselects a cuboid. */
     onselect?: (annotationId: string | null) => void;
     /** Fires when the pointer enters or leaves a cuboid. */
     onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
-    /** Fires when the user clicks the ground plane in create-cuboid mode. */
-    onCreateCuboid?: (position: Vector3) => void;
+    /** Creates an annotation from a drawn box. */
+    onCreateCuboid?: (box: CuboidBox) => void;
+    /** Region of a cuboid draft, drawn in any viewport; its points are highlighted. */
+    draftCuboid?: CuboidBox | null;
+    /** Reports the region whose points a cuboid draft takes in, or null without one. */
+    onCuboidDraftChange?: (box: CuboidBox | null) => void;
     /** Reports a completed annotation gizmo transform before it is committed. */
     onCuboidTransform?: CuboidLayerProps['onCuboidTransform'];
     /** Fires on the left arrow key. */

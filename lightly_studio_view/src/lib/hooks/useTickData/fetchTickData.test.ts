@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from '$lib/api/ApiError';
 import { fetchTickData } from './fetchTickData';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
@@ -10,14 +11,10 @@ const { getTickData } = await import('$lib/api/lightly_studio_local/sdk.gen');
 const params = { datasetId: 'dataset-1', sequenceId: 'sequence-1', seqNumber: 3 };
 
 describe('fetchTickData', () => {
-    it('throws with the tick number and status on an HTTP error', async () => {
-        vi.mocked(getTickData).mockResolvedValue({
-            data: undefined,
-            error: { detail: 'Server error' },
-            request: new Request('http://localhost'),
-            response: new Response(null, { status: 500 })
-        } as Awaited<ReturnType<typeof getTickData>>);
+    it('rejects with the API error on an HTTP error', async () => {
+        const error = new ApiError('Server error', 500);
+        vi.mocked(getTickData).mockRejectedValue(error);
 
-        await expect(fetchTickData(params)).rejects.toThrow('Could not load tick 3 (500).');
+        await expect(fetchTickData(params)).rejects.toBe(error);
     });
 });

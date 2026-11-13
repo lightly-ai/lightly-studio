@@ -10,9 +10,10 @@ export function buildOptions(
 ): FilterOption[] {
     const selectable = buckets.filter((b): b is SelectableBucket => b.kind !== 'other');
     const returned: FilterOption[] = selectable.map((bucket) => ({ bucket, retained: false }));
+    const listedValues = new Set(selectable.map((b) => b.value));
     const uniqueSelected = [...new Map(selectedValues.map((v) => [JSON.stringify(v), v])).values()];
     const retained: FilterOption[] = uniqueSelected
-        .filter((value) => !selectable.some((b) => Object.is(b.value, value)))
+        .filter((value) => !listedValues.has(value))
         .map((value) => ({
             bucket:
                 value === null

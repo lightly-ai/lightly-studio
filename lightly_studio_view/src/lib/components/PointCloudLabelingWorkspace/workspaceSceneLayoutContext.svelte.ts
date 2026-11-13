@@ -3,12 +3,19 @@ import type { CameraMode } from './domain';
 import type { PointCloudWorkspaceLayoutState } from './pointCloudWorkspaceLayoutContext.svelte';
 const KEY = Symbol('workspace-scene-layout');
 
-/** Provides expansion state to scene viewports. */
+/** Provides expansion state to scene viewports and ends a cuboid draft of a removed viewport. */
 export function provideWorkspaceSceneLayout(getLayout: () => PointCloudWorkspaceLayoutState) {
     let expandedProjection = $state<CameraMode | null>(null);
+    let hadOrthographicViews = false;
     $effect(() => {
         const layout = getLayout();
-        if (!layout.showOrthographicViews) expandedProjection = null;
+        const hasOrthographicViews = layout.showOrthographicViews;
+        if (!hasOrthographicViews) {
+            expandedProjection = null;
+            // A removed viewport cannot clear the highlight of its cuboid draft.
+            if (hadOrthographicViews) layout.onCuboidDraftChange(null);
+        }
+        hadOrthographicViews = hasOrthographicViews;
     });
     const context = {
         get expandedProjection() {

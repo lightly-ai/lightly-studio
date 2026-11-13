@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { getErrorMessage } from '$lib/utils';
     import DatasetDistributionPanel from '$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import type { CategoryCount } from '$lib/components/BarChart';
@@ -223,7 +222,7 @@
             groupLabel: 'Annotation type',
             valueNoun: countMode === AnnotationCountMode.SAMPLES ? 'samples' : 'annotations',
             comparisonLoading: activeClassComparisonQuery?.isFetching,
-            comparisonError: getErrorMessage(activeClassComparisonQuery?.error)
+            comparisonError: activeClassComparisonQuery?.error?.message
         };
 
         // Use the distribution-specific "all" query so the "All types" group
@@ -398,9 +397,9 @@
                 metadataHistogramsQuery.isFetching || imageFieldHistogramsQuery.isFetching,
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,
-            categoricalError: getErrorMessage(categoricalMetadataQuery.error),
+            categoricalError: categoricalMetadataQuery.error?.message,
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
-            comparisonError: getErrorMessage(metadataTagDistributionsQuery.error)
+            comparisonError: metadataTagDistributionsQuery.error?.message
         })
     );
 
@@ -462,6 +461,8 @@
     onCountModeChange={(mode) => (countMode = mode)}
     onHistogramRangeSelect={handleHistogramRangeSelect}
     onCategoricalValueToggle={handleCategoricalValueToggle}
+    onCategoricalValuesSet={(metadataKey, values) =>
+        updateCategoricalMetadataValues({ ...$categoricalMetadataValues, [metadataKey]: values })}
     onCategoricalValuesClear={(metadataKey) =>
         updateCategoricalMetadataValues(
             withoutCategoricalValues($categoricalMetadataValues, metadataKey)

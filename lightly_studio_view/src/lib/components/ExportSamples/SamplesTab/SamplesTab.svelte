@@ -26,7 +26,7 @@
                 collection_filter: $imageFilter
             }
         });
-        if (response.error) throw new Error(JSON.stringify(response.error));
+        if (response.error) throw response.error;
         const exportKey = response.data?.export_key;
         if (!exportKey) throw new Error('Unexpected empty response data');
         triggerDownload(
