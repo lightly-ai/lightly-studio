@@ -87,42 +87,10 @@ for sample in list(dataset)[:3]:
     a local DuckDB file. You do **not** need to call `ls.start_gui()` — the GUI is already
     running on the enterprise server.
 
-## Use Your Own Embedding Model
-
-You can run your own model on an embedding server or on your machine. In both setups, the
-script sends the vectors to the enterprise instance, together with the file paths and
-metadata of the samples. The default embedding plot reads the stored vectors, so it works
-with any model. Search and text axes embed each query in the same space as your data, so
-they need an embedding server.
-
-=== "Embedding Server"
-
-    Register the embedding server as the default embedder before you add data. The script
-    sends each image to the server and stores the vectors that the server returns.
-
-    ![Your own model on an embedding server](../_static/lightly_studio_enterprise_embedding_server.svg){ width="100%" }
-
-    The dataset stores the URL of the server, so search and text axes use the same server.
-    The Python client and the enterprise server must both be able to reach this URL.
-
-=== "Embedder on Your Machine"
-
-    Register an embedder in the Python script before you add data. The model runs on your
-    machine.
-
-    ![Your own model on your machine](../_static/lightly_studio_enterprise_local_embedder.svg){ width="100%" }
-
-    To use search and text axes, serve the same model on an embedding server and register it
-    with `ls.register_remote_embedder`. The Python client contacts this server when you
-    register it, and the enterprise server sends each query to it. Both must be able to reach
-    its URL.
-
-For the embedder interfaces and examples, see
-[Using Your Own Embeddings](../workflows/embeddings.md#using-your-own-embeddings) and
-[Serving an Embedder from a Remote Server](../workflows/embeddings.md#serving-an-embedder-from-a-remote-server).
-
 ## Next Steps
 
+- [Custom Embeddings](embeddings.md) — use your own embedding model for the
+  embedding plot, sampling, and similarity search.
 - [Local Storage](local_storage.md) — use local disk or NAS/shared storage in an
   on-premise deployment.
 - [Cloud Storage](cloud_storage/index.md) — configure cloud storage credentials so

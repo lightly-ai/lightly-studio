@@ -196,6 +196,7 @@ nav:
     - Overview: enterprise/index.md
     - Collaboration and Permissions: enterprise/collaboration.md
     - Connect from Python: enterprise/connect.md
+    - Custom Embeddings: enterprise/embeddings.md
     - Security and Architecture: enterprise/security.md
     - Hardware Requirements: enterprise/hardware-requirements.md
     - On-Premise Deployment: enterprise/on-premise.md
@@ -305,6 +306,7 @@ plugins:
           - enterprise/index.md
           - enterprise/collaboration.md
           - enterprise/connect.md
+          - enterprise/embeddings.md
           - enterprise/security.md
           - enterprise/hardware-requirements.md
           - enterprise/on-premise.md
