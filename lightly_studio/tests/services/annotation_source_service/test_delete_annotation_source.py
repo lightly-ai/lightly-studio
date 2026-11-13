@@ -63,27 +63,6 @@ def test_delete_annotation_source(db_session: Session) -> None:
     assert [annotation.sample_id for annotation in remaining] == [gt.sample_id]
 
 
-def test_delete_annotation_source__export_job(db_session: Session) -> None:
-    collection = create_collection(session=db_session)
-    image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = create_source_annotations(
-        session=db_session, image=image, source_name="predictions", count=1
-    )
-    export_key = export_job_resolver.create(
-        session=db_session,
-        collection_id=pred.annotation_collection_id,
-        export_path="/tmp/predictions.json",
-    ).export_key
-
-    annotation_source_service.delete_annotation_source(
-        session=db_session,
-        dataset_collection_id=collection.collection_id,
-        annotation_source_id=pred.annotation_collection_id,
-    )
-
-    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
-
-
 def test_delete_annotation_source__empty_source(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
@@ -181,6 +160,53 @@ def test_delete_annotation_source__has_child_collection(db_session: Session) -> 
         AnnotationSourceInUseError,
         match=r"'predictions' cannot be deleted because it has data attached: crops\.",
     ):
+        annotation_source_service.delete_annotation_source(
+            session=db_session,
+            dataset_collection_id=collection.collection_id,
+            annotation_source_id=pred.annotation_collection_id,
+        )
+    assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
+
+
+def test_delete_annotation_source__exported(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    (pred,) = create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
+    )
+    export_job_resolver.create(
+        session=db_session,
+        collection_id=pred.annotation_collection_id,
+        export_path="/tmp/predictions.json",
+    )
+
+    with pytest.raises(AnnotationSourceInUseError, match="it was exported"):
+        annotation_source_service.delete_annotation_source(
+            session=db_session,
+            dataset_collection_id=collection.collection_id,
+            annotation_source_id=pred.annotation_collection_id,
+        )
+    assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
+
+
+def test_delete_annotation_source__exported_caption(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    (pred,) = create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
+    )
+    caption = create_caption(
+        session=db_session,
+        collection_id=pred.annotation_collection_id,
+        parent_sample_id=pred.sample_id,
+    )
+    export_job_resolver.create(
+        session=db_session,
+        collection_id=caption.sample.collection_id,
+        export_path="/tmp/captions.json",
+    )
+
+    with pytest.raises(AnnotationSourceInUseError, match="it was exported"):
         annotation_source_service.delete_annotation_source(
             session=db_session,
             dataset_collection_id=collection.collection_id,
