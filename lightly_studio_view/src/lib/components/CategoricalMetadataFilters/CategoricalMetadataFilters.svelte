@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { getErrorMessage } from '$lib/utils';
     import { validate as validateUUID } from 'uuid';
     import CategoricalMetadataFieldPicker from '$lib/components/CategoricalMetadataFieldPicker/CategoricalMetadataFieldPicker.svelte';
     import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
@@ -65,7 +64,7 @@
         selectedValues={$categoricalMetadataValues[field] ?? []}
         {loading}
         {updating}
-        error={getErrorMessage(categoricalQuery.error)}
+        error={categoricalQuery.error?.message}
         onRetry={() => categoricalQuery.refetch()}
         onToggle={(value) => onValueToggle(field, value)}
         onClear={() => onValuesClear(field)}

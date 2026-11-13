@@ -7,11 +7,10 @@
     import '../app.css';
     import { Toaster } from 'svelte-sonner';
     import { PluginExecutingOverlay } from '$lib/components/PluginExecutingOverlay';
+    import { ApiError } from '$lib/api/ApiError';
 
-    interface ApiErrorWithStatus {
-        error?: string;
-        status?: number;
-    }
+    const isClientError = (error: Error) =>
+        error instanceof ApiError && error.status >= 400 && error.status < 500;
 
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -19,13 +18,7 @@
                 enabled: browser,
                 // Don't retry client errors (4xx).
                 // Only retry network errors and 5xx server errors up to 3 times.
-                retry: (failureCount, error: unknown) => {
-                    const status = (error as ApiErrorWithStatus)?.status;
-                    if (status && status >= 400 && status < 500) {
-                        return false;
-                    }
-                    return failureCount < 3;
-                }
+                retry: (failureCount, error) => !isClientError(error) && failureCount < 3
             }
         }
     });

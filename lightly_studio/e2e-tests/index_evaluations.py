@@ -47,8 +47,13 @@ for annotation_source in (QUERY_GT_ANNOTATION_SOURCE, QUERY_PRED_ANNOTATION_SOUR
 
 # Tag a subset of samples to demonstrate evaluating a query
 tag_name = "evaluated_samples"
-dataset.query()[:10].add_tag(tag_name)
+dataset.query()[:10].add_tag(tag_name=tag_name)
 tagged_evaluation_query = dataset.query().match(ImageSampleField.tags.contains(tag_name))
+
+# Tags for the distribution panel comparison. The first two overlap on [16:32].
+dataset.query()[:32].add_tag(tag_name="distribution_reviewed")
+dataset.query()[16:48].add_tag(tag_name="distribution_priority")
+dataset.query()[:0].add_tag(tag_name="distribution_empty")
 
 evaluation_config = ObjectDetectionEvaluationConfig(
     iou_threshold=0.5,
