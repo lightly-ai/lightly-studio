@@ -11,11 +11,11 @@ Load the skill that matches the path you edit:
 - `lightly_studio/**/*.py`, `lightly_studio_serve/**/*.py` → [python-guide](./.agents/skills/python-guide/SKILL.md): Python style.
 - `lightly_studio/src/lightly_studio/**` → also [backend-guide](./.agents/skills/backend-guide/SKILL.md): FastAPI and SQLModel.
 - `lightly_studio_view/**` (`.ts`, `.svelte`) → [frontend-guide](./.agents/skills/frontend-guide/SKILL.md): TypeScript and SvelteKit.
+- Each `.py`, `.ts`, and `.svelte` file in the repository → also [clean-code](./.agents/skills/clean-code/SKILL.md): names, function shape, errors, comments.
 - `CHANGELOG.md`, `lightly_studio_serve/CHANGELOG.md` → [changelog](./.agents/skills/changelog/SKILL.md): changelog entries.
 
 When the task matches, also load:
 
-- [best-practices](./.agents/skills/best-practices/SKILL.md): a new function, module, or component.
 - [glossary](./.agents/skills/glossary/SKILL.md): names for anything that users see.
 - [pull-requests](./.agents/skills/pull-requests/SKILL.md): a pull request.
 - [Contributing](./CONTRIBUTING.md): setup and tests.

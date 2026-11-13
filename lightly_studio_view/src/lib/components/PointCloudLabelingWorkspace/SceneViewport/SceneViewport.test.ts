@@ -20,10 +20,6 @@ vi.mock('./SceneNavigationControls.svelte', () => ({ default: () => {} }));
 vi.mock('$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte', () => ({
     default: () => {}
 }));
-vi.mock(
-    '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte',
-    () => ({ default: () => {} })
-);
 vi.mock('$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte', () => ({
     default: () => {}
 }));

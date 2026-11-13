@@ -24,7 +24,6 @@ const DEFAULTS = {
     cameraMode: 'perspective',
     isScaleSource: false,
     showNavigationHelpers: true,
-    showAnnotationTooltips: true,
     showActiveBorder: false,
     viewState: null
 } satisfies Partial<SceneViewportProps>;

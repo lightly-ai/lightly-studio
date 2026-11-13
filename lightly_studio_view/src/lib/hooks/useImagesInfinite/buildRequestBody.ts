@@ -1,78 +1,45 @@
 import type { ReadImagesRequest } from '$lib/api/lightly_studio_local';
-import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { GRID_PAGE_SIZE } from '$lib/constants';
-import { getAnnotationsFilter } from './getAnnotationsFilter';
-import type { ClassifierSamples, ImagesInfiniteParams, NormalModeFilters } from './types';
-
-const buildBaseBody = (params: ImagesInfiniteParams, pageParam: number): ReadImagesRequest => ({
-    pagination: {
-        offset: pageParam,
-        limit: GRID_PAGE_SIZE
-    },
-    text_embedding: params.text_embedding,
-    sort_by: params.sort_by ?? undefined,
-    filters: {
-        sample_filter: {
-            query_expr: params.query_expr ?? undefined,
-            metadata_filters:
-                params.metadata_values || params.categorical_metadata_values
-                    ? createMetadataFilters(
-                          params.metadata_values ?? {},
-                          params.categorical_metadata_values ?? {}
-                      )
-                    : undefined
-        }
-    }
-});
-
-const withClassifierSamples = (
-    base: ReadImagesRequest,
-    samples: ClassifierSamples
-): ReadImagesRequest => ({
-    ...base,
-    sample_ids: [...samples.positiveSampleIds, ...samples.negativeSampleIds]
-});
-
-const withNormalFilters = (
-    base: ReadImagesRequest,
-    filters: NormalModeFilters
-): ReadImagesRequest => ({
-    ...base,
-    filters: {
-        ...base.filters,
-        sample_filter: {
-            ...(base.filters?.sample_filter ?? {}),
-            annotations_filter: getAnnotationsFilter(filters),
-            tag_ids: filters.tag_ids?.length ? filters.tag_ids : undefined,
-            sample_ids: filters.sample_ids?.length ? filters.sample_ids : undefined,
-            confusion_cell: filters.confusion_cell ?? undefined,
-            // Lasso/rectangle selection sent as geometry; the backend resolves it to sample
-            // ids server-side so the request body stays small at scale (see LIG-9903).
-            embedding_region: filters.embedding_region ?? undefined
-        },
-        // TODO(Malte, 10/2025): Share the width/height mapping with useImageFilters to avoid drift.
-        width: filters.dimensions
-            ? { min: filters.dimensions.min_width, max: filters.dimensions.max_width }
-            : undefined,
-        height: filters.dimensions
-            ? { min: filters.dimensions.min_height, max: filters.dimensions.max_height }
-            : undefined
-    }
-});
+import { buildSampleFilter, dimensionRanges, toMetadataFilters } from '$lib/utils/gridFilter';
+import type { ImagesInfiniteParams } from './types';
 
 export const buildRequestBody = (
     params: ImagesInfiniteParams,
     pageParam: number
 ): ReadImagesRequest => {
-    const base = buildBaseBody(params, pageParam);
+    const f = params.mode === 'normal' ? (params.filters ?? {}) : {};
+    const classifierSamples = params.mode === 'classifier' ? params.classifierSamples : undefined;
 
-    if (params.mode === 'classifier' && params.classifierSamples) {
-        return withClassifierSamples(base, params.classifierSamples);
-    }
-
-    if (params.mode === 'normal' && params.filters) {
-        return withNormalFilters(base, params.filters);
-    }
-
-    return base;
+    return {
+        pagination: {
+            offset: pageParam,
+            limit: GRID_PAGE_SIZE
+        },
+        text_embedding: params.text_embedding,
+        sort_by: params.sort_by ?? undefined,
+        ...(classifierSamples && {
+            sample_ids: [
+                ...classifierSamples.positiveSampleIds,
+                ...classifierSamples.negativeSampleIds
+            ]
+        }),
+        filters: {
+            ...dimensionRanges(f.dimensions),
+            sample_filter: buildSampleFilter({
+                sample_ids: f.sample_ids,
+                tag_ids: f.tag_ids,
+                annotation_label_ids: f.annotation_label_ids,
+                annotation_collection_ids: f.collection_ids,
+                confusion_cell: f.confusion_cell,
+                // Lasso/rectangle selection sent as geometry; the backend resolves it to sample
+                // ids server-side so the request body stays small at scale (see LIG-9903).
+                embedding_region: f.embedding_region,
+                query_expr: params.query_expr,
+                metadata_filters: toMetadataFilters(
+                    params.metadata_values,
+                    params.categorical_metadata_values
+                )
+            })
+        }
+    };
 };

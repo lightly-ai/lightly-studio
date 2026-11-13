@@ -83,7 +83,6 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         showOrthographicViews: presentation.showOrthographicViews,
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
-        showAnnotationTooltips: presentation.showAnnotationTooltips,
         accumulation,
         colorMode: presentation.colorMode,
         selectedCuboidId: editing.selectedCuboidId,
@@ -99,7 +98,6 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         onToggleOrthographicProjections: presentation.toggleOrthographicProjections,
         onPointSizeChange: presentation.setPointSize,
         onToggleNavigationHelpers: presentation.setShowNavigationHelpers,
-        onToggleAnnotationTooltips: presentation.setShowAnnotationTooltips,
         onToolChange: (tool) => {
             editing.activeTool = tool;
         },
