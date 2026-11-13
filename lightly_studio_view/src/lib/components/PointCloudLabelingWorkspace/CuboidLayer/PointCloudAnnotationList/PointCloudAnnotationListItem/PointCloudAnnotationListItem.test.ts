@@ -19,6 +19,9 @@ vi.mock('$lib/hooks/useTracks/useTracks.svelte', () => ({
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
     useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
 }));
+vi.mock('$lib/hooks/useUpdateTrackMutation/useUpdateTrackMutation.svelte', () => ({
+    useUpdateTrackMutation: () => ({ updateParentTrack: vi.fn(), isPending: false })
+}));
 
 const cuboid = createAnnotationFixture();
 

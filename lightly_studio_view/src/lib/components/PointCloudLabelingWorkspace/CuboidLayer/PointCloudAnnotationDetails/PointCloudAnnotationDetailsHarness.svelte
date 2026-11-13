@@ -7,6 +7,7 @@
         annotation,
         annotationSourceName,
         editable,
+        occupiedTrackIds,
         onAnnotationChange,
         onTrackChange
     }: ComponentProps<typeof PointCloudAnnotationDetails> = $props();
@@ -17,6 +18,7 @@
         {annotation}
         {annotationSourceName}
         {editable}
+        {occupiedTrackIds}
         {onAnnotationChange}
         {onTrackChange}
     />

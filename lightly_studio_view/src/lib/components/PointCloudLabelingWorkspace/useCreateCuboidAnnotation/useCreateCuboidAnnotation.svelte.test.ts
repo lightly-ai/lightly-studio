@@ -163,7 +163,7 @@ describe('useCreateCuboidAnnotation', () => {
             track: { objectTrackId: null, isNewTrack: true }
         });
 
-        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], vi.fn());
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
 
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({ object_track_id: undefined, create_new_track: true })

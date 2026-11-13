@@ -28,11 +28,15 @@ const parentTrackPendingRef = vi.hoisted(() => ({ current: false }));
 
 vi.mock(
     '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte',
-    () => ({
+    async (importOriginal) => ({
+        ...(await importOriginal<
+            typeof import('$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte')
+        >()),
         usePointCloudWorkspaceLayoutContext: () => () => ({ datasetId: 'ds-1' })
     })
 );
-vi.mock('$lib/hooks', () => ({
+vi.mock('$lib/hooks', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks')>()),
     useTracks: () => ({ data: tracksRef.current, refetch: vi.fn() }),
     useUpdateAnnotationsMutation: () => ({
         updateAnnotations: (...args: unknown[]) => updateAnnotationsRef.current(...args)
