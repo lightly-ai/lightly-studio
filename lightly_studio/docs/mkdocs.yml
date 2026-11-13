@@ -163,6 +163,7 @@ nav:
       - Embeddings: workflows/embeddings.md
     - Annotate:
       - Create and Edit Annotations: workflows/annotations.md
+      - Label with Your Own Model: workflows/labeling_models.md
       - Find Wrong Annotations: workflows/annotation_qa.md
       - Add Captions: workflows/captions.md
     - Evaluate:
@@ -181,6 +182,7 @@ nav:
       - DatasetQuery: api/dataset_query.md
       - Sampling: api/sampling.md
       - Embeddings: api/embeddings.md
+      - Labeling Models: api/labeling_models.md
       - Plugin: api/plugin.md
       - Annotation: api/annotation.md
       - Model Evaluation: api/evaluation.md
@@ -275,6 +277,7 @@ plugins:
           - workflows/sampling.md
           - workflows/embeddings.md
           - workflows/annotations.md
+          - workflows/labeling_models.md
           - workflows/annotation_qa.md
           - workflows/captions.md
           - workflows/evaluation.md
@@ -290,6 +293,7 @@ plugins:
           - api/dataset_query.md
           - api/sampling.md
           - api/embeddings.md
+          - api/labeling_models.md
           - api/plugin.md
           - api/annotation.md
           - api/evaluation.md
