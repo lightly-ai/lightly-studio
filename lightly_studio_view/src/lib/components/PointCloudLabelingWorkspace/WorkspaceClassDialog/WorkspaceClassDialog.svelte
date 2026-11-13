@@ -14,4 +14,5 @@
     onCancel={editing.handleClassDialogCancel}
     showTrackSelect
     tracks={editing.tracks.data ?? []}
+    occupiedTrackIds={editing.occupiedTrackIds}
 />

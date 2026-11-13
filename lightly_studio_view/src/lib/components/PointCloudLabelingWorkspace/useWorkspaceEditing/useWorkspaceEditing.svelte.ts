@@ -177,10 +177,15 @@ export function useWorkspaceEditing(
             queryKey: getTickDetailsSequenceQueryKey({
                 datasetId: getOptions().datasetId,
                 sequenceId: getOptions().sequenceId
-            })
+            }),
+            refetchType: 'none'
         });
-        await getWorkspace().tickDetails.refetch();
+        await getWorkspace().tickDetails.refetch({ throwOnError: true });
     }
+
+    const occupiedTrackIds = $derived(
+        new Set(getData().cuboids.flatMap((c) => (c.trackId ? [c.trackId] : [])))
+    );
 
     const displayedAnnotations = fromStore(annotations);
     return {
@@ -190,6 +195,9 @@ export function useWorkspaceEditing(
         handleClassDialogCancel,
         labels,
         tracks,
+        get occupiedTrackIds() {
+            return occupiedTrackIds;
+        },
         get annotations() {
             return displayedAnnotations.current;
         },

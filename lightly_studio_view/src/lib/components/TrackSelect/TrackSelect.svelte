@@ -7,16 +7,35 @@
 
     const NO_TRACK_VALUE = '__no_track__';
     const NEW_TRACK_VALUE = '__new_track__';
-    const NO_TRACK_LABEL = 'No track';
-    const NEW_TRACK_LABEL = '+ New track';
 
     interface Props {
         tracks: TrackWithClassNameView[];
         value?: string;
+        /** Label shown for the empty option. Defaults to "No track". */
+        noSelectionLabel?: string;
+        /** When false, hides the "+ New track" option. Defaults to true. */
+        showNewTrack?: boolean;
+        /** When true, the selector is greyed out and non-interactive. */
+        disabled?: boolean;
+        /** When true, shows a loading spinner next to the selector. */
+        isLoading?: boolean;
+        /** Additional CSS class for the inner SelectList. */
+        className?: string;
         onValueChange?: (value: string | null, isNewTrack: boolean) => void;
     }
 
-    let { tracks, value = $bindable(NO_TRACK_VALUE), onValueChange }: Props = $props();
+    let {
+        tracks,
+        value = $bindable(NO_TRACK_VALUE),
+        noSelectionLabel = 'No track',
+        showNewTrack = true,
+        disabled = false,
+        isLoading = false,
+        className = 'min-w-0',
+        onValueChange
+    }: Props = $props();
+
+    const NEW_TRACK_LABEL = '+ New track';
 
     function trackLabel(t: TrackWithClassNameView): string {
         return t.annotation_class_name
@@ -24,7 +43,10 @@
             : `Track ${t.object_track_number}`;
     }
 
-    const noTrackItem: ListItem = { value: NO_TRACK_LABEL, label: NO_TRACK_LABEL };
+    const noTrackItem = $derived<ListItem>({
+        value: noSelectionLabel,
+        label: noSelectionLabel
+    });
     const newTrackItem: ListItem = { value: NEW_TRACK_LABEL, label: NEW_TRACK_LABEL };
 
     const sortedItems = $derived.by(() => {
@@ -42,20 +64,17 @@
             });
     });
 
-    let selectedItem = $state<ListItem | undefined>({
-        value: NO_TRACK_LABEL,
-        label: NO_TRACK_LABEL
-    });
+    let selectedItem = $state<ListItem | undefined>(undefined);
 
     $effect(() => {
         let label: string;
         if (value === NO_TRACK_VALUE) {
-            label = NO_TRACK_LABEL;
+            label = noSelectionLabel;
         } else if (value === NEW_TRACK_VALUE) {
             label = NEW_TRACK_LABEL;
         } else {
             const track = tracks.find((t) => t.object_track_id === value);
-            label = track ? trackLabel(track) : NO_TRACK_LABEL;
+            label = track ? trackLabel(track) : noSelectionLabel;
         }
         if (untrack(() => selectedItem?.value) !== label) {
             selectedItem = { value: label, label };
@@ -63,7 +82,7 @@
     });
 
     function handleSelect(item: ListItem) {
-        if (item.value === NO_TRACK_LABEL) {
+        if (item.value === noSelectionLabel) {
             value = NO_TRACK_VALUE;
             onValueChange?.(null, false);
         } else if (item.value === NEW_TRACK_LABEL) {
@@ -84,11 +103,13 @@
         bind:selectedItem
         items={sortedItems}
         pinnedTop={[noTrackItem]}
-        pinnedBottom={[newTrackItem]}
-        label={NO_TRACK_LABEL}
+        pinnedBottom={showNewTrack ? [newTrackItem] : []}
+        label={noSelectionLabel}
         placeholder="Search track..."
-        className="w-full"
+        {className}
         allowCreate={false}
+        {disabled}
+        {isLoading}
         onSelect={handleSelect}
     />
 </div>

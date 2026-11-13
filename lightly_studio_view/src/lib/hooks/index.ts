@@ -62,6 +62,7 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+export { useUpdateTrackMutation } from '$lib/hooks/useUpdateTrackMutation/useUpdateTrackMutation.svelte';
 export {
     AnnotationClassNotAvailableError,
     getCreateLabelErrorMessage,

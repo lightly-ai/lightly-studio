@@ -8,6 +8,7 @@
     import type { ComponentProps } from 'svelte';
     import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
     import { TrackSelect } from '$lib/components/TrackSelect';
+    import { filterTracksByAnnotationClass } from '$lib/components/TrackSelect/filterTracksByAnnotationClass';
     import { useClassDialogForm } from './useClassDialogForm/useClassDialogForm';
 
     interface Props {
@@ -20,6 +21,8 @@
         onCancel: () => void;
         showTrackSelect?: boolean;
         tracks?: TrackWithClassNameView[];
+        /** Track IDs already assigned to annotations on the current frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
     }
 
     let {
@@ -28,7 +31,8 @@
         onConfirm,
         onCancel,
         showTrackSelect = false,
-        tracks = []
+        tracks = [],
+        occupiedTrackIds = new Set()
     }: Props = $props();
 
     const canCreateClass = useCanCreateAnnotationClass();
@@ -53,6 +57,13 @@
             open = false;
         }
     }));
+
+    const availableTracks = $derived(
+        filterTracksByAnnotationClass(
+            tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id)),
+            $selectedItem?.value ?? null
+        )
+    );
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
@@ -90,8 +101,9 @@
             <div class="min-w-0 space-y-1">
                 <span class="text-sm font-medium text-muted-foreground">Track</span>
                 <TrackSelect
-                    {tracks}
+                    tracks={availableTracks}
                     bind:value={$trackValue}
+                    className="w-full"
                     onValueChange={handleTrackValueChange}
                 />
             </div>
