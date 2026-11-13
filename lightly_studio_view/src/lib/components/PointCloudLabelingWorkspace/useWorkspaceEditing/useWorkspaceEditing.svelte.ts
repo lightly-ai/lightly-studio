@@ -12,6 +12,7 @@ import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
+import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
 import type { WorkspaceTool } from '../domain';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 
@@ -170,6 +171,17 @@ export function useWorkspaceEditing(
         setActiveTool(addingTrack ? 'create-cuboid' : 'select');
     }
 
+    async function handleTrackChange(): Promise<void> {
+        void refreshTracks();
+        void queryClient.invalidateQueries({
+            queryKey: getTickDetailsSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            })
+        });
+        await getWorkspace().tickDetails.refetch();
+    }
+
     const displayedAnnotations = fromStore(annotations);
     return {
         transforms,
@@ -219,6 +231,7 @@ export function useWorkspaceEditing(
         handleExtendTrack,
         handleDeleteTrack,
         handleLabelChange,
+        handleTrackChange,
         panelCuboidTransform
     };
 }

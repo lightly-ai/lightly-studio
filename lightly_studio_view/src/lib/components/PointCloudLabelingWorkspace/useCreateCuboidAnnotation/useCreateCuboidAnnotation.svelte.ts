@@ -101,10 +101,11 @@ export function useCreateCuboidAnnotation({
     const { lastAnnotationLabel, updateLastAnnotationLabel } = useGlobalStorage();
 
     async function selectAnnotationLabel(
-        collectionId: string
+        collectionId: string,
+        selectClass: boolean
     ): Promise<{ label: string; track?: TrackSelection } | null> {
         const stored = get(lastAnnotationLabel)[collectionId] ?? null;
-        if (stored) return { label: stored };
+        if (stored && !selectClass) return { label: stored };
         const selection = await requestLabel();
         if (!selection?.label) return null;
         updateLastAnnotationLabel(collectionId, selection.label);
@@ -176,7 +177,7 @@ export function useCreateCuboidAnnotation({
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
-        const selection = await selectAnnotationLabel(collectionId);
+        const selection = await selectAnnotationLabel(collectionId, selectClass);
         if (!selection) return;
         // Cancel if the active tick changed while the class dialog was open.
         if (getTickSampleId() !== sampleId) return;

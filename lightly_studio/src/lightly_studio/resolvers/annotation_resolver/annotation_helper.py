@@ -22,7 +22,7 @@ from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable, 
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
-from lightly_studio.resolvers import annotation_resolver
+from lightly_studio.resolvers import annotation_resolver, object_track_resolver
 
 
 def update_annotation_object(
@@ -111,6 +111,16 @@ def update_annotation_object(
 
     annotation_resolver.delete_annotation(session, annotation.sample_id, delete_sample=False)
 
+    # The delete above commits internally (DuckDB FK workaround), so the original
+    # annotation is already gone. Verify that the target track still exists before
+    # reinserting — a concurrent deletion would cause an FK violation on commit,
+    # permanently losing the annotation. Fall back to no track assignment.
+    reinsert_track_id = annotation_copy.object_track_id
+    if reinsert_track_id is not None:
+        track = object_track_resolver.get_by_id(session=session, object_track_id=reinsert_track_id)
+        if track is None:
+            reinsert_track_id = None
+
     new_annotation = AnnotationBaseTable(
         sample_id=annotation_copy.sample_id,
         annotation_label_id=annotation_copy.annotation_label_id,
@@ -118,7 +128,7 @@ def update_annotation_object(
         confidence=annotation_copy.confidence,
         created_at=annotation_copy.created_at,
         parent_sample_id=annotation_copy.parent_sample_id,
-        object_track_id=annotation_copy.object_track_id,
+        object_track_id=reinsert_track_id,
     )
     session.add(new_annotation)
 
@@ -138,4 +148,4 @@ def update_annotation_object(
     if commit:
         session.commit()
 
-    return annotation_copy
+    return new_annotation

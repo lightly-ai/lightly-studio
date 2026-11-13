@@ -182,6 +182,12 @@ describe('SelectClassDialog', () => {
         expect(screen.getByText(/Create:/)).toBeInTheDocument();
     });
 
+    it('does not show track select by default', () => {
+        renderDialog();
+
+        expect(screen.queryByTestId('track-select')).not.toBeInTheDocument();
+    });
+
     it('shows track select when showTrackSelect is true', () => {
         renderDialog(defaultTrackProps);
 
