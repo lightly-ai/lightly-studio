@@ -17,7 +17,8 @@ axes must embed each query while the GUI runs, so they need a remote embedder.
     embeds the search queries. Register it with `ls.register_default_embedder` before you add
     data. To embed images, the server must implement `ImageBytesEmbedder`.
 
-    ![Your own model in a remote embedder](../_static/lightly_studio_enterprise_remote_embedder.svg){ width="100%" }
+    ![Your own model in a remote embedder](../_static/lightly_studio_enterprise_remote_embedder.svg#only-light){ width="100%" }
+    ![Your own model in a remote embedder](../_static/lightly_studio_enterprise_remote_embedder_dark.svg#only-dark){ width="100%" }
 
     The dataset stores the URL of the server. Search then uses the same server, with no
     other registration. See
@@ -29,7 +30,8 @@ axes must embed each query while the GUI runs, so they need a remote embedder.
     `ls.register_default_embedder` before you add data. It can run your model, or it can load
     vectors that you computed before.
 
-    ![Your own model in a local embedder](../_static/lightly_studio_enterprise_local_embedder.svg){ width="100%" }
+    ![Your own model in a local embedder](../_static/lightly_studio_enterprise_local_embedder.svg#only-light){ width="100%" }
+    ![Your own model in a local embedder](../_static/lightly_studio_enterprise_local_embedder_dark.svg#only-dark){ width="100%" }
 
     The enterprise server cannot call a local embedder. As a result, similarity search and
     text axes are not available in this setup. To use them, choose a remote embedder.

@@ -3,29 +3,29 @@
   <desc id="desc">A Python script sends your images to your remote embedder, which returns the vectors. The script sends the vectors to LightlyStudio Enterprise, where the embedding plot and sampling read them. Similarity search sends each query to the same remote embedder.</desc>
   <defs>
     <style>
-      .panel-env { fill: #ffffff; stroke: #b8c2c1; stroke-width: 2; stroke-dasharray: 8 6; }
-      .panel-ls { fill: #e3f3f2; }
-      .panel-title { fill: #17272a; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
-      .panel-title-ls { fill: #14897f; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
-      .card { fill: #ffffff; stroke: #d3dbda; stroke-width: 2; }
-      .card-off { fill: #f3f6f6; stroke: #b8c2c1; stroke-width: 2; stroke-dasharray: 7 5; }
-      .icon-off { fill: none; stroke: #9aa6a5; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-      .title-off { fill: #8a9796; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
-      .icon { fill: none; stroke: #17272a; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-      .title { fill: #17272a; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
-      .sub { fill: #4b5a59; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; }
-      .mono { fill: #4b5a59; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 16px; }
-      .edge { stroke: #7c8c8a; stroke-width: 2.5; fill: none; }
-      .edge-search { stroke: #1aa39a; stroke-width: 2.5; stroke-dasharray: 9 7; fill: none; }
-      .edge-label { fill: #5d6b6a; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; font-style: italic; }
-      .edge-label-search { fill: #14897f; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; font-style: italic; }
-      .caption { fill: #5d6b6a; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 16px; }
+      .panel-env { fill: none; stroke: #dcdcdc; stroke-width: 2; stroke-dasharray: 8 6; }
+      .panel-ls { fill: #eaf7fd; }
+      .panel-title { fill: #0d0d0d; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
+      .panel-title-ls { fill: #1277a5; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
+      .card { fill: #ffffff; stroke: #e4e4e4; stroke-width: 2; }
+      .card-off { fill: #fafafa; stroke: #dcdcdc; stroke-width: 2; stroke-dasharray: 7 5; }
+      .icon { fill: none; stroke: #0d0d0d; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .icon-off { fill: none; stroke: #a3a3a3; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+      .title { fill: #0d0d0d; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
+      .title-off { fill: #a3a3a3; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 22px; font-weight: 700; }
+      .sub { fill: #4a4a4a; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; }
+      .mono { fill: #4a4a4a; font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 16px; }
+      .edge { stroke: #6e6e6e; stroke-width: 2.5; fill: none; }
+      .edge-search { stroke: #1277a5; stroke-width: 2.5; stroke-dasharray: 9 7; fill: none; }
+      .edge-label { fill: #6e6e6e; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; font-style: italic; }
+      .edge-label-search { fill: #1277a5; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 17px; font-style: italic; }
+      .caption { fill: #6e6e6e; font-family: -apple-system, "Segoe UI", Inter, Arial, sans-serif; font-size: 16px; }
     </style>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#7c8c8a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#6e6e6e" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
     <marker id="arrow-search" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
-      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#1aa39a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#1277a5" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
     </marker>
   </defs>
 
