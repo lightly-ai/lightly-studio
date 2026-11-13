@@ -13,7 +13,6 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
-from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -121,7 +120,10 @@ def _resolve_object_track_id(session: Session, annotation: AnnotationCreateParam
         sample_type=SampleType.ANNOTATION,
         name=annotation.annotation_collection_name,
     )
-    return _create_object_track(session=session, dataset_id=collection.dataset_id)
+    track = object_track_resolver.create_with_next_number(
+        session=session, dataset_id=collection.dataset_id, commit=False
+    )
+    return track.object_track_id
 
 
 def _validate_object_track(session: Session, object_track_id: UUID, collection_id: UUID) -> None:
@@ -136,13 +138,3 @@ def _validate_object_track(session: Session, object_track_id: UUID, collection_i
             f"Object track {object_track_id} belongs to a different dataset"
             f" than collection {collection_id}."
         )
-
-
-def _create_object_track(session: Session, dataset_id: UUID) -> UUID:
-    track_number = object_track_resolver.next_track_number(session=session, dataset_id=dataset_id)
-    track_ids = object_track_resolver.create_many(
-        session=session,
-        tracks=[ObjectTrackCreate(object_track_number=track_number, dataset_id=dataset_id)],
-        commit=False,
-    )
-    return track_ids[0]
