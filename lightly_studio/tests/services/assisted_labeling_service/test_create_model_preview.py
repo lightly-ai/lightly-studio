@@ -84,6 +84,34 @@ def test_create_model_preview__clamps_box_to_image() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    "box",
+    [
+        pytest.param((-2.0, 0.0, -1.0, 1.0), id="left"),
+        pytest.param((5.0, 0.0, 6.0, 1.0), id="right"),
+        pytest.param((0.0, -2.0, 1.0, -1.0), id="above"),
+        pytest.param((0.0, 3.0, 1.0, 4.0), id="below"),
+        pytest.param((-1.0, 0.0, 0.0, 1.0), id="touches-left-edge"),
+        pytest.param((4.0, 0.0, 5.0, 1.0), id="touches-right-edge"),
+        pytest.param((0.0, -1.0, 1.0, 0.0), id="touches-top-edge"),
+        pytest.param((0.0, 2.0, 1.0, 3.0), id="touches-bottom-edge"),
+    ],
+)
+def test_create_model_preview__drops_box_outside_image(
+    box: tuple[float, float, float, float],
+) -> None:
+    # The image is 4x2.
+    model = StubLabelingModel(
+        model_id="m",
+        class_names=["cat"],
+        predictions=[PredictedAnnotation(class_name="cat", box=box, score=0.8)],
+    )
+
+    response = _create_model_preview(model=model, threshold=0.4)
+
+    assert response.predictions == []
+
+
 def test_create_model_preview__mask_defines_box() -> None:
     mask = np.zeros((HEIGHT, WIDTH), dtype=np.bool_)
     mask[1, 1:3] = True
@@ -145,6 +173,34 @@ def test_create_model_preview__limits_previews() -> None:
     assert response.predictions[-1].score == 0.401
 
 
+def test_create_model_preview__empty_mask_does_not_use_limit() -> None:
+    # 301 mask predictions with the scores 0.400, 0.401, ..., 0.700.
+    # The mask of the highest score 0.7 is empty.
+    full_mask = np.ones((HEIGHT, WIDTH), dtype=np.bool_)
+    empty_mask = np.zeros((HEIGHT, WIDTH), dtype=np.bool_)
+    model = StubLabelingModel(
+        model_id="m",
+        task=ModelTask.INSTANCE_SEGMENTATION,
+        class_names=["cat"],
+        predictions=[
+            PredictedAnnotation(
+                class_name="cat",
+                box=(0.0, 0.0, 4.0, 2.0),
+                score=(400 + index) / 1000,
+                mask=empty_mask if index == 300 else full_mask,
+            )
+            for index in range(301)
+        ],
+    )
+
+    response = _create_model_preview(model=model, threshold=0.4)
+
+    # The limit is 300, and the other 300 predictions fill it.
+    assert len(response.predictions) == 300
+    assert response.predictions[0].score == 0.699
+    assert response.predictions[-1].score == 0.4
+
+
 @pytest.mark.parametrize(
     ("prediction", "message"),
     [
@@ -165,7 +221,7 @@ def test_create_model_preview__limits_previews() -> None:
         ),
         pytest.param(
             PredictedAnnotation(class_name="dog", box=(0.0, 0.0, 4.0, 2.0), score=0.8),
-            r"the class 'dog', which is not one of its class names",
+            r"a class that is not one of its class names",
             id="unknown-class",
         ),
         pytest.param(
@@ -221,8 +277,21 @@ def test_create_model_preview__invalid_prediction_below_threshold() -> None:
         predictions=[PredictedAnnotation(class_name="dog", box=(0.0, 0.0, 4.0, 2.0), score=0.1)],
     )
 
-    with pytest.raises(ProviderError, match=r"the class 'dog'"):
+    with pytest.raises(ProviderError, match=r"a class that is not one of its class names"):
         _create_model_preview(model=model, threshold=0.4)
+
+
+def test_create_model_preview__error_message_omits_class_name() -> None:
+    model = StubLabelingModel(
+        model_id="m",
+        class_names=["cat"],
+        predictions=[PredictedAnnotation(class_name="dog", box=(0.0, 0.0, 4.0, 2.0), score=0.8)],
+    )
+
+    with pytest.raises(ProviderError) as error_info:
+        _create_model_preview(model=model, threshold=0.4)
+
+    assert "dog" not in str(error_info.value)
 
 
 def _create_model_preview(model: StubLabelingModel, threshold: float) -> ModelAnnotationResponse:
