@@ -134,6 +134,18 @@ describe('FilterList', () => {
         expect(screen.getAllByTestId('filter-list-item')).toHaveLength(120);
     });
 
+    it('keeps a row past the page visible after it is unticked', async () => {
+        const items = makeItems(120).map((item, index) => ({ ...item, selected: index === 99 }));
+        const onToggle = vi.fn();
+        const { rerender } = render(FilterList, { items, onToggle, onSelectionChange: vi.fn() });
+
+        await userEvent.click(screen.getByRole('checkbox', { name: 'Item 99' }));
+        await rerender({ items: makeItems(120) });
+
+        expect(onToggle).toHaveBeenCalledWith('id-99');
+        expect(screen.getByRole('checkbox', { name: 'Item 99' })).not.toBeChecked();
+    });
+
     it('hides "Show more" when only selected rows were past the page', () => {
         const items = makeItems(60).map((item, index) => ({ ...item, selected: index >= 50 }));
         renderList({ items });
