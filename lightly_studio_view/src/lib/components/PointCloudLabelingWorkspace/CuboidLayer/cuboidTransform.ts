@@ -36,16 +36,12 @@ export function getCuboidEditModes(
 }
 
 export function getCuboidGizmoOptions(mode: string, cameraMode: Domain.CameraMode) {
-    if (cameraMode === 'perspective') {
-        return { space: 'local' as const, showX: true, showY: true, showZ: true };
-    }
-    // Rotate shows only the axis facing the camera; translate shows the two in-plane axes.
-    const showFacingAxis = mode === 'rotate';
+    const constrained = mode === 'rotate' && cameraMode !== 'perspective';
     return {
-        space: 'world' as const,
-        showX: (cameraMode === 'side') === showFacingAxis,
-        showY: (cameraMode === 'front') === showFacingAxis,
-        showZ: (cameraMode === 'top') === showFacingAxis
+        space: constrained ? ('world' as const) : ('local' as const),
+        showX: !constrained || cameraMode === 'side',
+        showY: !constrained || cameraMode === 'front',
+        showZ: !constrained || cameraMode === 'top'
     };
 }
 

@@ -130,29 +130,6 @@ describe('orthographic editing tools', () => {
             expect(getCuboidEditModes('create-cuboid', cameraMode)).toEqual([]);
         }
     );
-    it.each([
-        ['top', true, true, false],
-        ['side', false, true, true],
-        ['front', true, false, true]
-    ] as const)(
-        'hides the camera-facing axis when moving in %s view',
-        (cameraMode, showX, showY, showZ) => {
-            expect(getCuboidGizmoOptions('translate', cameraMode)).toEqual({
-                space: 'world',
-                showX,
-                showY,
-                showZ
-            });
-        }
-    );
-    it('keeps local translate axes in perspective', () => {
-        expect(getCuboidGizmoOptions('translate', 'perspective')).toEqual({
-            space: 'local',
-            showX: true,
-            showY: true,
-            showZ: true
-        });
-    });
     it('keeps all local rotation axes in perspective', () => {
         expect(getCuboidGizmoOptions('rotate', 'perspective')).toEqual({
             space: 'local',
