@@ -256,7 +256,6 @@ describe('SelectList', () => {
         }
     );
 
-
     it('selects existing item when pressing Enter with case-insensitive match', async () => {
         const user = userEvent.setup();
         const onSelect = vi.fn();

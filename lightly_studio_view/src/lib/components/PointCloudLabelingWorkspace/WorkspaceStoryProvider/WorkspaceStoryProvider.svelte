@@ -16,12 +16,14 @@
     // The summary query enables itself; seed it while empty IDs disable tick and cloud queries.
     client.setQueryData(getSummaryOptions({ path: { dataset_id: '', sequence_id: '' } }).queryKey, {
         recording_id: '',
+        collection_id: '',
         file_name: 'story.mcap',
         format: 'mcap',
         start_log_time_ns: null,
         lidar_channels: [],
         camera_channels: [],
-        reference_frames: []
+        reference_frames: [],
+        tags: []
     });
     setQueryClientContext(client);
     const controller = createWorkspaceController(() => ({
