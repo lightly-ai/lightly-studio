@@ -451,7 +451,7 @@ test-postgres: mock-webapp-dist
 .PHONY: mock-webapp-dist
 mock-webapp-dist:
 ifeq ($(OS),Windows_NT)
-	@powershell -Command "if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app)) { New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app | Out-Null }; New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html -Force | Out-Null"
+	@powershell -Command "if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app)) { New-Item -ItemType Directory -Path src\lightly_studio\dist_lightly_studio_view_app | Out-Null }; if (-not (Test-Path src\lightly_studio\dist_lightly_studio_view_app\index.html)) { New-Item -ItemType File -Path src\lightly_studio\dist_lightly_studio_view_app\index.html | Out-Null }"
 else
 	@mkdir -p src/lightly_studio/dist_lightly_studio_view_app
 	@touch src/lightly_studio/dist_lightly_studio_view_app/index.html
