@@ -45,8 +45,8 @@ interface CuboidDraftReturn {
 }
 
 /**
- * Step of a draft. Side and front views draw one `rectangle` with a drag. Top and 3D views draw
- * the first `side` (heading and length), then the `width`, and the 3D view then the `height`.
+ * Step of a draft. The top, side and front views draw one `rectangle` with a drag. The 3D view
+ * draws the first `side` (heading and length), then the `width`, then the `height`.
  */
 type DraftStep = 'rectangle' | 'side' | 'width' | 'height';
 
@@ -232,15 +232,11 @@ export function useCuboidDraft({
             if (hasExtent(active) && previewBox) active.step = 'width';
             return;
         }
-        const footprint = getFootprint(active);
-        if (active.step === 'width' && active.cameraMode === 'perspective') {
+        if (active.step === 'width') {
             active.step = 'height';
             // Show a height at once, so that the next click never saves the flat footprint.
             updateHeight(active, event);
             return;
-        }
-        if (active.step === 'width') {
-            return finish(getFootprintBox(footprint, fitFootprintHeight(footprint, active.batch)));
         }
         finish(previewBox);
     }

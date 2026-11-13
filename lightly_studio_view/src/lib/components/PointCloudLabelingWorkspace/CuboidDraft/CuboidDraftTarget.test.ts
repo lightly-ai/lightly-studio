@@ -58,7 +58,7 @@ function dragOnPlane(button = 0, onHighlightChange?: (box: unknown) => void): vo
     render(CuboidDraftTarget, {
         props: {
             bounds: { min: [-4, -4, 0], max: [4, 4, 2] },
-            cameraMode: 'top',
+            cameraMode: 'perspective',
             onHighlightChange,
             onCreateCuboid
         }
@@ -76,6 +76,9 @@ describe('CuboidDraftTarget', () => {
         dragOnPlane();
         canvas.dispatchEvent(pointer('pointerup', 325, 125));
         canvas.dispatchEvent(pointer('pointermove', 325, 75));
+        // The first click sets the width and the second one the height; a camera that looks
+        // straight down fits the height to the points.
+        canvas.dispatchEvent(pointer('pointerdown', 325, 75));
         canvas.dispatchEvent(pointer('pointerdown', 325, 75));
         expect(onCreateCuboid).toHaveBeenCalledOnce();
         const box = onCreateCuboid.mock.calls[0][0];
@@ -94,8 +97,26 @@ describe('CuboidDraftTarget', () => {
             expect.objectContaining({ yaw: expect.closeTo(Math.atan2(1, 2)) })
         );
         canvas.dispatchEvent(pointer('pointerdown', 325, 75));
+        canvas.dispatchEvent(pointer('pointerdown', 325, 75));
         flushSync();
         expect(onHighlightChange).toHaveBeenLastCalledWith(null);
+    });
+
+    it('stays silent while idle, so that it cannot overwrite the highlight of another viewport', () => {
+        const onHighlightChange = vi.fn();
+        const { rerender } = render(CuboidDraftTarget, {
+            props: {
+                bounds: { min: [-4, -4, 0], max: [4, 4, 2] },
+                onHighlightChange,
+                onCreateCuboid
+            }
+        });
+        flushSync();
+        const nextOnHighlightChange = vi.fn();
+        rerender({ onHighlightChange: nextOnHighlightChange });
+        flushSync();
+        expect(onHighlightChange).not.toHaveBeenCalled();
+        expect(nextOnHighlightChange).not.toHaveBeenCalled();
     });
 
     it('does not write to its owner while it is destroyed', () => {

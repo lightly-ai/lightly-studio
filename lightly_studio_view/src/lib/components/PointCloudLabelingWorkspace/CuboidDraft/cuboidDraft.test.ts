@@ -88,7 +88,7 @@ describe('getHeightExtent', () => {
 
 describe('hasAngledFootprint', () => {
     it.each([
-        ['top', true],
+        ['top', false],
         ['perspective', true],
         ['side', false],
         ['front', false]

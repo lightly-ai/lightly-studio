@@ -61,18 +61,19 @@ it('draws a cuboid on the sample points and highlights the points that it takes 
     };
     render(CuboidDraftPlayground, {
         props: {
-            cameraMode: 'top',
+            cameraMode: 'perspective',
             batch,
             bounds: { min: [-4, -4, 0], max: [4, 4, 2] },
             onCreateCuboid
         }
     });
     const onpointerdown = mocks.planeProps?.onpointerdown as (event: unknown) => void;
-    // Side from world (0, 0) to (2, 0), then a width of 1 toward +Y.
+    // Side from world (0, 0) to (2, 0), then a width of 1 toward +Y and the height of the points.
     onpointerdown({ point: { x: 0, y: 0, z: 0 }, nativeEvent: pointer('pointerdown', 200, 200) });
     canvas.dispatchEvent(pointer('pointermove', 300, 200));
     canvas.dispatchEvent(pointer('pointerup', 300, 200));
     canvas.dispatchEvent(pointer('pointermove', 300, 150));
+    canvas.dispatchEvent(pointer('pointerdown', 300, 150));
     canvas.dispatchEvent(pointer('pointerdown', 300, 150));
 
     expect(onCreateCuboid).toHaveBeenCalledOnce();
