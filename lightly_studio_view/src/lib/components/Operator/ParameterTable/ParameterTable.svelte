@@ -1,6 +1,6 @@
 <script lang="ts">
     import { tick } from 'svelte';
-    import { Trash2 } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import { Button } from '$lib/components';
     import { Label } from '$lib/components/ui/label';
     import { cn } from '$lib/utils';

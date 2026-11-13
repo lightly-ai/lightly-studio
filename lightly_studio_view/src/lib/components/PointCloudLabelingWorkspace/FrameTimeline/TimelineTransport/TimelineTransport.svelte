@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { ChevronLeft, ChevronRight, Pause, Play, SkipBack, SkipForward } from '@lucide/svelte';
+    import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import Pause from '@lucide/svelte/icons/pause';
+    import Play from '@lucide/svelte/icons/play';
+    import SkipBack from '@lucide/svelte/icons/skip-back';
+    import SkipForward from '@lucide/svelte/icons/skip-forward';
     import { Button } from '$lib/components';
     import { Select } from '$lib/components/Select';
     import { Checkbox } from '$lib/components/ui/checkbox';

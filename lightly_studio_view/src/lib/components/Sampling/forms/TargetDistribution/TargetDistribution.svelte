@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Trash2 } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import { Button } from '$lib/components';
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';

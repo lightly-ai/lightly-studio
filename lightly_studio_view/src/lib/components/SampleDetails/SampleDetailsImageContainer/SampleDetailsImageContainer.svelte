@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { LoaderCircle } from '@lucide/svelte';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { ZoomableContainer } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';

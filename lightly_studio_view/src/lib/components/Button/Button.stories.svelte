@@ -1,7 +1,9 @@
 <script module>
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
-    import { ChevronDown, Pencil, Plus } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import Pencil from '@lucide/svelte/icons/pencil';
+    import Plus from '@lucide/svelte/icons/plus';
     import Button from './Button.svelte';
 
     const { Story } = defineMeta({

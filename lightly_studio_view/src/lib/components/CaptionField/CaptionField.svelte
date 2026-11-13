@@ -1,7 +1,8 @@
 <script lang="ts">
     import { page } from '$app/state';
     import { useCaption } from '$lib/hooks/useCaption/useCaption';
-    import { Check, Trash2 } from '@lucide/svelte';
+    import Check from '@lucide/svelte/icons/check';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import type { CaptionView } from '$lib/api/lightly_studio_local';
     import { Button } from '$lib/components';
 

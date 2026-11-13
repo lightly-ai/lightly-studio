@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ChevronsUpDown, X } from '@lucide/svelte';
+    import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
+    import X from '@lucide/svelte/icons/x';
     import { Button } from '$lib/components';
     import { Button as IconButton } from '$lib/components/ui/button';
     import * as Popover from '$lib/components/ui/popover';

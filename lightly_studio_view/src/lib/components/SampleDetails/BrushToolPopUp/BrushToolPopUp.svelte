@@ -3,7 +3,8 @@
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils/isInputElement';
-    import { Brush, Eraser } from '@lucide/svelte';
+    import Brush from '@lucide/svelte/icons/brush';
+    import Eraser from '@lucide/svelte/icons/eraser';
     import { onDestroy, onMount } from 'svelte';
     import FinishAnnotationButton from '../FinishAnnotationButton/FinishAnnotationButton.svelte';
 

@@ -313,10 +313,13 @@ jobs:
           make export-schema
           make export-version
 
-      # `make build` installs deps (build: install) before building.
-      - name: Build app
+      # Tests need only the generated sources, not `vite build`. Other jobs build the app.
+      - name: Install dependencies and generate sources
         working-directory: lightly_studio_view
-        run: make build
+        run: |
+          npm ci
+          npm run generate-language
+          npm run generate-api-client
 
       - name: Run Tests for lightly_studio_view
         working-directory: lightly_studio_view

@@ -1,5 +1,8 @@
 <script lang="ts">
-    import { ChevronDown, ChevronUp, Maximize2, Minimize2 } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import ChevronUp from '@lucide/svelte/icons/chevron-up';
+    import Maximize2 from '@lucide/svelte/icons/maximize-2';
+    import Minimize2 from '@lucide/svelte/icons/minimize-2';
     import WorkspaceBreadcrumb from './WorkspaceBreadcrumb.svelte';
     import { Button } from '$lib/components';
     import type { WorkspaceCrumb } from '../types';

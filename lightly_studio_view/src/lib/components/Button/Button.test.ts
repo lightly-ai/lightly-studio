@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { ChevronDown, Pencil } from '@lucide/svelte';
+import ChevronDown from '@lucide/svelte/icons/chevron-down';
+import Pencil from '@lucide/svelte/icons/pencil';
 import '@testing-library/jest-dom';
 import ButtonTestWrapper from './ButtonTestWrapper.test.svelte';
 

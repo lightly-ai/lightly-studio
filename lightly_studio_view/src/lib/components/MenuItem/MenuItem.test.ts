@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { Image, Video } from '@lucide/svelte';
+import Image from '@lucide/svelte/icons/image';
+import Video from '@lucide/svelte/icons/video';
 import '@testing-library/jest-dom';
 import MenuItem from './MenuItem.svelte';
 import type { NavigationMenuItem } from '../NavigationMenu/types';

@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { AlertTriangle, Loader2, RotateCw } from '@lucide/svelte';
+    import AlertTriangle from '@lucide/svelte/icons/alert-triangle';
+    import Loader2 from '@lucide/svelte/icons/loader-2';
+    import RotateCw from '@lucide/svelte/icons/rotate-cw';
     import { Button } from '$lib/components';
 
     /**

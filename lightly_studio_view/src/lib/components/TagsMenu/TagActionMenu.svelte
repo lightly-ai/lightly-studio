@@ -1,6 +1,8 @@
 <script lang="ts">
     import * as Popover from '$lib/components/ui/popover';
-    import { MoreHorizontal, Pencil, Trash2 } from '@lucide/svelte';
+    import MoreHorizontal from '@lucide/svelte/icons/more-horizontal';
+    import Pencil from '@lucide/svelte/icons/pencil';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import type { TagView } from '$lib/services/types';
     import { Button } from '$lib/components';
 

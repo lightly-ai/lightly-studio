@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { Box, SquareDashed } from '@lucide/svelte';
+    import Box from '@lucide/svelte/icons/box';
+    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import { cn } from '$lib/utils';
     import { Button } from '$lib/components/ui/button';
     import { AnnotationClassSelect } from '$lib/components/SampleDetails/AnnotationClassSelect';

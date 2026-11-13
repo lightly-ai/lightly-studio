@@ -5,7 +5,9 @@
         CollapsibleTrigger
     } from '$lib/components/ui/collapsible';
     import { ColorMarker } from '$lib/components/SideMenu';
-    import { ChevronDown, Eye, EyeOff } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import Eye from '@lucide/svelte/icons/eye';
+    import EyeOff from '@lucide/svelte/icons/eye-off';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { untrack, type Snippet } from 'svelte';
     import { slide } from 'svelte/transition';

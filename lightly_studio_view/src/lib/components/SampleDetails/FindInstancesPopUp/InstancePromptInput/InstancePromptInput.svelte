@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { Loader2, Sparkles, SquareDashedMousePointer } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-2';
+    import Sparkles from '@lucide/svelte/icons/sparkles';
+    import SquareDashedMousePointer from '@lucide/svelte/icons/square-dashed-mouse-pointer';
     import { Button } from '$lib/components/ui/button';
     import { Input } from '$lib/components/ui/input';
     import type { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';

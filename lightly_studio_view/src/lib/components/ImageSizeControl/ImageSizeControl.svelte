@@ -1,7 +1,8 @@
 <script lang="ts">
     import { Slider } from '$lib/components/ui/slider/index.js';
     import { throttle } from 'lodash-es';
-    import { ZoomIn, ZoomOut } from '@lucide/svelte';
+    import ZoomIn from '@lucide/svelte/icons/zoom-in';
+    import ZoomOut from '@lucide/svelte/icons/zoom-out';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Tooltip } from '$lib/components/ui/tooltip';
 

@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import { X } from '@lucide/svelte';
+    import X from '@lucide/svelte/icons/x';
     import { useQueryClient } from '@tanstack/svelte-query';
     import QueryEditor from '$lib/components/QueryEditor/QueryEditor.svelte';
     import { Button } from '$lib/components';

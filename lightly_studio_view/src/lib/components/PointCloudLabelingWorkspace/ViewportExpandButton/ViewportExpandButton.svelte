@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Maximize2, Minimize2 } from '@lucide/svelte';
+    import Maximize2 from '@lucide/svelte/icons/maximize-2';
+    import Minimize2 from '@lucide/svelte/icons/minimize-2';
     import { Button } from '$lib/components';
 
     /** Inputs and callbacks for viewport expand button. */

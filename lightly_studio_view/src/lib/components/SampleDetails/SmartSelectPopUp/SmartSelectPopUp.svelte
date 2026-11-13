@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import { Loader2 } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-2';
     import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
 
     type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];

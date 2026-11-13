@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Button } from '$lib/components/Button';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { FilterX } from '@lucide/svelte';
+    import FilterX from '@lucide/svelte/icons/filter-x';
     import { useClearAllFilters } from './useClearAllFilters';
 
     interface Props {

@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ZoomIn, ZoomOut } from '@lucide/svelte';
+    import ZoomIn from '@lucide/svelte/icons/zoom-in';
+    import ZoomOut from '@lucide/svelte/icons/zoom-out';
     import { Button } from '$lib/components';
     import type { Snippet } from 'svelte';
 
