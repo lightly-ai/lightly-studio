@@ -8,8 +8,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_NOT_FOUND,
     HTTP_STATUS_OK,
 )
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -17,18 +16,17 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
 )
 from tests.helpers_resolvers import (
-    AnnotationDetails,
-    create_annotation_label,
-    create_annotations,
     create_collection,
     create_image,
+    create_source_annotations,
 )
 
 
 def test_delete_annotation_source(db_session: Session, test_client: TestClient) -> None:
     collection = create_collection(session=db_session)
-    annotations = _create_annotations(
-        session=db_session, collection=collection, source_name="predictions", count=2
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    annotations = create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=2
     )
     source_id = annotations[0].annotation_collection_id
 
@@ -56,11 +54,12 @@ def test_delete_annotation_source__used_by_evaluation_run(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection = create_collection(session=db_session)
-    gt_annotation = _create_annotations(
-        session=db_session, collection=collection, source_name="ground_truth", count=1
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    gt_annotation = create_source_annotations(
+        session=db_session, image=image, source_name="ground_truth", count=1
     )[0]
-    pred_annotation = _create_annotations(
-        session=db_session, collection=collection, source_name="predictions", count=1
+    pred_annotation = create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
     )[0]
     evaluation_run_resolver.create(
         session=db_session,
@@ -89,8 +88,9 @@ def test_delete_annotation_source__has_child_collection(
     db_session: Session, test_client: TestClient
 ) -> None:
     collection = create_collection(session=db_session)
-    pred = _create_annotations(
-        session=db_session, collection=collection, source_name="predictions", count=1
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    pred = create_source_annotations(
+        session=db_session, image=image, source_name="predictions", count=1
     )[0]
     create_collection(
         session=db_session,
@@ -106,22 +106,3 @@ def test_delete_annotation_source__has_child_collection(
 
     assert response.status_code == HTTP_STATUS_CONFLICT
     assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
-
-
-def _create_annotations(
-    session: Session, collection: CollectionTable, source_name: str, count: int
-) -> list[AnnotationBaseTable]:
-    """Create count box annotations on a new image in the named annotation source."""
-    image = create_image(session=session, collection_id=collection.collection_id)
-    label = create_annotation_label(
-        session=session, root_collection_id=collection.collection_id, label_name=source_name
-    )
-    details = AnnotationDetails(
-        sample_id=image.sample_id, annotation_label_id=label.annotation_label_id
-    )
-    return create_annotations(
-        session=session,
-        collection_id=collection.collection_id,
-        annotations=[details] * count,
-        collection_name=source_name,
-    )

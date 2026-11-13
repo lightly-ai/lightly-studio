@@ -633,7 +633,7 @@ def test_delete_dataset__with_export_job__leaves_artifact_outside_temp_dir(
 ) -> None:
     # Arrange - the fake temp directory does not contain the export artifact below
     mocker.patch(
-        "lightly_studio.export.export_artifact.tempfile.gettempdir",
+        "lightly_studio.resolvers.dataset_resolver.delete_dataset.tempfile.gettempdir",
         return_value=str(tmp_path / "temp"),
     )
     dataset = create_collection(session=db_session, collection_name="to_delete")
