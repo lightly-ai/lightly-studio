@@ -8,7 +8,10 @@
         BreadcrumbSeparator
     } from '$lib/components/ui/breadcrumb/index.js';
     import { routeHelpers } from '$lib/routes';
-    import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
+    import Home from '@lucide/svelte/icons/home';
+    import Database from '@lucide/svelte/icons/database';
+    import ComponentIcon from '@lucide/svelte/icons/component';
+    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import type { Collection } from '$lib/services/types';
     import { page } from '$app/state';
     import { useAdjacentAnnotations } from '$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations';

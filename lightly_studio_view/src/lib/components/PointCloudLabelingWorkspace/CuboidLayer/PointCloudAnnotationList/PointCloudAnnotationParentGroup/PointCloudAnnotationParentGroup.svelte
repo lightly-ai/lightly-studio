@@ -4,7 +4,7 @@
         CollapsibleContent,
         CollapsibleTrigger
     } from '$lib/components/ui/collapsible';
-    import { ChevronDown } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import { slide } from 'svelte/transition';
     import type { Snippet } from 'svelte';
 

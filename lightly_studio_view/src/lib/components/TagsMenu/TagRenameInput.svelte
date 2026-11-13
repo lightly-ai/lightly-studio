@@ -2,7 +2,7 @@
     import { tick, untrack } from 'svelte';
     import { Checkbox as CheckboxPrimitive } from '$lib/components/ui/checkbox';
     import { Input } from '$lib/components/ui/input';
-    import { Check } from '@lucide/svelte';
+    import Check from '@lucide/svelte/icons/check';
     import type { TagView } from '$lib/services/types';
     import { Button } from '$lib/components';
 

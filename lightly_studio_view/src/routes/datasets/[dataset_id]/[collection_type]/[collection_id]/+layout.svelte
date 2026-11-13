@@ -16,7 +16,9 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { Filter, GripVertical, PanelLeftClose } from '@lucide/svelte';
+    import Filter from '@lucide/svelte/icons/filter';
+    import GripVertical from '@lucide/svelte/icons/grip-vertical';
+    import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
     import { onDestroy, onMount } from 'svelte';
     import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';

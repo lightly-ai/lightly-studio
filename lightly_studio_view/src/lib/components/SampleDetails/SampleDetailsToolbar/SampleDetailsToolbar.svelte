@@ -9,7 +9,12 @@
     import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
-    import { MousePointer, Hand, Brush, Bot, Layers3, WandSparkles } from '@lucide/svelte';
+    import MousePointer from '@lucide/svelte/icons/mouse-pointer';
+    import Hand from '@lucide/svelte/icons/hand';
+    import Brush from '@lucide/svelte/icons/brush';
+    import Bot from '@lucide/svelte/icons/bot';
+    import Layers3 from '@lucide/svelte/icons/layers-3';
+    import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
     import { isFrameDetailsRoute } from '$lib/routes';

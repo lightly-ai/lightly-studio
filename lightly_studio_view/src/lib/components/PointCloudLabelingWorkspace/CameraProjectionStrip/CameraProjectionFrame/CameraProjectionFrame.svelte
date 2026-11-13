@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Camera } from '@lucide/svelte';
+    import Camera from '@lucide/svelte/icons/camera';
     import ProjectionOverlay from '../ProjectionOverlay.svelte';
     import CameraProjectionDialog from './CameraProjectionDialog.svelte';
     import type {

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Settings2 } from '@lucide/svelte';
+    import Settings2 from '@lucide/svelte/icons/settings-2';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Button } from '$lib/components/ui/button';
     import * as Popover from '$lib/components/ui/popover';

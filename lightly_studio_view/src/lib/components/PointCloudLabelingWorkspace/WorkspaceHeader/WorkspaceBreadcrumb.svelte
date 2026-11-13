@@ -1,5 +1,8 @@
 <script lang="ts">
-    import { Boxes, ComponentIcon, Database, Home } from '@lucide/svelte';
+    import Boxes from '@lucide/svelte/icons/boxes';
+    import ComponentIcon from '@lucide/svelte/icons/component';
+    import Database from '@lucide/svelte/icons/database';
+    import Home from '@lucide/svelte/icons/home';
     import {
         Breadcrumb,
         BreadcrumbItem,

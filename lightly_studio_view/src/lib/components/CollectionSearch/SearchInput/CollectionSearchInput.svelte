@@ -5,7 +5,9 @@
 <script lang="ts">
     import Input from '$lib/components/ui/input/input.svelte';
     import { cn } from '$lib/utils/shadcn';
-    import { Image as ImageIcon, Search, X } from '@lucide/svelte';
+    import ImageIcon from '@lucide/svelte/icons/image';
+    import Search from '@lucide/svelte/icons/search';
+    import X from '@lucide/svelte/icons/x';
     import type { HTMLInputAttributes } from 'svelte/elements';
 
     type CollectionSearchInputProps = Pick<

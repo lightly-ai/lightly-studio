@@ -1,6 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
-    import { Plus } from '@lucide/svelte';
+    import Plus from '@lucide/svelte/icons/plus';
 
     interface Props {
         name: string;

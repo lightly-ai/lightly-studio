@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { Info } from '@lucide/svelte';
+    import Info from '@lucide/svelte/icons/info';
     import { get } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
     import AddStrategyButton from '$lib/components/Sampling/AddStrategyButton.svelte';

@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { CheckCheck, X } from '@lucide/svelte';
+    import CheckCheck from '@lucide/svelte/icons/check-check';
+    import X from '@lucide/svelte/icons/x';
     import { FilterActionButton } from '$lib/components/FilterActionButton';
 
     interface Props {

@@ -1,7 +1,9 @@
 <script lang="ts">
     import * as Popover from '$lib/components/ui/popover';
     import { Button } from '$lib/components';
-    import { KeyRound, LogOut, Users } from '@lucide/svelte';
+    import KeyRound from '@lucide/svelte/icons/key-round';
+    import LogOut from '@lucide/svelte/icons/log-out';
+    import Users from '@lucide/svelte/icons/users';
     import { cn } from '$lib/utils/shadcn';
     import { useLogout } from '$lib/hooks/useLogout/useLogout';
     import { Separator } from '../ui/separator';

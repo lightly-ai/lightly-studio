@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
-    import { Trash2 } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
 
     const SIZE = 24;
     const ICON_SIZE = 14;

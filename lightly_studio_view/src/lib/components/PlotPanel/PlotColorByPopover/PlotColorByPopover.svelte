@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Palette } from '@lucide/svelte';
+    import Palette from '@lucide/svelte/icons/palette';
     import { Select, SelectMenuItem } from '$lib/components/Select';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { usePlotColorByType } from './usePlotColorByType/usePlotColorByType';

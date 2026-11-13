@@ -3,7 +3,8 @@
     import { Select, type SelectItem } from '$lib/components/Select';
     import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { ArrowDown, ArrowUp } from '@lucide/svelte';
+    import ArrowDown from '@lucide/svelte/icons/arrow-down';
+    import ArrowUp from '@lucide/svelte/icons/arrow-up';
 
     interface Props {
         items: SelectItem[];

@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import { ChevronDown } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import { FilterActionButton } from '$lib/components/FilterActionButton';
     import FilterListRow from '../FilterListRow/FilterListRow.svelte';
     import { highlightRange, type FilterListItem } from '../filterList.helpers';

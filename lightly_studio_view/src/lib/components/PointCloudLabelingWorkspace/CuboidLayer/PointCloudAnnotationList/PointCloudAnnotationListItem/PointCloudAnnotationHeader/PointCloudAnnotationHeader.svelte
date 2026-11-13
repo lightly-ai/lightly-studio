@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ChevronDown, Trash2 } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import PointCloudAnnotationLabel from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails/PointCloudAnnotationLabel';
     import { Typography } from '$lib/components/Typography';
     import { Tooltip } from '$lib/components/ui/tooltip';

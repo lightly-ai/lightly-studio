@@ -8,7 +8,10 @@
         BreadcrumbSeparator
     } from '$lib/components/ui/breadcrumb/index.js';
     import { routeHelpers } from '$lib/routes';
-    import { Home, Database, Images, FileImage } from '@lucide/svelte';
+    import Home from '@lucide/svelte/icons/home';
+    import Database from '@lucide/svelte/icons/database';
+    import Images from '@lucide/svelte/icons/images';
+    import FileImage from '@lucide/svelte/icons/file-image';
     import type { Collection } from '$lib/services/types';
     import { page } from '$app/state';
     import { useAdjacentImages } from '$lib/hooks/useAdjacentImages/useAdjacentImages';

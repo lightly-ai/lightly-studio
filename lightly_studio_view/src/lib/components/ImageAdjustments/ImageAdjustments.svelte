@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { RotateCcw } from '@lucide/svelte';
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
     import { Button } from '$lib/components/ui/button';
     import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
     import AdjustmentSlider from './AdjustmentSlider/AdjustmentSlider.svelte';

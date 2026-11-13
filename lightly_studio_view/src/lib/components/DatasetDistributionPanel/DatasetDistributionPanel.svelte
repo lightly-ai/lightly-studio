@@ -1,7 +1,7 @@
 <script lang="ts">
     import DistributionPlotContainer from './DistributionPlotContainer/DistributionPlotContainer.svelte';
     import { untrack } from 'svelte';
-    import { X } from '@lucide/svelte';
+    import X from '@lucide/svelte/icons/x';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';

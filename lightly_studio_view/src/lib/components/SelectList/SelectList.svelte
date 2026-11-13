@@ -1,9 +1,7 @@
 <script lang="ts">
-    import {
-        Check as CheckIcon,
-        ChevronsUpDown as ChevronsUpDownIcon,
-        LoaderCircle as Loader2Icon
-    } from '@lucide/svelte';
+    import CheckIcon from '@lucide/svelte/icons/check';
+    import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+    import Loader2Icon from '@lucide/svelte/icons/loader-circle';
     import { tick, untrack, type Snippet } from 'svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';

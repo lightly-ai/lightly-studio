@@ -36,7 +36,7 @@
     import { useSettings } from '$lib/hooks';
     import AnnotationColorLegend from '$lib/components/AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { page } from '$app/state';
-    import { Trash2 } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import { toast } from 'svelte-sonner';
     type SampleDetailsClassificationSegmentProps = {
         collectionId: string;

@@ -1,10 +1,8 @@
 <script lang="ts">
-    import {
-        Maximize2 as Maximize2Icon,
-        Settings as SettingsIcon,
-        BarChart3 as BarChart3Icon,
-        BarChartHorizontal as BarChartHorizontalIcon
-    } from '@lucide/svelte';
+    import Maximize2Icon from '@lucide/svelte/icons/maximize-2';
+    import SettingsIcon from '@lucide/svelte/icons/settings';
+    import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
+    import BarChartHorizontalIcon from '@lucide/svelte/icons/bar-chart-horizontal';
     import { Button } from '$lib/components';
     import { DISTRIBUTION_SORT_LABELS, type DistributionConfig } from '../types';
     import { ValueModeSelect, type ValueMode } from './ValueModeSelect';

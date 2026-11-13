@@ -8,7 +8,11 @@
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import LabelNotFound from '$lib/components/LabelNotFound/LabelNotFound.svelte';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
-    import { Trash2, Eye, EyeOff, Lock, Unlock } from '@lucide/svelte';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
+    import Eye from '@lucide/svelte/icons/eye';
+    import EyeOff from '@lucide/svelte/icons/eye-off';
+    import Lock from '@lucide/svelte/icons/lock';
+    import Unlock from '@lucide/svelte/icons/unlock';
     import { type AnnotationView } from '$lib/api/lightly_studio_local';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';

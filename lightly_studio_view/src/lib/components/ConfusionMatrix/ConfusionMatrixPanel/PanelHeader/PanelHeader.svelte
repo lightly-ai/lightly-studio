@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Maximize2 as Maximize2Icon, Settings as SettingsIcon } from '@lucide/svelte';
+    import Maximize2Icon from '@lucide/svelte/icons/maximize-2';
+    import SettingsIcon from '@lucide/svelte/icons/settings';
     import { Button } from '$lib/components';
     import { CLASS_SORT_LABELS } from '../../topNMatrix';
     import type { ClassSetConfig, ColorConfig } from '../../ClassSetDialog/types';
