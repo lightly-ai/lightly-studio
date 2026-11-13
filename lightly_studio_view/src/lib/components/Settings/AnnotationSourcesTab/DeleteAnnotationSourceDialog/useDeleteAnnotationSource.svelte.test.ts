@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({
     mutate: vi.fn(),
     invalidate: vi.fn(),
     onDeleted: vi.fn(),
-    onSuccess: undefined as undefined | (() => void),
+    onSuccess: undefined as undefined | (() => void | Promise<void>),
     onError: undefined as undefined | ((error: unknown) => void),
     toastError: vi.fn()
 }));
@@ -15,7 +15,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
     ...(await importOriginal<object>()),
     createMutation: (
-        getOptions: () => { onSuccess: () => void; onError: (error: unknown) => void }
+        getOptions: () => {
+            onSuccess: () => void | Promise<void>;
+            onError: (error: unknown) => void;
+        }
     ) => {
         mocks.onSuccess = getOptions().onSuccess;
         mocks.onError = getOptions().onError;
@@ -48,29 +51,51 @@ describe('useDeleteAnnotationSource', () => {
         });
     });
 
-    it('forgets the deleted source as target, and refreshes', () => {
+    it('forgets the deleted source as target, and refreshes', async () => {
         const { lastAnnotationSource, updateLastAnnotationSource } = useGlobalStorage();
         updateLastAnnotationSource('col-1', 'predictions');
         setup('predictions').remove();
 
-        mocks.onSuccess?.();
+        await mocks.onSuccess?.();
 
         expect(get(lastAnnotationSource)['col-1']).toBeUndefined();
         expect(mocks.invalidate).toHaveBeenCalledWith('col-1');
         expect(mocks.onDeleted).toHaveBeenCalledOnce();
     });
 
-    it('keeps another source as target', () => {
+    it('refreshes only once the navigation off the deleted source is done', async () => {
+        const order: string[] = [];
+        let finishNavigation = () => {};
+        mocks.onDeleted.mockImplementationOnce(
+            () =>
+                new Promise<void>((resolve) => {
+                    order.push('navigate');
+                    finishNavigation = resolve;
+                })
+        );
+        mocks.invalidate.mockImplementationOnce(() => order.push('invalidate'));
+        setup('predictions').remove();
+
+        const done = mocks.onSuccess?.();
+        expect(order).toEqual(['navigate']);
+
+        finishNavigation();
+        await done;
+
+        expect(order).toEqual(['navigate', 'invalidate']);
+    });
+
+    it('keeps another source as target', async () => {
         const { lastAnnotationSource, updateLastAnnotationSource } = useGlobalStorage();
         updateLastAnnotationSource('col-1', 'labels');
         setup('predictions').remove();
 
-        mocks.onSuccess?.();
+        await mocks.onSuccess?.();
 
         expect(get(lastAnnotationSource)['col-1']).toBe('labels');
     });
 
-    it('cleans up the collection of the request when the params change before it ends', () => {
+    it('cleans up the collection of the request when the params change before it ends', async () => {
         const { lastAnnotationSource, updateLastAnnotationSource } = useGlobalStorage();
         updateLastAnnotationSource('col-1', 'predictions');
         updateLastAnnotationSource('col-2', 'predictions');
@@ -83,7 +108,7 @@ describe('useDeleteAnnotationSource', () => {
 
         remove();
         collectionId = 'col-2';
-        mocks.onSuccess?.();
+        await mocks.onSuccess?.();
 
         expect(get(lastAnnotationSource)).toEqual({ 'col-2': 'predictions' });
         expect(mocks.invalidate).toHaveBeenCalledWith('col-1');

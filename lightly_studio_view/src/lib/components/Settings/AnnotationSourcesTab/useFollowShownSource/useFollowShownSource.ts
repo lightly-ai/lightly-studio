@@ -11,18 +11,19 @@ interface Params {
 
 /**
  * Moves the annotations grid off a source that the tab deleted, so the route does not point at
- * a collection that no longer exists. Reloads the route data.
+ * a collection that no longer exists. Reloads the route data. `afterDelete` resolves once the
+ * navigation is done, so the caller can refresh the queries only after the grid has left.
  */
 export const useFollowShownSource = (getParams: () => Params) => {
     const isShown = (sourceId: string) => sourceId === getParams().routeCollectionId;
     const datasetId = () => page.params.dataset_id ?? '';
 
     return {
-        afterDelete: (sourceId: string) => {
-            if (!isShown(sourceId)) return;
+        afterDelete: (sourceId: string): Promise<void> => {
+            if (!isShown(sourceId)) return Promise.resolve();
             // The collection layout redirects to the owner's own collection type.
             const collectionType = page.params.collection_type ?? 'image';
-            goto(
+            return goto(
                 routeHelpers.toCollectionHome(
                     datasetId(),
                     collectionType,

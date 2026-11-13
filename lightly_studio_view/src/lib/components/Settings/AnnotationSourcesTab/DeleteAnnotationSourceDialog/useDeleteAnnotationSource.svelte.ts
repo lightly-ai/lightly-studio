@@ -8,7 +8,8 @@ interface Params {
     /** The collection that owns the annotation sources. */
     collectionId: string;
     source: { id: string; name: string };
-    onDeleted: () => void;
+    /** Awaited before the refresh, so a navigation it starts completes first. */
+    onDeleted: () => void | Promise<void>;
 }
 
 export const useDeleteAnnotationSource = (getParams: () => Params) => {
@@ -20,15 +21,18 @@ export const useDeleteAnnotationSource = (getParams: () => Params) => {
 
     const mutation = createMutation(() => ({
         ...deleteAnnotationSourceMutation(),
-        onSuccess: () => {
+        onSuccess: async () => {
             if (!request) return;
             const { collectionId, source, onDeleted } = request;
             // The target is stored by name. Forget it, so the next annotation does not
             // re-create the deleted source.
             removeLastAnnotationSource(collectionId, source.name);
-            invalidateAnnotationSourceQueries(collectionId);
             toast.success(`Deleted the annotation source “${source.name}”`);
-            onDeleted();
+            // The annotations grid of the deleted source can still be on screen with its
+            // queries active. Leave it first, so the refresh below does not refetch a
+            // collection the API no longer has.
+            await onDeleted();
+            invalidateAnnotationSourceQueries(collectionId);
         },
         onError: (error) => {
             toast.error(

@@ -60,12 +60,11 @@
         </div>
     </div>
     {#if deleting}
-        {@const deletedId = deleting.id}
         <DeleteAnnotationSourceDialog
             {collectionId}
             source={deleting}
             onClose={() => (deleting = null)}
-            onDeleted={() => followShownSource.afterDelete(deletedId)}
+            onDeleted={followShownSource.afterDelete}
         />
     {/if}
 {/if}

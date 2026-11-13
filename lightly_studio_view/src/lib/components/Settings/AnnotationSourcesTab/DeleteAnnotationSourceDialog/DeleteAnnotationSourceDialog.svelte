@@ -9,16 +9,19 @@
         source: { id: string; name: string; annotationCount: number };
         /** Called when the dialog closes, after a delete or a cancel. */
         onClose: () => void;
-        /** Called after the delete, before `onClose`. */
-        onDeleted?: () => void;
+        /** Called with the deleted source, after the delete, once the dialog is closed. */
+        onDeleted?: (sourceId: string) => void | Promise<void>;
     }
     const { collectionId, source, onClose, onDeleted }: Props = $props();
     const { mutation, remove } = useDeleteAnnotationSource(() => ({
         collectionId,
         source,
+        // Close first, then hand back whatever `onDeleted` starts, so the refresh waits for it.
+        // The id is read before the close, which unmounts this dialog.
         onDeleted: () => {
-            onDeleted?.();
+            const sourceId = source.id;
             onClose();
+            return onDeleted?.(sourceId);
         }
     }));
     const countText = $derived(
