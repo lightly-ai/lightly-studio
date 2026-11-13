@@ -1,14 +1,15 @@
-import type { AnnotationPreview } from '$lib/api/lightly_studio_local';
 import { useCreateAnnotation } from '$lib/hooks';
 import { useLabelIds } from './useLabelIds';
 import { previewToCreateInput } from './useSaveAnnotationPreviews.helpers';
 
-interface SaveAnnotationPreviewsParams {
+type SavablePreview = Parameters<typeof previewToCreateInput>[0]['preview'];
+
+interface SaveAnnotationPreviewsParams<P extends SavablePreview> {
     sampleId: string;
     saveAs: Parameters<typeof previewToCreateInput>[0]['saveAs'];
     annotationSource: string | null | undefined;
-    previews: { preview: AnnotationPreview; className: string }[];
-    onPreviewSaved: (preview: AnnotationPreview) => void;
+    previews: { preview: P; className: string }[];
+    onPreviewSaved: (preview: P) => void;
 }
 
 // Saves accepted previews and reports each saved one, so a retry after a failure only has to
@@ -23,7 +24,9 @@ export const useSaveAnnotationPreviews = ({
     const { createAnnotation, refetch } = useCreateAnnotation({ getCollectionId });
     const { getLabelIds } = useLabelIds({ getCollectionId, getDatasetId });
 
-    const saveAnnotationPreviews = async (params: SaveAnnotationPreviewsParams) => {
+    const saveAnnotationPreviews = async <P extends SavablePreview>(
+        params: SaveAnnotationPreviewsParams<P>
+    ) => {
         const labelIds = await getLabelIds(params.previews.map(({ className }) => className));
         // Sequential, because one mutation only resolves the callbacks of its last call.
         try {

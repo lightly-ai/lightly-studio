@@ -68,6 +68,7 @@ export {
 } from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
+export { useLabelingModels } from '$lib/hooks/useLabelingModels';
 export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
 export {
     useClassColorPicker,
