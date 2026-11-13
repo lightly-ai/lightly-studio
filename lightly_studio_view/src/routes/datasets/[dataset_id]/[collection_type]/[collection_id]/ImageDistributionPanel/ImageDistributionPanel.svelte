@@ -461,6 +461,8 @@
     onCountModeChange={(mode) => (countMode = mode)}
     onHistogramRangeSelect={handleHistogramRangeSelect}
     onCategoricalValueToggle={handleCategoricalValueToggle}
+    onCategoricalValuesSet={(metadataKey, values) =>
+        updateCategoricalMetadataValues({ ...$categoricalMetadataValues, [metadataKey]: values })}
     onCategoricalValuesClear={(metadataKey) =>
         updateCategoricalMetadataValues(
             withoutCategoricalValues($categoricalMetadataValues, metadataKey)

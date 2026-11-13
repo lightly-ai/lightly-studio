@@ -46,6 +46,7 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -539,6 +540,16 @@
         });
     };
 
+    const setCategoricalValues = (metadataKey: string, values: CategoricalMetadataValue[]) => {
+        updateCategoricalMetadataValues({ ...$categoricalMetadataValues, [metadataKey]: values });
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: 'values_set',
+            value_count: values.length
+        });
+    };
+
     const clearCategoricalValues = (metadataKey: string) => {
         const next = { ...$categoricalMetadataValues };
         delete next[metadataKey];
@@ -693,6 +704,7 @@
                                             : categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
+                                        onCategoricalValuesSet={setCategoricalValues}
                                         onCategoricalValuesClear={clearCategoricalValues}
                                         onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />
