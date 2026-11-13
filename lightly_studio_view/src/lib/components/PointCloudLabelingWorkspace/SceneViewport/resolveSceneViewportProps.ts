@@ -20,6 +20,7 @@ const DEFAULTS = {
     selectedAnnotationId: null,
     hoveredAnnotationId: null,
     activeTool: 'select',
+    isEditingMode: false,
     draftCuboid: null,
     cameraMode: 'perspective',
     isScaleSource: false,

@@ -5,10 +5,11 @@
     import { getCuboidGizmoOptions } from './cuboidTransform';
     import { useCuboidTransformControls } from './useCuboidTransformControls.svelte';
     import OrthographicRotationRing from './OrthographicRotationRing/OrthographicRotationRing.svelte';
+    import OrthographicMoveHandle from './OrthographicMoveHandle/OrthographicMoveHandle.svelte';
     import type { CameraMode, Vector3 } from '../domain';
 
     interface Props extends Omit<Parameters<typeof useCuboidTransformControls>[0], 'getControls'> {
-        mode: 'translate' | 'rotate' | 'scale';
+        mode: 'translate' | 'rotate';
         cameraMode: CameraMode;
         size: Vector3;
         enabled?: boolean;
@@ -38,11 +39,18 @@
     });
 </script>
 
-{#if mode === 'rotate' && cameraMode !== 'perspective'}
-    {#if enabled}
+{#if cameraMode !== 'perspective'}
+    {#if enabled && mode === 'rotate'}
         <OrthographicRotationRing
             {size}
             {onTransformEnd}
+            {onInteractionStart}
+            {onInteractionCancel}
+        />
+    {:else if enabled}
+        <OrthographicMoveHandle
+            {onTransformEnd}
+            {onTransformPreview}
             {onInteractionStart}
             {onInteractionCancel}
         />

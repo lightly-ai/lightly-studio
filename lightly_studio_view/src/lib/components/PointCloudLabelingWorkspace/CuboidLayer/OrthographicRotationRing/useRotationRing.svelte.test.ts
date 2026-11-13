@@ -53,7 +53,7 @@ function pointer(type: string, clientX: number, clientY: number) {
     return event as PointerEvent;
 }
 
-function startDrag() {
+function startDrag(downEvent = pointer('pointerdown', 300, 130)) {
     const ref: { current?: ReturnType<typeof useRotationRing> } = {};
     const instance = render(RotationRingHarness, {
         props: {
@@ -69,7 +69,7 @@ function startDrag() {
     };
     const ring = ref.current!;
     ring.onPointerDown({
-        nativeEvent: pointer('pointerdown', 300, 130),
+        nativeEvent: downEvent,
         stopPropagation: vi.fn()
     });
     canvas.dispatchEvent(pointer('pointermove', 220, 50));
@@ -77,6 +77,13 @@ function startDrag() {
 }
 
 describe('rotation ring interaction', () => {
+    it('keeps other canvas pointer handlers from starting a second drag', () => {
+        const downEvent = pointer('pointerdown', 300, 130);
+        const stopImmediatePropagation = vi.spyOn(downEvent, 'stopImmediatePropagation');
+        startDrag(downEvent);
+        expect(stopImmediatePropagation).toHaveBeenCalledOnce();
+    });
+
     it('previews rotation, pauses camera controls, and commits once on release', () => {
         startDrag();
         expect(controls.enabled).toBe(false);

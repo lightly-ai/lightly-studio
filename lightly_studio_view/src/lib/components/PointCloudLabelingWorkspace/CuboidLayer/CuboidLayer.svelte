@@ -20,6 +20,7 @@
         selectedAnnotationId?: string | null;
         hoveredAnnotationId?: string | null;
         activeTool?: Domain.WorkspaceTool;
+        isEditingMode?: boolean;
         cameraMode?: Domain.CameraMode;
         groundPlaneBounds: Domain.Bounds3;
         pointBatch?: PointBatch;
@@ -42,6 +43,7 @@
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
+        isEditingMode = false,
         cameraMode = 'perspective',
         groundPlaneBounds,
         pointBatch,
@@ -68,6 +70,7 @@
         annotationClasses,
         transforms,
         activeTool,
+        isEditingMode,
         cameraMode,
         hoverTracker,
         selectedAnnotationId,

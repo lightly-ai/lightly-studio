@@ -5,7 +5,7 @@
     import { CuboidFaceResize } from '../CuboidFaceResize';
     import { useCuboidLayerContext } from '../cuboidLayerContext';
     import { highlightCuboidColor, resolveCuboidColor } from '../cuboidColors';
-    import { getCuboidGizmoMode, buildCuboidTransformPayload } from '../cuboidTransform';
+    import { getCuboidEditModes, buildCuboidTransformPayload } from '../cuboidTransform';
     import type { createCuboidRenderItems } from '../cuboidRenderItems';
     /** Geometry and annotation metadata for one cuboid instance. */
     interface Props {
@@ -20,8 +20,45 @@
     );
     const isSelected = $derived(layer.selectedAnnotationId === item.annotation.id);
     const isHovered = $derived(layer.hoveredAnnotationId === item.annotation.id);
-    const gizmoMode = $derived(getCuboidGizmoMode(layer.activeTool));
+    const editModes = $derived(
+        getCuboidEditModes({
+            tool: layer.activeTool,
+            cameraMode: layer.cameraMode,
+            isEditingMode: layer.isEditingMode
+        })
+    );
+    const gizmoModes = $derived(
+        editModes.filter((mode): mode is 'translate' | 'rotate' => mode !== 'resize')
+    );
     let transformStartAnnotation: typeof item.annotation | null = $state(null);
+    type GizmoObject = Parameters<typeof buildCuboidTransformPayload>[1];
+
+    function onTransformEnd(obj: GizmoObject) {
+        const payload = buildCuboidTransformPayload(
+            transformStartAnnotation ?? item.annotation,
+            obj
+        );
+        transformStartAnnotation = null;
+        layer.onCuboidTransform?.(payload);
+        void layer.transforms.commit(payload);
+    }
+
+    function onTransformPreview(obj: GizmoObject) {
+        layer.transforms.preview(
+            buildCuboidTransformPayload(transformStartAnnotation ?? item.annotation, obj.clone())
+        );
+    }
+
+    function onInteractionStart() {
+        layer.hoverTracker.markClicked();
+        transformStartAnnotation = item.annotation;
+        layer.transforms.begin(item.annotation);
+    }
+
+    function onInteractionCancel() {
+        transformStartAnnotation = null;
+        layer.transforms.cancel(item.annotation.id);
+    }
 </script>
 
 <T.Group
@@ -48,39 +85,18 @@
         onhoverleave={(id) => layer.hoverTracker.leave(id)}
     />
     {#if isSelected}
-        {#if gizmoMode}
+        {#each gizmoModes as mode (mode)}
             <CuboidGizmo
-                mode={gizmoMode}
+                {mode}
                 cameraMode={layer.cameraMode}
                 size={item.annotation.size}
-                onTransformEnd={(obj) => {
-                    const payload = buildCuboidTransformPayload(
-                        transformStartAnnotation ?? item.annotation,
-                        obj
-                    );
-                    transformStartAnnotation = null;
-                    layer.onCuboidTransform?.(payload);
-                    void layer.transforms.commit(payload);
-                }}
-                onTransformPreview={(obj) => {
-                    const payload = buildCuboidTransformPayload(
-                        transformStartAnnotation ?? item.annotation,
-                        obj.clone()
-                    );
-                    layer.transforms.preview(payload);
-                }}
-                onInteractionStart={() => {
-                    layer.hoverTracker.markClicked();
-                    transformStartAnnotation = item.annotation;
-                    layer.transforms.begin(item.annotation);
-                }}
-                onInteractionCancel={() => {
-                    transformStartAnnotation = null;
-                    layer.transforms.cancel(item.annotation.id);
-                }}
+                {onTransformEnd}
+                {onTransformPreview}
+                {onInteractionStart}
+                {onInteractionCancel}
             />
-        {/if}
-        {#if layer.activeTool === 'resize'}
+        {/each}
+        {#if editModes.includes('resize')}
             <CuboidFaceResize
                 annotation={item.annotation}
                 cameraMode={layer.cameraMode}
