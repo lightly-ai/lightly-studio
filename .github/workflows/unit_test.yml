@@ -177,18 +177,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          # Postgres is only tested on 3.15 because PostgreSQL dialect/driver
-          # behavior doesn't vary by Python version.
-          - python: "3.10"
-            database: DuckDB
-            make_target: test-without-build
-          - python: "3.15"
-            database: DuckDB
-            make_target: test-without-build
-          - python: "3.15"
-            database: Postgres
-            make_target: test-postgres-without-build
+        # Pull requests run one suite, Postgres on the lowest Python. The merge
+        # queue, main, and manual runs add Postgres and DuckDB on the highest.
+        include: >-
+          ${{ fromJSON(github.event_name == 'pull_request' && '[
+            {"python": "3.10", "database": "Postgres", "make_target": "test-postgres-without-build"}
+          ]' || '[
+            {"python": "3.10", "database": "Postgres", "make_target": "test-postgres-without-build"},
+            {"python": "3.15", "database": "Postgres", "make_target": "test-postgres-without-build"},
+            {"python": "3.15", "database": "DuckDB", "make_target": "test-without-build"}
+          ]') }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
