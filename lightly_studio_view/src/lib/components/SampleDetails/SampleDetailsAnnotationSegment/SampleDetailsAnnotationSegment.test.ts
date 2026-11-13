@@ -1,7 +1,10 @@
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { render, screen, within } from '@testing-library/svelte';
+import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'svelte-sonner';
+import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { resolveStickyClass, useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 import SampleDetailsAnnotationSegment from './SampleDetailsAnnotationSegment.svelte';
 import { useAnnotationSourceGroupState } from './useAnnotationSourceGroupState';
 
@@ -15,7 +18,10 @@ const mocks = vi.hoisted(() => ({
     lastCreatedAnnotationId: null as string | null,
     enforceColoringByClassStore: undefined as unknown as { set: (value: boolean) => void },
     isEditingMode: undefined as unknown as { set: (value: boolean) => void },
-    userRole: 'labeler' as string | undefined
+    userRole: 'labeler' as string | undefined,
+    addReversibleAction: vi.fn(),
+    deleteAnnotation: vi.fn(),
+    setAnnotationLabel: vi.fn()
 }));
 
 // Replace the heavy per-annotation row with a lightweight stub.
@@ -52,10 +58,13 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
     const isEditingMode = writable(false);
     mocks.isEditingMode = isEditingMode;
+    const lastAnnotationLabel = writable<Record<string, string>>({});
     return {
         useGlobalStorage: vi.fn(() => ({
-            addReversibleAction: vi.fn(),
-            updateLastAnnotationLabel: vi.fn(),
+            addReversibleAction: mocks.addReversibleAction,
+            lastAnnotationLabel,
+            updateLastAnnotationLabel: (collectionId: string, label: string) =>
+                lastAnnotationLabel.update((value) => ({ ...value, [collectionId]: label })),
             isEditingMode
         }))
     };
@@ -70,14 +79,16 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
             annotationType: null
         },
         setAnnotationId: vi.fn(),
-        setAnnotationLabel: vi.fn(),
+        setAnnotationLabel: mocks.setAnnotationLabel,
         setLastCreatedAnnotationId: vi.fn(),
         setLockedAnnotationIds: vi.fn()
     }))
 }));
 
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: vi.fn(() => ({ data: [] }))
+    useAnnotationLabels: vi.fn(() => ({
+        data: [{ annotation_label_id: 'label-cat', annotation_label_name: 'cat' }]
+    }))
 }));
 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
@@ -85,7 +96,7 @@ vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
 }));
 
 vi.mock('$lib/hooks/useDeleteAnnotation/useDeleteAnnotation', () => ({
-    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: vi.fn() }))
+    useDeleteAnnotation: vi.fn(() => ({ deleteAnnotation: mocks.deleteAnnotation }))
 }));
 
 vi.mock('$lib/hooks/useAnnotationSelection/useAnnotationSelection', () => ({
@@ -547,7 +558,7 @@ describe('SampleDetailsAnnotationSegment', () => {
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
             expect(getRow('pred-1')).toHaveAttribute('data-color-by-source', 'true');
 
-            await user.click(within(getRow('gt-1')).getByRole('button'));
+            await user.click(within(getRow('gt-1')).getByTestId('mock-annotation-row-toggle'));
             expect(getRow('gt-1')).toHaveAttribute('data-hidden', 'true');
             expect(getSourceColorMarker(headers[0])).toBeInTheDocument();
             expect(getRow('gt-1')).toHaveAttribute('data-color-by-source', 'true');
@@ -593,5 +604,63 @@ describe('SampleDetailsAnnotationSegment', () => {
 
             expect(screen.getByTestId('empty-state-message')).toHaveTextContent('No annotations.');
         });
+    });
+
+    describe('deleting an annotation', () => {
+        const annotations = [createAnnotation('a1', groundTruthSource.collection_id, 'cat')];
+
+        beforeEach(() => {
+            mocks.collections = [groundTruthSource];
+        });
+
+        it('offers undo once the delete succeeded', async () => {
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('mock-annotation-row-delete'));
+
+            await waitFor(() => expect(mocks.addReversibleAction).toHaveBeenCalledOnce());
+        });
+
+        it('offers no undo when the delete failed', async () => {
+            mocks.deleteAnnotation.mockRejectedValueOnce(new Error('offline'));
+            const toastError = vi.spyOn(toast, 'error');
+            const user = userEvent.setup();
+            render(SampleDetailsAnnotationSegment, { props: { ...defaultProps, annotations } });
+
+            await user.click(screen.getByTestId('mock-annotation-row-delete'));
+
+            // The error toast means the failed delete was handled.
+            await waitFor(() =>
+                expect(toastError).toHaveBeenCalledWith(
+                    'Failed to delete annotation. Please try again.'
+                )
+            );
+            expect(mocks.addReversibleAction).not.toHaveBeenCalled();
+        });
+    });
+
+    it('uses the class of a side-panel relabel for the next new annotation', async () => {
+        mocks.collections = [groundTruthSource];
+        const user = userEvent.setup();
+        render(SampleDetailsAnnotationSegment, {
+            props: {
+                ...defaultProps,
+                annotations: [createAnnotation('a1', groundTruthSource.collection_id, 'cat')]
+            }
+        });
+
+        await user.click(screen.getByTestId('mock-annotation-row-relabel'));
+
+        // Also when the row is not selected: a drawn box takes the class of the context.
+        expect(mocks.setAnnotationLabel).toHaveBeenCalledWith('dog');
+        // 'dog' is not in the class list yet: a new class is created with its first annotation.
+        expect(
+            resolveStickyClass({
+                collectionId: 'collection-1',
+                stickyClass: get(useStickyClass().stickyClasses)['collection-1'],
+                classNames: ['cat']
+            })
+        ).toBe('dog');
     });
 });
