@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { History } from '@lucide/svelte';
+    import History from '@lucide/svelte/icons/history';
     import * as Popover from '$lib/components/ui/popover';
 
     interface Props {
