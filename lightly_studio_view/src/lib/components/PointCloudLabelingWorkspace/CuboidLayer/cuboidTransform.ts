@@ -20,23 +20,32 @@ export function restoreTransformSnapshot(
     obj.scale.copy(snapshot.scale);
 }
 
-export const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'rotate' | 'scale'>> =
-    {
-        translate: 'translate',
-        rotate: 'rotate'
-    };
+const EDIT_MODES = ['translate', 'rotate', 'resize'] as const;
 
-export function getCuboidGizmoMode(tool: Domain.WorkspaceTool) {
-    return GIZMO_MODES[tool];
+/**
+ * Returns the edit handles to show on a selected cuboid. Orthographic views show all
+ * handles at once while any edit tool is active; perspective shows only the active one.
+ */
+export function getCuboidEditModes(
+    tool: Domain.WorkspaceTool,
+    cameraMode: Domain.CameraMode
+): (typeof EDIT_MODES)[number][] {
+    const editMode = EDIT_MODES.find((mode) => mode === tool);
+    if (!editMode) return [];
+    return cameraMode === 'perspective' ? [editMode] : [...EDIT_MODES];
 }
 
 export function getCuboidGizmoOptions(mode: string, cameraMode: Domain.CameraMode) {
-    const constrained = mode === 'rotate' && cameraMode !== 'perspective';
+    if (cameraMode === 'perspective') {
+        return { space: 'local' as const, showX: true, showY: true, showZ: true };
+    }
+    // Rotate shows only the axis facing the camera; translate shows the two in-plane axes.
+    const showFacingAxis = mode === 'rotate';
     return {
-        space: constrained ? ('world' as const) : ('local' as const),
-        showX: !constrained || cameraMode === 'side',
-        showY: !constrained || cameraMode === 'front',
-        showZ: !constrained || cameraMode === 'top'
+        space: 'world' as const,
+        showX: (cameraMode === 'side') === showFacingAxis,
+        showY: (cameraMode === 'front') === showFacingAxis,
+        showZ: (cameraMode === 'top') === showFacingAxis
     };
 }
 

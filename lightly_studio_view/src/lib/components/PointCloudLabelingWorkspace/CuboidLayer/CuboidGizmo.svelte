@@ -8,7 +8,7 @@
     import type { CameraMode, Vector3 } from '../domain';
 
     interface Props extends Omit<Parameters<typeof useCuboidTransformControls>[0], 'getControls'> {
-        mode: 'translate' | 'rotate' | 'scale';
+        mode: 'translate' | 'rotate';
         cameraMode: CameraMode;
         size: Vector3;
         enabled?: boolean;

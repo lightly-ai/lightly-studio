@@ -3,7 +3,7 @@ import { Object3D } from 'three';
 import {
     buildCuboidTransformPayload,
     captureTransformSnapshot,
-    getCuboidGizmoMode,
+    getCuboidEditModes,
     getCuboidGizmoOptions,
     restoreTransformSnapshot
 } from './cuboidTransform';
@@ -113,10 +113,45 @@ describe('orthographic editing tools', () => {
             });
         }
     );
-    it('uses face resizing instead of symmetric scale handles', () => {
-        expect(getCuboidGizmoMode('resize')).toBeUndefined();
-        expect(getCuboidGizmoMode('translate')).toBe('translate');
-        expect(getCuboidGizmoMode('rotate')).toBe('rotate');
+    it.each(['top', 'side', 'front'] as const)('combines all handles in %s view', (cameraMode) => {
+        for (const tool of ['translate', 'rotate', 'resize'] as const) {
+            expect(getCuboidEditModes(tool, cameraMode)).toEqual(['translate', 'rotate', 'resize']);
+        }
+    });
+    it('keeps one handle per tool in perspective', () => {
+        expect(getCuboidEditModes('translate', 'perspective')).toEqual(['translate']);
+        expect(getCuboidEditModes('rotate', 'perspective')).toEqual(['rotate']);
+        expect(getCuboidEditModes('resize', 'perspective')).toEqual(['resize']);
+    });
+    it.each(['perspective', 'top'] as const)(
+        'shows no handles for non-edit tools in %s',
+        (cameraMode) => {
+            expect(getCuboidEditModes('select', cameraMode)).toEqual([]);
+            expect(getCuboidEditModes('create-cuboid', cameraMode)).toEqual([]);
+        }
+    );
+    it.each([
+        ['top', true, true, false],
+        ['side', false, true, true],
+        ['front', true, false, true]
+    ] as const)(
+        'hides the camera-facing axis when moving in %s view',
+        (cameraMode, showX, showY, showZ) => {
+            expect(getCuboidGizmoOptions('translate', cameraMode)).toEqual({
+                space: 'world',
+                showX,
+                showY,
+                showZ
+            });
+        }
+    );
+    it('keeps local translate axes in perspective', () => {
+        expect(getCuboidGizmoOptions('translate', 'perspective')).toEqual({
+            space: 'local',
+            showX: true,
+            showY: true,
+            showZ: true
+        });
     });
     it('keeps all local rotation axes in perspective', () => {
         expect(getCuboidGizmoOptions('rotate', 'perspective')).toEqual({
