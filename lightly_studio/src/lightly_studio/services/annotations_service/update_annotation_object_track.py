@@ -64,7 +64,8 @@ def update_annotation_object_track(
     if old_track_id is not None and old_track_id != object_track_id:
         _delete_empty_track(session=session, object_track_id=old_track_id)
     updated = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
-    assert updated is not None
+    if updated is None:
+        raise RuntimeError(f"Annotation {annotation_id} disappeared after update.")
     return updated
 
 

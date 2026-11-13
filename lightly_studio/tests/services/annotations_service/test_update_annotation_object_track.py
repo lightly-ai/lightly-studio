@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 import uuid
 
 import pytest
@@ -481,6 +482,47 @@ def test_update_annotation_object_track__parent_track_preserved(db_session: Sess
     child = object_track_resolver.get_by_id(session=db_session, object_track_id=child_id)
     assert child is not None
     assert child.parent_object_track_id == parent_id
+
+
+def test_update_annotation_object_track__annotation_disappeared_after_update(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    """RuntimeError is raised when the annotation disappears between assign and re-fetch."""
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
+    annotation = create_annotation(
+        session=db_session,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
+    )
+    annotation_id = annotation.sample_id
+
+    original_get_by_id = annotation_resolver.get_by_id
+    call_count = 0
+
+    def get_by_id_then_none(session: Session, annotation_id: uuid.UUID) -> None:
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            return original_get_by_id(session=session, annotation_id=annotation_id)
+        return None
+
+    mocker.patch.object(annotation_resolver, "get_by_id", side_effect=get_by_id_then_none)
+    service_module = sys.modules[
+        "lightly_studio.services.annotations_service.update_annotation_object_track"
+    ]
+    mocker.patch.object(service_module, "_assign_track")
+
+    with pytest.raises(RuntimeError, match="disappeared after update"):
+        annotations_service.update_annotation_object_track(
+            session=db_session,
+            annotation_id=annotation_id,
+            collection_id=collection.collection_id,
+            object_track_id=None,
+        )
 
 
 def test_update_annotation_object_track__track_deleted_during_reinsert(
