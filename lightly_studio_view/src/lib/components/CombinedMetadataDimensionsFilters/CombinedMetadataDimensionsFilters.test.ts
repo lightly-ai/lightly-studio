@@ -105,3 +105,18 @@ it('edits exact frame numbers and synchronizes slider changes', async () => {
     await fireEvent.keyDown(screen.getAllByRole('slider')[0], { key: 'ArrowRight' });
     expect(input).toHaveValue('251');
 });
+
+it('hides and shows the slider of a numeric field from its name', async () => {
+    const bound = { min: 0, max: 1 };
+    storage.updateMetadataBounds({ score: bound });
+    storage.updateMetadataValues({ score: bound });
+    render(CombinedMetadataDimensionsFilters, defaultProps);
+    const toggle = screen.getByRole('button', { name: 'score' });
+
+    await fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+
+    await fireEvent.click(toggle);
+    expect(screen.getAllByRole('slider')).toHaveLength(2);
+});
