@@ -15,6 +15,8 @@
         error?: string;
         onRetry?: () => void;
         onToggle: (value: CategoricalMetadataValue) => void;
+        /** Replaces the selected values in one update; used by "Select all". */
+        onSetValues: (values: CategoricalMetadataValue[]) => void;
         onClear: () => void;
         onRemove?: () => void;
         layout?: 'dropdown' | 'list';
@@ -29,6 +31,7 @@
         error,
         onRetry,
         onToggle,
+        onSetValues,
         onClear,
         onRemove,
         layout = 'dropdown'
@@ -47,7 +50,6 @@
               : `${selectedValues.length} selected`
     );
     const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
-    let search = $state('');
 </script>
 
 <MetadataCategoricalFilterLayout
@@ -58,7 +60,6 @@
     {loading}
     {updating}
     {onRemove}
-    onOpenChange={(open) => !open && (search = '')}
 >
     {#snippet children()}
         <MetadataCategoricalFilterOptions
@@ -67,9 +68,8 @@
             {loading}
             {error}
             listMode={layout === 'list'}
-            {search}
-            onSearchChange={(value) => (search = value)}
             {onToggle}
+            {onSetValues}
             {onClear}
         />
     {/snippet}

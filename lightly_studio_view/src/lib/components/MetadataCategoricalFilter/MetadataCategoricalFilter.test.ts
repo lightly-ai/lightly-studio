@@ -19,6 +19,7 @@ const defaultProps = {
     buckets,
     selectedValues: [] as (string | null)[],
     onToggle: vi.fn(),
+    onSetValues: vi.fn(),
     onClear: vi.fn()
 };
 
@@ -220,5 +221,31 @@ describe('MetadataCategoricalFilter', () => {
         await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
         expect(screen.queryByLabelText('Search values')).not.toBeInTheDocument();
         expect(screen.getByText('Not in current results')).toBeVisible();
+    });
+
+    it('shows "Select all" and "Clear" for values and renders 50 rows at a time', async () => {
+        const manyBuckets: CategoricalMetadataBucket[] = Array.from({ length: 60 }, (_, index) => ({
+            id: `value-${index}`,
+            kind: 'value' as const,
+            value: `value-${index}`,
+            label: `value-${index}`,
+            count: 1
+        }));
+        const onSetValues = vi.fn();
+        render(MetadataCategoricalFilter, {
+            props: { ...defaultProps, buckets: manyBuckets, onSetValues }
+        });
+
+        await fireEvent.click(screen.getByTestId('metadata-categorical-filter-trigger'));
+        expect(screen.getByRole('button', { name: 'Select all' })).toBeVisible();
+        expect(screen.getByRole('button', { name: 'Clear' })).toBeVisible();
+        expect(screen.getAllByTestId('metadata-value-list-item')).toHaveLength(50);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Show 10 more' }));
+        expect(screen.getAllByTestId('metadata-value-list-item')).toHaveLength(60);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Select all' }));
+        expect(onSetValues).toHaveBeenCalledOnce();
+        expect(onSetValues).toHaveBeenCalledWith(manyBuckets.map((bucket) => bucket.label));
     });
 });

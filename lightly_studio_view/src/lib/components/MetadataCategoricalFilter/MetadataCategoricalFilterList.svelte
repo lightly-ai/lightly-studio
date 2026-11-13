@@ -12,7 +12,7 @@
         loading: boolean;
         updating: boolean;
         onRemove?: () => void;
-        onOpenChange: (open: boolean) => void;
+        onOpenChange?: (open: boolean) => void;
         children: Snippet;
     }
 
