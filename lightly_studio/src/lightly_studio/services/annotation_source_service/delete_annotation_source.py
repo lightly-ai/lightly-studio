@@ -12,6 +12,7 @@ from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
     evaluation_run_resolver,
+    export_job_resolver,
     sample_resolver,
 )
 from lightly_studio.services.annotation_source_service import get_annotation_source
@@ -34,8 +35,8 @@ def delete_annotation_source(
 
     Raises:
         NotFoundError: If the collection has no annotation source with this ID.
-        AnnotationSourceInUseError: If evaluation runs use the annotation source or it has
-            child collections.
+        AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation source
+            or it has child collections.
     """
     source = get_annotation_source.get_annotation_source(
         session=session,
@@ -50,8 +51,8 @@ def _check_not_in_use(session: Session, source: CollectionTable) -> None:
     """Check that the annotation source can be deleted.
 
     Raises:
-        AnnotationSourceInUseError: If evaluation runs use the annotation source or if it has
-            child collections other than captions, or captions with captions.
+        AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation source
+            or if it has child collections other than captions, or captions with captions.
     """
     evaluation_run_names = evaluation_run_resolver.get_names_by_collection_id(
         session=session, collection_id=source.collection_id
@@ -72,6 +73,15 @@ def _check_not_in_use(session: Session, source: CollectionTable) -> None:
         raise AnnotationSourceInUseError(
             f"The annotation source '{source.name}' cannot be deleted because "
             f"it has data attached: {', '.join(child_names)}."
+        )
+    # TODO(Gabriel, 11/2026): Delete the export jobs and their files with the annotation source,
+    # then remove this check.
+    collection_ids = [source.collection_id, *(child.collection_id for child in source.children)]
+    if export_job_resolver.exists_for_collection_ids(
+        session=session, collection_ids=collection_ids
+    ):
+        raise AnnotationSourceInUseError(
+            f"The annotation source '{source.name}' cannot be deleted because it was exported."
         )
 
 
