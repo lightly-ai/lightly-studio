@@ -395,6 +395,7 @@ def test_read_annotation_collections(
     ]
 
 
+
 def test_read_annotation_collections_with_counts(
     test_client: TestClient,
     db_session: Session,
@@ -426,3 +427,69 @@ def test_read_annotation_collections_with_counts(
     assert counts == {"ground_truth": 2, "empty_source": 0}
     empty_source = next(s for s in response.json() if s["name"] == "empty_source")
     assert empty_source["collection_id"] == str(empty_id)
+
+
+def test_read_annotation_collections_with_counts__sources_of_the_whole_dataset(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    videos = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    frames_id = collection_resolver.get_or_create_child_collection(
+        session=db_session, collection_id=videos.collection_id, sample_type=SampleType.VIDEO_FRAME
+    )
+    events_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=videos.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="events",
+    )
+    detections_id = collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=frames_id,
+        sample_type=SampleType.ANNOTATION,
+        name="detections",
+    )
+
+    # Called with the frames collection, it also lists the source under the videos.
+    response = test_client.get(f"/api/collections/{frames_id!s}/annotation_collections_with_counts")
+
+    assert response.status_code == HTTP_STATUS_OK
+    parents = {
+        source["collection_id"]: (
+            source["parent_collection_id"],
+            source["parent_sample_type"],
+            source["parent_group_component_name"],
+        )
+        for source in response.json()
+    }
+    assert parents == {
+        str(events_id): (str(videos.collection_id), "video", None),
+        str(detections_id): (str(frames_id), "video_frame", None),
+    }
+
+
+def test_read_annotation_collections_with_counts__group_component_name(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    groups = create_collection(session=db_session, sample_type=SampleType.GROUP)
+    components = collection_resolver.create_group_components(
+        session=db_session,
+        parent_collection_id=groups.collection_id,
+        components=[("front", SampleType.IMAGE)],
+    )
+    collection_resolver.get_or_create_child_collection(
+        session=db_session,
+        collection_id=components["front"].collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name="boxes",
+    )
+
+    response = test_client.get(
+        f"/api/collections/{groups.collection_id!s}/annotation_collections_with_counts"
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    [boxes] = response.json()
+    assert boxes["parent_sample_type"] == "image"
+    assert boxes["parent_group_component_name"] == "front"

@@ -8,7 +8,7 @@ from uuid import UUID
 from fastapi import APIRouter, Body, Depends, HTTPException, Path
 from fastapi.params import Query
 from pydantic import BaseModel, Field
-from sqlmodel import Session, col
+from sqlmodel import col
 
 from lightly_studio.api.routes.api import annotations as annotations_module
 from lightly_studio.api.routes.api.collection import get_and_validate_collection_id
@@ -78,9 +78,22 @@ def read_annotation_collections(
     Each entry includes the distinct annotation types it contains, so the GUI
     can filter sources to those compatible with a chosen evaluation task.
     """
-    return _list_annotation_collection_views(
-        session=session, parent_collection_id=collection.collection_id
+    collections = collection_resolver.get_annotation_collections(
+        session=session,
+        parent_collection_id=collection.collection_id,
     )
+    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session,
+        collection_ids=[c.collection_id for c in collections],
+    )
+    return [
+        AnnotationCollectionView(
+            collection_id=c.collection_id,
+            name=c.name,
+            annotation_types=types_by_collection_id.get(c.collection_id, []),
+        )
+        for c in collections
+    ]
 
 
 @annotations_router.get(
@@ -95,23 +108,42 @@ def read_annotation_collections_with_counts(
         Depends(get_and_validate_collection_id),
     ],
 ) -> list[AnnotationCollectionWithCountView]:
-    """List annotation collections under the parent collection with their annotation counts."""
-    sources = _list_annotation_collection_views(
-        session=session, parent_collection_id=collection.collection_id
+    """List the annotation collections of the collection's dataset with their annotation counts.
+
+    The list holds every annotation collection of the dataset, also those under other
+    collections than the given one, for example under the video frames of a video dataset.
+    Each entry names its parent collection, which the delete endpoint needs.
+    """
+    sources = collection_resolver.get_annotation_collections_by_dataset_id(
+        session=session, dataset_id=collection.dataset_id
+    )
+    source_ids = [s.collection_id for s in sources]
+    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session, collection_ids=source_ids
     )
     counts = collection_resolver.get_annotation_counts_by_collection_ids(
-        session=session,
-        collection_ids=[s.collection_id for s in sources],
+        session=session, collection_ids=source_ids
     )
-    return [
-        AnnotationCollectionWithCountView(
-            collection_id=s.collection_id,
-            name=s.name,
-            annotation_types=s.annotation_types,
-            annotation_count=counts.get(s.collection_id, 0),
+    views = []
+    for source in sources:
+        parent = source.parent
+        # An annotation collection is always the child of the collection it annotates.
+        assert parent is not None
+        definition = parent.group_component_definition
+        views.append(
+            AnnotationCollectionWithCountView(
+                collection_id=source.collection_id,
+                name=source.name,
+                annotation_types=types_by_collection_id.get(source.collection_id, []),
+                annotation_count=counts.get(source.collection_id, 0),
+                parent_collection_id=parent.collection_id,
+                parent_sample_type=parent.sample_type,
+                parent_group_component_name=definition.group_component_name
+                if definition
+                else None,
+            )
         )
-        for s in sources
-    ]
+    return views
 
 
 class ReadAnnotationsWithPayloadRequest(BaseModel):
@@ -348,24 +380,3 @@ def get_annotation_with_payload(
 ) -> AnnotationDetailsWithPayloadView | None:
     """Retrieve an existing annotation with payload from the database."""
     return annotation_resolver.get_by_id_with_payload(session=session, sample_id=sample_id)
-
-
-def _list_annotation_collection_views(
-    session: Session, parent_collection_id: UUID
-) -> list[AnnotationCollectionView]:
-    collections = collection_resolver.get_annotation_collections(
-        session=session,
-        parent_collection_id=parent_collection_id,
-    )
-    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
-        session=session,
-        collection_ids=[c.collection_id for c in collections],
-    )
-    return [
-        AnnotationCollectionView(
-            collection_id=c.collection_id,
-            name=c.name,
-            annotation_types=types_by_collection_id.get(c.collection_id, []),
-        )
-        for c in collections
-    ]
