@@ -1,6 +1,5 @@
 <script lang="ts">
     import { T } from '@threlte/core';
-    import { untrack } from 'svelte';
     import type { Bounds3, CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { PointBatch } from '$lib/components/PointCloudViewer';
     import { getCuboidCreationPlane } from './cuboidCreationPlane';
@@ -45,17 +44,8 @@
         onCreate: (box) => onCreateCuboid(box)
     });
 
-    // Every viewport has a target and they all report to one owner. A target reports only its
-    // own changes and does not depend on the callback: an idle target that reported `null` on
-    // every owner update would overwrite the highlight of the viewport that is drawing.
-    let reportedBox: CuboidBox | null = null;
     $effect(() => {
-        const box = draft.highlightBox;
-        untrack(() => {
-            if (box === reportedBox) return;
-            reportedBox = box;
-            onHighlightChange?.(box);
-        });
+        onHighlightChange?.(draft.highlightBox);
     });
 </script>
 

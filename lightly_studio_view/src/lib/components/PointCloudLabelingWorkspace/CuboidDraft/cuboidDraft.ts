@@ -110,7 +110,7 @@ export function getHeightExtent(groundZ: number, z: number): AxisExtent {
 
 /** Whether the camera mode draws an angled footprint in steps, not one rectangle. */
 export function hasAngledFootprint(cameraMode: CameraMode): boolean {
-    return cameraMode === 'perspective';
+    return cameraMode === 'top' || cameraMode === 'perspective';
 }
 
 /** Heading of the drawn side and its length on the ground. */

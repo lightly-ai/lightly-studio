@@ -89,11 +89,7 @@ interface SetupOptions {
     batch?: PointBatch;
 }
 
-function setup({
-    cameraMode = 'perspective',
-    camera = createTopCamera(),
-    batch
-}: SetupOptions = {}) {
+function setup({ cameraMode = 'top', camera = createTopCamera(), batch }: SetupOptions = {}) {
     mocks.useThrelte.mockReturnValue({
         camera: { current: camera },
         renderer: { domElement: canvas }
@@ -205,19 +201,6 @@ describe('useCuboidDraft', () => {
     });
 
     describe('top view', () => {
-        it('creates a fitted box after one drag', () => {
-            const { draft } = setup({ cameraMode: 'top' });
-            pressAt(draft, 200, 200, [0, 0, 0]);
-            canvas.dispatchEvent(pointer('pointermove', 300, 150));
-            canvas.dispatchEvent(pointer('pointerup', 300, 150));
-            expect(onCreate).toHaveBeenCalledOnce();
-            const box = onCreate.mock.calls[0][0];
-            expect(box.size).toEqual([expect.closeTo(2), expect.closeTo(1), expect.closeTo(1)]);
-            expect(box.yaw).toBe(0);
-        });
-    });
-
-    describe('angled footprint', () => {
         it('previews the side as a thin box and keeps it after the release', () => {
             const { draft } = setup();
             dragSide(draft);
@@ -238,6 +221,8 @@ describe('useCuboidDraft', () => {
                 expect.closeTo(1),
                 Infinity
             ]);
+            click(300, 150);
+            expect(draft.highlightBox).toBeNull();
         });
 
         it('creates an angled box fitted to the points after the width click', () => {
@@ -252,7 +237,6 @@ describe('useCuboidDraft', () => {
             canvas.dispatchEvent(pointer('pointermove', 250, 150));
             canvas.dispatchEvent(pointer('pointerup', 250, 150));
             canvas.dispatchEvent(pointer('pointermove', 200, 100));
-            click(200, 100);
             click(200, 100);
             expect(onCreate).toHaveBeenCalledOnce();
             const box = onCreate.mock.calls[0][0];
@@ -276,7 +260,6 @@ describe('useCuboidDraft', () => {
             click(300, 200);
             canvas.dispatchEvent(pointer('pointermove', 300, 150));
             click(300, 150);
-            click(300, 150);
             expect(onCreate).toHaveBeenCalledOnce();
             expect(onCreate.mock.calls[0][0].size.slice(0, 2)).toEqual([
                 expect.closeTo(2),
@@ -287,7 +270,6 @@ describe('useCuboidDraft', () => {
         it('does not start a new draft from the click that ends the draft', () => {
             const { draft } = setup();
             drawSideAndWidth(draft);
-            click(300, 150);
             const nativeEvent = click(300, 150);
             draft.handlePlanePointerDown({ point: { x: 2, y: 1, z: 0 }, nativeEvent });
             canvas.dispatchEvent(pointer('pointermove', 350, 100));

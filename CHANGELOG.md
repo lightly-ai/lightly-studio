@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Draw a cuboid in steps in the point cloud workspace: in the 3D view, drag along one side to set the heading, then click to set the width and again to set the height. In the top, side and front views, one drag draws a rectangle and the missing axis is fitted to the points.
+- Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
 
 ### Changed
 
