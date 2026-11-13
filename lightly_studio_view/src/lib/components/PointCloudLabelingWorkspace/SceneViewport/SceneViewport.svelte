@@ -33,7 +33,6 @@
         cameraMode?: CameraMode;
         isScaleSource?: boolean;
         showNavigationHelpers?: boolean;
-        showAnnotationTooltips?: boolean;
         showActiveBorder?: boolean;
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: CuboidHandle | null) => void;
