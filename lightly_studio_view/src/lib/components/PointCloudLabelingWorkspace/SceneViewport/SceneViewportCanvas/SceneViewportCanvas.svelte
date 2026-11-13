@@ -43,6 +43,7 @@
         selectedAnnotationId={props.selectedAnnotationId}
         hoveredAnnotationId={props.hoveredAnnotationId}
         activeTool={props.activeTool}
+        isEditingMode={props.isEditingMode}
         onselect={props.onselect}
         onhover={props.onhover}
         onCreateCuboid={props.onCreateCuboid}

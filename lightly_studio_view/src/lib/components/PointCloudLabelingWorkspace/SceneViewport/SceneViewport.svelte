@@ -30,6 +30,7 @@
         selectedAnnotationId?: string | null;
         hoveredAnnotationId?: string | null;
         activeTool?: WorkspaceTool;
+        isEditingMode?: boolean;
         cameraMode?: CameraMode;
         isScaleSource?: boolean;
         showNavigationHelpers?: boolean;

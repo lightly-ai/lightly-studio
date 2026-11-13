@@ -44,6 +44,8 @@ export interface SceneViewportProps {
     hoveredAnnotationId?: string | null;
     /** Tool that determines whether cuboids can be selected. */
     activeTool?: WorkspaceTool;
+    /** Whether annotation editing is enabled. */
+    isEditingMode?: boolean;
     /** Projection orientation used for rendering and editing. */
     cameraMode?: CameraMode;
     /** Publishes the initial shared camera scale before other views synchronize. */

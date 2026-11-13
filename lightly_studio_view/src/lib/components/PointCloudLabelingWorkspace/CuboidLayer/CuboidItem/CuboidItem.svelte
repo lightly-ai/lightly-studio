@@ -20,7 +20,13 @@
     );
     const isSelected = $derived(layer.selectedAnnotationId === item.annotation.id);
     const isHovered = $derived(layer.hoveredAnnotationId === item.annotation.id);
-    const editModes = $derived(getCuboidEditModes(layer.activeTool, layer.cameraMode));
+    const editModes = $derived(
+        getCuboidEditModes({
+            tool: layer.activeTool,
+            cameraMode: layer.cameraMode,
+            isEditingMode: layer.isEditingMode
+        })
+    );
     const gizmoModes = $derived(
         editModes.filter((mode): mode is 'translate' | 'rotate' => mode !== 'resize')
     );
