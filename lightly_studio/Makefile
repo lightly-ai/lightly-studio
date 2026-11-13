@@ -425,7 +425,7 @@ demo-mcap-urls:
 test: build
 	$(MAKE) test-without-build
 
-# Runs the tests with the current build. CI builds in its own step, to time it separately.
+# Runs the tests with the current build. CI uses a mock webapp instead of the build.
 .PHONY: test-without-build
 test-without-build:
 	@echo "Running tests..."

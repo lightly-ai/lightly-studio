@@ -207,18 +207,14 @@ jobs:
           python-version: ${{ matrix.python }}
           enable-cache: true
           save-cache: ${{ env.UV_SAVE_CACHE }}
+          # Other jobs on the same Python install fewer packages and finish first. With a shared
+          # key their small cache wins, and on 3.15 this job then builds packages from source.
+          cache-suffix: backend
 
       - name: Set Up Python
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
-
-      - name: Set Up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: lightly_studio_view/.nvmrc
-          cache: npm
-          cache-dependency-path: lightly_studio_view/package-lock.json
 
       - name: Install LightlyStudio dependencies
         working-directory: lightly_studio
@@ -233,11 +229,19 @@ jobs:
           UV_PYTHON: ${{ matrix.python }}
         run: make migration-check-postgresql
 
-      - name: Build app
+      # The app only checks that the webapp exists at import time. The E2E and frontend jobs
+      # test the real build.
+      - name: Create mock webapp
+        working-directory: lightly_studio
+        run: make mock-webapp-dist
+
+      # Catches packaging errors before a release. The wheel is pure Python, so one job is enough.
+      - name: Build Python package
+        if: matrix.python == '3.10'
         working-directory: lightly_studio
         env:
           UV_PYTHON: ${{ matrix.python }}
-        run: make build
+        run: uv build --out-dir dist
 
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
