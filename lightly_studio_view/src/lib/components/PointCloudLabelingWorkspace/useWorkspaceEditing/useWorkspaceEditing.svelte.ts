@@ -172,6 +172,7 @@ export function useWorkspaceEditing(
     }
 
     async function handleTrackChange(): Promise<void> {
+        void refreshTracks();
         void queryClient.invalidateQueries({
             queryKey: getTickDetailsSequenceQueryKey({
                 datasetId: getOptions().datasetId,
