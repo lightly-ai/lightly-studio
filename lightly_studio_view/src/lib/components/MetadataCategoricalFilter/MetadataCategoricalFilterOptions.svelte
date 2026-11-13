@@ -26,15 +26,14 @@
         onClear
     }: Props = $props();
     const options = $derived(buildOptions(buckets, selectedValues));
-    const isSelected = (value: CategoricalMetadataValue) =>
-        selectedValues.some((selected) => Object.is(selected, value));
+    const selected = $derived(new Set(selectedValues));
     const items = $derived(
         options.map((option) => {
             const label = getOptionLabel(option, options, buckets);
             return {
                 id: option.bucket.id,
                 label,
-                selected: isSelected(option.bucket.value),
+                selected: selected.has(option.bucket.value),
                 count: option.retained ? 'Not in current results' : String(option.bucket.count),
                 ariaLabel: getCheckboxLabel(option, label)
             };
@@ -68,20 +67,17 @@
     };
 </script>
 
-<div class="-m-1 max-h-56 overflow-y-auto p-1">
-    <FilterList
-        {items}
-        onToggle={toggleById}
-        onSelectionChange={changeSelection}
-        testId="metadata-value-list"
-        {showSearch}
-        searchPlaceholder="Search values…"
-        {emptyText}
-        noMatchText="No values found."
-    />
-    {#if hasOtherAggregate}
-        <p class="p-2 text-xs text-muted-foreground">
-            Other is an aggregate and cannot be selected.
-        </p>
-    {/if}
-</div>
+<FilterList
+    {items}
+    onToggle={toggleById}
+    onSelectionChange={changeSelection}
+    testId="metadata-value-list"
+    {showSearch}
+    searchPlaceholder="Search values…"
+    {emptyText}
+    noMatchText="No values found."
+    rowsClass="-mx-1 -mb-1 max-h-56 overflow-y-auto p-1"
+/>
+{#if hasOtherAggregate}
+    <p class="p-2 text-xs text-muted-foreground">Other is an aggregate and cannot be selected.</p>
+{/if}

@@ -20,8 +20,18 @@ class MetadataTransport(Protocol):
                 `{"weather": "cloudy"}`. Keys that are already set get the new value.
         """
 
-    def add_captions(self, captions: Sequence[CaptionCreate]) -> None:
-        """Add captions to samples."""
+    def add_captions(
+        self, parent_collection_id: UUID, captions: Sequence[CaptionCreate]
+    ) -> list[UUID]:
+        """Add captions to samples.
+
+        Args:
+            parent_collection_id: The ID of the collection of the captioned samples.
+            captions: The captions to add.
+
+        Returns:
+            The IDs of the new captions, in the order of `captions`.
+        """
 
     def delete_captions(self, caption_ids: Sequence[UUID]) -> None:
         """Delete captions by ID."""
