@@ -65,6 +65,11 @@
         addedFields = [...addedFields, field];
     };
 
+    let collapsedFields = $state<Record<string, boolean>>({});
+    const toggleExpanded = (field: string): void => {
+        collapsedFields = { ...collapsedFields, [field]: !collapsedFields[field] };
+    };
+
     const removeField = (field: string): void => {
         if ($categoricalMetadataValues[field]?.length) onValuesClear(field);
         addedFields = addedFields.filter((candidate) => candidate !== field);
@@ -87,5 +92,7 @@
         onSetValues={(values) => onValuesSet(field, values)}
         onClear={() => onValuesClear(field)}
         onRemove={() => removeField(field)}
+        expanded={!collapsedFields[field]}
+        onToggleExpanded={() => toggleExpanded(field)}
     />
 {/each}
