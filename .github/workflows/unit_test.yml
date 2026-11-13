@@ -235,6 +235,14 @@ jobs:
         working-directory: lightly_studio
         run: make mock-webapp-dist
 
+      # Catches packaging errors before a release. The wheel is pure Python, so one job is enough.
+      - name: Build Python package
+        if: matrix.python == '3.10'
+        working-directory: lightly_studio
+        env:
+          UV_PYTHON: ${{ matrix.python }}
+        run: uv build --out-dir dist
+
       - name: Run Tests for LightlyStudio
         working-directory: lightly_studio
         env:
