@@ -89,6 +89,8 @@ for sample in list(dataset)[:3]:
 
 ## Next Steps
 
+- [Custom Embeddings](embeddings.md) — use your own embedding model for the
+  embedding plot, sampling, and similarity search.
 - [Local Storage](local_storage.md) — use local disk or NAS/shared storage in an
   on-premise deployment.
 - [Cloud Storage](cloud_storage/index.md) — configure cloud storage credentials so
