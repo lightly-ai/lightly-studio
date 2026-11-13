@@ -54,7 +54,12 @@ vi.mock('$app/state', () => ({ page: { data: {} } }));
 
 vi.mock('$lib/components', async () => {
     const stub = (await import('./SampleDetailsPanel.stub.svelte')).default;
-    return { Card: stub, CardContent: stub, SampleDetailsSidePanel: stub };
+    return {
+        Card: stub,
+        CardContent: stub,
+        SampleDetailsSidePanel: stub,
+        SidePanelToggleButton: stub
+    };
 });
 vi.mock('$lib/components/ImageAdjustments', async () => ({
     ImageAdjustments: (await import('./SampleDetailsPanel.stub.svelte')).default

@@ -41,10 +41,14 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
 }));
 
 const updateLastAnnotationLabelMock = vi.fn();
+const panelState = vi.hoisted(() => ({ collapsed: true }));
 
 vi.mock('../useGlobalStorage', () => ({
     useGlobalStorage: () => ({
-        updateLastAnnotationLabel: updateLastAnnotationLabelMock
+        updateLastAnnotationLabel: updateLastAnnotationLabelMock,
+        openSampleDetailsSidePanel: () => {
+            panelState.collapsed = false;
+        }
     })
 }));
 
@@ -57,6 +61,7 @@ describe('useAnnotationSelection', () => {
         mockAnnotationLabelContext.annotationId = null;
         mockAnnotationLabelContext.lastCreatedAnnotationId = 'prev-id';
 
+        panelState.collapsed = true;
         updateLastAnnotationLabelMock.mockClear();
     });
 
@@ -169,6 +174,48 @@ describe('useAnnotationSelection', () => {
         expect(mockAnnotationLabelContext.annotationId).toBeNull();
 
         expect(updateLastAnnotationLabelMock).not.toHaveBeenCalled();
+    });
+
+    it('opens the side panel when selecting an annotation', () => {
+        const annotations = [
+            {
+                sample_id: 'a5',
+                annotation_type: AnnotationType.OBJECT_DETECTION,
+                annotation_label: { annotation_label_name: 'Car' }
+            }
+        ];
+
+        const { selectAnnotation } = useAnnotationSelection();
+
+        selectAnnotation({
+            annotationId: 'a5',
+            collectionId: 'collection-1',
+            annotations
+        });
+
+        expect(panelState.collapsed).toBe(false);
+    });
+
+    it('does not open the side panel when deselecting an annotation', () => {
+        mockAnnotationLabelContext.annotationId = 'a6';
+
+        const annotations = [
+            {
+                sample_id: 'a6',
+                annotation_type: AnnotationType.OBJECT_DETECTION,
+                annotation_label: { annotation_label_name: 'Car' }
+            }
+        ];
+
+        const { selectAnnotation } = useAnnotationSelection();
+
+        selectAnnotation({
+            annotationId: 'a6',
+            collectionId: 'collection-1',
+            annotations
+        });
+
+        expect(panelState.collapsed).toBe(true);
     });
 
     it('does nothing if annotation is not found', () => {

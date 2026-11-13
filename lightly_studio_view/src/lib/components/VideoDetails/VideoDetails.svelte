@@ -4,6 +4,7 @@
         CardContent,
         MetadataSegment,
         SegmentTags,
+        SidePanelToggleButton,
         VideoDetailsNavigation,
         VideoFrameDetails,
         VideoPlayer
@@ -36,6 +37,7 @@
     import { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
     import { onMount, untrack } from 'svelte';
     import { toast } from 'svelte-sonner';
+    import { cn } from '$lib/utils/shadcn';
     import { routeHelpers } from '$lib/routes';
     import VideoFrameAnnotationItem, {
         type PrerenderedAnnotation
@@ -63,7 +65,7 @@
     );
 
     // Reuse the global "Edit annotations" toggle to enable event editing.
-    const { isEditingMode } = useGlobalStorage();
+    const { isEditingMode, isSampleDetailsSidePanelCollapsed } = useGlobalStorage();
 
     // Events live on the video's own collection; labels are shared per dataset.
     const eventCollectionId = untrack(
@@ -269,8 +271,13 @@
 </script>
 
 <div class="flex h-full min-h-0 w-full flex-col">
+    <div class="flex shrink-0 justify-end pb-2">
+        <SidePanelToggleButton />
+    </div>
     <div class="flex min-h-0 flex-1 gap-4">
-        <Card className="flex h-full min-h-0 w-[60vw] flex-col overflow-hidden">
+        <Card
+            className={`flex h-full min-h-0 flex-col overflow-hidden ${$isSampleDetailsSidePanelCollapsed ? 'flex-1' : 'w-[60vw]'}`}
+        >
             <CardContent className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div
                     bind:this={videoFrameContainerEl}
@@ -317,7 +324,12 @@
             </CardContent>
         </Card>
 
-        <Card className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <Card
+            className={cn(
+                'min-h-0 flex-1 flex-col overflow-hidden',
+                $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+            )}
+        >
             <CardContent className="h-full overflow-y-auto">
                 {#if video?.sample?.sample_id}
                     <SegmentTags
