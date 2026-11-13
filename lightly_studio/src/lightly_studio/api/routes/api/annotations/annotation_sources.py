@@ -35,7 +35,8 @@ def delete_annotation_source(
 ) -> DeleteAnnotationSourceResult:
     """Delete an annotation source and all its annotations.
 
-    Responds with 409 if evaluation runs or child collections use the annotation source.
+    Responds with 409 if evaluation runs, export jobs or child collections use the annotation
+    source.
     """
     deleted_count = annotation_source_service.delete_annotation_source(
         session=session,
