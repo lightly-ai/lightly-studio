@@ -268,6 +268,50 @@ def sampling_via_database(
         )
         return
 
+    selected_sample_ids = select_sample_ids(
+        session=session,
+        config=config,
+        input_sample_ids=input_sample_ids,
+        preselected_sample_ids=preselected_sample_ids,
+    )
+    if not selected_sample_ids:
+        return
+    sampling_helpers.create_result_tag(
+        session=session,
+        collection_id=config.collection_id,
+        tag_name=config.sampling_result_tag_name,
+        selected_sample_ids=selected_sample_ids,
+    )
+
+
+def select_sample_ids(
+    session: Session,
+    config: SamplingConfig,
+    input_sample_ids: list[UUID],
+    preselected_sample_ids: Sequence[UUID] | None = None,
+) -> list[UUID]:
+    """Run sampling and return the selected sample IDs without writing a tag.
+
+    Sequence sampling is not supported, because it selects whole sequences through a
+    different code path.
+
+    Args:
+        session: Database session used to resolve sampling data.
+        config: Sampling configuration. ``sampling_result_tag_name`` is not used.
+        input_sample_ids: Candidate sample IDs.
+        preselected_sample_ids: Sample IDs that count as already selected. They are
+            part of the returned selection. None resolves them from
+            ``config.preselected_tag_name``.
+
+    Returns:
+        The selected sample IDs, including the preselected ones.
+    """
+    if preselected_sample_ids is None:
+        preselected_sample_ids = _get_preselected_sample_ids(
+            session=session,
+            collection_id=config.collection_id,
+            preselected_tag_name=config.preselected_tag_name,
+        )
     preselected_indices, n_samples_to_select = _prepare_preselection(
         input_sample_ids=input_sample_ids,
         preselected_sample_ids=preselected_sample_ids,
@@ -275,14 +319,7 @@ def sampling_via_database(
     )
     if n_samples_to_select == 0:
         logger.warning("No samples available for sampling.")
-        if preselected_sample_ids:
-            sampling_helpers.create_result_tag(
-                session=session,
-                collection_id=config.collection_id,
-                tag_name=config.sampling_result_tag_name,
-                selected_sample_ids=preselected_sample_ids,
-            )
-        return
+        return list(preselected_sample_ids)
 
     # Get root dataset id for balancing strategies
     root_collection = collection_resolver.get_root_collection(
@@ -308,13 +345,7 @@ def sampling_via_database(
         n_samples=len(preselected_indices) + n_samples_to_select,
         preselected_indices=preselected_indices,
     )
-    selected_sample_ids = [input_sample_ids[index] for index in selected_indices]
-    sampling_helpers.create_result_tag(
-        session=session,
-        collection_id=config.collection_id,
-        tag_name=config.sampling_result_tag_name,
-        selected_sample_ids=selected_sample_ids,
-    )
+    return [input_sample_ids[index] for index in selected_indices]
 
 
 def _get_preselected_sample_ids(

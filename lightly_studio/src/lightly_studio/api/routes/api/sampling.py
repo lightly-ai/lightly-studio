@@ -19,6 +19,7 @@ from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter 
     McapSequenceFilter,
 )
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
+from lightly_studio.sampling import sampling_via_db
 from lightly_studio.sampling.sampling_config import (
     SamplingConfig,
     Strategy,
@@ -44,6 +45,83 @@ class SamplingRequest(BaseModel):
             "result"
         ),
     )
+
+
+class SamplingPreviewRequest(BaseModel):
+    """Request model for a sampling preview that writes no tag."""
+
+    n_samples_to_select: int = Field(gt=0, description="Number of samples to select")
+    strategies: list[Strategy]
+    metadata_computations: list[sampling_metadata.MetadataComputation] = Field(default_factory=list)
+    filter: SamplingFilter | None = None
+    preselected_tag_id: UUID | None = Field(
+        default=None,
+        description=(
+            "Sample tag whose samples should be considered already selected and included in the "
+            "result"
+        ),
+    )
+
+
+class SamplingPreviewResponse(BaseModel):
+    """The samples a sampling run would select."""
+
+    sample_ids: list[UUID]
+
+
+@sampling_router.post(
+    "/collections/{collection_id}/sampling/preview",
+    response_model=SamplingPreviewResponse,
+)
+def preview_sampling(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Depends(get_and_validate_collection_id),
+    ],
+    request: SamplingPreviewRequest,
+) -> SamplingPreviewResponse:
+    """Run a sampling and return the selected sample IDs without creating a tag.
+
+    The caller decides afterwards whether to keep the selection, by adding the returned
+    sample IDs to a tag.
+
+    Args:
+        session: Database session dependency.
+        collection: Collection to perform sampling on.
+        request: Sampling parameters without a result tag name.
+
+    Returns:
+        The sample IDs the sampling selected.
+
+    Raises:
+        HTTPException: 400 if sampling fails due to invalid parameters or other errors.
+    """
+    input_sample_ids = list(
+        _get_input_sample_ids(session=session, collection=collection, filters=request.filter)
+    )
+    preselected_tag_name = sampling_service.validate_preselection(
+        session=session,
+        collection_id=collection.collection_id,
+        preselected_tag_id=request.preselected_tag_id,
+        input_sample_ids=input_sample_ids,
+        n_samples_to_select=request.n_samples_to_select,
+    )
+    config = SamplingConfig(
+        collection_id=collection.collection_id,
+        n_samples_to_select=request.n_samples_to_select,
+        # The preview writes no tag, but the config requires a name.
+        sampling_result_tag_name="preview",
+        strategies=request.strategies,
+        preselected_tag_name=preselected_tag_name,
+    )
+    sampling_metadata.compute_metadata(
+        session=session, collection=collection, computations=request.metadata_computations
+    )
+    sample_ids = sampling_via_db.select_sample_ids(
+        session=session, config=config, input_sample_ids=input_sample_ids
+    )
+    return SamplingPreviewResponse(sample_ids=sample_ids)
 
 
 @sampling_router.post(
