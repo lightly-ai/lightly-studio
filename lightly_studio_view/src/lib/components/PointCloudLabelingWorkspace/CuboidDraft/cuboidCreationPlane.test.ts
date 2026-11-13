@@ -25,12 +25,10 @@ describe('cuboid creation planes', () => {
         else expect(center.toArray()).toEqual([10, 10, 6]);
     });
 
-    it('starts perspective creation at the zero-height ground plane', () => {
-        expect(getCuboidCreationPlane(bounds, 'perspective')?.center).toEqual([10, 10, 0]);
-        expect(getCuboidCreationPlane(bounds, 'top')?.center[2]).toBeLessThan(bounds.min[2]);
-    });
-
-    it('skips an empty scene', () => {
+    it('preserves ground placement in perspective and skips an empty scene', () => {
+        expect(getCuboidCreationPlane(bounds, 'perspective')).toEqual(
+            getCuboidCreationPlane(bounds, 'top')
+        );
         expect(getCuboidCreationPlane({ min: [0, 0, 0], max: [0, 0, 0] }, 'side')).toBeNull();
     });
 });
