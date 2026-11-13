@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Slider } from '$lib/components/ui/slider/index.js';
+    import MetadataFieldHeader from '$lib/components/MetadataFieldHeader/MetadataFieldHeader.svelte';
     import type { MetadataBounds, MetadataValues } from '$lib/services/types';
     import { NumericRangeInputs } from '$lib/components/NumericRangeInputs';
     import { fromTick, getSliderTickCount, toTick } from './MetadataFilterItem.helpers';
@@ -15,6 +16,10 @@
         value: MetadataValue;
         isInteger: boolean;
         onValueCommit: (metadataKey: string, newValues: number[]) => void;
+        /** Whether the slider shows. */
+        expanded?: boolean;
+        /** Lets the user show or hide the slider from the field header. */
+        onToggleExpanded?: () => void;
     }
 
     const {
@@ -24,10 +29,12 @@
         bound,
         value,
         isInteger,
-        onValueCommit
+        onValueCommit,
+        expanded = true,
+        onToggleExpanded
     }: MetadataFilterItemProps = $props();
 
-    const label = $derived(displayName ?? metadataKey.replace(/_/g, ' '));
+    const label = $derived(displayName ?? metadataKey);
     const ticks = $derived(getSliderTickCount(bound, isInteger));
 
     const sliderValue = $derived([
@@ -48,24 +55,26 @@
 </script>
 
 <div class="space-y-1">
-    <h2 class="text-md capitalize">{label}</h2>
-    <NumericRangeInputs
-        {label}
-        {bound}
-        {value}
-        {unit}
-        integer={isInteger}
-        onValueCommit={(values) => onValueCommit(metadataKey, values)}
-    />
-    <div class="relative p-2">
-        <Slider
-            type="multiple"
-            class="filter-{metadataKey}"
-            min={0}
-            max={ticks}
-            step={1}
-            value={sliderValue}
-            onValueCommit={handleValueCommit}
+    <MetadataFieldHeader title={label} {expanded} {onToggleExpanded} />
+    {#if expanded}
+        <NumericRangeInputs
+            {label}
+            {bound}
+            {value}
+            {unit}
+            integer={isInteger}
+            onValueCommit={(values) => onValueCommit(metadataKey, values)}
         />
-    </div>
+        <div class="relative p-2">
+            <Slider
+                type="multiple"
+                class="filter-{metadataKey}"
+                min={0}
+                max={ticks}
+                step={1}
+                value={sliderValue}
+                onValueCommit={handleValueCommit}
+            />
+        </div>
+    {/if}
 </div>
