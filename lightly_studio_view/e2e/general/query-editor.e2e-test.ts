@@ -145,4 +145,23 @@ test.describe('query editor', () => {
         // Grid should still show the previously filtered results
         await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
     });
+
+    test('query history applies an earlier query after a reload', async ({ samplesPage, page }) => {
+        await page.getByTestId('side-panel-tabs-query').click();
+        await typeAndApply(page, QUERY);
+        await typeAndApply(page, 'width > 0');
+
+        // The applied query is lost on reload. The history stays in the browser.
+        await page.reload();
+        await page.getByTestId('side-panel-tabs-query').click();
+        await page.getByTestId('query-history-button').click();
+        await expect(page.getByTestId('query-history-item')).toHaveText(['width > 0', QUERY]);
+
+        const refetchPromise = waitForImageListResponse(page);
+        await page.getByTestId('query-history-item').filter({ hasText: QUERY }).click();
+        await refetchPromise;
+
+        await expect(page.locator('.monaco-editor .view-lines')).toContainText(QUERY);
+        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
+    });
 });

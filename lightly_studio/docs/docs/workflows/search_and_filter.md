@@ -61,6 +61,9 @@ The language supports filtering by image fields such as dimensions or file name,
 as well as logical combinations of these. For a full reference, see the
 [Lightly Query Language](lightly_query_language.md) documentation.
 
+The history button in the header of the query editor lists the last 10 queries that you applied
+in the collection. Click a query to apply it again. The history is saved in your browser.
+
 Example queries:
 
 ```mysql

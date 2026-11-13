@@ -803,6 +803,7 @@
                             {:else if $activePanel === 'queryEditor' && isImages}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
                                     <QueryEditorPanel
+                                        {collectionId}
                                         sampleType="image"
                                         queryExpression={$imageQueryExpression}
                                         {updateQueryExpr}
