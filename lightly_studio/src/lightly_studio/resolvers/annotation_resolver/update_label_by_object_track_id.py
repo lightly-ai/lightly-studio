@@ -90,8 +90,6 @@ def update_label_by_object_track_id(
             col(Cuboid3DAnnotationTable.sample_id).in_(sibling_ids)
         )
     )
-    # DuckDB checks FK constraints against committed state, so the deletes must be
-    # committed before the UPDATE can run without FK violations.
     session.commit()
 
     try:

@@ -111,19 +111,19 @@
         parentTrackClassName: 'truck'
     });
 
-    // Standalone roots — flat top-level items with no parent track
-    const standaloneRoot1 = createCuboidAnnotation({
+    // Cuboids with a track but no parent track → "No parent track" group
+    const noParentTrackCuboid1 = createCuboidAnnotation({
         ...base,
-        id: 'standalone-0',
+        id: 'no-parent-track-0',
         annotationClassId: 'cabin',
         annotationSourceId: 'ground-truth',
         trackNumber: 20,
         parentTrackNumber: null,
         parentTrackClassName: null
     });
-    const standaloneRoot2 = createCuboidAnnotation({
+    const noParentTrackCuboid2 = createCuboidAnnotation({
         ...base,
-        id: 'standalone-1',
+        id: 'no-parent-track-1',
         annotationClassId: 'trailer',
         annotationSourceId: 'ground-truth',
         trackNumber: 21,
@@ -161,9 +161,9 @@
 />
 
 <Story
-    name="Standalone roots"
+    name="No parent track"
     args={{
-        cuboids: [standaloneRoot1, standaloneRoot2],
+        cuboids: [noParentTrackCuboid1, noParentTrackCuboid2],
         annotationSources: [sources[0]]
     }}
 />
