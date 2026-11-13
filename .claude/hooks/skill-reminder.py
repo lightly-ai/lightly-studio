@@ -16,12 +16,18 @@ from pathlib import Path
 # Path prefix + file suffixes -> guide skills to load. First match wins, so the backend
 # package (a subdirectory) comes before the general lightly_studio rule.
 SKILLS_BY_PATH = [
-    ("lightly_studio/src/lightly_studio/", (".py",), ["python-guide", "backend-guide"]),
-    ("lightly_studio/", (".py",), ["python-guide"]),
-    ("lightly_studio_serve/", (".py",), ["python-guide"]),
-    ("lightly_studio_view/", (".ts", ".svelte"), ["frontend-guide"]),
+    (
+        "lightly_studio/src/lightly_studio/",
+        (".py",),
+        ["python-guide", "backend-guide", "clean-code"],
+    ),
+    ("lightly_studio/", (".py",), ["python-guide", "clean-code"]),
+    ("lightly_studio_serve/", (".py",), ["python-guide", "clean-code"]),
+    ("lightly_studio_view/", (".ts", ".svelte"), ["frontend-guide", "clean-code"]),
     ("CHANGELOG.md", (".md",), ["changelog"]),
     ("lightly_studio_serve/CHANGELOG.md", (".md",), ["changelog"]),
+    # Fallback: all other code files in the repository.
+    ("", (".py", ".ts", ".svelte"), ["clean-code"]),
 ]
 
 

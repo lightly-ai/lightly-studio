@@ -78,15 +78,15 @@ class ImageView(BaseModel):
     tags: list[ImageViewTag]
     metadata_dict: Optional["SampleMetadataView"] = None
     captions: list[CaptionView] = []
-    similarity_score: Optional[float] = None
-    order_value: Optional[float] = None
+    similarity_score: float | None = None
+    order_value: float | None = None
 
     @classmethod
     def from_image_table(
         cls,
         image: "ImageTable",
-        similarity_score: Optional[float] = None,
-        order_value: Optional[float] = None,
+        similarity_score: float | None = None,
+        order_value: float | None = None,
     ) -> "ImageView":
         """Convert an ImageTable to an ImageView.
 
@@ -132,4 +132,4 @@ class ImageViewsWithCount(BaseModel):
 
     samples: list[ImageView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")

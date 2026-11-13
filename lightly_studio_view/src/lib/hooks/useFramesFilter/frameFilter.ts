@@ -1,7 +1,10 @@
-import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import {
+    buildGridFilter,
+    buildSampleFilter,
+    toMetadataFilters,
+    toRange
+} from '$lib/utils/gridFilter';
 import type {
-    AnnotationsFilter,
-    SampleFilter,
     VideoFrameFilter,
     VideoFrameFieldsBoundsView
 } from '$lib/api/lightly_studio_local/types.gen';
@@ -26,55 +29,19 @@ export const getFrameFilter = (params: VideoFrameFilterParams | null): VideoFram
         return null;
     }
 
-    const filters: VideoFrameFilter = { filter_type: 'video_frame' };
+    const f = params.filters ?? {};
 
-    if (params.video_id) {
-        filters.video_id = params.video_id;
-    }
-
-    if (params.frame_bounds?.frame_number) {
-        const frameNumber = params.frame_bounds.frame_number;
-        filters.frame_number = {
-            min: frameNumber.min ?? undefined,
-            max: frameNumber.max ?? undefined
-        };
-    } else {
-        filters.frame_number = {};
-    }
-
-    const sampleFilter: SampleFilter = {};
-
-    const sampleIds = params.filters?.sample_ids;
-    if (sampleIds && sampleIds.length > 0) {
-        sampleFilter.sample_ids = sampleIds;
-    }
-
-    const annotationLabelIds = params.filters?.annotation_label_ids;
-    if (annotationLabelIds && annotationLabelIds.length > 0) {
-        sampleFilter.annotations_filter = {
-            filter_type: 'annotations',
-            annotation_label_ids: annotationLabelIds
-        } satisfies AnnotationsFilter;
-    }
-
-    const tagIds = params.filters?.tag_ids;
-    if (tagIds && tagIds.length > 0) {
-        sampleFilter.tag_ids = tagIds;
-    }
-
-    if (params.filters?.metadata_values || params.filters?.categorical_metadata_values) {
-        const metadataFilters = createMetadataFilters(
-            params.filters.metadata_values ?? {},
-            params.filters.categorical_metadata_values ?? {}
-        );
-        if (metadataFilters.length > 0) {
-            sampleFilter.metadata_filters = metadataFilters;
-        }
-    }
-
-    if (Object.keys(sampleFilter).length > 0) {
-        filters.sample_filter = sampleFilter;
-    }
-
-    return filters;
+    return buildGridFilter(
+        'video_frame',
+        {
+            video_id: params.video_id || undefined,
+            frame_number: toRange(params.frame_bounds?.frame_number) ?? {}
+        },
+        buildSampleFilter({
+            sample_ids: f.sample_ids,
+            annotation_label_ids: f.annotation_label_ids,
+            tag_ids: f.tag_ids,
+            metadata_filters: toMetadataFilters(f.metadata_values, f.categorical_metadata_values)
+        })
+    );
 };

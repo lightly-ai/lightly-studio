@@ -1,26 +1,29 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
-import { tick } from 'svelte';
 import '@testing-library/jest-dom';
 import { toast } from 'svelte-sonner';
 import QueryEditor from './QueryEditor.svelte';
-import type { QueryExprTranslationResult } from './language/query-expr-translation.js';
+import type { useQueryEditor } from './useQueryEditor';
 
-const translateQuery = vi.fn();
-let capturedOnChange: ((next: string) => void) | undefined;
-const mount = vi.fn(
-    (
-        _el: HTMLElement,
-        options: { value: string; readOnly?: boolean; onChange?: (next: string) => void }
-    ) => {
-        capturedOnChange = options.onChange;
-        return () => {};
-    }
-);
+const mount: ReturnType<typeof useQueryEditor>['mount'] = (el, options) => {
+    const input = document.createElement('textarea');
+    input.setAttribute('aria-label', 'Query');
+    input.value = options.value;
+    input.readOnly = options.readOnly ?? false;
+    input.oninput = () => options.onChange?.(input.value);
+    el.append(input);
+    return () => input.remove();
+};
 
-vi.mock('./useQueryEditor', () => ({
-    useQueryEditor: () => ({ mount, translateQuery })
-}));
+// Replace Monaco rendering while keeping the real language hook, parser, and translation.
+vi.mock('monaco-editor', () => ({}));
+vi.mock('./useQueryEditor', async () => {
+    const { useLightlyQueryLanguage } =
+        await import('./useLightlyQueryLanguage/useLightlyQueryLanguage');
+    return {
+        useQueryEditor: () => ({ mount, translateQuery: useLightlyQueryLanguage().translateQuery })
+    };
+});
 
 vi.mock('svelte-sonner', () => ({
     toast: {
@@ -30,45 +33,50 @@ vi.mock('svelte-sonner', () => ({
 }));
 
 async function simulateUserEdit(next: string) {
-    capturedOnChange?.(next);
-    await tick();
+    await fireEvent.input(screen.getByRole('textbox', { name: 'Query' }), {
+        target: { value: next }
+    });
 }
 
 describe('QueryEditor', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        capturedOnChange = undefined;
     });
 
-    it('calls onSave with the latest parsed result when the Apply button is clicked', async () => {
+    it('starts with an implicit video query, rejects invalid fields, and saves a video query', async () => {
         const onSave = vi.fn();
-        const parsed = {
+        render(QueryEditor, { props: { sampleType: 'video', onSave } });
+        expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue('duration_s > 10');
+
+        await simulateUserEdit('created_at = "2025-01-01"');
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(toast.error).toHaveBeenCalledWith(
+            expect.stringContaining('Failed to translate query:')
+        );
+        expect(onSave).not.toHaveBeenCalled();
+
+        await simulateUserEdit('duration_s > 5');
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onSave).toHaveBeenCalledExactlyOnceWith('duration_s > 5', {
             status: 'ok',
             queryExpr: {
                 match_expr: {
-                    type: 'string_expr',
-                    field: { table: 'object_detection', name: 'class_name' },
-                    operator: '==',
-                    value: 'cat'
+                    type: 'ordinal_float_expr',
+                    field: { table: 'video', name: 'duration_s' },
+                    operator: '>',
+                    value: 5
                 }
             }
-        } as QueryExprTranslationResult;
-        translateQuery.mockReturnValueOnce(parsed);
-
-        render(QueryEditor, { props: { value: 'my query', onSave } });
-        await simulateUserEdit('my modified query');
-
-        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
-
-        expect(translateQuery).toHaveBeenCalledOnce();
-        expect(translateQuery).toHaveBeenCalledWith('my modified query');
-        expect(onSave).toHaveBeenCalledOnce();
-        expect(onSave).toHaveBeenCalledWith('my modified query', parsed);
+        });
     });
 
-    it('does not render the toolbar when onSave is not provided', () => {
-        render(QueryEditor, { props: { value: 'query' } });
+    it('keeps the image example and hides the toolbar when onSave is not provided', () => {
+        render(QueryEditor);
 
+        expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue(
+            '# Example query\nwidth < 500\nAND "reviewed" IN tags\n' +
+                'AND object_detection(class_name = "person" AND x > 10)\n'
+        );
         expect(screen.queryByTestId('query-editor-apply-button')).not.toBeInTheDocument();
     });
 
@@ -83,33 +91,35 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Re-apply' })).toBeEnabled();
     });
 
-    it('calls onSave when re-applying unchanged text', async () => {
+    it('loads and re-applies the supplied query instead of the default', async () => {
         const onSave = vi.fn();
-        const parsed = { status: 'ok', queryExpr: {} } as QueryExprTranslationResult;
-        translateQuery.mockReturnValueOnce(parsed);
-        render(QueryEditor, { props: { value: 'query', onSave } });
+        render(QueryEditor, { props: { value: 'width < 500', sampleType: 'image', onSave } });
+        expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue('width < 500');
 
         await fireEvent.click(screen.getByRole('button', { name: 'Re-apply' }));
 
-        expect(onSave).toHaveBeenCalledExactlyOnceWith('query', parsed);
+        expect(onSave).toHaveBeenCalledExactlyOnceWith('width < 500', {
+            status: 'ok',
+            queryExpr: {
+                match_expr: {
+                    type: 'integer_expr',
+                    field: { table: 'image', name: 'width' },
+                    operator: '<',
+                    value: 500
+                }
+            }
+        });
     });
 
-    it('shows an error toast when translation returns an error result', async () => {
+    it('shows an error toast without saving an invalid query', async () => {
         const onSave = vi.fn();
-        const errorResult = {
-            status: 'error',
-            errors: [{ message: 'unexpected token', line: 1, column: 5 }]
-        } as QueryExprTranslationResult;
-        translateQuery.mockReturnValueOnce(errorResult);
-        render(QueryEditor, { props: { value: 'my query', onSave } });
-        await simulateUserEdit('my modified query');
+        render(QueryEditor, { props: { value: 'width < 500', onSave } });
+        await simulateUserEdit('width <');
 
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
-        expect(translateQuery).toHaveBeenCalledOnce();
-        expect(translateQuery).toHaveBeenCalledWith('my modified query');
         expect(toast.error).toHaveBeenCalledWith(
-            'Failed to translate query: unexpected token (line 1, column 5)'
+            expect.stringContaining('Failed to translate query:')
         );
         expect(onSave).not.toHaveBeenCalled();
     });

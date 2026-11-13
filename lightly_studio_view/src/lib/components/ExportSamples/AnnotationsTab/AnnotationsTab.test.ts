@@ -54,6 +54,8 @@ describe('AnnotationsTab', () => {
         mocks.exportCollectionAnnotationsPrepare.mockReset();
         mocks.triggerDownload.mockReset();
         vi.mocked(useVideoFilters).mockReturnValue({
+            videoQueryExpression: writable(null),
+            updateQueryExpr: vi.fn(),
             videoFilter: writable(null),
             filterParams: writable(null),
             updateFilterParams: vi.fn(),
@@ -113,6 +115,8 @@ describe('AnnotationsTab', () => {
         });
         const activeFilter = { filter_type: 'video' as const, width: { min: 100 } };
         vi.mocked(useVideoFilters).mockReturnValueOnce({
+            videoQueryExpression: writable(null),
+            updateQueryExpr: vi.fn(),
             videoFilter: writable(activeFilter),
             filterParams: writable(null),
             updateFilterParams: vi.fn(),

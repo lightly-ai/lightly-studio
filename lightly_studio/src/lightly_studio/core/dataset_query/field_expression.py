@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Generic, Literal, TypeVar, Union
+from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 
 from sqlalchemy import ColumnElement
 from sqlalchemy.orm import Mapped
@@ -59,7 +59,7 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
         return operations[self.operator](table_property, self.value)
 
 
-NumericalFieldExpression = OrdinalFieldExpression[Union[float, int]]
+NumericalFieldExpression = OrdinalFieldExpression[float | int]
 DatetimeFieldExpression = OrdinalFieldExpression[datetime]
 
 

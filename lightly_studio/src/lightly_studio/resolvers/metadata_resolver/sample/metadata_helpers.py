@@ -44,8 +44,10 @@ def without_metadata_key_filter(
         return filters
     updated = filters.model_copy(deep=True)
     # Narrowed above via ``filters``; the deep copy preserves both.
-    assert updated.sample_filter is not None
-    assert updated.sample_filter.metadata_filters is not None
+    if updated.sample_filter is None:
+        raise RuntimeError("Expected `updated.sample_filter` to be set.")
+    if updated.sample_filter.metadata_filters is None:
+        raise RuntimeError("Expected `updated.sample_filter.metadata_filters` to be set.")
     updated.sample_filter.metadata_filters = [
         metadata_filter
         for metadata_filter in updated.sample_filter.metadata_filters

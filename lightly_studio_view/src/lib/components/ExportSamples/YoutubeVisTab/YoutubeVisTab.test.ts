@@ -34,6 +34,8 @@ describe('YoutubeVisTab', () => {
         mocks.exportCollectionYoutubeVisPrepare.mockReset();
         mocks.triggerDownload.mockReset();
         vi.mocked(useVideoFilters).mockReturnValue({
+            videoQueryExpression: writable(null),
+            updateQueryExpr: vi.fn(),
             videoFilter: writable(null),
             filterParams: writable(null),
             updateFilterParams: vi.fn(),
@@ -74,6 +76,8 @@ describe('YoutubeVisTab', () => {
         });
         const activeFilter: VideoFilter = { filter_type: 'video', width: { min: 100 } };
         vi.mocked(useVideoFilters).mockReturnValueOnce({
+            videoQueryExpression: writable(null),
+            updateQueryExpr: vi.fn(),
             videoFilter: writable(activeFilter),
             filterParams: writable(null),
             updateFilterParams: vi.fn(),

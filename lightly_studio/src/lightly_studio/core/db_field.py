@@ -33,7 +33,8 @@ class DBField(Generic[T]):
 
     def __get__(self, obj: _DBFieldOwner | None, owner: type | None = None) -> T:
         """Get the value of the field from the database."""
-        assert obj is not None, "DBField must be accessed via an instance, not the class"
+        if obj is None:
+            raise RuntimeError("DBField must be accessed via an instance, not the class")
         # Delegate to SQLAlchemy's descriptor.
         value: T = self._sqla_descriptor.__get__(obj.inner, type(obj.inner))
         return value

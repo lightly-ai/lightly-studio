@@ -1,7 +1,5 @@
 <script lang="ts">
-    import { Checkbox } from '$lib/components/ui/checkbox';
-    import { Input } from '$lib/components/ui/input';
-    import { Button } from '$lib/components/ui/button';
+    import { FilterList } from '$lib/components/FilterList';
     import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { buildOptions, getCheckboxLabel, getOptionLabel } from './helpers';
@@ -12,9 +10,8 @@
         loading: boolean;
         error?: string;
         listMode: boolean;
-        search: string;
-        onSearchChange: (search: string) => void;
         onToggle: (value: CategoricalMetadataValue) => void;
+        onSetValues: (values: CategoricalMetadataValue[]) => void;
         onClear: () => void;
     }
 
@@ -24,68 +21,63 @@
         loading,
         error,
         listMode,
-        search,
-        onSearchChange,
         onToggle,
+        onSetValues,
         onClear
     }: Props = $props();
     const options = $derived(buildOptions(buckets, selectedValues));
-    const optionLabel = (option: (typeof options)[number]) =>
-        getOptionLabel(option, options, buckets);
+    const selected = $derived(new Set(selectedValues));
+    const items = $derived(
+        options.map((option) => {
+            const label = getOptionLabel(option, options, buckets);
+            return {
+                id: option.bucket.id,
+                label,
+                selected: selected.has(option.bucket.value),
+                count: option.retained ? 'Not in current results' : String(option.bucket.count),
+                ariaLabel: getCheckboxLabel(option, label)
+            };
+        })
+    );
     const showSearch = $derived(buckets.filter((bucket) => bucket.kind === 'value').length > 5);
     const hasOtherAggregate = $derived(buckets.some((bucket) => bucket.kind === 'other'));
-    const visible = $derived(
-        options.filter((option) => optionLabel(option).toLowerCase().includes(search.toLowerCase()))
+    const emptyText = $derived(
+        listMode && error
+            ? 'Could not load metadata distribution.'
+            : listMode && loading
+              ? 'Loading…'
+              : listMode
+                ? 'No values are available under the current filters.'
+                : 'No values found.'
     );
-    const isSelected = (value: CategoricalMetadataValue) =>
-        selectedValues.some((selected) => Object.is(selected, value));
+
+    const toggleById = (id: string) => {
+        const option = options.find(({ bucket }) => bucket.id === id);
+        if (option) onToggle(option.bucket.value);
+    };
+    const changeSelection = (ids: string[]) => {
+        if (ids.length === 0) {
+            onClear();
+            return;
+        }
+        const wanted = new Set(ids);
+        onSetValues(
+            options.filter(({ bucket }) => wanted.has(bucket.id)).map(({ bucket }) => bucket.value)
+        );
+    };
 </script>
 
-{#if showSearch}
-    <Input
-        value={search}
-        oninput={(event) => onSearchChange(event.currentTarget.value)}
-        placeholder="Search values…"
-        aria-label="Search values"
-        class="max-sm:min-h-11"
-    />
-{/if}
-<div class="mt-2 max-h-56 space-y-1 overflow-y-auto">
-    {#each visible as option (option.bucket.id)}
-        {@const label = optionLabel(option)}
-        <label
-            class="flex min-h-8 cursor-pointer items-center gap-2 rounded px-2 text-sm hover:bg-accent max-sm:min-h-11"
-        >
-            <Checkbox
-                checked={isSelected(option.bucket.value)}
-                onCheckedChange={() => onToggle(option.bucket.value)}
-                aria-label={getCheckboxLabel(option, label)}
-            />
-            <span class="min-w-0 flex-1 truncate" title={label}>{label}</span>
-            <span class="text-muted-foreground"
-                >{option.retained ? 'Not in current results' : option.bucket.count}</span
-            >
-        </label>
-    {/each}
-    {#if visible.length === 0}
-        <p class="p-2 text-sm text-muted-foreground">
-            {listMode && error && options.length === 0
-                ? 'Could not load metadata distribution.'
-                : listMode && loading && options.length === 0
-                  ? 'Loading…'
-                  : listMode && options.length === 0
-                    ? 'No values are available under the current filters.'
-                    : 'No values found.'}
-        </p>
-    {/if}
-    {#if hasOtherAggregate}
-        <p class="p-2 text-xs text-muted-foreground">
-            Other is an aggregate and cannot be selected.
-        </p>
-    {/if}
-</div>
-{#if selectedValues.length > 0}
-    <Button variant="ghost" size="sm" class="mt-2 w-full max-sm:min-h-11" onclick={onClear}
-        >Clear</Button
-    >
+<FilterList
+    {items}
+    onToggle={toggleById}
+    onSelectionChange={changeSelection}
+    testId="metadata-value-list"
+    {showSearch}
+    searchPlaceholder="Search values…"
+    {emptyText}
+    noMatchText="No values found."
+    rowsClass="-mx-1 -mb-1 max-h-56 overflow-y-auto p-1"
+/>
+{#if hasOtherAggregate}
+    <p class="p-2 text-xs text-muted-foreground">Other is an aggregate and cannot be selected.</p>
 {/if}

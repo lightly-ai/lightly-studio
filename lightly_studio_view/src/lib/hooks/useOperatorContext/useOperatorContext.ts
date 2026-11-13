@@ -97,9 +97,27 @@ export function resolveContextFilter(
     return undefined;
 }
 
+// True only when the user has applied explicit filters — excludes intrinsic route constraints
+// (e.g. the captions route always sends has_captions:true, which is not a user-applied filter).
+export function resolveHasActiveFilter(
+    routeId: string | null,
+    hasGridFilters: boolean,
+    annotationFilterIds: Set<string>,
+    tagsSelected: Set<string>
+): boolean {
+    if (isAnnotationsRoute(routeId)) {
+        return annotationFilterIds.size > 0 || tagsSelected.size > 0;
+    }
+    if (isImagesRoute(routeId) || isVideosRoute(routeId) || isVideoFramesRoute(routeId)) {
+        return hasGridFilters;
+    }
+    return false;
+}
+
 export function useOperatorContext(
     pageContext: Readable<PageContext>,
-    tagsSelected: Readable<Set<string>> = readable(new Set<string>())
+    tagsSelected: Readable<Set<string>> = readable(new Set<string>()),
+    hasGridFilters: Readable<boolean> = readable(false)
 ) {
     const routeId = derived(pageContext, ($p) => $p.routeId);
 
@@ -139,26 +157,10 @@ export function useOperatorContext(
             )
     );
 
-    // True only when the user has applied explicit filters — excludes intrinsic route constraints
-    // (e.g. the captions route always sends has_captions:true, which is not a user-applied filter).
     const hasActiveFilter = derived(
-        [routeId, imageFilter, videoFilter, frameFilter, selectedAnnotationFilterIds, tagsSelected],
-        ([
-            $routeId,
-            $imageFilter,
-            $videoFilter,
-            $frameFilter,
-            $annotationFilterIds,
-            $tagsSelected
-        ]) => {
-            if (isAnnotationsRoute($routeId)) {
-                return $annotationFilterIds.size > 0 || $tagsSelected.size > 0;
-            }
-            if (isImagesRoute($routeId)) return $imageFilter !== null;
-            if (isVideosRoute($routeId)) return $videoFilter !== null;
-            if (isVideoFramesRoute($routeId)) return $frameFilter !== null;
-            return false;
-        }
+        [routeId, hasGridFilters, selectedAnnotationFilterIds, tagsSelected],
+        ([$routeId, $hasGridFilters, $annotationFilterIds, $tagsSelected]) =>
+            resolveHasActiveFilter($routeId, $hasGridFilters, $annotationFilterIds, $tagsSelected)
     );
 
     const scopeCount = derived(

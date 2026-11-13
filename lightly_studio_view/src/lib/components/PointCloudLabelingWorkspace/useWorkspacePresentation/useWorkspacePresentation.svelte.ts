@@ -20,11 +20,6 @@ export function useWorkspacePresentation() {
     const editing = fromStore(isEditingMode);
     const points = fromStore(pointSize);
     const helpers = fromStore(showNavigationHelpers);
-    const showAnnotationTooltips = useSessionStorage<boolean>(
-        'lightlyStudio_pointCloudShowAnnotationTooltips',
-        true
-    );
-    const tooltips = fromStore(showAnnotationTooltips);
 
     return {
         get isEditingMode() {
@@ -39,9 +34,6 @@ export function useWorkspacePresentation() {
         get showNavigationHelpers() {
             return helpers.current;
         },
-        get showAnnotationTooltips() {
-            return tooltips.current;
-        },
         get colorMode() {
             return selectedColorMode ?? ('intensity' as const);
         },
@@ -50,7 +42,6 @@ export function useWorkspacePresentation() {
         },
         setPointSize: pointSize.set,
         setShowNavigationHelpers: showNavigationHelpers.set,
-        setShowAnnotationTooltips: showAnnotationTooltips.set,
         toggleOrthographicProjections: showOrthographicViews.set
     };
 }

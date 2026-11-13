@@ -4,11 +4,11 @@ from __future__ import annotations
 
 import socket as socket_module
 from socket import AF_INET, SOCK_STREAM, socket
-from unittest.mock import MagicMock, patch
 
 import pytest
 from brotli_asgi import BrotliMiddleware
 from fastapi.testclient import TestClient
+from pytest_mock import MockerFixture
 
 from lightly_studio.api.app import app
 from lightly_studio.api.routes.api.status import (
@@ -18,42 +18,40 @@ from lightly_studio.api.routes.api.status import (
 from lightly_studio.api.server import Server, _is_ipv6_available
 
 
-def test_lifespan_calls_startup_all() -> None:
+def test_lifespan_calls_startup_all(mocker: MockerFixture) -> None:
     """Operator startup_all is called when the app starts."""
-    with patch("lightly_studio.api.app.operator_registry") as mock_registry, TestClient(app):
+    mock_registry = mocker.patch("lightly_studio.api.app.operator_registry")
+    with TestClient(app):
         mock_registry.startup_all.assert_called_once()
 
 
-def test_lifespan_calls_shutdown_all() -> None:
+def test_lifespan_calls_shutdown_all(mocker: MockerFixture) -> None:
     """Operator shutdown_all is called when the app shuts down."""
-    with patch("lightly_studio.api.app.operator_registry") as mock_registry, TestClient(app):
+    mock_registry = mocker.patch("lightly_studio.api.app.operator_registry")
+    with TestClient(app):
         pass
     mock_registry.shutdown_all.assert_called_once()
 
 
-def test_lifespan_shutdown_all_called_even_if_startup_raises() -> None:
+def test_lifespan_shutdown_all_called_even_if_startup_raises(mocker: MockerFixture) -> None:
     """Operator shutdown_all and db_manager.close still run if startup_all raises."""
-    with (
-        patch("lightly_studio.api.app.operator_registry") as mock_registry,
-        patch("lightly_studio.api.app.db_manager") as mock_db,
-    ):
-        mock_registry.startup_all.side_effect = RuntimeError("startup failed")
-        with pytest.raises(RuntimeError), TestClient(app):
-            pass
-        mock_registry.shutdown_all.assert_called_once()
-        mock_db.close.assert_called_once()
+    mock_registry = mocker.patch("lightly_studio.api.app.operator_registry")
+    mock_db = mocker.patch("lightly_studio.api.app.db_manager")
+    mock_registry.startup_all.side_effect = RuntimeError("startup failed")
+    with pytest.raises(RuntimeError), TestClient(app):
+        pass
+    mock_registry.shutdown_all.assert_called_once()
+    mock_db.close.assert_called_once()
 
 
-def test_lifespan_db_close_called_even_if_shutdown_all_raises() -> None:
+def test_lifespan_db_close_called_even_if_shutdown_all_raises(mocker: MockerFixture) -> None:
     """db_manager.close still runs if shutdown_all raises."""
-    with (
-        patch("lightly_studio.api.app.operator_registry") as mock_registry,
-        patch("lightly_studio.api.app.db_manager") as mock_db,
-    ):
-        mock_registry.shutdown_all.side_effect = RuntimeError("shutdown failed")
-        with pytest.raises(RuntimeError), TestClient(app):
-            pass
-        mock_db.close.assert_called_once()
+    mock_registry = mocker.patch("lightly_studio.api.app.operator_registry")
+    mock_db = mocker.patch("lightly_studio.api.app.db_manager")
+    mock_registry.shutdown_all.side_effect = RuntimeError("shutdown failed")
+    with pytest.raises(RuntimeError), TestClient(app):
+        pass
+    mock_db.close.assert_called_once()
 
 
 def test_server_initialization() -> None:
@@ -123,8 +121,8 @@ def test__get_available_port__preferred_port_in_use() -> None:
     assert server.port != port
 
 
-@patch("lightly_studio.api.server.socket.socket")
-def test__is_ipv6_available(mock_socket: MagicMock) -> None:
+def test__is_ipv6_available(mocker: MockerFixture) -> None:
+    mock_socket = mocker.patch("lightly_studio.api.server.socket.socket")
     # Test True
     assert _is_ipv6_available() is True
     mock_socket.assert_called_with(socket_module.AF_INET6, socket_module.SOCK_STREAM)

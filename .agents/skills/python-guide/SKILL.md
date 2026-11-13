@@ -1,6 +1,6 @@
 ---
 name: python-guide
-description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, assertions, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
+description: Read before writing or reviewing any Python code in this repository. Covers import style (modules for functions, direct for classes), file layout ordering (private functions at the bottom), protocols vs ABCs, TODO and comment format, preference for keyword arguments, docstrings including tensor shapes, typing, and pytest conventions.
 ---
 
 # Python Code Guidelines
@@ -25,8 +25,18 @@ mymodule.foo()
 c = MyClass()
 ```
 
+Put all imports at the top of the file. Ruff rule `PLC0415` checks this. Do not add
+`# noqa: PLC0415` to break an import cycle or to make a module load faster; move the shared code
+to a module that both sides can import.
+
 Exceptions from the guidelines:
+- An import inside a function is allowed only for an optional dependency that is possibly not
+  installed, for example `pgvector`. Add `# noqa: PLC0415`.
+- A file in `models/` can import other model files at the bottom of the file, with
+  `# noqa: E402`. This breaks the import cycles between tables that refer to each other.
 - We allow direct function import from `typing`, `dataclasses`, `abc`, `sqlmodel`, `sqlalchemy`
+- In tests, we allow direct function import from `tests.helpers_resolvers`,
+  `tests.resolvers.video.helpers`, and `tests.resolvers.evaluation_sample_metric_resolver.helpers`
 
 ## File layout
 
@@ -72,6 +82,10 @@ Use the following format: `# TODO({name}, {mm}/{yyyy}): Blah blah`
 
 ## Comments
 
+Code must be self-descriptive. Write a comment only for a reason that the code cannot show.
+Keep an inline comment short, one line if possible. A longer comment is acceptable for inner
+logic that names cannot explain. The contract of the function goes in the docstring.
+
 Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current state, not the change. Prefer properly formatted comments with a leading capital and punctuation. Final full stop may be omitted for a single sentence.
 
 ```python
@@ -83,50 +97,6 @@ Use ASD-STE100 Simplified Technical English, avoid bloat. Describe the current s
 
 # we don't do this <-
 ...
-```
-
-## Assertions
-
-- Avoid using assertions:
-    - Don’t use assertions for user errors, raise an exception instead.
-    - Assertions should never fail. If they do it is a bad internal error.
-    - Don’t assert that a variable follows its typehint.
-
-They can be used:
-
-- for invariants that are easy to check locally, like a minimum length
-- for typing (e.g. non-nullity)
-- To document what we expect a particular value to be. Here, expect means that there would need to be some logical error somewhere for the value to be different.
-- in a private function when the calling code makes the check
-
-It’s ok to not test assertions as they’re not the intended behavior of a function.
-
-Example:
-
-```python
-def get_metrics(values: list[float]) -> Something:
-    ...
-    if len(values) < 2:
-        std = 0 # Or an Error is raised.
-    else:
-        std = _get_std(values)
-    ...
-
-def _get_std(sequence: Sequence[float]) -> float:
-    """Gets the standard deviation of a sequence
-
-    Args:
-        sequence:
-            The sequence to get the std of.
-            Must have a length >= 2.
-
-    Returns:
-            The standard deviation of a sequence.
-
-    """
-
-    assert len(sequence) >= 2
-    return np.std(sequence)
 ```
 
 ## Positional vs. Keyword Arguments
@@ -155,31 +125,12 @@ Exceptions may apply occasionally. Such logic should be accompanied by a comment
 
 ## Docstrings
 
-### Function and method-level Docstrings
-
-We use Google style docstrings.
-
-```python
-def foo(bar: int) -> str:
-    """Summary of function here.
-
-    Longer function information...
-
-    Args:
-        bar: Description of the argument `bar`.
-
-    Returns:
-        Description of the return value.
-
-    Raises:
-        ValueError: Description of the error that may be raised.
-    """
-```
+We use Google style docstrings. Ruff checks the format.
 
 ### Class-level Docstrings
 
-Document the functionality of the class and its **public attributes** if they are not already
-documented on the class level.
+Document the functionality of the class. Document each **public attribute** in the `Attributes`
+section or in a docstring below the attribute, not in both.
 
 ```python
 class SampleClass:
@@ -218,24 +169,14 @@ class SampleClass:
         Returns:
             Reduced point clouds of the shape (B, D).
         """
-        self.likes_spam = likes_spam
-        self.eggs = 0
 ```
 
 # Typing
 
-All our code must be typed.
+Ruff and mypy enforce typed code and the modern typing syntax. This section has only the rules
+that they do not check.
 
-- Prefer Python 3.10+ syntax for built-ins
-    - Good: `lst: list[int]`, bad: `lst: typing.List[int]`
-    - Good: `path: str | None`, bad: `path: typing.Optional[str]`
-    - For python 3.8, you can get these by using `from __future__ import annotations` . To use also Pydantic, pip install `eval_type_backport`. Also `typing_extensions` package might be needed.
-- Use built in ABCs
-    - Use `Sequence` and `Mapping` for immutable `list` and `dict`
-    - Import from collections.abc:
-        - Good: `from collections.abc import Sequence, Mapping`
-        - Bad: `from typing import Sequence, Mapping`
-        - Rationale: The latter is deprecated by PEP 585
+- Use `Sequence` and `Mapping` for immutable `list` and `dict`.
 - Use abstract inputs and concrete outputs:
     - Good (note: toy example, it could accept and return Iterable in this case):
         
@@ -243,11 +184,6 @@ All our code must be typed.
         def add_suffix_to_list(lst: Sequence[str], suffix: str) -> list[str]:
             return [x + suffix for x in lst]
         ```
-        
-- Be specific when ignoring a type error
-    - Good: `def foo(x: Any) -> None:  # type: ignore[misc]`
-    - Bad: `def foo(x: Any) -> None:  # type: ignore`
-    - Rationale: Ignoring all type errors might miss an error that was not intended.
         
 - Torch typing
     - Type all tensors with `from torch import Tensor`
@@ -307,10 +243,9 @@ with pytest.raises(ValueError, match=r"does not match"):
     dataset.add_images_from_path(path=tmp_path / "second")
 ```
 
-### Tests must use pytest (NOT unittest)
+### Use `MockerFixture` for mocking
 
-- Don't import unittest. Pytest is more modern.
-- Use MockerFixture for mocking.
+Ruff forbids `unittest` imports.
 
 ```python
 from pytest_mock import MockerFixture

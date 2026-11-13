@@ -26,8 +26,8 @@ Coding standards for frontend development in LightlyStudio using SvelteKit and T
 
 Minimize framework-specific syntax to reduce coupling and improve testability:
 
-- Prefer [writable](https://svelte.dev/docs/svelte/svelte-store)/readable/derived stores over runes for state management - stores have explicit imports and clearer dependencies.
-- Use runes only when their specific features are necessary for component-level reactivity.
+- Hooks and shared state use [writable](https://svelte.dev/docs/svelte/svelte-store)/readable/derived stores - stores have explicit imports and clearer dependencies.
+- Components use runes (`$props`, `$state`, `$derived`) for component-level reactivity.
 - Less framework coupling means easier maintenance, onboarding, and migration.
 
 ## Project structure & naming
@@ -40,19 +40,19 @@ Canonical layout:
 
 ```
 src/
-  components/
-    AuthForm/
-      AuthForm.svelte
-      AuthForm.test.ts
-      AuthForm.stories.svelte       # if needed
-    UserDashboard/
-      UserDashboard.svelte
-      UserDashboard.test.ts
-      UserDashboard.helpers.ts       # if needed
-      UserProfile/                   # subcomponent
-        UserProfile.svelte
-        UserProfile.test.ts
   lib/
+    components/
+      AuthForm/
+        AuthForm.svelte
+        AuthForm.test.ts
+        AuthForm.stories.svelte      # if needed
+      UserDashboard/
+        UserDashboard.svelte
+        UserDashboard.test.ts
+        UserDashboard.helpers.ts     # if needed
+        UserProfile/                 # subcomponent
+          UserProfile.svelte
+          UserProfile.test.ts
     hooks/
       index.ts                       # barrel exports
       useAuth/
@@ -63,13 +63,15 @@ src/
         useData.test.ts
 ```
 
-- Use `.svelte.ts` files for component logic, state machines, and hooks that use TanStack Query (since v6 uses runes internally).
+- Use a `.svelte.ts` file for component logic, state machines, and hooks only if the file itself uses runes. A file without runes is a plain `.ts` file.
 - Use barrel exports (`index.ts`) to define a module's public API. Import from module level, not deep paths:
 
 ```typescript
 // ✅ from "$lib/hooks"  - not "$lib/hooks/useData/useData"
 import { useData, useAuth } from "$lib/hooks";
 ```
+
+Older code has many deep imports. Do not copy them, and do not convert them in an unrelated PR.
 
 ## Imports
 
@@ -97,7 +99,8 @@ export function useData(params: UseDataParams): UseDataReturn {
 }
 ```
 
-- Avoid exporting/importing types. Derive types from source code using utility types to keep things DRY:
+- Import API types from the generated client in `$lib/api/lightly_studio_local`. Do not edit that folder by hand.
+- Do not declare a type that repeats one that exists. Derive it from source code using utility types:
 
 ```typescript
 type UseDataParams = Parameters<typeof useData>[0];
@@ -119,20 +122,11 @@ type WithoutTitle = Omit<UseDataParams, "title">;
 
 Keep JS chunk sizes **below 500KB**. Use dynamic imports for heavy components:
 
-```typescript
-<script lang="ts">
-  import { onMount } from 'svelte';
-
-  let HeavyChart;
-
-  onMount(async () => {
-    const module = await import('$lib/components/HeavyChart.svelte');
-    HeavyChart = module.default;
-  });
-</script>
-
-{#if HeavyChart}
-  <svelte:component this={HeavyChart} />
+```svelte
+{#if isChartOpen}
+  {#await import('$lib/components/HeavyChart/HeavyChart.svelte') then { default: HeavyChart }}
+    <HeavyChart />
+  {/await}
 {/if}
 ```
 
@@ -180,7 +174,7 @@ page.params.sampleId; // no $ prefix needed
 **Hooks and reactivity** - for hooks that wrap TanStack Query, accept a **getter function (thunk)** for reactive parameters. TanStack Query v6 uses thunks for reactivity — do not pass Svelte stores or `$derived` values:
 
 ```typescript
-// Hook definition (useFrames.svelte.ts — must be .svelte.ts for TanStack v6)
+// Hook definition (useFrames.ts)
 export const useFrames = (
   getParams: () => { video_frame_collection_id: string; filter: VideoFrameFilter }
 ) => {
@@ -209,14 +203,14 @@ For non-TanStack hooks with static parameters, pass values via SvelteKit's page 
 
 ## State management & hooks
 
-Create small, reusable hooks in `src/lib/hooks` - avoid monolithic stores. We do not use a `services` folder; hooks handle data fetching and state.
+Create small, reusable hooks in `src/lib/hooks` - avoid monolithic stores. Hooks handle data fetching and state.
 Ref: `lightly_studio_view/src/lib/hooks/useTags/useTags.ts`, `lightly_studio_view/src/lib/hooks/useFeatureFlags/useFeatureFlags.ts`.
 
 Generic hooks go in `src/lib/hooks`; component-specific hooks go in the component's folder.
 
 For data fetching and API work:
 
-- Use [TanStack Query](https://tanstack.com/query/latest/docs/framework/svelte/overview) for all data fetching. TanStack Query v6 is runes-based — hooks that call `createQuery`/`createInfiniteQuery` must be `.svelte.ts` files.
+- Use [TanStack Query](https://tanstack.com/query/latest/docs/framework/svelte/overview) for all data fetching.
 - The query result is a **reactive proxy** (not a Svelte store). Access properties like `query.isSuccess`, `query.data` directly — no `$` prefix needed.
 - Implement proper request handling and response formatting in API routes.
 
@@ -309,7 +303,7 @@ Before submitting code:
 make static-checks
 
 # Unit tests
-npm run test:unit
+make test
 ```
 
 All checks must pass before committing.
