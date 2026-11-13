@@ -202,8 +202,12 @@ jobs:
           rm -rf lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
           cp -r lightly_studio_view/build/ lightly_studio/src/lightly_studio/dist_lightly_studio_view_app
 
+  # The merge queue skips this job: the ruleset requires `End2End Success Check` on the pull request
+  # before it can enter the queue, so these tests already passed. The queue still tests the merged
+  # code with the Postgres jobs below.
   end-to-end:
     name: End2End Test (${{ matrix.name }})
+    if: github.event_name != 'merge_group'
     runs-on: ubuntu-latest
     # Recent runs: 5.7min median, 9.2min worst.
     timeout-minutes: 20
@@ -608,7 +612,8 @@ jobs:
       - name: Check failure
         if: >-
           needs.check-success.outputs.skip != 'true' &&
-          (needs.end-to-end.result != 'success' ||
+          ((github.event_name != 'merge_group' && needs.end-to-end.result != 'success') ||
+          (github.event_name == 'merge_group' && needs.end-to-end-merge-queue.result != 'success') ||
           (needs.end-to-end-merge-queue.result != 'success' &&
           needs.end-to-end-merge-queue.result != 'skipped') ||
           (needs.end-to-end-after-merge.result != 'success' &&
