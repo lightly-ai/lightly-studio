@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import pytest
 from sqlmodel import Session
 
@@ -23,17 +21,17 @@ from tests.helpers_resolvers import (
     create_collection,
     create_embedding_model,
     create_image,
+    create_source_annotations,
 )
-from tests.services.annotation_source_service import helpers
 
 
 def test_delete_annotation_source(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (gt,) = helpers.create_source_annotations(
+    (gt,) = create_source_annotations(
         session=db_session, image=image, source_name="ground_truth", count=1
     )
-    pred = helpers.create_source_annotations(
+    pred = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=2
     )
     pred_source_id = pred[0].annotation_collection_id
@@ -65,19 +63,17 @@ def test_delete_annotation_source(db_session: Session) -> None:
     assert [annotation.sample_id for annotation in remaining] == [gt.sample_id]
 
 
-def test_delete_annotation_source__export_file(db_session: Session, tmp_path: Path) -> None:
+def test_delete_annotation_source__export_job(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
-    export_path = tmp_path / "predictions.json"
-    export_path.write_text("{}")
-    export_job_resolver.create(
+    export_key = export_job_resolver.create(
         session=db_session,
         collection_id=pred.annotation_collection_id,
-        export_path=str(export_path),
-    )
+        export_path="/tmp/predictions.json",
+    ).export_key
 
     annotation_source_service.delete_annotation_source(
         session=db_session,
@@ -85,13 +81,13 @@ def test_delete_annotation_source__export_file(db_session: Session, tmp_path: Pa
         annotation_source_id=pred.annotation_collection_id,
     )
 
-    assert not export_path.exists()
+    assert export_job_resolver.get(session=db_session, export_key=export_key) is None
 
 
 def test_delete_annotation_source__empty_source(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     pred_source_id = pred.annotation_collection_id
@@ -113,7 +109,7 @@ def test_delete_annotation_source__other_collection(db_session: Session) -> None
     collection = create_collection(session=db_session)
     other_collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
 
@@ -139,10 +135,10 @@ def test_delete_annotation_source__not_an_annotation_source(db_session: Session)
 def test_delete_annotation_source__used_by_evaluation_run(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (gt,) = helpers.create_source_annotations(
+    (gt,) = create_source_annotations(
         session=db_session, image=image, source_name="ground_truth", count=1
     )
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     evaluation_run_resolver.create(
@@ -171,7 +167,7 @@ def test_delete_annotation_source__used_by_evaluation_run(db_session: Session) -
 def test_delete_annotation_source__has_child_collection(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     create_collection(
@@ -196,7 +192,7 @@ def test_delete_annotation_source__has_child_collection(db_session: Session) -> 
 def test_delete_annotation_source__caption_with_caption(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     caption = create_caption(
@@ -225,7 +221,7 @@ def test_delete_annotation_source__caption_with_caption(db_session: Session) -> 
 def test_delete_annotation_source__with_caption(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     source_id = pred.annotation_collection_id
@@ -253,7 +249,7 @@ def test_delete_annotation_source__with_caption(db_session: Session) -> None:
 def test_delete_annotation_source__deleted_caption(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    (pred,) = helpers.create_source_annotations(
+    (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
     source_id = pred.annotation_collection_id

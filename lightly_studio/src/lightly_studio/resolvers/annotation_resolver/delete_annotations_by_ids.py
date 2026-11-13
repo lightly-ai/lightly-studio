@@ -18,11 +18,10 @@ from lightly_studio.models.annotation.segmentation import SegmentationAnnotation
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricTable
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricTable
-from lightly_studio.models.metadata import SampleMetadataTable
-from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import embedding_plot_resolver, evaluation_run_resolver
+from lightly_studio.resolvers.sample_resolver import sample_dependent_tables
 from lightly_studio.utils import batching
 
 logger = logging.getLogger(__name__)
@@ -98,13 +97,7 @@ def delete_annotations_by_ids(
     )
     _delete_by_sample_ids(
         session=session,
-        tables=(
-            SampleTagLinkTable,
-            SampleEmbeddingTable,
-            SampleMetadataTable,
-            TemporalSpanTable,
-            CaptionTable,
-        ),
+        tables=sample_dependent_tables.SAMPLE_DEPENDENT_TABLES,
         sample_ids=sample_ids,
     )
     session.commit()

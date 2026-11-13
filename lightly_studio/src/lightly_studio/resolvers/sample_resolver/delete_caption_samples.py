@@ -6,11 +6,8 @@ from uuid import UUID
 
 from sqlmodel import Session, col, delete, select
 
-from lightly_studio.models.caption import CaptionTable
-from lightly_studio.models.metadata import SampleMetadataTable
-from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
-from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from lightly_studio.models.temporal_span import TemporalSpanTable
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.resolvers.sample_resolver import sample_dependent_tables
 
 
 def delete_caption_samples(session: Session, collection_id: UUID) -> None:
@@ -27,13 +24,7 @@ def delete_caption_samples(session: Session, collection_id: UUID) -> None:
     sample_ids = select(SampleTable.sample_id).where(
         col(SampleTable.collection_id) == collection_id
     )
-    for table in (
-        CaptionTable,
-        TemporalSpanTable,
-        SampleTagLinkTable,
-        SampleEmbeddingTable,
-        SampleMetadataTable,
-    ):
+    for table in sample_dependent_tables.SAMPLE_DEPENDENT_TABLES:
         session.exec(delete(table).where(col(table.sample_id).in_(sample_ids)))
     session.commit()
     session.exec(delete(SampleTable).where(col(SampleTable.collection_id) == collection_id))
