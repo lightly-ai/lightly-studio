@@ -5,11 +5,13 @@
 
     interface Props {
         name: string;
+        /** Where the source lives, for example "Frames". Shown after the name. */
+        owner?: string;
         annotationCount: number;
         onDelete: () => void;
     }
 
-    const { name, annotationCount, onDelete }: Props = $props();
+    const { name, owner, annotationCount, onDelete }: Props = $props();
 </script>
 
 <li
@@ -17,7 +19,12 @@
     data-testid="annotation-source-row"
 >
     <ColorMarker label={name} enableColorPicker />
-    <span class="min-w-0 flex-1 truncate text-sm" title={name}>{name}</span>
+    <span class="flex min-w-0 flex-1 items-baseline gap-2">
+        <span class="truncate text-sm" title={name}>{name}</span>
+        {#if owner}
+            <span class="shrink-0 text-xs text-muted-foreground">{owner}</span>
+        {/if}
+    </span>
     <span class="shrink-0 text-xs tabular-nums text-muted-foreground">
         {formatInteger(annotationCount)}
         {annotationCount === 1 ? 'annotation' : 'annotations'}

@@ -5,7 +5,7 @@ import { getApiErrorMessage } from '$lib/utils';
 import { toast } from 'svelte-sonner';
 
 interface Params {
-    /** The collection that owns the annotation sources. */
+    /** The collection the annotation source belongs to. */
     collectionId: string;
     source: { id: string; name: string };
     /** Awaited before the refresh, so a navigation it starts completes first. */

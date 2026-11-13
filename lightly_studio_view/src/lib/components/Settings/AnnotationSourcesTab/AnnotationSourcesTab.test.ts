@@ -10,9 +10,6 @@ const mocks = vi.hoisted(() => ({
     removeSource: vi.fn(),
     goto: vi.fn(),
     toastError: vi.fn(),
-    // The collection that owns the sources, when it is not the route collection.
-    ownerId: undefined as string | undefined,
-    ownerError: false,
     sourcesError: false
 }));
 
@@ -37,10 +34,12 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => {
 });
 
 vi.mock('./DeleteAnnotationSourceDialog/useDeleteAnnotationSource.svelte', () => ({
-    useDeleteAnnotationSource: (getParams: () => { onDeleted: () => void }) => ({
+    useDeleteAnnotationSource: (
+        getParams: () => { collectionId: string; onDeleted: () => void }
+    ) => ({
         mutation: { isPending: false },
         remove: () => {
-            mocks.removeSource();
+            mocks.removeSource(getParams().collectionId);
             getParams().onDeleted();
         }
     })
@@ -48,20 +47,17 @@ vi.mock('./DeleteAnnotationSourceDialog/useDeleteAnnotationSource.svelte', () =>
 
 vi.mock('$app/navigation', () => ({ goto: mocks.goto }));
 
-vi.mock('$lib/hooks/useAnnotationSourceOwnerId/useAnnotationSourceOwnerId.svelte', () => ({
-    useAnnotationSourceOwnerId: (getCollectionId: () => string) => ({
-        get ownerCollectionId() {
-            return mocks.ownerError ? undefined : (mocks.ownerId ?? getCollectionId());
-        },
-        get isError() {
-            return mocks.ownerError;
-        }
-    })
-}));
-
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.toastError, success: vi.fn() } }));
 
 const COLLECTION_ID = 'c1';
+
+const source = (collectionId: string, name: string, count: number, parentId = COLLECTION_ID) => ({
+    collection_id: collectionId,
+    name,
+    annotation_count: count,
+    parent_collection_id: parentId,
+    parent_sample_type: 'image'
+});
 
 const mockParams = (params: Record<string, string>) => {
     vi.spyOn(appState, 'page', 'get').mockReturnValue({
@@ -72,13 +68,8 @@ const mockParams = (params: Record<string, string>) => {
 describe('AnnotationSourcesTab', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        mocks.ownerId = undefined;
-        mocks.ownerError = false;
         mocks.sourcesError = false;
-        mocks.data.set([
-            { collection_id: 's1', name: 'ground_truth', annotation_count: 12 },
-            { collection_id: 's2', name: 'model_v1', annotation_count: 3 }
-        ]);
+        mocks.data.set([source('s1', 'ground_truth', 12), source('s2', 'model_v1', 3)]);
         mockParams({ dataset_id: 'd', collection_id: COLLECTION_ID });
         useGlobalStorage().lastAnnotationSource.set({});
     });
@@ -91,11 +82,25 @@ describe('AnnotationSourcesTab', () => {
         expect(screen.getByText('2 annotation sources')).toBeInTheDocument();
     });
 
-    it.each([
-        ['the owner collection', 'ownerError'],
-        ['the sources', 'sourcesError']
-    ] as const)('shows an error without a count when %s fail to load', (_, error) => {
-        mocks[error] = true;
+    it('names where each source lives when the sources live in more than one place', () => {
+        mocks.data.set([
+            { ...source('s1', 'events', 4, 'videos-1'), parent_sample_type: 'video' },
+            { ...source('s2', 'detections', 18, 'frames-1'), parent_sample_type: 'video_frame' }
+        ]);
+        render(AnnotationSourcesTab);
+
+        expect(screen.getByText('Videos')).toBeInTheDocument();
+        expect(screen.getByText('Frames')).toBeInTheDocument();
+    });
+
+    it('does not name where the sources live when they all live in one place', () => {
+        render(AnnotationSourcesTab);
+
+        expect(screen.queryByText('Images')).not.toBeInTheDocument();
+    });
+
+    it('shows an error without a count when the sources fail to load', () => {
+        mocks.sourcesError = true;
         mocks.data.set(undefined);
         render(AnnotationSourcesTab);
 
@@ -115,21 +120,40 @@ describe('AnnotationSourcesTab', () => {
         expect(mocks.removeSource).toHaveBeenCalledOnce();
     });
 
+    it('deletes a source from the collection it belongs to', async () => {
+        mocks.data.set([source('s1', 'events', 4), source('s2', 'detections', 18, 'frames-1')]);
+        render(AnnotationSourcesTab);
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Delete detections' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+        expect(mocks.removeSource).toHaveBeenCalledWith('frames-1');
+    });
+
     describe('on the annotations grid of a source', () => {
         beforeEach(() => {
             mockParams({ dataset_id: 'd', collection_type: 'annotation', collection_id: 's2' });
-            mocks.ownerId = COLLECTION_ID;
+            mocks.data.set([source('s1', 'events', 4), source('s2', 'detections', 18, 'frames-1')]);
         });
 
-        it('leaves the grid of a deleted source for the owner collection', async () => {
+        it('leaves the grid of a deleted source for the collection it belonged to', async () => {
             render(AnnotationSourcesTab);
 
-            await fireEvent.click(screen.getByRole('button', { name: 'Delete model_v1' }));
+            await fireEvent.click(screen.getByRole('button', { name: 'Delete detections' }));
             await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
 
-            expect(mocks.goto).toHaveBeenCalledWith(`/datasets/d/annotation/${COLLECTION_ID}`, {
+            expect(mocks.goto).toHaveBeenCalledWith('/datasets/d/annotation/frames-1', {
                 invalidateAll: true
             });
+        });
+
+        it('stays on the grid when another source is deleted', async () => {
+            render(AnnotationSourcesTab);
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Delete events' }));
+            await fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
+
+            expect(mocks.goto).not.toHaveBeenCalled();
         });
     });
 

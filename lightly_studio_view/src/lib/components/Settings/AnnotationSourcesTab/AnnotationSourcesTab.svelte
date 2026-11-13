@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { useAnnotationSourceOwnerId } from '$lib/hooks';
     import { page } from '$app/state';
     import { AnnotationSourceList } from './AnnotationSourceList';
     import { DeleteAnnotationSourceDialog } from './DeleteAnnotationSourceDialog';
@@ -15,22 +14,22 @@
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { dialogState: _dialogState }: Props = $props();
 
-    // On the annotations grid the route collection is a source. Its parent owns the sources.
+    // Any collection of the dataset lists every annotation source of the dataset.
     const routeCollectionId = $derived(page.params.collection_id ?? '');
-    const owner = useAnnotationSourceOwnerId(() => routeCollectionId);
-    const collectionId = $derived(owner.ownerCollectionId ?? '');
-    const sources = useAnnotationSources(() => ({ collectionId }));
-    const isError = $derived(owner.isError || sources.query.isError);
-    const isLoading = $derived(!isError && (!collectionId || sources.query.isLoading));
+    const sources = useAnnotationSources(() => ({ collectionId: routeCollectionId }));
+    const isError = $derived(sources.query.isError);
+    const isLoading = $derived(!isError && sources.query.isLoading);
     const sortedSources = $derived(
         [...(sources.query.data ?? [])].sort((a, b) => a.name.localeCompare(b.name))
     );
-    const followShownSource = useFollowShownSource(() => ({
-        routeCollectionId,
-        ownerCollectionId: collectionId
-    }));
+    const followShownSource = useFollowShownSource(() => ({ routeCollectionId }));
 
-    let deleting = $state<{ id: string; name: string; annotationCount: number } | null>(null);
+    let deleting = $state<{
+        id: string;
+        name: string;
+        annotationCount: number;
+        collectionId: string;
+    } | null>(null);
     const sourceCount = $derived(sortedSources.length);
 </script>
 
@@ -54,14 +53,15 @@
                     (deleting = {
                         id: source.collection_id,
                         name: source.name,
-                        annotationCount: source.annotation_count
+                        annotationCount: source.annotation_count,
+                        collectionId: source.parent_collection_id
                     })}
             />
         </div>
     </div>
     {#if deleting}
         <DeleteAnnotationSourceDialog
-            {collectionId}
+            collectionId={deleting.collectionId}
             source={deleting}
             onClose={() => (deleting = null)}
             onDeleted={followShownSource.afterDelete}

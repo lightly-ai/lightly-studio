@@ -53,9 +53,6 @@ vi.mock('./AnnotationSourcesTab/useAnnotationSources', () => ({
         query: { data: [], isLoading: false }
     })
 }));
-vi.mock('$lib/hooks/useAnnotationSourceOwnerId/useAnnotationSourceOwnerId.svelte', () => ({
-    useAnnotationSourceOwnerId: () => ({ ownerCollectionId: undefined })
-}));
 
 // Get reference to the mocked function
 import { useSettings } from '$lib/hooks/useSettings';

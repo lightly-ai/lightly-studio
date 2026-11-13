@@ -2,12 +2,12 @@ import { readAnnotationCollectionsWithCountsOptions } from '$lib/api/lightly_stu
 import { createQuery } from '@tanstack/svelte-query';
 
 interface UseAnnotationSourcesParams {
-    /** The collection that owns the annotation sources. */
+    /** Any collection of the dataset. */
     collectionId: string;
 }
 
-// Lists the annotation sources of a collection with their annotation counts. Deleting goes
-// through the DeleteAnnotationSourceDialog.
+// Lists every annotation source of the dataset with its annotation count and the collection it
+// belongs to. Deleting goes through the DeleteAnnotationSourceDialog.
 export const useAnnotationSources = (getParams: () => UseAnnotationSourcesParams) => {
     const query = createQuery(() => ({
         ...readAnnotationCollectionsWithCountsOptions({

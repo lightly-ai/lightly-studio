@@ -133,5 +133,4 @@ export {
 } from '$lib/hooks/useAnnotationTarget/messages';
 export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
 export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
-export { useAnnotationSourceOwnerId } from '$lib/hooks/useAnnotationSourceOwnerId/useAnnotationSourceOwnerId.svelte';
 export { useInvalidateAnnotationSourceQueries } from '$lib/hooks/useInvalidateAnnotationSourceQueries';

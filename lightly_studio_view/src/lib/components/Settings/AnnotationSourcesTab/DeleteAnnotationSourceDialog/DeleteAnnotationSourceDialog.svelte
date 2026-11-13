@@ -4,24 +4,24 @@
     import { useDeleteAnnotationSource } from './useDeleteAnnotationSource.svelte';
 
     interface Props {
-        /** The collection that owns the annotation sources. */
+        /** The collection the annotation source belongs to. */
         collectionId: string;
         source: { id: string; name: string; annotationCount: number };
         /** Called when the dialog closes, after a delete or a cancel. */
         onClose: () => void;
         /** Called with the deleted source, after the delete, once the dialog is closed. */
-        onDeleted?: (sourceId: string) => void | Promise<void>;
+        onDeleted?: (deleted: { sourceId: string; collectionId: string }) => void | Promise<void>;
     }
     const { collectionId, source, onClose, onDeleted }: Props = $props();
     const { mutation, remove } = useDeleteAnnotationSource(() => ({
         collectionId,
         source,
         // Close first, then hand back whatever `onDeleted` starts, so the refresh waits for it.
-        // The id is read before the close, which unmounts this dialog.
+        // The ids are read before the close, which unmounts this dialog.
         onDeleted: () => {
-            const sourceId = source.id;
+            const deleted = { sourceId: source.id, collectionId };
             onClose();
-            return onDeleted?.(sourceId);
+            return onDeleted?.(deleted);
         }
     }));
     const countText = $derived(
