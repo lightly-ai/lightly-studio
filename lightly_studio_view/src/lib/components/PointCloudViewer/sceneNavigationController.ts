@@ -15,6 +15,8 @@ interface Params {
     isActive?: () => boolean;
     /** Identifies the viewport receiving navigation commands. */
     navigationId?: symbol;
+    /** Moves the orbit target to the viewed part of the scene before a movement starts. */
+    anchorTarget?: () => void;
 }
 
 /** Animates navigation commands addressed to one viewport and cleans up on disposal. */
@@ -23,7 +25,8 @@ export function createSceneNavigationController({
     controls,
     invalidate,
     isActive,
-    navigationId
+    navigationId,
+    anchorTarget
 }: Params) {
     let navigationFrame: number | undefined;
     let navigationDamping = true;
@@ -108,6 +111,7 @@ export function createSceneNavigationController({
         if (phase !== 'stop' && isActive && !isActive()) return;
         if (camera instanceof THREE.OrthographicCamera && action.startsWith('rotate-')) return;
         if (phase === 'start') {
+            anchorTarget?.();
             if (navigationFrame === undefined) navigationDamping = controls.enableDamping;
             else cancelAnimationFrame(navigationFrame);
             continuousNavigation.set(action, (continuousNavigation.get(action) ?? 0) + 1);
@@ -127,6 +131,7 @@ export function createSceneNavigationController({
     });
 
     function navigateStep(action: SceneNavigationAction) {
+        anchorTarget?.();
         const targetPosition = camera.position.clone();
         const targetCenter = controls.target.clone();
         if (action === 'rotate-left' || action === 'rotate-right') {

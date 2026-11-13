@@ -48,45 +48,14 @@ describe('enableScreenSpacePanning', () => {
         expect(getViewDirection(camera).distanceTo(direction)).toBeCloseTo(0);
     });
 
-    it('keeps the target at its height when the view is steep enough', () => {
+    it('moves the target with the camera, so the view direction and distance stay the same', () => {
         const { camera, controls } = createControls([10, 10, 14]);
+        const offset = controls.target.clone().sub(camera.position);
         enableScreenSpacePanning(controls);
 
         panUp(controls, 2, camera);
 
-        expect(controls.target.z).toBeCloseTo(0);
-    });
-
-    it('lifts the target in a level view and restores its height once the view is steep', () => {
-        const { camera, controls } = createControls([10, 0, 0.01]);
-        enableScreenSpacePanning(controls);
-
-        panUp(controls, 2, camera);
-        expect(controls.target.z).toBeCloseTo(2);
-
-        camera.position.set(10, 0, 12);
-        controls.update();
-        const position = camera.position.clone();
-        const direction = getViewDirection(camera);
-        controls.dispatchEvent({ type: 'start' });
-        controls.update();
-
-        expect(controls.target.z).toBeCloseTo(0);
-        expect(camera.position.distanceTo(position)).toBeCloseTo(0);
-        expect(getViewDirection(camera).distanceTo(direction)).toBeCloseTo(0);
-    });
-
-    it('keeps a target height that was set from outside', () => {
-        const { camera, controls } = createControls([10, 0, 0.01]);
-        enableScreenSpacePanning(controls);
-        panUp(controls, 2, camera);
-
-        controls.target.set(0, 0, 5);
-        camera.position.set(10, 0, 20);
-        controls.update();
-        controls.dispatchEvent({ type: 'start' });
-
-        expect(controls.target.z).toBeCloseTo(5);
+        expect(controls.target.clone().sub(camera.position).distanceTo(offset)).toBeCloseTo(0);
     });
 
     it('restores ground plane panning on cleanup', () => {
