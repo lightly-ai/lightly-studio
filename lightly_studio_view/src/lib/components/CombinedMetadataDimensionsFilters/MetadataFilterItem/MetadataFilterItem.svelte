@@ -57,24 +57,27 @@
 <div class="space-y-1">
     <MetadataFieldHeader title={label} {expanded} {onToggleExpanded} />
     {#if expanded}
-        <NumericRangeInputs
-            {label}
-            {bound}
-            {value}
-            {unit}
-            integer={isInteger}
-            onValueCommit={(values) => onValueCommit(metadataKey, values)}
-        />
-        <div class="relative p-2">
-            <Slider
-                type="multiple"
-                class="filter-{metadataKey}"
-                min={0}
-                max={ticks}
-                step={1}
-                value={sliderValue}
-                onValueCommit={handleValueCommit}
+        <!-- Indented under the chevron. -->
+        <div class={onToggleExpanded ? 'pl-6' : undefined}>
+            <NumericRangeInputs
+                {label}
+                {bound}
+                {value}
+                {unit}
+                integer={isInteger}
+                onValueCommit={(values) => onValueCommit(metadataKey, values)}
             />
+            <div class="relative p-2">
+                <Slider
+                    type="multiple"
+                    class="filter-{metadataKey}"
+                    min={0}
+                    max={ticks}
+                    step={1}
+                    value={sliderValue}
+                    onValueCommit={handleValueCommit}
+                />
+            </div>
         </div>
     {/if}
 </div>
