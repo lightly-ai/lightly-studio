@@ -1,6 +1,6 @@
 <script lang="ts">
     import { page } from '$app/state';
-    import { AnnotationSourceList } from './AnnotationSourceList';
+    import { AnnotationSourceList, getSourceOwnerLabel } from './AnnotationSourceList';
     import { DeleteAnnotationSourceDialog } from './DeleteAnnotationSourceDialog';
     import { useAnnotationSources } from './useAnnotationSources';
     import { useFollowShownSource } from './useFollowShownSource';
@@ -19,8 +19,13 @@
     const sources = useAnnotationSources(() => ({ collectionId: routeCollectionId }));
     const isError = $derived(sources.query.isError);
     const isLoading = $derived(!isError && sources.query.isLoading);
+    // Sources that live in the same place stay together, so a long list is easy to scan.
     const sortedSources = $derived(
-        [...(sources.query.data ?? [])].sort((a, b) => a.name.localeCompare(b.name))
+        [...(sources.query.data ?? [])].sort(
+            (a, b) =>
+                getSourceOwnerLabel(a).localeCompare(getSourceOwnerLabel(b)) ||
+                a.name.localeCompare(b.name)
+        )
     );
     const followShownSource = useFollowShownSource(() => ({ routeCollectionId }));
 

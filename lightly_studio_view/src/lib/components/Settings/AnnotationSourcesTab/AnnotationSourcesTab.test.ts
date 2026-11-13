@@ -93,6 +93,24 @@ describe('AnnotationSourcesTab', () => {
         expect(screen.getByText('Frames')).toBeInTheDocument();
     });
 
+    it('keeps the sources that live in the same place together', () => {
+        mocks.data.set([
+            { ...source('s1', 'events', 4, 'videos-1'), parent_sample_type: 'video' },
+            { ...source('s2', 'detections', 18, 'frames-1'), parent_sample_type: 'video_frame' },
+            { ...source('s3', 'highlights', 4, 'videos-1'), parent_sample_type: 'video' },
+            { ...source('s4', 'predictions', 12, 'frames-1'), parent_sample_type: 'video_frame' }
+        ]);
+        render(AnnotationSourcesTab);
+
+        const rows = screen.getAllByTestId('annotation-source-row').map((row) => row.textContent);
+        expect(rows).toEqual([
+            expect.stringContaining('detections'),
+            expect.stringContaining('predictions'),
+            expect.stringContaining('events'),
+            expect.stringContaining('highlights')
+        ]);
+    });
+
     it('does not name where the sources live when they all live in one place', () => {
         render(AnnotationSourcesTab);
 
