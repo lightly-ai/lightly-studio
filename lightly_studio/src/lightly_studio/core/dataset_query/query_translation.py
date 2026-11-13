@@ -7,9 +7,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Protocol, TypeVar
-
-from typing_extensions import assert_never
+from typing import Protocol, TypeVar, assert_never
 
 from lightly_studio.core.dataset_query import evaluation_query_translation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR

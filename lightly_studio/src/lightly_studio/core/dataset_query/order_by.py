@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, cast, overload
+from typing import Any, Self, cast, overload
 from uuid import UUID
 
 import sqlalchemy
@@ -13,7 +13,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
-from typing_extensions import Self, TypeVar
+from typing_extensions import TypeVar
 
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.database import db_json

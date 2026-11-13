@@ -7,9 +7,8 @@ import tempfile
 from collections.abc import Iterable, Sequence
 from itertools import islice
 from pathlib import Path
+from typing import Self
 from uuid import UUID
-
-from typing_extensions import Self
 
 from lightly_studio.analytics import ingest_tracking
 from lightly_studio.analytics.ingest_tracking import IngestFormat

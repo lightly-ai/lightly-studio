@@ -1,6 +1,6 @@
 """Translate GUI evaluation predicates using the Python query API."""
 
-from typing_extensions import assert_never
+from typing import assert_never
 
 from lightly_studio.core.dataset_query.annotation_evaluation_metric_expression import (
     AnnotationEvaluationMetricMatchExpression,

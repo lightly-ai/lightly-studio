@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from collections.abc import Iterator, Mapping
-from typing import Generic, cast
+from typing import Generic, Self, cast
 from uuid import UUID
 
 from sqlalchemy import orm
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
-from typing_extensions import Self, TypeVar
+from typing_extensions import TypeVar
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
