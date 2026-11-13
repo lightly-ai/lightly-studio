@@ -56,8 +56,6 @@ export interface PointCloudWorkspaceLayoutState {
     pointSize: number;
     /** Whether navigation buttons and shortcut hints are shown. */
     showNavigationHelpers: boolean;
-    /** Whether hovered annotation metadata is shown in scene viewports. */
-    showAnnotationTooltips: boolean;
     /** Accumulation preferences and actions for the scene settings. */
     accumulation?: ReturnType<typeof createWorkspaceController>['accumulation'];
     /** Strategy used to color the point cloud. */
@@ -84,8 +82,6 @@ export interface PointCloudWorkspaceLayoutState {
     onPointSizeChange: (value: number) => void;
     /** Updates navigation helper visibility. */
     onToggleNavigationHelpers: (show: boolean) => void;
-    /** Updates annotation tooltip visibility for all scene viewports. */
-    onToggleAnnotationTooltips: (show: boolean) => void;
     /** Selects the tool shared by all scene viewports. */
     onToolChange: (tool: WorkspaceTool) => void;
     /** Selects or clears the current cuboid. */
