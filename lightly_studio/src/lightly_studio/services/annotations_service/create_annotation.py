@@ -13,7 +13,13 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
-from lightly_studio.resolvers import annotation_resolver, evaluation_run_resolver
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    evaluation_run_resolver,
+    object_track_resolver,
+)
 
 
 class AnnotationCreateParams(BaseModel):
@@ -27,6 +33,8 @@ class AnnotationCreateParams(BaseModel):
     annotation_collection_name: str | None = None
     collection_id: UUID
     parent_sample_id: UUID
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
 
     x: int | None = None
     y: int | None = None
@@ -43,6 +51,10 @@ class AnnotationCreateParams(BaseModel):
 def create_annotation(session: Session, annotation: AnnotationCreateParams) -> AnnotationBaseTable:
     """Create a new annotation.
 
+    When ``create_new_track`` is set, a new :class:`ObjectTrackTable` row is
+    created atomically with the next available track number for the dataset,
+    and the annotation is linked to it.
+
     Args:
         session: Database session for executing the operation.
         annotation: Annotation data to create.
@@ -50,15 +62,20 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
     Returns:
         The retrieved annotation.
     """
-    annotation_create = AnnotationCreate(
-        **annotation.model_dump(),
-    )
-    new_annotation_ids = annotation_resolver.create_many(
-        session=session,
-        parent_collection_id=annotation.collection_id,
-        annotations=[annotation_create],
-        collection_name=annotation.annotation_collection_name,
-    )
+    try:
+        annotation_data = annotation.model_dump(exclude={"create_new_track"})
+        annotation_data["object_track_id"] = _resolve_object_track_id(
+            session=session, annotation=annotation
+        )
+        new_annotation_ids = annotation_resolver.create_many(
+            session=session,
+            parent_collection_id=annotation.collection_id,
+            annotations=[AnnotationCreate(**annotation_data)],
+            collection_name=annotation.annotation_collection_name,
+        )
+    except Exception:
+        session.rollback()
+        raise
 
     if not new_annotation_ids:
         raise ValueError("Failed to create annotation.")
@@ -77,3 +94,47 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
     )
 
     return created_annotation
+
+
+def _resolve_object_track_id(session: Session, annotation: AnnotationCreateParams) -> UUID | None:
+    if annotation.create_new_track and annotation.object_track_id is not None:
+        raise ValueError("Cannot set both create_new_track and object_track_id.")
+    if not annotation.create_new_track:
+        if annotation.object_track_id is not None:
+            _validate_object_track(
+                session=session,
+                object_track_id=annotation.object_track_id,
+                collection_id=annotation.collection_id,
+            )
+        return annotation.object_track_id
+
+    collection = collection_resolver.get_by_id(
+        session=session, collection_id=annotation.collection_id
+    )
+    if collection is None:
+        raise ValueError(f"Collection {annotation.collection_id} not found.")
+    # Source creation commits, so prepare it before inserting the uncommitted track.
+    collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=annotation.collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=annotation.annotation_collection_name,
+    )
+    track = object_track_resolver.create_with_next_number(
+        session=session, dataset_id=collection.dataset_id, commit=False
+    )
+    return track.object_track_id
+
+
+def _validate_object_track(session: Session, object_track_id: UUID, collection_id: UUID) -> None:
+    track = object_track_resolver.get_by_id(session=session, object_track_id=object_track_id)
+    if track is None:
+        raise ValueError(f"Object track {object_track_id} not found.")
+    collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
+    if collection is None:
+        raise ValueError(f"Collection {collection_id} not found.")
+    if track.dataset_id != collection.dataset_id:
+        raise ValueError(
+            f"Object track {object_track_id} belongs to a different dataset"
+            f" than collection {collection_id}."
+        )
