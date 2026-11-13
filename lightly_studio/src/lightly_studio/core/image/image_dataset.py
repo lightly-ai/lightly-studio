@@ -355,8 +355,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         Raises:
             ValueError: If the dataset has no annotation source with this name.
-            AnnotationSourceInUseError: If evaluation runs use the annotation source, or if
-                the annotation source has child collections other than captions.
+            AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation
+                source, or if it has child collections other than captions.
         """
         sources = collection_resolver.get_annotation_collections(
             session=self.session, parent_collection_id=self.collection_id
