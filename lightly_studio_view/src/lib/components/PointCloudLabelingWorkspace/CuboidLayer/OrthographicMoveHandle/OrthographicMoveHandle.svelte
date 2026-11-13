@@ -49,22 +49,17 @@
         <T.CircleGeometry args={[14 * unit, 32]} />
         <T.MeshBasicMaterial transparent opacity={0} depthWrite={false} side={DoubleSide} />
     </T.Mesh>
-    <T.Mesh renderOrder={1002} raycast={() => {}}>
-        <T.CircleGeometry args={[($hovered ? 10 : 8) * unit, 32]} />
-        <T.MeshBasicMaterial
-            color="#ffffff"
-            depthTest={false}
-            depthWrite={false}
-            side={DoubleSide}
-        />
-    </T.Mesh>
-    <T.Mesh renderOrder={1003} raycast={() => {}}>
-        <T.CircleGeometry args={[($hovered ? 8 : 6) * unit, 32]} />
-        <T.MeshBasicMaterial
-            color="#fbbf24"
-            depthTest={false}
-            depthWrite={false}
-            side={DoubleSide}
-        />
-    </T.Mesh>
+    <!-- Transparent materials render after the translucent cuboid fill, so the dot stays on top. -->
+    {#each [{ radius: $hovered ? 12 : 10, color: '#0f172a' }, { radius: $hovered ? 10 : 8, color: '#ffffff' }, { radius: $hovered ? 8 : 6, color: '#fbbf24' }] as ring, index}
+        <T.Mesh renderOrder={1001 + index} raycast={() => {}}>
+            <T.CircleGeometry args={[ring.radius * unit, 32]} />
+            <T.MeshBasicMaterial
+                color={ring.color}
+                transparent
+                depthTest={false}
+                depthWrite={false}
+                side={DoubleSide}
+            />
+        </T.Mesh>
+    {/each}
 </T.Group>
