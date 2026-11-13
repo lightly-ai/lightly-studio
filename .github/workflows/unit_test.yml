@@ -182,13 +182,13 @@ jobs:
           # behavior doesn't vary by Python version.
           - python: "3.10"
             database: DuckDB
-            make_target: test-without-build
+            make_target: test
           - python: "3.15"
             database: DuckDB
-            make_target: test-without-build
+            make_target: test
           - python: "3.15"
             database: Postgres
-            make_target: test-postgres-without-build
+            make_target: test-postgres
     steps:
       - name: Checkout Code
         uses: actions/checkout@v7
@@ -228,12 +228,6 @@ jobs:
         env:
           UV_PYTHON: ${{ matrix.python }}
         run: make migration-check-postgresql
-
-      # The app only checks that the webapp exists at import time. The E2E and frontend jobs
-      # test the real build.
-      - name: Create mock webapp
-        working-directory: lightly_studio
-        run: make mock-webapp-dist
 
       # Catches packaging errors before a release. The wheel is pure Python, so one job is enough.
       - name: Build Python package

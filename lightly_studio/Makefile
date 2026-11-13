@@ -421,13 +421,9 @@ demo-mcap-urls:
 		"$(firstword $(FLOCI_MCAP_FILES))" "$(DEMO_MCAP_HOST)" "$(DEMO_MCAP_PORT)" \
 		"$(DEMO_DATASET_ID)" "$(DEMO_RECORDING_ID)"
 
+# The tests need only a mock webapp. A real build in its place is kept.
 .PHONY: test
-test: build
-	$(MAKE) test-without-build
-
-# Runs the tests with the current build. CI uses a mock webapp instead of the build.
-.PHONY: test-without-build
-test-without-build:
+test: mock-webapp-dist
 	@echo "Running tests..."
 	PYTHONPATH=$(PWD) uv run pytest -n auto
 
@@ -447,11 +443,7 @@ test-coverage:
 	  --cov-report=term-missing:skip-covered
 
 .PHONY: test-postgres
-test-postgres: build
-	$(MAKE) test-postgres-without-build
-
-.PHONY: test-postgres-without-build
-test-postgres-without-build:
+test-postgres: mock-webapp-dist
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres -n 3
 
