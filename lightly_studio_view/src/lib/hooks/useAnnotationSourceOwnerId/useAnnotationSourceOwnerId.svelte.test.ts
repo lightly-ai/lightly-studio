@@ -72,6 +72,31 @@ describe('useAnnotationSourceOwnerId', () => {
         expect(useAnnotationSourceOwnerId(() => 'sequence-1').ownerCollectionId).toBeUndefined();
     });
 
+    it('is the VIDEO_FRAME child of a video collection', () => {
+        mocks.data = { collection_id: 'videos-1', sample_type: 'video' };
+        mocks.hierarchy = [
+            { collection_id: 'videos-1', sample_type: 'video' },
+            {
+                collection_id: 'frames-2',
+                sample_type: 'video_frame',
+                parent_collection_id: 'videos-2'
+            },
+            {
+                collection_id: 'frames-1',
+                sample_type: 'video_frame',
+                parent_collection_id: 'videos-1'
+            }
+        ];
+
+        expect(useAnnotationSourceOwnerId(() => 'videos-1').ownerCollectionId).toBe('frames-1');
+    });
+
+    it('is the frame collection itself on the frames grid', () => {
+        mocks.data = { collection_id: 'frames-1', sample_type: 'video_frame' };
+
+        expect(useAnnotationSourceOwnerId(() => 'frames-1').ownerCollectionId).toBe('frames-1');
+    });
+
     it('is the sequence itself when it has no GROUP child', () => {
         mocks.data = { collection_id: 'sequence-1', sample_type: 'sequence' };
         mocks.hierarchy = [{ collection_id: 'sequence-1', sample_type: 'sequence' }];
