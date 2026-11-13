@@ -68,17 +68,15 @@ it('draws a cuboid on the sample points and highlights the points that it takes 
         }
     });
     const onpointerdown = mocks.planeProps?.onpointerdown as (event: unknown) => void;
-    // Side from world (0, 0) to (2, 0), then a width of 1 toward +Y.
+    // Rectangle from world (0, 0) to (2, 1).
     onpointerdown({ point: { x: 0, y: 0, z: 0 }, nativeEvent: pointer('pointerdown', 200, 200) });
-    canvas.dispatchEvent(pointer('pointermove', 300, 200));
-    canvas.dispatchEvent(pointer('pointerup', 300, 200));
     canvas.dispatchEvent(pointer('pointermove', 300, 150));
-    canvas.dispatchEvent(pointer('pointerdown', 300, 150));
+    canvas.dispatchEvent(pointer('pointerup', 300, 150));
 
     expect(onCreateCuboid).toHaveBeenCalledOnce();
     expect(onCreateCuboid.mock.calls[0][0].size).toEqual([
         expect.closeTo(2),
         expect.closeTo(1),
-        expect.closeTo(1.5)
+        expect.closeTo(1)
     ]);
 });

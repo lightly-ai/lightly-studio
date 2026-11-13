@@ -40,7 +40,7 @@
     isScaleSource={cameraMode === 'perspective' || scene.expandedProjection === cameraMode}
     onselect={layout.onSelect}
     onhover={(id) => layout.onHover(id)}
-    onCreateCuboid={layout.onCreateCuboid}
+    onCreateCuboid={(box) => layout.onCreateCuboid(box, cameraMode !== 'perspective')}
     draftCuboid={layout.draftCuboid}
     onCuboidDraftChange={layout.onCuboidDraftChange}
     onPreviousTick={cameraMode === 'perspective' ? layout.onPreviousFrame : undefined}

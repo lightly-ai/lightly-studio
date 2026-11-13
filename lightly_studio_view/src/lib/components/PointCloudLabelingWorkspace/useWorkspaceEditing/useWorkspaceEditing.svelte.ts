@@ -142,16 +142,20 @@ export function useWorkspaceEditing(
         }
     }
 
-    async function handleCreateCuboid(box: CuboidBox): Promise<void> {
+    async function handleCreateCuboid(box: CuboidBox, selectClass = false): Promise<void> {
         const asTrack = addingTrack;
-        await createCuboidAnnotation(box, async (annotationId) => {
-            await getWorkspace().tickDetails.refetch({ throwOnError: true });
-            selectedCuboidId = annotationId;
-            activeTool = 'select';
-            addingTrack = false;
-            // A failed attach leaves a plain cuboid, never an empty track.
-            if (asTrack) await handleStartTrack(annotationId);
-        });
+        await createCuboidAnnotation(
+            box,
+            async (annotationId) => {
+                await getWorkspace().tickDetails.refetch({ throwOnError: true });
+                selectedCuboidId = annotationId;
+                activeTool = 'select';
+                addingTrack = false;
+                // A failed attach leaves a plain cuboid, never an empty track.
+                if (asTrack) await handleStartTrack(annotationId);
+            },
+            selectClass
+        );
     }
 
     function setActiveTool(tool: WorkspaceTool): void {

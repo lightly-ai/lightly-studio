@@ -1,10 +1,12 @@
 <script lang="ts">
     import { T } from '@threlte/core';
+    import { untrack } from 'svelte';
     import type { Bounds3, CameraMode } from '$lib/components/PointCloudLabelingWorkspace/domain';
     import type { PointBatch } from '$lib/components/PointCloudViewer';
     import { getCuboidCreationPlane } from './cuboidCreationPlane';
     import type { CuboidBox } from './cuboidDraft';
     import CuboidDraftPreview from './CuboidDraftPreview.svelte';
+    import { getProportionalCuboid } from './orthographicDraft';
     import { useCuboidDraft } from './useCuboidDraft';
 
     /** Invisible plane on which the user draws a cuboid in steps. */
@@ -41,11 +43,17 @@
         getCameraMode: () => cameraMode,
         getBatch: () => batch,
         getTick: () => tick,
-        onCreate: (box) => onCreateCuboid(box)
+        getRectangleOnly: () => cameraMode !== 'perspective',
+        onCreate: (box) => {
+            const cuboid =
+                cameraMode === 'perspective' ? box : getProportionalCuboid(cameraMode, box);
+            if (cuboid) onCreateCuboid(cuboid);
+        }
     });
 
     $effect(() => {
-        onHighlightChange?.(draft.highlightBox);
+        const box = draft.highlightBox;
+        untrack(() => onHighlightChange?.(box));
     });
 </script>
 

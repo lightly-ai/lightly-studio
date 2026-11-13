@@ -30,6 +30,8 @@ interface Params {
     getBatch: () => PointBatch | undefined;
     /** Timeline tick on display. The batch stays the same while the next tick loads. */
     getTick: () => number | undefined;
+    /** Collects a rectangle without fitting depth for the shared orthographic draft. */
+    getRectangleOnly?: () => boolean;
     onCreate: (box: CuboidBox) => void;
 }
 
@@ -84,6 +86,7 @@ export function useCuboidDraft({
     getCameraMode,
     getBatch,
     getTick,
+    getRectangleOnly = () => false,
     onCreate
 }: Params): CuboidDraftReturn {
     const { camera, renderer } = useThrelte();
@@ -108,7 +111,7 @@ export function useCuboidDraft({
             batch: getBatch(),
             tick: getTick(),
             plane: createDraftPlane(cameraMode, startWorld),
-            step: hasAngledFootprint(cameraMode) ? 'side' : 'rectangle',
+            step: !getRectangleOnly() && hasAngledFootprint(cameraMode) ? 'side' : 'rectangle',
             isPressed: true,
             startScreen,
             startWorld,
@@ -225,7 +228,12 @@ export function useCuboidDraft({
                 active.startWorld,
                 active.currentWorld
             );
-            return finish(getDraftBox(rectangle, fitMissingAxis(rectangle, active.batch)));
+            return finish(
+                getDraftBox(
+                    rectangle,
+                    getRectangleOnly() ? undefined : fitMissingAxis(rectangle, active.batch)
+                )
+            );
         }
         if (active.step === 'side') {
             // Without a side yet, the next click sets its end.

@@ -5,8 +5,9 @@
     interface Props extends DraftParams {
         onReady: (draft: ReturnType<typeof useCuboidDraft>) => void;
     }
-    let { onReady, getCameraMode, getBatch, getTick, onCreate }: Props = $props();
+    let { onReady, getCameraMode, getBatch, getTick, getRectangleOnly, onCreate }: Props = $props();
     const draft = useCuboidDraft({
+        getRectangleOnly: () => getRectangleOnly?.() ?? false,
         getCameraMode: () => getCameraMode(),
         getBatch: () => getBatch(),
         getTick: () => getTick(),

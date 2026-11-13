@@ -3,9 +3,11 @@ import { render } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import { OrthographicCamera } from 'three';
 import CuboidDraftTarget from './CuboidDraftTarget.svelte';
+import CuboidDraftGroupHarness from './CuboidDraftGroupHarness.svelte';
 
 const mocks = vi.hoisted(() => ({
     useThrelte: vi.fn(),
+    planePropsList: [] as Record<string, unknown>[],
     planeProps: null as Record<string, unknown> | null
 }));
 vi.mock('@threlte/core', () => ({
@@ -15,7 +17,10 @@ vi.mock('@threlte/core', () => ({
         {},
         {
             get: (_target, element) => (_anchor: unknown, props: Record<string, unknown>) => {
-                if (element === 'Mesh' && props.visible === false) mocks.planeProps = props;
+                if (element === 'Mesh' && props.visible === false) {
+                    mocks.planeProps = props;
+                    mocks.planePropsList.push(props);
+                }
             }
         }
     )
@@ -27,6 +32,7 @@ const onCreateCuboid = vi.fn();
 beforeEach(() => {
     vi.clearAllMocks();
     mocks.planeProps = null;
+    mocks.planePropsList = [];
     canvas = document.createElement('canvas');
     canvas.getBoundingClientRect = () => new DOMRect(0, 0, 400, 400);
     canvas.setPointerCapture = vi.fn();
@@ -72,30 +78,105 @@ function dragOnPlane(button = 0, onHighlightChange?: (box: unknown) => void): vo
 }
 
 describe('CuboidDraftTarget', () => {
-    it('creates an angled box from a dragged side and a width click', () => {
-        dragOnPlane();
-        canvas.dispatchEvent(pointer('pointerup', 325, 125));
-        canvas.dispatchEvent(pointer('pointermove', 325, 75));
-        canvas.dispatchEvent(pointer('pointerdown', 325, 75));
-        expect(onCreateCuboid).toHaveBeenCalledOnce();
-        const box = onCreateCuboid.mock.calls[0][0];
-        expect(box.yaw).toBeCloseTo(Math.atan2(1, 2));
-        expect(box.size[0]).toBeCloseTo(Math.sqrt(5));
-        expect(box.size[1]).toBeCloseTo(2 / Math.sqrt(5));
+    it('creates a cuboid immediately after a rectangle drag in Top, Side, or Front', () => {
+        const cameras = [
+            createTopCamera(),
+            createProjectionCamera('front'),
+            createProjectionCamera('side'),
+            createTopCamera()
+        ];
+        for (const camera of cameras)
+            mocks.useThrelte.mockReturnValueOnce({
+                camera: { current: camera },
+                renderer: { domElement: canvas }
+            });
+        const onHighlightChange = vi.fn(() => {
+            if (onHighlightChange.mock.calls.length > 30)
+                throw new Error('Highlight feedback loop');
+        });
+        render(CuboidDraftGroupHarness, {
+            props: {
+                onHighlightChange,
+                onCreateCuboid
+            }
+        });
+        for (const index of [3, 2, 1]) {
+            const onpointerdown = mocks.planePropsList[index].onpointerdown as (
+                event: unknown
+            ) => void;
+            onpointerdown({
+                point: { x: 0, y: 0, z: 0 },
+                nativeEvent: pointer('pointerdown', 200, 200)
+            });
+            canvas.dispatchEvent(pointer('pointermove', 300, 150));
+            flushSync();
+            canvas.dispatchEvent(pointer('pointerup', 300, 150));
+            canvas.dispatchEvent(pointer('lostpointercapture', 300, 150));
+            flushSync();
+            expect(
+                onCreateCuboid.mock.calls.at(-1)?.[0].size.every((extent: number) => extent > 0.1)
+            ).toBe(true);
+        }
+        expect(onCreateCuboid).toHaveBeenCalledTimes(3);
     });
 
-    it('reports the highlight region while drawing and clears it at the end', () => {
+    it('keeps the active projection highlight when the owner updates idle viewports', () => {
+        const onHighlightChange = vi.fn(() => {
+            if (onHighlightChange.mock.calls.length > 20)
+                throw new Error('Highlight feedback loop');
+        });
+        render(CuboidDraftGroupHarness, { props: { onHighlightChange } });
+        onHighlightChange.mockClear();
+        const onpointerdown = mocks.planeProps?.onpointerdown as (event: unknown) => void;
+        onpointerdown({
+            point: { x: 0.5, y: 0.5, z: 0 },
+            nativeEvent: pointer('pointerdown', 225, 175)
+        });
+        canvas.dispatchEvent(pointer('pointermove', 325, 125));
+        flushSync();
+        expect(onHighlightChange).toHaveBeenCalledExactlyOnceWith(
+            expect.objectContaining({ size: [expect.closeTo(2), expect.closeTo(1), Infinity] })
+        );
+    });
+
+    it('creates a proportional box on rectangle release without another confirmation click', () => {
+        dragOnPlane();
+        expect(onCreateCuboid).not.toHaveBeenCalled();
+        canvas.dispatchEvent(pointer('pointerup', 325, 125));
+        expect(onCreateCuboid).toHaveBeenCalledExactlyOnceWith({
+            center: [expect.closeTo(1.5), expect.closeTo(1), expect.closeTo(0.5)],
+            size: [expect.closeTo(2), expect.closeTo(1), expect.closeTo(1)],
+            yaw: 0
+        });
+    });
+
+    it('reports the highlight region while drawing and clears it on release', () => {
         const onHighlightChange = vi.fn();
         dragOnPlane(0, onHighlightChange);
-        canvas.dispatchEvent(pointer('pointerup', 325, 125));
-        canvas.dispatchEvent(pointer('pointermove', 325, 75));
         flushSync();
         expect(onHighlightChange).toHaveBeenLastCalledWith(
-            expect.objectContaining({ yaw: expect.closeTo(Math.atan2(1, 2)) })
+            expect.objectContaining({ size: [expect.closeTo(2), expect.closeTo(1), Infinity] })
         );
-        canvas.dispatchEvent(pointer('pointerdown', 325, 75));
+        canvas.dispatchEvent(pointer('pointerup', 325, 125));
         flushSync();
         expect(onHighlightChange).toHaveBeenLastCalledWith(null);
+    });
+
+    it('does not create a cuboid from a line', () => {
+        render(CuboidDraftTarget, {
+            props: {
+                bounds: { min: [-4, -4, 0], max: [4, 4, 2] },
+                cameraMode: 'top',
+                onCreateCuboid
+            }
+        });
+        const onpointerdown = mocks.planeProps?.onpointerdown as (event: unknown) => void;
+        onpointerdown({
+            point: { x: 0, y: 0, z: 0 },
+            nativeEvent: pointer('pointerdown', 200, 200)
+        });
+        canvas.dispatchEvent(pointer('pointerup', 300, 200));
+        expect(onCreateCuboid).not.toHaveBeenCalled();
     });
 
     it('does not write to its owner while it is destroyed', () => {
@@ -117,13 +198,21 @@ describe('CuboidDraftTarget', () => {
         'creates nothing after %s',
         (cancel) => {
             dragOnPlane(cancel === 'right-button drag' ? 2 : 0);
-            canvas.dispatchEvent(pointer('pointerup', 325, 125));
             if (cancel === 'Escape')
                 window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
             if (cancel === 'context menu')
                 canvas.dispatchEvent(pointer('contextmenu', 325, 125, 2));
-            canvas.dispatchEvent(pointer('pointerdown', 325, 75));
+            canvas.dispatchEvent(pointer('pointerup', 325, 125));
             expect(onCreateCuboid).not.toHaveBeenCalled();
         }
     );
 });
+
+function createProjectionCamera(mode: 'side' | 'front'): OrthographicCamera {
+    const camera = new OrthographicCamera(-4, 4, 4, -4, 0.1, 100);
+    camera.up.set(0, 0, 1);
+    camera.position.set(mode === 'side' ? 10 : 0, mode === 'front' ? -10 : 0, 0);
+    camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    return camera;
+}

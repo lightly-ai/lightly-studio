@@ -33,7 +33,8 @@ interface CreateCuboidParams {
 interface UseCreateCuboidAnnotationReturn {
     handleCreateCuboid: (
         box: CuboidBox,
-        onCreated: (annotationId: string) => void | Promise<void>
+        onCreated: (annotationId: string) => void | Promise<void>,
+        selectClass?: boolean
     ) => Promise<void>;
     showSelectClassDialog: ReturnType<typeof useSelectClassDialog>['open'];
     handleClassSelected: ReturnType<typeof useSelectClassDialog>['handleConfirm'];
@@ -88,9 +89,12 @@ export function useCreateCuboidAnnotation({
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() ?? '' }));
     const { lastAnnotationLabel, updateLastAnnotationLabel } = useGlobalStorage();
 
-    async function selectAnnotationLabel(collectionId: string): Promise<string | null> {
+    async function selectAnnotationLabel(
+        collectionId: string,
+        selectClass: boolean
+    ): Promise<string | null> {
         const stored = get(lastAnnotationLabel)[collectionId] ?? null;
-        if (stored) return stored;
+        if (stored && !selectClass) return stored;
         const selection = await requestLabel();
         if (!selection?.label) return null;
         updateLastAnnotationLabel(collectionId, selection.label);
@@ -154,13 +158,14 @@ export function useCreateCuboidAnnotation({
 
     async function handleCreateCuboid(
         box: CuboidBox,
-        onCreated: (annotationId: string) => void | Promise<void>
+        onCreated: (annotationId: string) => void | Promise<void>,
+        selectClass = false
     ): Promise<void> {
         const collectionId = getCollectionId();
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
-        const labelName = await selectAnnotationLabel(collectionId);
+        const labelName = await selectAnnotationLabel(collectionId, selectClass);
         if (!labelName) return;
         // Cancel if the active tick changed while the class dialog was open.
         if (getTickSampleId() !== sampleId) return;

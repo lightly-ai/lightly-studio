@@ -84,12 +84,18 @@ function pointer(type: string, clientX: number, clientY: number, button = 0, poi
 }
 
 interface SetupOptions {
+    rectangleOnly?: boolean;
     cameraMode?: CameraMode;
     camera?: Camera;
     batch?: PointBatch;
 }
 
-function setup({ cameraMode = 'top', camera = createTopCamera(), batch }: SetupOptions = {}) {
+function setup({
+    rectangleOnly,
+    cameraMode = 'top',
+    camera = createTopCamera(),
+    batch
+}: SetupOptions = {}) {
     mocks.useThrelte.mockReturnValue({
         camera: { current: camera },
         renderer: { domElement: canvas }
@@ -97,6 +103,7 @@ function setup({ cameraMode = 'top', camera = createTopCamera(), batch }: SetupO
     const ref: { current?: Draft } = {};
     const instance = render(CuboidDraftHarness, {
         props: {
+            getRectangleOnly: () => rectangleOnly ?? false,
             getCameraMode: () => cameraMode,
             getBatch: () => batch,
             getTick: () => 0,
@@ -161,6 +168,20 @@ function startHeightStep() {
 }
 
 describe('useCuboidDraft', () => {
+    it('draws a top rectangle with one drag for a shared orthographic draft', () => {
+        const { draft } = setup({ rectangleOnly: true });
+        pressAt(draft, 200, 200, [0, 0, 0]);
+        canvas.dispatchEvent(pointer('pointermove', 300, 150));
+        expect(draft.previewBox?.size).toEqual([expect.closeTo(2), expect.closeTo(1), 0.1]);
+        canvas.dispatchEvent(pointer('pointerup', 300, 150));
+        expect(onCreate).toHaveBeenCalledExactlyOnceWith({
+            center: [expect.closeTo(1), expect.closeTo(0.5), 0],
+            size: [expect.closeTo(2), expect.closeTo(1), 0.1],
+            yaw: 0
+        });
+        expect(draft.previewBox).toBeNull();
+    });
+
     describe('side and front views', () => {
         it('creates a fitted box after one drag', () => {
             const batch = createBatch([

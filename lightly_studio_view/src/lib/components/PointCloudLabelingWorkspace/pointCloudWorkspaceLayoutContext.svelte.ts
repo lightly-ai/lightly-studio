@@ -92,7 +92,7 @@ export interface PointCloudWorkspaceLayoutState {
     /** Updates the region of the cuboid being drawn. */
     onCuboidDraftChange: (box: CuboidBox | null) => void;
     /** Creates an annotation from a drawn box. */
-    onCreateCuboid: (box: CuboidBox) => void | Promise<void>;
+    onCreateCuboid: (box: CuboidBox, selectClass?: boolean) => void | Promise<void>;
     /** Whether the next created cuboid also starts a new object track. */
     isAddingTrack: boolean;
     /** Arms or cancels creating a new object track with its first cuboid. */

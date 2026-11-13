@@ -118,6 +118,25 @@ describe('useCreateCuboidAnnotation', () => {
         expect(toast.success).toHaveBeenCalledWith('Annotation created successfully');
     });
 
+    it('shows class selection when requested even if a class is remembered', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'truck' });
+        requestLabel.mockResolvedValue({ label: 'car' });
+        labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-car' }];
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn(), true);
+        expect(requestLabel).toHaveBeenCalledOnce();
+        expect(createAnnotation).toHaveBeenCalledWith(
+            expect.objectContaining({ annotation_label_id: 'label-car' })
+        );
+    });
+
+    it('does not save a remembered class when the requested dialog is cancelled', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'truck' });
+        requestLabel.mockResolvedValue(null);
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn(), true);
+        expect(requestLabel).toHaveBeenCalledOnce();
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
     it('asks for a class, creates it, and remembers the selection', async () => {
         const onCreated = vi.fn();
 
