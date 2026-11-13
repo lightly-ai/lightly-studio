@@ -1,6 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
-    import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
+    import { ChartColumn, ChartNetwork, Gauge, SearchCode, Shuffle } from '@lucide/svelte';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useSidePanelTabs } from './useSidePanelTabs';
 
@@ -116,6 +116,25 @@
             >
                 <ChartColumn class="size-4" />
                 <span>Distr</span>
+            </button>
+        </Tooltip>
+    {/if}
+    {#if isImages}
+        <Tooltip content="Sample a subset" position="left" triggerClass="w-full" class="w-max">
+            <button
+                class={cn(
+                    'flex aspect-square w-full flex-col items-center justify-center gap-0.5 rounded-md p-1.5 text-[10px] font-medium transition-colors',
+                    $activePanel === 'sampling'
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                )}
+                data-testid="side-panel-tabs-sampling"
+                aria-label="Sampling"
+                aria-pressed={$activePanel === 'sampling'}
+                onclick={() => toggle($activePanel, 'sampling')}
+            >
+                <Shuffle class="size-4" />
+                <span>Sample</span>
             </button>
         </Tooltip>
     {/if}

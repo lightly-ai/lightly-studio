@@ -1,21 +1,16 @@
 <script lang="ts">
     import { useDatasetSplitDialog } from '$lib/components/DatasetSplit/useDatasetSplitDialog';
-    import { page } from '$app/state';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { useClassifiersMenu } from '$lib/hooks/useClassifiers/useClassifiersMenu';
-    import { useSamplingDialog } from '$lib/hooks/useSamplingDialog/useSamplingDialog';
     import { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
     import { useSettingsDialog } from '$lib/hooks/useSettingsDialog/useSettingsDialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
-    import { get } from 'svelte/store';
-    import { useGlobalStorage } from '$lib/hooks';
     import {
         Split as SplitIcon,
         Puzzle as PuzzleIcon,
         Download as DownloadIcon,
         Settings as SettingsIcon,
         BrainCircuit as BrainCircuitIcon,
-        WandSparkles as WandSparklesIcon,
         Menu as MenuIcon,
         Compass as CompassIcon
     } from '@lucide/svelte';
@@ -48,8 +43,6 @@
 
     const { openDatasetSplitDialog } = useDatasetSplitDialog();
     const { openClassifiersMenu } = useClassifiersMenu();
-    const { openSamplingDialog } = useSamplingDialog();
-    const { filteredSampleCount } = useGlobalStorage();
     const { openExportDialog } = useExportDialog();
     const { openSettingsDialog } = useSettingsDialog();
     const { openOperatorsDialog } = useOperatorsDialog();
@@ -80,18 +73,6 @@
             icon: BrainCircuitIcon,
             testId: 'menu-classifiers',
             onSelect: openClassifiersMenu
-        });
-
-        addAction(items, hasSampling && isEditor, {
-            value: 'menu-sampling',
-            label: 'Sampling',
-            icon: WandSparklesIcon,
-            testId: 'menu-sampling',
-            onSelect: () =>
-                openSamplingDialog({
-                    collection_id: page.params.collection_id!,
-                    filtered_sample_count: get(filteredSampleCount)
-                })
         });
 
         addAction(

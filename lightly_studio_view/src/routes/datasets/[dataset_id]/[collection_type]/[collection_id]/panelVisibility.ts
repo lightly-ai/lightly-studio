@@ -10,6 +10,7 @@ export function isPanelVisible(
         (activePanel === 'evaluationRuns' && isImages) ||
         (activePanel === 'embeddingPlot' && hasMediaWithEmbeddings) ||
         (activePanel === 'queryEditor' && isImages) ||
-        (activePanel === 'distribution' && supportsDistribution)
+        (activePanel === 'distribution' && supportsDistribution) ||
+        (activePanel === 'sampling' && isImages)
     );
 }

@@ -13,6 +13,10 @@ export {
     type StrategySummaryTag,
     type MetadataWeightingParams
 } from './types';
-export { cloneStrategyParams, createStrategyInstance } from './strategyInstance';
+export {
+    cloneStrategyParams,
+    createStrategyInstance,
+    generateStrategyInstanceId
+} from './strategyInstance';
 export { isStrategyInstanceValid } from './strategyValidation';
 export { useStrategyBuilder } from './useStrategyBuilder';

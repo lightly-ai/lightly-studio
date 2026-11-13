@@ -822,6 +822,17 @@
                                         />
                                     {/key}
                                 {/await}
+                            {:else if $activePanel === 'sampling' && isImages}
+                                {#await import('$lib/components/SamplingPanel/SamplingPanel.svelte') then { default: SamplingPanel }}
+                                    {#key collectionId}
+                                        <SamplingPanel
+                                            {collectionId}
+                                            sampleCount={$filteredSampleCount}
+                                            totalSampleCount={collection.total_sample_count}
+                                            onClose={() => setActivePanel('none')}
+                                        />
+                                    {/key}
+                                {/await}
                             {:else if distributionPanelVisible}
                                 {#await import('./ImageDistributionPanel/ImageDistributionPanel.svelte') then { default: ImageDistributionPanel }}
                                     {#key collectionId}
