@@ -15,7 +15,8 @@ axes must embed each query while the GUI runs, so they need a remote embedder.
 
     Your model runs on a server. The remote embedder embeds your data at ingestion and also
     embeds the search queries. Register it with `ls.register_default_embedder` before you add
-    data. To embed images, the server must implement `ImageBytesEmbedder`.
+    data. To embed images and image queries, the server must implement `ImageBytesEmbedder`.
+    For text search and text axes, it must also implement `TextEmbedder`.
 
     ![Your own model in a remote embedder](../_static/lightly_studio_enterprise_remote_embedder.svg#only-light){ width="100%" }
     ![Your own model in a remote embedder](../_static/lightly_studio_enterprise_remote_embedder_dark.svg#only-dark){ width="100%" }
