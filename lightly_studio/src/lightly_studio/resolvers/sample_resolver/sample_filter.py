@@ -1,6 +1,6 @@
 """SampleFilter class."""
 
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID
 
 from sqlalchemy.orm import aliased
@@ -28,12 +28,12 @@ class SampleFilter(RegionSampleIdsFilter):
     """Encapsulates filter parameters for querying samples."""
 
     filter_type: Literal["sample"] = "sample"
-    tag_ids: Optional[list[UUID]] = None
-    metadata_filters: Optional[list[MetadataFilter]] = None
-    sample_ids: Optional[list[UUID]] = None
-    has_captions: Optional[bool] = None
-    annotations_filter: Optional[AnnotationsFilter] = None
-    confusion_cell: Optional[ConfusionCell] = None
+    tag_ids: list[UUID] | None = None
+    metadata_filters: list[MetadataFilter] | None = None
+    sample_ids: list[UUID] | None = None
+    has_captions: bool | None = None
+    annotations_filter: AnnotationsFilter | None = None
+    confusion_cell: ConfusionCell | None = None
 
     # Query expression filter
     #
@@ -42,7 +42,7 @@ class SampleFilter(RegionSampleIdsFilter):
     # Important note: The expression can (and usually will) reference fields outside of SampleTable.
     # It is caller's responsibility to ensure that the necessary joins are present in the query
     # before applying this filter.
-    query_expr: Optional[QueryExpr] = None
+    query_expr: QueryExpr | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""

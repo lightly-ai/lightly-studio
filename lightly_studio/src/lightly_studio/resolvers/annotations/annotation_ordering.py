@@ -6,7 +6,7 @@ grid and the detail view's next/prev navigation drift apart.
 
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Any
 
 from sqlalchemy.orm import Mapped
 from sqlalchemy.sql.elements import ColumnElement
@@ -18,7 +18,7 @@ from lightly_studio.models.video import VideoTable
 
 # Expressions the helper sorts itself: model columns come in as `Mapped`, subquery and
 # computed columns as `ColumnElement`.
-OrderExpression = Union[ColumnElement[Any], Mapped[Any]]
+OrderExpression = ColumnElement[Any] | Mapped[Any]
 
 
 def build_order_by(

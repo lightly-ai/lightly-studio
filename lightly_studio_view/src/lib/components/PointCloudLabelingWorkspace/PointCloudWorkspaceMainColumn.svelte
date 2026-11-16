@@ -119,6 +119,7 @@
         bufferEntireSequence={layout.bufferEntireSequence}
         onBufferEntireSequenceChange={layout.onBufferEntireSequenceChange}
         bufferedRanges={layout.bufferedRanges}
+        bufferStatus={layout.bufferStatus}
         onPreviousFrame={layout.onPreviousFrame}
         onNextFrame={layout.onNextFrame}
         onPlayToggle={layout.onPlayToggle}

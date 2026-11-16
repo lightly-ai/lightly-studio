@@ -6,6 +6,8 @@ from typing import Protocol
 
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.collection_transport import CollectionTransport
+from lightly_studio.transport.compute_transport import ComputeTransport
+from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.metadata_transport import MetadataTransport
 from lightly_studio.transport.sample_transport import SampleTransport
@@ -42,3 +44,11 @@ class StudioTransport(Protocol):
     @property
     def ingestion(self) -> IngestionTransport:
         """The transport for ingestion."""
+
+    @property
+    def compute(self) -> ComputeTransport:
+        """The transport for compute."""
+
+    @property
+    def export(self) -> ExportTransport:
+        """The transport for export."""

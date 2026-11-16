@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, RotateCw } from '@lucide/svelte';
+    import ArrowDown from '@lucide/svelte/icons/arrow-down';
+    import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+    import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import ArrowUp from '@lucide/svelte/icons/arrow-up';
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+    import RotateCw from '@lucide/svelte/icons/rotate-cw';
     import { type SceneNavigationAction } from '$lib/components/PointCloudViewer';
     import { useNavigationHighlight } from './useNavigationHighlight/useNavigationHighlight.svelte';
 
@@ -28,14 +33,14 @@
         icon: typeof ArrowUp;
         key?: string;
     }[] = [
-        { action: 'rotate-left', label: 'Rotate left (Q)', icon: RotateCcw, key: 'Q' },
+        { action: 'rotate-left', label: 'Rotate left', icon: RotateCcw },
         { action: 'forward', label: 'Move forward (W)', icon: ArrowUp, key: 'W' },
-        { action: 'rotate-right', label: 'Rotate right (E)', icon: RotateCw, key: 'E' },
+        { action: 'rotate-right', label: 'Rotate right', icon: RotateCw },
         { action: 'left', label: 'Move left (A)', icon: ArrowLeft, key: 'A' },
         { action: 'backward', label: 'Move backward (S)', icon: ArrowDown, key: 'S' },
         { action: 'right', label: 'Move right (D)', icon: ArrowRight, key: 'D' }
     ];
-    const highlight = useNavigationHighlight(() => ({ isActive, navigationId, allowRotation }));
+    const highlight = useNavigationHighlight(() => ({ isActive, navigationId }));
     const { input } = highlight;
     const visibleControls = $derived(
         controls.filter((control) => allowRotation || !control.action.startsWith('rotate-'))
@@ -44,7 +49,7 @@
 
 {#if showNavigationHelpers && isActive}
     <div
-        class="absolute bottom-3 right-3 z-10 grid grid-cols-3 gap-1 rounded-md border bg-background/80 p-1 shadow"
+        class="absolute bottom-3 left-3 z-10 grid grid-cols-3 gap-1 rounded-md border bg-background/80 p-1 shadow"
     >
         {#each visibleControls as control (control.action)}
             <button

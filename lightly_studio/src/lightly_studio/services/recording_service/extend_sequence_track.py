@@ -194,7 +194,8 @@ def _create_copies(  # noqa: PLR0913
             sz=details.sz,
             interpolated=True,
         )
-    assert label_id is not None
+    if label_id is None:
+        raise RuntimeError("Expected `label_id` to be set.")
     annotation_resolver.create_many(
         session=session,
         parent_collection_id=parent_collection_id,

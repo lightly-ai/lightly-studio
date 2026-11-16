@@ -151,14 +151,6 @@ start-e2e-evaluations: build
 	@echo "Starting server for e2e tests with evaluations..."
 	uv run e2e-tests/index_evaluations.py
 
-# Content is controlled via env vars (all default to true), e.g.:
-#   ADD_METADATA=false make start-e2e-distribution
-#   ADD_CLASSIFICATIONS=false ADD_OBJECT_DETECTIONS=false ADD_SEGMENTATIONS=false make start-e2e-distribution
-.PHONY: start-e2e-distribution
-start-e2e-distribution: build
-	@echo "Starting server for e2e distribution tests (toggles: ADD_CLASSIFICATIONS, ADD_OBJECT_DETECTIONS, ADD_SEGMENTATIONS, ADD_METADATA)..."
-	uv run e2e-tests/index_distribution.py
-
 .PHONY: start-e2e-video-groups
 start-e2e-video-groups: build
 	uv run e2e-tests/index_videos_groups.py
@@ -433,7 +425,7 @@ demo-mcap-urls:
 test: build
 	$(MAKE) test-without-build
 
-# Runs the tests with the current build. CI builds in its own step, to time it separately.
+# Runs the tests with the current build. CI uses a mock webapp instead of the build.
 .PHONY: test-without-build
 test-without-build:
 	@echo "Running tests..."

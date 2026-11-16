@@ -124,5 +124,6 @@ export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassCo
 export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
 export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
+export { useQueryHistory } from '$lib/hooks/useQueryHistory/useQueryHistory';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';

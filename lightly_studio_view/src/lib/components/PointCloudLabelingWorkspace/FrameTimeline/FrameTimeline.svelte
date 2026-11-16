@@ -1,7 +1,10 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
     import TimelineContent from './TimelineContent/TimelineContent.svelte';
     import TimelineTransportControls from './TimelineTransport/TimelineTransportControls.svelte';
+    import TimelineBufferStatus from './TimelineBufferStatus/TimelineBufferStatus.svelte';
+    import { setTimelineViewport, useTimelineViewport } from './TimelineViewport';
 
     interface BufferRange {
         /** Inclusive zero-based index of the first buffered tick. */
@@ -27,6 +30,7 @@
         onBufferEntireSequenceChange: (enabled: boolean) => void;
         /** Inclusive tick-index ranges whose data is ready for playback. */
         bufferedRanges: readonly BufferRange[];
+        bufferStatus?: ComponentProps<typeof TimelineBufferStatus>['status'];
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
@@ -68,6 +72,7 @@
         bufferEntireSequence,
         onBufferEntireSequenceChange,
         bufferedRanges,
+        bufferStatus,
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
@@ -85,9 +90,21 @@
         onPreviousSequence,
         onNextSequence
     }: Props = $props();
+
+    const viewport = useTimelineViewport(
+        () => ticks.length,
+        () => ticks.findIndex((tick) => tick.seq_number === currentTick)
+    );
+    setTimelineViewport(viewport);
+    let previousSequenceId: string | undefined;
+    $effect(() => {
+        if (sequenceId === previousSequenceId) return;
+        previousSequenceId = sequenceId;
+        viewport.reset();
+    });
 </script>
 
-<div class="flex min-h-0 flex-col border-t bg-background" data-testid="workspace-frame-timeline">
+<div class="flex shrink-0 flex-col border-t bg-background" data-testid="workspace-frame-timeline">
     <TimelineTransportControls
         {ticks}
         {currentTick}
@@ -95,6 +112,7 @@
         {onBufferEntireSequenceChange}
         {isPlaying}
         {playbackIntervalMs}
+        {bufferStatus}
         {onPreviousFrame}
         {onNextFrame}
         {onPlayToggle}

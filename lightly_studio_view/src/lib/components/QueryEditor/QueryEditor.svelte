@@ -1,32 +1,35 @@
 <script lang="ts">
-    import { onMount, untrack } from 'svelte';
+    import { onMount, untrack, type Snippet } from 'svelte';
     import { toast } from 'svelte-sonner';
     import { Button } from '$lib/components';
 
     import { useQueryEditor } from './useQueryEditor';
+    import { getDefaultQuery } from './getDefaultQuery';
     import type { QueryExprTranslationResult } from './language/query-expr-translation';
-
-    const LIGHTLY_QUERY_DEFAULT_VALUE = `# Example query
-width < 500
-AND "reviewed" IN tags
-AND object_detection(class_name = "person" AND x > 10)
-`;
 
     interface QueryEditorProps {
         value?: string;
+        /** Text to show when the editor mounts, in place of `value`. It does not count as applied. */
+        draft?: string;
+        sampleType?: 'image' | 'video';
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
+        onSave?: (value: string, parsed: QueryExprTranslationResult) => void;
+        /** Extra controls in the footer, before the apply button. Needs `onSave`. */
+        footerActions?: Snippet;
     }
 
     let {
         value: valueProp,
+        draft,
+        sampleType,
         height = '320px',
         readOnly = false,
-        onSave
+        onSave,
+        footerActions
     }: QueryEditorProps = $props();
 
-    const initialValue = $derived(valueProp ?? LIGHTLY_QUERY_DEFAULT_VALUE);
+    const initialValue = $derived(draft ?? valueProp ?? getDefaultQuery(sampleType));
 
     let containerEl: HTMLDivElement | null = null;
 
@@ -46,7 +49,7 @@ AND object_detection(class_name = "person" AND x > 10)
     }
 
     function handleSave() {
-        const translationResult = translateQuery(draftValue);
+        const translationResult = translateQuery(draftValue, sampleType);
         if (translationResult.status === 'error') {
             toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);
             return;
@@ -61,6 +64,7 @@ AND object_detection(class_name = "person" AND x > 10)
         return mount(containerEl, {
             value: initialValue,
             readOnly,
+            sampleType,
             onChange: (next) => {
                 draftValue = next;
             }
@@ -82,6 +86,7 @@ AND object_detection(class_name = "person" AND x > 10)
         <div
             class="flex items-center justify-end gap-2 border-b border-[#3c3c3c] bg-[#252526] px-4 py-2"
         >
+            {@render footerActions?.()}
             <Button
                 variant="default"
                 buttonProps={{

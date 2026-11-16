@@ -324,8 +324,12 @@ def _tick_message(
 def _to_cuboid_label(view: AnnotationView, sweep_timestamp_ns: int) -> CuboidLabel:
     """Converts one mapped cuboid annotation to a `CuboidLabel`."""
     cuboid = view.cuboid_3d_details
-    assert cuboid is not None  # Only CUBOID_3D annotations are loaded.
-    assert view.object_track_number is not None  # Checked by `_validate_cuboid_annotations`.
+    # Only CUBOID_3D annotations are loaded.
+    if cuboid is None:
+        raise RuntimeError("Expected `cuboid` to be set.")
+    # Checked by `_validate_cuboid_annotations`.
+    if view.object_track_number is None:
+        raise RuntimeError("Expected `view.object_track_number` to be set.")
     return CuboidLabel(
         timestamp_ns=sweep_timestamp_ns,
         frame_id=cuboid.frame_id,

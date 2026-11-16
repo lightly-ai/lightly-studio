@@ -64,4 +64,34 @@ describe('sensor frame colors', () => {
             getPointCloudFrameColors(mixed, 'rgb').flatMap((colors) => Array.from(colors))
         ).toEqual(Array(9).fill(0.5));
     });
+
+    it('highlights the points inside a cuboid and keeps the points outside on request', () => {
+        const batch = {
+            positions: new Float32Array([0, 0, 0, 5, 0, 0]),
+            intensities: new Float32Array(2),
+            colors: new Float32Array([1, 0, 0, 0, 0, 1]),
+            count: 2
+        };
+        const cuboid = {
+            center: [0, 0, 0],
+            size: [1, 1, Infinity],
+            rotation: [0, 0, 0, 1]
+        } as const;
+
+        const [dimmed] = getPointCloudFrameColors(batch, 'rgb', undefined, undefined, cuboid);
+        // The inside point turns yellow; the outside point is dimmed.
+        expect(Array.from(dimmed.slice(0, 3))).toEqual([
+            1,
+            expect.closeTo(0.663),
+            expect.closeTo(0.068)
+        ]);
+        expect(dimmed[5]).toBeCloseTo(0.12);
+
+        const [kept] = getPointCloudFrameColors(batch, 'rgb', undefined, undefined, {
+            ...cuboid,
+            keepOutside: true
+        });
+        expect(Array.from(kept.slice(0, 3))).toEqual(Array.from(dimmed.slice(0, 3)));
+        expect(Array.from(kept.slice(3))).toEqual([0, 0, 1]);
+    });
 });

@@ -1,12 +1,15 @@
 <script lang="ts">
+    import type { ComponentProps } from 'svelte';
     import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
     import TimelineTransport from './TimelineTransport.svelte';
+    import TimelineBufferStatus from '../TimelineBufferStatus/TimelineBufferStatus.svelte';
 
     interface Props {
         ticks: TickView[];
         currentTick: number;
         isPlaying: boolean;
         playbackIntervalMs: number;
+        bufferStatus?: ComponentProps<typeof TimelineBufferStatus>['status'];
         bufferEntireSequence: boolean;
         onBufferEntireSequenceChange: (enabled: boolean) => void;
         onPreviousFrame: () => void;
@@ -22,6 +25,7 @@
         currentTick,
         isPlaying,
         playbackIntervalMs,
+        bufferStatus,
         bufferEntireSequence,
         onBufferEntireSequenceChange,
         onPreviousFrame,
@@ -40,6 +44,7 @@
 
 <TimelineTransport
     {frameLabel}
+    {bufferStatus}
     {bufferEntireSequence}
     {onBufferEntireSequenceChange}
     {isPlaying}

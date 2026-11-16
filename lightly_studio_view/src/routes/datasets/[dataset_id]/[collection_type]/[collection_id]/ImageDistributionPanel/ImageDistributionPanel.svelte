@@ -1,5 +1,4 @@
 <script lang="ts">
-    import { getErrorMessage } from '$lib/utils';
     import DatasetDistributionPanel from '$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte';
     import type { DistributionSource } from '$lib/components/DatasetDistributionPanel';
     import type { CategoryCount } from '$lib/components/BarChart';
@@ -24,7 +23,6 @@
     } from '$lib/hooks/useImageFieldDistribution';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters.js';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
     import { buildDistributionSources } from '../distributionSources';
     import {
         selectHistogramRange,
@@ -39,9 +37,10 @@
         selectComparisonSampleTags,
         selectNumericMetadataKeys
     } from '../metadataDistributionSource';
+    import { buildDistributionBaseFilter } from './distributionBaseFilter';
     import { applyImageFieldRange, selectImageFieldRanges } from './imageFieldRanges';
 
-    type ImageDistributionFilter = ReturnType<typeof buildImageFilter>;
+    type ImageDistributionFilter = ReturnType<typeof buildDistributionBaseFilter>;
 
     interface Props {
         collectionId: string;
@@ -98,19 +97,9 @@
     // stable as sidebar filters are applied.  Filtering is communicated through
     // bar colour (green = in selection, grey = out of selection) rather than
     // through shrinking bars, which loses the original distribution context.
-    // Tag / sample / confusion-cell / query context is kept so the distributions
+    // Tag / sample / confusion-cell / query / plot selection context is kept so the distributions
     // stay scoped to the collection the user is currently exploring.
-    const distributionBaseFilter = $derived(
-        buildImageFilter({
-            dimensionsValues: null,
-            annotationFilter: undefined,
-            metadataFilters: undefined,
-            sampleIds: $imageFilter?.sample_filter?.sample_ids ?? [],
-            tagIds: $imageFilter?.sample_filter?.tag_ids ?? [],
-            confusionCell: $imageFilter?.sample_filter?.confusion_cell ?? null,
-            queryExpr: $imageFilter?.sample_filter?.query_expr ?? null
-        })
-    );
+    const distributionBaseFilter = $derived(buildDistributionBaseFilter($imageFilter));
 
     // With every annotation source unchecked, the class distribution has nothing to show,
     // whichever count query it came from.
@@ -233,7 +222,7 @@
             groupLabel: 'Annotation type',
             valueNoun: countMode === AnnotationCountMode.SAMPLES ? 'samples' : 'annotations',
             comparisonLoading: activeClassComparisonQuery?.isFetching,
-            comparisonError: getErrorMessage(activeClassComparisonQuery?.error)
+            comparisonError: activeClassComparisonQuery?.error?.message
         };
 
         // Use the distribution-specific "all" query so the "All types" group
@@ -408,9 +397,9 @@
                 metadataHistogramsQuery.isFetching || imageFieldHistogramsQuery.isFetching,
             categoricalLoading: categoricalFetchState.loading,
             categoricalUpdating: categoricalFetchState.updating,
-            categoricalError: getErrorMessage(categoricalMetadataQuery.error),
+            categoricalError: categoricalMetadataQuery.error?.message,
             comparisonLoading: metadataTagDistributionsQuery.isFetching,
-            comparisonError: getErrorMessage(metadataTagDistributionsQuery.error)
+            comparisonError: metadataTagDistributionsQuery.error?.message
         })
     );
 
@@ -472,6 +461,8 @@
     onCountModeChange={(mode) => (countMode = mode)}
     onHistogramRangeSelect={handleHistogramRangeSelect}
     onCategoricalValueToggle={handleCategoricalValueToggle}
+    onCategoricalValuesSet={(metadataKey, values) =>
+        updateCategoricalMetadataValues({ ...$categoricalMetadataValues, [metadataKey]: values })}
     onCategoricalValuesClear={(metadataKey) =>
         updateCategoricalMetadataValues(
             withoutCategoricalValues($categoricalMetadataValues, metadataKey)
