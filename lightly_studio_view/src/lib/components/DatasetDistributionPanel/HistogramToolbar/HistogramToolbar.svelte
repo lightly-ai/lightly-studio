@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Maximize2 as Maximize2Icon } from '@lucide/svelte';
+    import Maximize2Icon from '@lucide/svelte/icons/maximize-2';
     import { Button } from '$lib/components';
     import { Select, type SelectItem } from '$lib/components/Select';
     import { formatFloat, formatInteger } from '$lib/utils';

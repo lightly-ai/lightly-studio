@@ -3,7 +3,7 @@ import { Object3D } from 'three';
 import {
     buildCuboidTransformPayload,
     captureTransformSnapshot,
-    getCuboidGizmoMode,
+    getCuboidEditModes,
     getCuboidGizmoOptions,
     restoreTransformSnapshot
 } from './cuboidTransform';
@@ -113,10 +113,36 @@ describe('orthographic editing tools', () => {
             });
         }
     );
-    it('uses face resizing instead of symmetric scale handles', () => {
-        expect(getCuboidGizmoMode('resize')).toBeUndefined();
-        expect(getCuboidGizmoMode('translate')).toBe('translate');
-        expect(getCuboidGizmoMode('rotate')).toBe('rotate');
+    const ALL_HANDLES = ['translate', 'rotate', 'resize'];
+    it.each(['top', 'side', 'front'] as const)(
+        'shows all handles for any edit tool in %s view while editing',
+        (cameraMode) => {
+            for (const tool of ['select', 'translate', 'rotate', 'resize'] as const) {
+                expect(getCuboidEditModes({ tool, cameraMode, isEditingMode: true })).toEqual(
+                    ALL_HANDLES
+                );
+            }
+        }
+    );
+    it('keeps one handle per tool in perspective', () => {
+        for (const tool of ['translate', 'rotate', 'resize'] as const) {
+            expect(
+                getCuboidEditModes({ tool, cameraMode: 'perspective', isEditingMode: true })
+            ).toEqual([tool]);
+        }
+        expect(
+            getCuboidEditModes({ tool: 'select', cameraMode: 'perspective', isEditingMode: true })
+        ).toEqual([]);
+    });
+    it('shows no handles while creating a cuboid', () => {
+        expect(
+            getCuboidEditModes({ tool: 'create-cuboid', cameraMode: 'top', isEditingMode: true })
+        ).toEqual([]);
+    });
+    it('shows no handles outside editing mode', () => {
+        expect(
+            getCuboidEditModes({ tool: 'select', cameraMode: 'top', isEditingMode: false })
+        ).toEqual([]);
     });
     it('keeps all local rotation axes in perspective', () => {
         expect(getCuboidGizmoOptions('rotate', 'perspective')).toEqual({

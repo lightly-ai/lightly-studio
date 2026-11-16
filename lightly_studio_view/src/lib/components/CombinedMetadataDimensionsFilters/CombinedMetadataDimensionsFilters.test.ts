@@ -13,6 +13,7 @@ const defaultProps = {
     collectionId: '',
     showDimensions: false,
     onCategoricalValueToggle: vi.fn(),
+    onCategoricalValuesSet: vi.fn(),
     onCategoricalValuesClear: vi.fn()
 };
 afterEach(() => {

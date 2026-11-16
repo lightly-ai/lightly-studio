@@ -12,7 +12,8 @@ import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
-import type { Vector3, WorkspaceTool } from '../domain';
+import type { WorkspaceTool } from '../domain';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 
 /** Shared annotation selection, tools, and persistence for every scene viewport. */
 export function useWorkspaceEditing(
@@ -32,6 +33,7 @@ export function useWorkspaceEditing(
         });
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
+    let draftCuboid = $state.raw<CuboidBox | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
     // The next cuboid placed with the create tool also starts a new object track.
     let addingTrack = $state(false);
@@ -54,7 +56,6 @@ export function useWorkspaceEditing(
             const frame = getData().snapshot?.frame;
             return frame
                 ? {
-                      bounds: frame.bounds,
                       // Use the first channel's frameId — the top-level frameId on a merged
                       // frame is a comma-joined composite ("odom,odom") that does not match
                       // the per-channel frameIds used by the scene filter.
@@ -141,21 +142,31 @@ export function useWorkspaceEditing(
         }
     }
 
-    async function handleCreateCuboid(groundPosition: Vector3): Promise<void> {
+    async function handleCreateCuboid(box: CuboidBox, selectClass = false): Promise<void> {
         const asTrack = addingTrack;
-        await createCuboidAnnotation(groundPosition, async (annotationId) => {
-            await getWorkspace().tickDetails.refetch({ throwOnError: true });
-            selectedCuboidId = annotationId;
-            activeTool = 'select';
-            addingTrack = false;
-            // A failed attach leaves a plain cuboid, never an empty track.
-            if (asTrack) await handleStartTrack(annotationId);
-        });
+        await createCuboidAnnotation(
+            box,
+            async (annotationId) => {
+                await getWorkspace().tickDetails.refetch({ throwOnError: true });
+                selectedCuboidId = annotationId;
+                activeTool = 'select';
+                addingTrack = false;
+                // A failed attach leaves a plain cuboid, never an empty track.
+                if (asTrack) await handleStartTrack(annotationId);
+            },
+            selectClass
+        );
+    }
+
+    function setActiveTool(tool: WorkspaceTool): void {
+        activeTool = tool;
+        // Orthographic cameras fit a selected cuboid's frame, so drawing needs a world-aligned view.
+        if (tool === 'create-cuboid') selectedCuboidId = null;
     }
 
     function toggleAddTrack(): void {
         addingTrack = !addingTrack;
-        activeTool = addingTrack ? 'create-cuboid' : 'select';
+        setActiveTool(addingTrack ? 'create-cuboid' : 'select');
     }
 
     const displayedAnnotations = fromStore(annotations);
@@ -180,11 +191,17 @@ export function useWorkspaceEditing(
         set hoveredCuboidId(value) {
             hoveredCuboidId = value;
         },
+        get draftCuboid() {
+            return draftCuboid;
+        },
+        set draftCuboid(value) {
+            draftCuboid = value;
+        },
         get activeTool() {
             return activeTool;
         },
         set activeTool(value: WorkspaceTool) {
-            activeTool = value;
+            setActiveTool(value);
             addingTrack = false;
         },
         get isAddingTrack() {

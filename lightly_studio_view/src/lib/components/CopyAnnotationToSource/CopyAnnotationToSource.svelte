@@ -3,7 +3,7 @@
     import * as Command from '$lib/components/ui/command';
     import * as Popover from '$lib/components/ui/popover';
     import { useAnnotationCollections } from '$lib/hooks';
-    import { CopyPlus } from '@lucide/svelte';
+    import CopyPlus from '@lucide/svelte/icons/copy-plus';
     import { useCopyAnnotationToSource } from './useCopyAnnotationToSource.svelte';
 
     type Props = ReturnType<Parameters<typeof useCopyAnnotationToSource>[0]>;
