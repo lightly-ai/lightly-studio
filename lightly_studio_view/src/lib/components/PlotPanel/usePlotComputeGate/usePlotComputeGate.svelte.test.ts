@@ -5,11 +5,10 @@ import { usePlotComputeGate } from './usePlotComputeGate.svelte';
 
 interface StatusQueryStub {
     data: Embeddings2dStatus | undefined;
-    dataUpdatedAt: number;
     isFetchedAfterMount: boolean;
     isError: boolean;
     error: Error | null;
-    refetch: () => void;
+    refetch: () => Promise<unknown>;
 }
 
 const mocks = vi.hoisted(() => ({
@@ -31,11 +30,10 @@ let disposers: (() => void)[] = [];
 function createStatusQuery(data: Embeddings2dStatus | undefined): StatusQueryStub {
     const query: StatusQueryStub = $state({
         data,
-        dataUpdatedAt: 0,
         isFetchedAfterMount: true,
         isError: false,
         error: null,
-        refetch: vi.fn()
+        refetch: vi.fn(async () => undefined)
     });
     return query;
 }
@@ -140,7 +138,7 @@ describe('usePlotComputeGate', () => {
 
     it('refetches status and clears the start once the plot loads', () => {
         const query = createStatusQuery(NOT_COMPUTED_LARGE);
-        query.refetch = vi.fn(() => {
+        query.refetch = vi.fn(async () => {
             query.data = COMPUTED;
         });
         mocks.statusQueries['loaded'] = query;
@@ -157,9 +155,19 @@ describe('usePlotComputeGate', () => {
         expect(gate.view).toBe('plot');
     });
 
-    it('ends the compute once a plot load finishes, even if the plot is dirty again', () => {
+    it('ends the compute once the status refresh after the load finishes, even if the plot is dirty again', async () => {
         vi.useFakeTimers({ now: 1_000_000 });
         const query = createStatusQuery(NOT_COMPUTED_LARGE);
+        let finishRefresh = () => {};
+        query.refetch = vi.fn(
+            () =>
+                new Promise<void>((resolve) => {
+                    finishRefresh = () => {
+                        query.data = { is_computed: false, embedding_count: 300_001 };
+                        resolve();
+                    };
+                })
+        );
         mocks.statusQueries['dirty-again'] = query;
         let plotUpdatedAt = $state(0);
         const { gate } = mountGate({
@@ -169,31 +177,41 @@ describe('usePlotComputeGate', () => {
         gate.startCompute();
         flushSync();
 
+        // The refresh can finish in the same millisecond as the load, so only its completion decides.
         plotUpdatedAt = 1_005_000;
         flushSync();
 
-        // Until the status refresh after the load returns, the panel keeps the computing state.
+        expect(query.refetch).toHaveBeenCalledOnce();
         expect(gate.startedAt).toBe(1_000_000);
         expect(gate.view).toBe('computing');
 
-        query.dataUpdatedAt = 1_006_000;
+        finishRefresh();
+        await vi.waitFor(() => expect(gate.startedAt).toBeNull());
         flushSync();
 
-        expect(gate.startedAt).toBeNull();
         expect(gate.view).toBe('prompt');
     });
 
-    it('waits for a status newer than the plot load before it ends the compute', () => {
+    it('ends the compute after a load even when the status cache had expired', async () => {
         vi.useFakeTimers({ now: 1_000_000 });
         const query = createStatusQuery(NOT_COMPUTED_LARGE);
-        query.dataUpdatedAt = 1_005_000;
-        mocks.statusQueries['same-ms'] = query;
-        const { gate } = mountGate({ collectionId: 'same-ms', plotUpdatedAt: () => 1_005_000 });
-        gate.startCompute();
+        mocks.statusQueries['expired-load'] = query;
+        const first = mountGate({ collectionId: 'expired-load' });
+        first.gate.startCompute();
         flushSync();
+        first.dispose();
 
-        expect(gate.startedAt).toBe(1_000_000);
-        expect(gate.view).toBe('computing');
+        query.data = undefined;
+        query.isFetchedAfterMount = false;
+        query.refetch = vi.fn(async () => {
+            query.data = { is_computed: false, embedding_count: 300_001 };
+            query.isFetchedAfterMount = true;
+        });
+        const { gate } = mountGate({ collectionId: 'expired-load', plotUpdatedAt: () => 1_005_000 });
+
+        await vi.waitFor(() => expect(gate.startedAt).toBeNull());
+        flushSync();
+        expect(gate.view).toBe('prompt');
     });
 
     it('keeps the start while only an older cached plot is loaded', () => {
@@ -227,7 +245,7 @@ describe('usePlotComputeGate', () => {
     it('refetches the status once per plot load while embeddings keep changing', () => {
         const query = createStatusQuery(NOT_COMPUTED_SMALL);
         let embeddingCount = NOT_COMPUTED_SMALL.embedding_count;
-        query.refetch = vi.fn(() => {
+        query.refetch = vi.fn(async () => {
             embeddingCount += 1;
             query.data = { is_computed: false, embedding_count: embeddingCount };
         });

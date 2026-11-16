@@ -52,24 +52,25 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
         if (view === 'computing' && startedAt === null) untrack(startCompute);
     });
 
-    // A finished compute saves the plot, so the status is outdated once per plot load.
+    // A finished compute saves the plot, so the status is outdated once per plot load. A load after
+    // the start ends the compute once the status refresh after it finishes, even if the plot is
+    // dirty again: a kept start would skip the prompt next time.
     $effect(() => {
-        if (getPlotUpdatedAt() === 0) return;
+        const plotUpdatedAt = getPlotUpdatedAt();
+        if (plotUpdatedAt === 0) return;
         untrack(() => {
-            if (statusQuery.data?.is_computed === false) statusQuery.refetch();
+            if (statusQuery.data?.is_computed === true) return;
+            const collectionId = getCollectionId();
+            const isLoadedAfterStart = startedAt !== null && plotUpdatedAt > startedAt;
+            void statusQuery.refetch().then(() => {
+                if (isLoadedAfterStart) clearComputeStart(collectionId);
+            });
         });
     });
 
-    // The compute ends once a plot load finished after the start and the status refresh after that
-    // load returned, even if the plot is dirty again: a kept start would skip the prompt next time.
     $effect(() => {
-        if (startedAt === null) return;
-        const plotUpdatedAt = getPlotUpdatedAt();
-        const isLoadedAfterStart = plotUpdatedAt > startedAt;
-        const isStatusAfterLoad = statusQuery.dataUpdatedAt > plotUpdatedAt;
-        const isComputeOver =
-            freshStatus?.is_computed === true || (isLoadedAfterStart && isStatusAfterLoad);
-        if (isComputeOver) untrack(() => clearComputeStart(getCollectionId()));
+        if (startedAt === null || freshStatus?.is_computed !== true) return;
+        untrack(() => clearComputeStart(getCollectionId()));
     });
 
     return {
