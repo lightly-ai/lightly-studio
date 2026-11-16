@@ -51,7 +51,7 @@ def delete_annotations_by_ids(
         session: Database session.
         annotation_ids: IDs of the annotations to delete.
         delete_samples: Whether to also delete the annotation samples, their tags,
-            embeddings and captions. Set to False to keep the samples for reuse,
+            embeddings, metadata and captions. Set to False to keep the samples for reuse,
             e.g. when an annotation is updated.
 
     Returns:
