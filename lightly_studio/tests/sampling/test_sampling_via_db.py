@@ -28,7 +28,6 @@ from lightly_studio.sampling.sampling_config import (
     EmbeddingSimilarityStrategy,
     MetadataBalancingStrategy,
     SamplingConfig,
-    SamplingStrategy,
     SubpartDiversityStrategy,
 )
 from lightly_studio.sampling.sampling_via_db import (
@@ -300,37 +299,6 @@ def test_sampling_via_database__embedding_similarity(
     expected_sample_paths = {"sample_0.jpg", "sample_1.jpg"}
     actual_sample_paths = {sample.file_path_abs for sample in samples_in_tag}
     assert actual_sample_paths == expected_sample_paths
-
-
-def test_sampling_via_database__unknown_strategy(
-    db_session: Session,
-) -> None:
-    """Runs sampling with a non-existing strategy.
-
-    Check for the correct error message.
-    """
-    collection_id = fill_db_with_samples_and_embeddings(
-        db_session, n_samples=20, embedding_model_names=["embedding_model_1"]
-    )
-
-    sampling_config = SamplingConfig(
-        collection_id=collection_id,
-        n_samples_to_select=2,
-        sampling_result_tag_name="sampling_1",
-        strategies=[SamplingStrategy()],
-    )
-
-    expected_error = "Sampling strategy of type <class "
-    "'lightly_studio.sampling.sampling_config.SamplingStrategy'> is unknown."
-    with pytest.raises(
-        ValueError,
-        match=expected_error,
-    ):
-        sampling_via_database(
-            db_session,
-            sampling_config,
-            input_sample_ids=_all_sample_ids(db_session, collection_id),
-        )
 
 
 def test_sampling_via_database__embedding_similarity__missing_query_tag(

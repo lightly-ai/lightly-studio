@@ -5,10 +5,8 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
-from typing import Any, Generic
+from typing import Any, Generic, Self, TypeVar
 from uuid import UUID
-
-from typing_extensions import Self, TypeVar
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -302,7 +300,8 @@ def load_root_collection(
     collection = collection_resolver.get_by_id(
         session=db_manager.persistent_session(), collection_id=collection_id
     )
-    assert collection is not None
+    if collection is None:
+        raise RuntimeError("Expected `collection` to be set.")
     if collection.sample_type != sample_type:
         raise ValueError(
             f"Dataset with name '{name}' already exists with sample type "

@@ -2,6 +2,7 @@ import * as monaco from 'monaco-editor';
 import { detectScopeAt } from '../../language/detectScopeAt';
 import { findFieldInScope } from '../../language/lightly-query-schema';
 import { buildFieldHover } from './buildFieldHover';
+import { getModelQuerySource } from '../modelQueryScope';
 import { getWordRange } from './getWordRange';
 
 /** Return field hover at cursor position after resolving the active query scope. */
@@ -12,12 +13,12 @@ export function getFieldHover(
     const word = model.getWordAtPosition(position);
     if (!word) return null;
 
-    const text = model.getValue();
+    const { text } = getModelQuerySource(model);
     const offset = model.getOffsetAt({
         lineNumber: position.lineNumber,
         column: word.startColumn
     });
-    const scope = detectScopeAt(text, offset);
+    const scope = detectScopeAt(text, offset + text.length - model.getValue().length);
     const field = findFieldInScope(scope, word.word);
     if (!field) return null;
 

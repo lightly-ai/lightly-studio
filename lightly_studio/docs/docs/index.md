@@ -73,7 +73,7 @@ pip install lightly-studio
 
 ## Quickstart
 
-LightlyStudio works on Windows, Linux, and macOS with **Python 3.10 to 3.15**.
+LightlyStudio works on Windows, Linux, and macOS with **Python 3.11 to 3.15**.
 
 ??? tip "Recommended: install into a virtual environment"
     A virtual environment keeps LightlyStudio and its dependencies separate from other

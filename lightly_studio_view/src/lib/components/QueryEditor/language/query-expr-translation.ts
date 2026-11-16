@@ -36,6 +36,8 @@ import {
     type Expression,
     type Query
 } from './generated/ast.js';
+import { getQuerySource } from './getQuerySource';
+import { getQueryScopeError } from './getQueryScopeError';
 import { translateSampleEvaluation } from './sampleEvaluationQueryTranslation';
 
 export interface QueryParseError {
@@ -46,6 +48,7 @@ export interface QueryParseError {
 
 export type QueryExprTranslationResult =
     | { status: 'ok'; queryExpr: QueryExpr }
+    | { status: 'empty' }
     | { status: 'error'; errors: QueryParseError[] };
 
 type QueryScope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
@@ -60,25 +63,32 @@ interface TranslationParser {
 
 export function parseLightlyQuery(
     parser: TranslationParser,
-    value: string
+    value: string,
+    sampleType?: 'image' | 'video'
 ): QueryExprTranslationResult {
-    const parseResult = parser.parse(value);
+    const { text, lineOffset } = getQuerySource(value, sampleType);
+    const parseResult = parser.parse(text);
     const errors = [...parseResult.lexerErrors, ...parseResult.parserErrors];
     if (errors.length > 0) {
         return {
             status: 'error',
             errors: errors.map((error) => ({
                 message: error.message,
-                line: error.line,
+                line: error.line === undefined ? undefined : Math.max(1, error.line - lineOffset),
                 column: error.column
             }))
         };
     }
 
     try {
+        const scopeError = getQueryScopeError(parseResult.value, sampleType);
+        if (scopeError) throw new Error(scopeError);
+        if (!parseResult.value.expression) return { status: 'empty' };
         return {
             status: 'ok',
-            queryExpr: toQueryExpr(parseResult.value)
+            queryExpr: {
+                match_expr: visit(parseResult.value.expression, getRootScope(parseResult.value))
+            }
         };
     } catch (error) {
         return {
@@ -86,16 +96,6 @@ export function parseLightlyQuery(
             errors: [{ message: toErrorMessage(error) }]
         };
     }
-}
-
-/**
- * Converts a Langium AST into a backend-compatible QueryExpr.
- */
-function toQueryExpr(parseResult: Query): QueryExpr {
-    const table = getRootScope(parseResult);
-    return {
-        match_expr: visit(parseResult.expression, table)
-    };
 }
 
 /**

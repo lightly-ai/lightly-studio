@@ -79,7 +79,6 @@ describe('useAnnotationSelection', () => {
 
             selectAnnotation({
                 annotationId: 'a-mask',
-                collectionId: 'collection-1',
                 annotations
             });
 
@@ -106,7 +105,6 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'a1',
-            collectionId: 'collection-1',
             annotations
         });
 
@@ -135,7 +133,6 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'a2',
-            collectionId: 'collection-1',
             annotations
         });
 
@@ -162,7 +159,6 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'a3',
-            collectionId: 'collection-1',
             annotations
         });
 
@@ -176,7 +172,6 @@ describe('useAnnotationSelection', () => {
 
         selectAnnotation({
             annotationId: 'missing',
-            collectionId: 'collection-1',
             annotations: []
         });
 

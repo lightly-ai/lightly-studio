@@ -1,10 +1,12 @@
 <script lang="ts">
+    import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
     import { untrack } from 'svelte';
     import { useThrelte } from '@threlte/core';
     import { interactivity } from '@threlte/extras';
     import type * as Domain from '../domain';
     import type { createCuboidTransformState } from './cuboidTransformState';
-    import { GroundPlaneClickTarget } from '$lib/components/PointCloudLabelingWorkspace/GroundPlane';
+    import { CuboidDraftTarget } from '../CuboidDraft';
+    import type { PointBatch } from '$lib/components/PointCloudViewer';
     import CuboidItem from './CuboidItem/CuboidItem.svelte';
     import { provideCuboidLayerContext } from './cuboidLayerContext';
     import { createCuboidHoverTracker } from './cuboidHoverTracker';
@@ -18,11 +20,15 @@
         selectedAnnotationId?: string | null;
         hoveredAnnotationId?: string | null;
         activeTool?: Domain.WorkspaceTool;
+        isEditingMode?: boolean;
         cameraMode?: Domain.CameraMode;
         groundPlaneBounds: Domain.Bounds3;
+        pointBatch?: PointBatch;
+        tick?: number;
         onselect?: (annotationId: string | null) => void;
         onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
-        onCreateCuboid?: (position: Domain.Vector3) => void;
+        onCreateCuboid?: (box: CuboidBox) => void;
+        onCuboidDraftChange?: (box: CuboidBox | null) => void;
         onCuboidTransform?: (
             payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
         ) => void;
@@ -37,11 +43,15 @@
         selectedAnnotationId = null,
         hoveredAnnotationId = null,
         activeTool = 'select',
+        isEditingMode = false,
         cameraMode = 'perspective',
         groundPlaneBounds,
+        pointBatch,
+        tick,
         onselect,
         onhover,
         onCreateCuboid,
+        onCuboidDraftChange,
         onCuboidTransform
     }: Props = $props();
 
@@ -60,6 +70,7 @@
         annotationClasses,
         transforms,
         activeTool,
+        isEditingMode,
         cameraMode,
         hoverTracker,
         selectedAnnotationId,
@@ -97,10 +108,13 @@
 </script>
 
 {#if activeTool === 'create-cuboid'}
-    <GroundPlaneClickTarget
+    <CuboidDraftTarget
         bounds={groundPlaneBounds}
         {cameraMode}
-        onclick={(p) => onCreateCuboid?.(p)}
+        batch={pointBatch}
+        {tick}
+        onHighlightChange={(box) => onCuboidDraftChange?.(box)}
+        onCreateCuboid={(p) => onCreateCuboid?.(p)}
     />
 {/if}
 

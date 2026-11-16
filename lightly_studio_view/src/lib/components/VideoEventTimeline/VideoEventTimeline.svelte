@@ -26,7 +26,8 @@
      * />
      * ```
      */
-    import { Plus, Trash2 } from '@lucide/svelte';
+    import Plus from '@lucide/svelte/icons/plus';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import { cn } from '$lib/utils/shadcn.js';
     import { assignEventLanes, type VideoEvent } from '$lib/utils';
 

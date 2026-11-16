@@ -24,6 +24,18 @@ def test_strategy__unknown_strategy_name_rejected() -> None:
 
 
 class TestSamplingConfig:
+    def test_model_validate_json__keeps_strategy_type(self) -> None:
+        config = SamplingConfig(
+            collection_id=uuid4(),
+            n_samples_to_select=4,
+            sampling_result_tag_name="selected",
+            strategies=[EmbeddingDiversityStrategy(embedding_model_name="model")],
+        )
+
+        restored = SamplingConfig.model_validate_json(config.model_dump_json())
+
+        assert restored.strategies == [EmbeddingDiversityStrategy(embedding_model_name="model")]
+
     @pytest.mark.parametrize("selected_sequence_length", [1, 0, -1])
     def test_init__rejects_sequence_length_below_two(
         self,

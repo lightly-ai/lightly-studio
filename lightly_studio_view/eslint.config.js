@@ -31,6 +31,23 @@ export default ts.config(
         }
     },
     {
+        rules: {
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: '@lucide/svelte',
+                            message:
+                                "Import each icon from '@lucide/svelte/icons/<name>'. The root entry loads all icons and slows down tests.",
+                            allowTypeImports: true
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
         ignores: [
             'build/',
             '.svelte-kit/',
@@ -43,5 +60,19 @@ export default ts.config(
             'src/lib/components/QueryEditor/language-server-worker.ts'
         ]
     },
-    storybook.configs['flat/recommended']
+    storybook.configs['flat/recommended'],
+    {
+        rules: {
+            'no-console': ['error', { allow: ['warn', 'error'] }],
+            'no-restricted-imports': [
+                'error',
+                { paths: [{ name: '$app/stores', message: 'Use $app/state.' }] }
+            ]
+        }
+    },
+    {
+        // The performance tests print their measurements.
+        files: ['e2e/**'],
+        rules: { 'no-console': 'off' }
+    }
 );

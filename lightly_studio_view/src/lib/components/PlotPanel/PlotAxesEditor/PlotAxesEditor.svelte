@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ArrowLeftRight, RotateCcw } from '@lucide/svelte';
+    import ArrowLeftRight from '@lucide/svelte/icons/arrow-left-right';
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
     import * as Popover from '$lib/components/ui/popover';
     import { Button, buttonVariants } from '$lib/components/ui/button';
     import { Tooltip } from '$lib/components/ui/tooltip';
