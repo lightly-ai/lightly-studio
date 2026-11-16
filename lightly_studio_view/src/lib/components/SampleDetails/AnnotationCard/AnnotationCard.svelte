@@ -72,7 +72,6 @@
             recentClasses={recentChips(classSearch.recent, className)}
             onPickClass={actions.changeClass}
             onSearch={() => view.show('search')}
-            onRemove={actions.remove}
             onClose={actions.close}
         />
     {:else if view.current === 'search'}
