@@ -13,7 +13,7 @@ Then two plugins are added:
  and runs inference only on the unlabeled images, i.e. a different tag.
 
 Development setup:
-- Requires a newer Python version (3.10+) for LightlyTrain compatibility.
+- Requires Python 3.11 to 3.15.
 - Requires installing lightly-train via `pip install lightly-train` to run the plugins.
 - Might need newer packages of `huggingface_hub`, `torch`, or `torchvision`. Install
   them via `pip install --upgrade` to avoid runtime or import errors.

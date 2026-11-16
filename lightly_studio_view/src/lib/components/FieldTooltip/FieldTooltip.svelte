@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CircleHelp } from '@lucide/svelte';
+    import CircleHelp from '@lucide/svelte/icons/circle-help';
 
     interface Props {
         content: string;

@@ -1,7 +1,7 @@
 """Utility functions for building database queries."""
 # TODO(Michal, 11/2025): Move to image_resolver once CollectionTable.get_samples() is removed.
 
-from typing import Literal, Optional
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -17,17 +17,17 @@ from lightly_studio.type_definitions import QueryType
 class FilterDimensions(BaseModel):
     """Encapsulates dimension-based filter parameters for querying samples."""
 
-    min: Optional[int] = None
-    max: Optional[int] = None
+    min: int | None = None
+    max: int | None = None
 
 
 class ImageFilter(GridFilterBase):
     """Encapsulates filter parameters for querying samples."""
 
     filter_type: Literal["image"] = "image"
-    sample_filter: Optional[SampleFilter] = None
-    width: Optional[FilterDimensions] = None
-    height: Optional[FilterDimensions] = None
+    sample_filter: SampleFilter | None = None
+    width: FilterDimensions | None = None
+    height: FilterDimensions | None = None
 
     def apply(self, query: QueryType) -> QueryType:
         """Apply the filters to the given query."""

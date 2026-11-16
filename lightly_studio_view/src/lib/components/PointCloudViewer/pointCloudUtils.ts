@@ -153,6 +153,9 @@ export function computeActiveBounds(positions: Float32Array, count: number): Box
 
 /**
  * Compute camera placement from a precomputed bounding box.
+ *
+ * The orbit target sits on the floor of the bounds rather than at their center, so
+ * zooming and panning stay anchored to the ground instead of a point in mid-air.
  */
 export function computeCameraPlacement(bounds: Box3): CameraPlacement {
     if (bounds.isEmpty()) {
@@ -163,9 +166,10 @@ export function computeCameraPlacement(bounds: Box3): CameraPlacement {
     const size = bounds.getSize(new Vector3());
     const maxDim = Math.max(size.x, size.y, size.z, 1);
     const distance = maxDim * 1.5;
+    const floor = bounds.min.z;
 
     return {
-        position: [center.x + distance * 0.5, center.y + distance * 0.5, center.z + distance],
-        target: [center.x, center.y, center.z]
+        position: [center.x + distance * 0.5, center.y + distance * 0.5, floor + distance],
+        target: [center.x, center.y, floor]
     };
 }

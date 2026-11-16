@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/api/ApiError';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
@@ -195,7 +196,7 @@
             labelName: item.value
         });
         if (!data) {
-            toast.error('Failed to update annotations: ' + JSON.stringify(error));
+            toast.error('Failed to update annotations: ' + getErrorMessage(error, 'Unknown error'));
             return;
         }
 

@@ -243,14 +243,14 @@ class Sample(ABC):
         annotations: list[Annotation] = []
         for annotation in self.sample_table.annotations:
             if annotation.annotation_type == AnnotationType.OBJECT_DETECTION:
-                assert annotation.object_detection_details is not None, (
-                    "Invalid sample annotation data"
-                )
+                if annotation.object_detection_details is None:
+                    raise RuntimeError("Invalid sample annotation data")
                 annotations.append(
                     ObjectDetectionAnnotation(inner=annotation.object_detection_details)
                 )
             elif annotation.annotation_type == AnnotationType.SEGMENTATION_MASK:
-                assert annotation.segmentation_details is not None, "Invalid sample annotation data"
+                if annotation.segmentation_details is None:
+                    raise RuntimeError("Invalid sample annotation data")
                 annotations.append(
                     SegmentationMaskAnnotation(inner=annotation.segmentation_details)
                 )

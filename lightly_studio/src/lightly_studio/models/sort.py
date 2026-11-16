@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated, Literal, Union
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
 
@@ -71,7 +71,7 @@ class EvaluationMetricSortExpr(BaseModel):
 
 
 ImageSortExpr = Annotated[
-    Union[ImageSortFieldExpr, EvaluationMetricSortExpr],
+    ImageSortFieldExpr | EvaluationMetricSortExpr,
     Field(discriminator="source"),
 ]
 
@@ -85,7 +85,7 @@ ImageSortExpr = Annotated[
 # structurally identical, guarded by
 # tests/models/test_sort.py::test_image_and_video_sort_field_exprs_stay_structurally_identical.
 AdjacentSortExpr = Annotated[
-    Union[ImageSortFieldExpr, VideoSortFieldExpr, EvaluationMetricSortExpr],
+    ImageSortFieldExpr | VideoSortFieldExpr | EvaluationMetricSortExpr,
     Field(union_mode="left_to_right"),
 ]
 

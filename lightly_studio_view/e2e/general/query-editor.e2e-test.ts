@@ -12,6 +12,8 @@ function waitForImageListResponse(page: Page): Promise<Response> {
 async function typeAndApply(page: Page, query: string): Promise<void> {
     await page.locator('.monaco-editor .view-lines').first().click();
     await page.keyboard.press('ControlOrMeta+a');
+    // Delete the selection first: typing a quote or bracket over it wraps it instead.
+    await page.keyboard.press('Backspace');
     await page.keyboard.type(query);
 
     const refetchPromise = waitForImageListResponse(page);
@@ -107,6 +109,21 @@ test.describe('query editor', () => {
             .toBeGreaterThanOrEqual(cocoDataset.defaultPageSize);
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    test('typing an opening parenthesis wraps the selected text', async ({ samplesPage, page }) => {
+        // The samplesPage fixture navigates to the samples grid.
+        await page.getByTestId('side-panel-tabs-query').click();
+        const editorLines = page.locator('.monaco-editor .view-lines').first();
+        await editorLines.click();
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.type('width > 0');
+
+        await page.keyboard.press('ControlOrMeta+a');
+        await page.keyboard.type('(');
+
+        await expect(editorLines).toHaveText('(width > 0)');
+    });
+
     test('syntax error shows toast and Apply stays enabled', async ({ samplesPage, page }) => {
         await page.getByTestId('side-panel-tabs-query').click();
         await typeAndApply(page, QUERY);
@@ -126,6 +143,25 @@ test.describe('query editor', () => {
         await expect(applyButton).toBeEnabled();
 
         // Grid should still show the previously filtered results
+        await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
+    });
+
+    test('query history applies an earlier query after a reload', async ({ samplesPage, page }) => {
+        await page.getByTestId('side-panel-tabs-query').click();
+        await typeAndApply(page, QUERY);
+        await typeAndApply(page, 'width > 0');
+
+        // The applied query is lost on reload. The history stays in the browser.
+        await page.reload();
+        await page.getByTestId('side-panel-tabs-query').click();
+        await page.getByTestId('query-history-button').click();
+        await expect(page.getByTestId('query-history-item')).toHaveText(['width > 0', QUERY]);
+
+        const refetchPromise = waitForImageListResponse(page);
+        await page.getByTestId('query-history-item').filter({ hasText: QUERY }).click();
+        await refetchPromise;
+
+        await expect(page.locator('.monaco-editor .view-lines')).toContainText(QUERY);
         await expect(samplesPage.getSamples()).toHaveCount(cocoDataset.labels.airplane.sampleCount);
     });
 });
