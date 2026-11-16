@@ -59,8 +59,8 @@ interface StringLiteral extends Expression {
 }
 
 entry Query:
-  (expression=Sample<true>) |
-    (isVideo?='video:' expression=Sample<false>);
+  {infer Query} (expression=Sample<true> |
+    (isVideo?='video:' (expression=Sample<false>)?))?;
 
 Sample<isImage> returns Expression:
   SampleOr<isImage>;

@@ -133,7 +133,7 @@ describe('useLightlyQueryLanguage', () => {
             expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([]);
 
             const listener = model.onDidChangeContent.mock.calls[0][0] as () => void;
-            for (const blank of ['', ' \n\t ']) {
+            for (const blank of ['', ' \n\t ', '# width > 100\n# AND height < 500']) {
                 model._value = 'width >';
                 listener();
                 expect(mocks.setModelMarkers.mock.calls.at(-1)![2].length).toBeGreaterThan(0);

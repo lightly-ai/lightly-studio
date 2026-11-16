@@ -51,7 +51,9 @@ describe('QueryEditorPanel', () => {
 
     it.each([
         ['image', ''],
-        ['video', ' \n\t ']
+        ['video', ' \n\t '],
+        ['image', '# width < 500'],
+        ['video', '# width < 500\n# AND height > 10']
     ] as const)('clears the %s query when applying blank input', async (sampleType, value) => {
         const collectionId = `empty-${sampleType}`;
         render(QueryEditorPanel, {
@@ -66,6 +68,7 @@ describe('QueryEditorPanel', () => {
         await fireEvent.input(screen.getByRole('textbox', { name: 'Query' }), {
             target: { value }
         });
+        translateQuery.mockReturnValueOnce({ status: 'empty' });
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
 
         expect(updateQueryExpr).toHaveBeenCalledExactlyOnceWith(undefined);

@@ -43,7 +43,7 @@ export interface UseLightlyQueryLanguageReturn {
      * disposes the subscription and clears any markers this hook owns. */
     attach: (model: monaco.editor.ITextModel, sampleType?: 'image' | 'video') => () => void;
     /** Synchronously parses a query string and returns either the translated
-     * backend `QueryExpr` (`status: 'ok'`) or the collected lexer/parser errors
+     * backend `QueryExpr` (`status: 'ok'`), no expression (`status: 'empty'`), or lexer/parser errors
      * (`status: 'error'`). Intended for one-off translation outside the editor
      * lifecycle (e.g. on Save). */
     translateQuery: (value: string, sampleType?: 'image' | 'video') => QueryExprTranslationResult;
@@ -54,10 +54,6 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
     const parser = services.LightlyQuery.parser.LangiumParser;
 
     function validate(model: monaco.editor.ITextModel): void {
-        if (!model.getValue().trim()) {
-            monaco.editor.setModelMarkers(model, MARKER_OWNER, []);
-            return;
-        }
         const { text, lineOffset } = getModelQuerySource(model);
         const result = parser.parse<Query>(text);
         const markers = [

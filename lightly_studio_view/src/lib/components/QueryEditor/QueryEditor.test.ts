@@ -44,6 +44,20 @@ describe('QueryEditor', () => {
         vi.clearAllMocks();
     });
 
+    it.each(['image', 'video'] as const)(
+        'saves an empty result when all %s query conditions are commented out',
+        async (sampleType) => {
+            const onSave = vi.fn();
+            render(QueryEditor, { props: { value: 'width < 500', sampleType, onSave } });
+            const query = '# width < 500\n# AND file_name = "sample#1"';
+            await simulateUserEdit(query);
+            await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+            expect(onSave).toHaveBeenCalledExactlyOnceWith(query, { status: 'empty' });
+            expect(toast.error).not.toHaveBeenCalled();
+        }
+    );
+
     it('starts with an implicit video query, rejects invalid fields, and saves a video query', async () => {
         const onSave = vi.fn();
         render(QueryEditor, { props: { sampleType: 'video', onSave } });
