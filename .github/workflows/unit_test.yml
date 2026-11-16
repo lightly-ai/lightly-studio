@@ -237,7 +237,7 @@ jobs:
 
       # Catches packaging errors before a release. The wheel is pure Python, so one job is enough.
       - name: Build Python package
-        if: matrix.python == '3.10'
+        if: matrix.python == '3.11'
         working-directory: lightly_studio
         env:
           UV_PYTHON: ${{ matrix.python }}

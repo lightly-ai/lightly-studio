@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlalchemy import orm
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
-from typing_extensions import TypeVar
+from typing_extensions import TypeVar  # default= needs Python 3.13.
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression

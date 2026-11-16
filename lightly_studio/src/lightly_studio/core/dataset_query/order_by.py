@@ -13,7 +13,7 @@ from sqlalchemy.engine import Row
 from sqlalchemy.orm import Mapped, aliased
 from sqlmodel import col
 from sqlmodel.sql.expression import SelectOfScalar
-from typing_extensions import TypeVar
+from typing_extensions import TypeVar  # default= needs Python 3.13.
 
 from lightly_studio.core.dataset_query.field import Field
 from lightly_studio.database import db_json
