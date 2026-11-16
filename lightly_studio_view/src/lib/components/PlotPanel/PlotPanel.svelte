@@ -528,7 +528,8 @@
     );
 
     const errorText = $derived.by(() => {
-        if (plotComputeGate.statusError) {
+        // A text axes plot does not use the status, so a failed status request must not hide it.
+        if (plotComputeGate.view === 'error') {
             return plotComputeGate.statusError;
         }
         if (embeddingsData.isError) {
@@ -570,6 +571,7 @@
             <PlotComputePrompt
                 view="prompt"
                 embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
                 startedAt={plotComputeGate.startedAt}
                 onCompute={plotComputeGate.startCompute}
             />
@@ -577,6 +579,7 @@
             <PlotComputePrompt
                 view="computing"
                 embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
                 startedAt={plotComputeGate.startedAt}
                 onCompute={plotComputeGate.startCompute}
             />

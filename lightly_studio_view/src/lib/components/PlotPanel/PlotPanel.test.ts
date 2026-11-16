@@ -999,6 +999,26 @@ describe('PlotPanel.svelte', () => {
             expect((useEmbeddings as vi.Mock).mock.lastCall?.[4]).toBe(false);
         });
 
+        it('names the items of the collection in the prompt', () => {
+            routeState.id = VIDEOS_ROUTE;
+            setGate({ view: 'prompt', embeddingCount: 300_000 });
+            (useEmbeddings as vi.Mock).mockReturnValue(idlePlot);
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('300,000 videos. The first compute can take several minutes.')
+            ).toBeInTheDocument();
+        });
+
+        it('keeps a loaded text axes plot when the status request fails', () => {
+            setGate({ view: 'plot', statusError: 'boom' });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(screen.queryByText('Error loading embeddings: boom')).not.toBeInTheDocument();
+        });
+
         it('shows the status error', () => {
             setGate({
                 view: 'error',
