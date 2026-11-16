@@ -409,6 +409,23 @@ describe('SampleDetailsPanel batch context', () => {
         );
     });
 
+    it('submits the labeler’s file for review from the header', async () => {
+        const transition = vi.fn().mockResolvedValue(undefined);
+        workflow = {
+            active: true,
+            canEdit: true,
+            isError: false,
+            transitioning: false,
+            transition,
+            file: workflowFile
+        };
+
+        render(SampleDetailsPanel, { props: defaultProps });
+        await fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+
+        expect(transition).toHaveBeenCalledWith('in_review');
+    });
+
     it('keeps the file read-only when the batch cannot be loaded', () => {
         workflow = { active: true, canEdit: false, isError: true };
 

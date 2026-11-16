@@ -129,5 +129,6 @@ export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName
 export {
     fetchWorkflowFile,
     useWorkflowFile,
+    useWorkflowFileTransition,
     type WorkflowFile
 } from '$lib/hooks/useWorkflowFile/useWorkflowFile.svelte';

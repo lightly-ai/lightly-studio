@@ -1,4 +1,4 @@
-import { createQuery } from '@tanstack/svelte-query';
+import { createMutation, createQuery, useQueryClient } from '@tanstack/svelte-query';
 
 interface WorkflowFileParams {
     projectId: string;
@@ -32,20 +32,24 @@ export interface WorkflowFile {
     instructions_updated_at: string | null;
 }
 
+type WorkflowFileState = WorkflowFile['state'];
+
+const filePath = ({ projectId, batchId, sampleId }: WorkflowFileParams) => {
+    const [project, batch, sample] = [projectId, batchId, sampleId].map(encodeURIComponent);
+    return `/workflow/projects/${project}/batches/${batch}/files/${sample}`;
+};
+
+const workflowFileKey = (params: WorkflowFileParams | null) => ['workflow-file', params];
+
 /**
  * Reads a batch file's context from the hosted workflow service on the same origin.
  * The proxy verifies the session cookie and tells the service who is asking.
  */
-export async function fetchWorkflowFile({
-    projectId,
-    batchId,
-    sampleId
-}: WorkflowFileParams): Promise<WorkflowFile> {
-    const path = [projectId, batchId, sampleId].map(encodeURIComponent);
-    const response = await fetch(
-        `/workflow/projects/${path[0]}/batches/${path[1]}/files/${path[2]}/context`,
-        { credentials: 'same-origin', headers: { Accept: 'application/json' } }
-    );
+export async function fetchWorkflowFile(params: WorkflowFileParams): Promise<WorkflowFile> {
+    const response = await fetch(`${filePath(params)}/context`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+    });
     if (!response.ok) {
         throw new Error(`Could not load the batch context (${response.status})`);
     }
@@ -57,11 +61,57 @@ export const useWorkflowFile = (getParams: () => WorkflowFileParams | null) => {
     const query = createQuery(() => {
         const params = getParams();
         return {
-            queryKey: ['workflow-file', params],
+            queryKey: workflowFileKey(params),
             queryFn: () => fetchWorkflowFile(params!),
             enabled: params !== null,
             retry: false
         };
     });
     return { query };
+};
+
+/** Moves a batch file to another state; the service checks that the move and the caller are allowed. */
+export async function transitionWorkflowFile(
+    params: WorkflowFileParams,
+    state: WorkflowFileState
+): Promise<void> {
+    const response = await fetch(`${filePath(params)}/transitions`, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state })
+    });
+    if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        const detail = typeof body?.detail === 'string' ? body.detail : null;
+        throw new Error(detail ?? `Could not change the file state (${response.status})`);
+    }
+}
+
+/**
+ * Moves the open batch file to another state. Resolves only once the file's context was
+ * read again, so the badge, turn and edit lock change after the service confirmed the move.
+ * A rejected move reads the context again too, in case the file moved elsewhere meanwhile.
+ */
+export const useWorkflowFileTransition = (getParams: () => WorkflowFileParams | null) => {
+    const client = useQueryClient();
+    const mutation = createMutation(() => ({
+        mutationFn: async (state: WorkflowFileState) => {
+            const params = getParams();
+            if (!params) throw new Error('The file was not opened from a batch');
+            const refetch = () =>
+                client.refetchQueries(
+                    { queryKey: workflowFileKey(params), exact: true },
+                    { throwOnError: true }
+                );
+            try {
+                await transitionWorkflowFile(params, state);
+            } catch (error) {
+                await refetch().catch(() => undefined);
+                throw error;
+            }
+            await refetch();
+        }
+    }));
+    return { mutation };
 };

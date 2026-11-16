@@ -1,5 +1,5 @@
 import { getContext, setContext } from 'svelte';
-import { useWorkflowFile, type WorkflowFile } from '$lib/hooks';
+import { useWorkflowFile, useWorkflowFileTransition, type WorkflowFile } from '$lib/hooks';
 
 type WorkflowFileParams = Parameters<typeof useWorkflowFile>[0] extends () => infer P
     ? NonNullable<P>
@@ -18,6 +18,10 @@ type WorkflowFileContext = {
     readonly canEdit: boolean;
     /** The service said the user cannot edit, or could not be asked; false while loading. */
     readonly locked: boolean;
+    /** Moves the file to another state; resolves once the new state is shown. */
+    transition(state: WorkflowFile['state']): Promise<void>;
+    /** True while a move waits for the service. */
+    readonly transitioning: boolean;
 };
 
 const CONTEXT_KEY = 'workflow-file';
@@ -33,6 +37,7 @@ export function createWorkflowFileContext(
     getParams: () => WorkflowFileParams | null
 ): WorkflowFileContext {
     const { query } = useWorkflowFile(getParams);
+    const { mutation } = useWorkflowFileTransition(getParams);
     const context: WorkflowFileContext = {
         get active() {
             return getParams() !== null;
@@ -48,6 +53,12 @@ export function createWorkflowFileContext(
         },
         get locked() {
             return this.active && (query.isError || query.data?.can_edit === false);
+        },
+        transition(state) {
+            return mutation.mutateAsync(state);
+        },
+        get transitioning() {
+            return mutation.isPending;
         }
     };
     setContext(CONTEXT_KEY, context);

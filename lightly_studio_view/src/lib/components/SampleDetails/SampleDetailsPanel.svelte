@@ -37,6 +37,7 @@
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
     import WorkflowFileStatus from '$lib/components/Workflow/WorkflowFileStatus/WorkflowFileStatus.svelte';
+    import WorkflowFileActions from '$lib/components/Workflow/WorkflowFileActions/WorkflowFileActions.svelte';
     import WorkflowReadOnlyBanner from '$lib/components/Workflow/WorkflowReadOnlyBanner/WorkflowReadOnlyBanner.svelte';
 
     const {
@@ -108,6 +109,8 @@
     const { user } = useAuth();
     const workflow = useWorkflowFileContext();
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler') && (workflow?.canEdit ?? true));
+    // Flags are not stored yet, so a file has none to address or clear.
+    const openFlags = 0;
     const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
 
     let isPanModeEnabled = $state(false);
@@ -300,6 +303,14 @@
                 {/if}
             </div>
             <div class="flex items-center gap-1">
+                {#if workflow?.file}
+                    <WorkflowFileActions
+                        file={workflow.file}
+                        {openFlags}
+                        transitioning={workflow.transitioning}
+                        onTransition={workflow.transition}
+                    />
+                {/if}
                 <BreadcrumbHeaderActions {collectionId} />
                 <SidePanelToggleButton />
             </div>

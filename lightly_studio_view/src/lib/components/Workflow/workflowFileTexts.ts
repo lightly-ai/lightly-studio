@@ -49,3 +49,11 @@ export function readOnlyText(
     }
     return 'You aren’t assigned to this batch, so this file is read-only for you.';
 }
+
+/** "1 flag", "3 flags", or the same with another noun such as "open flag". */
+export function flagsText(count: number, noun = 'flag'): string {
+    return `${count} ${noun}${count === 1 ? '' : 's'}`;
+}
+
+/** Why a reviewer cannot send a file back yet. */
+export const SEND_BACK_NEEDS_FLAG = 'Flag at least one object to send the file back';
