@@ -66,7 +66,7 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
         if (startedAt === null) return;
         const plotUpdatedAt = getPlotUpdatedAt();
         const isLoadedAfterStart = plotUpdatedAt > startedAt;
-        const isStatusAfterLoad = statusQuery.dataUpdatedAt >= plotUpdatedAt;
+        const isStatusAfterLoad = statusQuery.dataUpdatedAt > plotUpdatedAt;
         const isComputeOver =
             freshStatus?.is_computed === true || (isLoadedAfterStart && isStatusAfterLoad);
         if (isComputeOver) untrack(() => clearComputeStart(getCollectionId()));
