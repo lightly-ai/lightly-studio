@@ -38,12 +38,16 @@ function createStatusQuery(data: Embeddings2dStatus | undefined): StatusQueryStu
     return query;
 }
 
-function mountGate(params: { collectionId: string; plotUpdatedAt?: () => number }) {
+function mountGate(params: {
+    collectionId: string;
+    plotUpdatedAt?: () => number;
+    isAxesLayout?: () => boolean;
+}) {
     let gate!: ReturnType<typeof usePlotComputeGate>;
     const dispose = $effect.root(() => {
         gate = usePlotComputeGate({
             getCollectionId: () => params.collectionId,
-            getIsAxesLayout: () => false,
+            getIsAxesLayout: params.isAxesLayout ?? (() => false),
             getPlotUpdatedAt: params.plotUpdatedAt ?? (() => 0)
         });
     });
@@ -215,6 +219,33 @@ describe('usePlotComputeGate', () => {
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
         flushSync();
         expect(gate.view).toBe('prompt');
+    });
+
+    it('keeps a running compute when a text axes plot loads', async () => {
+        vi.useFakeTimers({ now: 1_000_000 });
+        const query = createStatusQuery(NOT_COMPUTED_LARGE);
+        mocks.statusQueries['axes-load'] = query;
+        let isAxesLayout = $state(false);
+        let plotUpdatedAt = $state(0);
+        const { gate } = mountGate({
+            collectionId: 'axes-load',
+            plotUpdatedAt: () => plotUpdatedAt,
+            isAxesLayout: () => isAxesLayout
+        });
+        gate.startCompute();
+        flushSync();
+
+        isAxesLayout = true;
+        plotUpdatedAt = 1_005_000;
+        flushSync();
+        await Promise.resolve();
+        // Back on the PaCMAP layout, the plot query of the running compute has no data yet.
+        isAxesLayout = false;
+        plotUpdatedAt = 0;
+        flushSync();
+
+        expect(gate.startedAt).toBe(1_000_000);
+        expect(gate.view).toBe('computing');
     });
 
     it('keeps the start while only an older cached plot is loaded', () => {
