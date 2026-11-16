@@ -333,5 +333,13 @@ describe('FrameTimeline', () => {
             await rerender({ ...manyTicks, currentTick: 500, isPlaying: true });
             expect(screen.getByText('501')).toBeInTheDocument();
         });
+
+        it('renders only the marks near the viewport when zoomed in', async () => {
+            render(FrameTimeline, { props: manyTicks });
+            expect(screen.getAllByTestId('timeline-tick-mark')).toHaveLength(200);
+
+            await zoomInDeeply();
+            expect(screen.getAllByTestId('timeline-tick-mark').length).toBeLessThan(100);
+        });
     });
 });

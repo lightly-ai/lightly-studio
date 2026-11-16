@@ -96,9 +96,19 @@
         Math.max(1, Math.ceil(ticks.length / (MAX_VISIBLE_MARKS * viewport.zoom)))
     );
 
-    const visibleMarks = $derived(
-        ticks.flatMap((tick, index) => (index % markStride === 0 ? [{ tick, index }] : []))
-    );
+    // Render only the marks inside the window, plus one window on each side, so zooming in does
+    // not keep every offscreen mark in the DOM. Start on the mark grid to avoid marks shifting.
+    const visibleMarks = $derived.by(() => {
+        const span = ticks.length / viewport.zoom;
+        const windowStart = viewport.offset * ticks.length;
+        const first = Math.max(0, Math.floor(windowStart - span));
+        const last = Math.min(ticks.length - 1, Math.ceil(windowStart + 2 * span));
+        const marks = [];
+        for (let index = first - (first % markStride); index <= last; index += markStride) {
+            marks.push({ tick: ticks[index], index });
+        }
+        return marks;
+    });
     const labelStride = $derived(
         markStride * Math.max(1, Math.ceil(ticks.length / (12 * viewport.zoom * markStride)))
     );
