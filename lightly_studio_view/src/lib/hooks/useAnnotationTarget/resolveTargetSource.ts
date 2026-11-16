@@ -39,10 +39,9 @@ interface ResolvedTargetSource {
  */
 export const resolveTargetSource = (params: ResolveTargetSourceParams): ResolvedTargetSource => {
     const { sourceNames } = params;
-    if (!sourceNames) {
-        const blockedReason = params.isError ? SOURCES_ERROR_MESSAGE : LOADING_SOURCES_MESSAGE;
-        return { targetSource: null, blockedReason };
-    }
+    // A failed load blocks even when a previous load left names cached: the pick may be gone.
+    if (params.isError) return { targetSource: null, blockedReason: SOURCES_ERROR_MESSAGE };
+    if (!sourceNames) return { targetSource: null, blockedReason: LOADING_SOURCES_MESSAGE };
     const targetSource = pickTargetSource({ ...params, sourceNames });
     if (targetSource === null) return { targetSource, blockedReason: PICK_SOURCE_MESSAGE };
     const isHidden = params.hiddenSources.includes(targetSource);
