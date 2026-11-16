@@ -1,6 +1,6 @@
 """Interface for annotations."""
 
-from typing import Optional, cast
+from typing import cast
 
 from sqlalchemy.orm import object_session
 from sqlmodel import Session
@@ -35,7 +35,7 @@ class Annotation:
         return cast(Session, session)
 
     @property
-    def confidence(self) -> Optional[float]:
+    def confidence(self) -> float | None:
         """Annotation confidence."""
         return self.annotation_base.confidence
 

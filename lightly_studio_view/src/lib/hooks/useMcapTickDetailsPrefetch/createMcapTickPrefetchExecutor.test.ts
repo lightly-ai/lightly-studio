@@ -91,6 +91,24 @@ describe('createMcapTickPrefetchExecutor', () => {
         expect(onStateChange).toHaveBeenLastCalledWith(new Set([0, 1, 2, 3]), new Map());
     });
 
+    it('clears a failed tick after a successful retry without fetching completed ticks again', async () => {
+        const error = new Error('Failed to load');
+        prefetchMock
+            .mockResolvedValueOnce(undefined)
+            .mockRejectedValueOnce(error)
+            .mockResolvedValue(undefined);
+        const onStateChange = vi.fn();
+        const executor = createExecutor(onStateChange);
+        const request = { requestId: 'session-1', ranges: [{ startIndex: 0, endIndex: 1 }] };
+
+        await executor.prefetchRanges(request);
+        expect(onStateChange).toHaveBeenLastCalledWith(new Set([0]), new Map([[1, error]]));
+        await executor.prefetchRanges(request);
+
+        expect(prefetchMock.mock.calls.map(([, params]) => params.seqNumber)).toEqual([0, 1, 1]);
+        expect(onStateChange).toHaveBeenLastCalledWith(new Set([0, 1]), new Map());
+    });
+
     it('does not reuse completed ticks after changing display frames', async () => {
         prefetchMock.mockResolvedValue(undefined);
         let displayFrameId: string | undefined = 'base_link';

@@ -6,7 +6,6 @@ locator fields; no payload bytes, file path, or topic are stored here.
 """
 
 from datetime import datetime, timezone
-from typing import Optional
 from uuid import UUID
 
 from sqlalchemy import BigInteger
@@ -30,7 +29,7 @@ class McapBase(SQLModel):
     capture_timestamp_ns: int = Field(sa_type=BigInteger)
 
     """Log time of the keyframe to seek to before decoding. Required for camera channels."""
-    keyframe_log_time_ns: Optional[int] = Field(default=None, sa_type=BigInteger)
+    keyframe_log_time_ns: int | None = Field(default=None, sa_type=BigInteger)
 
 
 class McapCreate(McapBase):
@@ -57,7 +56,7 @@ class McapView(SQLModel):
     channel_id: int
     log_time_ns: int
     capture_timestamp_ns: int
-    keyframe_log_time_ns: Optional[int] = None
+    keyframe_log_time_ns: int | None = None
 
     sample: SampleView
 

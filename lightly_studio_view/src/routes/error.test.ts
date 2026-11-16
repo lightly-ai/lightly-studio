@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/svelte';
 import ErrorPage from './+error.svelte';
 import '@testing-library/jest-dom';
+// eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
 import * as appStores from '$app/stores';
 import * as clientModule from '$lib/api/lightly_studio_local/client.gen';
 import { readable } from 'svelte/store';

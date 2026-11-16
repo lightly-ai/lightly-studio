@@ -8,7 +8,6 @@ import json
 import tempfile
 import zipfile
 from pathlib import Path
-from unittest import mock
 from uuid import UUID, uuid4
 
 import pytest
@@ -640,10 +639,11 @@ def test_export_collection_annotations_prepare__unsupported_format(
     db_session: Session,
     test_client: TestClient,
     monkeypatch: pytest.MonkeyPatch,
+    mocker: MockerFixture,
 ) -> None:
     collection = create_collection(session=db_session)
-    generate_annotations_export = mock.Mock()
-    make_temp_dir = mock.Mock()
+    generate_annotations_export = mocker.Mock()
+    make_temp_dir = mocker.Mock()
     monkeypatch.setattr(export_api, "_generate_annotations_export", generate_annotations_export)
     monkeypatch.setattr(tempfile, "mkdtemp", make_temp_dir)
 
@@ -978,6 +978,7 @@ def scene_update_client(patch_collection: None, test_client: TestClient) -> Test
 def test_scene_update_options(
     scene_update_client: TestClient,
     tmp_path: Path,
+    mocker: MockerFixture,
 ) -> None:
     dataset = _index_scene_update_recording(tmp_path=tmp_path)
 
@@ -993,7 +994,7 @@ def test_scene_update_options(
     # The stored cuboid frame comes before the reference frames.
     assert result["annotation_collections"] == [
         {
-            "collection_id": mock.ANY,
+            "collection_id": mocker.ANY,
             "name": "ground_truth",
             "frame_ids": ["odom", *SCENE_UPDATE_FRAME_IDS],
         }

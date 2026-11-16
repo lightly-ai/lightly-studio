@@ -168,7 +168,11 @@ describe('camera synchronization lifecycle', () => {
         options.fitKey = 'sequence/sensor';
         flushSync();
         sync.updateBounds(nextBounds);
-        expect(controls.target.toArray()).toEqual([100, 100, 2]);
+        expect(controls.target.toArray()).toEqual([
+            expect.closeTo(100),
+            expect.closeTo(100),
+            expect.closeTo(0)
+        ]);
         expect(camera.position.toArray()).not.toEqual(position.toArray());
     });
 

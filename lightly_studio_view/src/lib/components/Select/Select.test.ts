@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import { render } from '@testing-library/svelte';
-import { Crosshair, Target } from '@lucide/svelte';
+import Crosshair from '@lucide/svelte/icons/crosshair';
+import Target from '@lucide/svelte/icons/target';
 import '@testing-library/jest-dom';
 import Select, { type SelectItem } from './Select.svelte';
 

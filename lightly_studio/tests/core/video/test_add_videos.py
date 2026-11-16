@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from argparse import ArgumentParser
 from pathlib import Path
-from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
 import fsspec
@@ -528,9 +527,9 @@ def test_load_into_collection_from_paths__invalid_fps_raises(
         )
 
 
-def test__configure_stream_threading__with_explicit_thread_count() -> None:
+def test__configure_stream_threading__with_explicit_thread_count(mocker: MockerFixture) -> None:
     """Test configuring threading with explicit thread count."""
-    video_stream = MagicMock()
+    video_stream = mocker.MagicMock()
 
     add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=4)
 
@@ -540,7 +539,7 @@ def test__configure_stream_threading__with_explicit_thread_count() -> None:
 
 def test__configure_stream_threading__auto_calculate_threads(mocker: MockerFixture) -> None:
     """Test automatic thread count calculation based on CPU count."""
-    video_stream = MagicMock()
+    video_stream = mocker.MagicMock()
 
     mocker.patch.object(os, "cpu_count", return_value=8)
     add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
@@ -552,7 +551,7 @@ def test__configure_stream_threading__auto_calculate_threads(mocker: MockerFixtu
 
 def test__configure_stream_threading__capped_at_16_threads(mocker: MockerFixture) -> None:
     """Test that thread count is capped at 16."""
-    video_stream = MagicMock()
+    video_stream = mocker.MagicMock()
 
     mocker.patch.object(os, "cpu_count", return_value=32)
     add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
@@ -564,7 +563,7 @@ def test__configure_stream_threading__capped_at_16_threads(mocker: MockerFixture
 
 def test__configure_stream_threading__min_1_thread(mocker: MockerFixture) -> None:
     """Test that at least 1 thread is used even with single CPU."""
-    video_stream = MagicMock()
+    video_stream = mocker.MagicMock()
 
     mocker.patch.object(os, "cpu_count", return_value=1)
     add_videos._configure_stream_threading(video_stream=video_stream, num_decode_threads=None)
