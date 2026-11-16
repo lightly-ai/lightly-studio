@@ -64,7 +64,6 @@ export function useAnnotationLabelContext(): {
     setAnnotationId: (id: string | null) => void;
     setCurrentBoundingBox: (bbox: BoundingBox | null) => void;
     setAnnotationLabel: (label: string | null) => void;
-    setAnnotationSource: (source: string | null) => void;
     setAnnotationType: (type: AnnotationType | null) => void;
     setLastCreatedAnnotationId: (id: string | null) => void;
     setIsDrawing: (value: boolean) => void;
@@ -90,10 +89,6 @@ export function useAnnotationLabelContext(): {
 
     function setAnnotationLabel(label: string | null) {
         context.annotationLabel = label;
-    }
-
-    function setAnnotationSource(source: string | null) {
-        context.annotationSource = source;
     }
 
     function setAnnotationType(type: AnnotationType | null) {
@@ -134,7 +129,6 @@ export function useAnnotationLabelContext(): {
         setAnnotationId,
         setCurrentBoundingBox,
         setAnnotationLabel,
-        setAnnotationSource,
         setAnnotationType,
         setLastCreatedAnnotationId,
         setIsDrawing,
