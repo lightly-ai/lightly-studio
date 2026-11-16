@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { Maximize, Minus, Plus } from '@lucide/svelte';
+    import Maximize from '@lucide/svelte/icons/maximize';
+    import Minus from '@lucide/svelte/icons/minus';
+    import Plus from '@lucide/svelte/icons/plus';
     import { Button } from '$lib/components';
     import { getTimelineViewport } from '../useTimelineViewport.svelte';
 
