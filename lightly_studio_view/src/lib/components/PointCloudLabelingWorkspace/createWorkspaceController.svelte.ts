@@ -83,11 +83,12 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         showOrthographicViews: presentation.showOrthographicViews,
         pointSize: presentation.pointSize,
         showNavigationHelpers: presentation.showNavigationHelpers,
-        showAnnotationTooltips: presentation.showAnnotationTooltips,
         accumulation,
         colorMode: presentation.colorMode,
         selectedCuboidId: editing.selectedCuboidId,
         hoveredCuboidId: editing.hoveredCuboidId,
+        // The draft target does not clear its highlight on teardown, so it ends with the tool.
+        draftCuboid: editing.effectiveTool === 'create-cuboid' ? editing.draftCuboid : null,
         selectedCameraChannelIds: cameraSelection.selectedChannelIds,
         cameraStripCollapsed: cameraPane.collapsed,
         bufferEntireSequence: playback.bufferEntireSequence,
@@ -97,7 +98,6 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         onToggleOrthographicProjections: presentation.toggleOrthographicProjections,
         onPointSizeChange: presentation.setPointSize,
         onToggleNavigationHelpers: presentation.setShowNavigationHelpers,
-        onToggleAnnotationTooltips: presentation.setShowAnnotationTooltips,
         onToolChange: (tool) => {
             editing.activeTool = tool;
         },
@@ -106,6 +106,9 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         },
         onHover: (id) => {
             editing.hoveredCuboidId = id;
+        },
+        onCuboidDraftChange: (box) => {
+            editing.draftCuboid = box;
         },
         onCreateCuboid: editing.handleCreateCuboid,
         isAddingTrack: editing.isAddingTrack,

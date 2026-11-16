@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTickDetails } from '$lib/api/lightly_studio_local/sdk.gen';
 import { getTickDetailsOptions } from './getTickDetailsOptions';
+import { ApiError } from '$lib/api/ApiError';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     getTickDetails: vi.fn()
@@ -63,7 +64,7 @@ describe('getTickDetailsOptions', () => {
     it('retries without a target frame when the transform is unavailable', async () => {
         const data = { annotations: [] };
         vi.mocked(getTickDetails)
-            .mockRejectedValueOnce({ detail: { type: 'transform_unavailable' } })
+            .mockRejectedValueOnce(new ApiError('No transform', 400, 'transform_unavailable'))
             .mockResolvedValueOnce({ data } as never);
         const signal = new AbortController().signal;
 

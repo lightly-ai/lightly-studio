@@ -2,6 +2,7 @@ import { createSampling } from '$lib/api/lightly_studio_local/sdk.gen';
 import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSubmitCombinationSelection } from './useSubmitCombinationSelection';
+import { ApiError } from '$lib/api/ApiError';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', () => ({
     createSampling: vi.fn()
@@ -159,7 +160,7 @@ describe('useSubmitCombinationSelection', () => {
     it('returns false and toasts error when createSampling fails', async () => {
         vi.mocked(createSampling).mockResolvedValue({
             data: undefined,
-            error: { error: 'Server error' }
+            error: new ApiError('Server error', 500)
         } as never);
         const loadTags = vi.fn();
         const closeSelectionDialog = vi.fn();

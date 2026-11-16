@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import uuid
-from typing import Any
+from typing import Any, assert_type
 
 from duckdb_engine import Dialect as DuckDBDialect
 from sqlalchemy import Select
 from sqlalchemy import select as sa_select
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
-from typing_extensions import assert_type
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (

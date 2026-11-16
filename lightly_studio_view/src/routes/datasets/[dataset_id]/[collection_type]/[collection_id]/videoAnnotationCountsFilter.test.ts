@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { get } from 'svelte/store';
+import { useVideoFilters } from '$lib/hooks';
 import type {
     AnnotationsFilter,
+    QueryExpr,
     VideoFieldsBoundsView,
     VideoFilter
 } from '$lib/api/lightly_studio_local';
@@ -33,6 +36,28 @@ const defaultParams = {
 };
 
 describe('buildVideoAnnotationCountsFilter', () => {
+    it('keeps annotation counts in sync when the video query is applied and cleared', () => {
+        const { videoFilter, updateFilterParams, updateQueryExpr } = useVideoFilters();
+        const queryExpr: QueryExpr = {
+            match_expr: {
+                type: 'ordinal_float_expr',
+                field: { table: 'video', name: 'duration_s' },
+                operator: '>',
+                value: 10
+            }
+        };
+        updateFilterParams({ collection_id: 'videos', filters: { tag_ids: ['t'] } });
+        updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'duration_s > 10' });
+        expect(
+            buildVideoAnnotationCountsFilter({ ...defaultParams, videoFilter: get(videoFilter) })
+        ).toMatchObject({ sample_filter: { tag_ids: ['t'], query_expr: queryExpr } });
+
+        updateQueryExpr();
+        expect(
+            buildVideoAnnotationCountsFilter({ ...defaultParams, videoFilter: get(videoFilter) })
+        ).toEqual({ filter_type: 'video', sample_filter: { tag_ids: ['t'] } });
+    });
+
     it('passes the plot selection and tags through', () => {
         const videoFilter: VideoFilter = {
             sample_filter: { embedding_region: region, tag_ids: ['t'] }
@@ -82,5 +107,14 @@ describe('buildVideoAnnotationCountsFilter', () => {
             ...videoBounds,
             frame_annotation_filter: annotationsFilter
         });
+    });
+
+    it('keeps empty metadata filters', () => {
+        expect(buildVideoAnnotationCountsFilter({ ...defaultParams, metadataFilters: [] })).toEqual(
+            {
+                filter_type: 'video',
+                sample_filter: { metadata_filters: [] }
+            }
+        );
     });
 });

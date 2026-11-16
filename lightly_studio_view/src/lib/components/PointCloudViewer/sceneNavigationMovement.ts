@@ -31,9 +31,9 @@ export function getNavigationDistance(camera: SceneCamera, center: THREE.Vector3
         : camera.position.distanceTo(center);
 }
 
-/** Rotates a camera position around its current target. */
+const UP = new THREE.Vector3(0, 0, 1);
+
+/** Orbits a camera position around the vertical axis through its target; the height stays. */
 export function rotatePosition(position: THREE.Vector3, center: THREE.Vector3, angle: number) {
-    const spherical = new THREE.Spherical().setFromVector3(position.clone().sub(center));
-    spherical.theta += angle;
-    position.copy(center).add(new THREE.Vector3().setFromSpherical(spherical));
+    position.sub(center).applyAxisAngle(UP, angle).add(center);
 }

@@ -17,6 +17,7 @@ const meta = {
         selectedValues: ['Berlin'],
         loading: false,
         onToggle: fn(),
+        onSetValues: fn(),
         onClear: fn()
     }
 } satisfies Meta<typeof MetadataCategoricalFilter>;

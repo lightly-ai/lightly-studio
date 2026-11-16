@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Button } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { PanelLeftOpen } from '@lucide/svelte';
+    import PanelLeftOpen from '@lucide/svelte/icons/panel-left-open';
 
     const { toggleFilterPanelCollapsed } = useGlobalStorage();
 </script>

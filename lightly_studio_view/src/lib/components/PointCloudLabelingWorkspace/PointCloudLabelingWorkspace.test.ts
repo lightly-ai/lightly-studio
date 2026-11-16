@@ -227,7 +227,6 @@ describe('PointCloudLabelingWorkspace', () => {
         prefetchState.bufferedRanges = [{ startIndex: 0, endIndex: 1 }];
         prefetchState.errors.clear();
         sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
-        sessionStorage.removeItem('lightlyStudio_pointCloudShowAnnotationTooltips');
         sessionStorage.removeItem('lightlyStudio_pointCloudAccumulate');
         sessionStorage.removeItem('lightlyStudio_pointCloudAccumulationRadius');
     });
@@ -269,26 +268,6 @@ describe('PointCloudLabelingWorkspace', () => {
 
         await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
         expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
-    });
-
-    it('persists annotation tooltip visibility from scene settings across workspace mounts', async () => {
-        const user = userEvent.setup();
-        const view = render(PointCloudLabelingWorkspace, { props: defaultProps });
-        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
-        const checkbox = screen.getByRole('checkbox', { name: 'Show annotation tooltips' });
-        expect(checkbox).toBeChecked();
-        await user.click(checkbox);
-        expect(checkbox).not.toBeChecked();
-        expect(sessionStorage.getItem('lightlyStudio_pointCloudShowAnnotationTooltips')).toBe(
-            'false'
-        );
-
-        view.unmount();
-        render(PointCloudLabelingWorkspace, { props: defaultProps });
-        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
-        expect(
-            screen.getByRole('checkbox', { name: 'Show annotation tooltips' })
-        ).not.toBeChecked();
     });
 
     it('configures and persists accumulation from the 3D scene settings', async () => {
