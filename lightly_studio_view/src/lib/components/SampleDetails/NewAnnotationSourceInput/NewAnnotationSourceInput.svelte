@@ -1,5 +1,6 @@
 <script lang="ts">
     import Plus from '@lucide/svelte/icons/plus';
+    import { Input } from '$lib/components/ui/input';
 
     interface Props {
         /** Names already taken; typing one of them selects it instead of creating a duplicate. */
@@ -34,9 +35,8 @@
             submit();
         }}
     >
-        <!-- svelte-ignore a11y_autofocus -->
-        <input
-            class="h-8 w-full rounded-md border border-border bg-transparent px-2 text-sm outline-none focus:border-primary"
+        <Input
+            class="h-8 bg-transparent px-2 text-sm"
             placeholder="Source name"
             aria-label="New annotation source name"
             autofocus
