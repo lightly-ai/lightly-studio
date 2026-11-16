@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Annotation class counts in the image sidebar load faster when you filter by annotation source.
+
 ### Deprecated
 
 ### Removed
@@ -23,6 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - BREAKING: Dropped Python 3.10 support. Upgrade to Python 3.11–3.15.
 
 ### Fixed
+
+- Fixed slow grid loading by avoiding unnecessary database queries for each annotation.
 
 ### Security
 
