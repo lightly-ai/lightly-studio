@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Kbd } from '$lib/components/ui/kbd';
-    import { isDeleteKey, isOverlayTarget, isRelabelKey, isTextInputTarget } from '$lib/utils';
+    import { isOverlayTarget, isRelabelKey, isTextInputTarget } from '$lib/utils';
     import { ColorDot } from '../ColorDot';
 
     interface Props {
@@ -14,7 +14,6 @@
         onPickClass: (className: string) => void;
         /** Opens the class search. */
         onSearch: () => void;
-        onRemove: () => void;
         onClose: () => void;
     }
 
@@ -25,12 +24,12 @@
         recentClasses,
         onPickClass,
         onSearch,
-        onRemove,
         onClose
     }: Props = $props();
 
     // Mounted only in the compact view, so the keys act only there. Capture phase, so Esc
-    // closes the card before the panel's own Esc handler switches the tool.
+    // closes the card before the panel's own Esc handler switches the tool. Delete is left to
+    // the panel, which deletes the selected annotation whether the card is shown or not.
     const handleKeydown = (event: KeyboardEvent) => {
         if (!isActive) return;
         const inFieldOrMenu = isTextInputTarget(event.target) || isOverlayTarget(event.target);
@@ -38,9 +37,6 @@
             event.preventDefault();
             event.stopPropagation();
             onClose();
-        } else if (isDeleteKey(event)) {
-            event.preventDefault();
-            onRemove();
         } else if (isRelabelKey(event)) {
             event.preventDefault();
             onSearch();
