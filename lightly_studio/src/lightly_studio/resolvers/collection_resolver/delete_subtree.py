@@ -33,7 +33,8 @@ def delete_subtree(session: Session, collection_id: UUID) -> int:
     # delete_dataset.py. A caption, evaluation run or annotation that is created after the
     # caller validated the collection can make the delete fail after earlier steps are
     # committed. DuckDB needs the commits, so every step stays safe to run again there.
-    subtree_ids = collection_resolver.get_subtree_ids(session=session, collection_id=collection_id)
+    subtree = collection_resolver.get_subtree(session=session, collection_id=collection_id)
+    subtree_ids = [collection.collection_id for collection in subtree]
     deleted_annotation_count = 0
     # Reversed order: a collection comes after the descendants that reference it.
     for subtree_id in reversed(subtree_ids):

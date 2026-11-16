@@ -14,6 +14,10 @@ from lightly_studio.resolvers import (
     export_job_resolver,
 )
 
+# The delete removes the samples of these types. It leaves the rows of the other sample type
+# tables, for example image or video, see ``collection_resolver.delete_subtree``.
+_DELETABLE_SAMPLE_TYPES = (SampleType.ANNOTATION, SampleType.CAPTION)
+
 
 def delete_annotation_source(
     session: Session, dataset_collection_id: UUID, annotation_source_id: UUID
@@ -32,7 +36,8 @@ def delete_annotation_source(
 
     Raises:
         NotFoundError: If the collection has no annotation source with this ID.
-        AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation source.
+        AnnotationSourceInUseError: If the annotation source or a descendant collection has
+            other data attached, or evaluation runs or export jobs use one of them.
     """
     source = _get_annotation_source(
         session=session,
@@ -62,14 +67,29 @@ def _get_annotation_source(
 
 
 def _check_not_in_use(session: Session, source: CollectionTable) -> None:
-    """Check that the annotation source can be deleted.
+    """Check that the annotation source and its descendant collections can be deleted.
 
     Raises:
-        AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation source
-            or one of its descendant collections.
+        AnnotationSourceInUseError: If a collection of the subtree has samples of another type,
+            or an evaluation run or an export job uses one of them.
     """
-    evaluation_run_names = evaluation_run_resolver.get_names_by_collection_id(
-        session=session, collection_id=source.collection_id
+    subtree = collection_resolver.get_subtree(session=session, collection_id=source.collection_id)
+    other_data_names = sorted(
+        collection.name
+        for collection in subtree
+        if collection.sample_type not in _DELETABLE_SAMPLE_TYPES
+    )
+    if other_data_names:
+        raise AnnotationSourceInUseError(
+            f"The annotation source '{source.name}' cannot be deleted because "
+            f"it has data attached: {', '.join(other_data_names)}."
+        )
+    evaluation_run_names = sorted(
+        name
+        for collection in subtree
+        for name in evaluation_run_resolver.get_names_by_collection_id(
+            session=session, collection_id=collection.collection_id
+        )
     )
     if evaluation_run_names:
         raise AnnotationSourceInUseError(
@@ -78,11 +98,9 @@ def _check_not_in_use(session: Session, source: CollectionTable) -> None:
         )
     # TODO(Gabriel, 11/2026): Delete the export jobs and their files with the annotation source,
     # then remove this check.
-    collection_ids = collection_resolver.get_subtree_ids(
-        session=session, collection_id=source.collection_id
-    )
     if export_job_resolver.exists_for_collection_ids(
-        session=session, collection_ids=collection_ids
+        session=session,
+        collection_ids=[collection.collection_id for collection in subtree],
     ):
         raise AnnotationSourceInUseError(
             f"The annotation source '{source.name}' cannot be deleted because it was exported."
