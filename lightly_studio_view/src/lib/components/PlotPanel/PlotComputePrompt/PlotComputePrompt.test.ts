@@ -7,6 +7,7 @@ const NOW = 10_000_000;
 const defaultProps = {
     view: 'prompt' as const,
     embeddingCount: 2_000_000,
+    itemLabel: 'image',
     startedAt: null,
     onCompute: () => {}
 };
@@ -26,6 +27,14 @@ describe('PlotComputePrompt', () => {
         ).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: 'Compute plot' }));
         expect(onCompute).toHaveBeenCalledOnce();
+    });
+
+    it('names the items of the collection in the count', () => {
+        render(PlotComputePrompt, { props: { ...defaultProps, itemLabel: 'video' } });
+
+        expect(
+            screen.getByText('2,000,000 videos. The first compute can take several minutes.')
+        ).toBeInTheDocument();
     });
 
     it('renders the computing state with the elapsed time', async () => {
