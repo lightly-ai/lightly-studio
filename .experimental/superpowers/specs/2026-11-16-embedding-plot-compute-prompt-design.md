@@ -78,8 +78,9 @@ GET /collections/{collection_id}/embeddings2d/status
 
 Both states are centered in the black plot area, as in the mock (`PlotComputePrompt`):
 
-- **Compute prompt:** scatter icon, "Plot not computed", "{count} images. The first compute can
-  take several minutes.", primary button "Compute plot".
+- **Compute prompt:** scatter icon, "Plot not computed", "{count} {items}. The first compute can
+  take several minutes.", primary button "Compute plot". `{items}` is the plural item label of the
+  collection: images, videos, annotations or sequences.
 - **Computing:** spinning loader, "Computing plot…", "Running for {m:ss}. The first compute can
   take several minutes."
 
@@ -94,6 +95,12 @@ Closing and reopening the panel mid-compute keeps the computing state for the sa
 - 249,999 with no plot: no prompt, computing state shows.
 - Clean plot above 250k: no prompt, normal loading.
 - Text axes layout above 250k with no plot: plot renders, no prompt.
+
+Accepted window: the panel decides on a status read before the plot request. If an embedding
+write turns a clean plot dirty after that status read, the next plot request (a filter, color-by
+or layout change while the panel stays open) rebuilds the plot without the prompt. The status
+refetches on window focus and after each plot load, which narrows the window. Closing it needs a
+server-side guard on the plot route, which this design does not add.
 
 ## Left to the builder
 

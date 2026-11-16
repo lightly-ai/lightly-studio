@@ -16,7 +16,7 @@
 - "Computed" means the `embedding_plot` row exists and `is_dirty` is false. Missing, dirty and placeholder rows are not computed.
 - Never load `EmbeddingPlotTable.data` in the status path.
 - No mention of text axes in any new copy.
-- Copy, exact: "Plot not computed", "{count} images. The first compute can take several minutes.", "Compute plot", "Computing plot…", "Running for {m:ss}. The first compute can take several minutes."
+- Copy, exact: "Plot not computed", "{count} {items}. The first compute can take several minutes." ({items} is the collection's plural item label: images, videos, annotations or sequences), "Compute plot", "Computing plot…", "Running for {m:ss}. The first compute can take several minutes."
 - Load the repo skills before editing: `python-guide`, `backend-guide`, `clean-code` for `.py`; `frontend-guide`, `clean-code` for `.ts`/`.svelte`.
 - Frontend commands run with Node from `lightly_studio_view/.nvmrc` (24.13.1).
 
@@ -144,7 +144,7 @@ Expected: FAIL with 404/405 on the status path
 
 - [ ] **Step 3: Implement `Embeddings2DStatus` and `get_2d_embeddings_status` in `embeddings2d.py`**
 
-Reuse the plot route's 404 for an unknown collection and its default-embedding-model lookup.
+Raise `NotFoundError` for an unknown collection (404, per `backend-guide`; do not copy the plot route's legacy `HTTPException`). Reuse the plot route's default-embedding-model lookup.
 
 - [ ] **Step 4: Run to verify they pass, then static checks**
 
@@ -228,7 +228,7 @@ git commit -m "feat: add embedding plot compute gate"
 ### Task 4: Status hook, compute-start store, gate hook
 
 **Files:**
-- Create: `lightly_studio_view/src/lib/hooks/useEmbeddingPlotStatus/useEmbeddingPlotStatus.ts`
+- Create: `lightly_studio_view/src/lib/hooks/useEmbeddingPlotStatus/useEmbeddingPlotStatus.ts` (export it from `src/lib/hooks/index.ts` and import it from `$lib/hooks`)
 - Modify: `lightly_studio_view/src/lib/hooks/useEmbeddings/useEmbeddings.ts`
 - Create: `lightly_studio_view/src/lib/components/PlotPanel/usePlotComputeGate/usePlotComputeGate.svelte.ts`
 - Test: `lightly_studio_view/src/lib/components/PlotPanel/usePlotComputeGate/usePlotComputeGate.test.ts`
@@ -238,9 +238,9 @@ git commit -m "feat: add embedding plot compute gate"
 - Produces:
   - `useEmbeddingPlotStatus(getCollectionId: () => string)` → TanStack query of `Embeddings2DStatus`
   - `useEmbeddings(collectionId, filters, colorBy = null, axes = null, enabled = true)`; spreads `enabled` into the query options
-  - `usePlotComputeGate(params: { getCollectionId: () => string; getIsAxesLayout: () => boolean; getIsPlotLoaded: () => boolean })` returning `{ readonly view: PlotComputeView; readonly isPlotRequestEnabled: boolean; readonly embeddingCount: number; readonly startedAt: number | null; readonly statusError: string | null; startCompute(): void }`
+  - `usePlotComputeGate(params: { getCollectionId: () => string; getIsAxesLayout: () => boolean; getPlotUpdatedAt: () => number })` returning `{ readonly view: PlotComputeView; readonly isPlotRequestEnabled: boolean; readonly embeddingCount: number; readonly startedAt: number | null; readonly statusError: string | null; startCompute(): void }`
 
-Start times live in a module-level `writable<Record<string, number>>` keyed by collection id, so they survive the panel unmounting. `startCompute()` sets `Date.now()` only if the key is absent. When `view === 'computing'` and no start exists (below the threshold), the gate calls `startCompute()` itself. When `getIsPlotLoaded()` turns true while the status says not computed, the gate refetches the status and deletes the start for that collection.
+Start times live in a module-level `writable<Record<string, number>>` keyed by collection id, so they survive the panel unmounting. `startCompute()` sets `Date.now()` only if the key is absent. When `view === 'computing'` and no start exists (below the threshold), the gate calls `startCompute()` itself. Each time `getPlotUpdatedAt()` changes (a plot load finished, not cached data) while the status says not computed, the gate refetches the status once; it deletes the start once a fresh status says computed. Only a status fetched after mount decides, except while this tab has a start for the collection, because the server answers no request during a compute. A failed plot request keeps the start; clearing it is left for a follow-up.
 
 - [ ] **Step 1: Write the failing tests** (mock `useEmbeddingPlotStatus`)
 
@@ -337,7 +337,7 @@ git commit -m "feat: add embedding plot compute prompt"
 **Interfaces:**
 - Consumes: `usePlotComputeGate` (Task 4), `PlotComputePrompt` (Task 5), `useEmbeddings(..., enabled)` (Task 4)
 
-Gate params: `getIsAxesLayout: () => $plotAxes !== null`, `getIsPlotLoaded: () => embeddingsData.isSuccess`. Pass `gate.isPlotRequestEnabled` as `useEmbeddings`'s `enabled`. `errorText` also returns `gate.statusError`. The state block gets two branches before `embeddingsData.isLoading`: `gate.view === 'prompt'` renders the prompt; `gate.view === 'computing' && embeddingsData.isLoading` renders the computing state. `'checking'` renders today's loading text. Everything else is unchanged.
+Gate params: `getIsAxesLayout: () => $plotAxes !== null`, `getPlotUpdatedAt: () => embeddingsData.dataUpdatedAt` (cached data must not count as a finished compute). Pass `gate.isPlotRequestEnabled` as `useEmbeddings`'s `enabled`. `errorText` also returns `gate.statusError` when `gate.view === 'error'`. The state block gets two branches before `embeddingsData.isLoading`: `gate.view === 'prompt'` renders the prompt; `gate.view === 'computing' && embeddingsData.isFetching` renders the computing state (`isLoading` is false when the key holds an outdated cached plot). `'checking'` renders today's loading text. Everything else is unchanged.
 
 - [ ] **Step 1: Write the failing tests** (mock `usePlotComputeGate` next to the existing `useEmbeddings` mock; default view `'plot'` so existing tests keep passing)
 
