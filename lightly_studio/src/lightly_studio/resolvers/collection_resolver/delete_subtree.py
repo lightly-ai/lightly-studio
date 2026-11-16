@@ -17,10 +17,24 @@ def delete_subtree(session: Session, collection_id: UUID) -> int:
     The annotations of a collection go through ``annotation_resolver.delete_annotations_by_ids``.
     The other samples lose the rows of ``SAMPLE_DEPENDENT_TABLES``. The rows of the sample type
     tables, for example image or video, stay, so a collection with these samples needs
-    ``dataset_resolver.delete_dataset``.
+    ``dataset_resolver.delete_dataset``. The delete commits several times and is not atomic,
+    see ``annotation_resolver.delete_annotations_by_ids``. Every step is safe to run again.
 
-    The delete commits several times and is not atomic, see
-    ``annotation_resolver.delete_annotations_by_ids``. Every step is safe to run again.
+    Example:
+        ``predictions`` is an annotation source that has a caption of a caption below it:
+
+        ```text
+        predictions (annotation)
+        └── caption (caption)
+            └── caption (caption)
+        ```
+
+        ```python
+        count = collection_resolver.delete_subtree(session=session, collection_id=predictions_id)
+        ```
+
+        The delete empties and removes the deepest caption collection first and ``predictions``
+        last. ``count`` is the number of annotations that ``predictions`` holds.
 
     Args:
         session: Database session.
