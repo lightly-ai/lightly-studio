@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from lightly_studio.api.routes.api.v1 import collections
+from lightly_studio.api.routes.api.v1 import collections, samples
 
 v1_router = APIRouter(prefix="/v1", tags=["v1"])
 v1_router.include_router(collections.collections_router)
+v1_router.include_router(samples.samples_router)

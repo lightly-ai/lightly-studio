@@ -5,6 +5,7 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter
+from sqlmodel import Session
 
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import NotFoundError
@@ -29,6 +30,15 @@ def v1_read_collections(
 )
 def v1_read_collection(session: SessionDep, collection_id: UUID) -> CollectionTable:
     """Get a collection by ID."""
+    return get_collection(session=session, collection_id=collection_id)
+
+
+def get_collection(session: Session, collection_id: UUID) -> CollectionTable:
+    """Get a collection by ID.
+
+    Raises:
+        NotFoundError: If the collection does not exist.
+    """
     collection = collection_resolver.get_by_id(session=session, collection_id=collection_id)
     if collection is None:
         raise NotFoundError(f"Collection with ID {collection_id} not found.")
