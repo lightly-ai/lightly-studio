@@ -92,6 +92,11 @@
             );
         })
     );
+    let collapsedFields = $state<Record<string, boolean>>({});
+    const toggleExpanded = (metadataKey: string) => {
+        collapsedFields = { ...collapsedFields, [metadataKey]: !collapsedFields[metadataKey] };
+    };
+
     const handleMetadataValueCommit = (metadataKey: string, newValues: number[]): void => {
         const currentValues: MetadataValues = { ...$metadataValues };
         currentValues[metadataKey] = { min: newValues[0], max: newValues[1] };
@@ -175,6 +180,8 @@
                     isInteger={$metadataInfo.find((info) => info.name === metadataKey)?.type ===
                         'integer'}
                     onValueCommit={handleMetadataValueCommit}
+                    expanded={!collapsedFields[metadataKey]}
+                    onToggleExpanded={() => toggleExpanded(metadataKey)}
                 />
             {/each}
         {/if}
