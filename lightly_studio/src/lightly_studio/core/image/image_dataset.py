@@ -358,11 +358,10 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation
                 source, or if it has child collections other than captions.
         """
-        sources = collection_resolver.get_annotation_collections(
-            session=self.session, parent_collection_id=self.collection_id
-        )
-        source = next(
-            (collection for collection in sources if collection.name == annotation_source), None
+        source = collection_resolver.get_annotation_source_by_name(
+            session=self.session,
+            dataset_collection_id=self.collection_id,
+            name=annotation_source,
         )
         if source is None:
             raise ValueError(f"The dataset has no annotation source '{annotation_source}'.")
