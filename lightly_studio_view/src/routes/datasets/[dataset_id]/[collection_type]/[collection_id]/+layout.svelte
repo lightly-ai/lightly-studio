@@ -16,7 +16,9 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { Filter, GripVertical, PanelLeftClose } from '@lucide/svelte';
+    import Filter from '@lucide/svelte/icons/filter';
+    import GripVertical from '@lucide/svelte/icons/grip-vertical';
+    import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
     import { onDestroy, onMount } from 'svelte';
     import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
@@ -46,6 +48,7 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -539,6 +542,16 @@
         });
     };
 
+    const setCategoricalValues = (metadataKey: string, values: CategoricalMetadataValue[]) => {
+        updateCategoricalMetadataValues({ ...$categoricalMetadataValues, [metadataKey]: values });
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: 'values_set',
+            value_count: values.length
+        });
+    };
+
     const clearCategoricalValues = (metadataKey: string) => {
         const next = { ...$categoricalMetadataValues };
         delete next[metadataKey];
@@ -693,6 +706,7 @@
                                             : categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
+                                        onCategoricalValuesSet={setCategoricalValues}
                                         onCategoricalValuesClear={clearCategoricalValues}
                                         onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />

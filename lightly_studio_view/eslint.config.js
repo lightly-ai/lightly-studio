@@ -31,6 +31,23 @@ export default ts.config(
         }
     },
     {
+        rules: {
+            '@typescript-eslint/no-restricted-imports': [
+                'error',
+                {
+                    paths: [
+                        {
+                            name: '@lucide/svelte',
+                            message:
+                                "Import each icon from '@lucide/svelte/icons/<name>'. The root entry loads all icons and slows down tests.",
+                            allowTypeImports: true
+                        }
+                    ]
+                }
+            ]
+        }
+    },
+    {
         ignores: [
             'build/',
             '.svelte-kit/',

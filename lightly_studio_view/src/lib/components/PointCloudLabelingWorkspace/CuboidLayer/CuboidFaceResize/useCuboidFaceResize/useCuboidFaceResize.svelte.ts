@@ -72,6 +72,8 @@ export function useCuboidFaceResize({
             camera: camera.current
         });
         event.stopPropagation();
+        // Keep TransformControls on the same element from taking pointer capture.
+        event.nativeEvent.stopImmediatePropagation();
         canvas.setPointerCapture(event.nativeEvent.pointerId);
         canvas.style.cursor = 'grabbing';
         if (orbitControls.current) orbitControls.current.enabled = false;

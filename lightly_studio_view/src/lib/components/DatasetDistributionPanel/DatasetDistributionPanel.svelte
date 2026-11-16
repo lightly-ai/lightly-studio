@@ -1,7 +1,7 @@
 <script lang="ts">
     import DistributionPlotContainer from './DistributionPlotContainer/DistributionPlotContainer.svelte';
     import { untrack } from 'svelte';
-    import { X } from '@lucide/svelte';
+    import X from '@lucide/svelte/icons/x';
     import { Button } from '$lib/components';
     import Typography from '$lib/components/Typography/Typography.svelte';
     import { Select, type SelectItem } from '$lib/components/Select';
@@ -85,6 +85,8 @@
         onHistogramBinCountChange?: (binCount: number) => void;
         /** Called when a concrete categorical value or Missing is toggled. */
         onCategoricalValueToggle?: (groupId: string, value: CategoricalMetadataValue) => void;
+        /** Replaces the categorical values selected for the given group. */
+        onCategoricalValuesSet?: (groupId: string, values: CategoricalMetadataValue[]) => void;
         /** Removes every categorical value selected for the given group. */
         onCategoricalValuesClear?: (groupId: string) => void;
         /** Retries a failed categorical distribution request. */
@@ -115,6 +117,7 @@
         histogramBinCount = 20,
         onHistogramBinCountChange,
         onCategoricalValueToggle,
+        onCategoricalValuesSet,
         onCategoricalValuesClear,
         onCategoricalRetry,
         comparisonTagItems = [],
@@ -506,6 +509,7 @@
             error={activeCategorical.error}
             onRetry={onCategoricalRetry}
             onToggle={(value) => onCategoricalValueToggle?.(activeGroup.id, value)}
+            onSetValues={(values) => onCategoricalValuesSet?.(activeGroup.id, values)}
             onClear={() => onCategoricalValuesClear?.(activeGroup.id)}
         />
         {#if categoricalData.length > 0}
