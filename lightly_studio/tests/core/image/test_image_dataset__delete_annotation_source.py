@@ -3,8 +3,10 @@ from __future__ import annotations
 import pytest
 
 from lightly_studio import ImageDataset
+from lightly_studio.errors import AnnotationSourceInUseError
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
+from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
@@ -67,3 +69,51 @@ class TestImageDataset:
 
         with pytest.raises(ValueError, match="no annotation source 'captions'"):
             dataset.delete_annotation_source(annotation_source="captions")
+
+    def test_delete_annotation_source__used_by_evaluation_run(
+        self,
+        patch_collection: None,  # noqa: ARG002
+    ) -> None:
+        dataset = ImageDataset.create(name="test_dataset")
+        image = create_image(session=dataset.session, collection_id=dataset.collection_id)
+        label = create_annotation_label(
+            session=dataset.session, root_collection_id=dataset.collection_id
+        )
+        details = AnnotationDetails(
+            sample_id=image.sample_id, annotation_label_id=label.annotation_label_id
+        )
+        for source_name in ["ground_truth", "predictions"]:
+            create_annotations(
+                session=dataset.session,
+                collection_id=dataset.collection_id,
+                annotations=[details],
+                collection_name=source_name,
+            )
+        ground_truth = collection_resolver.get_annotation_source_by_name(
+            session=dataset.session,
+            dataset_collection_id=dataset.collection_id,
+            name="ground_truth",
+        )
+        predictions = collection_resolver.get_annotation_source_by_name(
+            session=dataset.session,
+            dataset_collection_id=dataset.collection_id,
+            name="predictions",
+        )
+        assert ground_truth is not None
+        assert predictions is not None
+        evaluation_run_resolver.create(
+            session=dataset.session,
+            evaluation_run_input=EvaluationRunCreate(
+                name="run_a",
+                gt_annotation_collection_id=ground_truth.collection_id,
+                pred_annotation_collection_id=predictions.collection_id,
+                dataset_id=dataset.dataset_id,
+                task_type=EvaluationTaskType.OBJECT_DETECTION,
+            ),
+        )
+
+        with pytest.raises(
+            AnnotationSourceInUseError,
+            match=r"'predictions' is used by the evaluation runs run_a\. Delete these",
+        ):
+            dataset.delete_annotation_source(annotation_source="predictions")
