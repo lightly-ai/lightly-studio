@@ -1,9 +1,7 @@
 <script lang="ts">
-    import {
-        Check as CheckIcon,
-        ChevronsUpDown as ChevronsUpDownIcon,
-        Info as InfoIcon
-    } from '@lucide/svelte';
+    import CheckIcon from '@lucide/svelte/icons/check';
+    import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+    import InfoIcon from '@lucide/svelte/icons/info';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
     import { Tooltip } from '$lib/components/ui/tooltip';

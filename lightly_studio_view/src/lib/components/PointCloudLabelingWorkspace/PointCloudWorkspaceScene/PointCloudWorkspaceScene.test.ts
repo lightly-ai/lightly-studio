@@ -46,12 +46,14 @@ const defaultProps: Props = {
     colorMode: 'intensity',
     selectedCuboidId: null,
     hoveredCuboidId: null,
+    draftCuboid: null,
     onToggleOrthographicProjections: vi.fn(),
     onPointSizeChange: vi.fn(),
     onToggleNavigationHelpers: vi.fn(),
     onToolChange: vi.fn(),
     onSelect: vi.fn(),
     onHover: vi.fn(),
+    onCuboidDraftChange: vi.fn(),
     onCreateCuboid: vi.fn(),
     isAddingTrack: false,
     onToggleAddTrack: vi.fn(),
@@ -101,7 +103,10 @@ it('keeps navigation independent, preserves views through expansion, and resets 
 it('restores the main viewport when projections are disabled while one is expanded', async () => {
     const { rerender } = render(WorkspaceSceneProviderHarness, { props: { state: defaultProps } });
     await fireEvent.click(screen.getByRole('button', { name: 'Expand Top view' }));
+    expect(defaultProps.onCuboidDraftChange).not.toHaveBeenCalled();
     await rerender({ state: { ...defaultProps, showOrthographicViews: false } });
+    // A draft drawn in a removed viewport must not keep its highlight.
+    expect(defaultProps.onCuboidDraftChange).toHaveBeenCalledExactlyOnceWith(null);
     expect(screen.getByRole('region', { name: 'perspective' })).toBeVisible();
     expect(screen.queryByRole('region', { name: 'top' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Restore views' })).not.toBeInTheDocument();

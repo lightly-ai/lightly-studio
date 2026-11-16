@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Brush } from '@lucide/svelte';
+    import Brush from '@lucide/svelte/icons/brush';
 
     type Props = { onclick: () => void; isActive?: boolean };
 

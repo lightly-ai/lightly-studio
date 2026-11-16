@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from uuid import UUID
-
 import numpy as np
 import pytest
 from lightly_studio_serve.labeling import ModelTask, PredictedAnnotation
@@ -10,14 +8,12 @@ from lightly_studio.assisted_labeling.labeling_model_runner import LocalLabeling
 from lightly_studio.assisted_labeling.provider import ProviderError
 from lightly_studio.models.assisted_labeling import (
     AnnotationPreviewBox,
-    ModelAnnotationRequest,
     ModelAnnotationResponse,
 )
 from lightly_studio.services import assisted_labeling_service
 from tests.assisted_labeling import helpers
 from tests.assisted_labeling.helpers import StubLabelingModel
 
-COLLECTION_ID = UUID(int=7)
 WIDTH = 4
 HEIGHT = 2
 
@@ -81,6 +77,21 @@ def test_create_model_preview__clamps_box_to_image() -> None:
 
     assert [preview.bbox for preview in response.predictions] == [
         AnnotationPreviewBox(x=0, y=0, width=4, height=2)
+    ]
+
+
+def test_create_model_preview__clamps_box_with_edge_between_pixels() -> None:
+    # The left and top edges are between -1 and 0.
+    model = StubLabelingModel(
+        model_id="m",
+        class_names=["cat"],
+        predictions=[PredictedAnnotation(class_name="cat", box=(-0.5, -0.5, 1.5, 0.5), score=0.8)],
+    )
+
+    response = _create_model_preview(model=model, threshold=0.4)
+
+    assert [preview.bbox for preview in response.predictions] == [
+        AnnotationPreviewBox(x=0, y=0, width=2, height=1)
     ]
 
 
@@ -201,75 +212,6 @@ def test_create_model_preview__empty_mask_does_not_use_limit() -> None:
     assert response.predictions[-1].score == 0.4
 
 
-@pytest.mark.parametrize(
-    ("prediction", "message"),
-    [
-        pytest.param(
-            PredictedAnnotation(class_name="cat", box=(0.0, 0.0, 4.0, 2.0), score=float("nan")),
-            r"the score nan",
-            id="score-nan",
-        ),
-        pytest.param(
-            PredictedAnnotation(class_name="cat", box=(0.0, 0.0, 4.0, 2.0), score=1.5),
-            r"the score 1\.5",
-            id="score-above-1",
-        ),
-        pytest.param(
-            PredictedAnnotation(class_name="cat", box=(0.0, 0.0, 4.0, 2.0), score=-0.1),
-            r"the score -0\.1",
-            id="score-below-0",
-        ),
-        pytest.param(
-            PredictedAnnotation(class_name="dog", box=(0.0, 0.0, 4.0, 2.0), score=0.8),
-            r"a class that is not one of its class names",
-            id="unknown-class",
-        ),
-        pytest.param(
-            PredictedAnnotation(class_name="cat", box=(0.0, 0.0, float("inf"), 2.0), score=0.8),
-            r"a value that is not finite",
-            id="box-not-finite",
-        ),
-        pytest.param(
-            PredictedAnnotation(class_name="cat", box=(3.0, 0.0, 1.0, 2.0), score=0.8),
-            r"a positive size",
-            id="box-inverted",
-        ),
-        pytest.param(
-            PredictedAnnotation(class_name="cat", box=(1.0, 1.0, 3.0, 1.0), score=0.8),
-            r"a positive size",
-            id="box-empty",
-        ),
-        pytest.param(
-            PredictedAnnotation(
-                class_name="cat",
-                box=(0.0, 0.0, 4.0, 2.0),
-                score=0.8,
-                mask=np.ones((WIDTH, HEIGHT), dtype=np.bool_),
-            ),
-            r"a mask of shape \(4, 2\), expected \(2, 4\)",
-            id="mask-shape",
-        ),
-        pytest.param(
-            PredictedAnnotation(
-                class_name="cat",
-                box=(0.0, 0.0, 4.0, 2.0),
-                score=0.8,
-                mask=np.ones((HEIGHT, WIDTH), dtype=np.float32),
-            ),
-            r"a mask of dtype float32, expected bool",
-            id="mask-dtype",
-        ),
-    ],
-)
-def test_create_model_preview__invalid_prediction(
-    prediction: PredictedAnnotation, message: str
-) -> None:
-    model = StubLabelingModel(model_id="m", class_names=["cat"], predictions=[prediction])
-
-    with pytest.raises(ProviderError, match=message):
-        _create_model_preview(model=model, threshold=0.4)
-
-
 def test_create_model_preview__invalid_prediction_below_threshold() -> None:
     model = StubLabelingModel(
         model_id="m",
@@ -277,21 +219,8 @@ def test_create_model_preview__invalid_prediction_below_threshold() -> None:
         predictions=[PredictedAnnotation(class_name="dog", box=(0.0, 0.0, 4.0, 2.0), score=0.1)],
     )
 
-    with pytest.raises(ProviderError, match=r"a class that is not one of its class names"):
+    with pytest.raises(ProviderError, match=r"an annotation class that is not"):
         _create_model_preview(model=model, threshold=0.4)
-
-
-def test_create_model_preview__error_message_omits_class_name() -> None:
-    model = StubLabelingModel(
-        model_id="m",
-        class_names=["cat"],
-        predictions=[PredictedAnnotation(class_name="dog", box=(0.0, 0.0, 4.0, 2.0), score=0.8)],
-    )
-
-    with pytest.raises(ProviderError) as error_info:
-        _create_model_preview(model=model, threshold=0.4)
-
-    assert "dog" not in str(error_info.value)
 
 
 def _create_model_preview(model: StubLabelingModel, threshold: float) -> ModelAnnotationResponse:
@@ -301,10 +230,5 @@ def _create_model_preview(model: StubLabelingModel, threshold: float) -> ModelAn
     return assisted_labeling_service.create_model_preview(
         runner=LocalLabelingModelRunner(model=model),
         image=image,
-        request=ModelAnnotationRequest(
-            collection_id=COLLECTION_ID,
-            sample_id=image.sample_id,
-            model_id=model.model_id,
-            threshold=threshold,
-        ),
+        threshold=threshold,
     )

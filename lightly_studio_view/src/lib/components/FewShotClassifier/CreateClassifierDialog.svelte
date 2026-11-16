@@ -7,7 +7,7 @@
     import { useClassifiers } from '$lib/hooks/useClassifiers/useClassifiers';
     import { Alert, Button } from '$lib/components';
     import ClassifierSamplesGrid from './ClassifierSamplesGrid.svelte';
-    import { Network as NetworkIcon } from '@lucide/svelte';
+    import NetworkIcon from '@lucide/svelte/icons/network';
     import { handleCreateClassifierClose } from './classifierDialogHelpers';
 
     const { isCreateClassifiersPanelOpen } = useCreateClassifiersPanel();

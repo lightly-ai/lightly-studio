@@ -1,5 +1,8 @@
 <script lang="ts">
-    import { ChevronDown, ChevronRight, Copy, Trash2 } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import Copy from '@lucide/svelte/icons/copy';
+    import Trash2 from '@lucide/svelte/icons/trash-2';
     import { Button } from '$lib/components';
     import {
         Collapsible,
