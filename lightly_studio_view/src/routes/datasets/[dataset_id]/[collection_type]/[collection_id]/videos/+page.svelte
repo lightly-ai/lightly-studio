@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useVideos } from '$lib/hooks/useVideos/useVideos.svelte';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
@@ -19,7 +19,7 @@
     import { onMount } from 'svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
 
-    const collectionId = $derived($page.params.collection_id!);
+    const collectionId = $derived(page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
         useTags({
             collection_id: collectionId

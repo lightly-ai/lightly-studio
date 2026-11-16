@@ -641,7 +641,7 @@
                             </span>
                         </h2>
                         <div
-                            class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                            class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 [scrollbar-gutter:stable] dark:[color-scheme:dark]"
                         >
                             {#if isImages}
                                 <QueryControl
