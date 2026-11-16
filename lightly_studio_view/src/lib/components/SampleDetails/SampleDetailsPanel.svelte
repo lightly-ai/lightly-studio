@@ -188,8 +188,7 @@
             return;
         selectAnnotation({
             annotationId,
-            annotations: sample.annotations ?? [],
-            collectionId
+            annotations: sample.annotations ?? []
         });
     };
 
