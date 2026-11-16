@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
+import { createRawSnippet } from 'svelte';
 import { toast } from 'svelte-sonner';
 import QueryEditor from './QueryEditor.svelte';
 import type { useQueryEditor } from './useQueryEditor';
@@ -134,6 +135,25 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Re-apply' })).toBeEnabled();
 
         await rerender({ value: undefined, onSave });
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    });
+
+    it('renders the footer actions before the apply button', () => {
+        const footerActions = createRawSnippet(() => ({
+            render: () => '<button type="button">History</button>'
+        }));
+        render(QueryEditor, { props: { onSave: vi.fn(), footerActions } });
+
+        const buttonNames = screen
+            .getAllByRole('button')
+            .map((button) => button.textContent?.trim());
+        expect(buttonNames).toEqual(['History', 'Apply']);
+    });
+
+    it('shows the draft in place of the applied value and labels the button Apply', () => {
+        render(QueryEditor, { props: { value: 'width < 500', draft: 'width <', onSave: vi.fn() } });
+
+        expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue('width <');
         expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
     });
 
