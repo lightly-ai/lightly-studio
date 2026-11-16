@@ -1,6 +1,6 @@
 <script lang="ts">
     import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
-    import { MousePointer } from '@lucide/svelte';
+    import MousePointer from '@lucide/svelte/icons/mouse-pointer';
 
     type Props = { onclick: () => void };
 

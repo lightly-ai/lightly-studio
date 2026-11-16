@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { Loader2, Play, RotateCw } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-circle';
+    import Play from '@lucide/svelte/icons/play';
+    import RotateCw from '@lucide/svelte/icons/rotate-cw';
     import { Button } from '$lib/components/ui/button';
 
     interface Props {

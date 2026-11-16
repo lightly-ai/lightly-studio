@@ -1,6 +1,9 @@
 <script lang="ts">
     import { cn } from '$lib/utils/shadcn';
-    import { ChartColumn, ChartNetwork, Gauge, SearchCode } from '@lucide/svelte';
+    import ChartColumn from '@lucide/svelte/icons/chart-column';
+    import ChartNetwork from '@lucide/svelte/icons/chart-network';
+    import Gauge from '@lucide/svelte/icons/gauge';
+    import SearchCode from '@lucide/svelte/icons/search-code';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useSidePanelTabs } from './useSidePanelTabs';
 

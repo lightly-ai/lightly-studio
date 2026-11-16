@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import { Box, SquareDashed } from '@lucide/svelte';
+    import Box from '@lucide/svelte/icons/box';
+    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import type { LabelingModelView } from '$lib/api/lightly_studio_local';
     import { Select } from '$lib/components/Select';
     import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';

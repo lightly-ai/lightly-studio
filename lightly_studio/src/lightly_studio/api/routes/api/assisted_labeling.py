@@ -135,7 +135,7 @@ def _create_model_preview(request: ModelAnnotationRequest) -> ModelAnnotationRes
     runner = labeling_model_lookup.get_runner(model_id=request.model_id)
     image = _load_image(collection_id=request.collection_id, sample_id=request.sample_id)
     return assisted_labeling_service.create_model_preview(
-        runner=runner, image=image, request=request
+        runner=runner, image=image, threshold=request.threshold
     )
 
 
