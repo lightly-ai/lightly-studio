@@ -31,6 +31,7 @@ from lightly_studio.models.sample_query import (
     SortKey,
 )
 from lightly_studio.models.sort_direction import SortDirection
+from lightly_studio.resolvers import tag_resolver
 from lightly_studio.services.sample_services import sample_query_cursor
 
 # Only annotation match expressions correlate their table with the image.
@@ -40,7 +41,7 @@ _ANNOTATION_SCOPES: dict[type[BaseModel], str] = {
     SegmentationMaskMatchExpr: "segmentation_mask",
 }
 _SORT_FIELDS = {"file_name", "file_path_abs", "created_at", "width", "height"}
-_SUPPORTED_INCLUDES: set[SampleInclude] = set()
+_SUPPORTED_INCLUDES = {SampleInclude.TAGS}
 
 
 @dataclass(frozen=True)
@@ -76,7 +77,8 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
     if len(images) > request.limit:
         after = [getattr(page[-1], c.name) for c in sort_columns]
         next_cursor = sample_query_cursor.encode(query_hash=hash_, after=after)
-    records = [_to_record(image=image, collection_id=collection_id) for image in page]
+    tags = _tag_names(session=session, images=page, include=request.include)
+    records = [_to_record(image=image, collection_id=collection_id, tags=tags) for image in page]
     return SamplePage(samples=records, next_cursor=next_cursor)
 
 
@@ -145,8 +147,20 @@ def _after(sort_columns: Sequence[_SortColumn], values: Sequence[Any]) -> Column
     return or_(*clauses)
 
 
-def _to_record(image: ImageTable, collection_id: UUID) -> ImageSampleRecord:
-    return ImageSampleRecord(**image.model_dump(), collection_id=collection_id)
+def _tag_names(
+    session: Session, images: Sequence[ImageTable], include: Sequence[SampleInclude]
+) -> dict[UUID, list[str]] | None:
+    if SampleInclude.TAGS not in include:
+        return None
+    sample_ids = [image.sample_id for image in images]
+    return tag_resolver.get_names_by_sample_ids(session=session, sample_ids=sample_ids)
+
+
+def _to_record(
+    image: ImageTable, collection_id: UUID, tags: dict[UUID, list[str]] | None
+) -> ImageSampleRecord:
+    sample_tags = None if tags is None else tags.get(image.sample_id, [])
+    return ImageSampleRecord(**image.model_dump(), collection_id=collection_id, tags=sample_tags)
 
 
 def _parse_int(value: Any) -> int:
