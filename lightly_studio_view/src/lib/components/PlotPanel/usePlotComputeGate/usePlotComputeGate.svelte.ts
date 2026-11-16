@@ -60,9 +60,16 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
         });
     });
 
+    // The compute ends once a plot load finished after the start and the status refresh after that
+    // load returned, even if the plot is dirty again: a kept start would skip the prompt next time.
     $effect(() => {
-        if (freshStatus?.is_computed !== true || startedAt === null) return;
-        untrack(() => clearComputeStart(getCollectionId()));
+        if (startedAt === null) return;
+        const plotUpdatedAt = getPlotUpdatedAt();
+        const isLoadedAfterStart = plotUpdatedAt > startedAt;
+        const isStatusAfterLoad = statusQuery.dataUpdatedAt >= plotUpdatedAt;
+        const isComputeOver =
+            freshStatus?.is_computed === true || (isLoadedAfterStart && isStatusAfterLoad);
+        if (isComputeOver) untrack(() => clearComputeStart(getCollectionId()));
     });
 
     return {
