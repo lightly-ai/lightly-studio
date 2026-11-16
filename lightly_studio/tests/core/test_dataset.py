@@ -13,8 +13,9 @@ from lightly_studio.core.image import image_dataset
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
 from lightly_studio.embed.embedder_registry import EmbedderRegistry, NoEmbedderReason
-from lightly_studio.models.collection import SampleType
+from lightly_studio.models.collection import CollectionWithoutChildrenView, SampleType
 from lightly_studio.resolvers import image_resolver, tag_resolver
+from lightly_studio.transport import active_transport
 from tests.helpers_resolvers import (
     ImageStub,
     create_annotation,
@@ -79,6 +80,26 @@ class TestDataset:
         # Load non-existent dataset
         with pytest.raises(ValueError, match="Dataset with name 'non_existent' not found"):
             ImageDataset.load(name="non_existent")
+
+    def test_load__remote(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        dataset = ImageDataset.create(name="dataset1")
+        view = CollectionWithoutChildrenView.model_validate(dataset._inner)
+        transport = mocker.Mock()
+        transport.collections.get_by_name.return_value = view
+        mocker.patch.object(active_transport._active, "transport", transport)
+        get_engine = mocker.spy(db_manager, "get_engine")
+
+        loaded = ImageDataset.load(name="dataset1")
+
+        assert (loaded.name, loaded.collection_id) == ("dataset1", dataset.collection_id)
+        transport.collections.get_by_name.assert_called_once_with(
+            name="dataset1", parent_collection_id=None
+        )
+        get_engine.assert_not_called()
 
     def test_load__default_name(
         self,

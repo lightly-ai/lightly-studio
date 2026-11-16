@@ -17,6 +17,7 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
@@ -135,19 +136,23 @@ class DatasetQuery(Generic[T]):
     """
 
     def __init__(
-        self, dataset: CollectionTable, session: Session, sample_class: type[T] | None = None
+        self,
+        dataset: CollectionTable,
+        session: Session | None = None,
+        sample_class: type[T] | None = None,
     ) -> None:
         """Initialize with dataset and database session.
 
         Args:
             dataset: The dataset to query.
-            session: Database session for executing queries.
+            session: Database session for executing queries. None uses the persistent session
+                when a query needs SQL.
             sample_class: The class of type `T`.
         """
         # TODO(lukas 12/2025): it would be great to assert that sample_class is the same as
         # self.dataset.sample_type.
         self.dataset = dataset
-        self.session = session
+        self._session = session
         self.match_expression: MatchExpression | None = None
         self.order_by_expressions: list[OrderByExpression] | None = None
         self._slice: _SliceType | None = None
@@ -158,6 +163,13 @@ class DatasetQuery(Generic[T]):
             self._sample_class = cast(type[T], ImageSample)
         else:
             self._sample_class = sample_class
+
+    @property
+    def session(self) -> Session:
+        """The database session of the SQL path."""
+        if self._session is None:
+            self._session = db_manager.persistent_session()
+        return self._session
 
     def match(self, match_expression: MatchExpression) -> Self:
         """Store a field condition for filtering.
