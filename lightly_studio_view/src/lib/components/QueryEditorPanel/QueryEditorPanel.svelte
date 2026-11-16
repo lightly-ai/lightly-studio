@@ -69,23 +69,17 @@
             <Typography variant="h5" component="h2" className="text-foreground"
                 >Query Filter</Typography
             >
-            <div class="flex items-center gap-1">
-                <QueryHistoryMenu
-                    queries={$queryHistory[collectionId] ?? []}
-                    onSelect={applyQueryFromHistory}
-                />
-                <Button
-                    icon={X}
-                    variant="ghost"
-                    ariaLabel="Close query filter panel"
-                    buttonProps={{
-                        size: 'icon',
-                        onclick: onClose,
-                        class: 'h-8 w-8',
-                        'data-testid': 'query-editor-close-button'
-                    }}
-                />
-            </div>
+            <Button
+                icon={X}
+                variant="ghost"
+                ariaLabel="Close query filter panel"
+                buttonProps={{
+                    size: 'icon',
+                    onclick: onClose,
+                    class: 'h-8 w-8',
+                    'data-testid': 'query-editor-close-button'
+                }}
+            />
         </div>
         <QuerySyntaxHelp {sampleType} />
     </div>
@@ -95,6 +89,13 @@
             {sampleType}
             value={queryExpression?.query_expr_str}
             onSave={handleQueryEditorValueChange}
-        />
+        >
+            {#snippet footerActions()}
+                <QueryHistoryMenu
+                    queries={$queryHistory[collectionId] ?? []}
+                    onSelect={applyQueryFromHistory}
+                />
+            {/snippet}
+        </QueryEditor>
     {/key}
 </div>

@@ -1,5 +1,6 @@
 <script lang="ts">
     import History from '@lucide/svelte/icons/history';
+    import { Button } from '$lib/components';
     import * as Popover from '$lib/components/ui/popover';
 
     interface Props {
@@ -19,16 +20,21 @@
 </script>
 
 <Popover.Root bind:open>
-    <Popover.Trigger
-        class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
-        aria-label="Query history"
-        title="Query history"
-        data-testid="query-history-button"
-    >
-        <History class="size-4" />
+    <Popover.Trigger>
+        {#snippet child({ props })}
+            <Button
+                variant="outline"
+                icon={History}
+                ariaLabel="Query history"
+                buttonProps={{ ...props, 'data-testid': 'query-history-button' }}
+            >
+                History
+            </Button>
+        {/snippet}
     </Popover.Trigger>
     <Popover.Content
         class="scrollbar-thin max-h-80 w-96 overflow-y-auto overscroll-contain p-1"
+        side="top"
         align="end"
     >
         {#each queries as query (query)}

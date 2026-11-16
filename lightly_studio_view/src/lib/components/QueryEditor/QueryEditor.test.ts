@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
+import { createRawSnippet } from 'svelte';
 import { toast } from 'svelte-sonner';
 import QueryEditor from './QueryEditor.svelte';
 import type { useQueryEditor } from './useQueryEditor';
@@ -135,6 +136,18 @@ describe('QueryEditor', () => {
 
         await rerender({ value: undefined, onSave });
         expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    });
+
+    it('renders the footer actions before the apply button', () => {
+        const footerActions = createRawSnippet(() => ({
+            render: () => '<button type="button">History</button>'
+        }));
+        render(QueryEditor, { props: { onSave: vi.fn(), footerActions } });
+
+        const buttonNames = screen
+            .getAllByRole('button')
+            .map((button) => button.textContent?.trim());
+        expect(buttonNames).toEqual(['History', 'Apply']);
     });
 
     it('disables the button when readOnly is true', async () => {
