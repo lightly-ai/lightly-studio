@@ -207,7 +207,10 @@ describe('usePlotComputeGate', () => {
             query.data = { is_computed: false, embedding_count: 300_001 };
             query.isFetchedAfterMount = true;
         });
-        const { gate } = mountGate({ collectionId: 'expired-load', plotUpdatedAt: () => 1_005_000 });
+        const { gate } = mountGate({
+            collectionId: 'expired-load',
+            plotUpdatedAt: () => 1_005_000
+        });
 
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
         flushSync();
