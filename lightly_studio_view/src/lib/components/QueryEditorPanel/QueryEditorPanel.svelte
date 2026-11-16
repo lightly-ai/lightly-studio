@@ -3,8 +3,7 @@
     import { useQueryClient } from '@tanstack/svelte-query';
     import { toast } from 'svelte-sonner';
     import { QueryEditor, useQueryEditor } from '$lib/components/QueryEditor';
-    import type { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-    import { useQueryHistory } from '$lib/hooks';
+    import { useQueryHistory, type useImageFilters } from '$lib/hooks';
 
     import QueryEditorPanelHeader from './QueryEditorPanelHeader.svelte';
     import QueryHistoryMenu from './QueryHistoryMenu.svelte';
