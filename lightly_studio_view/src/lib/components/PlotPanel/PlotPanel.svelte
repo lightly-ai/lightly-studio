@@ -36,6 +36,8 @@
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
+    import PlotComputePrompt from './PlotComputePrompt/PlotComputePrompt.svelte';
+    import { usePlotComputeGate } from './usePlotComputeGate/usePlotComputeGate.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
@@ -167,7 +169,23 @@
     } = usePlotLayout(untrack(() => collectionId));
     const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
+    const plotComputeGate = usePlotComputeGate({
+        getCollectionId: () => collectionId,
+        getIsAxesLayout: () => $plotAxes !== null,
+        getPlotUpdatedAt: () => embeddingsData.dataUpdatedAt
+    });
+    // A separate derived, so a view change that keeps the request on does not create a new query.
+    const isPlotRequestEnabled = $derived(plotComputeGate.isPlotRequestEnabled);
+    const embeddingsData = $derived(
+        useEmbeddings(
+            collectionId,
+            filter,
+            $colorBy,
+            $plotAxes,
+            isPlotRequestEnabled,
+            () => plotComputeGate.view === 'computing'
+        )
+    );
 
     const {
         data: arrowData,
@@ -510,6 +528,9 @@
     );
 
     const errorText = $derived.by(() => {
+        if (plotComputeGate.statusError) {
+            return plotComputeGate.statusError;
+        }
         if (embeddingsData.isError) {
             return embeddingsData.error?.message || 'Unknown error';
         }
@@ -545,7 +566,21 @@
         </Button>
     </div>
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if embeddingsData.isLoading}
+        {#if plotComputeGate.view === 'prompt'}
+            <PlotComputePrompt
+                view="prompt"
+                embeddingCount={plotComputeGate.embeddingCount}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+        {:else if plotComputeGate.view === 'computing' && embeddingsData.isFetching}
+            <PlotComputePrompt
+                view="computing"
+                embeddingCount={plotComputeGate.embeddingCount}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+        {:else if plotComputeGate.view === 'checking' || embeddingsData.isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
