@@ -1,7 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { APP_ROUTES } from '$lib/routes';
 import { SampleType as SampleTypeValues } from '$lib/api/lightly_studio_local';
-import { resolveIsDetailPage, resolveScopeLabel, resolveContextFilter } from './useOperatorContext';
+import {
+    resolveIsDetailPage,
+    resolveScopeLabel,
+    resolveContextFilter,
+    resolveHasActiveFilter
+} from './useOperatorContext';
 import type { PageContext } from './useOperatorContext';
 
 const BASE_CONTEXT: PageContext = {
@@ -103,6 +108,29 @@ describe('resolveScopeLabel', () => {
         expect(resolveScopeLabel(SampleTypeValues.VIDEO_FRAME, false, 1, true)).toBe(
             '1 filtered video frame'
         );
+    });
+});
+
+describe('resolveHasActiveFilter', () => {
+    const NONE = new Set<string>();
+
+    it.each([
+        ['images', APP_ROUTES.images],
+        ['videos', APP_ROUTES.videos],
+        ['frames', APP_ROUTES.frames]
+    ])('is true with grid filters on the %s route', (_name, route) => {
+        expect(resolveHasActiveFilter(route, true, NONE, NONE)).toBe(true);
+    });
+
+    it('uses labels and tags on the annotations route', () => {
+        const route = APP_ROUTES.annotations;
+        expect(resolveHasActiveFilter(route, true, NONE, NONE)).toBe(false);
+        expect(resolveHasActiveFilter(route, false, new Set(['lbl-1']), NONE)).toBe(true);
+        expect(resolveHasActiveFilter(route, false, NONE, new Set(['tag-1']))).toBe(true);
+    });
+
+    it('is false on the captions route', () => {
+        expect(resolveHasActiveFilter(APP_ROUTES.captions, true, NONE, NONE)).toBe(false);
     });
 });
 

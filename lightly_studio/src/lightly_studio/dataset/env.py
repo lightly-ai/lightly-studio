@@ -1,7 +1,6 @@
 """Initialize environment variables for the dataset module."""
 
 from pathlib import Path
-from typing import Optional
 
 from environs import Env
 
@@ -18,18 +17,18 @@ LIGHTLY_STUDIO_PORT: int = env.int("LIGHTLY_STUDIO_PORT", 8001)
 LIGHTLY_STUDIO_HOST: str = env.str("LIGHTLY_STUDIO_HOST", "localhost")
 LIGHTLY_STUDIO_DEBUG: bool = env.bool("LIGHTLY_STUDIO_DEBUG", False)
 
-LIGHTLY_STUDIO_DATABASE_URL: Optional[str] = env.str("LIGHTLY_STUDIO_DATABASE_URL", default=None)
+LIGHTLY_STUDIO_DATABASE_URL: str | None = env.str("LIGHTLY_STUDIO_DATABASE_URL", default=None)
 
-LIGHTLY_STUDIO_API_URL: Optional[str] = env.str("LIGHTLY_STUDIO_API_URL", default=None)
-LIGHTLY_STUDIO_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_TOKEN", default=None)
-LIGHTLY_STUDIO_API_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_API_KEY", default=None)
+LIGHTLY_STUDIO_API_URL: str | None = env.str("LIGHTLY_STUDIO_API_URL", default=None)
+LIGHTLY_STUDIO_TOKEN: str | None = env.str("LIGHTLY_STUDIO_TOKEN", default=None)
+LIGHTLY_STUDIO_API_KEY: str | None = env.str("LIGHTLY_STUDIO_API_KEY", default=None)
 
 # Anonymous usage tracking. Covers the Python package and the GUI, which reads the flag back from
 # the API. See lightly_studio/analytics/tracking.py.
 LIGHTLY_STUDIO_ANALYTICS_ENABLED: bool = env.bool("LIGHTLY_STUDIO_ANALYTICS_ENABLED", True)
 # Overrides the project to report against. Unset or empty, it follows the cohort of the
 # installation, see lightly_studio/analytics/posthog_project.py.
-LIGHTLY_STUDIO_POSTHOG_KEY: Optional[str] = env.str("LIGHTLY_STUDIO_POSTHOG_KEY", default=None)
+LIGHTLY_STUDIO_POSTHOG_KEY: str | None = env.str("LIGHTLY_STUDIO_POSTHOG_KEY", default=None)
 
 # The EU instance. The GUI reads this back from the API rather than carrying its own copy. Not an
 # environment variable: the key above is the only part worth pointing elsewhere.
@@ -41,11 +40,11 @@ LIGHTLY_STUDIO_INTERNAL: bool = env.bool("LIGHTLY_STUDIO_INTERNAL", False)
 
 # Reporting of paid service usage (AI-assisted labeling, embedding) to a central service.
 # Reports are sent only when both are set. See lightly_studio/usage/usage_reporter.py.
-LIGHTLY_STUDIO_USAGE_REPORT_URL: Optional[str] = env.str(
+LIGHTLY_STUDIO_USAGE_REPORT_URL: str | None = env.str(
     "LIGHTLY_STUDIO_USAGE_REPORT_URL", default=None
 )
 # The token this installation presents to the central service, for every call it makes there.
-LIGHTLY_STUDIO_SERVICE_TOKEN: Optional[str] = env.str("LIGHTLY_STUDIO_SERVICE_TOKEN", default=None)
+LIGHTLY_STUDIO_SERVICE_TOKEN: str | None = env.str("LIGHTLY_STUDIO_SERVICE_TOKEN", default=None)
 
 LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS: int = max(
     1, env.int("LIGHTLY_STUDIO_REMOTE_IMAGE_PROBE_WORKERS", 32)

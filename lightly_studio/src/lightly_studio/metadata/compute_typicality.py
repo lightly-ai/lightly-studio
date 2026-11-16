@@ -49,9 +49,8 @@ def compute_typicality_metadata(
     typicality_values = typicality.calculate_typicality(
         num_nearest_neighbors=DEFAULT_NUM_NEAREST_NEIGHBORS
     )
-    assert len(samples) == len(typicality_values), (
-        "The number of samples and computed typicality values must match"
-    )
+    if len(samples) != len(typicality_values):
+        raise RuntimeError("The number of samples and computed typicality values must match")
 
     metadata: list[tuple[UUID, Mapping[str, Any]]] = [
         (sample.sample_id, {metadata_name: typicality})

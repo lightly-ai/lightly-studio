@@ -4,14 +4,14 @@ import type { ApplyMaskConstraintsParams, OverriddenSegmentationAnnotations } fr
 
 /**
  * Applies lock constraints and overlap cleanup to a working segmentation mask.
+ *
+ * Locked pixels are removed from the working mask first. Other annotations are then trimmed
+ * only where the remaining mask has pixels, so pixels rejected by a lock never trim them.
  */
 export const applySegmentationMaskConstraints = async ({
     workingMask,
     ...rest
 }: ApplyMaskConstraintsParams): Promise<OverriddenSegmentationAnnotations> => {
-    // Preserve the drawn mask for overlap removal; locked stripping mutates workingMask.
-    const maskForOverlap = workingMask.slice();
-
     stripLockedPixels({
         mask: workingMask,
         lockedAnnotationIds: rest.lockedAnnotationIds,
@@ -19,8 +19,13 @@ export const applySegmentationMaskConstraints = async ({
         sample: rest.sample
     });
 
+    // Nothing to trim with, so skip decoding the other masks.
+    if (!workingMask.includes(1)) {
+        return [];
+    }
+
     return removeOverlapFromOtherSegmentationAnnotations({
-        newMask: maskForOverlap,
+        newMask: workingMask,
         ...rest
     });
 };

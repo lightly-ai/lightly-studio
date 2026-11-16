@@ -4,7 +4,7 @@ import type { GridType } from '$lib/types';
 import type { TagByFilterBody } from '$lib/api/lightly_studio_local';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
-import { useVideoFilters, buildVideoFilter } from '$lib/hooks/useVideoFilters/useVideoFilters';
+import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 import { getFrameFilter } from '$lib/hooks/useFramesFilter/frameFilter';
 import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
@@ -34,7 +34,7 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
         clearSelectAllAnnotationSnapshot
     } = useGlobalStorage();
     const { imageFilter, filterParams: imageFilterParams } = useImageFilters();
-    const { filterParams: videoFilterParams } = useVideoFilters();
+    const { videoFilter } = useVideoFilters();
     const { filterParams: frameFilterParams } = useFramesFilter();
     const { annotationFilter } = useSelectedAnnotationsFilter(collectionId);
     const { annotationPlotRegion } = useAnnotationPlotSelection();
@@ -67,7 +67,7 @@ export function useSelectAll(collectionId: string, gridType: GridType) {
                 };
             }
             case 'videos': {
-                const filter = buildVideoFilter(get(videoFilterParams));
+                const filter = get(videoFilter);
                 return {
                     snapshotFilter: { ...filter, filter_type: GRID_FILTER_TYPE.videos },
                     fetchIds: () => fetchSampleIdsForVideos(collectionId, filter)

@@ -1,4 +1,6 @@
 export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
+export { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+export { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -122,6 +124,7 @@ export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassCo
 export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
 export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
+export { useQueryHistory } from '$lib/hooks/useQueryHistory/useQueryHistory';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
 export { useAnnotationTarget } from '$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte';

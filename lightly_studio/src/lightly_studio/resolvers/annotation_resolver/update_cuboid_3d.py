@@ -43,5 +43,6 @@ def update_cuboid_3d(
     )
     # Re-fetch to get a session-bound instance with updated relationship data.
     refreshed = annotation_resolver.get_by_id(session=session, annotation_id=annotation_id)
-    assert refreshed is not None
+    if refreshed is None:
+        raise RuntimeError("Expected `refreshed` to be set.")
     return refreshed
