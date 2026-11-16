@@ -126,3 +126,8 @@ export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationCl
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
+export {
+    fetchWorkflowFile,
+    useWorkflowFile,
+    type WorkflowFile
+} from '$lib/hooks/useWorkflowFile/useWorkflowFile.svelte';

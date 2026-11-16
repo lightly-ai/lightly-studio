@@ -5,6 +5,7 @@
     import { useRemoveTagFromSample } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
     import { toast } from 'svelte-sonner';
     import AddTagPopover from './AddTagPopover.svelte';
 
@@ -24,7 +25,11 @@
     let { tags, collectionId, sampleId, onRefetch = () => {}, title = 'Tags' }: Props = $props();
 
     const { user } = useAuth();
-    const canManageTags = $derived(hasMinimumRole(user?.role, 'labeler'));
+    // A batch file's tags are locked like its annotations when it is not the user's turn.
+    const workflow = useWorkflowFileContext();
+    const canManageTags = $derived(
+        hasMinimumRole(user?.role, 'labeler') && (workflow?.canEdit ?? true)
+    );
 
     const { removeTagFromSample } = useRemoveTagFromSample({ getCollectionId: () => collectionId });
 

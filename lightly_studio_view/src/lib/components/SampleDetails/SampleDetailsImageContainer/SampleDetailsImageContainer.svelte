@@ -34,6 +34,7 @@
     import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
     import { DisplayAdjustmentsPopover } from '$lib/components/DisplayAdjustmentsPopover';
+    import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 
     type SampleDetailsImageContainerProps = {
         sample: {
@@ -71,6 +72,8 @@
     }: SampleDetailsImageContainerProps = $props();
 
     const { isEditingMode, imageBrightness, imageContrast, maskOpacity } = useGlobalStorage();
+    // A batch file shows the toolbar only when it is the user's turn.
+    const workflow = useWorkflowFileContext();
     const { customLabelColorsStore } = useCustomLabelColors();
     // Same as the CSS filter `brightness(b) contrast(c)`.
     const filterSlope = $derived($imageBrightness * $imageContrast);
@@ -256,7 +259,7 @@
     registerResetFn={(fn) => (resetZoomTransform = fn)}
 >
     {#snippet toolbarContent()}
-        {#if $isEditingMode}
+        {#if $isEditingMode && (workflow?.canEdit ?? true)}
             <SampleDetailsToolbar
                 showSegmentationTool={shouldShowSegmentationToolInToolbar}
                 isPending={$isPending}

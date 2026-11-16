@@ -11,6 +11,8 @@
     import SampleDetailsClassificationSegment from '../SampleDetailsClassificationSegment/SampleDetailsClassificationSegment.svelte';
     import { type Snippet } from 'svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
+    import WorkflowInstructions from '$lib/components/Workflow/WorkflowInstructions/WorkflowInstructions.svelte';
 
     type Props = {
         sample: {
@@ -35,6 +37,7 @@
     }: Props = $props();
 
     const { context: annotationLabelContext } = useAnnotationLabelContext();
+    const workflow = useWorkflowFileContext();
 
     // Auto-scroll to selected annotation
     $effect(() => {
@@ -60,6 +63,9 @@
         <div
             class="flex h-full min-h-0 flex-col space-y-4 overflow-y-auto dark:[color-scheme:dark]"
         >
+            {#if workflow?.file}
+                <WorkflowInstructions file={workflow.file} />
+            {/if}
             {#key sample.sample_id}
                 <SegmentTags
                     tags={sample.tags ?? []}

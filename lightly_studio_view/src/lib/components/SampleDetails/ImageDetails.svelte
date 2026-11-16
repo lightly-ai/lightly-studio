@@ -11,6 +11,12 @@
     import { page } from '$app/state';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import SampleDetailsNavigation from './SampleDetailsNavigation/SampleDetailsNavigation.svelte';
+    import WorkflowBreadcrumb from '$lib/components/Workflow/WorkflowBreadcrumb/WorkflowBreadcrumb.svelte';
+    import WorkflowNavigation from '$lib/components/Workflow/WorkflowNavigation/WorkflowNavigation.svelte';
+    import {
+        createWorkflowFileContext,
+        getWorkflowParams
+    } from '$lib/contexts/WorkflowFile.svelte';
 
     const {
         sampleId,
@@ -38,6 +44,9 @@
 
     const { image, refetch } = useImage(() => ({ sampleId }));
 
+    // A sample opened from a hosted workflow batch shows the batch instead of the collection.
+    const workflow = createWorkflowFileContext(() => getWorkflowParams(page.url, sampleId));
+
     let sampleURL = $derived(getImageURLById(sampleId));
     const sampleImage = $derived(image.data as ImageView | undefined);
 </script>
@@ -58,10 +67,21 @@
     >
         {#if children}
             {@render children()}
-            <SampleDetailsNavigation />
+            {#if !workflow.active}
+                <SampleDetailsNavigation />
+            {:else if workflow.file}
+                <WorkflowNavigation
+                    previousSampleId={workflow.file.previous_sample_id}
+                    nextSampleId={workflow.file.next_sample_id}
+                />
+            {/if}
         {/if}
         {#snippet breadcrumb({ collection: rootCollection })}
-            <SampleDetailsBreadcrumb {rootCollection} />
+            {#if !workflow.active}
+                <SampleDetailsBreadcrumb {rootCollection} />
+            {:else if workflow.file}
+                <WorkflowBreadcrumb file={workflow.file} />
+            {/if}
         {/snippet}
         {#snippet metadataValue()}
             <SampleMetadata sample={sampleImage} />

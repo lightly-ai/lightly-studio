@@ -35,6 +35,9 @@
     import { useDeleteAnnotationWithUndo } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
+    import WorkflowFileStatus from '$lib/components/Workflow/WorkflowFileStatus/WorkflowFileStatus.svelte';
+    import WorkflowReadOnlyBanner from '$lib/components/Workflow/WorkflowReadOnlyBanner/WorkflowReadOnlyBanner.svelte';
 
     const {
         sampleId,
@@ -103,7 +106,8 @@
     const { selectAnnotation } = useAnnotationSelection();
 
     const { user } = useAuth();
-    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    const workflow = useWorkflowFileContext();
+    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler') && (workflow?.canEdit ?? true));
     const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
 
     let isPanModeEnabled = $state(false);
@@ -287,15 +291,27 @@
 {#if sample}
     <div class="flex h-full w-full flex-col space-y-4" data-testid={dataTestId}>
         <div class="flex w-full items-center justify-between">
-            {#if datasetCollection}
-                {@render breadcrumb({ collection: datasetCollection })}
-            {/if}
+            <div class="flex items-center gap-4">
+                {#if datasetCollection}
+                    {@render breadcrumb({ collection: datasetCollection })}
+                {/if}
+                {#if workflow?.file}
+                    <WorkflowFileStatus file={workflow.file} />
+                {/if}
+            </div>
             <div class="flex items-center gap-1">
                 <BreadcrumbHeaderActions {collectionId} />
                 <SidePanelToggleButton />
             </div>
         </div>
         <Separator class="bg-border-hard" />
+        {#if workflow?.file}
+            <WorkflowReadOnlyBanner file={workflow.file} />
+        {:else if workflow?.isError}
+            <p role="alert" class="text-sm text-destructive">
+                Could not load the batch for this file. It stays read-only.
+            </p>
+        {/if}
 
         <div class="flex min-h-0 flex-1 gap-4">
             <div class="flex-1">

@@ -6,6 +6,7 @@
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { isInputElement } from '$lib/utils';
+    import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
     import { Check, Pencil, Puzzle, Settings, Undo2 } from '@lucide/svelte';
     import { get } from 'svelte/store';
 
@@ -23,7 +24,17 @@
     const { user } = useAuth();
     const { trackEvent } = usePostHog();
 
-    const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    const workflow = useWorkflowFileContext();
+    const hasEditRole = $derived(hasMinimumRole(user?.role, 'labeler'));
+    // In a workflow batch, only the person whose turn it is may edit the file.
+    const canEdit = $derived(hasEditRole && (workflow?.canEdit ?? true));
+
+    const readOnlyLabel = 'Read-only: you can’t edit this file now';
+
+    // Leave edit mode once the batch file turns out to be locked, not while it loads.
+    $effect(() => {
+        if (workflow?.locked && $isEditingMode) setIsEditingMode(false);
+    });
 
     type TriggeredBy = 'click' | 'keyboard_shortcut';
 
@@ -108,6 +119,19 @@
                 />
             </Tooltip>
         {/if}
+    {:else if hasEditRole}
+        <Tooltip content={readOnlyLabel} position="bottom" triggerTabIndex={0}>
+            <Button
+                icon={Pencil}
+                variant="ghost"
+                ariaLabel={readOnlyLabel}
+                buttonProps={{
+                    disabled: true,
+                    'data-testid': 'breadcrumb-edit-button',
+                    class: 'h-8 px-2'
+                }}
+            />
+        </Tooltip>
     {/if}
     <Tooltip content="Plugins" position="bottom">
         <Button

@@ -1,7 +1,9 @@
-import { fireEvent, render } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
 import { writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { workflowFile } from '$lib/components/Workflow/workflowFile.fixture';
+import type { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 
 const mockToolbarContext = { status: 'cursor', brush: { mode: 'brush', size: 50 } };
 
@@ -30,6 +32,11 @@ vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
 }));
 
 let userRole: string | undefined = 'labeler';
+let workflow: Partial<NonNullable<ReturnType<typeof useWorkflowFileContext>>> | undefined;
+
+vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
+    useWorkflowFileContext: () => workflow
+}));
 
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({
@@ -87,6 +94,14 @@ vi.mock('$lib/hooks/useSettings', () => ({
 }));
 
 vi.mock('$lib/hooks', () => ({
+    useGlobalStorage: () => ({
+        isEditingMode,
+        setIsEditingMode: (value: boolean) => isEditingMode.set(value),
+        reversibleActions: writable([]),
+        executeReversibleAction: vi.fn()
+    }),
+    useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
+    useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) }),
     useDeleteAnnotationWithUndo: () => ({ deleteWithUndo }),
     useAnnotationCollections: vi.fn(() => ({ data: [] })),
     usePostHog: () => ({ trackEvent: vi.fn() })
@@ -151,6 +166,7 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         mockAnnotationLabelContext.isOnAnnotationDetailsView = false;
         isEditingMode.set(false);
         userRole = 'labeler';
+        workflow = undefined;
     });
 
     it('selects on space and goes back on escape', async () => {
@@ -264,6 +280,20 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
             expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         });
 
+        it('does nothing on a batch file when it is not the user’s turn', async () => {
+            workflow = {
+                active: true,
+                canEdit: false,
+                isError: false,
+                file: { ...workflowFile, state: 'in_review', can_edit: false }
+            };
+            renderWithSelectedAnnotation();
+
+            await fireEvent.keyDown(window, { key: 'Delete' });
+
+            expect(mockAnnotationLabelContext.annotationId).toBe('a1');
+        });
+
         it('does nothing without labeler role', async () => {
             userRole = 'viewer';
             renderWithSelectedAnnotation();
@@ -346,5 +376,55 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
                 expect(mockAnnotationLabelContext.annotationId).toBeNull();
             });
         });
+    });
+});
+
+describe('SampleDetailsPanel batch context', () => {
+    beforeEach(() => {
+        isEditingMode.set(false);
+        userRole = 'labeler';
+    });
+
+    it('shows the file state, whose turn it is, and why the file is read-only', () => {
+        workflow = {
+            active: true,
+            canEdit: false,
+            isError: false,
+            file: {
+                ...workflowFile,
+                state: 'in_review',
+                can_edit: false,
+                waiting_for: 'marta@example.com'
+            }
+        };
+
+        render(SampleDetailsPanel, { props: defaultProps });
+
+        expect(screen.getByTestId('workflow-state-badge')).toHaveTextContent('In review');
+        expect(screen.getByTestId('workflow-turn')).toHaveTextContent(
+            'Waiting for marta@example.com'
+        );
+        expect(screen.getByRole('status')).toHaveTextContent(
+            'You submitted this file. It’s read-only while marta@example.com reviews it.'
+        );
+    });
+
+    it('keeps the file read-only when the batch cannot be loaded', () => {
+        workflow = { active: true, canEdit: false, isError: true };
+
+        render(SampleDetailsPanel, { props: defaultProps });
+
+        expect(screen.getByRole('alert')).toHaveTextContent(
+            'Could not load the batch for this file. It stays read-only.'
+        );
+    });
+
+    it('shows no workflow overlays outside a batch', () => {
+        workflow = undefined;
+
+        render(SampleDetailsPanel, { props: defaultProps });
+
+        expect(screen.queryByTestId('workflow-file-status')).not.toBeInTheDocument();
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 });
