@@ -20,7 +20,7 @@ dependencies = [
     "alembic>=1.14.0,<2.0",
     "duckdb-engine>=0.15.0,<0.17",
     "duckdb>=2.0.0,<3.0",
-    # Pandas 3 requires Python 3.11+; pandas 3.1 provides Python 3.15 wheels.
+    # pandas 3.1 provides Python 3.15 wheels.
     "pandas>=3.1.0,<4.0",
     "psycopg[binary]>=3.2.4; python_version < '3.15'",
     "psycopg[binary]>=3.3.6; python_version >= '3.15'",
