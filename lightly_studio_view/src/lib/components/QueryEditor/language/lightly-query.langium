@@ -58,6 +58,8 @@ interface StringLiteral extends Expression {
   value: string;
 }
 
+// Create a Query node even when the document contains only whitespace or comments.
+// The outer optional group allows both query alternatives to be absent.
 entry Query:
   {infer Query} (expression=Sample<true> |
     (isVideo?='video:' (expression=Sample<false>)?))?;
