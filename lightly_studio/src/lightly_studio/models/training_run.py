@@ -9,7 +9,8 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field
 
-DEFAULT_TRAINING_MODEL_NAME = "dinov3/vitt16-ltdetr-coco"
+# The smallest PicoDet model. Studio always trains this model.
+TRAINING_MODEL_NAME = "picodet-s-coco"
 DEFAULT_TRAINING_STEPS = 100
 
 
@@ -42,7 +43,6 @@ class TrainingRunCreate(BaseModel):
     val_tag_id: UUID
     gt_annotation_collection_id: UUID
     """The annotation source with the ground truth annotations."""
-    model_name: str = DEFAULT_TRAINING_MODEL_NAME
     steps: int = Field(default=DEFAULT_TRAINING_STEPS, ge=1)
 
 

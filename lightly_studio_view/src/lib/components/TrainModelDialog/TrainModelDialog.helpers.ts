@@ -14,12 +14,6 @@ export const STATUS_LABELS: Record<TrainingRunStatus, string> = {
     cancelled: 'Cancelled'
 };
 
-export const TRAINING_MODELS = [
-    { value: 'dinov3/vitt16-ltdetr-coco', label: 'DINOv3 ViT-T/16 LTDETR (fastest)' },
-    { value: 'dinov3/convnext-tiny-ltdetr-coco', label: 'DINOv3 ConvNeXt-T LTDETR' },
-    { value: 'ltdetrv2-s-coco', label: 'LTDETRv2-S' }
-];
-
 export const DEFAULT_TRAINING_STEPS = 100;
 
 export const isActiveRun = (run: Pick<TrainingRunView, 'status'> | undefined): boolean =>

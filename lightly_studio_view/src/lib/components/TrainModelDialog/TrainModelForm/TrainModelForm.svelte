@@ -4,11 +4,7 @@
     import { Input } from '$lib/components/ui/input';
     import { Label } from '$lib/components/ui/label';
     import type { CreateTrainingRunData } from '$lib/api/lightly_studio_local/types.gen';
-    import {
-        DEFAULT_TRAINING_STEPS,
-        TRAINING_MODELS,
-        canStartTraining
-    } from '../TrainModelDialog.helpers';
+    import { DEFAULT_TRAINING_STEPS, canStartTraining } from '../TrainModelDialog.helpers';
 
     interface Option {
         value: string;
@@ -27,7 +23,6 @@
     let trainTagId = $state<string | undefined>(undefined);
     let valTagId = $state<string | undefined>(undefined);
     let gtSourceId = $state<string | undefined>(undefined);
-    let modelName = $state(TRAINING_MODELS[0].value);
     let steps = $state(DEFAULT_TRAINING_STEPS);
 
     const canStart = $derived(
@@ -43,7 +38,6 @@
             train_tag_id: trainTagId!,
             val_tag_id: valTagId!,
             gt_annotation_collection_id: gtSourceId!,
-            model_name: modelName,
             steps
         });
     };
@@ -80,15 +74,6 @@
                 : 'Select a source'}
             onValueChange={(value) => (gtSourceId = value)}
             testId="gt-source-select"
-        />
-    </div>
-    <div class="grid gap-2">
-        <Label class="text-foreground">Model</Label>
-        <Select
-            items={TRAINING_MODELS}
-            value={modelName}
-            onValueChange={(value) => (modelName = value)}
-            testId="model-select"
         />
     </div>
     <div class="grid gap-2">

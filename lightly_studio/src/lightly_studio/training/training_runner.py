@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import json
 import sys
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -24,7 +24,16 @@ import lightly_train  # type: ignore[import-not-found]
 import torch
 
 _TRAIN_BATCH_SIZE = 16
-_PREDICTION_BATCH_SIZE = 8
+# Train without data augmentation. Without scale jitter, all images are resized to the input
+# size of the model, so that the images of a batch have the same size.
+_TRAIN_TRANSFORM_ARGS: dict[str, Any] = {
+    "photometric_distort": None,
+    "random_zoom_out": None,
+    "random_iou_crop": None,
+    "random_flip": None,
+    "scale_jitter": None,
+    "resize": {"height": "auto", "width": "auto"},
+}
 # The Lightning accelerator name for each torch device type.
 _ACCELERATORS = {"cuda": "gpu", "mps": "mps", "cpu": "cpu"}
 
@@ -46,6 +55,7 @@ def main(config_path: Path) -> None:
         },
         steps=config["steps"],
         batch_size=_TRAIN_BATCH_SIZE,
+        transform_args=_TRAIN_TRANSFORM_ARGS,
         accelerator=_ACCELERATORS[device],
         # One device only. With more GPUs, LightlyTrain starts more processes, and Studio
         # cancels a run by stopping only this process.
@@ -77,11 +87,14 @@ def _device() -> str:
 
 
 def _precision(device: str) -> str:
-    # bf16 needs a CUDA GPU of the Ampere generation or newer. Older GPUs use fp16.
-    # MPS and the CPU use full precision.
-    if device != "cuda":
-        return "32-true"
-    return "bf16-mixed" if torch.cuda.is_bf16_supported() else "16-mixed"
+    # bf16 has the range of fp32, so it needs no gradient scaler. CUDA GPUs older than
+    # Ampere have no bf16 and use fp16. The CPU uses full precision, because bf16 is often
+    # not faster there.
+    if device == "cuda":
+        return "bf16-mixed" if torch.cuda.is_bf16_supported() else "16-mixed"
+    if device == "mps":
+        return "bf16-mixed"
+    return "32-true"
 
 
 def _exported_model_path(out_dir: Path) -> Path:
@@ -94,26 +107,23 @@ def _exported_model_path(out_dir: Path) -> Path:
 def _predict(
     model: Any, images: Sequence[dict[str, str]], threshold: float
 ) -> list[dict[str, Any]]:
-    """Predict boxes for images given as `{"sample_id": ..., "path": ...}` entries."""
+    """Predict boxes for images given as `{"sample_id": ..., "path": ...}` entries.
+
+    The prediction is one image at a time, because PicoDet has no batch prediction.
+    """
     predictions: list[dict[str, Any]] = []
-    for batch in _batches(items=images, size=_PREDICTION_BATCH_SIZE):
-        results = model.predict_batch([image["path"] for image in batch], threshold=threshold)
-        for image, result in zip(batch, results):
-            detections = [
-                {
-                    "class_name": model.classes[int(label)],
-                    "bbox_xyxy": [float(value) for value in box.tolist()],
-                    "score": float(score),
-                }
-                for box, label, score in zip(result["bboxes"], result["labels"], result["scores"])
-            ]
-            predictions.append({"sample_id": image["sample_id"], "detections": detections})
+    for image in images:
+        result = model.predict(image["path"], threshold=threshold)
+        detections = [
+            {
+                "class_name": model.classes[int(label)],
+                "bbox_xyxy": [float(value) for value in box.tolist()],
+                "score": float(score),
+            }
+            for box, label, score in zip(result["bboxes"], result["labels"], result["scores"])
+        ]
+        predictions.append({"sample_id": image["sample_id"], "detections": detections})
     return predictions
-
-
-def _batches(items: Sequence[dict[str, str]], size: int) -> Iterator[Sequence[dict[str, str]]]:
-    for start in range(0, len(items), size):
-        yield items[start : start + size]
 
 
 if __name__ == "__main__":

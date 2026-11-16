@@ -17,7 +17,7 @@ from sqlmodel import Session
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import env
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.training_run import TrainingRunCreate
+from lightly_studio.models.training_run import TRAINING_MODEL_NAME, TrainingRunCreate
 from lightly_studio.resolvers import collection_resolver, tag_resolver
 from lightly_studio.services.training_service import watch_training_run, write_training_files
 from lightly_studio.services.training_service.training_run_files import TrainingRunFiles
@@ -59,7 +59,7 @@ def start_training_run(  # noqa: PLR0913
         training_run_id=training_run_id,
         collection_id=collection.collection_id,
         name=f"lightly_train_{created_at:%Y-%m-%d_%H-%M-%S}",
-        model_name=run_create.model_name,
+        model_name=TRAINING_MODEL_NAME,
         steps=run_create.steps,
         files=TrainingRunFiles(run_dir=runs_dir.resolve() / str(training_run_id)),
         gt_annotation_source=_gt_annotation_source_name(
