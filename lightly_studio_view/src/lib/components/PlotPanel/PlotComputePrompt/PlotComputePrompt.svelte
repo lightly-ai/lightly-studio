@@ -2,18 +2,20 @@
     import ChartScatter from '@lucide/svelte/icons/chart-scatter';
     import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { Button } from '$lib/components/ui/button';
-    import { formatElapsed, type PlotComputeView } from '../plotComputeGate/plotComputeGate';
+    import { formatElapsed, type PlotComputeView } from '../plotComputeGate';
 
     interface Props {
         view: Extract<PlotComputeView, 'prompt' | 'computing'>;
         embeddingCount: number;
+        /** Singular item name of the collection, for example "image" or "video". */
+        itemLabel: string;
         startedAt: number | null;
         onCompute: () => void;
     }
 
     const TIMER_INTERVAL_MS = 1_000;
 
-    let { view, embeddingCount, startedAt, onCompute }: Props = $props();
+    let { view, embeddingCount, itemLabel, startedAt, onCompute }: Props = $props();
 
     let now = $state(Date.now());
     $effect(() => {
@@ -34,7 +36,8 @@
         <ChartScatter class="size-8 text-muted-foreground" />
         <div class="text-base font-medium">Plot not computed</div>
         <div class="max-w-64 text-sm text-muted-foreground">
-            {embeddingCount.toLocaleString('en-US')} images. The first compute can take several minutes.
+            {embeddingCount.toLocaleString('en-US')}
+            {itemLabel}s. The first compute can take several minutes.
         </div>
         <Button class="mt-2" onclick={onCompute}>Compute plot</Button>
     {:else}
