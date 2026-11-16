@@ -54,6 +54,10 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
     const parser = services.LightlyQuery.parser.LangiumParser;
 
     function validate(model: monaco.editor.ITextModel): void {
+        if (!model.getValue().trim()) {
+            monaco.editor.setModelMarkers(model, MARKER_OWNER, []);
+            return;
+        }
         const { text, lineOffset } = getModelQuerySource(model);
         const result = parser.parse<Query>(text);
         const markers = [

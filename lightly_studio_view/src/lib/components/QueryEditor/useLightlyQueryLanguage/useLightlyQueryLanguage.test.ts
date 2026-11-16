@@ -119,6 +119,32 @@ describe('useLightlyQueryLanguage', () => {
         }
     });
 
+    it.each(['image', 'video'] as const)(
+        'clears blank %s query diagnostics and resumes validation when typing',
+        async (sampleType) => {
+            const { attach } = await loadHook();
+            const { createLightlyQueryServices } = await vi.importActual<
+                typeof import('../language/lightly-query-module')
+            >('../language/lightly-query-module');
+            const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
+            mocks.parse.mockImplementation((text: string) => parser.parse(text));
+            const model = makeModel('');
+            attach(model as never, sampleType);
+            expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([]);
+
+            const listener = model.onDidChangeContent.mock.calls[0][0] as () => void;
+            for (const blank of ['', ' \n\t ']) {
+                model._value = 'width >';
+                listener();
+                expect(mocks.setModelMarkers.mock.calls.at(-1)![2].length).toBeGreaterThan(0);
+
+                model._value = blank;
+                listener();
+                expect(mocks.setModelMarkers.mock.calls.at(-1)![2]).toEqual([]);
+            }
+        }
+    );
+
     it('re-validates the model whenever its content changes', async () => {
         const { attach } = await loadHook();
         const model = makeModel('first');
