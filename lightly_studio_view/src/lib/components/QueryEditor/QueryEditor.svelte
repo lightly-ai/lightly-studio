@@ -49,6 +49,10 @@
     }
 
     function handleSave() {
+        if (!draftValue.trim()) {
+            onSave?.(draftValue, null);
+            return;
+        }
         const translationResult = translateQuery(draftValue, sampleType);
         if (translationResult.status === 'error') {
             toast.error(`Failed to translate query: ${formatTranslationErrors(translationResult)}`);

@@ -41,6 +41,11 @@
     };
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
+        if (!value.trim()) {
+            updateQueryExpr(undefined);
+            queryClient.invalidateQueries();
+            return;
+        }
         if (!parsed) {
             throw new Error('Failed to parse query expression');
         }
