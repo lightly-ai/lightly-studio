@@ -183,6 +183,19 @@ describe('usePlotComputeGate', () => {
         expect(gate.view).toBe('prompt');
     });
 
+    it('waits for a status newer than the plot load before it ends the compute', () => {
+        vi.useFakeTimers({ now: 1_000_000 });
+        const query = createStatusQuery(NOT_COMPUTED_LARGE);
+        query.dataUpdatedAt = 1_005_000;
+        mocks.statusQueries['same-ms'] = query;
+        const { gate } = mountGate({ collectionId: 'same-ms', plotUpdatedAt: () => 1_005_000 });
+        gate.startCompute();
+        flushSync();
+
+        expect(gate.startedAt).toBe(1_000_000);
+        expect(gate.view).toBe('computing');
+    });
+
     it('keeps the start while only an older cached plot is loaded', () => {
         vi.useFakeTimers({ now: 1_000_000 });
         mocks.statusQueries['cached-old'] = createStatusQuery(NOT_COMPUTED_LARGE);
