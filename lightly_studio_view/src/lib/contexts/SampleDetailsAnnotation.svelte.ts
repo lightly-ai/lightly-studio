@@ -9,11 +9,25 @@ export type AnnotationLabelContext = {
     lockedAnnotationIds?: Set<string>;
     isAnnotationLocked?: (annotationId?: string | null) => boolean;
 
-    // Selected annotation label.
+    // The class of the selected annotation. New annotations get the sticky class instead.
     annotationLabel?: string | null;
 
-    // Selected annotation source.
+    // The source new annotations go to, or null while it is unknown or not picked. Set by
+    // useAnnotationTarget only.
     annotationSource?: string | null;
+
+    // Why new annotations must not be created right now, or null when they may: the sources
+    // load, no source is picked among several, or the picked source is hidden. Set by
+    // useAnnotationTarget only.
+    annotationSourceBlockedReason?: string | null;
+
+    // The sources whose annotations are all hidden on this sample. They can't be the target.
+    // Set by useAnnotationTarget only.
+    hiddenAnnotationSources?: string[];
+
+    // A new source name typed on this page, with its collection. It may be the target of that
+    // collection before the source exists. Set by useSetTargetSource only.
+    typedAnnotationSource?: { collectionId: string; name: string } | null;
 
     // The annotation type selected via toolbar.
     annotationType?: AnnotationType | null;
