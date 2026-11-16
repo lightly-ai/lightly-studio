@@ -5,6 +5,7 @@
     import { Checkbox } from '$lib/components/ui/checkbox';
     import type { ComponentProps } from 'svelte';
     import TimelineBufferStatus from '../TimelineBufferStatus/TimelineBufferStatus.svelte';
+    import { TimelineZoomControls } from '../TimelineViewport';
 
     /** Playback interval at 1x speed, i.e. 10 Hz. */
     const BASE_INTERVAL_MS = 100;
@@ -135,6 +136,7 @@
     />
     <span class="ml-2 text-xs text-muted-foreground">{frameLabel}</span>
     <div class="ml-auto flex items-center gap-2">
+        <TimelineZoomControls />
         <TimelineBufferStatus status={bufferStatus} />
     </div>
     <label class="ml-3 flex items-center gap-1.5 text-xs text-muted-foreground">
