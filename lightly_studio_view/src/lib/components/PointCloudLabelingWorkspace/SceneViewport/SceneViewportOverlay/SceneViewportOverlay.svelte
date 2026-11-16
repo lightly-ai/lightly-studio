@@ -1,7 +1,6 @@
 <script lang="ts">
     import RotationCursor from '../RotationCursor/RotationCursor.svelte';
     import SceneNavigationControls from '../SceneNavigationControls.svelte';
-    import CuboidTooltipOverlay from '../../CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte';
     import { useSceneViewportContext } from '../sceneViewportContext';
     const { getProps, interaction } = useSceneViewportContext();
     const props = $derived(getProps());
@@ -34,13 +33,3 @@
     cursorX={interaction.cursorX}
     cursorY={interaction.cursorY}
 />
-{#if props.showAnnotationTooltips}
-    <CuboidTooltipOverlay
-        cursorX={interaction.cursorX}
-        cursorY={interaction.cursorY}
-        hoveredAnnotationId={props.hoveredAnnotationId}
-        cuboids={props.cuboids}
-        annotationClasses={props.annotationClasses}
-        annotationSources={props.annotationSources}
-    />
-{/if}

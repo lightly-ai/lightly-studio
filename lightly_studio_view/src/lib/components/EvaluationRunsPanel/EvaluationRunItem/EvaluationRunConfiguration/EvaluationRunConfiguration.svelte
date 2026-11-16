@@ -1,6 +1,6 @@
 <script lang="ts">
     import { Button, Typography } from '$lib/components';
-    import { Pencil } from '@lucide/svelte';
+    import Pencil from '@lucide/svelte/icons/pencil';
 
     interface Props {
         configuration: Record<string, unknown> | null;

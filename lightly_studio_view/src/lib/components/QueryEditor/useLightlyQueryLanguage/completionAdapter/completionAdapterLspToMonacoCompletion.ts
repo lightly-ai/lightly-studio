@@ -8,15 +8,18 @@ import { enrichWithSchemaDocs } from './completionAdapterEnrichWithSchemaDocs';
 import { mapDocumentation } from './completionAdapterMapDocumentation';
 import { LSP_TO_MONACO_KIND } from './completionAdapterShared';
 
-function toMonacoRange(range: {
-    start: { line: number; character: number };
-    end: { line: number; character: number };
-}): monaco.IRange {
+function toMonacoRange(
+    range: {
+        start: { line: number; character: number };
+        end: { line: number; character: number };
+    },
+    lineOffset: number
+): monaco.IRange {
     // LSP positions are 0-based (line/character), Monaco ranges are 1-based.
     return {
-        startLineNumber: range.start.line + 1,
+        startLineNumber: Math.max(1, range.start.line + 1 - lineOffset),
         startColumn: range.start.character + 1,
-        endLineNumber: range.end.line + 1,
+        endLineNumber: Math.max(1, range.end.line + 1 - lineOffset),
         endColumn: range.end.character + 1
     };
 }
@@ -25,23 +28,24 @@ function toMonacoRange(range: {
 export function lspToMonacoCompletion<Scope extends keyof typeof SCOPES>(
     item: LspCompletionItem,
     fallbackRange: monaco.IRange,
-    scope: Scope
+    scope: Scope,
+    lineOffset = 0
 ): monaco.languages.CompletionItem {
     const { label, kind, detail, documentation, sortText, filterText, textEdit } = item;
     const isSnippet = item.insertTextFormat === LspInsertTextFormat.Snippet;
 
     let range: monaco.IRange | monaco.languages.CompletionItemRanges = fallbackRange;
     let insertText = item.insertText ?? label;
-    if (textEdit && 'range' in textEdit) {
-        range = toMonacoRange(textEdit.range);
-        insertText = textEdit.newText;
-    } else if (textEdit && 'insert' in textEdit && 'replace' in textEdit) {
+    if (textEdit) {
         // InsertReplaceEdit: preserve dual-range semantics so Monaco can insert
         // when typing in-place and replace when completing over a wider span.
-        range = {
-            insert: toMonacoRange(textEdit.insert),
-            replace: toMonacoRange(textEdit.replace)
-        };
+        range =
+            'range' in textEdit
+                ? toMonacoRange(textEdit.range, lineOffset)
+                : {
+                      insert: toMonacoRange(textEdit.insert, lineOffset),
+                      replace: toMonacoRange(textEdit.replace, lineOffset)
+                  };
         insertText = textEdit.newText;
     }
 

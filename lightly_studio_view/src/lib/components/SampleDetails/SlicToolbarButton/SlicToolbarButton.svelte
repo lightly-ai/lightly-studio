@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Bot } from '@lucide/svelte';
+    import Bot from '@lucide/svelte/icons/bot';
 
     interface Props {
         onclick: () => void;

@@ -4,7 +4,6 @@ export * from './groupAnnotationLabels';
 export * from './countVisibleSources';
 export * from './getColorByLabel';
 export * from './getColorBySource';
-export * from './getApiErrorMessage';
 export * from './namePerCollection';
 export * from './getSimilarityColor';
 export * from './formatter';
@@ -49,3 +48,4 @@ export {
     oklchHueWheelColor
 } from './colorConvert';
 export { trackAnnotationClassEvent, trackClassCreatedInPicker } from './trackAnnotationClassEvent';
+export { dimensionRanges, withFilterOverrides } from './gridFilter';

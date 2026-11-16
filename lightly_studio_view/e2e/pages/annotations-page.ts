@@ -54,10 +54,7 @@ export class AnnotationsPage {
     async clickLabel(label: string) {
         const requestsSettled = waitForRequestsToSettle(this.page, '/annotations');
 
-        await this.page
-            .getByTestId('label-menu-label-name')
-            .getByText(label, { exact: true })
-            .click();
+        await this.page.getByTestId('labels-menu-name').getByText(label, { exact: true }).click();
 
         await requestsSettled;
         await expect(this.page.getByTestId('annotations-grid')).toBeVisible({
@@ -70,11 +67,11 @@ export class AnnotationsPage {
     }
 
     async clickTag(tag: string) {
-        await this.page.getByTestId('tag-menu-item').getByText(tag, { exact: true }).click();
+        await this.page.getByTestId('tags-menu-item').getByText(tag, { exact: true }).click();
     }
 
     getTagsMenuItem(tagName: string) {
-        return this.page.getByTestId('tags-menu-label').getByText(tagName, { exact: true });
+        return this.page.getByTestId('tags-menu-name').getByText(tagName, { exact: true });
     }
 
     async clickAnnotation(index: number) {

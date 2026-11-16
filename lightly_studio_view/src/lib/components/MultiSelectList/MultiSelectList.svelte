@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Check as CheckIcon } from '@lucide/svelte';
+    import CheckIcon from '@lucide/svelte/icons/check';
     import { Button } from '$lib/components';
     import * as Command from '$lib/components/ui/command';
     import { cn } from '$lib/utils';
@@ -51,7 +51,8 @@
 
 <div>
     {#if showSelectAll}
-        <div class="mb-1 flex items-center justify-between">
+        <!-- Inset by the list border (1px) plus the item padding (8px) to line up with the items. -->
+        <div class="mb-1 flex items-center justify-between px-[9px]">
             <span class="text-xs text-muted-foreground">
                 {selectedIds.length} of {items.length} selected
             </span>

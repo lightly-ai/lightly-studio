@@ -1,4 +1,5 @@
 <script lang="ts">
+    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
     import { onMount } from 'svelte';
@@ -8,7 +9,9 @@
         type SampleType,
         OperatorScope
     } from '$lib/api/lightly_studio_local';
-    import { LoaderCircle as Loader2, AlertCircle, ChevronRight } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-circle';
+    import AlertCircle from '@lucide/svelte/icons/alert-circle';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
     import * as Dialog from '$lib/components/ui/dialog';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import OperatorDialog from '$lib/components/Operator/OperatorDialog.svelte';
