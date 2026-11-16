@@ -240,7 +240,7 @@ git commit -m "feat: add embedding plot compute gate"
   - `useEmbeddings(collectionId, filters, colorBy = null, axes = null, enabled = true)`; spreads `enabled` into the query options
   - `usePlotComputeGate(params: { getCollectionId: () => string; getIsAxesLayout: () => boolean; getPlotUpdatedAt: () => number })` returning `{ readonly view: PlotComputeView; readonly isPlotRequestEnabled: boolean; readonly embeddingCount: number; readonly startedAt: number | null; readonly statusError: string | null; startCompute(): void }`
 
-Start times live in a module-level `writable<Record<string, number>>` keyed by collection id, so they survive the panel unmounting. `startCompute()` sets `Date.now()` only if the key is absent. When `view === 'computing'` and no start exists (below the threshold), the gate calls `startCompute()` itself. Each time `getPlotUpdatedAt()` changes (a plot load finished, not cached data) while the status says not computed, the gate refetches the status once. It deletes the start once a fresh status says computed, or once a plot load that finished after the start is followed by a status refresh, even if that status says dirty: a kept start would skip the prompt next time. With a start but no status at hand (the status cache expired), the view is computing. Only a status fetched after mount decides, except while this tab has a start for the collection, because the server answers no request during a compute. A failed plot request keeps the start; clearing it is left for a follow-up.
+Start times live in a module-level `writable<Record<string, number>>` keyed by collection id, so they survive the panel unmounting. `startCompute()` sets `Date.now()` only if the key is absent. When `view === 'computing'` and no start exists (below the threshold), the gate calls `startCompute()` itself. Each time `getPlotUpdatedAt()` changes (a plot load finished, not cached data) in the PaCMAP layout while the status does not say computed, the gate refetches the status once; a text axes load is a projection and does not count. It deletes the start once a fresh status says computed, or once the status refresh after a PaCMAP load that finished after the start completes, even if that status says dirty: a kept start would skip the prompt next time. With a start but no status at hand (the status cache expired), the view is computing. Only a status fetched after mount decides, except while this tab has a start for the collection, because the server can take long to answer during a compute. A failed plot request keeps the start; clearing it is left for a follow-up.
 
 - [ ] **Step 1: Write the failing tests** (mock `useEmbeddingPlotStatus`)
 
@@ -274,7 +274,7 @@ Expected: PASS
 - [ ] **Step 5: Commit**
 
 ```bash
-git add lightly_studio_view/src/lib/hooks/useEmbeddingPlotStatus lightly_studio_view/src/lib/hooks/useEmbeddings lightly_studio_view/src/lib/components/PlotPanel/usePlotComputeGate
+git add lightly_studio_view/src/lib/hooks/index.ts lightly_studio_view/src/lib/hooks/useEmbeddingPlotStatus lightly_studio_view/src/lib/hooks/useEmbeddings lightly_studio_view/src/lib/components/PlotPanel/usePlotComputeGate
 git commit -m "feat: gate the embedding plot request on plot status"
 ```
 
