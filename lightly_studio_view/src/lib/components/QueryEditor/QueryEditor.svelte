@@ -9,6 +9,8 @@
 
     interface QueryEditorProps {
         value?: string;
+        /** Text to show when the editor mounts, in place of `value`. It does not count as applied. */
+        draft?: string;
         sampleType?: 'image' | 'video';
         height?: string;
         readOnly?: boolean;
@@ -19,6 +21,7 @@
 
     let {
         value: valueProp,
+        draft,
         sampleType,
         height = '320px',
         readOnly = false,
@@ -26,7 +29,7 @@
         footerActions
     }: QueryEditorProps = $props();
 
-    const initialValue = $derived(valueProp ?? getDefaultQuery(sampleType));
+    const initialValue = $derived(draft ?? valueProp ?? getDefaultQuery(sampleType));
 
     let containerEl: HTMLDivElement | null = null;
 

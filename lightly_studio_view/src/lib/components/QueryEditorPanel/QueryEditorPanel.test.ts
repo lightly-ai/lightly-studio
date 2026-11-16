@@ -1,25 +1,38 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
+import { toast } from 'svelte-sonner';
 import { useQueryHistory } from '$lib/hooks';
+import type { QueryExprTranslationResult } from '$lib/components/QueryEditor/language/query-expr-translation';
 import QueryEditorPanel from './QueryEditorPanel.svelte';
 
-const { updateQueryExpr, invalidateQueries, queryExpr } = await vi.hoisted(async () => {
-    return {
-        updateQueryExpr: vi.fn(),
-        invalidateQueries: vi.fn(),
-        queryExpr: { match_expr: { type: 'and' as const, children: [] } }
-    };
-});
+const { updateQueryExpr, invalidateQueries, queryExpr, translateQuery } = await vi.hoisted(
+    async () => {
+        const queryExpr = { match_expr: { type: 'and' as const, children: [] } };
+        return {
+            updateQueryExpr: vi.fn(),
+            invalidateQueries: vi.fn(),
+            queryExpr,
+            translateQuery: vi.fn((): QueryExprTranslationResult => ({ status: 'ok', queryExpr }))
+        };
+    }
+);
 
 vi.mock('$lib/components/QueryEditor/useQueryEditor', () => ({
     useQueryEditor: () => ({
-        mount: () => () => {},
-        translateQuery: () => ({ status: 'ok', queryExpr })
+        mount: (el: HTMLElement, options: { value: string }) => {
+            const input = document.createElement('textarea');
+            input.setAttribute('aria-label', 'Query');
+            input.value = options.value;
+            el.append(input);
+            return () => input.remove();
+        },
+        translateQuery
     })
 }));
 vi.mock('@tanstack/svelte-query', () => ({
     useQueryClient: () => ({ invalidateQueries })
 }));
+vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
 const defaultProps = {
     onClose: vi.fn(),
@@ -93,5 +106,21 @@ describe('QueryEditorPanel', () => {
             query_expr_str: 'height > 100'
         });
         expect(invalidateQueries).toHaveBeenCalledExactlyOnceWith();
+    });
+
+    it('loads a history query that does not translate into the editor without applying it', async () => {
+        useQueryHistory().addQuery('invalid-collection', 'removed_field > 1');
+        render(QueryEditorPanel, {
+            props: { ...defaultProps, collectionId: 'invalid-collection' }
+        });
+        updateQueryExpr.mockClear();
+        translateQuery.mockReturnValueOnce({ status: 'error', errors: [] });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Query history' }));
+        await fireEvent.click(await screen.findByText('removed_field > 1'));
+
+        expect(toast.error).toHaveBeenCalledOnce();
+        expect(updateQueryExpr).not.toHaveBeenCalled();
+        expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue('removed_field > 1');
     });
 });

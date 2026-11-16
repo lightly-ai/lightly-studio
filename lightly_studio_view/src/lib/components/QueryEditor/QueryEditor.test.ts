@@ -150,6 +150,13 @@ describe('QueryEditor', () => {
         expect(buttonNames).toEqual(['History', 'Apply']);
     });
 
+    it('shows the draft in place of the applied value and labels the button Apply', () => {
+        render(QueryEditor, { props: { value: 'width < 500', draft: 'width <', onSave: vi.fn() } });
+
+        expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue('width <');
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    });
+
     it('disables the button when readOnly is true', async () => {
         render(QueryEditor, {
             props: { value: 'query', readOnly: true, onSave: vi.fn() }
