@@ -11,6 +11,7 @@ from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 from typing_extensions import TypeVar  # default= needs Python 3.13.
 
+from lightly_studio.core.dataset_query import transport_query
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
@@ -20,9 +21,11 @@ from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.sample_query import SampleQueryRequest
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import tag_resolver
 from lightly_studio.sampling.sample import Sampling
+from lightly_studio.transport import active_transport
 
 _SliceType = slice  # to avoid shadowing built-in slice in type annotations
 
@@ -274,6 +277,13 @@ class DatasetQuery(Generic[T]):
         Returns:
             Iterator of Sample objects from the database.
         """
+        request = self._transport_request()
+        if request is not None:
+            samples = transport_query.iter_samples(
+                collection_id=self.dataset.collection_id, request=request, limit=self._limit()
+            )
+            yield from cast(Iterator[T], samples)
+            return
         # Reuse the joined base sample so wrapper construction needs no per-sample query.
         if self.dataset.sample_type == SampleType.IMAGE:
             image_query: SelectOfScalar[ImageTable] = (
@@ -327,6 +337,24 @@ class DatasetQuery(Generic[T]):
                 f"Iter is not implemented for sample type {self.dataset.sample_type}"
             )
 
+    def _transport_request(self) -> SampleQueryRequest | None:
+        """Get the request for the transport, or None to use SQL."""
+        return transport_query.build_request(
+            sample_type=self.dataset.sample_type,
+            match_expression=self.match_expression,
+            order_by=self.order_by_expressions or [],
+            filters_sample_ids=self._sample_ids_subquery is not None,
+            offset=0 if self._slice is None else self._slice.start or 0,
+        )
+
+    def _limit(self) -> int | None:
+        """Get the maximum number of samples of the slice, or None without a limit."""
+        if self._slice is None or self._slice.stop is None:
+            return None
+        stop: int = self._slice.stop
+        start: int = self._slice.start or 0
+        return max(stop - start, 0)
+
     def _compose_query(self, query: SelectOfScalar[Table]) -> SelectOfScalar[Table]:
         """Applies match expressions, slicing, etc., to the query."""
         # Apply filter if present
@@ -379,6 +407,12 @@ class DatasetQuery(Generic[T]):
         Args:
             tag_name: Name of the tag to add to matching samples.
         """
+        if self._transport_request() is not None:
+            sample_ids = [sample.sample_id for sample in self]
+            active_transport.get_transport().tags.add_to_samples(
+                collection_id=self.dataset.collection_id, tag_name=tag_name, sample_ids=sample_ids
+            )
+            return
         # Get or create the tag
         tag = tag_resolver.get_or_create_sample_tag_by_name(
             session=self.session, collection_id=self.dataset.collection_id, tag_name=tag_name
