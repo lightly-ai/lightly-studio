@@ -124,36 +124,38 @@
                     handleEscape();
                 }
                 break;
-            // Add spacebar handling for selection toggle
-            case ' ': // Space key
-                // Prevent default space behavior (like page scrolling)
-                event.preventDefault();
-                event.stopPropagation();
-
-                // Toggle selection based on context
-                if (!$isEditingMode) {
-                    if (isOnAnnotationDetailsView) {
-                        toggleSampleAnnotationCropSelection(
-                            collectionId,
-                            sample.annotations![0].sample_id
-                        );
-                    } else {
-                        toggleSampleSelection(sampleId, collectionId);
-                    }
-                } else {
-                    if (!isPanModeEnabled) {
-                        previousAnnotationType = annotationLabelContext.annotationType;
-                        sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
-                        sampleDetailsToolbarContext.status = 'drag';
-                        annotationLabelContext.annotationType = null;
-                    }
-                    isPanModeEnabled = true;
-                }
+            case ' ':
+                handleSpaceKeyDown(event);
                 break;
         }
 
         // Always pass to the hide annotations handler
         handleKeyEvent(event);
+    };
+
+    /** Space toggles the selection, or starts pan mode while editing. */
+    const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        // Space would scroll the page.
+        event.preventDefault();
+        event.stopPropagation();
+
+        if ($isEditingMode) {
+            if (!isPanModeEnabled) {
+                previousAnnotationType = annotationLabelContext.annotationType;
+                sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
+                sampleDetailsToolbarContext.status = 'drag';
+                annotationLabelContext.annotationType = null;
+            }
+            isPanModeEnabled = true;
+            return;
+        }
+
+        if (isOnAnnotationDetailsView) {
+            toggleSampleAnnotationCropSelection(collectionId, sample.annotations![0].sample_id);
+            return;
+        }
+
+        toggleSampleSelection(sampleId, collectionId);
     };
 
     const handleKeyUpEvent = (event: KeyboardEvent) => {
@@ -195,8 +197,7 @@
             return;
         selectAnnotation({
             annotationId,
-            annotations: sample.annotations ?? [],
-            collectionId
+            annotations: sample.annotations ?? []
         });
     };
 

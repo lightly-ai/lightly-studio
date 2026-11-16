@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom';
 import { configure } from '@testing-library/dom';
 import { vi } from 'vitest';
+import { registerApiErrorInterceptor } from '$lib/api/registerApiErrorInterceptor';
 
 // `waitFor`/`findBy*` default to a 1s timeout, independent of vitest's testTimeout.
 // Heavy tests (e.g. the point-cloud workspace lazy-loading a Three.js module ~1s)
@@ -106,3 +107,6 @@ Object.defineProperty(Element.prototype, 'animate', {
         return animation;
     }
 });
+
+// Make API errors the same as in the app, which registers this in hooks.client.ts.
+registerApiErrorInterceptor();

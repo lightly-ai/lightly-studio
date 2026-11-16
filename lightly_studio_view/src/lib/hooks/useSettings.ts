@@ -1,6 +1,7 @@
 import type { GridViewSampleRenderingType, SettingView } from '$lib/api/lightly_studio_local';
 import { derived, get, writable } from 'svelte/store';
 import { getSettings, setSettings } from '$lib/api/lightly_studio_local';
+import { getErrorMessage } from '$lib/api/ApiError';
 
 type UpdateSettingsResult = { success: boolean; error?: string };
 
@@ -108,7 +109,7 @@ const saveSettings = async (
         });
 
         if (response.error) {
-            const errorMsg = JSON.stringify(response.error);
+            const errorMsg = getErrorMessage(response.error, 'Failed to save settings');
             console.error('Settings API error:', errorMsg);
             errorStore.set(errorMsg);
             return { success: false, error: errorMsg };

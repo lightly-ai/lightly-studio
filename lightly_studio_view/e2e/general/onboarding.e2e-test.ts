@@ -30,8 +30,8 @@ async function reachImageStep(page: Page) {
 }
 
 test('image tour follows a double-click into sample details', async ({ page }) => {
+    // No navigation click: the tour invitation's backdrop can cover the menu.
     await page.goto('/');
-    await page.getByTestId('navigation-menu-images').click();
     await expect(page.getByTestId('sample-grid-item').first()).toBeVisible();
 
     await expect(page.getByRole('complementary', { name: 'Image tour invitation' })).toBeVisible();

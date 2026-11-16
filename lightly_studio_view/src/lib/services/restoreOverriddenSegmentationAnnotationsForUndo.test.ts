@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import { ApiError } from '$lib/api/ApiError';
 import { restoreOverriddenSegmentationAnnotationsForUndo } from './restoreOverriddenSegmentationAnnotationsForUndo';
 
 vi.mock('$lib/components/SampleAnnotation/utils', () => ({
@@ -60,7 +61,9 @@ describe('restoreOverriddenSegmentationAnnotationsForUndo', () => {
     });
 
     it('recreates an annotation when update reports it as missing', async () => {
-        const updateAnnotations = vi.fn().mockRejectedValue({ status: 404 });
+        const updateAnnotations = vi
+            .fn()
+            .mockRejectedValue(new ApiError('Missing annotation', 404));
         const createAnnotation = vi.fn().mockResolvedValue(undefined);
 
         await restoreOverriddenSegmentationAnnotationsForUndo({
@@ -107,7 +110,9 @@ describe('restoreOverriddenSegmentationAnnotationsForUndo', () => {
     });
 
     it('skips recreation when no label id can be resolved', async () => {
-        const updateAnnotations = vi.fn().mockRejectedValue({ status: 404 });
+        const updateAnnotations = vi
+            .fn()
+            .mockRejectedValue(new ApiError('Missing annotation', 404));
         const createAnnotation = vi.fn().mockResolvedValue(undefined);
         const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 

@@ -296,7 +296,8 @@ def _camera_payloads(  # noqa: PLR0913
 
 def _keyframe_ns(camera: McapTable) -> int:
     """Returns the keyframe log time of a camera locator."""
-    assert camera.keyframe_log_time_ns is not None
+    if camera.keyframe_log_time_ns is None:
+        raise RuntimeError("Expected `camera.keyframe_log_time_ns` to be set.")
     return camera.keyframe_log_time_ns
 
 

@@ -1,7 +1,11 @@
 <script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
     import { fn } from 'storybook/test';
-    import { Crosshair, Plus, Sigma, Target, TrendingUp } from '@lucide/svelte';
+    import Crosshair from '@lucide/svelte/icons/crosshair';
+    import Plus from '@lucide/svelte/icons/plus';
+    import Sigma from '@lucide/svelte/icons/sigma';
+    import Target from '@lucide/svelte/icons/target';
+    import TrendingUp from '@lucide/svelte/icons/trending-up';
     import { Button } from '$lib/components';
     import Select from './Select.svelte';
 

@@ -9,16 +9,14 @@
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
     import { get } from 'svelte/store';
     import { useGlobalStorage } from '$lib/hooks';
-    import {
-        Split as SplitIcon,
-        Puzzle as PuzzleIcon,
-        Download as DownloadIcon,
-        Settings as SettingsIcon,
-        BrainCircuit as BrainCircuitIcon,
-        WandSparkles as WandSparklesIcon,
-        Menu as MenuIcon,
-        Compass as CompassIcon
-    } from '@lucide/svelte';
+    import SplitIcon from '@lucide/svelte/icons/split';
+    import PuzzleIcon from '@lucide/svelte/icons/puzzle';
+    import DownloadIcon from '@lucide/svelte/icons/download';
+    import SettingsIcon from '@lucide/svelte/icons/settings';
+    import BrainCircuitIcon from '@lucide/svelte/icons/brain-circuit';
+    import WandSparklesIcon from '@lucide/svelte/icons/wand-sparkles';
+    import MenuIcon from '@lucide/svelte/icons/menu';
+    import CompassIcon from '@lucide/svelte/icons/compass';
 
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';

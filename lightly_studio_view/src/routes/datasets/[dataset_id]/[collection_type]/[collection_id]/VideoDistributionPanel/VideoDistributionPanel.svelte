@@ -37,8 +37,13 @@
     }: Props = $props();
 
     const { allSourcesHidden } = useAnnotationCollectionsFilter();
-    const { filterParams } = useVideoFilters();
-    const filters = $derived(buildVideoDistributionFilters($filterParams));
+    const { filterParams, videoQueryExpression } = useVideoFilters();
+    const filters = $derived(
+        buildVideoDistributionFilters(
+            $filterParams,
+            $filterParams?.collection_id === collectionId ? $videoQueryExpression : null
+        )
+    );
 
     let activeDistributionSourceId = $state<string | undefined>(undefined);
     let activeDistributionGroupId = $state<string | undefined>(undefined);
@@ -77,6 +82,7 @@
     onBarClick={onClassBarClick}
     onHistogramRangeSelect={metadataDistribution.onHistogramRangeSelect}
     onCategoricalValueToggle={metadataDistribution.onCategoricalValueToggle}
+    onCategoricalValuesSet={metadataDistribution.onCategoricalValuesSet}
     onCategoricalValuesClear={metadataDistribution.onCategoricalValuesClear}
     onCategoricalRetry={metadataDistribution.onCategoricalRetry}
     {histogramBinCount}

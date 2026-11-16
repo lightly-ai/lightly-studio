@@ -23,7 +23,9 @@ def get_tags_by_sample(
     )
     result: dict[UUID, set[UUID]] = {}
     for sample_id, tag_id in session.exec(stmt).all():
-        assert sample_id is not None
-        assert tag_id is not None
+        if sample_id is None:
+            raise RuntimeError("Expected `sample_id` to be set.")
+        if tag_id is None:
+            raise RuntimeError("Expected `tag_id` to be set.")
         result.setdefault(sample_id, set()).add(tag_id)
     return result

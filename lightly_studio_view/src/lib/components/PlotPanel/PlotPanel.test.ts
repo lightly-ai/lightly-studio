@@ -245,7 +245,7 @@ describe('PlotPanel.svelte', () => {
     });
 
     it('should display an error message when useEmbeddings returns an error object', async () => {
-        const mockError: Error = { name: 'TestError', message: 'Test error from object' };
+        const mockError = new Error('Test error from object');
         (useEmbeddings as vi.Mock).mockReturnValue({
             isError: true,
             error: mockError,
