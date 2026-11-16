@@ -24,6 +24,8 @@ describe('getPlotComputeView', () => {
             'plot'
         ],
         [{}, 'checking'],
+        // The status cache can expire while a started compute still runs on the server.
+        [{ isComputeStarted: true }, 'computing'],
         [{ isStatusError: true }, 'error'],
         [{ status: { is_computed: true, embedding_count: 2_000_000 } }, 'plot'],
         [{ status: { is_computed: false, embedding_count: 250_000 } }, 'prompt'],
