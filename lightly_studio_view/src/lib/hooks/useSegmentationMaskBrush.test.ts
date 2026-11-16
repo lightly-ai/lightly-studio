@@ -397,7 +397,7 @@ describe('useSegmentationMaskBrush', () => {
             deleteAnnotation
         });
 
-        await finishBrush(mask, null, labels);
+        await finishBrush(mask, null, labels, updateAnnotation);
 
         expect(createAnnotation).toHaveBeenCalledWith(
             expect.objectContaining({ annotation_label_id: 'deer-id' })
@@ -419,9 +419,12 @@ describe('useSegmentationMaskBrush', () => {
             requestLabel
         });
 
-        await finishBrush(mask, null, [
-            { annotation_label_id: 'deer-id', annotation_label_name: 'deer' }
-        ]);
+        await finishBrush(
+            mask,
+            null,
+            [{ annotation_label_id: 'deer-id', annotation_label_name: 'deer' }],
+            updateAnnotation
+        );
 
         expect(requestLabel).toHaveBeenCalledOnce();
         expect(createLabel).not.toHaveBeenCalled();
@@ -467,7 +470,7 @@ describe('useSegmentationMaskBrush', () => {
             requestLabel
         });
 
-        await finishBrush(mask, null, []);
+        await finishBrush(mask, null, [], updateAnnotation);
 
         expect(toast.error).toHaveBeenCalledWith('Pick a source.');
         expect(requestLabel).not.toHaveBeenCalled();
