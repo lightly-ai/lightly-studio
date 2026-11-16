@@ -1,11 +1,7 @@
 import { fromStore, writable } from 'svelte/store';
 import { untrack } from 'svelte';
 import { useEmbeddingPlotStatus } from '$lib/hooks';
-import {
-    getPlotComputeView,
-    isPlotRequestEnabled,
-    type PlotComputeView
-} from '../plotComputeGate';
+import { getPlotComputeView, isPlotRequestEnabled, type PlotComputeView } from '../plotComputeGate';
 
 interface UsePlotComputeGateParams {
     getCollectionId: () => string;
