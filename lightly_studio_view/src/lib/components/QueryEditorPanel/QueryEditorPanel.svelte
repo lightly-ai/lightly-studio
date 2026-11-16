@@ -32,21 +32,18 @@
     // A history query that does not translate anymore. The user can correct it in the editor.
     let draftQuery = $state<string>();
 
-    const applyQuery = (query: string, queryExpr: QueryExpression['query_expr']) => {
-        updateQueryExpr({ query_expr: queryExpr, query_expr_str: query });
-        addQuery(collectionId, query);
+    const applyQuery = (query: string, queryExpr?: QueryExpression['query_expr']) => {
+        updateQueryExpr(queryExpr ? { query_expr: queryExpr, query_expr_str: query } : undefined);
+        if (queryExpr) addQuery(collectionId, query);
         // Data may have changed since the last apply, so refetch even if the query is unchanged.
         queryClient.invalidateQueries();
     };
 
     const handleQueryEditorValueChange: OnSaveHandler = (value, parsed) => {
-        if (!parsed) {
-            throw new Error('Failed to parse query expression');
-        }
         if (parsed.status === 'error') {
             throw new Error(`Failed to parse query expression: ${JSON.stringify(parsed.errors)}`);
         }
-        applyQuery(value, parsed.queryExpr);
+        applyQuery(value, parsed.status === 'empty' ? undefined : parsed.queryExpr);
     };
 
     const applyQueryFromHistory = (query: string) => {
@@ -58,7 +55,7 @@
             return;
         }
         draftQuery = undefined;
-        applyQuery(query, translation.queryExpr);
+        applyQuery(query, translation.status === 'empty' ? undefined : translation.queryExpr);
     };
 </script>
 

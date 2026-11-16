@@ -38,12 +38,25 @@ function createParser(): LangiumParser {
 const parser = createParser();
 
 describe('collection query scope', () => {
+    it.each(['', ' \n\t ', '# width > 100', '# first\r\n# second\r\n'])(
+        'treats a document without an expression as empty: %s',
+        (source) => {
+            expect(parseLightlyQuery(parser, source)).toEqual({ status: 'empty' });
+            expect(parseLightlyQuery(parser, source, 'image')).toEqual({ status: 'empty' });
+            expect(parseLightlyQuery(parser, source, 'video')).toEqual({ status: 'empty' });
+            expect(parseLightlyQuery(parser, `video: ${source}`, 'video')).toEqual({
+                status: 'empty'
+            });
+        }
+    );
+
     it.each([
         'width > 100',
         '# video: is optional\nduration_s > 10',
         '# comment\nduration_s > 10 AND fps = 30',
         'NOT classification(class_name = "outdoor")',
         '"reviewed" IN tags AND metadata["score"] > 0.5',
+        'file_name = "sample#1.mp4" # trailing comment',
         'file_name = "video: clip.mp4"'
     ])('infers video scope without changing the expression: %s', (source) => {
         const explicit = parseLightlyQuery(parser, `video: ${source}`);
@@ -61,6 +74,7 @@ describe('collection query scope', () => {
 
     it.each([
         ['video', 'created_at = "2025-01-01"'],
+        ['image', 'video: # no conditions'],
         ['image', '# comment\nvideo: duration_s > 10']
     ] as const)('rejects an incompatible query for %s collections: %s', (sampleType, source) => {
         expect(parseLightlyQuery(parser, source, sampleType).status).toBe('error');
@@ -81,15 +95,12 @@ describe('parseLightlyQuery error handling', () => {
 
         expect(result.status).toBe('error');
         if (result.status !== 'error') return;
-        expect(result.errors).toHaveLength(2);
+        expect(result.errors).toHaveLength(1);
         expect(result.errors[0].message).toMatch(/unexpected character/);
-        expect(result.errors[1].message).toMatch(
-            /Expecting: one of these possible Token sequences:/
-        );
     });
 
     const PARSE_FAILURE_CASES: Array<{ name: string; source: string }> = [
-        { name: 'empty input', source: '' },
+        { name: 'comment after an incomplete expression', source: 'width > # 100' },
         { name: 'unknown field', source: 'x = 1' },
         { name: 'metric outside evaluation', source: 'custom_score > 0' },
         { name: 'double equals operator', source: 'height == 400' },

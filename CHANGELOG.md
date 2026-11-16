@@ -26,6 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Applying an empty query or a query with only comments now clears the query filter instead of showing a syntax error.
 - Fixed slow grid loading by avoiding unnecessary database queries for each annotation.
 
 ### Security
