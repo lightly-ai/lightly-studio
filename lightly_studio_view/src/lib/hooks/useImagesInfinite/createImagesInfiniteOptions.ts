@@ -1,6 +1,6 @@
 import type { InfiniteData } from '@tanstack/svelte-query';
 import { infiniteQueryOptions } from '@tanstack/svelte-query';
-import type { ReadImagesError, ReadImagesResponse } from '$lib/api/lightly_studio_local';
+import type { ReadImagesResponse } from '$lib/api/lightly_studio_local';
 import { readImages } from '$lib/api/lightly_studio_local';
 import { createMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 import { buildRequestBody } from './buildRequestBody';
@@ -37,7 +37,7 @@ export const createImagesInfiniteOptions = (params: ImagesInfiniteParams) => {
 
     return infiniteQueryOptions<
         ReadImagesResponse,
-        ReadImagesError,
+        Error,
         InfiniteData<ReadImagesResponse>,
         SamplesQueryKey,
         number

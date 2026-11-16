@@ -11,7 +11,8 @@
     import { type SelectItem } from '$lib/components/Select';
     import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { RefreshCw, TriangleAlert } from '@lucide/svelte';
+    import RefreshCw from '@lucide/svelte/icons/refresh-cw';
+    import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
     import OrderByControl from './OrderByControl.svelte';
 
     const STALE_WARNING =

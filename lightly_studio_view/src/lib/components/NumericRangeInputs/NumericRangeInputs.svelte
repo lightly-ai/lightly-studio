@@ -38,7 +38,7 @@
         const min = index === 0 ? bound.min : range[0];
         const max = index === 0 ? range[1] : bound.max;
         if (!Number.isFinite(number) || (integer && !Number.isInteger(number))) {
-            return integer ? 'Enter a whole number.' : 'Enter a number.';
+            return `Enter a ${integer ? 'whole number' : 'value'} between ${min} and ${max}.`;
         }
         return number < min || number > max ? `Enter a value between ${min} and ${max}.` : '';
     };
@@ -53,6 +53,15 @@
         if (number === range[index]) return;
         drafts[index] = String(number);
         pending = range.map((n, i) => (i === index ? number : n));
+        const other = 1 - index;
+        if (errors[other]) {
+            errors[other] = validate(other, pending);
+            if (!errors[other]) {
+                pending[other] = Number(drafts[other]);
+                drafts[other] = String(pending[other]);
+                dirty[other] = false;
+            }
+        }
         onValueCommit(pending);
     };
 
@@ -66,7 +75,7 @@
     };
 </script>
 
-<div class="flex gap-2">
+<div class="grid grid-cols-2 gap-x-2 gap-y-1">
     {#each ['Min', 'Max'] as endpoint, index}
         <div class="min-w-0 flex-1">
             <label for="{id}-{index}" class="text-xs text-diffuse-foreground">{endpoint}</label>
@@ -87,11 +96,17 @@
                 />
                 {#if unit}<span class="text-xs text-diffuse-foreground">{unit}</span>{/if}
             </div>
-            {#if errors[index]}
-                <p id="{id}-{index}-error" role="alert" class="text-xs text-destructive">
-                    {errors[index]}
-                </p>
-            {/if}
         </div>
+    {/each}
+    {#each errors as error, index}
+        {#if error}
+            <p
+                id="{id}-{index}-error"
+                role="alert"
+                class="col-span-2 text-sm text-destructive-text"
+            >
+                {index === 0 ? 'Min' : 'Max'}: {error}
+            </p>
+        {/if}
     {/each}
 </div>

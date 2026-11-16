@@ -65,7 +65,8 @@ def get_plot(session: Session, collection_id: UUID, embedding_model_id: UUID) ->
         # Publish the placeholder before rebuilding so DuckDB writers can see it.
         session.commit()
         plot = session.get(EmbeddingPlotTable, key, populate_existing=True)
-        assert plot is not None
+        if plot is None:
+            raise RuntimeError("Expected `plot` to be set.")
     # Hold a real write through commit: PostgreSQL writers wait; DuckDB conflicts
     # require rollback and retry. Refresh after waiting for another rebuild.
     plot.write_token = uuid4()

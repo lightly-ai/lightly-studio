@@ -8,6 +8,7 @@ import {
 import { detectScopeAt } from '../language/lightly-query-schema';
 import { getMetadataQueryContext } from '$lib/components/QueryEditor/language';
 import { getEvaluationCompletionContext } from './getEvaluationCompletionContext';
+import { getModelQuerySource } from './modelQueryScope';
 import { getQuotedMetricRange } from './getQuotedMetricRange';
 import {
     buildSchemaCompletions,
@@ -53,7 +54,8 @@ async function getCompletions(
     } = services;
     if (!provider) return { suggestions: [] };
 
-    const doc = await syncLangiumDocument(model, services);
+    const { text, lineOffset } = getModelQuerySource(model);
+    const doc = await syncLangiumDocument(model, services, text);
 
     const word = model.getWordUntilPosition(position);
     const { lineNumber, column } = position;
@@ -67,10 +69,13 @@ async function getCompletions(
     const result: LspCompletionList | undefined = await provider.getCompletion(doc, {
         textDocument: { uri: doc.uri.toString() },
         // Monaco positions are 1-based; LSP expects 0-based line/character.
-        position: { line: lineNumber - 1, character: column - 1 }
+        position: { line: lineNumber - 1 + lineOffset, character: column - 1 }
     });
 
-    const scope = detectScopeAt(model.getValue(), model.getOffsetAt(position));
+    const scope = detectScopeAt(
+        text,
+        model.getOffsetAt(position) + text.length - model.getValue().length
+    );
 
     const metadataContext = getMetadataQueryContext({
         text: model.getValue(),
@@ -93,7 +98,7 @@ async function getCompletions(
         return shouldShowSuggestion(item, metadataContext);
     };
     const lspSuggestions = (result?.items ?? [])
-        .map((item) => lspToMonacoCompletion(item, fallbackRange, scope))
+        .map((item) => lspToMonacoCompletion(item, fallbackRange, scope, lineOffset))
         // Use the schema snippet instead of Langium's bare metadata keyword.
         .filter((item) => completionLabel(item) !== 'metadata')
         .filter(isSupported);

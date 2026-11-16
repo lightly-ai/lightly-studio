@@ -6,7 +6,7 @@ import math
 import operator
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Any, Literal, Union
+from typing import Any, Literal
 
 from sqlalchemy import ColumnElement, Double, and_, case, exists
 from sqlmodel import col, select
@@ -16,7 +16,7 @@ from lightly_studio.database import db_json
 from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.sample import SampleTable
 
-MetadataValue = Union[str, bool, int, float]
+MetadataValue = str | bool | int | float
 MetadataComparison = Literal["==", "!=", "<", "<=", ">", ">="]
 
 

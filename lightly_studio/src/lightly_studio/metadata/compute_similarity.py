@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Any
 from uuid import UUID
 
 from lightly_mundig import Similarity  # type: ignore[import-untyped]
@@ -18,7 +18,7 @@ def compute_similarity_metadata(
     key_collection_id: UUID,
     embedding_model_id: UUID,
     query_tag_id: UUID,
-    metadata_name: Optional[str] = None,
+    metadata_name: str | None = None,
 ) -> str:
     """Computes similarity for each sample in the collection from embeddings.
 

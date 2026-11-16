@@ -4,7 +4,9 @@
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useSettings } from '$lib/hooks/useSettings';
     import { isInputElement } from '$lib/utils';
-    import { Pencil, Check, Undo2 } from '@lucide/svelte';
+    import Pencil from '@lucide/svelte/icons/pencil';
+    import Check from '@lucide/svelte/icons/check';
+    import Undo2 from '@lucide/svelte/icons/undo-2';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
     import { isImagesRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';

@@ -5,7 +5,7 @@ Per-grid sample filters are expected to implement GridFilterBase.
 
 from __future__ import annotations
 
-from typing import Annotated, Union
+from typing import Annotated
 
 from pydantic import Field
 
@@ -19,18 +19,18 @@ from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 
 # TODO(Michal, 06/2026): Add GroupFilter.
 GridFilter = Annotated[
-    Union[ImageFilter, VideoFilter, VideoFrameFilter, AnnotationsFilter, McapSequenceFilter],
+    ImageFilter | VideoFilter | VideoFrameFilter | AnnotationsFilter | McapSequenceFilter,
     Field(discriminator="filter_type"),
 ]
 
 # A filter for the samples of a root collection.
 CollectionFilter = Annotated[
-    Union[ImageFilter, VideoFilter],
+    ImageFilter | VideoFilter,
     Field(discriminator="filter_type"),
 ]
 
 # A filter for the samples of a root collection that sampling supports.
 SamplingFilter = Annotated[
-    Union[ImageFilter, VideoFilter, McapSequenceFilter],
+    ImageFilter | VideoFilter | McapSequenceFilter,
     Field(discriminator="filter_type"),
 ]

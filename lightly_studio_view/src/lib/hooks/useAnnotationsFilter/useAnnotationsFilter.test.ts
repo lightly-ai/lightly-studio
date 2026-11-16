@@ -29,6 +29,8 @@ vi.mock('../useGlobalStorage', () => ({
     useGlobalStorage: () => ({
         selectedAnnotationFilterIds,
         setSelectedAnnotationFilterIds,
+        replaceSelectedAnnotationFilterIds: (ids: Iterable<string>) =>
+            selectedAnnotationFilterIds.set(new Set(ids)),
         clearSelectedAnnotationFilterIds
     })
 }));
@@ -150,6 +152,56 @@ describe('useAnnotationsFilter', () => {
             { label_name: 'cat', total_count: 10, current_count: 5, selected: true },
             { label_name: 'dog', total_count: 8, selected: false }
         ]);
+    });
+
+    it('setAnnotationFilterSelection leaves only the given labels selected', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['cat']);
+
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+    });
+
+    it('setAnnotationFilterSelection with no labels clears the selection', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1', 'id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection([]);
+
+        expect(get(selectedAnnotationFilterIds).size).toBe(0);
+    });
+
+    it('setAnnotationFilterSelection drops ids missing from the label map', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-1', 'stale-id']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['cat']);
+
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+    });
+
+    it('setAnnotationFilterSelection tracks each changed label', () => {
+        selectedAnnotationFilterIds.set(new Set(['id-2']));
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection(['cat'], 'col-1');
+
+        expect(trackEvent).toHaveBeenCalledTimes(2);
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'cat',
+            action: 'selected',
+            active_count: 1
+        });
+        expect(trackEvent).toHaveBeenCalledWith('grid_filter_toggled', {
+            collection_id: 'col-1',
+            filter_type: 'annotation_label',
+            filter_value: 'dog',
+            action: 'unselected',
+            active_count: 1
+        });
     });
 
     it('toggleAnnotationFilterSelection maps label name to id', () => {
