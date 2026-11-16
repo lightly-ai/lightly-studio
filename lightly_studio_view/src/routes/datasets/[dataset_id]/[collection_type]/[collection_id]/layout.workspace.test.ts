@@ -30,11 +30,13 @@ vi.mock('$lib/workers/maskRendererPool', () => ({
 vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
     clearAnnotationPlotSelection: vi.fn()
 }));
-vi.mock('$lib/utils/buildImageFilter', () => ({
-    buildImageFilter: vi.fn(() => ({}))
+vi.mock('./imageAnnotationCountsFilter', () => ({
+    buildImageAnnotationCountsFilter: vi.fn(() => ({}))
+}));
+vi.mock('./videoAnnotationCountsFilter', () => ({
+    buildVideoAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/utils/buildAnnotationCountsFilters', () => ({
-    buildVideoAnnotationCountsFilter: vi.fn(() => ({})),
     buildVideoFrameAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/components/GridItem', () => ({
@@ -146,7 +148,11 @@ vi.mock('$lib/hooks/useVideosBounds/useVideosBounds.js', () => ({
     useVideoBounds: vi.fn(() => ({ videoBoundsValues: writable({}) }))
 }));
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
-    useImageFilters: vi.fn(() => ({ imageFilter: writable(null) }))
+    useImageFilters: vi.fn(() => ({
+        imageFilter: writable(null),
+        imageQueryExpression: writable(null),
+        updateQueryExpr: vi.fn()
+    }))
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: vi.fn(() => ({ videoFilter: writable(null), filterParams: writable(null) })),
@@ -173,6 +179,7 @@ vi.mock('$lib/hooks', async () => ({
     useNumericMetadataDistribution: vi.fn(() => ({
         data: { score: { binEdges: [0, 1], counts: [1] } }
     })),
+    useImageFieldDistribution: vi.fn(() => ({ data: undefined, isFetching: false })),
     useCategoricalMetadataDistribution: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -183,6 +190,7 @@ vi.mock('$lib/hooks', async () => ({
     useFeatureFlags: vi.fn(() => ({ featureFlags: writable([]), ready: Promise.resolve() })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
+    setAnnotationClasses: vi.fn(),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -331,6 +339,31 @@ describe('video distribution panel', () => {
 
         expect(await screen.findByText('Annotation classes')).toBeInTheDocument();
     });
+});
+
+describe('distribution plot selection', () => {
+    // Opening a sample unmounts the panel like closing it does, so a reopen covers both.
+    it.each([APP_ROUTES.images, APP_ROUTES.videos])(
+        'keeps the picked plot, not a loading fallback, when the panel opens again on %s',
+        async (route) => {
+            setPageRoute(route);
+            mockActivePanel.set('distribution');
+            render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+
+            (await screen.findByTestId('distribution-pick-metadata-city')).click();
+            await tick();
+            // While its groups load, the panel reports a fallback group.
+            screen.getByTestId('distribution-select-metadata-undefined').click();
+            await tick();
+            mockActivePanel.set('none');
+            await tick();
+            mockActivePanel.set('distribution');
+
+            expect(await screen.findByTestId('distribution-selected')).toHaveTextContent(
+                'metadata/city'
+            );
+        }
+    );
 });
 
 describe('annotation label pruning', () => {

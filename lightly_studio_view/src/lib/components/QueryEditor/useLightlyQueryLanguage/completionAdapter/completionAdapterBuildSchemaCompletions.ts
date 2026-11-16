@@ -18,12 +18,13 @@ export function buildSchemaCompletions({
     const { title, fields } = SCOPES[scope];
 
     for (const field of fields) {
+        const insertText = field.insertText ?? field.name;
         items.push({
-            label: field.name,
+            label: insertText,
             kind: monaco.languages.CompletionItemKind.Field,
             detail: `${title}.${field.name}: ${field.type}`,
             documentation: { value: field.description },
-            insertText: field.name,
+            insertText,
             range
         });
     }

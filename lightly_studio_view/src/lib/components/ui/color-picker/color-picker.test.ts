@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import ColorPickerInDialogTestWrapper from './ColorPickerInDialogTestWrapper.test.svelte';
 import ColorPicker from './color-picker.svelte';
 
 const children = createRawSnippet(() => ({
@@ -14,14 +15,30 @@ afterEach(() => {
 });
 
 describe('ColorPicker', () => {
+    beforeAll(() => {
+        // jsdom has no pointer capture and no PointerEvent, so pointer coordinates would be lost.
+        HTMLElement.prototype.setPointerCapture = vi.fn();
+        window.PointerEvent ??= class extends MouseEvent {
+            pointerId: number;
+            constructor(type: string, init: PointerEventInit = {}) {
+                super(type, init);
+                this.pointerId = init.pointerId ?? 0;
+            }
+        } as typeof PointerEvent;
+    });
+
+    it('sets the trigger aria-label from triggerLabel', () => {
+        render(ColorPicker, { props: { ...defaultProps, triggerLabel: 'Change the color of cat' } });
+
+        expect(screen.getByRole('button', { name: 'Change the color of cat' })).toBeInTheDocument();
+    });
+
     it('previews the selected color while dragging', async () => {
         const onChange = vi.fn();
         render(ColorPicker, { props: { ...defaultProps, onChange } });
         await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
-        const picker = screen.getByRole('dialog', {
-            name: 'Saturation and lightness picker'
-        });
+        const picker = screen.getByRole('slider', { name: 'Saturation and lightness' });
         vi.spyOn(picker, 'getBoundingClientRect').mockReturnValue({
             left: 0,
             top: 0,
@@ -29,12 +46,48 @@ describe('ColorPicker', () => {
             height: 100
         } as DOMRect);
 
-        await fireEvent.mouseDown(picker, { clientX: 100, clientY: 25 });
+        await fireEvent.pointerDown(picker, { clientX: 100, clientY: 25, pointerId: 1 });
 
         await waitFor(() => {
             expect(onChange).toHaveBeenLastCalledWith('#ff8080', 1);
         });
-        await fireEvent.mouseUp(document);
+    });
+
+    it('previews a gray preset exactly', async () => {
+        const onChange = vi.fn();
+        render(ColorPicker, { props: { ...defaultProps, onChange } });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+
+        await fireEvent.click(screen.getByTitle('#888888'));
+
+        await waitFor(() => {
+            expect(onChange).toHaveBeenLastCalledWith('#888888', 1);
+        });
+        onChange.mockClear();
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onChange).toHaveBeenCalledWith('#888888', 1);
+    });
+
+    it('keeps the hue when the saturation box reaches black', async () => {
+        const onChange = vi.fn();
+        render(ColorPicker, {
+            props: { ...defaultProps, initialColor: '#0000ff', onChange }
+        });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+        const box = screen.getByRole('slider', { name: 'Saturation and lightness' });
+        vi.spyOn(box, 'getBoundingClientRect').mockReturnValue({
+            left: 0,
+            top: 0,
+            width: 100,
+            height: 100
+        } as DOMRect);
+
+        await fireEvent.pointerDown(box, { clientX: 100, clientY: 100, pointerId: 1 });
+        await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#000000', 1));
+        await fireEvent.pointerUp(box, { pointerId: 1 });
+        await fireEvent.pointerDown(box, { clientX: 100, clientY: 50, pointerId: 1 });
+
+        await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1));
     });
 
     it('restores the original color when cancelling a preview', async () => {
@@ -60,79 +113,89 @@ describe('ColorPicker', () => {
         await waitFor(() => {
             expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1);
         });
-        await fireEvent.mouseDown(document.body);
+        // bits-ui checks that the pointer is outside the panel, so the events need coordinates.
+        const outside = { bubbles: true, clientX: 500, clientY: 500 };
+        await fireEvent.pointerDown(document.body, outside);
+        await fireEvent.pointerUp(document.body, outside);
+        await fireEvent.click(document.body, outside);
+
+        // bits-ui debounces the outside interaction.
+        await waitFor(() => {
+            expect(onChange).toHaveBeenLastCalledWith('#ff0000', 1);
+        });
+        expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
+    });
+
+    it('restores the original color when pressing Escape after a preview', async () => {
+        const onChange = vi.fn();
+        render(ColorPicker, { props: { ...defaultProps, onChange } });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+
+        await fireEvent.click(screen.getByTitle('#0000ff'));
+        await waitFor(() => {
+            expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1);
+        });
+        await fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
 
         expect(onChange).toHaveBeenLastCalledWith('#ff0000', 1);
         expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
     });
 
-    it('opens inside a transformed modal dialog and positions relative to it', async () => {
-        const modal = document.createElement('div');
-        modal.setAttribute('role', 'dialog');
-        modal.style.transform = 'translate(-50%, -50%)';
-        document.body.appendChild(modal);
-        vi.spyOn(modal, 'getBoundingClientRect').mockReturnValue({
-            left: 100,
-            top: 50
-        } as DOMRect);
-
-        render(ColorPicker, { props: defaultProps, target: modal });
-        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
-
-        const panel = screen.getByRole('dialog', { name: 'Color picker' });
-        expect(modal).toContainElement(panel);
-        // The trigger is at (0, 0), so the viewport position is clamped to (10, 10).
-        await waitFor(() => {
-            expect(panel.style.left).toBe('-90px');
-            expect(panel.style.top).toBe('-40px');
+    it('starts from the new initial color after apply and reopen', async () => {
+        const onChange = vi.fn();
+        const onClose = vi.fn();
+        const { rerender } = render(ColorPicker, {
+            props: { ...defaultProps, initialColor: '#ff0000', onChange, onClose }
         });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+        await fireEvent.click(screen.getByTitle('#0000ff'));
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+        expect(onClose).toHaveBeenLastCalledWith(true);
 
-        modal.remove();
+        await rerender({ initialColor: '#0000ff' });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+        expect(screen.getByRole('textbox')).toHaveValue('#0000ff');
+
+        const callCount = onChange.mock.calls.length;
+        await fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        expect(onChange).toHaveBeenCalledTimes(callCount);
     });
 
-    it('positions relative to the viewport outside a modal dialog', async () => {
-        // jsdom computes an empty transform instead of the browser default 'none'.
-        document.documentElement.style.transform = 'none';
-        document.body.style.transform = 'none';
-        render(ColorPicker, { props: defaultProps });
-        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+    it('does not propagate the trigger click to a parent element', async () => {
+        const parentClick = vi.fn();
+        // Svelte delegates events to the target, so the listener sits on its parent.
+        const parent = document.createElement('div');
+        const target = parent.appendChild(document.createElement('div'));
+        parent.addEventListener('click', parentClick);
+        document.body.appendChild(parent);
 
-        const panel = screen.getByRole('dialog', { name: 'Color picker' });
-        expect(panel.parentElement).toBe(document.body);
-        await waitFor(() => {
-            expect(panel.style.left).toBe('10px');
-            expect(panel.style.top).toBe('10px');
-        });
-
-        document.documentElement.style.transform = '';
-        document.body.style.transform = '';
-    });
-
-    it.each(['Saturation and lightness picker', 'Hue picker'])(
-        'registers one mousemove listener for a drag on %s',
-        async (pickerName) => {
-            render(ColorPicker, { props: defaultProps });
+        try {
+            render(ColorPicker, { props: defaultProps, target });
             await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
 
-            const addEventListenerSpy = vi.spyOn(document, 'addEventListener');
-            const picker = screen.getByRole('dialog', { name: pickerName });
-            vi.spyOn(picker, 'getBoundingClientRect').mockReturnValue({
-                left: 0,
-                top: 0,
-                width: 100,
-                height: 100
-            } as DOMRect);
-
-            await fireEvent.mouseDown(picker, { clientX: 25, clientY: 25 });
-            await fireEvent.mouseMove(document, { clientX: 50, clientY: 50 });
-            await fireEvent.mouseMove(document, { clientX: 75, clientY: 75 });
-
-            const mouseMoveRegistrations = addEventListenerSpy.mock.calls.filter(
-                ([eventName]) => eventName === 'mousemove'
-            );
-            expect(mouseMoveRegistrations).toHaveLength(1);
-
-            await fireEvent.mouseUp(document);
+            expect(parentClick).not.toHaveBeenCalled();
+            expect(screen.getByRole('dialog', { name: 'Color picker' })).toBeInTheDocument();
+        } finally {
+            parent.remove();
         }
-    );
+    });
+
+    it('works inside a modal dialog without closing it', async () => {
+        const onChange = vi.fn();
+        render(ColorPickerInDialogTestWrapper, { props: { onChange } });
+        await fireEvent.click(screen.getByRole('button', { name: 'Open color picker' }));
+
+        const hexInput = screen.getByRole('textbox');
+        hexInput.focus();
+        await fireEvent.click(hexInput);
+        expect(hexInput).toBe(document.activeElement);
+
+        await fireEvent.click(screen.getByTitle('#0000ff'));
+        await waitFor(() => expect(onChange).toHaveBeenLastCalledWith('#0000ff', 1));
+        expect(screen.getByRole('dialog', { name: 'Host dialog' })).toBeInTheDocument();
+        await fireEvent.keyDown(document.activeElement ?? document.body, { key: 'Escape' });
+
+        expect(screen.queryByRole('dialog', { name: 'Color picker' })).not.toBeInTheDocument();
+        expect(screen.getByRole('dialog', { name: 'Host dialog' })).toBeInTheDocument();
+    });
 });

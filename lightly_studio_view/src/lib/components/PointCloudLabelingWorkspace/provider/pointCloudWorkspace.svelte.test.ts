@@ -200,6 +200,24 @@ describe('PointCloudWorkspace', () => {
         expect(workspace.cameraChannels[0].group_component_name).toBe('front');
     });
 
+    it('exposes the sequence sample from the summary, or none without data', () => {
+        expect(createWorkspace().sequenceSample).toBeUndefined();
+
+        const tags = [{ tag_id: 'tag-1', name: 'night_drive' }];
+        summaryState.data = { ...summaryWithChannels, collection_id: 'sequence-collection', tags };
+        expect(createWorkspace().sequenceSample).toEqual({
+            sampleId: 'seq-1',
+            collectionId: 'sequence-collection',
+            tags
+        });
+    });
+
+    it('re-fetches the summary when the sequence tags change', () => {
+        createWorkspace().refetchSequenceSample();
+
+        expect(refetch).toHaveBeenCalledOnce();
+    });
+
     it('starts on the initial tick when one is given', () => {
         const workspace = new PointCloudWorkspace(() => ({
             datasetId: 'dataset-1',

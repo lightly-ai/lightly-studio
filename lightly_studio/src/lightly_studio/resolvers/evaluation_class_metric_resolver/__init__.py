@@ -4,6 +4,9 @@ from lightly_studio.resolvers.evaluation_class_metric_resolver.create_many impor
 from lightly_studio.resolvers.evaluation_class_metric_resolver.delete_by_annotation_label_id import (  # noqa: E501
     delete_by_annotation_label_id,
 )
+from lightly_studio.resolvers.evaluation_class_metric_resolver.delete_by_evaluation_run_id import (
+    delete_by_evaluation_run_id,
+)
 from lightly_studio.resolvers.evaluation_class_metric_resolver.get_all_by_evaluation_run_id import (
     get_all_by_evaluation_run_id,
 )
@@ -11,5 +14,6 @@ from lightly_studio.resolvers.evaluation_class_metric_resolver.get_all_by_evalua
 __all__ = [
     "create_many",
     "delete_by_annotation_label_id",
+    "delete_by_evaluation_run_id",
     "get_all_by_evaluation_run_id",
 ]

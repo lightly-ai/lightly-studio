@@ -1,4 +1,6 @@
 import {
+    AnnotationClassNotAvailableError,
+    getCreateLabelErrorMessage,
     useAnnotationLabels,
     useCreateAnnotation,
     useCreateLabel,
@@ -8,10 +10,9 @@ import {
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
-import type { Bounds3, Vector3 } from '$lib/components/PointCloudLabelingWorkspace/domain';
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 
 interface SceneFrame {
-    bounds: Bounds3 | null;
     frameId: string;
 }
 
@@ -24,15 +25,16 @@ interface Params {
 
 interface CreateCuboidParams {
     frame: SceneFrame | null;
-    groundPosition: Vector3;
+    box: CuboidBox;
     labelId: string;
     sampleId: string;
 }
 
 interface UseCreateCuboidAnnotationReturn {
     handleCreateCuboid: (
-        groundPosition: Vector3,
-        onCreated: (annotationId: string) => void | Promise<void>
+        box: CuboidBox,
+        onCreated: (annotationId: string) => void | Promise<void>,
+        selectClass?: boolean
     ) => Promise<void>;
     showSelectClassDialog: ReturnType<typeof useSelectClassDialog>['open'];
     handleClassSelected: ReturnType<typeof useSelectClassDialog>['handleConfirm'];
@@ -40,40 +42,29 @@ interface UseCreateCuboidAnnotationReturn {
     labels: ReturnType<typeof useAnnotationLabels>;
 }
 
-const ZERO_BOUNDS: Bounds3 = { min: [0, 0, 0], max: [0, 0, 0] };
-
-function computeDefaultCuboidSize(bounds: Bounds3): number {
-    const diagonal = Math.hypot(
-        bounds.max[0] - bounds.min[0],
-        bounds.max[1] - bounds.min[1],
-        bounds.max[2] - bounds.min[2]
-    );
-    return Math.max(diagonal * 0.02, 0.1);
-}
-
 function buildCuboidInput({
     frame,
-    groundPosition,
+    box,
     labelId,
     sampleId
 }: CreateCuboidParams): AnnotationCreateInput {
-    const size = computeDefaultCuboidSize(frame?.bounds ?? ZERO_BOUNDS);
     return {
         parent_sample_id: sampleId,
         annotation_type: 'cuboid_3d',
         annotation_label_id: labelId,
         cuboid_3d: {
             frame_id: frame?.frameId ?? '',
-            px: groundPosition[0],
-            py: groundPosition[1],
-            pz: groundPosition[2] + size / 2,
+            px: box.center[0],
+            py: box.center[1],
+            pz: box.center[2],
+            // The heading is a rotation around the vertical axis.
             qx: 0,
             qy: 0,
-            qz: 0,
-            qw: 1,
-            sx: size,
-            sy: size,
-            sz: size
+            qz: Math.sin(box.yaw / 2),
+            qw: Math.cos(box.yaw / 2),
+            sx: box.size[0],
+            sy: box.size[1],
+            sz: box.size[2]
         }
     };
 }
@@ -98,16 +89,29 @@ export function useCreateCuboidAnnotation({
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() ?? '' }));
     const { lastAnnotationLabel, updateLastAnnotationLabel } = useGlobalStorage();
 
-    async function selectAnnotationLabel(collectionId: string): Promise<string | null> {
+    async function selectAnnotationLabel(
+        collectionId: string,
+        selectClass: boolean
+    ): Promise<string | null> {
         const stored = get(lastAnnotationLabel)[collectionId] ?? null;
-        if (stored) return stored;
+        if (stored && !selectClass) return stored;
         const selection = await requestLabel();
         if (!selection?.label) return null;
         updateLastAnnotationLabel(collectionId, selection.label);
         return selection.label;
     }
 
-    async function findOrCreateLabelId(labelName: string): Promise<string | null> {
+    function forgetLastAnnotationLabel(collectionId: string) {
+        lastAnnotationLabel.update((value) => {
+            delete value[collectionId];
+            return value;
+        });
+    }
+
+    async function findOrCreateLabelId(
+        collectionId: string,
+        labelName: string
+    ): Promise<string | null> {
         let currentData = labels.data;
         if (currentData === undefined) {
             const result = await labels.refetch();
@@ -125,43 +129,53 @@ export function useCreateCuboidAnnotation({
             });
             await labels.refetch();
             return label.annotation_label_id ?? null;
-        } catch {
-            toast.error('Failed to create annotation class. Please try again.');
+        } catch (error) {
+            // Forget a rejected class, so the next attempt asks for a class again.
+            if (error instanceof AnnotationClassNotAvailableError) {
+                forgetLastAnnotationLabel(collectionId);
+            }
+            toast.error(
+                getCreateLabelErrorMessage(
+                    error,
+                    'Failed to create annotation class. Please try again.'
+                )
+            );
             return null;
         }
     }
 
     async function saveCuboid(
-        groundPosition: Vector3,
+        box: CuboidBox,
         sampleId: string,
         labelId: string,
         frame: SceneFrame | null
     ): Promise<string> {
-        const input = buildCuboidInput({ frame, groundPosition, labelId, sampleId });
+        const input = buildCuboidInput({ frame, box, labelId, sampleId });
         const annotation = await createAnnotation(input);
         toast.success('Annotation created successfully');
         return annotation.sample_id;
     }
 
     async function handleCreateCuboid(
-        groundPosition: Vector3,
-        onCreated: (annotationId: string) => void | Promise<void>
+        box: CuboidBox,
+        onCreated: (annotationId: string) => void | Promise<void>,
+        selectClass = false
     ): Promise<void> {
         const collectionId = getCollectionId();
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
-        const labelName = await selectAnnotationLabel(collectionId);
+        const labelName = await selectAnnotationLabel(collectionId, selectClass);
         if (!labelName) return;
         // Cancel if the active tick changed while the class dialog was open.
         if (getTickSampleId() !== sampleId) return;
-        const labelId = await findOrCreateLabelId(labelName);
+        const labelId = await findOrCreateLabelId(collectionId, labelName);
         if (!labelId) return;
         // Cancel if the active sample or collection changed while finding/creating the label.
         if (getTickSampleId() !== sampleId || getCollectionId() !== collectionId) return;
         let annotationId: string;
         try {
-            annotationId = await saveCuboid(groundPosition, sampleId, labelId, capturedFrame);
+            annotationId = await saveCuboid(box, sampleId, labelId, capturedFrame);
         } catch {
             toast.error('Failed to create annotation. Please try again.');
             return;

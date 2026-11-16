@@ -4,6 +4,10 @@ import { page } from '$app/state';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation.svelte';
 
+vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
+    useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
+}));
+
 vi.mock('$app/state', async () => {
     const { writable } = await import('svelte/store');
     return {

@@ -7,10 +7,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from datetime import datetime
-from typing import Protocol, TypeVar, Union
+from typing import Protocol, TypeVar, assert_never
 
-from typing_extensions import assert_never
-
+from lightly_studio.core.dataset_query import evaluation_query_translation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import (
     ClassificationField,
@@ -39,9 +38,12 @@ from lightly_studio.errors import QueryExprError
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
+    ConfusionMatchExpr,
     DatetimeExpr,
     EqualityComparisonOperator,
     EqualityFloatExpr,
+    FalseNegativeMatchExpr,
+    FalsePositiveMatchExpr,
     FieldRef,
     IntegerExpr,
     MatchExpr,
@@ -51,6 +53,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    SampleEvaluationMatchExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
@@ -59,7 +62,7 @@ from lightly_studio.models.sort_direction import SortDirection
 
 T = TypeVar("T")
 T_contra = TypeVar("T_contra", contravariant=True)
-Number = Union[int, float]
+Number = int | float
 
 
 class _EqualityField(Protocol[T_contra]):  # noqa: PLW1641
@@ -124,9 +127,9 @@ _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
 }
 
-# Annotation confidence is stored in a nullable column, but still supports
-# ordinal numeric comparisons in the query language.
+# Nullable numeric columns support ordinal comparisons in the query language.
 _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
+    ("video", "duration_s"): VideoSampleField.duration_s,
     ("classification", "confidence"): ClassificationField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
     ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
@@ -140,6 +143,7 @@ _ALL_ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
 
 _EQUALITY_FLOAT_FIELDS: dict[tuple[str, str], _EqualityField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
+    ("video", "fps"): VideoSampleField.fps,
 }
 
 _TAGS_FIELDS: dict[tuple[str, str], _TagsAccessor] = {
@@ -287,6 +291,16 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PL
         return ObjectDetectionQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
         return SegmentationMaskQuery(to_match_expression(expr=expr.subexpr))
+    if isinstance(
+        expr,
+        (
+            SampleEvaluationMatchExpr,
+            ConfusionMatchExpr,
+            FalsePositiveMatchExpr,
+            FalseNegativeMatchExpr,
+        ),
+    ):
+        return evaluation_query_translation.to_match_expression(expr=expr)
     if isinstance(expr, AndExpr):
         return AND(*(to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):

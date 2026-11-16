@@ -1,7 +1,6 @@
 import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
-import { useGlobalStorage } from '../useGlobalStorage';
 
 export function useAnnotationSelection() {
     const {
@@ -13,11 +12,9 @@ export function useAnnotationSelection() {
     } = useAnnotationLabelContext();
 
     const { context: toolbarContext, setStatus } = useSampleDetailsToolbarContext();
-    const { updateLastAnnotationLabel } = useGlobalStorage();
 
     function selectAnnotation({
         annotationId,
-        collectionId,
         annotations
     }: {
         annotationId: string;
@@ -31,16 +28,13 @@ export function useAnnotationSelection() {
         if (annotation.annotation_type === 'segmentation_mask') {
             setAnnotationType(annotation.annotation_type);
             setAnnotationLabel(annotation.annotation_label?.annotation_label_name ?? null);
-            setStatus(toolbarContext.status === 'slic' ? 'slic' : 'brush');
+            // Keep the active mask tool. Other tools switch to the brush.
+            if (!['brush', 'slic', 'smart-select'].includes(toolbarContext.status)) {
+                setStatus('brush');
+            }
         } else {
             setStatus('cursor');
         }
-
-        if (annotation.annotation_label?.annotation_label_name)
-            updateLastAnnotationLabel(
-                collectionId,
-                annotation.annotation_label!.annotation_label_name
-            );
 
         setLastCreatedAnnotationId(null);
 

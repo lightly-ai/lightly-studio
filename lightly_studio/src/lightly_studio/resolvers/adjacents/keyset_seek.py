@@ -8,7 +8,7 @@ the base query, so resolvers for different sample types can share the engine.
 
 from __future__ import annotations
 
-from typing import Any, Union
+from typing import Any
 from uuid import UUID
 
 import sqlalchemy
@@ -20,7 +20,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from lightly_studio.models.adjacents import AdjacentResultView
 
 # A sort key column, either built as an expression or taken from a model with ``col()``.
-SortColumn = Union[ColumnElement[Any], Mapped[Any]]
+SortColumn = ColumnElement[Any] | Mapped[Any]
 
 # A keyset sort key paired with its sort direction (True == ascending).
 SortKey = tuple[SortColumn, bool]

@@ -26,11 +26,13 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
+    ImageStub,
     create_annotation,
     create_annotation_label,
     create_annotations,
     create_collection,
     create_image,
+    create_images,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video
 
@@ -350,6 +352,62 @@ def test_get_samples_dimensions_calls_get_dimension_bounds(
         collection_id=collection_id,
         annotation_label_ids=None,
     )
+
+
+def test_get_image_histograms(test_client: TestClient, db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[
+            ImageStub(path="/a.png", width=100, height=200),
+            ImageStub(path="/b.png", width=300, height=200),
+        ],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/histograms",
+        json={
+            "filters": {"filter_type": "image", "height": {"min": 0, "max": 10}},
+            "bin_count": 2,
+            "fields": ["width"],
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    # The height filter excludes both images, which are 200 px high.
+    assert response.json() == {"width": {"bin_edges": [100.0, 200.0, 300.0], "counts": [0, 0]}}
+
+
+def test_get_image_histograms__without_body(test_client: TestClient, db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    create_image(
+        session=db_session,
+        collection_id=collection_id,
+        file_path_abs="/a.png",
+        width=100,
+        height=50,
+    )
+
+    response = test_client.post(f"/api/collections/{collection_id}/images/histograms")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {
+        "width": {"bin_edges": [100.0, 100.0], "counts": [1]},
+        "height": {"bin_edges": [50.0, 50.0], "counts": [1]},
+    }
+
+
+def test_get_image_histograms__unknown_field_returns_422(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/histograms", json={"fields": ["depth"]}
+    )
+
+    assert response.status_code == 422
 
 
 def test_count_image_annotations_by_collection__with_image_filter(

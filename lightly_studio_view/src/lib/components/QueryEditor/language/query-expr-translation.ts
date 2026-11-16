@@ -13,6 +13,7 @@ import {
     isComparisonExpression,
     isFieldReference,
     isFunctionCall,
+    isSampleEvaluationQuery,
     isImageDateTimeFieldName,
     isImageIntFieldName,
     isImageStringFieldName,
@@ -35,6 +36,9 @@ import {
     type Expression,
     type Query
 } from './generated/ast.js';
+import { getQuerySource } from './getQuerySource';
+import { getQueryScopeError } from './getQueryScopeError';
+import { translateSampleEvaluation } from './sampleEvaluationQueryTranslation';
 
 export interface QueryParseError {
     message: string;
@@ -58,22 +62,26 @@ interface TranslationParser {
 
 export function parseLightlyQuery(
     parser: TranslationParser,
-    value: string
+    value: string,
+    sampleType?: 'image' | 'video'
 ): QueryExprTranslationResult {
-    const parseResult = parser.parse(value);
+    const { text, lineOffset } = getQuerySource(value, sampleType);
+    const parseResult = parser.parse(text);
     const errors = [...parseResult.lexerErrors, ...parseResult.parserErrors];
     if (errors.length > 0) {
         return {
             status: 'error',
             errors: errors.map((error) => ({
                 message: error.message,
-                line: error.line,
+                line: error.line === undefined ? undefined : Math.max(1, error.line - lineOffset),
                 column: error.column
             }))
         };
     }
 
     try {
+        const scopeError = getQueryScopeError(parseResult.value, sampleType);
+        if (scopeError) throw new Error(scopeError);
         return {
             status: 'ok',
             queryExpr: toQueryExpr(parseResult.value)
@@ -138,6 +146,9 @@ function visit(expr: Expression, table: QueryScope): QueryExpr['match_expr'] {
             type,
             subexpr: visit(expr.args[0], subTable)
         };
+    }
+    if (isSampleEvaluationQuery(expr)) {
+        return translateSampleEvaluation(expr);
     }
     throw new Error(`Unsupported expression type: ${expr.$type}`);
 }

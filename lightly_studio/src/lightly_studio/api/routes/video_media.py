@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import AsyncGenerator
 
@@ -12,6 +13,8 @@ from fastapi.responses import StreamingResponse
 from lightly_studio.api.routes.api import status
 from lightly_studio.database import db_manager
 from lightly_studio.models import video
+
+logger = logging.getLogger(__name__)
 
 app_router = APIRouter(prefix="/videos/media")
 
@@ -193,9 +196,13 @@ async def serve_video_by_sample_id(
             detail=f"File not found: {file_path}",
         ) from exc
     except OSError as exc:
+        logger.warning("Error accessing file %s: %s", file_path, exc)
+        # Errors from botocore and aiohttp, for example TLS errors, have no `strerror`.
+        # Their message can contain the storage endpoint URL, so only the log shows it.
+        cause = exc.strerror or type(exc).__name__
         raise HTTPException(
             status_code=status.HTTP_STATUS_NOT_FOUND,
-            detail=f"Error accessing file {file_path}: {exc.strerror}",
+            detail=f"Error accessing file {file_path}: {cause}",
         ) from exc
 
 

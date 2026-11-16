@@ -25,5 +25,6 @@ Admins invite teammates and assign each of them a role on the Users page under
 | Export data | ✔ | ✔ | ✔ | ✔ |
 | Create and apply tags | ✗ | ✔ | ✔ | ✔ |
 | Edit annotations and labels | ✗ | ✔ | ✔ | ✔ |
+| Create annotation classes | ✗ | ✗ | ✔ | ✔ |
 | Few-Shot Classifier, Sampling, Plugins, and Settings | ✗ | ✗ | ✔ | ✔ |
 | Manage users and roles | ✗ | ✗ | ✗ | ✔ |

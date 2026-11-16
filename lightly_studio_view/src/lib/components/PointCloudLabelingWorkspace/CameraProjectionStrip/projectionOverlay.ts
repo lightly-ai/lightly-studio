@@ -228,15 +228,12 @@ export function projectPointCloud(
     projection: CameraProjectionView,
     maxPoints = 5000
 ): ProjectedPoint[] {
+    const { positions } = batch;
     const step = Math.max(1, Math.ceil(batch.count / maxPoints));
     const points: ProjectedPoint[] = [];
     for (let index = 0; index < batch.count; index += step) {
         const point = projectPoint(
-            [
-                batch.positions[index * 3],
-                batch.positions[index * 3 + 1],
-                batch.positions[index * 3 + 2]
-            ],
+            [positions[index * 3], positions[index * 3 + 1], positions[index * 3 + 2]],
             projection
         );
         if (
@@ -259,6 +256,7 @@ export function projectPointCloudData(
     maxPoints = 5000,
     includeDensity = false
 ): ProjectedPointData[] {
+    const { positions, intensities, colors } = batch;
     const densityByCell = includeDensity ? getDensityByCell(batch) : undefined;
     const visiblePoints: Array<{
         index: number;
@@ -268,9 +266,9 @@ export function projectPointCloudData(
     for (let index = 0; index < batch.count; index++) {
         const offset = index * 3;
         const position: [number, number, number] = [
-            batch.positions[offset],
-            batch.positions[offset + 1],
-            batch.positions[offset + 2]
+            positions[offset],
+            positions[offset + 1],
+            positions[offset + 2]
         ];
         const projected = projectScenePoint(position, projection);
         if (
@@ -294,25 +292,24 @@ export function projectPointCloudData(
             ...screenPoint,
             depth: cameraPoint[2],
             height: position[2],
-            intensity: batch.intensities[index],
+            intensity: intensities[index],
             distance: Math.hypot(...position),
             density: densityByCell ? Math.log1p(densityByCell.get(getCellKey(position)) ?? 1) : 0,
-            rgb: batch.colors
-                ? [batch.colors[offset], batch.colors[offset + 1], batch.colors[offset + 2]]
-                : undefined
+            rgb: colors ? [colors[offset], colors[offset + 1], colors[offset + 2]] : undefined
         });
     }
     return points;
 }
 
 function getDensityByCell(batch: PointBatch): Map<string, number> {
+    const { positions } = batch;
     const counts = new Map<string, number>();
     for (let index = 0; index < batch.count; index++) {
         const offset = index * 3;
         const position: [number, number, number] = [
-            batch.positions[offset],
-            batch.positions[offset + 1],
-            batch.positions[offset + 2]
+            positions[offset],
+            positions[offset + 1],
+            positions[offset + 2]
         ];
         const key = getCellKey(position);
         counts.set(key, (counts.get(key) ?? 0) + 1);

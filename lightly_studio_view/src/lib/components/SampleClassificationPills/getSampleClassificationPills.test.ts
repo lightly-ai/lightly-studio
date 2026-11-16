@@ -82,6 +82,7 @@ describe('getSampleClassificationPills', () => {
                 label: 'zebra',
                 displayLabel: 'zebra',
                 colorKey: 'zebra',
+                colorBySource: false,
                 title: 'zebra'
             }
         ]);
@@ -113,6 +114,7 @@ describe('getSampleClassificationPills', () => {
                 label: 'car',
                 displayLabel: 'car',
                 colorKey: 'car',
+                colorBySource: false,
                 title: 'car'
             }
         ]);
@@ -144,6 +146,7 @@ describe('getSampleClassificationPills', () => {
                 label: 'car',
                 displayLabel: 'car',
                 colorKey: 'Source A',
+                colorBySource: true,
                 title: 'Source A: car'
             },
             {
@@ -151,6 +154,7 @@ describe('getSampleClassificationPills', () => {
                 label: 'car',
                 displayLabel: 'car',
                 colorKey: 'Source B',
+                colorBySource: true,
                 title: 'Source B: car'
             }
         ]);
@@ -208,6 +212,7 @@ describe('getSampleClassificationPills', () => {
                 label: 'person',
                 displayLabel: 'person',
                 colorKey: 'Collection missing-collection',
+                colorBySource: true,
                 title: 'Collection missing-collection: person'
             }
         ]);
@@ -240,12 +245,20 @@ describe('getSampleClassificationPills', () => {
         // With enforcement on, source colors are suppressed: duplicate labels are
         // deduped and colorKey uses the class name, not the source name.
         expect(pills).toEqual([
-            { id: 'car', label: 'car', displayLabel: 'car', colorKey: 'car', title: 'car' },
+            {
+                id: 'car',
+                label: 'car',
+                displayLabel: 'car',
+                colorKey: 'car',
+                colorBySource: false,
+                title: 'car'
+            },
             {
                 id: 'truck',
                 label: 'truck',
                 displayLabel: 'truck',
                 colorKey: 'truck',
+                colorBySource: false,
                 title: 'truck'
             }
         ]);

@@ -298,6 +298,46 @@ describe('useGlobalStorage', () => {
         });
     });
 
+    describe('Last annotation label', () => {
+        it('is stored in localStorage, not sessionStorage', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'deer');
+
+            const stored = JSON.parse(
+                localStorage.getItem('lightlyStudio_last_annotation_label')!
+            ) as Record<string, string>;
+            expect(stored[testCollectionId]).toBe('deer');
+            expect(sessionStorage.getItem('lightlyStudio_last_annotation_label')).toBeNull();
+        });
+
+        it('follows a class rename in its collection only', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'deer');
+            storage.updateLastAnnotationLabel(testCollectionId2, 'deer');
+
+            storage.renameLastAnnotationLabel(testCollectionId, 'deer', 'roe deer');
+
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('roe deer');
+            expect(get(storage.lastAnnotationLabel)[testCollectionId2]).toBe('deer');
+        });
+
+        it('keeps another class on a rename', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'fox');
+
+            storage.renameLastAnnotationLabel(testCollectionId, 'deer', 'roe deer');
+
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('fox');
+        });
+
+        it('forgets a deleted class', () => {
+            storage.updateLastAnnotationLabel(testCollectionId, 'deer');
+
+            storage.removeLastAnnotationLabel(testCollectionId, 'fox');
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('deer');
+
+            storage.removeLastAnnotationLabel(testCollectionId, 'deer');
+            expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBeUndefined();
+        });
+    });
+
     describe('Last annotation source', () => {
         it('stores the selected source per collection', () => {
             storage.updateLastAnnotationSource(testCollectionId, 'ground_truth');
@@ -313,6 +353,16 @@ describe('useGlobalStorage', () => {
 
             expect(get(storage.lastAnnotationLabel)[testCollectionId]).toBe('cat');
             expect(get(storage.lastAnnotationSource)[testCollectionId]).toBe('predictions');
+        });
+
+        it('forgets a deleted source', () => {
+            storage.updateLastAnnotationSource(testCollectionId, 'predictions');
+
+            storage.removeLastAnnotationSource(testCollectionId, 'labels');
+            expect(get(storage.lastAnnotationSource)[testCollectionId]).toBe('predictions');
+
+            storage.removeLastAnnotationSource(testCollectionId, 'predictions');
+            expect(get(storage.lastAnnotationSource)[testCollectionId]).toBeUndefined();
         });
     });
 

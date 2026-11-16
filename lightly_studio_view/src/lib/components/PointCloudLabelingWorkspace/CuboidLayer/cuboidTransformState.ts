@@ -12,6 +12,7 @@ interface Params {
 
 interface WorkingTransform {
     annotation: Domain.CuboidAnnotation;
+    originalAnnotation: Domain.CuboidAnnotation;
     /** Source snapshots and earlier transforms whose refetches may still arrive. */
     staleAnnotations: readonly Domain.CuboidAnnotation[];
     active: boolean;
@@ -22,6 +23,7 @@ interface CuboidTransformState {
     annotations: ReturnType<typeof readonly<readonly Domain.CuboidAnnotation[]>>;
     reconcile(annotations: readonly Domain.CuboidAnnotation[]): void;
     begin(annotation: Domain.CuboidAnnotation): void;
+    preview(transform: Transform): void;
     cancel(annotationId: string): void;
     commit(transform: Transform): Promise<void>;
 }
@@ -85,16 +87,25 @@ export function createCuboidTransformState({ onTransform }: Params): CuboidTrans
             }
             working.set(annotation.id, {
                 annotation,
+                originalAnnotation: annotation,
                 staleAnnotations: [annotation],
                 active: true,
                 status: 'unchanged'
             });
         },
 
+        preview({ annotationId, center, rotation, size }) {
+            const entry = working.get(annotationId);
+            if (!entry || !entry.active) return;
+            entry.annotation = { ...entry.annotation, center, rotation, size };
+            publish();
+        },
+
         cancel(annotationId) {
             const entry = working.get(annotationId);
             if (!entry) return;
             entry.active = false;
+            entry.annotation = entry.originalAnnotation;
             publish();
         },
 
@@ -121,6 +132,7 @@ function createPendingTransform(
 ): WorkingTransform {
     return {
         annotation: { ...annotation, center, rotation, size },
+        originalAnnotation: previous?.originalAnnotation ?? annotation,
         staleAnnotations: previous
             ? [...previous.staleAnnotations, previous.annotation, annotation]
             : [annotation],

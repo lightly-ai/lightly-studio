@@ -7,6 +7,7 @@ import {
 } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
 import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte';
 import { DEFAULT_MAX_INSTANCES } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
 import { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';
@@ -22,7 +23,6 @@ class AssistedLabelingToolState {
     saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
     instancesClass = $state<string | null>(null);
-    // Kept across samples, so one prompt labels a whole series of images.
     instancesPrompt = $state('');
     maxInstances = $state(DEFAULT_MAX_INSTANCES);
     isDrawingInstancesBox = $state(false);
@@ -36,6 +36,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const { context: annotationLabelContext } = useAnnotationLabelContext();
     const isEditingMode = fromStore(useGlobalStorage().isEditingMode);
     const state = new AssistedLabelingToolState();
+    const stickyClass = useStickyClassName(() => getParams().collectionId);
 
     // A Space pan keeps the tool it interrupts active, so its prompts survive the pan.
     const tool = $derived(context.status === 'drag' ? context.panFrom : context.status);
@@ -46,10 +47,9 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         context.status === 'smart-select' ||
             (context.status === 'find-instances' && state.isDrawingInstancesBox)
     );
-    const smartSelectClass = $derived(
-        state.smartSelectClass ?? annotationLabelContext.annotationLabel
-    );
-    const instancesClass = $derived(state.instancesClass ?? annotationLabelContext.annotationLabel);
+    // A class picked in the tool's pop-up wins, else new annotations get the sticky class.
+    const smartSelectClass = $derived(state.smartSelectClass ?? stickyClass.current ?? null);
+    const instancesClass = $derived(state.instancesClass ?? stickyClass.current ?? null);
     const smartSelect = useSmartSelect(() => {
         const { collectionId, sampleId, refetch } = getParams();
         return {
@@ -71,7 +71,10 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             saveAs: state.saveAs,
             annotationClass: instancesClass,
             annotationSource: annotationLabelContext.annotationSource,
-            onSaved: refetch
+            onSaved: () => {
+                clearInstances();
+                refetch();
+            }
         };
     });
 
@@ -82,6 +85,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const clearInstances = () => {
         instances.clear();
         state.instancesPrompt = '';
+        endInstancesBoxDrawing();
     };
 
     $effect(() => {
@@ -98,10 +102,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         const tool = activeTool;
         untrack(() => {
             if (tool !== 'smart-select') smartSelect.clear();
-            if (tool !== 'find-instances') {
-                endInstancesBoxDrawing();
-                clearInstances();
-            }
+            if (tool !== 'find-instances') clearInstances();
         });
     });
 

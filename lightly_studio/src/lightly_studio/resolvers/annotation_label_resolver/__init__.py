@@ -11,6 +11,7 @@ from .get_by_id import get_by_id
 from .get_by_ids import get_by_ids
 from .get_by_label_name import get_by_label_name
 from .names_by_ids import names_by_ids
+from .set_color import set_color
 from .update import update
 
 __all__ = [
@@ -23,5 +24,6 @@ __all__ = [
     "get_by_ids",
     "get_by_label_name",
     "names_by_ids",
+    "set_color",
     "update",
 ]

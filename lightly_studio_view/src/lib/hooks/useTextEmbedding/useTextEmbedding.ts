@@ -1,5 +1,6 @@
 import { embedText } from '$lib/api/lightly_studio_local';
 import { writable, type Writable } from 'svelte/store';
+import { getErrorMessage } from '$lib/api/ApiError';
 
 type EmbedSuccessResult = {
     queryText: string;
@@ -47,10 +48,7 @@ export function useTextEmbedding({
                 query: { query_text: trimmed, embedding_model_id: null }
             });
             if (requestId !== latestRequestId) return;
-            if (error) {
-                const errObj = error as { error?: unknown; message?: string };
-                throw new Error(String(errObj.error ?? errObj.message ?? 'Failed to embed text'));
-            }
+            if (error) throw new Error(getErrorMessage(error, 'Failed to embed text'));
             if (!data) throw new Error('Failed to embed text');
             onSuccess({ queryText: trimmed, embedding: data, collectionId });
         } catch (err) {

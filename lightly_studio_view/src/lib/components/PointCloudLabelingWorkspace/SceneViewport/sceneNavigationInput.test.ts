@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import { listenToSceneNavigation } from '../../PointCloudViewer/sceneNavigation';
 import { createSceneNavigationInput } from './sceneNavigationInput';
 
 describe('scene navigation input', () => {
     let input: ReturnType<typeof createSceneNavigationInput>;
-    let events: ReturnType<typeof vi.fn>;
+    let events: Mock<Parameters<typeof listenToSceneNavigation>[0]>;
     let cleanup: () => void;
     let unsubscribe: () => void;
     beforeEach(() => {
@@ -30,13 +30,15 @@ describe('scene navigation input', () => {
     });
 
     it('releases keys on keyup and ignores unrelated keys', () => {
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'q' }));
-        window.dispatchEvent(new KeyboardEvent('keyup', { key: 'q' }));
-        window.dispatchEvent(new KeyboardEvent('keyup', { key: 'q' }));
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z' }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: 'a' }));
+        window.dispatchEvent(new KeyboardEvent('keyup', { key: 'a' }));
+        for (const key of ['z', 'q', 'e']) {
+            window.dispatchEvent(new KeyboardEvent('keydown', { key }));
+        }
         expect(events.mock.calls).toEqual([
-            [{ action: 'rotate-left', phase: 'start' }],
-            [{ action: 'rotate-left', phase: 'stop' }]
+            [{ action: 'left', phase: 'start' }],
+            [{ action: 'left', phase: 'stop' }]
         ]);
     });
 

@@ -11,6 +11,7 @@ from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
     DatetimeExpr,
+    EvaluationMetricComparisonExpr,
     MetadataComparisonExpr,
     NotExpr,
     OrdinalComparisonOperator,
@@ -95,6 +96,26 @@ class TestMetadataComparisonExpr:
         query = QueryExpr.model_validate({"match_expr": expression})
         assert query.model_dump(mode="json") == {"match_expr": expression}
         assert QueryExpr.model_validate_json(query.model_dump_json()) == query
+
+
+class TestEvaluationMetricComparisonExpr:
+    @pytest.mark.parametrize("operator", ["==", "!=", "<", "<=", ">", ">="])
+    @pytest.mark.parametrize("value", [0, -2, 0.5])
+    def test_model_validate(self, operator: str, value: int | float) -> None:
+        metric = EvaluationMetricComparisonExpr.model_validate(
+            {"metric_name": "custom metric", "operator": operator, "value": value}
+        )
+        assert type(metric.value) is type(value)
+        assert (
+            EvaluationMetricComparisonExpr.model_validate_json(metric.model_dump_json()) == metric
+        )
+
+    @pytest.mark.parametrize("value", [True, False, "1", None, [], {}, float("inf"), float("nan")])
+    def test_model_validate__invalid_value(self, value: object) -> None:
+        with pytest.raises(ValidationError):
+            EvaluationMetricComparisonExpr.model_validate(
+                {"metric_name": "iou", "operator": ">", "value": value}
+            )
 
 
 class TestQueryExpr:

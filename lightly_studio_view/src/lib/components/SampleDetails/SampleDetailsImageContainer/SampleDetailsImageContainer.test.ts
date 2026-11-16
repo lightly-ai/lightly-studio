@@ -32,6 +32,9 @@ vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
         updateAnnotation: vi.fn()
     })
 }));
+vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
+    useAnnotationLabels: () => ({ data: undefined })
+}));
 vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => ({ disabledReason: null })
 }));

@@ -20,8 +20,10 @@ from lightly_studio.assisted_labeling.provider import (
     PointPrompt,
     ProviderError,
     ProviderImage,
+    ProviderNotCalledError,
     ProviderUnavailableError,
 )
+from lightly_studio.errors import NotFoundError
 from tests.assisted_labeling import helpers
 
 IMAGE_URL = "https://v3.fal.media/files/image.jpg"
@@ -292,9 +294,9 @@ class TestFalSam3Provider:
         provider = _make_provider(mocker=mocker, client=client)
         image = helpers.make_image(width=4, height=2)
 
-        with pytest.raises(ProviderError, match=r"^fal\.ai request failed\.$"):
+        with pytest.raises(ProviderNotCalledError, match=r"^fal\.ai request failed\.$"):
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
-        with pytest.raises(ProviderError, match=r"^fal\.ai request failed\.$"):
+        with pytest.raises(ProviderNotCalledError, match=r"^fal\.ai request failed\.$"):
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
 
         assert len(client.uploads) == 2
@@ -313,8 +315,28 @@ class TestFalSam3Provider:
             sample_id=UUID(int=1), width=4, height=2, file_name="a.jpg", read_bytes=read_bytes
         )
 
-        with pytest.raises(ProviderError, match="unreadable"):
+        with pytest.raises(ProviderNotCalledError, match="unreadable"):
             provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
+
+    def test_segment__unreadable_image_file(
+        self, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture
+    ) -> None:
+        monkeypatch.setenv("FAL_KEY", "secret")
+        client = FakeFalClient()
+        provider = _make_provider(mocker=mocker, client=client)
+
+        def read_bytes() -> bytes:
+            raise NotFoundError("The image file 'a.jpg' could not be read.")
+
+        image = ProviderImage(
+            sample_id=UUID(int=1), width=4, height=2, file_name="a.jpg", read_bytes=read_bytes
+        )
+
+        with pytest.raises(NotFoundError, match="could not be read"):
+            provider.segment(image=image, prompt=helpers.make_prompt(text="car"))
+
+        assert client.uploads == []
+        assert client.runs == []
 
     @pytest.mark.parametrize(
         "error",
@@ -346,12 +368,16 @@ class TestFalSam3Provider:
         )
         provider = _make_provider(mocker=mocker, client=FakeFalClient(run_error=error))
 
-        with pytest.raises(ProviderError, match=r"^fal\.ai request failed with status 422\.$"):
+        with pytest.raises(
+            ProviderError, match=r"^fal\.ai request failed with status 422\.$"
+        ) as exc_info:
             provider.segment(
                 image=helpers.make_image(width=4, height=2), prompt=helpers.make_prompt(text="car")
             )
 
         assert "Invalid image" in caplog.text
+        # The call reached fal.ai, so it is billed and reported
+        assert not isinstance(exc_info.value, ProviderNotCalledError)
 
     def test_segment__start_timeout_expiry(
         self, monkeypatch: pytest.MonkeyPatch, mocker: MockerFixture

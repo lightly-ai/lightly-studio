@@ -3,6 +3,8 @@ export * from './resolveEffectiveColorBySource';
 export * from './groupAnnotationLabels';
 export * from './countVisibleSources';
 export * from './getColorByLabel';
+export * from './getColorBySource';
+export * from './namePerCollection';
 export * from './getSimilarityColor';
 export * from './formatter';
 export * from './formatDate';
@@ -11,6 +13,7 @@ export * from './shadcn';
 export * from './isInputElement';
 export * from './isTextInputTarget';
 export * from './isOverlayTarget';
+export * from './keyPress';
 export * from './shouldShowBoundingBoxForAnnotation';
 export * from './navigation';
 export { isImageView } from './isImageView/isImageView';
@@ -44,3 +47,5 @@ export {
     oklchToRgb,
     oklchHueWheelColor
 } from './colorConvert';
+export { trackAnnotationClassEvent, trackClassCreatedInPicker } from './trackAnnotationClassEvent';
+export { dimensionRanges, withFilterOverrides } from './gridFilter';

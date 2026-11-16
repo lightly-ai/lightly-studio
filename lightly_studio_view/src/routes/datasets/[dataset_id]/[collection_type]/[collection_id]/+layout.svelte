@@ -16,7 +16,9 @@
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { SidePanelTabs } from '$lib/components';
     import Separator from '$lib/components/ui/separator/separator.svelte';
-    import { Filter, GripVertical, PanelLeftClose } from '@lucide/svelte';
+    import Filter from '@lucide/svelte/icons/filter';
+    import GripVertical from '@lucide/svelte/icons/grip-vertical';
+    import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
     import { onDestroy, onMount } from 'svelte';
     import { afterNavigate } from '$app/navigation';
     import { toStore } from 'svelte/store';
@@ -25,6 +27,7 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
+    import { setAnnotationClasses } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -45,6 +48,7 @@
         isVideoDetailsRoute
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';
@@ -63,11 +67,9 @@
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import type { CategoryCount } from '$lib/components/BarChart';
     import { selectCategoricalMetadataKeys } from './metadataDistributionSource';
-    import { buildImageFilter } from '$lib/utils/buildImageFilter';
-    import {
-        buildVideoAnnotationCountsFilter,
-        buildVideoFrameAnnotationCountsFilter
-    } from '$lib/utils/buildAnnotationCountsFilters';
+    import { buildImageAnnotationCountsFilter } from './imageAnnotationCountsFilter';
+    import { buildVideoAnnotationCountsFilter } from './videoAnnotationCountsFilter';
+    import { buildVideoFrameAnnotationCountsFilter } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
     import ClearAllFiltersButton from '$lib/components/ClearAllFiltersButton';
@@ -339,6 +341,8 @@
         collectionId: collectionId ?? ''
     }));
     const annotationLabelsData = $derived(annotationLabelsQuery?.data);
+    // The route param is the root collection ID; classes point to the dataset table.
+    $effect(() => setAnnotationClasses(collection.dataset_id, annotationLabelsData ?? []));
     const annotationLabelsStore = toStore(() => annotationLabelsData);
 
     // Initialize annotation filter hook (must be before annotationCounts to avoid init-order crash)
@@ -347,6 +351,7 @@
         annotationFilterRows,
         selectedAnnotationFilterNames,
         toggleAnnotationFilterSelection,
+        setAnnotationFilterSelection,
         setAnnotationCounts,
         pruneInvalidSelections
     } = useAnnotationsFilter({
@@ -361,23 +366,13 @@
     const { videoFramesBoundsValues } = useVideoFramesBounds();
     const { videoBoundsValues } = useVideoBounds();
 
-    const { imageFilter: imageFilterFromHook } = useImageFilters();
+    const {
+        imageFilter: imageFilterFromHook,
+        imageQueryExpression,
+        updateQueryExpr
+    } = useImageFilters();
 
     const { videoFilter: videoFilterFromHook } = useVideoFilters();
-    const plotFilterImageSampleIds = $derived(
-        $imageFilterFromHook?.sample_filter?.sample_ids ?? []
-    );
-    const plotFilterVideoSampleIds = $derived(
-        $videoFilterFromHook?.sample_filter?.sample_ids ?? []
-    );
-    // Query, tag and confusion-cell selections live on the shared image filter's
-    // sample_filter. Pull them out so the distribution counts track them too
-    // (previously only sample_ids from this filter were forwarded).
-    const plotFilterTagIds = $derived($imageFilterFromHook?.sample_filter?.tag_ids ?? []);
-    const plotFilterConfusionCell = $derived(
-        $imageFilterFromHook?.sample_filter?.confusion_cell ?? null
-    );
-    const plotFilterQueryExpr = $derived($imageFilterFromHook?.sample_filter?.query_expr ?? null);
 
     // Fill the annotation source filter for whatever collection is on screen. Every grid draws
     // its boxes against this one selection, so seeding only from the images-grid menu left the
@@ -403,20 +398,20 @@
         };
     });
 
-    // Image-count filter shared by the mix and per-type distribution queries so
-    // the distribution plot tracks the active filters (dimensions, labels,
-    // metadata, query, tags, confusion cell and annotation sources).
+    // Image-count filter shared by the mix and per-type distribution queries so the counts
+    // track the active filters: the plot selection (sample ids, embedding region), tags, query,
+    // confusion cell, dimensions, labels, metadata and annotation sources.
     const imageAnnotationCountsFilter = $derived(
-        buildImageFilter({
+        buildImageAnnotationCountsFilter({
+            imageFilter: $imageFilterFromHook,
+            isAnnotations,
             dimensionsValues: $dimensionsValues,
             annotationFilter: annotationFilterForCounts,
-            metadataFilters,
-            sampleIds: isAnnotations ? [] : plotFilterImageSampleIds,
-            tagIds: isAnnotations ? [] : plotFilterTagIds,
-            confusionCell: isAnnotations ? null : plotFilterConfusionCell,
-            queryExpr: isAnnotations ? null : plotFilterQueryExpr
+            metadataFilters
         })
     );
+
+    const categoricalCountsFilter = $derived($imageFilterFromHook ?? undefined);
 
     // Annotations of video frames are counted against the frame collection, which
     // is the parent of the annotation collection the route points at.
@@ -435,10 +430,10 @@
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
         collectionId,
         filter: buildVideoAnnotationCountsFilter({
+            videoFilter: $videoFilterFromHook,
             metadataFilters,
             annotationFilter: $annotationFilterStore,
-            videoBoundsValues: $videoBoundsValues,
-            sampleIds: plotFilterVideoSampleIds
+            videoBoundsValues: $videoBoundsValues
         }),
         enabled: isVideos && !$allSourcesHidden
     }));
@@ -522,10 +517,13 @@
         $activePanel === 'distribution' && supportsDistribution
     );
 
-    // The distribution settings live here, so they stay when the panel closes and opens again.
+    // The distribution settings live here, so they stay when the panel closes and opens again,
+    // and when a sample opens and the grid comes back.
     let distributionCountMode = $state<AnnotationCountMode>(AnnotationCountMode.OBJECTS);
     let distributionSampleTagIds = $state<string[]>([]);
     let histogramBinCount = $state(20);
+    let distributionSourceId = $state<string | undefined>(undefined);
+    let distributionGroupId = $state<string | undefined>(undefined);
 
     const handleCategoricalValueToggle = (metadataKey: string, value: string | boolean | null) => {
         const selected = $categoricalMetadataValues[metadataKey] ?? [];
@@ -541,6 +539,16 @@
             collection_id: collectionId,
             field_name: metadataKey,
             action: exists ? 'value_disabled' : 'value_enabled'
+        });
+    };
+
+    const setCategoricalValues = (metadataKey: string, values: CategoricalMetadataValue[]) => {
+        updateCategoricalMetadataValues({ ...$categoricalMetadataValues, [metadataKey]: values });
+        trackEvent('metadata_filter_changed', {
+            collection_id: collectionId,
+            field_name: metadataKey,
+            action: 'values_set',
+            value_count: values.length
         });
     };
 
@@ -602,42 +610,43 @@
                     aria-hidden={$filterPanelCollapsed}
                 >
                     <div class="flex min-h-0 flex-1 flex-col rounded-[1vw] bg-card py-4">
-                        <div
-                            class="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 dark:[color-scheme:dark]"
+                        <h2
+                            class="flex items-center justify-between px-4 py-2 text-lg font-semibold"
                         >
-                            <h2
-                                class="flex items-center justify-between py-2 text-lg font-semibold"
-                            >
-                                <span class="flex items-center space-x-2">
-                                    <Filter class="size-5" />
-                                    <span>Filters</span>
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <ClearAllFiltersButton
-                                        collectionId={metadataCollectionId}
-                                        {isCaptions}
-                                        {isImages}
-                                        {isVideos}
-                                        {isVideoFrames}
+                            <span class="flex items-center space-x-2">
+                                <Filter class="size-5" />
+                                <span>Filters</span>
+                            </span>
+                            <span class="flex items-center gap-1">
+                                <ClearAllFiltersButton
+                                    collectionId={metadataCollectionId}
+                                    {isCaptions}
+                                    {isImages}
+                                    {isVideos}
+                                    {isVideoFrames}
+                                />
+                                <Tooltip content="Hide filters" position="bottom" class="w-max">
+                                    <Button
+                                        variant="ghost"
+                                        icon={PanelLeftClose}
+                                        ariaLabel="Hide filters"
+                                        buttonProps={{
+                                            onclick: toggleFilterPanelCollapsed,
+                                            'aria-expanded': true,
+                                            'data-testid': 'filter-panel-collapse',
+                                            class: 'size-6 p-0'
+                                        }}
                                     />
-                                    <Tooltip content="Hide filters" position="bottom" class="w-max">
-                                        <Button
-                                            variant="ghost"
-                                            icon={PanelLeftClose}
-                                            ariaLabel="Hide filters"
-                                            buttonProps={{
-                                                onclick: toggleFilterPanelCollapsed,
-                                                'aria-expanded': true,
-                                                'data-testid': 'filter-panel-collapse',
-                                                class: 'size-6 p-0'
-                                            }}
-                                        />
-                                    </Tooltip>
-                                </span>
-                            </h2>
-
+                                </Tooltip>
+                            </span>
+                        </h2>
+                        <div
+                            class="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto px-4 pb-2 [scrollbar-gutter:stable] dark:[color-scheme:dark]"
+                        >
                             {#if isImages}
                                 <QueryControl
+                                    queryExpression={$imageQueryExpression}
+                                    {updateQueryExpr}
                                     onOpen={() => {
                                         setActivePanel(
                                             $activePanel === 'queryEditor' ? 'none' : 'queryEditor'
@@ -673,6 +682,8 @@
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>
                                         toggleAnnotationFilterSelection(label, collectionId)}
+                                    onSelectionChange={(labels) =>
+                                        setAnnotationFilterSelection(labels, collectionId)}
                                     showVisibilityToggle={showAnnotationVisibilityToggle}
                                 />
                             {/if}
@@ -692,9 +703,10 @@
                                         isImageCollection={isImages || isCaptions}
                                         categoricalFilter={isCaptions
                                             ? undefined
-                                            : imageAnnotationCountsFilter}
+                                            : categoricalCountsFilter}
                                         categoricalKeys={categoricalMetadataKeys}
                                         onCategoricalValueToggle={handleCategoricalValueToggle}
+                                        onCategoricalValuesSet={setCategoricalValues}
                                         onCategoricalValuesClear={clearCategoricalValues}
                                         onFilterChanged={handleCombinedMetadataFilterChanged}
                                     />
@@ -790,7 +802,13 @@
                                 {/await}
                             {:else if $activePanel === 'queryEditor' && isImages}
                                 {#await import('$lib/components/QueryEditorPanel/QueryEditorPanel.svelte') then { default: QueryEditorPanel }}
-                                    <QueryEditorPanel onClose={() => setActivePanel('none')} />
+                                    <QueryEditorPanel
+                                        {collectionId}
+                                        sampleType="image"
+                                        queryExpression={$imageQueryExpression}
+                                        {updateQueryExpr}
+                                        onClose={() => setActivePanel('none')}
+                                    />
                                 {/await}
                             {:else if distributionPanelVisible && isVideos}
                                 {#await import('./VideoDistributionPanel/VideoDistributionPanel.svelte') then { default: VideoDistributionPanel }}
@@ -802,6 +820,8 @@
                                             onClassBarClick={handleClassBarClick}
                                             onClose={() => setActivePanel('none')}
                                             bind:histogramBinCount
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}
@@ -820,6 +840,8 @@
                                             bind:countMode={distributionCountMode}
                                             bind:histogramBinCount
                                             bind:comparisonTagIds={distributionSampleTagIds}
+                                            bind:selectedSourceId={distributionSourceId}
+                                            bind:selectedGroupId={distributionGroupId}
                                         />
                                     {/key}
                                 {/await}

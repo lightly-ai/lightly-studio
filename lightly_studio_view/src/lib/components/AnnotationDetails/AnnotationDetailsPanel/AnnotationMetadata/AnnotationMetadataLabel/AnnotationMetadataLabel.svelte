@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { useCanCreateAnnotationClass } from '$lib/hooks';
+    import { trackClassCreatedInPicker } from '$lib/utils';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
@@ -28,6 +30,7 @@
     } = $props();
 
     const result = useAnnotationLabels(() => ({ collectionId }));
+    const canCreateClass = useCanCreateAnnotationClass();
     const { addReversibleAction } = useGlobalStorage();
 
     const { updateAnnotation, refetch } = useAnnotation(() => ({
@@ -42,10 +45,9 @@
 
     const items = $derived(getSelectionItems(result.data || []));
 
-    const value = $derived.by(() => {
-        const item = items.find((i) => i.value === currentValue);
-        return item ? item : { value: currentValue, label: currentValue };
-    });
+    const value = $derived(
+        items.find((i) => i.value === currentValue) ?? { value: currentValue, label: currentValue }
+    );
 </script>
 
 <span class="text-sm">{label}</span>
@@ -53,10 +55,12 @@
 {#if $isEditingMode}
     <div class="min-w-0">
         <SelectList
+            onCreate={trackClassCreatedInPicker}
+            allowCreate={canCreateClass}
             {items}
             selectedItem={items.find((i) => i.value === value?.value)}
             name="annotation-label"
-            placeholder="Select or create a class"
+            placeholder={canCreateClass ? 'Select or create a class' : 'Select a class'}
             className="w-full min-w-0"
             contentClassName="w-full min-w-0"
             onSelect={(item) => {
@@ -81,7 +85,7 @@
             }}
         >
             {#snippet notFound({ inputValue })}
-                <LabelNotFound label={inputValue} />
+                <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
             {/snippet}
         </SelectList>
     </div>

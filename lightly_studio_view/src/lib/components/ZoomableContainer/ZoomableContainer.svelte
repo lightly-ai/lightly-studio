@@ -165,7 +165,9 @@
                 transform = event.transform;
             })
             .filter((event: MouseEvent | WheelEvent) => {
-                if (!panEnabled || !zoomEnabled) return false;
+                if (!zoomEnabled) return false;
+                // Tools that own drags disable pan, but wheel and trackpad zoom keep working.
+                if (!panEnabled && event.type !== 'wheel') return false;
                 // Allow wheel events, touch events, and mouse events (except right click)
                 return (
                     (!event.ctrlKey || event.type === 'wheel') &&

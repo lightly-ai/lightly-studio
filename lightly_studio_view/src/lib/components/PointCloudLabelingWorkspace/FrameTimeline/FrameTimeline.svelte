@@ -1,7 +1,9 @@
 <script lang="ts">
-    import type { TickView } from '$lib/api/lightly_studio_local/types.gen';
-    import TimelineTransport from './TimelineTransport/TimelineTransport.svelte';
-    import TimelineTracks from './TimelineTracks/TimelineTracks.svelte';
+    import type { ComponentProps } from 'svelte';
+    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import TimelineContent from './TimelineContent/TimelineContent.svelte';
+    import TimelineTransportControls from './TimelineTransport/TimelineTransportControls.svelte';
+    import TimelineBufferStatus from './TimelineBufferStatus/TimelineBufferStatus.svelte';
 
     interface BufferRange {
         /** Inclusive zero-based index of the first buffered tick. */
@@ -10,13 +12,12 @@
         endIndex: number;
     }
 
-    /**
-     * Frame navigation for the active recording with a tick ruler; stepping controls disable at
-     * the ends of the sequence.
-     */
+    /** Playback controls and annotation tracks for the active recording. */
     interface Props {
         /** Sequence ticks (seq number + anchor timestamp). */
         ticks: TickView[];
+        tracks?: SequenceTrackView[];
+        selectedAnnotationId?: string | null;
         /** Seq number of the active tick; drives the frame counter and ruler highlight. */
         currentTick: number;
         /** Whether playback is currently running; toggles the play/pause icon. */
@@ -28,6 +29,7 @@
         onBufferEntireSequenceChange: (enabled: boolean) => void;
         /** Inclusive tick-index ranges whose data is ready for playback. */
         bufferedRanges: readonly BufferRange[];
+        bufferStatus?: ComponentProps<typeof TimelineBufferStatus>['status'];
         /** Step to the previous frame. */
         onPreviousFrame: () => void;
         /** Step to the next frame. */
@@ -36,6 +38,19 @@
         onPlayToggle: () => void;
         onPlaybackIntervalChange: (intervalMs: number) => void;
         onSelectTick: (seqNumber: number) => void;
+        onSelectAnnotation?: (annotationId: string) => void;
+        /** Starts a track from the selected cuboid; set only while that is possible. */
+        onStartTrack?: () => void;
+        /** Arms or cancels adding a new track; set only while editing. */
+        onAddTrack?: () => void;
+        isAddingTrack?: boolean;
+        onDeleteTrack?: (track: SequenceTrackView) => Promise<unknown>;
+        sequenceId?: string;
+        onExtendTrack?: (
+            track: SequenceTrackView,
+            startSeqNumber: number,
+            endSeqNumber: number
+        ) => void;
         /** Called when the user starts dragging the slider. */
         onSeekStart?: () => void;
         /** Called when the user releases the slider. */
@@ -48,45 +63,43 @@
 
     let {
         ticks,
+        tracks = [],
+        selectedAnnotationId = null,
         currentTick,
         isPlaying,
         playbackIntervalMs,
         bufferEntireSequence,
         onBufferEntireSequenceChange,
         bufferedRanges,
+        bufferStatus,
         onPreviousFrame,
         onNextFrame,
         onPlayToggle,
         onPlaybackIntervalChange,
         onSelectTick,
+        onSelectAnnotation = () => {},
+        onStartTrack,
+        onAddTrack,
+        isAddingTrack = false,
+        onExtendTrack,
+        onDeleteTrack,
+        sequenceId,
         onSeekStart,
         onSeekEnd,
         onPreviousSequence,
         onNextSequence
     }: Props = $props();
-
-    // Ticks can be sparse, so resolve the active seq number to its array position rather than
-    // treating currentTick as an index. -1 when absent, e.g. for an empty sequence.
-    const activeIndex = $derived(ticks.findIndex((tick) => tick.seq_number === currentTick));
-
-    const canGoPrevious = $derived(activeIndex > 0);
-    const canGoNext = $derived(activeIndex >= 0 && activeIndex < ticks.length - 1);
-
-    const frameLabel = $derived(
-        activeIndex >= 0 ? `Frame ${activeIndex + 1} / ${ticks.length}` : 'Frame — / —'
-    );
 </script>
 
 <div class="flex min-h-0 flex-col border-t bg-background" data-testid="workspace-frame-timeline">
-    <TimelineTransport
-        {frameLabel}
+    <TimelineTransportControls
+        {ticks}
+        {currentTick}
         {bufferEntireSequence}
         {onBufferEntireSequenceChange}
         {isPlaying}
         {playbackIntervalMs}
-        hasTicks={ticks.length > 0}
-        {canGoPrevious}
-        {canGoNext}
+        {bufferStatus}
         {onPreviousFrame}
         {onNextFrame}
         {onPlayToggle}
@@ -94,14 +107,21 @@
         {onPreviousSequence}
         {onNextSequence}
     />
-    <div class="relative flex-none">
-        <TimelineTracks
-            {ticks}
-            {currentTick}
-            {bufferedRanges}
-            {onSelectTick}
-            {onSeekStart}
-            {onSeekEnd}
-        />
-    </div>
+    <TimelineContent
+        {ticks}
+        {tracks}
+        {currentTick}
+        {selectedAnnotationId}
+        {bufferedRanges}
+        {onSelectTick}
+        {onSelectAnnotation}
+        {onStartTrack}
+        {onAddTrack}
+        {isAddingTrack}
+        {onExtendTrack}
+        {onDeleteTrack}
+        {sequenceId}
+        {onSeekStart}
+        {onSeekEnd}
+    />
 </div>

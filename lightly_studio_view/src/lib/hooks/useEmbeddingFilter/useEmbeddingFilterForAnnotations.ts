@@ -18,7 +18,7 @@ export function useAnnotationPlotSelection() {
 
 // Clears the shared annotation plot region and the plot-selection count for `collectionId`.
 // The region store is global, but the count is per-collection, so leaving it set would keep the
-// Embedding Plot Filter chip visible after switching away from and back to the collection.
+// Plot Filter chip visible after switching away from and back to the collection.
 export function clearAnnotationPlotSelection(collectionId: string) {
     annotationPlotRegion.set(null);
     clearPlotSelectionCount(collectionId);

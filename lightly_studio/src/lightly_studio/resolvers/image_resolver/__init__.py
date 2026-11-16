@@ -14,6 +14,10 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
 )
 from lightly_studio.resolvers.image_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.image_resolver.get_dimension_bounds import get_dimension_bounds
+from lightly_studio.resolvers.image_resolver.get_field_histograms import (
+    ImageField,
+    get_field_histograms,
+)
 from lightly_studio.resolvers.image_resolver.get_for_export import (
     ImageExportPreload,
     get_for_export,
@@ -33,6 +37,7 @@ from lightly_studio.resolvers.image_resolver.get_unembedded_sample_ids import (
 
 __all__ = [
     "ImageExportPreload",
+    "ImageField",
     "build_sample_ids_query",
     "count_image_annotations_by_collection",
     "count_image_annotations_by_sample_tags",
@@ -42,6 +47,7 @@ __all__ = [
     "get_all_by_collection_id",
     "get_by_id",
     "get_dimension_bounds",
+    "get_field_histograms",
     "get_for_export",
     "get_many_by_id",
     "get_sample_ids",

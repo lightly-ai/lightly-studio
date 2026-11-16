@@ -36,6 +36,7 @@
         collectionId: string;
         brushRadius: number;
         drawerStrokeColor: string;
+        previewOpacity: number;
         annotationLabel?: string | null | undefined;
         annotationType?: string | null | undefined;
         refetch: () => void;
@@ -49,6 +50,7 @@
         collectionId,
         brushRadius,
         drawerStrokeColor,
+        previewOpacity,
         mousePosition,
         refetch,
         onFinishBrushPendingChange
@@ -253,7 +255,8 @@
                 await brushApi.finishBrush(
                     updatedMask,
                     targetAnnotation,
-                    labels.data ?? [],
+                    // Wait for the class list, so an existing class does not count as missing.
+                    labels.data ?? labels.refetch().then((result) => result.data),
                     updateAnnotation,
                     annotationLabelContext.lockedAnnotationIds
                 );
@@ -285,7 +288,7 @@
     y="0"
     width={sample.width}
     height={sample.height}
-    opacity="0.85"
+    opacity={previewOpacity}
     class:previewHidden={!isPreviewVisible}
 >
     <canvas

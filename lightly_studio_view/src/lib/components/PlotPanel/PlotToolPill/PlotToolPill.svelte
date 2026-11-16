@@ -3,7 +3,10 @@
     import { Button } from '$lib/components';
     import { cn } from '$lib/utils';
     import { ToolbarTooltip } from '$lib/components/ToolbarTooltip';
-    import { Hand, Lasso, SquareDashed, type IconProps } from '@lucide/svelte';
+    import type { IconProps } from '@lucide/svelte';
+    import Hand from '@lucide/svelte/icons/hand';
+    import Lasso from '@lucide/svelte/icons/lasso';
+    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import {
         SELECTION_TOOLS,
         createSelectionToolController,

@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
 
 import SelectClassDialog from './SelectClassDialog.svelte';
+import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+
+vi.mock('$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass', () => ({
+    useCanCreateAnnotationClass: vi.fn(() => true)
+}));
 
 describe('SelectClassDialog', () => {
     beforeAll(() => {
@@ -130,5 +135,31 @@ describe('SelectClassDialog', () => {
         renderDialog();
 
         expect(screen.queryByTestId('annotation-source-trigger')).not.toBeInTheDocument();
+    });
+
+    it('hides class creation below editor', async () => {
+        vi.mocked(useCanCreateAnnotationClass).mockReturnValue(false);
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog();
+        const input = await screen.findByTestId('select-list-input');
+
+        await user.type(input, 'zebra');
+
+        expect(screen.queryByText(/Create:/)).not.toBeInTheDocument();
+        expect(screen.getByText('No annotation class found.')).toBeInTheDocument();
+        expect(screen.getByText('Choose an existing class.')).toBeInTheDocument();
+
+        await user.type(input, '{Enter}');
+        expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('keeps class creation for editors', async () => {
+        vi.mocked(useCanCreateAnnotationClass).mockReturnValue(true);
+        const user = userEvent.setup();
+        renderDialog();
+
+        await user.type(await screen.findByTestId('select-list-input'), 'zebra');
+
+        expect(screen.getByText(/Create:/)).toBeInTheDocument();
     });
 });

@@ -1,5 +1,5 @@
 import { get, writable } from 'svelte/store';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest';
 import type { StrategyInstance } from '$lib/hooks/useStrategyBuilder';
 import { useSamplingCombinationDialog } from './useSamplingCombinationDialog';
 
@@ -27,8 +27,8 @@ describe('useSamplingCombinationDialog', () => {
     let instances: ReturnType<typeof writable<StrategyInstance[]>>;
     let isSubmitting: ReturnType<typeof writable<boolean>>;
     let submitFn: ReturnType<typeof vi.fn>;
-    let resetStrategiesFn: ReturnType<typeof vi.fn>;
-    let buildSelectionFilterFn: ReturnType<typeof vi.fn>;
+    let resetStrategiesFn: Mock<() => void>;
+    let buildSelectionFilterFn: Mock<ReturnType<typeof useSelectionFilter>['buildSelectionFilter']>;
     let defaultParams: Parameters<typeof useSamplingCombinationDialog>[0];
 
     beforeEach(() => {

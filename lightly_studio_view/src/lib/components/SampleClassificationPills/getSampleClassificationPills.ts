@@ -32,6 +32,7 @@ export interface SampleClassificationPill {
     label: string;
     displayLabel: string;
     colorKey: string;
+    colorBySource: boolean;
     title: string;
 }
 
@@ -61,6 +62,7 @@ function createSampleClassificationPill({
         label,
         displayLabel: truncateDisplayLabel(label),
         colorKey,
+        colorBySource: showSourceColors,
         title
     };
 }

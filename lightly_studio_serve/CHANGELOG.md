@@ -11,13 +11,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Python 3.15 support.
+
 ### Changed
 
 ### Deprecated
 
 ### Removed
 
-- BREAKING: Dropped Python 3.9 support. Upgrade to Python 3.10–3.14.
+- BREAKING: Dropped Python 3.9 and 3.10 support. Upgrade to Python 3.11–3.15.
 
 ### Fixed
 

@@ -37,9 +37,47 @@ function createParser(): LangiumParser {
 
 const parser = createParser();
 
+describe('collection query scope', () => {
+    it.each([
+        'width > 100',
+        '# video: is optional\nduration_s > 10',
+        '# comment\nduration_s > 10 AND fps = 30',
+        'NOT classification(class_name = "outdoor")',
+        '"reviewed" IN tags AND metadata["score"] > 0.5',
+        'file_name = "video: clip.mp4"'
+    ])('infers video scope without changing the expression: %s', (source) => {
+        const explicit = parseLightlyQuery(parser, `video: ${source}`);
+        expect(explicit.status).toBe('ok');
+        expect(parseLightlyQuery(parser, source, 'video')).toEqual(explicit);
+    });
+
+    it('reports lexer errors at the visible line and column', () => {
+        const result = parseLightlyQuery(parser, '# comment\nduration_s > @', 'video');
+        expect(result).toMatchObject({
+            status: 'error',
+            errors: [expect.objectContaining({ line: 2, column: 14 }), expect.anything()]
+        });
+    });
+
+    it.each([
+        ['video', 'created_at = "2025-01-01"'],
+        ['image', '# comment\nvideo: duration_s > 10']
+    ] as const)('rejects an incompatible query for %s collections: %s', (sampleType, source) => {
+        expect(parseLightlyQuery(parser, source, sampleType).status).toBe('error');
+    });
+
+    it.each([
+        ['video', '# comment\nvideo: duration_s > 10 AND fps = 30'],
+        ['video', 'video: "reviewed" IN tags AND metadata["score"] > 0.5'],
+        ['image', 'width > 100']
+    ] as const)('accepts a query for %s collections: %s', (sampleType, source) => {
+        expect(parseLightlyQuery(parser, source, sampleType).status).toBe('ok');
+    });
+});
+
 describe('parseLightlyQuery error handling', () => {
     it('returns an error result when the parser reports errors', () => {
-        const result = parseLightlyQuery(parser, 'invalid_query');
+        const result = parseLightlyQuery(parser, '@');
 
         expect(result.status).toBe('error');
         if (result.status !== 'error') return;
@@ -53,6 +91,7 @@ describe('parseLightlyQuery error handling', () => {
     const PARSE_FAILURE_CASES: Array<{ name: string; source: string }> = [
         { name: 'empty input', source: '' },
         { name: 'unknown field', source: 'x = 1' },
+        { name: 'metric outside evaluation', source: 'custom_score > 0' },
         { name: 'double equals operator', source: 'height == 400' },
         { name: 'unterminated string literal', source: 'file_name = "cat' },
         { name: 'unmatched opening paren', source: '(height > 400' },

@@ -49,11 +49,9 @@ export default defineConfig({
         },
         {
             name: 'evaluations',
-            testDir: './e2e/evaluations'
-        },
-        {
-            name: 'distribution',
-            testDir: './e2e/distribution'
+            testDir: './e2e/evaluations',
+            // The evaluation fixture loads annotations from four sources on CI runners.
+            expect: { timeout: 15_000 }
         },
         {
             name: 'remote-embedder',

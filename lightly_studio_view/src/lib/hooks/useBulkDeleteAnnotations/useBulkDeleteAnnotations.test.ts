@@ -25,9 +25,13 @@ vi.mock('$lib/api/lightly_studio_local', () => ({
     bulkDeleteAnnotationsByFilter: mocks.bulkDeleteAnnotationsByFilter
 }));
 
-vi.mock('$lib/hooks', () => ({
-    useImageAnnotationCountsQueryKey: mocks.countsQueryKey,
-    useInvalidateAnnotationGridQueries: () => mocks.invalidateAnnotationGridQueries,
+vi.mock('$lib/hooks/useImageAnnotationCounts/useImageAnnotationCounts', () => ({
+    useImageAnnotationCountsQueryKey: mocks.countsQueryKey
+}));
+vi.mock('$lib/hooks/useInvalidateAnnotationGridQueries', () => ({
+    useInvalidateAnnotationGridQueries: () => mocks.invalidateAnnotationGridQueries
+}));
+vi.mock('$lib/hooks/useEvaluationRuns/useEvaluationRuns', () => ({
     useInvalidateEvaluationRunsQueries: () => mocks.invalidateEvaluationRunsQueries
 }));
 

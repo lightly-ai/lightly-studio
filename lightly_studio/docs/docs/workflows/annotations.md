@@ -33,6 +33,14 @@ Annotations are shown in sample detail view and in the annotation-focused views.
   ></iframe>
 </div>
 
+## Manage Annotation Classes
+
+To add, rename, recolor, or delete the annotation classes of a dataset, open `Menu` > `Settings` >
+`Annotation classes`. Deleting a class also deletes all its annotations. Annotation class
+settings are shared for all users of the dataset.
+
+![Annotation classes tab](https://storage.googleapis.com/lightly-public/studio/docs/settings_annotation_classes_v1.2.1.png)
+
 ## Annotations in Python
 
 Use the [Python API](../api/annotation.md) to create annotations and predictions directly, add them from model

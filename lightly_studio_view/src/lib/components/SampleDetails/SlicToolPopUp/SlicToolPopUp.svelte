@@ -24,7 +24,7 @@
         class="pointer-events-auto flex w-[240px] max-w-full select-none flex-col items-stretch gap-2 rounded-lg bg-muted p-2 shadow-md"
     >
         <div class="text-left">
-            <h3 class="text-sm font-semibold text-foreground">AI-Assisted labeling</h3>
+            <h3 class="text-sm font-semibold text-foreground">Superpixel brush</h3>
             <p class="text-xs text-muted-foreground">Click a superpixel to toggle it.</p>
         </div>
 

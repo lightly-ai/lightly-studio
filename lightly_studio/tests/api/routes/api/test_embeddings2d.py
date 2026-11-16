@@ -46,7 +46,15 @@ from tests.helpers_resolvers import (
 from tests.resolvers.video.helpers import VideoStub, create_videos
 
 
-@pytest.mark.parametrize("count", [0, 2])
+@pytest.mark.parametrize(
+    "plot",
+    [
+        (0, None),
+        (2, None),
+        (0, {"type": "tag", "tag_ids": []}),
+        (2, {"type": "tag", "tag_ids": []}),
+    ],
+)
 @pytest.mark.parametrize(
     "case",
     [
@@ -62,9 +70,10 @@ def test_get_embeddings2d__saved_unfiltered(
     db_session: Session,
     mocker: MockerFixture,
     case: tuple[SampleType, dict[str, Any]],
-    count: int,
+    plot: tuple[int, dict[str, Any] | None],
 ) -> None:
-    """Return saved columns, including empty plots, without resolving sample IDs."""
+    """Return saved plots without querying IDs for an empty filter."""
+    count, color_by = plot
     sample_type, filters = case
     collection = create_collection(session=db_session, sample_type=sample_type)
     model = create_embedding_model(
@@ -86,14 +95,15 @@ def test_get_embeddings2d__saved_unfiltered(
     mocker.patch.object(
         embeddings2d, "_get_matching_sample_ids", side_effect=AssertionError("Sample lookup")
     )
-    mocker.patch.object(
-        twodim_embedding_resolver,
-        "get_twodim_embeddings",
-        side_effect=AssertionError("UUID conversion"),
-    )
+    if color_by is None:
+        mocker.patch.object(
+            twodim_embedding_resolver,
+            "get_twodim_embeddings",
+            side_effect=AssertionError("UUID conversion"),
+        )
     response = test_client.post(
         f"/api/collections/{collection.collection_id}/embeddings2d/default",
-        json={"filters": filters},
+        json={"filters": filters, "color_by": color_by},
     )
     assert response.status_code == 200
     table = ipc.open_stream(response.content).read_all()
@@ -117,11 +127,13 @@ def test_get_embeddings2d__saved_unfiltered(
         ({"width": {"min": 0}}, [1, 1]),
     ],
 )
+@pytest.mark.parametrize("color_by", [None, {"type": "tag", "tag_ids": []}])
 def test_get_embeddings2d__active_filter(
     test_client: TestClient,
     db_session: Session,
     mocker: MockerFixture,
     case: tuple[dict[str, Any], list[int]],
+    color_by: dict[str, Any] | None,
 ) -> None:
     """False, zero and an empty region must still go through filtering."""
     filters, expected = case
@@ -130,7 +142,8 @@ def test_get_embeddings2d__active_filter(
     )
     lookup = mocker.spy(embeddings2d, "_get_matching_sample_ids")
     response = test_client.post(
-        f"/api/collections/{collection_id}/embeddings2d/default", json={"filters": filters}
+        f"/api/collections/{collection_id}/embeddings2d/default",
+        json={"filters": filters, "color_by": color_by},
     )
     assert response.status_code == 200
     lookup.assert_called_once()

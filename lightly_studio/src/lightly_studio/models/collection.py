@@ -26,7 +26,7 @@ class CollectionBase(SQLModel):
     """Base class for the Collection model."""
 
     name: str = Field(index=True)
-    parent_collection_id: Optional[UUID] = Field(
+    parent_collection_id: UUID | None = Field(
         default=None,
         foreign_key="collection.collection_id",
         index=True,
@@ -65,14 +65,19 @@ class CollectionCreate(CollectionBase):
     """Collection class when inserting."""
 
 
-class CollectionView(CollectionBase):
-    """Collection class when retrieving."""
+class CollectionWithoutChildrenView(CollectionBase):
+    """Collection class when retrieving, without the child collections."""
 
     collection_id: UUID
     dataset_id: UUID
     created_at: datetime
     updated_at: datetime
-    group_component_definition: Optional["GroupComponentDefinitionView"] = None
+    group_component_definition: "GroupComponentDefinitionView | None" = None
+
+
+class CollectionView(CollectionWithoutChildrenView):
+    """Collection class when retrieving."""
+
     children: list["CollectionView"] = []
 
 

@@ -122,6 +122,7 @@ export function createAnnotationFixture() {
         trackId: 'track-0',
         trackNumber: 7,
         parentTrackNumber: null,
+        parentTrackClassName: null,
         keyframeId: 'keyframe-0',
         center: [10, -2, 1],
         size: [4, 2, 2],

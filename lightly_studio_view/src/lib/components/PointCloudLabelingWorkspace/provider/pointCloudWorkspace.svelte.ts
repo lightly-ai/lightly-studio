@@ -14,6 +14,10 @@ export type GetInputs = () => {
     initialTick?: number;
     /** Selected LiDAR channel IDs; undefined means all channels are shown. */
     selectedLidarChannels?: number[];
+    /** Number of ticks to show on either side of the active tick. */
+    accumulationRadius?: number;
+    /** Ordered sequence tick numbers, used to clamp the accumulation window. */
+    accumulationTickNumbers?: number[];
     /** Overrides the summary-derived status; for tests/stories. */
     statusOverride?: 'loading' | 'unsupported' | 'empty' | 'error';
 };
@@ -47,8 +51,22 @@ function createCloudPointFrameParamsGetter(
         sequenceId: getInputs().sequenceId,
         seqNumber: getCurrentTick(),
         displayFrameId: getDisplayFrameId() || undefined,
-        selectedChannelIds: getInputs().selectedLidarChannels
+        selectedChannelIds: getInputs().selectedLidarChannels,
+        accumulationTickNumbers: getAccumulationTickNumbers(getInputs, getCurrentTick)
     });
+}
+
+function getAccumulationTickNumbers(getInputs: GetInputs, getCurrentTick: () => number): number[] {
+    const { accumulationRadius = 0 } = getInputs();
+    if (accumulationRadius <= 0) return [getCurrentTick()];
+    const tickNumbers = getInputs().accumulationTickNumbers;
+    if (!tickNumbers?.length) return [getCurrentTick()];
+    const activeIndex = tickNumbers.indexOf(getCurrentTick());
+    if (activeIndex < 0) return [getCurrentTick()];
+    return tickNumbers.slice(
+        Math.max(0, activeIndex - accumulationRadius),
+        activeIndex + accumulationRadius + 1
+    );
 }
 
 function createRetryHandler(
@@ -90,6 +108,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     readonly tickDetails: TickDetails;
     readonly cloudPointFrame: CloudPointQuery;
     readonly retry: () => void;
+    readonly refetchSequenceSample: () => void;
 
     // `$derived` is lazy, so referencing `this.#summary` here is safe — the body runs only when
     // the field is read, by which point the constructor has assigned it.
@@ -109,6 +128,15 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
     readonly lidarChannels = $derived.by(() => this.#summary.data?.lidar_channels ?? []);
     readonly cameraChannels = $derived.by(() => this.#summary.data?.camera_channels ?? []);
     readonly referenceFrames = $derived.by(() => this.#summary.data?.reference_frames ?? []);
+    readonly sequenceSample = $derived.by(() => {
+        const summary = this.#summary.data;
+        if (!summary) return undefined;
+        return {
+            sampleId: this.sequenceId,
+            collectionId: summary.collection_id,
+            tags: summary.tags
+        };
+    });
     readonly referenceFrameId = $derived.by(() => {
         const frames = this.referenceFrames;
         const picked = this.#pickedReferenceFrame;
@@ -138,6 +166,7 @@ export class PointCloudWorkspace implements PointCloudWorkspaceContext {
         });
         this.#getInputs = getInputs;
         this.#summary = summary;
+        this.refetchSequenceSample = () => void refetch();
         const { ticks, refetch: refetchTicks } = useMcapSequenceTicks({
             getDatasetId: () => getInputs().datasetId,
             getSequenceId: () => getInputs().sequenceId

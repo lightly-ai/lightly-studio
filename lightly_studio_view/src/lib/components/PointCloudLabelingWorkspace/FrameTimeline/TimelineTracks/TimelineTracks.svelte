@@ -18,14 +18,23 @@
         bufferedRanges: readonly BufferRange[];
         /** Select a tick from the overlaid ruler slider. */
         onSelectTick: (seqNumber: number) => void;
+        /** Preview the slider's current tick while the user is seeking. */
+        onPreviewTick?: (seqNumber: number | null) => void;
         /** Called when the user starts dragging the slider. */
         onSeekStart?: () => void;
         /** Called when the user releases the slider. */
         onSeekEnd?: () => void;
     }
 
-    let { ticks, currentTick, bufferedRanges, onSelectTick, onSeekStart, onSeekEnd }: Props =
-        $props();
+    let {
+        ticks,
+        currentTick,
+        bufferedRanges,
+        onSelectTick,
+        onPreviewTick,
+        onSeekStart,
+        onSeekEnd
+    }: Props = $props();
 
     const SEEK_KEYS = new Set([
         'ArrowLeft',
@@ -58,10 +67,15 @@
         }
     };
 
+    const previewSelectedTick = (input: HTMLInputElement) => {
+        onPreviewTick?.(ticks[Number(input.value)]?.seq_number ?? null);
+    };
+
     const endSeek = () => {
         if (!seekActive) return;
         seekActive = false;
         lastCommittedIndex = null;
+        onPreviewTick?.(null);
         onSeekEnd?.();
     };
 
@@ -104,7 +118,7 @@
         {/each}
         <input
             aria-label="Frame position"
-            class="absolute top-0 z-20 h-4 cursor-pointer appearance-none bg-transparent accent-primary [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:bg-transparent"
+            class="absolute top-0 z-20 h-4 cursor-pointer appearance-none bg-transparent accent-primary [&::-moz-range-thumb]:size-3.5 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-moz-range-track]:bg-transparent [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:size-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
             style:left={ticks.length > 0 ? `${50 / ticks.length}%` : '0%'}
             style:right={ticks.length > 0 ? `${50 / ticks.length}%` : '0%'}
             style:width={`calc(100% - ${ticks.length > 0 ? 100 / ticks.length : 0}%)`}
@@ -122,6 +136,7 @@
                 endSeek();
             }}
             onpointercancel={endSeek}
+            oninput={(event) => previewSelectedTick(event.currentTarget)}
             onkeydown={(event) => {
                 if (SEEK_KEYS.has(event.key)) beginSeek();
             }}

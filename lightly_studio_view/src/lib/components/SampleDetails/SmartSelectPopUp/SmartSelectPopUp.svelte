@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import { Loader2 } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-2';
     import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
 
     type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];
@@ -12,6 +12,7 @@
         annotationClass?: string | null;
         onAnnotationClassChange: (value: string) => void;
         canSave: boolean;
+        isSaving?: boolean;
         isPending: boolean;
         needsPositivePoint: boolean;
         onSave: () => void;
@@ -25,6 +26,7 @@
         annotationClass,
         onAnnotationClassChange,
         canSave,
+        isSaving = false,
         isPending,
         needsPositivePoint,
         onSave,
@@ -40,6 +42,7 @@
     {saveAs}
     {onSaveAsChange}
     {canSave}
+    {isSaving}
     {onSave}
     {onClear}
 >

@@ -86,9 +86,11 @@ export const loadSuperpixelsForImage = async ({
 }) => {
     const prepared = await prepareImageForSlic(imageUrl);
     const engine = await getSlicEngine();
-    return {
-        segmentation: engine.computeSuperpixels(prepared.imageData, getSlicComputeOptions(level)),
-        scaleX: prepared.scaleX,
-        scaleY: prepared.scaleY
-    };
+    let segmentation = engine.computeSuperpixels(prepared.imageData, getSlicComputeOptions('fine'));
+    const merge = ({ labels, width, height }: typeof segmentation, targetSegments: number) =>
+        engine.mergeSegments({ labels, width, height, targetSegments });
+    // Each parent is a union of its children, so changing levels cannot leave boundary fragments.
+    if (level !== 'fine') segmentation = merge(segmentation, LEVEL_CONFIG.medium.targetSegments);
+    if (level === 'coarse') segmentation = merge(segmentation, LEVEL_CONFIG.coarse.targetSegments);
+    return { segmentation, scaleX: prepared.scaleX, scaleY: prepared.scaleY };
 };

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from collections.abc import Sequence
 from uuid import UUID
 
 import sqlalchemy
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, SQLModel, col, delete, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
@@ -20,6 +23,14 @@ from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.resolvers import embedding_plot_resolver, evaluation_run_resolver
 from lightly_studio.utils import batching
+
+logger = logging.getLogger(__name__)
+
+# DuckDB's FK constraint check on the annotation_base DELETE can produce a false
+# IntegrityError when a concurrent read transaction makes the ART index report stale
+# child entries (duckdb#19002). Retrying gives the concurrent reader time to finish.
+_FK_RETRY_ATTEMPTS = 3
+_FK_RETRY_DELAY_S = 0.1
 
 
 def delete_annotations_by_ids(
@@ -90,10 +101,7 @@ def delete_annotations_by_ids(
         sample_ids=sample_ids,
     )
     session.commit()
-    _delete_by_sample_ids(
-        session=session, tables=(AnnotationBaseTable,), sample_ids=existing_annotation_ids
-    )
-    session.commit()
+    _delete_annotation_base_with_retry(session=session, annotation_ids=existing_annotation_ids)
     _delete_by_sample_ids(session=session, tables=(SampleTable,), sample_ids=sample_ids)
     session.commit()
     for annotation_collection_id in annotation_collection_ids:
@@ -138,6 +146,35 @@ def _get_caption_sample_ids(session: Session, parent_sample_ids: Sequence[UUID])
             ).all()
         )
     return caption_sample_ids
+
+
+def _delete_annotation_base_with_retry(session: Session, annotation_ids: Sequence[UUID]) -> None:
+    """Delete annotation_base rows, retrying on DuckDB FK false positives.
+
+    DuckDB's FK constraint check can fail with a spurious ``IntegrityError`` when a
+    concurrent read transaction makes the ART index report stale child entries
+    (duckdb#19002). Retrying after a short delay gives the concurrent reader time to
+    finish its transaction.
+    """
+    for attempt in range(_FK_RETRY_ATTEMPTS):
+        try:
+            _delete_by_sample_ids(
+                session=session,
+                tables=(AnnotationBaseTable,),
+                sample_ids=annotation_ids,
+            )
+            session.commit()
+            return
+        except IntegrityError:
+            session.rollback()
+            if attempt + 1 >= _FK_RETRY_ATTEMPTS:
+                raise
+            logger.debug(
+                "Retrying annotation_base delete after DuckDB FK error (attempt %d/%d)",
+                attempt + 1,
+                _FK_RETRY_ATTEMPTS,
+            )
+            time.sleep(_FK_RETRY_DELAY_S)
 
 
 def _delete_by_sample_ids(

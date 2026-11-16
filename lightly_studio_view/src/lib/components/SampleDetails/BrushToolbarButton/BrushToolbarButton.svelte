@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Brush } from '@lucide/svelte';
+    import Brush from '@lucide/svelte/icons/brush';
 
     type Props = { onclick: () => void; isActive?: boolean };
 
@@ -9,7 +9,7 @@
 <button
     type="button"
     {onclick}
-    aria-label="Segmentation Mask Brush"
+    aria-label="Mask brush"
     class={`flex
  items-center justify-center rounded-md p-2 transition-colors
         focus:outline-none

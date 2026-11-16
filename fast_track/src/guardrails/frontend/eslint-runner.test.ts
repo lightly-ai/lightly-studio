@@ -9,7 +9,9 @@ vi.mock('node:module', async (importOriginal) => {
     return {
         ...actual,
         createRequire: () => () => ({
-            ESLint: vi.fn().mockImplementation(() => ({ lintFiles: mockLintFiles }))
+            ESLint: vi.fn(function () {
+                return { lintFiles: mockLintFiles };
+            })
         })
     };
 });

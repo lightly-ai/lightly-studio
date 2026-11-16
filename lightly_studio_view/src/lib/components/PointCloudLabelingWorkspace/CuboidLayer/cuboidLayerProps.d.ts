@@ -1,0 +1,41 @@
+import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import type { PointBatch } from '$lib/components/PointCloudViewer';
+import type * as Domain from '../domain';
+import type { createCuboidTransformState } from './cuboidTransformState';
+/** Annotation rendering and editing inputs for one viewport's cuboid layer. */
+export interface CuboidLayerProps {
+    /** Cuboid annotations rendered in this viewport. */
+    cuboids: readonly Domain.CuboidAnnotation[];
+    /** Annotation classes and colors used to render cuboids. */
+    annotationClasses: readonly Domain.AnnotationClass[];
+    /** Shared annotation transforms and their persistence actions. */
+    transforms: ReturnType<typeof createCuboidTransformState>;
+    /** Selected annotation identifier, or null. */
+    selectedAnnotationId?: string | null;
+    /** Hovered annotation identifier, or null. */
+    hoveredAnnotationId?: string | null;
+    /** Tool selected in the main scene toolbar. */
+    activeTool?: Domain.WorkspaceTool;
+    /** Whether annotation editing is enabled. */
+    isEditingMode?: boolean;
+    /** Projection orientation used for rendering and editing. */
+    cameraMode?: Domain.CameraMode;
+    /** Retained cloud bounds used for ground placement and creation. */
+    groundPlaneBounds: Domain.Bounds3;
+    /** Selects or clears an annotation after hit testing. */
+    onselect?: (annotationId: string | null) => void;
+    /** Updates hovered annotation and handle feedback. */
+    onhover?: (annotationId: string | null, handle: Domain.CuboidHandle | null) => void;
+    /** Points of the current tick, used to fit a drawn cuboid. */
+    pointBatch?: PointBatch;
+    /** Timeline tick on display. A change discards a cuboid draft. */
+    tick?: number;
+    /** Creates an annotation from a drawn box. */
+    onCreateCuboid?: (box: CuboidBox) => void;
+    /** Reports the region whose points a cuboid draft takes in, or null without one. */
+    onCuboidDraftChange?: (box: CuboidBox | null) => void;
+    /** Reports a completed gizmo transform before it is committed. */
+    onCuboidTransform?: (
+        payload: Parameters<ReturnType<typeof createCuboidTransformState>['commit']>[0]
+    ) => void;
+}

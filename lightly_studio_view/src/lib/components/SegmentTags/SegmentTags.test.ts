@@ -56,6 +56,7 @@ vi.spyOn(hooks, 'useTags').mockImplementation(() => ({
     clearTagsSelected: vi.fn(),
     clearTagSelected: vi.fn(),
     setTagSelected: vi.fn(),
+    setTagsSelected: vi.fn(),
     tagSelectionToggle: vi.fn(),
     isLoading: writable(false),
     error: writable(null)
@@ -90,6 +91,16 @@ describe('SegmentTags', () => {
         });
 
         expect(container.querySelector('[data-testid="segment-tag-name"]')).not.toBeInTheDocument();
+    });
+
+    it('shows the given title, or "Tags" by default', () => {
+        const props = { tags: [], collectionId: 'collection-1', sampleId: 'sample-1' };
+        const { unmount } = render(SegmentTags, { props });
+        expect(screen.getByText('Tags')).toBeInTheDocument();
+        unmount();
+
+        render(SegmentTags, { props: { ...props, title: 'Sequence tags' } });
+        expect(screen.getByText('Sequence tags')).toBeInTheDocument();
     });
 
     it('renders all tags with their names', () => {

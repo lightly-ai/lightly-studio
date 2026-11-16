@@ -49,10 +49,40 @@ describe('PointCloudRightSidePanel', () => {
         expect(screen.getAllByTestId('point-cloud-annotation-list-row')).toHaveLength(1);
     });
 
-    it('hides the tags segment until the tick loads', () => {
+    it('hides the tags segments until the sequence and the tick load', () => {
         render(PointCloudRightSidePanel, { props: defaultProps });
 
-        expect(screen.queryByText('Tags')).not.toBeInTheDocument();
+        expect(screen.queryByText('Sequence tags')).not.toBeInTheDocument();
+        expect(screen.queryByText('Frame tags')).not.toBeInTheDocument();
+    });
+
+    it('shows the tags of the sequence above the tags of the tick', () => {
+        render(PointCloudRightSidePanel, {
+            props: {
+                ...defaultProps,
+                sequence: {
+                    sampleId: 'sequence-1',
+                    collectionId: 'sequence-collection',
+                    tags: [{ tag_id: 'tag-2', name: 'night_drive' }]
+                },
+                tick: {
+                    sampleId: 'tick-1',
+                    collectionId: 'group-collection',
+                    tags: [{ tag_id: 'tag-1', name: 'lidar_dropout' }]
+                }
+            }
+        });
+
+        expect(screen.getAllByTestId('segment-tag-name').map((tag) => tag.textContent)).toEqual([
+            'night_drive',
+            'lidar_dropout'
+        ]);
+        const sequenceTagsTitle = screen.getByText('Sequence tags');
+        const frameTagsTitle = screen.getByText('Frame tags');
+        expect(
+            sequenceTagsTitle.compareDocumentPosition(frameTagsTitle) &
+                Node.DOCUMENT_POSITION_FOLLOWING
+        ).toBeTruthy();
     });
 
     it('shows the tags of the tick above the annotations', () => {
@@ -68,7 +98,7 @@ describe('PointCloudRightSidePanel', () => {
         });
 
         expect(screen.getByTestId('segment-tag-name')).toHaveTextContent('lidar_dropout');
-        const tagsTitle = screen.getByText('Tags');
+        const tagsTitle = screen.getByText('Frame tags');
         const annotationsTitle = screen.getByText('Annotations');
         expect(
             tagsTitle.compareDocumentPosition(annotationsTitle) & Node.DOCUMENT_POSITION_FOLLOWING

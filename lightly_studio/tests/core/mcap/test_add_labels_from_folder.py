@@ -17,7 +17,7 @@ from lightly_studio.core.mcap.folder_labels import (
 )
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.database import db_manager
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import (
@@ -122,6 +122,44 @@ def test_add_labels_from_folder__skips_a_second_call(
     assert len(_cuboids(group_ids)) == 1
 
 
+def test_add_labels_from_folder__overwrite(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, group_ids = _index(tmp_path)
+    _write_labels(tmp_path / "recording.mcap", px=1.0)
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update")
+    _write_labels(tmp_path / "recording.mcap", px=5.0)
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update", overwrite=True)
+
+    cuboids = _cuboids(group_ids)
+    assert len(cuboids) == 1
+    assert cuboids[0].cuboid_3d_details is not None
+    assert cuboids[0].cuboid_3d_details.px == pytest.approx(5.0)
+
+
+def test_add_labels_from_folder__overwrite_keeps_other_annotation_sources(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, group_ids = _index(tmp_path)
+    _write_labels(tmp_path / "recording.mcap", px=1.0)
+    dataset.add_labels_from_folder(
+        path=tmp_path, topic="/scene_update", annotation_source="predictions"
+    )
+    _write_labels(tmp_path / "recording.mcap", px=5.0)
+
+    dataset.add_labels_from_folder(path=tmp_path, topic="/scene_update", overwrite=True)
+
+    positions = sorted(
+        cuboid.cuboid_3d_details.px
+        for cuboid in _cuboids(group_ids)
+        if cuboid.cuboid_3d_details is not None
+    )
+    assert positions == [pytest.approx(1.0), pytest.approx(5.0)]
+
+
 def test_add_labels_from_folder__logs_unknown_topic(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
@@ -206,7 +244,7 @@ def _index(tmp_path: Path) -> tuple[McapDataset, list[UUID]]:
     return dataset, [entry.sample_id for entry in sequence.get_samples()]
 
 
-def _cuboids(parent_sample_ids: list[UUID]) -> list[object]:
+def _cuboids(parent_sample_ids: list[UUID]) -> list[AnnotationBaseTable]:
     return list(
         annotation_resolver.get_all_by_parent_sample_ids(
             session=db_manager.persistent_session(),
@@ -216,18 +254,18 @@ def _cuboids(parent_sample_ids: list[UUID]) -> list[object]:
     )
 
 
-def _write_labels(source_path: Path) -> None:
+def _write_labels(source_path: Path, px: float = 1.0) -> None:
     timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
     sec, nsec = divmod(timestamp_ns, 1_000_000_000)
     helpers.write_json_mcap(
         path=Path(annotation_mcap.annotation_mcap_uri(recording_uri=str(source_path))),
         topic="/scene_update",
         schema_name="foxglove_msgs/msg/SceneUpdate",
-        messages=[(timestamp_ns, {"entities": [_entity(sec, nsec)]})],
+        messages=[(timestamp_ns, {"entities": [_entity(sec=sec, nsec=nsec, px=px)]})],
     )
 
 
-def _entity(sec: int, nsec: int) -> dict[str, object]:
+def _entity(sec: int, nsec: int, px: float) -> dict[str, object]:
     return {
         "id": "truck_1",
         "timestamp": {"sec": sec, "nsec": nsec},
@@ -236,7 +274,7 @@ def _entity(sec: int, nsec: int) -> dict[str, object]:
         "cubes": [
             {
                 "pose": {
-                    "position": {"x": 1.0, "y": 0.0, "z": 0.0},
+                    "position": {"x": px, "y": 0.0, "z": 0.0},
                     "orientation": {"x": 0.0, "y": 0.0, "z": 0.0, "w": 1.0},
                 },
                 "size": {"x": 1.0, "y": 1.0, "z": 1.0},

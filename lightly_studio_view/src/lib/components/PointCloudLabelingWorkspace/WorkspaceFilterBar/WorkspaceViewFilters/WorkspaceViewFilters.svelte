@@ -34,7 +34,8 @@
         { value: 'distance', label: 'Distance' },
         { value: 'density', label: 'Density' },
         { value: 'height-distance', label: 'Height + Distance' },
-        { value: 'height-density', label: 'Height + Density' }
+        { value: 'height-density', label: 'Height + Density' },
+        { value: 'camera-rgb', label: 'Camera RGB' }
     ];
     const colorTriggerLabel = $derived(
         `Color: ${colorItems.find((item) => item.value === colorMode)?.label ?? colorMode}`

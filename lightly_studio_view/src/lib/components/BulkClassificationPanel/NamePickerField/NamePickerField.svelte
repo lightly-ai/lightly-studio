@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
     import { SelectList } from '$lib/components/SelectList';
+    import { LabelNotFound } from '$lib/components/LabelNotFound';
 
     type ListItem = ComponentProps<typeof SelectList>['items'][number];
 
@@ -10,10 +11,21 @@
         selectedName?: string;
         names: string[];
         disabled?: boolean;
+        allowCreate?: boolean;
         onSelect: (name: string) => void;
+        onCreate?: () => void;
     }
 
-    let { label, placeholder, selectedName, names, disabled = false, onSelect }: Props = $props();
+    let {
+        label,
+        placeholder,
+        selectedName,
+        names,
+        disabled = false,
+        allowCreate = true,
+        onSelect,
+        onCreate
+    }: Props = $props();
 
     const labelId = $props.id();
 
@@ -27,6 +39,10 @@
     };
 </script>
 
+{#snippet classNotFound({ inputValue }: { inputValue: string })}
+    <LabelNotFound label={inputValue} allowCreate={false} />
+{/snippet}
+
 <div class="space-y-1.5">
     <div id={labelId} class="text-xs font-medium text-muted-foreground">{label}</div>
     <SelectList
@@ -35,10 +51,13 @@
         labelledBy={labelId}
         name={label}
         label={placeholder}
-        placeholder="Search or create…"
+        placeholder={allowCreate ? 'Search or create…' : 'Search…'}
+        {allowCreate}
         className="w-full"
         contentClassName="w-[var(--bits-popover-anchor-width)]"
         onSelect={handleSelect}
+        {onCreate}
         {disabled}
+        notFound={allowCreate ? undefined : classNotFound}
     />
 </div>

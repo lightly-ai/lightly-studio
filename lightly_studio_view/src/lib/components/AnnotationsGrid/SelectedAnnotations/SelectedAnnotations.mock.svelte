@@ -1,8 +1,6 @@
 <script lang="ts">
-    import type { AnnotationView } from '$lib/api/lightly_studio_local';
-
     interface Props {
-        selectedAnnotations: AnnotationView[];
+        selectedCount: number;
         disabled: boolean;
         isLoading: boolean;
         collectionId: string;

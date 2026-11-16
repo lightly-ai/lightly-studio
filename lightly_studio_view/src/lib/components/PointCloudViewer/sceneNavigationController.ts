@@ -1,14 +1,30 @@
 import * as THREE from 'three';
 import type { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { listenToSceneNavigation, type SceneNavigationAction } from './sceneNavigation';
+import { getMovementAxes, getNavigationDistance, rotatePosition } from './sceneNavigationMovement';
 
+/** Dependencies for navigation input routing and animation lifecycle. */
 interface Params {
-    camera: THREE.PerspectiveCamera;
+    /** Camera whose position and projection are controlled. */
+    camera: THREE.PerspectiveCamera | THREE.OrthographicCamera;
+    /** Orbit controls supplying the shared scene target. */
     controls: OrbitControls;
+    /** Requests a render after camera or geometry changes. */
     invalidate: () => void;
+    /** Whether this viewport currently owns navigation input. */
+    isActive?: () => boolean;
+    /** Identifies the viewport receiving navigation commands. */
+    navigationId?: symbol;
 }
 
-export function createSceneNavigationController({ camera, controls, invalidate }: Params) {
+/** Animates navigation commands addressed to one viewport and cleans up on disposal. */
+export function createSceneNavigationController({
+    camera,
+    controls,
+    invalidate,
+    isActive,
+    navigationId
+}: Params) {
     let navigationFrame: number | undefined;
     let navigationDamping = true;
     let lastContinuousNavigationTime = 0;
@@ -31,13 +47,13 @@ export function createSceneNavigationController({ camera, controls, invalidate }
     }
 
     function moveContinuously(delta: number) {
-        const { direction, right } = getMovementAxes(camera.position, controls.target);
+        const { direction, right } = getMovementAxes(camera, camera.position, controls.target);
         const move = new THREE.Vector3();
         if (continuousNavigation.has('forward')) move.add(direction);
         if (continuousNavigation.has('backward')) move.sub(direction);
         if (continuousNavigation.has('right')) move.add(right);
         if (continuousNavigation.has('left')) move.sub(right);
-        move.multiplyScalar(camera.position.distanceTo(controls.target) * 0.85 * delta);
+        move.multiplyScalar(getNavigationDistance(camera, controls.target) * 0.85 * delta);
         camera.position.add(move);
         controls.target.add(move);
         const rotateLeft = continuousNavigation.has('rotate-left');
@@ -87,7 +103,10 @@ export function createSceneNavigationController({ camera, controls, invalidate }
         controls.enableDamping = navigationDamping;
     }
 
-    const unsubscribe = listenToSceneNavigation(({ action, phase }) => {
+    const unsubscribe = listenToSceneNavigation(({ action, phase, navigationId: eventId }) => {
+        if (eventId !== navigationId) return;
+        if (phase !== 'stop' && isActive && !isActive()) return;
+        if (camera instanceof THREE.OrthographicCamera && action.startsWith('rotate-')) return;
         if (phase === 'start') {
             if (navigationFrame === undefined) navigationDamping = controls.enableDamping;
             else cancelAnimationFrame(navigationFrame);
@@ -113,7 +132,7 @@ export function createSceneNavigationController({ camera, controls, invalidate }
         if (action === 'rotate-left' || action === 'rotate-right') {
             rotatePosition(targetPosition, targetCenter, action === 'rotate-left' ? 0.12 : -0.12);
         } else {
-            const { direction, right } = getMovementAxes(targetPosition, targetCenter);
+            const { direction, right } = getMovementAxes(camera, targetPosition, targetCenter);
             const movements = {
                 forward: direction,
                 backward: direction.clone().negate(),
@@ -121,7 +140,7 @@ export function createSceneNavigationController({ camera, controls, invalidate }
                 right
             };
             const move = movements[action].multiplyScalar(
-                targetPosition.distanceTo(targetCenter) * 0.08
+                getNavigationDistance(camera, controls.target) * 0.08
             );
             targetPosition.add(move);
             targetCenter.add(move);
@@ -136,21 +155,4 @@ export function createSceneNavigationController({ camera, controls, invalidate }
             cancelNavigationAnimation();
         }
     };
-}
-
-function getMovementAxes(position: THREE.Vector3, center: THREE.Vector3) {
-    const direction = center.clone().sub(position);
-    direction.z = 0;
-    direction.normalize();
-    const right = direction
-        .clone()
-        .cross(new THREE.Vector3(0, 0, 1))
-        .normalize();
-    return { direction, right };
-}
-
-function rotatePosition(position: THREE.Vector3, center: THREE.Vector3, angle: number) {
-    const spherical = new THREE.Spherical().setFromVector3(position.clone().sub(center));
-    spherical.theta += angle;
-    position.copy(center).add(new THREE.Vector3().setFromSpherical(spherical));
 }

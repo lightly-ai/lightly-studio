@@ -35,6 +35,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         lastAnnotationBrushSize: writable({}),
         imageBrightness: writable(0),
         imageContrast: writable(0),
+        maskOpacity: writable(0),
         lastAnnotationLabel: writable({}),
         lastAnnotationSource: writable({})
     })

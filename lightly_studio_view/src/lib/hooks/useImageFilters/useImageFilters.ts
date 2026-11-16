@@ -1,43 +1,22 @@
 import { derived, get, writable } from 'svelte/store';
-import { createMetadataFilters } from '../useMetadataFilters/useMetadataFilters';
+import {
+    buildGridFilter,
+    buildSampleFilter,
+    dimensionRanges,
+    toMetadataFilters,
+    patchFilters
+} from '$lib/utils/gridFilter';
 import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
-import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import type {
-    AnnotationsFilter,
     ConfusionCell,
     EmbeddingRegion,
     ImageFilter,
-    QueryExpr,
-    SampleFilter
+    QueryExpr
 } from '$lib/api/lightly_studio_local';
 import type { ImageSortExpr } from '../useImagesInfinite/types';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
-
-const buildFilterDimensions = (min?: number, max?: number) => {
-    if (min == null && max == null) {
-        return undefined;
-    }
-    return {
-        min: min ?? undefined,
-        max: max ?? undefined
-    };
-};
-
-const extractDimensions = (dimensions?: DimensionBounds) => {
-    if (!dimensions) {
-        return {};
-    }
-
-    const width = buildFilterDimensions(dimensions.min_width, dimensions.max_width);
-    const height = buildFilterDimensions(dimensions.min_height, dimensions.max_height);
-
-    return {
-        width,
-        height
-    };
-};
 
 export interface QueryExpression {
     query_expr: QueryExpr;
@@ -49,79 +28,32 @@ const imageQueryExpression = writable<QueryExpression | null>(null);
 const imageFilter = derived(
     [filterParams, imageQueryExpression],
     ([$filterParams, $imageQueryExpression]): ImageFilter | null => {
-        if (!$filterParams?.collection_id || !$filterParams?.mode) {
+        if (!$filterParams?.collection_id || $filterParams.mode !== 'normal') {
             return null;
         }
 
-        if ($filterParams.mode === 'classifier') {
-            return null;
-        }
+        const f = $filterParams.filters ?? {};
 
-        const filters: ImageFilter = {
-            filter_type: 'image'
-        };
-
-        const { width, height } = extractDimensions($filterParams.filters?.dimensions);
-        if (width) {
-            filters.width = width;
-        }
-        if (height) {
-            filters.height = height;
-        }
-
-        const sampleFilter: SampleFilter = {};
-
-        const sampleIds = $filterParams.filters?.sample_ids;
-        if (sampleIds && sampleIds.length > 0) {
-            sampleFilter.sample_ids = sampleIds;
-        }
-
-        // Embedding-plot lasso/rectangle selections are sent as geometry (a few KB) rather
-        // than the full list of selected sample ids, so the request body stays constant-size
-        // regardless of selection size (see LIG-9903). The backend resolves the polygon to
-        // sample ids server-side.
-        const embeddingRegion = $filterParams.filters?.embedding_region;
-        if (embeddingRegion) {
-            sampleFilter.embedding_region = embeddingRegion;
-        }
-
-        const annotationLabelIds = $filterParams.filters?.annotation_label_ids;
-        if (annotationLabelIds && annotationLabelIds.length > 0) {
-            sampleFilter.annotations_filter = {
-                filter_type: 'annotations',
-                annotation_label_ids: annotationLabelIds
-            } satisfies AnnotationsFilter;
-        }
-
-        const tagIds = $filterParams.filters?.tag_ids;
-        if (tagIds && tagIds.length > 0) {
-            sampleFilter.tag_ids = tagIds;
-        }
-
-        const confusionCell = $filterParams.filters?.confusion_cell;
-        if (confusionCell) {
-            sampleFilter.confusion_cell = confusionCell;
-        }
-
-        if ($filterParams.metadata_values || $filterParams.categorical_metadata_values) {
-            const metadataFilters = createMetadataFilters(
-                $filterParams.metadata_values ?? {},
-                $filterParams.categorical_metadata_values ?? {}
-            );
-            if (metadataFilters.length > 0) {
-                sampleFilter.metadata_filters = metadataFilters;
-            }
-        }
-
-        if ($imageQueryExpression?.query_expr) {
-            sampleFilter.query_expr = $imageQueryExpression.query_expr;
-        }
-
-        if (Object.keys(sampleFilter).length > 0) {
-            filters.sample_filter = sampleFilter;
-        }
-
-        return Object.keys(filters).length > 0 ? filters : null;
+        return buildGridFilter(
+            'image',
+            dimensionRanges(f.dimensions),
+            buildSampleFilter({
+                sample_ids: f.sample_ids,
+                // Embedding-plot lasso/rectangle selections are sent as geometry (a few KB) rather
+                // than the full list of selected sample ids, so the request body stays
+                // constant-size regardless of selection size (see LIG-9903). The backend
+                // resolves the polygon to sample ids server-side.
+                embedding_region: f.embedding_region,
+                annotation_label_ids: f.annotation_label_ids,
+                tag_ids: f.tag_ids,
+                confusion_cell: f.confusion_cell,
+                metadata_filters: toMetadataFilters(
+                    $filterParams.metadata_values,
+                    $filterParams.categorical_metadata_values
+                ),
+                query_expr: $imageQueryExpression?.query_expr
+            })
+        );
     }
 );
 
@@ -144,65 +76,37 @@ export const useImageFilters = () => {
 
     // updates only sample ids in the existing filter params
     const updateSampleIds = (sampleIds: string[]) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
         }
 
-        const newParams: ImagesInfiniteParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
-            }
-        };
-
-        filterParams.set(newParams);
+        filterParams.set(
+            patchFilters(params, { sample_ids: sampleIds.length > 0 ? sampleIds : undefined })
+        );
     };
 
     // updates only the embedding-plot region selection in the existing filter params
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
         }
 
-        const newParams: ImagesInfiniteParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                embedding_region: embeddingRegion ?? undefined
-            }
-        };
-
-        filterParams.set(newParams);
+        filterParams.set(patchFilters(params, { embedding_region: embeddingRegion ?? undefined }));
     };
 
     // updates only the confusion-matrix cell in the existing filter params
     const updateConfusionCell = (confusionCell: ConfusionCell | null) => {
-        const params: ImagesInfiniteParams = {
-            ...get(filterParams)
-        };
+        const params: ImagesInfiniteParams = get(filterParams);
 
         if (params.mode !== 'normal') {
             return;
         }
 
-        const newParams: ImagesInfiniteParams = {
-            ...params,
-            filters: {
-                ...params.filters,
-                confusion_cell: confusionCell ?? undefined
-            }
-        };
-
-        filterParams.set(newParams);
+        filterParams.set(patchFilters(params, { confusion_cell: confusionCell ?? undefined }));
     };
 
     const updateSortBy = (sort: ImageSortExpr[] | null) => {

@@ -63,6 +63,8 @@ export interface DistributionSourceGroup {
     loading?: boolean;
     id: string;
     label: string;
+    /** Heading under which the group is listed in the group picker. */
+    section?: string;
     /** Category counts rendered as a bar chart. Mutually exclusive with `histogram`. */
     data?: CategoryCount[];
     /** Counts grouped by the sample tags selected for comparison. */

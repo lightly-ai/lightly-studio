@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
         points: [] as { x: number; y: number; positive: boolean }[],
         preview: null as AnnotationPreview | null,
         canSave: false,
+        isSaving: false,
         isPending: false,
         needsPositivePoint: false,
         addPoint: vi.fn(),

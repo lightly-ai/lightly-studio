@@ -57,7 +57,8 @@ vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', 
 vi.mock('$lib/hooks/useCreateAnnotation/useCreateAnnotation', () => ({
     useCreateAnnotation: vi.fn(() => ({ createAnnotation: vi.fn() }))
 }));
-vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', () => ({
+vi.mock('$lib/hooks/useCreateLabel/useCreateLabel', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useCreateLabel/useCreateLabel')>()),
     useCreateLabel: vi.fn(() => ({ createLabel: vi.fn() }))
 }));
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({

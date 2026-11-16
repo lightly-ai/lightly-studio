@@ -17,6 +17,6 @@
     data-testid="point-size-control"
 >
     <span class="whitespace-nowrap">Point size</span>
-    <Slider type="single" bind:value {min} {max} {step} aria-label="Point size" />
+    <Slider type="single" bind:value {min} {max} {step} thumbLabel="Point size" />
     <span class="w-6 text-right tabular-nums">{value}</span>
 </div>

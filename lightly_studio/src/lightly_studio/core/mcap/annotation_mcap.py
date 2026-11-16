@@ -11,6 +11,7 @@ import fsspec
 from lightly_studio.core.mcap import add_mcaps
 
 DEFAULT_ANNOTATION_MCAP_SUFFIX = "_labeled"
+DEFAULT_SCENE_UPDATE_TOPIC = "/platform/perception/visualization/detections_3d_ground_truth"
 
 
 def annotation_mcap_uri(recording_uri: str, suffix: str = DEFAULT_ANNOTATION_MCAP_SUFFIX) -> str:
@@ -88,6 +89,24 @@ def annotation_mcap_exists(uri: str) -> bool:
     """
     filesystem, path_in_filesystem = fsspec.core.url_to_fs(url=uri)
     return bool(filesystem.exists(path_in_filesystem))
+
+
+def annotation_mcap_file_name(
+    recording_uri: str, suffix: str = DEFAULT_ANNOTATION_MCAP_SUFFIX
+) -> str:
+    """Return the file name of the annotation MCAP that belongs to a recording.
+
+    Args:
+        recording_uri: The path or URI of the source recording.
+        suffix: Inserted before the `.mcap` extension.
+
+    Returns:
+        The annotation MCAP file name, e.g. `"s3://b/runs/foo.mcap"` gives
+        `"foo_labeled.mcap"`.
+    """
+    return _file_name(
+        uri=annotation_mcap_uri(recording_uri=normalized_uri(uri=recording_uri), suffix=suffix)
+    )
 
 
 def _file_name(uri: str) -> str:

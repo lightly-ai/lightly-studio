@@ -15,6 +15,30 @@ const adjacentSequences = vi.hoisted(() => ({
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
 
+vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
+    useQueryClient: () => ({ invalidateQueries: vi.fn() })
+}));
+
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useStartSequenceTrack', () => ({
+    useStartSequenceTrack: () => ({ handleStartTrack: vi.fn() })
+}));
+
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useExtendSequenceTrack', () => ({
+    useExtendSequenceTrack: () => ({ handleExtendTrack: vi.fn() })
+}));
+
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useDeleteSequenceTrack', () => ({
+    useDeleteSequenceTrack: () => ({ handleDeleteTrack: vi.fn() })
+}));
+
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/FrameTimeline/useSequenceTracks.svelte',
+    () => ({
+        useSequenceTracks: () => ({ query: { data: { tracks: [] } } })
+    })
+);
+
 vi.mock('$app/state', () => ({
     page: {
         url: new URL(
@@ -27,6 +51,10 @@ vi.mock('$app/state', () => ({
 
 vi.mock('$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences', () => ({
     useAdjacentMcapSequences: () => ({ query: adjacentSequences, refetch: vi.fn() })
+}));
+
+vi.mock('$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidClass', () => ({
+    useUpdateCuboidClass: () => ({ handleLabelChange: vi.fn() })
 }));
 
 vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation', async () => {
@@ -50,6 +78,7 @@ vi.mock('$lib/hooks', async () => {
         useGlobalStorage: () => ({ isEditingMode: writable(false) }),
         useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
         useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() }),
+        useCanCreateAnnotationClass: () => true,
         // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
         useMcapSequenceSummary: () => ({
             summary: { data: summaryData, isLoading: false, isError: false },
@@ -71,6 +100,14 @@ vi.mock('$lib/hooks', async () => {
             query: { data: undefined, isLoading: false, isError: false, refetch: vi.fn() }
         }),
         useTickCameraFrames: () => ({ query: { data: undefined } }),
+        // The right panel shows the sequence tags once the summary loads; stub the tag hooks.
+        useTags: () => ({ tags: writable([]), loadTags: vi.fn() }),
+        useAddTagToSample: () => ({
+            busy: writable(false),
+            addExisting: vi.fn(),
+            createAndAdd: vi.fn()
+        }),
+        useRemoveTagFromSample: () => ({ removeTagFromSample: vi.fn() }),
         useAnnotationCollections: () => ({ data: [] }),
         useMcapTickPrefetchScheduler: () => ({
             bufferedRanges: [],

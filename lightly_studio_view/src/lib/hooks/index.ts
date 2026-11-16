@@ -1,4 +1,6 @@
 export { useVideoFrames } from '$lib/hooks/useVideoFrames/useVideoFrames';
+export { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
+export { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
 export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/useVideoFrameAnnotations';
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -18,6 +20,7 @@ export {
     useMetadataFilters
 } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
+export { useImageFieldDistribution } from '$lib/hooks/useImageFieldDistribution';
 export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution';
 export { useMetadataDistributionsBySampleTags } from '$lib/hooks/useMetadataDistributionsBySampleTags';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
@@ -58,10 +61,18 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
-export { useCreateLabel } from '$lib/hooks/useCreateLabel/useCreateLabel';
+export {
+    AnnotationClassNotAvailableError,
+    getCreateLabelErrorMessage,
+    useCreateLabel
+} from '$lib/hooks/useCreateLabel/useCreateLabel';
 export { useSaveAnnotationPreviews } from '$lib/hooks/useSaveAnnotationPreviews/useSaveAnnotationPreviews';
 export { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-export { useColorPicker } from '$lib/hooks/useColorPicker/useColorPicker.svelte';
+export { useCustomSourceColors } from '$lib/hooks/useCustomSourceColors/useCustomSourceColors';
+export {
+    useClassColorPicker,
+    useSourceColorPicker
+} from '$lib/hooks/useColorPicker/useColorPicker.svelte';
 export { useSubmitCombinationSelection } from '$lib/hooks/useSubmitCombinationSelection/useSubmitCombinationSelection';
 export { usePostHog } from '$lib/hooks/usePostHog';
 export {
@@ -71,6 +82,7 @@ export {
 } from '$lib/hooks/useOnboarding/useOnboarding';
 export { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 export { useDeleteAnnotation } from '$lib/hooks/useDeleteAnnotation/useDeleteAnnotation';
+export { useDeleteAnnotationWithUndo } from '$lib/hooks/useDeleteAnnotationWithUndo/useDeleteAnnotationWithUndo.svelte';
 export { useExportDialog } from '$lib/hooks/useExportDialog/useExportDialog';
 export { useSettings } from '$lib/hooks/useSettings';
 export { useTrackSampleInspected } from '$lib/hooks/useTrackSampleInspected';
@@ -81,6 +93,7 @@ export { useAnnotationOrderBy } from '$lib/hooks/useAnnotationOrderBy/useAnnotat
 export { useInvalidateAnnotationGridQueries } from '$lib/hooks/useInvalidateAnnotationGridQueries';
 export { useBulkCreateClassifications } from '$lib/hooks/useBulkCreateClassifications/useBulkCreateClassifications';
 export { useBulkDeleteAnnotations } from '$lib/hooks/useBulkDeleteAnnotations/useBulkDeleteAnnotations';
+export { useBulkRelabelAnnotations } from '$lib/hooks/useBulkRelabelAnnotations/useBulkRelabelAnnotations';
 export {
     useImageAnnotationCounts,
     useImageAnnotationCountsQueryKey
@@ -102,7 +115,15 @@ export { useRecomputeEvaluationRun } from '$lib/hooks/useRecomputeEvaluationRun/
 export { useMcapSequenceSummary } from '$lib/hooks/useMcapSequenceSummary/useMcapSequenceSummary';
 export { useMcapSequenceTicks } from '$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte';
 export { useTickDetails } from '$lib/hooks/useTickDetails/useTickDetails';
+export { getTickDetailsSequenceQueryKey } from '$lib/hooks/useTickDetails/getTickDetailsOptions';
 export { useCloudPointFrame } from '$lib/hooks/useCloudPointFrame/useCloudPointFrame.svelte';
 export { useTickCameraFrames } from '$lib/hooks/useTickData/useTickCameraFrames.svelte';
 export { useMcapTickDetailsPrefetch } from '$lib/hooks/useMcapTickDetailsPrefetch';
 export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svelte';
+export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte';
+export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
+export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
+export { useQueryHistory } from '$lib/hooks/useQueryHistory/useQueryHistory';
+export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
+export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';

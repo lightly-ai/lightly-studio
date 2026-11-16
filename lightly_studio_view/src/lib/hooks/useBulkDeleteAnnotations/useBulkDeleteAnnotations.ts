@@ -3,15 +3,10 @@ import {
     bulkDeleteAnnotationsByFilter
 } from '$lib/api/lightly_studio_local';
 import {
-    readAnnotationCollectionsQueryKey,
     readAnnotationLabelsQueryKey,
     readCollectionHierarchyQueryKey
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import {
-    useImageAnnotationCountsQueryKey,
-    useInvalidateAnnotationGridQueries,
-    useInvalidateEvaluationRunsQueries
-} from '$lib/hooks';
+import { useInvalidateAnnotationQueries } from '$lib/hooks/useInvalidateAnnotationQueries';
 import { useQueryClient } from '@tanstack/svelte-query';
 import { readonly, writable, type Readable } from 'svelte/store';
 
@@ -61,23 +56,17 @@ const requestBulkDelete = ({
 
 export const useBulkDeleteAnnotations = (): UseBulkDeleteAnnotations => {
     const client = useQueryClient();
-    const invalidateAnnotationGridQueries = useInvalidateAnnotationGridQueries();
-    const invalidateEvaluationRunsQueries = useInvalidateEvaluationRunsQueries();
+    const invalidateAnnotationQueries = useInvalidateAnnotationQueries();
     const isPending = writable(false);
 
     const invalidateQueries = ({ collectionId, rootCollectionId }: BulkDeleteAnnotationsInput) => {
-        invalidateAnnotationGridQueries(collectionId);
-        client.invalidateQueries({ queryKey: useImageAnnotationCountsQueryKey });
-        client.invalidateQueries({
-            queryKey: readAnnotationCollectionsQueryKey({ path: { collection_id: collectionId } })
-        });
+        invalidateAnnotationQueries(collectionId);
         client.invalidateQueries({
             queryKey: readAnnotationLabelsQueryKey({ path: { collection_id: collectionId } })
         });
         client.invalidateQueries({
             queryKey: readCollectionHierarchyQueryKey({ path: { collection_id: rootCollectionId } })
         });
-        invalidateEvaluationRunsQueries();
     };
 
     const deleteAnnotations = async (

@@ -37,7 +37,7 @@
         colorBySource?: boolean;
         showSourceLabels?: boolean;
     } = $props();
-    const { addReversibleAction } = useGlobalStorage();
+    const { addReversibleAction, maskOpacity } = useGlobalStorage();
     const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
 
     const { annotation: annotationResp, updateAnnotation } = useAnnotation(() => ({
@@ -101,6 +101,7 @@
                 {highlight}
                 {scale}
                 {colorBySource}
+                maskOpacity={$maskOpacity}
                 isSelectable
             />
         </SelectableSvgGroup>

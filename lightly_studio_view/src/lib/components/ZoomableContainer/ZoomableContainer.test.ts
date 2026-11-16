@@ -183,4 +183,35 @@ describe('ZoomableContainer', () => {
         await fireEvent.keyUp(window, { key: 'w', code: 'KeyW' });
         await fireEvent.keyUp(window, { key: ' ', code: 'Space' });
     });
+
+    it('zooms on wheel when pan is disabled', async () => {
+        const { container } = render(ZoomableContainerTestWrapper, {
+            props: { panEnabled: false }
+        });
+        await tick();
+
+        const svg = container.querySelector('svg.z-10');
+        await fireEvent.wheel(svg!, { deltaY: -100 });
+        await tick();
+
+        const zoomGroup = container.querySelector('svg.z-10 g');
+        const scale = Number(
+            zoomGroup!.getAttribute('transform')?.match(/scale\(([-\d.]+)\)/)?.[1]
+        );
+        expect(scale).toBeGreaterThan(1);
+    });
+
+    it('ignores wheel when zoom is disabled', async () => {
+        const { container } = render(ZoomableContainerTestWrapper, {
+            props: { zoomEnabled: false }
+        });
+        await tick();
+
+        const svg = container.querySelector('svg.z-10');
+        await fireEvent.wheel(svg!, { deltaY: -100 });
+        await tick();
+
+        const zoomGroup = container.querySelector('svg.z-10 g');
+        expect(zoomGroup!.getAttribute('transform')).toBe('translate(0, 0) scale(1)');
+    });
 });

@@ -15,6 +15,7 @@ from lightly_studio.resolvers.tag_resolver.get_all_by_collection_id import (
 from lightly_studio.resolvers.tag_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.tag_resolver.get_by_name import get_by_name
 from lightly_studio.resolvers.tag_resolver.get_names_by_ids import get_names_by_ids
+from lightly_studio.resolvers.tag_resolver.get_names_by_sample_ids import get_names_by_sample_ids
 from lightly_studio.resolvers.tag_resolver.get_or_create_sample_tag_by_name import (
     get_or_create_sample_tag_by_name,
 )
@@ -43,6 +44,7 @@ __all__ = [
     "get_by_id",
     "get_by_name",
     "get_names_by_ids",
+    "get_names_by_sample_ids",
     "get_or_create_sample_tag_by_name",
     "get_sample_ids_by_tag_id",
     "get_tags_by_sample",

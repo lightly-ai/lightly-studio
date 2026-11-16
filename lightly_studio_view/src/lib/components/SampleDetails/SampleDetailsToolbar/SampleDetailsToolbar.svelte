@@ -9,7 +9,12 @@
     import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
-    import { MousePointer, Hand, Brush, Bot, Layers3, WandSparkles } from '@lucide/svelte';
+    import MousePointer from '@lucide/svelte/icons/mouse-pointer';
+    import Hand from '@lucide/svelte/icons/hand';
+    import Brush from '@lucide/svelte/icons/brush';
+    import Bot from '@lucide/svelte/icons/bot';
+    import Layers3 from '@lucide/svelte/icons/layers-3';
+    import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
     import { isFrameDetailsRoute } from '$lib/routes';
@@ -92,34 +97,35 @@
             visible: !annotationLabelContext.isOnAnnotationDetailsView
         },
         {
+            id: 'brush',
+            label: 'Mask brush',
+            icon: Brush,
+            shortcut: $settingsStore.key_toolbar_segmentation_mask,
+            action: 'paint',
+            visible: showSegmentationTool
+        },
+        {
             id: 'slic',
-            label: 'AI-Assisted labeling',
+            label: 'Superpixel brush',
             icon: Bot,
             shortcut: $settingsStore.key_toolbar_slic ?? 'a',
             action: 'activate',
+            hint: 'Build a mask by selecting image regions.',
             visible: showSegmentationTool && slicAvailable
         },
         {
             id: 'smart-select',
             label: 'Smart select',
             icon: WandSparkles,
-            hint: 'Segments the object that you click or box. Sends the image to fal.ai.',
+            hint: 'Segments the object that you click or box.',
             visible: showAssistedLabelingTools
         },
         {
             id: 'find-instances',
             label: 'Find all instances',
             icon: Layers3,
-            hint: 'Finds all objects that match a text prompt. Sends the image to fal.ai.',
+            hint: 'Finds all objects that match a text prompt.',
             visible: showAssistedLabelingTools
-        },
-        {
-            id: 'brush',
-            label: 'Segmentation Mask Brush',
-            icon: Brush,
-            shortcut: $settingsStore.key_toolbar_segmentation_mask,
-            action: 'paint',
-            visible: showSegmentationTool
         }
     ]);
 

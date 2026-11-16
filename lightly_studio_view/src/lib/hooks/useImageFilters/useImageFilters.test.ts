@@ -3,6 +3,7 @@ import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { QueryExpr, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
+import { createMetadataFilters } from '$lib/hooks';
 
 const queryExpr = {
     match_expr: {
@@ -100,6 +101,150 @@ describe('useImageFilters', () => {
             const sampleFilter = get(imageFilter)?.sample_filter;
             expect(sampleFilter?.confusion_cell).toBeUndefined();
             expect(sampleFilter?.sample_ids).toEqual(['sample-1']);
+        });
+    });
+
+    describe('imageFilter output', () => {
+        const embeddingRegion = {
+            polygon: [
+                { x: 0, y: 0 },
+                { x: 1, y: 0 },
+                { x: 0, y: 1 }
+            ]
+        };
+        const confusionCell = { evaluation_run_id: 'run-1', gt_label: 'car', pred_label: 'truck' };
+        const metadataFilter = {
+            filter_type: 'metadata',
+            key: 'k',
+            value: 1
+        } as unknown as ReturnType<typeof createMetadataFilters>[number];
+        const categoricalMetadataValues = { cat: ['a'] } as unknown as Parameters<
+            typeof createMetadataFilters
+        >[1];
+
+        const setParams = (params: object) => {
+            const { updateFilterParams } = useImageFilters();
+            updateFilterParams({
+                ...normalFilterParams,
+                ...params
+            } as typeof normalFilterParams);
+        };
+
+        const normalFilters = (
+            filterParams: ReturnType<typeof useImageFilters>['filterParams']
+        ) => {
+            const params = get(filterParams);
+            return params.mode === 'normal' ? params.filters : undefined;
+        };
+
+        it('updateSampleIds does nothing in classifier mode', () => {
+            const { filterParams, updateSampleIds } = useImageFilters();
+            setParams({ mode: 'classifier' });
+            const before = get(filterParams);
+            updateSampleIds(['s1']);
+            expect(get(filterParams)).toBe(before);
+        });
+
+        it('updateSampleIds clears sample ids for an empty list', () => {
+            const { filterParams, updateSampleIds } = useImageFilters();
+            setParams({});
+            updateSampleIds(['s1']);
+            expect(normalFilters(filterParams)?.sample_ids).toEqual(['s1']);
+            updateSampleIds([]);
+            expect(normalFilters(filterParams)?.sample_ids).toBeUndefined();
+        });
+
+        it('updateEmbeddingRegion stores and clears the region', () => {
+            const { filterParams, updateEmbeddingRegion } = useImageFilters();
+            setParams({});
+            updateEmbeddingRegion(embeddingRegion);
+            expect(normalFilters(filterParams)?.embedding_region).toBe(embeddingRegion);
+            updateEmbeddingRegion(null);
+            expect(normalFilters(filterParams)?.embedding_region).toBeUndefined();
+        });
+
+        it('returns null without a collection id', () => {
+            const { imageFilter } = useImageFilters();
+            setParams({ collection_id: undefined });
+            expect(get(imageFilter)).toBeNull();
+        });
+
+        it('returns null in classifier mode', () => {
+            const { imageFilter } = useImageFilters();
+            setParams({ mode: 'classifier' });
+            expect(get(imageFilter)).toBeNull();
+        });
+
+        it('returns only the filter type when nothing is set', () => {
+            const { imageFilter } = useImageFilters();
+            setParams({});
+            expect(get(imageFilter)).toEqual({ filter_type: 'image' });
+        });
+
+        it('pins every field', () => {
+            const { imageFilter, updateQueryExpr } = useImageFilters();
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([metadataFilter]);
+            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
+            setParams({
+                filters: {
+                    dimensions: { min_width: 1, max_width: 2, min_height: 3, max_height: 4 },
+                    sample_ids: ['s'],
+                    embedding_region: embeddingRegion,
+                    annotation_label_ids: ['l'],
+                    tag_ids: ['t'],
+                    confusion_cell: confusionCell
+                },
+                metadata_values: { k: { min: 0, max: 1 } }
+            });
+            expect(get(imageFilter)).toEqual({
+                filter_type: 'image',
+                width: { min: 1, max: 2 },
+                height: { min: 3, max: 4 },
+                sample_filter: {
+                    sample_ids: ['s'],
+                    embedding_region: embeddingRegion,
+                    annotations_filter: {
+                        filter_type: 'annotations',
+                        annotation_label_ids: ['l']
+                    },
+                    tag_ids: ['t'],
+                    confusion_cell: confusionCell,
+                    metadata_filters: [metadataFilter],
+                    query_expr: queryExpr
+                }
+            });
+        });
+
+        it('drops empty lists', () => {
+            const { imageFilter } = useImageFilters();
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([]);
+            setParams({
+                filters: { sample_ids: [], annotation_label_ids: [], tag_ids: [] },
+                metadata_values: {}
+            });
+            expect(get(imageFilter)).toEqual({ filter_type: 'image' });
+        });
+
+        it('sends only annotation label ids', () => {
+            const { imageFilter } = useImageFilters();
+            setParams({ filters: { annotation_label_ids: ['l'], collection_ids: ['c'] } });
+            expect(get(imageFilter)).toEqual({
+                filter_type: 'image',
+                sample_filter: {
+                    annotations_filter: {
+                        filter_type: 'annotations',
+                        annotation_label_ids: ['l']
+                    }
+                }
+            });
+        });
+
+        it('passes categorical-only metadata', () => {
+            const { imageFilter } = useImageFilters();
+            vi.mocked(createMetadataFilters).mockReturnValueOnce([metadataFilter]);
+            setParams({ categorical_metadata_values: categoricalMetadataValues });
+            expect(get(imageFilter)?.sample_filter?.metadata_filters).toEqual([metadataFilter]);
+            expect(createMetadataFilters).toHaveBeenCalledWith({}, categoricalMetadataValues);
         });
     });
 });

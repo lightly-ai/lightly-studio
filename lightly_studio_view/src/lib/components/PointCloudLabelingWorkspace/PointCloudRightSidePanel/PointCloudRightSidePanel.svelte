@@ -17,6 +17,14 @@
         annotationSources?: readonly AnnotationSource[];
         /** ID of the currently expanded annotation row; bindable. */
         selectedCuboidId?: string | null;
+        /** Sequence sample, the same one as in the sequences grid; hidden until it loads. */
+        sequence?: {
+            sampleId: string;
+            collectionId: string;
+            tags: { tag_id?: string; name: string }[];
+        };
+        /** Reloads the sequence after a tag is added or removed. */
+        onSequenceTagsChange?: () => void;
         /** Group sample of the active tick; the tags segment is hidden until it loads. */
         tick?: {
             sampleId: string;
@@ -31,6 +39,12 @@
         editable?: boolean;
         /** Called when the user commits a geometry change in the detail panel. */
         onCuboidTransform?: ReturnType<typeof useUpdateCuboidAnnotation>['handleCuboidTransform'];
+        /** Called when the user selects a new annotation class for a cuboid. */
+        onLabelChange?: (
+            annotationId: string,
+            labelName: string,
+            annotationSourceId: string
+        ) => void;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
     }
@@ -40,10 +54,13 @@
         annotationClasses = [],
         annotationSources = [],
         selectedCuboidId = $bindable(null),
+        sequence,
+        onSequenceTagsChange,
         tick,
         onTagsChange,
         editable = false,
         onCuboidTransform,
+        onLabelChange,
         onDeleteCuboid
     }: Props = $props();
 </script>
@@ -53,11 +70,23 @@
     data-testid="point-cloud-right-side-panel"
 >
     <div class="flex flex-1 flex-col">
+        {#if sequence}
+            {#key sequence.sampleId}
+                <SegmentTags
+                    title="Sequence tags"
+                    tags={sequence.tags}
+                    collectionId={sequence.collectionId}
+                    sampleId={sequence.sampleId}
+                    onRefetch={onSequenceTagsChange}
+                />
+            {/key}
+        {/if}
         {#if tick}
             <!-- Stays mounted while the next tick loads to keep the layout steady. -->
             <div inert={tick.isStale} data-testid="point-cloud-tick-tags">
                 {#key tick.sampleId}
                     <SegmentTags
+                        title="Frame tags"
                         tags={tick.tags}
                         collectionId={tick.collectionId}
                         sampleId={tick.sampleId}
@@ -74,6 +103,7 @@
                 bind:selectedCuboidId
                 {editable}
                 {onCuboidTransform}
+                {onLabelChange}
                 {onDeleteCuboid}
             />
         </Segment>
