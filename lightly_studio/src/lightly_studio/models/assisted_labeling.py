@@ -30,6 +30,8 @@ MAX_INSTANCES_TEXT_PROMPT_LENGTH = 200
 DEFAULT_MODEL_THRESHOLD = 0.5
 MAX_MODEL_ID_LENGTH = 200
 # A labeling model can predict hundreds of objects. The GUI saves one annotation per preview.
+# A mask preview holds a run-length encoding of the full image, so the limit also keeps the
+# response small.
 MAX_MODEL_PREVIEWS = 300
 
 # The validators raise `PydanticCustomError` instead of `ValueError`, because the error
