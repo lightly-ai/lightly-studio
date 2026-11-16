@@ -71,7 +71,7 @@ endif
 .PHONY: install-optional-deps
 install-optional-deps:
 	@echo "Installing with optional dependencies..."
-	uv sync --group docs --extra cloud-storage --extra fal
+	uv sync --group docs --extra cloud-storage --extra fal --extra jobs
 
 # `--out-dir dist` on every `uv build` below: in a uv workspace `uv build` defaults to the
 # workspace root, so without it the wheel would land in ../dist instead of lightly_studio/dist.
