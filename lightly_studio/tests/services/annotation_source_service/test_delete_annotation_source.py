@@ -143,29 +143,28 @@ def test_delete_annotation_source__used_by_evaluation_run(db_session: Session) -
     assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
 
 
-def test_delete_annotation_source__has_child_collection(db_session: Session) -> None:
+def test_delete_annotation_source__with_child_collection(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
     (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
+    source_id = pred.annotation_collection_id
     create_collection(
         session=db_session,
         collection_name="crops",
-        parent_collection_id=pred.annotation_collection_id,
+        parent_collection_id=source_id,
         sample_type=SampleType.IMAGE,
     )
 
-    with pytest.raises(
-        AnnotationSourceInUseError,
-        match=r"'predictions' cannot be deleted because it has data attached: crops\.",
-    ):
-        annotation_source_service.delete_annotation_source(
-            session=db_session,
-            dataset_collection_id=collection.collection_id,
-            annotation_source_id=pred.annotation_collection_id,
-        )
-    assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
+    deleted_count = annotation_source_service.delete_annotation_source(
+        session=db_session,
+        dataset_collection_id=collection.collection_id,
+        annotation_source_id=source_id,
+    )
+
+    assert deleted_count == 1
+    assert collection_resolver.get_subtree_ids(session=db_session, collection_id=source_id) == []
 
 
 def test_delete_annotation_source__exported(db_session: Session) -> None:
@@ -221,27 +220,26 @@ def test_delete_annotation_source__caption_with_caption(db_session: Session) -> 
     (pred,) = create_source_annotations(
         session=db_session, image=image, source_name="predictions", count=1
     )
+    source_id = pred.annotation_collection_id
     caption = create_caption(
-        session=db_session,
-        collection_id=pred.annotation_collection_id,
-        parent_sample_id=pred.sample_id,
+        session=db_session, collection_id=source_id, parent_sample_id=pred.sample_id
     )
-    create_caption(
+    nested_caption = create_caption(
         session=db_session,
         collection_id=caption.sample.collection_id,
         parent_sample_id=caption.sample_id,
     )
+    caption_sample_ids = [caption.sample_id, nested_caption.sample_id]
 
-    with pytest.raises(
-        AnnotationSourceInUseError,
-        match=r"'predictions' cannot be deleted because it has data attached: caption\.",
-    ):
-        annotation_source_service.delete_annotation_source(
-            session=db_session,
-            dataset_collection_id=collection.collection_id,
-            annotation_source_id=pred.annotation_collection_id,
-        )
-    assert annotation_resolver.get_by_id(session=db_session, annotation_id=pred.sample_id)
+    deleted_count = annotation_source_service.delete_annotation_source(
+        session=db_session,
+        dataset_collection_id=collection.collection_id,
+        annotation_source_id=source_id,
+    )
+
+    assert deleted_count == 1
+    assert caption_resolver.get_by_ids(session=db_session, sample_ids=caption_sample_ids) == []
+    assert collection_resolver.get_subtree_ids(session=db_session, collection_id=source_id) == []
 
 
 def test_delete_annotation_source__with_caption(db_session: Session) -> None:
