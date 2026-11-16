@@ -13,10 +13,11 @@ from lightly_studio.models.query_expr import (
 )
 from lightly_studio.models.sample_query import SampleInclude, SampleQueryRequest, SortKey
 from lightly_studio.models.sort_direction import SortDirection
-from lightly_studio.services.sample_services import sample_query_service
+from lightly_studio.services.sample_services import sample_query_cursor, sample_query_service
 from tests.helpers_resolvers import create_collection, create_image
 
 WIDTH = FieldRef(table="image", name="width")
+FILE_NAME = FieldRef(table="image", name="file_name")
 
 
 def test_query_samples__filter_and_sort(db_session: Session) -> None:
@@ -66,6 +67,85 @@ def test_query_samples__filter_field_of_other_table__raises(
     with pytest.raises(QueryExprError, match="not valid here"):
         sample_query_service.query_samples(
             session=db_session, collection_id=collection_id, request=request
+        )
+
+
+@pytest.mark.parametrize("sort", [[], [SortKey(field=WIDTH)]])
+def test_query_samples__pages(db_session: Session, sort: list[SortKey]) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    for path in ["/a.png", "/b.png", "/c.png", "/d.png", "/e.png"]:
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=path, width=7)
+    request = SampleQueryRequest(sort=sort, limit=2)
+
+    sample_ids = []
+    while True:
+        page = sample_query_service.query_samples(
+            session=db_session, collection_id=collection_id, request=request
+        )
+        sample_ids += [sample.sample_id for sample in page.samples]
+        if page.next_cursor is None:
+            break
+        request = request.model_copy(update={"cursor": page.next_cursor})
+
+    assert len(sample_ids) == 5
+    assert len(set(sample_ids)) == 5
+
+
+def test_query_samples__cursor_of_other_sort__raises(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    for path in ["/a.png", "/b.png"]:
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=path)
+    page = sample_query_service.query_samples(
+        session=db_session, collection_id=collection_id, request=SampleQueryRequest(limit=1)
+    )
+    request = SampleQueryRequest(sort=[SortKey(field=WIDTH)], cursor=page.next_cursor)
+
+    with pytest.raises(ValueError, match="different query"):
+        sample_query_service.query_samples(
+            session=db_session, collection_id=collection_id, request=request
+        )
+
+
+def test_query_samples__offset_only_on_first_page(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    for path in ["/a.png", "/b.png", "/c.png", "/d.png"]:
+        create_image(session=db_session, collection_id=collection_id, file_path_abs=path)
+    request = SampleQueryRequest(sort=[SortKey(field=FILE_NAME)], limit=1, offset=1)
+
+    first = sample_query_service.query_samples(
+        session=db_session, collection_id=collection_id, request=request
+    )
+    second = sample_query_service.query_samples(
+        session=db_session,
+        collection_id=collection_id,
+        request=request.model_copy(update={"cursor": first.next_cursor}),
+    )
+
+    assert [sample.file_name for sample in first.samples] == ["b.png"]
+    assert [sample.file_name for sample in second.samples] == ["c.png"]
+
+
+@pytest.mark.parametrize(
+    "after",
+    [
+        [None, "00000000-0000-0000-0000-000000000001"],
+        ["7", "00000000-0000-0000-0000-000000000001"],
+        [7, 123],
+    ],
+)
+def test_query_samples__cursor_values_not_valid__raises(
+    db_session: Session, after: list[object]
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    request = SampleQueryRequest(sort=[SortKey(field=WIDTH)])
+    query_hash = sample_query_cursor.query_hash(collection_id=collection_id, request=request)
+    cursor = sample_query_cursor.encode(query_hash=query_hash, after=after)
+
+    with pytest.raises(ValueError, match="not valid"):
+        sample_query_service.query_samples(
+            session=db_session,
+            collection_id=collection_id,
+            request=request.model_copy(update={"cursor": cursor}),
         )
 
 
