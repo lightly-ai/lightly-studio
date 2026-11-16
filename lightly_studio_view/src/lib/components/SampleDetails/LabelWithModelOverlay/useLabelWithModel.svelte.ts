@@ -20,8 +20,23 @@ interface UseLabelWithModelParams {
     onSaved: () => void;
 }
 
+interface UseLabelWithModelReturn {
+    readonly predictions: ModelAnnotationPreview[];
+    readonly isGenerating: boolean;
+    readonly isEmptyResult: boolean;
+    readonly isSaving: boolean;
+    readonly canSave: boolean;
+    readonly canGenerate: boolean;
+    generate: () => Promise<void>;
+    removePrediction: (preview: ModelAnnotationPreview) => void;
+    clear: () => void;
+    save: () => Promise<void>;
+}
+
 // Runs a model on the sample, keeps its previews until the user saves or deletes them.
-export const useLabelWithModel = (getParams: () => UseLabelWithModelParams) => {
+export const useLabelWithModel = (
+    getParams: () => UseLabelWithModelParams
+): UseLabelWithModelReturn => {
     let predictions = $state<ModelAnnotationPreview[]>([]);
     let isGenerating = $state(false);
     // Set when the last run returned no objects.

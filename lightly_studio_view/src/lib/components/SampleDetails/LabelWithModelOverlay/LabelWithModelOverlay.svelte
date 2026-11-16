@@ -9,7 +9,7 @@
     type SaveAs = ComponentProps<typeof AnnotationPreview>['saveAs'];
 
     interface Props {
-        sample: { width: number; height: number };
+        sample: { width: number };
         scale: number;
         saveAs: SaveAs;
         // Owned by the parent, so the pop-up reads the same results.
