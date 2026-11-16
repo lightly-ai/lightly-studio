@@ -1,5 +1,7 @@
 <script lang="ts">
-    import { ChevronDown, ChevronRight, X } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import X from '@lucide/svelte/icons/x';
     import { Button as IconButton } from '$lib/components/ui/button';
 
     interface Props {
