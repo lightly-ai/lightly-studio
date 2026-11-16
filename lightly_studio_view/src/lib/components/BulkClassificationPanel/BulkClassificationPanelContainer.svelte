@@ -1,6 +1,7 @@
 <script lang="ts">
     import { page } from '$app/state';
     import {
+        DEFAULT_SOURCE_NAME,
         useAnnotationCollections,
         useAnnotationLabels,
         useBulkCreateClassifications,
@@ -14,7 +15,6 @@
 
     let { collectionId }: Props = $props();
 
-    const DEFAULT_SOURCE_NAME = 'annotation';
     const rootCollectionId = $derived(page.params.dataset_id!);
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
