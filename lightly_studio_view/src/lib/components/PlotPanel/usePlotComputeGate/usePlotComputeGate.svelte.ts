@@ -57,7 +57,8 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
     // dirty again: a kept start would skip the prompt next time.
     $effect(() => {
         const plotUpdatedAt = getPlotUpdatedAt();
-        if (plotUpdatedAt === 0) return;
+        // A text axes plot is a projection, so its load says nothing about a PaCMAP compute.
+        if (plotUpdatedAt === 0 || getIsAxesLayout()) return;
         untrack(() => {
             if (statusQuery.data?.is_computed === true) return;
             const collectionId = getCollectionId();
