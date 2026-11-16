@@ -110,13 +110,17 @@ describe('AnnotationCard', () => {
         expect(mocks.changeClass).toHaveBeenCalledWith('coyote');
     });
 
-    it('deletes on Delete and Backspace', async () => {
+    it('leaves Delete and Backspace to the other window listeners', async () => {
+        const windowListener = vi.fn();
+        window.addEventListener('keydown', windowListener);
         await renderCard();
 
         await fireEvent.keyDown(document.body, { key: 'Delete' });
         await fireEvent.keyDown(document.body, { key: 'Backspace' });
+        window.removeEventListener('keydown', windowListener);
 
-        expect(mocks.remove).toHaveBeenCalledTimes(2);
+        expect(mocks.remove).not.toHaveBeenCalled();
+        expect(windowListener).toHaveBeenCalledTimes(2);
     });
 
     it('closes on Esc before other window listeners see it', async () => {
@@ -140,17 +144,15 @@ describe('AnnotationCard', () => {
     });
 
     it.each(['isDrawing', 'isMovingAnnotation'])(
-        'ignores Delete and Enter while %s hides the card',
+        'ignores Enter while %s hides the card',
         async (flag) => {
             const context = $state<Record<string, unknown>>({});
             await renderCard(context);
             context[flag] = true;
             await waitFor(() => expect(screen.getByTestId('annotation-card')).not.toBeVisible());
 
-            await fireEvent.keyDown(document.body, { key: 'Delete' });
             await fireEvent.keyDown(document.body, { key: 'Enter' });
 
-            expect(mocks.remove).not.toHaveBeenCalled();
             expect(screen.queryByPlaceholderText('Pick a class')).not.toBeInTheDocument();
         }
     );
