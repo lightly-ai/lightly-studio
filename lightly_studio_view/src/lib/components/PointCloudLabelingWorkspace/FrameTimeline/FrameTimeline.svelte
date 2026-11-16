@@ -4,6 +4,7 @@
     import TimelineContent from './TimelineContent/TimelineContent.svelte';
     import TimelineTransportControls from './TimelineTransport/TimelineTransportControls.svelte';
     import TimelineBufferStatus from './TimelineBufferStatus/TimelineBufferStatus.svelte';
+    import { setTimelineViewport, useTimelineViewport } from './TimelineViewport';
 
     interface BufferRange {
         /** Inclusive zero-based index of the first buffered tick. */
@@ -89,9 +90,21 @@
         onPreviousSequence,
         onNextSequence
     }: Props = $props();
+
+    const viewport = useTimelineViewport(
+        () => ticks.length,
+        () => ticks.findIndex((tick) => tick.seq_number === currentTick)
+    );
+    setTimelineViewport(viewport);
+    let previousSequenceId: string | undefined;
+    $effect(() => {
+        if (sequenceId === previousSequenceId) return;
+        previousSequenceId = sequenceId;
+        viewport.reset();
+    });
 </script>
 
-<div class="flex min-h-0 flex-col border-t bg-background" data-testid="workspace-frame-timeline">
+<div class="flex shrink-0 flex-col border-t bg-background" data-testid="workspace-frame-timeline">
     <TimelineTransportControls
         {ticks}
         {currentTick}

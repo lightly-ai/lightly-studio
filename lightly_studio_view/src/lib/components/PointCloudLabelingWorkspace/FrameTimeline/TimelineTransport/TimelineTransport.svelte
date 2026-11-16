@@ -1,10 +1,16 @@
 <script lang="ts">
-    import { ChevronLeft, ChevronRight, Pause, Play, SkipBack, SkipForward } from '@lucide/svelte';
+    import ChevronLeft from '@lucide/svelte/icons/chevron-left';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
+    import Pause from '@lucide/svelte/icons/pause';
+    import Play from '@lucide/svelte/icons/play';
+    import SkipBack from '@lucide/svelte/icons/skip-back';
+    import SkipForward from '@lucide/svelte/icons/skip-forward';
     import { Button } from '$lib/components';
     import { Select } from '$lib/components/Select';
     import { Checkbox } from '$lib/components/ui/checkbox';
     import type { ComponentProps } from 'svelte';
     import TimelineBufferStatus from '../TimelineBufferStatus/TimelineBufferStatus.svelte';
+    import { TimelineZoomControls } from '../TimelineViewport';
 
     /** Playback interval at 1x speed, i.e. 10 Hz. */
     const BASE_INTERVAL_MS = 100;
@@ -135,6 +141,7 @@
     />
     <span class="ml-2 text-xs text-muted-foreground">{frameLabel}</span>
     <div class="ml-auto flex items-center gap-2">
+        <TimelineZoomControls />
         <TimelineBufferStatus status={bufferStatus} />
     </div>
     <label class="ml-3 flex items-center gap-1.5 text-xs text-muted-foreground">

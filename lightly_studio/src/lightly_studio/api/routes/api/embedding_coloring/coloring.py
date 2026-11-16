@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Literal
+from typing import Annotated, Literal, assert_never
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 from sqlmodel import Session
-from typing_extensions import assert_never
 
 from lightly_studio.api.routes.api.embedding_coloring import (
     annotations as annotation_coloring,

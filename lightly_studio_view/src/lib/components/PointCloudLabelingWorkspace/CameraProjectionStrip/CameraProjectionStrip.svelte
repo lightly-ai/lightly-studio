@@ -8,7 +8,8 @@
     import CameraProjectionFrame from './CameraProjectionFrame/CameraProjectionFrame.svelte';
     import { useTickCameraFrames, useTickDetails } from '$lib/hooks';
     import ProjectionControls from './ProjectionControls.svelte';
-    import { ChevronDown, ChevronUp } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import ChevronUp from '@lucide/svelte/icons/chevron-up';
     import { Button } from '$lib/components';
     import { useProjectionSettings } from './useProjectionSettings/useProjectionSettings.svelte';
     import WorkspacePanelHeader from '../WorkspacePanelHeader/WorkspacePanelHeader.svelte';

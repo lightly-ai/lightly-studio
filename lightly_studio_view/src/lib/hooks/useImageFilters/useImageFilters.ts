@@ -67,6 +67,9 @@ const imageSortBy = writable<ImageSortExpr[] | null>([
 
 export const useImageFilters = () => {
     const updateFilterParams = (params: ImagesInfiniteParams) => {
+        if (params.collection_id !== get(filterParams).collection_id) {
+            imageQueryExpression.set(null);
+        }
         filterParams.set(params);
     };
 

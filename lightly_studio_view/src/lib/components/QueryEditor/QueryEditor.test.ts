@@ -1,6 +1,7 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import '@testing-library/jest-dom';
+import { createRawSnippet } from 'svelte';
 import { toast } from 'svelte-sonner';
 import QueryEditor from './QueryEditor.svelte';
 import type { useQueryEditor } from './useQueryEditor';
@@ -42,6 +43,20 @@ describe('QueryEditor', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
+
+    it.each(['image', 'video'] as const)(
+        'saves an empty result when all %s query conditions are commented out',
+        async (sampleType) => {
+            const onSave = vi.fn();
+            render(QueryEditor, { props: { value: 'width < 500', sampleType, onSave } });
+            const query = '# width < 500\n# AND file_name = "sample#1"';
+            await simulateUserEdit(query);
+            await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+            expect(onSave).toHaveBeenCalledExactlyOnceWith(query, { status: 'empty' });
+            expect(toast.error).not.toHaveBeenCalled();
+        }
+    );
 
     it('starts with an implicit video query, rejects invalid fields, and saves a video query', async () => {
         const onSave = vi.fn();
@@ -134,6 +149,25 @@ describe('QueryEditor', () => {
         expect(screen.getByRole('button', { name: 'Re-apply' })).toBeEnabled();
 
         await rerender({ value: undefined, onSave });
+        expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
+    });
+
+    it('renders the footer actions before the apply button', () => {
+        const footerActions = createRawSnippet(() => ({
+            render: () => '<button type="button">History</button>'
+        }));
+        render(QueryEditor, { props: { onSave: vi.fn(), footerActions } });
+
+        const buttonNames = screen
+            .getAllByRole('button')
+            .map((button) => button.textContent?.trim());
+        expect(buttonNames).toEqual(['History', 'Apply']);
+    });
+
+    it('shows the draft in place of the applied value and labels the button Apply', () => {
+        render(QueryEditor, { props: { value: 'width < 500', draft: 'width <', onSave: vi.fn() } });
+
+        expect(screen.getByRole('textbox', { name: 'Query' })).toHaveValue('width <');
         expect(screen.getByRole('button', { name: 'Apply' })).toBeEnabled();
     });
 

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Button, Segment } from '$lib/components';
-    import { TagsIcon, X } from '@lucide/svelte';
+    import TagsIcon from '@lucide/svelte/icons/tags';
+    import X from '@lucide/svelte/icons/x';
     import { useTags, useAddTagToSample } from '$lib/hooks';
     import { useRemoveTagFromSample } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';

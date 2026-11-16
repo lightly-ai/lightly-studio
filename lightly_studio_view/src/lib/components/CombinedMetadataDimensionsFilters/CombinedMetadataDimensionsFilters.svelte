@@ -26,6 +26,7 @@
         categoricalFilter?: ImageFilter;
         categoricalKeys?: string[];
         onCategoricalValueToggle: (field: string, value: CategoricalMetadataValue) => void;
+        onCategoricalValuesSet: (field: string, values: CategoricalMetadataValue[]) => void;
         onCategoricalValuesClear: (field: string) => void;
     }
 
@@ -39,6 +40,7 @@
         categoricalFilter,
         categoricalKeys = [],
         onCategoricalValueToggle,
+        onCategoricalValuesSet,
         onCategoricalValuesClear
     }: Props = $props();
 
@@ -90,6 +92,11 @@
             );
         })
     );
+    let collapsedFields = $state<Record<string, boolean>>({});
+    const toggleExpanded = (metadataKey: string) => {
+        collapsedFields = { ...collapsedFields, [metadataKey]: !collapsedFields[metadataKey] };
+    };
+
     const handleMetadataValueCommit = (metadataKey: string, newValues: number[]): void => {
         const currentValues: MetadataValues = { ...$metadataValues };
         currentValues[metadataKey] = { min: newValues[0], max: newValues[1] };
@@ -106,6 +113,7 @@
                 filter={categoricalFilter}
                 {categoricalKeys}
                 onValueToggle={onCategoricalValueToggle}
+                onValuesSet={onCategoricalValuesSet}
                 onValuesClear={onCategoricalValuesClear}
             />
         {/if}
@@ -172,6 +180,8 @@
                     isInteger={$metadataInfo.find((info) => info.name === metadataKey)?.type ===
                         'integer'}
                     onValueCommit={handleMetadataValueCommit}
+                    expanded={!collapsedFields[metadataKey]}
+                    onToggleExpanded={() => toggleExpanded(metadataKey)}
                 />
             {/each}
         {/if}

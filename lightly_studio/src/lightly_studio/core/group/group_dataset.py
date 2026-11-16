@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import Self
 from uuid import UUID
-
-from typing_extensions import Self
 
 from lightly_studio.core import dataset
 from lightly_studio.core.create_sample import CreateSample

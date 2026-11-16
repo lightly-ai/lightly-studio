@@ -115,6 +115,45 @@ describe('FilterList', () => {
         expect(screen.getAllByTestId('filter-list-item')).toHaveLength(100);
     });
 
+    it('renders selected rows past the current page', () => {
+        const items = makeItems(120).map((item, index) => ({ ...item, selected: index === 99 }));
+        renderList({ items });
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(51);
+        expect(screen.getByText('Item 99')).toBeInTheDocument();
+    });
+
+    it('shows 50 more hidden rows when selected rows are already visible', async () => {
+        const items = makeItems(120).map((item, index) => ({ ...item, selected: index === 99 }));
+        renderList({ items });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Show 50 more' }));
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(101);
+        await userEvent.click(screen.getByRole('button', { name: 'Show 19 more' }));
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(120);
+    });
+
+    it('keeps a row past the page visible after it is unticked', async () => {
+        const items = makeItems(120).map((item, index) => ({ ...item, selected: index === 99 }));
+        const onToggle = vi.fn();
+        const { rerender } = render(FilterList, { items, onToggle, onSelectionChange: vi.fn() });
+
+        await userEvent.click(screen.getByRole('checkbox', { name: 'Item 99' }));
+        await rerender({ items: makeItems(120) });
+
+        expect(onToggle).toHaveBeenCalledWith('id-99');
+        expect(screen.getByRole('checkbox', { name: 'Item 99' })).not.toBeChecked();
+    });
+
+    it('hides "Show more" when only selected rows were past the page', () => {
+        const items = makeItems(60).map((item, index) => ({ ...item, selected: index >= 50 }));
+        renderList({ items });
+
+        expect(screen.getAllByTestId('filter-list-item')).toHaveLength(60);
+        expect(screen.queryByRole('button', { name: /more/ })).not.toBeInTheDocument();
+    });
+
     it('renders all rows when paging is off', () => {
         renderList({ items: makeItems(120), paged: false });
 
