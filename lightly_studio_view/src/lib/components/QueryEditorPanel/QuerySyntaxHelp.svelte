@@ -25,9 +25,12 @@
             {/if}
         </li>
         <li>Metadata: <code>metadata["quality_score"] &gt;= 0.8</code></li>
-        <li>
-            Sample evaluation: <code>sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code>
-        </li>
+        {#if sampleType === 'image'}
+            <li>
+                Sample evaluation: <code>sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code
+                >
+            </li>
+        {/if}
         <li>Tag membership: <code>"tag_name" IN tags</code></li>
         <li>
             {#if sampleType === 'video'}
