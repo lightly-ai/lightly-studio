@@ -201,9 +201,10 @@
     };
 
     $effect(() => {
-        if (createToolDisabledReason && CREATE_TOOLS.includes(sampleDetailsToolbarContext.status)) {
-            setStatus('cursor');
-        }
+        if (!createToolDisabledReason) return;
+        // A selected mask stays editable while new annotations are blocked, as the brush allows.
+        if (annotationLabelContext.annotationId) return;
+        if (CREATE_TOOLS.includes(sampleDetailsToolbarContext.status)) setStatus('cursor');
     });
 
     $effect(() => {
