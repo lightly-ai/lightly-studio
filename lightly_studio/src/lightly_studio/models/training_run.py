@@ -59,6 +59,8 @@ class TrainingRunView(BaseModel):
     train_sample_count: int
     val_sample_count: int
     created_at: datetime
+    start_run_name: Optional[str] = None
+    """The name of the run whose model this run starts from. None means the COCO weights."""
     current_step: Optional[int] = None
     total_steps: Optional[int] = None
     train_loss: Optional[float] = None

@@ -17,7 +17,11 @@ from sqlmodel import Session
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import env
 from lightly_studio.models.collection import CollectionTable, SampleType
-from lightly_studio.models.training_run import TRAINING_MODEL_NAME, TrainingRunCreate
+from lightly_studio.models.training_run import (
+    TRAINING_MODEL_NAME,
+    TrainingRunCreate,
+    TrainingRunStatus,
+)
 from lightly_studio.resolvers import collection_resolver, tag_resolver
 from lightly_studio.services.training_service import watch_training_run, write_training_files
 from lightly_studio.services.training_service.training_run_files import TrainingRunFiles
@@ -53,6 +57,7 @@ def start_training_run(  # noqa: PLR0913
     train_sample_ids, val_sample_ids = _split_sample_ids(
         session=session, collection=collection, run_create=run_create
     )
+    start_run = _start_run(registry=registry, collection_id=collection.collection_id)
     created_at = datetime.now(timezone.utc)
     training_run_id = uuid4()
     run = TrainingRun(
@@ -68,6 +73,7 @@ def start_training_run(  # noqa: PLR0913
         val_sample_ids=val_sample_ids,
         train_sample_count=len(train_sample_ids),
         created_at=created_at,
+        start_run_name=None if start_run is None else start_run.name,
     )
     try:
         write_training_files.write_training_files(
@@ -79,6 +85,7 @@ def start_training_run(  # noqa: PLR0913
             gt_annotation_collection_id=run_create.gt_annotation_collection_id,
             model_name=run.model_name,
             steps=run.steps,
+            start_model_file=None if start_run is None else start_run.files.exported_model_file,
         )
     except Exception:
         shutil.rmtree(run.files.run_dir, ignore_errors=True)
@@ -91,6 +98,14 @@ def start_training_run(  # noqa: PLR0913
         daemon=True,
     ).start()
     return run
+
+
+def _start_run(registry: TrainingRunRegistry, collection_id: UUID) -> TrainingRun | None:
+    """Return the newest completed run of the collection that has a trained model, or None."""
+    for run in registry.list_for_collection(collection_id=collection_id):
+        if run.status == TrainingRunStatus.COMPLETED and run.files.exported_model_file.exists():
+            return run
+    return None
 
 
 def _split_sample_ids(

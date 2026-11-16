@@ -53,6 +53,21 @@ class TrainingRunFiles:
         return self.out_dir / "train.log"
 
     @property
+    def exported_model_file(self) -> Path:
+        """The trained model: the best one, or the last one if there is no best one.
+
+        LightlyTrain saves the best model only after a validation round improves the metric.
+        """
+        exported_dir = self.out_dir / "exported_models"
+        best_file = exported_dir / "exported_best.pt"
+        return best_file if best_file.exists() else exported_dir / "exported_last.pt"
+
+    @property
+    def start_model_file(self) -> Path:
+        """The copy of the start model without the class head, if the classes changed."""
+        return self.run_dir / "start_model.pt"
+
+    @property
     def process_log_file(self) -> Path:
         """The stdout and stderr of the training process."""
         return self.run_dir / "process.log"

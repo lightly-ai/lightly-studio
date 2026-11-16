@@ -25,6 +25,9 @@
     <p class="text-xs text-muted-foreground">
         {run.model_name} · {run.train_sample_count} train · {run.val_sample_count} val images
     </p>
+    <p class="text-xs text-muted-foreground" data-testid="training-run-start-model">
+        Started from {run.start_run_name ?? 'COCO weights'}
+    </p>
     {#if run.status === 'training'}
         <div class="h-2 w-full overflow-hidden rounded bg-muted">
             <div class="h-full bg-primary transition-all" style="width: {percent ?? 0}%"></div>

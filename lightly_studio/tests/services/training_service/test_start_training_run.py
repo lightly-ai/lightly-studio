@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import sys
+import time
 from pathlib import Path
 from uuid import UUID
 
@@ -47,6 +49,66 @@ def test_start_training_run(db_session: Session, tmp_path: Path) -> None:
     )
     assert [str(r.id) for r in runs] == [str(run.evaluation_run_id)]
     assert runs[0].name == run.name
+
+
+def test_start_training_run__starts_from_previous_model(
+    db_session: Session, tmp_path: Path
+) -> None:
+    dataset = helpers.create_training_dataset(session=db_session)
+    registry = TrainingRunRegistry()
+    first_run = _start(
+        session=db_session,
+        dataset=dataset,
+        registry=registry,
+        tmp_path=tmp_path,
+        script=helpers.FAKE_RUNNER_SCRIPT,
+    )
+    helpers.wait_until_done(run=first_run)
+    # The run names have a precision of one second.
+    time.sleep(1)
+
+    second_run = _start(
+        session=db_session,
+        dataset=dataset,
+        registry=registry,
+        tmp_path=tmp_path,
+        script=helpers.FAKE_RUNNER_SCRIPT,
+    )
+    helpers.wait_until_done(run=second_run)
+
+    assert first_run.start_run_name is None
+    assert second_run.start_run_name == first_run.name
+    config = json.loads(second_run.files.config_file.read_text())
+    assert config["start_model_file"] == str(
+        first_run.files.out_dir / "exported_models" / "exported_best.pt"
+    )
+
+
+def test_start_training_run__skips_failed_run(db_session: Session, tmp_path: Path) -> None:
+    dataset = helpers.create_training_dataset(session=db_session)
+    registry = TrainingRunRegistry()
+    failed_run = _start(
+        session=db_session,
+        dataset=dataset,
+        registry=registry,
+        tmp_path=tmp_path,
+        script="import sys\nsys.exit(1)\n",
+    )
+    helpers.wait_until_done(run=failed_run)
+
+    run = _start(
+        session=db_session,
+        dataset=dataset,
+        registry=registry,
+        tmp_path=tmp_path,
+        script=helpers.FAKE_RUNNER_SCRIPT,
+    )
+    helpers.wait_until_done(run=run)
+
+    assert failed_run.status == TrainingRunStatus.FAILED
+    assert run.start_run_name is None
+    config = json.loads(run.files.config_file.read_text())
+    assert config["start_model_file"] is None
 
 
 def test_start_training_run__process_fails(db_session: Session, tmp_path: Path) -> None:

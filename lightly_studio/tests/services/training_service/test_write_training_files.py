@@ -36,6 +36,7 @@ def test_write_training_files(db_session: Session, tmp_path: Path) -> None:
         gt_annotation_collection_id=dataset.gt_annotation_collection_id,
         model_name="model-a",
         steps=7,
+        start_model_file=Path("/runs/previous/exported_best.pt"),
     )
 
     train_coco = json.loads(files.train_annotations_file.read_text())
@@ -53,6 +54,8 @@ def test_write_training_files(db_session: Session, tmp_path: Path) -> None:
     config = json.loads(files.config_file.read_text())
     assert config["model_name"] == "model-a"
     assert config["steps"] == 7
+    assert config["start_model_file"] == "/runs/previous/exported_best.pt"
+    assert config["start_model_copy_file"] == str(files.start_model_file)
     assert config["out_dir"] == str(files.out_dir)
 
 
@@ -70,6 +73,7 @@ def test_write_training_files__no_train_annotations(db_session: Session, tmp_pat
             gt_annotation_collection_id=dataset.gt_annotation_collection_id,
             model_name="model-a",
             steps=7,
+            start_model_file=None,
         )
 
 
@@ -91,4 +95,5 @@ def test_write_training_files__remote_image(db_session: Session, tmp_path: Path)
             gt_annotation_collection_id=dataset.gt_annotation_collection_id,
             model_name="model-a",
             steps=7,
+            start_model_file=None,
         )

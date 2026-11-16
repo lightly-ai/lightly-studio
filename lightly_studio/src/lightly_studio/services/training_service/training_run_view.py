@@ -24,6 +24,7 @@ def to_view(run: TrainingRun) -> TrainingRunView:
         train_sample_count=run.train_sample_count,
         val_sample_count=len(run.val_sample_ids),
         created_at=run.created_at,
+        start_run_name=run.start_run_name,
         current_step=progress.current_step,
         total_steps=progress.total_steps,
         train_loss=progress.train_loss,

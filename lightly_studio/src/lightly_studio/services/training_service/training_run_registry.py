@@ -30,6 +30,8 @@ class TrainingRun:
     val_sample_ids: list[UUID]
     train_sample_count: int
     created_at: datetime
+    start_run_name: str | None = None
+    """The name of the run whose model this run starts from. None means the COCO weights."""
     status: TrainingRunStatus = TrainingRunStatus.TRAINING
     process: subprocess.Popen[bytes] | None = None
     cancel_requested: bool = False

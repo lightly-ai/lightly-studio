@@ -92,6 +92,19 @@ active at a time.
 When the run is completed, the predictions are in the new annotation source, and the evaluation
 results are in the evaluation run with the same name.
 
+## Continue training
+
+The first run starts from the COCO weights of PicoDet-S. Each new run starts from the model of the
+newest completed run of the same collection. The run card shows the start model: "Started from
+lightly_train_<timestamp>" or "Started from COCO weights".
+
+- If the classes changed since that run, the new run keeps the trained weights but gets a new class
+  head. The training process writes a copy of the start model without the class head to
+  `start_model.pt` in the run folder.
+- Failed and cancelled runs are not used.
+- Studio keeps the runs in memory. After a restart of Studio, the first run starts from the COCO
+  weights again.
+
 ## Use your own data
 
 You can train on each image collection that has:
@@ -112,6 +125,7 @@ working directory. To change it, set `LIGHTLY_STUDIO_TRAINING_RUNS_DIR`.
 | `predict_images.json` | The images to predict on |
 | `stage.txt` | The current stage: `training` or `predicting` |
 | `process.log` | The output of the training process |
+| `start_model.pt` | Only if the classes changed: the start model without the class head |
 | `predictions.json` | The predictions |
 | `lightly_train/train.log` | The LightlyTrain log with the training progress |
 | `lightly_train/exported_models/` | The trained model: `exported_best.pt`, or `exported_last.pt` if there is no best model |

@@ -25,7 +25,7 @@ from tests.helpers_resolvers import (
     create_tag,
 )
 
-# Writes a train log and one "cat" box per image, like the real runner does.
+# Writes a train log, an exported model and one "cat" box per image, like the real runner.
 FAKE_RUNNER_SCRIPT = """
 import json, sys
 from pathlib import Path
@@ -34,6 +34,8 @@ config = json.loads(Path(sys.argv[1]).read_text())
 out_dir = Path(config["out_dir"])
 out_dir.mkdir(parents=True)
 (out_dir / "train.log").write_text("Train Step 2/2 | Epoch 0 | train_loss: 0.5000\\n")
+(out_dir / "exported_models").mkdir()
+(out_dir / "exported_models" / "exported_best.pt").write_text("model")
 images = json.loads(Path(config["predict_images_file"]).read_text())
 predictions = [
     {

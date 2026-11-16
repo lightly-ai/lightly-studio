@@ -48,6 +48,8 @@ def main(config_path: Path) -> None:
     lightly_train.train_object_detection(
         out=str(out_dir),
         model=config["model_name"],
+        # With a checkpoint, LightlyTrain starts from its weights instead of the COCO weights.
+        checkpoint=_start_checkpoint(config=config),
         data={
             "format": "coco",
             "train": {"annotations": config["train_annotations_file"]},
@@ -71,6 +73,54 @@ def main(config_path: Path) -> None:
     images = json.loads(Path(config["predict_images_file"]).read_text(encoding="utf-8"))
     predictions = _predict(model=model, images=images, threshold=config["score_threshold"])
     Path(config["predictions_file"]).write_text(json.dumps(predictions), encoding="utf-8")
+
+
+def _start_checkpoint(config: dict[str, Any]) -> str | None:
+    """Return the model to start training from, or None to start from the COCO weights.
+
+    If the classes of the start model are not the classes of the train annotations, the
+    class head of the start model does not fit. Then this function writes a copy of the
+    start model without the class head, so that LightlyTrain initializes a new class head
+    and keeps the other weights.
+    """
+    start_model_file = config["start_model_file"]
+    if start_model_file is None:
+        return None
+    checkpoint = torch.load(start_model_file, map_location="cpu", weights_only=False)
+    if _classes_match(
+        checkpoint=checkpoint, train_annotations_file=Path(config["train_annotations_file"])
+    ):
+        print(f"Starting from the model '{start_model_file}'.", flush=True)
+        return str(start_model_file)
+
+    # The PicoDet class head layers have "gfl_cls" in their names.
+    checkpoint["train_model"] = {
+        key: value for key, value in checkpoint["train_model"].items() if ".gfl_cls." not in key
+    }
+    torch.save(checkpoint, config["start_model_copy_file"])
+    print(
+        f"Starting from the model '{start_model_file}' with a new class head, "
+        "because the classes changed.",
+        flush=True,
+    )
+    return str(config["start_model_copy_file"])
+
+
+def _classes_match(checkpoint: dict[str, Any], train_annotations_file: Path) -> bool:
+    """Return whether the model has the same classes as the train annotations.
+
+    The model has its classes in `checkpoint["model_init_args"]["classes"]`, a dict from
+    the class ID to the class name, for example `{0: "animal", 1: "human"}`. The COCO
+    file has its classes in "categories", a list of `{"id": ..., "name": ...}` entries.
+    """
+    model_classes = checkpoint.get("model_init_args", {}).get("classes")
+    if model_classes is None:
+        return False
+    coco = json.loads(train_annotations_file.read_text(encoding="utf-8"))
+    # Compare the full mapping from class ID to name, because a new class can shift the IDs
+    # of the other classes.
+    train_classes = {int(c["id"]): str(c["name"]) for c in coco["categories"]}
+    return {int(k): str(v) for k, v in model_classes.items()} == train_classes
 
 
 def _write_stage(config: dict[str, Any], stage: str) -> None:

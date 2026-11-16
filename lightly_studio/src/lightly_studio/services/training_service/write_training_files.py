@@ -31,8 +31,12 @@ def write_training_files(  # noqa: PLR0913
     gt_annotation_collection_id: UUID,
     model_name: str,
     steps: int,
+    start_model_file: Path | None,
 ) -> None:
     """Write the COCO annotations, the images to predict on and the config of a run.
+
+    `start_model_file` is the model that training starts from. If it is None, training
+    starts from the COCO weights of `model_name`.
 
     Raises:
         ValueError: If the train samples have no ground truth annotations, or if an image
@@ -57,6 +61,8 @@ def write_training_files(  # noqa: PLR0913
     config = {
         "model_name": model_name,
         "steps": steps,
+        "start_model_file": None if start_model_file is None else str(start_model_file),
+        "start_model_copy_file": str(files.start_model_file),
         "score_threshold": PREDICTION_SCORE_THRESHOLD,
         "train_annotations_file": str(files.train_annotations_file),
         "val_annotations_file": str(files.val_annotations_file),
