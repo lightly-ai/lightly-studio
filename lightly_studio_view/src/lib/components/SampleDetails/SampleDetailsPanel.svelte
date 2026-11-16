@@ -13,6 +13,7 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { untrack, type Snippet } from 'svelte';
 
+    import { cn } from '$lib/utils/shadcn';
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
     import {
@@ -313,27 +314,30 @@
                     </CardContent>
                 </Card>
             </div>
-            {#if !$isSampleDetailsSidePanelCollapsed}
-                <div class="relative w-[375px]">
-                    {#if sidePanelItem}
-                        {@render sidePanelItem()}
-                    {:else}
-                        <SampleDetailsSidePanel
-                            bind:annotationsIdsToHide
-                            {sample}
-                            onUpdate={refetch}
-                            {collectionId}
-                            {isPanModeEnabled}
-                        >
-                            {#snippet metadataItem()}
-                                {#if metadataValue}
-                                    {@render metadataValue()}
-                                {/if}
-                            {/snippet}
-                        </SampleDetailsSidePanel>
-                    {/if}
-                </div>
-            {/if}
+            <div
+                class={cn(
+                    'relative w-[375px]',
+                    $isSampleDetailsSidePanelCollapsed ? 'hidden' : 'flex'
+                )}
+            >
+                {#if sidePanelItem}
+                    {@render sidePanelItem()}
+                {:else}
+                    <SampleDetailsSidePanel
+                        bind:annotationsIdsToHide
+                        {sample}
+                        onUpdate={refetch}
+                        {collectionId}
+                        {isPanModeEnabled}
+                    >
+                        {#snippet metadataItem()}
+                            {#if metadataValue}
+                                {@render metadataValue()}
+                            {/if}
+                        {/snippet}
+                    </SampleDetailsSidePanel>
+                {/if}
+            </div>
         </div>
     </div>
 {:else}
