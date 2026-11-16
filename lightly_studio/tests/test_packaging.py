@@ -11,8 +11,14 @@ from packaging.requirements import Requirement
 
 WORKSPACE_DEPENDENCY = "lightly-studio-serve"
 JOBS_DEPENDENCY = "hatchet-sdk"
-# Each of these modules must import when the jobs extra is not installed.
-MODULES_WITHOUT_JOBS_EXTRA = ("lightly_studio", "lightly_studio.api.app")
+# These modules must not import the Hatchet SDK, so that they work without the jobs extra.
+# Only the jobs engine module and the worker main can import the SDK.
+MODULES_WITHOUT_JOBS_EXTRA = (
+    "lightly_studio",
+    "lightly_studio.api.app",
+    "lightly_studio.jobs",
+    "lightly_studio.jobs.settings",
+)
 
 
 def test_workspace_dependency__requirement_admits_the_installed_version() -> None:
