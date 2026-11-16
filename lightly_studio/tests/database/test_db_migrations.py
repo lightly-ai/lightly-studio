@@ -1023,6 +1023,43 @@ def test_postgres_tag_kind__dropped_and_restored(
         engine.dispose()
 
 
+def test_postgres_job__added_and_dropped(postgres_url: str | None) -> None:
+    """The job migration adds the table with its partial index, the downgrade drops both."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+
+    _reset_postgres_database(engine_url=postgres_url)
+    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        indexes = db_migrations._get_inspector(engine=engine).get_indexes(table_name="job")
+        assert {index["name"] for index in indexes} == {
+            "ix_job_resource_id",
+            "uq_job_resource_active",
+        }
+
+        config.attributes.pop("connection", None)
+        command.check(config)
+
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.downgrade, revision="8660d246e98e"
+        )
+        assert not db_migrations._get_inspector(engine=engine).has_table(table_name="job")
+        with engine.connect() as connection:
+            assert (
+                connection.execute(
+                    statement=text("SELECT count(*) FROM pg_type WHERE typname = 'jobstatus'")
+                ).scalar_one()
+                == 0
+            )
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
 def _metadata_column_data_type(engine: Engine, column_name: str) -> str:
     """Return the SQL ``data_type`` of a ``metadata`` column, e.g. ``json`` or ``jsonb``."""
     with engine.connect() as connection:
