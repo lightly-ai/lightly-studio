@@ -511,13 +511,12 @@
     const hasFilterPanel = $derived(isCollectionGrid || isCaptions);
 
     const panelIsVisible = $derived(
-        isPanelVisible(
-            $activePanel,
+        isPanelVisible($activePanel, {
             isImages,
             hasMediaWithEmbeddings,
             supportsDistribution,
             supportsQuery
-        )
+        })
     );
 
     // False only once annotation labels have loaded and come back empty — not
