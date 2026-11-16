@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { Eye } from '@lucide/svelte';
+import Eye from '@lucide/svelte/icons/eye';
 import { describe, expect, it, vi } from 'vitest';
 import FilterActionButton from './FilterActionButton.svelte';
 

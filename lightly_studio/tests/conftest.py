@@ -585,9 +585,12 @@ def _truncate_tables(session: Session, backend: DatabaseBackend) -> None:
 
 
 def _truncate_tables_postgres(session: Session) -> None:
-    """Reset all tables on Postgres with TRUNCATE ... CASCADE."""
-    for table in reversed(SQLModel.metadata.sorted_tables):
-        session.execute(sqlalchemy.text(f'TRUNCATE TABLE "{table.name}" CASCADE'))
+    """Reset all tables on Postgres with one TRUNCATE ... CASCADE.
+
+    One statement for all tables is much faster than one statement per table.
+    """
+    table_names = ", ".join(f'"{table.name}"' for table in SQLModel.metadata.sorted_tables)
+    session.execute(sqlalchemy.text(f"TRUNCATE TABLE {table_names} CASCADE"))
     session.commit()
 
 

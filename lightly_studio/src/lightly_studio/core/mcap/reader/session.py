@@ -179,7 +179,8 @@ class TopicIndex:
             TopicNotFoundError: If the topic is not in the file.
         """
         self.topics()
-        assert self._topics_by_name is not None
+        if self._topics_by_name is None:
+            raise RuntimeError("Expected `self._topics_by_name` to be set.")
         topic_info = self._topics_by_name.get(topic)
         if topic_info is None:
             raise TopicNotFoundError(f"Topic '{topic}' is not in MCAP file '{self._path}'.")
@@ -199,7 +200,8 @@ class TopicIndex:
     def has_topic(self, topic: str) -> bool:
         """Returns whether a topic is in the file."""
         self.topics()
-        assert self._topics_by_name is not None
+        if self._topics_by_name is None:
+            raise RuntimeError("Expected `self._topics_by_name` to be set.")
         return topic in self._topics_by_name
 
     def require_chunk_index(self) -> None:

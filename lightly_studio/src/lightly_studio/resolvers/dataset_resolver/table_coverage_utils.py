@@ -28,11 +28,12 @@ def verify_table_coverage() -> None:
     and delete_dataset operations are updated to handle them appropriately.
 
     Raises:
-        AssertionError: If the number of SQLModel tables has changed.
+        RuntimeError: If the number of SQLModel tables has changed.
     """
     actual_count = len(SQLModel.metadata.tables)
-    assert actual_count == _TOTAL_TABLES_COUNT, (
-        f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
-        "Update deep_copy and delete_dataset to handle new tables, then update "
-        "_HANDLED_TABLES_COUNT in table_coverage_utils.py."
-    )
+    if actual_count != _TOTAL_TABLES_COUNT:
+        raise RuntimeError(
+            f"Table count changed ({actual_count} != {_TOTAL_TABLES_COUNT}). "
+            "Update deep_copy and delete_dataset to handle new tables, then update "
+            "_HANDLED_TABLES_COUNT in table_coverage_utils.py."
+        )

@@ -2,7 +2,10 @@ import * as THREE from 'three';
 
 type SceneCamera = THREE.PerspectiveCamera | THREE.OrthographicCamera;
 
-/** Resolves pan axes in the projection plane or the perspective ground plane. */
+/**
+ * Resolves movement axes in the projection plane, or for a perspective camera along its
+ * view direction and sideways on the ground plane.
+ */
 export function getMovementAxes(
     camera: SceneCamera,
     position: THREE.Vector3,
@@ -14,11 +17,8 @@ export function getMovementAxes(
             right: new THREE.Vector3(1, 0, 0).applyQuaternion(camera.quaternion)
         };
     }
-    const direction = center.clone().sub(position);
-    direction.z = 0;
-    direction.normalize();
-    const right = direction
-        .clone()
+    const direction = center.clone().sub(position).normalize();
+    const right = new THREE.Vector3(direction.x, direction.y, 0)
         .cross(new THREE.Vector3(0, 0, 1))
         .normalize();
     return { direction, right };
@@ -31,9 +31,9 @@ export function getNavigationDistance(camera: SceneCamera, center: THREE.Vector3
         : camera.position.distanceTo(center);
 }
 
-/** Rotates a camera position around its current target. */
+const UP = new THREE.Vector3(0, 0, 1);
+
+/** Orbits a camera position around the vertical axis through its target; the height stays. */
 export function rotatePosition(position: THREE.Vector3, center: THREE.Vector3, angle: number) {
-    const spherical = new THREE.Spherical().setFromVector3(position.clone().sub(center));
-    spherical.theta += angle;
-    position.copy(center).add(new THREE.Vector3().setFromSpherical(spherical));
+    position.sub(center).applyAxisAngle(UP, angle).add(center);
 }

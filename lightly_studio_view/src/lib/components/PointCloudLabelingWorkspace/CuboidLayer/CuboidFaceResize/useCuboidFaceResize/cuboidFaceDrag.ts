@@ -1,9 +1,8 @@
 import type { IntersectionEvent } from '@threlte/extras';
-import { Plane, Vector2, Vector3, type Camera, type Object3D, type Raycaster } from 'three';
+import { Plane, Vector2, Vector3, type Camera, type Raycaster } from 'three';
 import type * as Domain from '$lib/components/PointCloudLabelingWorkspace/domain';
 import {
     FACE_DEFINITIONS,
-    MIN_CUBOID_SIZE,
     computeFaceNormalWorld,
     computeResizedCuboid
 } from '../cuboidFaceResize';
@@ -115,23 +114,4 @@ export function computePointerResize({
         faceNormalWorld: drag.faceNormalWorld,
         delta: hitPoint.sub(drag.startPoint).dot(normal)
     });
-}
-
-interface ResizeTransformParams {
-    object: Object3D;
-    originalSize: Domain.Vector3;
-}
-
-export function readResizeTransform({
-    object,
-    originalSize
-}: ResizeTransformParams): ReturnType<typeof computeResizedCuboid> {
-    return {
-        center: [object.position.x, object.position.y, object.position.z],
-        size: [
-            Math.max(originalSize[0] * object.scale.x, MIN_CUBOID_SIZE),
-            Math.max(originalSize[1] * object.scale.y, MIN_CUBOID_SIZE),
-            Math.max(originalSize[2] * object.scale.z, MIN_CUBOID_SIZE)
-        ]
-    };
 }

@@ -119,7 +119,8 @@ def get_tick_details(
             timestamp_ns=link.timestamp_ns,
         )
     tick_sample = sample_resolver.get_by_id(session=session, sample_id=link.sample_id)
-    assert tick_sample is not None
+    if tick_sample is None:
+        raise RuntimeError("Expected `tick_sample` to be set.")
     return TickDetailView(
         sample_id=link.sample_id,
         collection_id=tick_sample.collection_id,

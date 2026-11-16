@@ -1,10 +1,11 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { LoaderCircle as Loader2 } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-circle';
     import {
         executeOperator,
         getOperatorParameters,
@@ -25,6 +26,8 @@
     } from '$lib/hooks/useOperatorContext/useOperatorContext';
     import type { SampleType } from '$lib/api/lightly_studio_local';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useClearAllFilters } from '$lib/components/ClearAllFiltersButton';
+    import { isImagesRoute, isVideoFramesRoute, isVideosRoute } from '$lib/routes';
     import { useQueryClient } from '@tanstack/svelte-query';
     import { useOperatorsDialog } from '$lib/hooks/useOperatorsDialog/useOperatorsDialog';
 
@@ -58,11 +61,22 @@
     const queryClient = useQueryClient();
     const { setPluginExecuting } = useOperatorsDialog();
 
-    const collectionId = $page.params.collection_id!;
-
-    const { tagsSelected } = useTags({ collection_id: collectionId });
-
-    const { scopeLabel, contextFilter } = useOperatorContext(pageContext, tagsSelected);
+    // The dialog stays mounted across navigation, so the hooks are created again whenever the
+    // collection or the grid changes.
+    const collectionId = $derived($page.params.collection_id!);
+    const isImages = $derived(isImagesRoute($page.route.id));
+    const isVideos = $derived(isVideosRoute($page.route.id));
+    const isVideoFrames = $derived(isVideoFramesRoute($page.route.id));
+    const { scopeLabel, contextFilter } = $derived.by(() => {
+        const { tagsSelected } = useTags({ collection_id: collectionId, autoLoad: false });
+        const { hasActiveFilters } = useClearAllFilters({
+            collectionId,
+            isImages,
+            isVideos,
+            isVideoFrames
+        });
+        return useOperatorContext(pageContext, tagsSelected, hasActiveFilters);
+    });
 
     function resetExecutionState() {
         executionError = undefined;

@@ -23,7 +23,7 @@ class VideoBase(SQLModel):
     height: int
 
     """The duration of the video in seconds."""
-    duration_s: Optional[float] = Field(default=None)
+    duration_s: float | None = Field(default=None)
 
     """The fps of the video."""
     fps: float
@@ -66,15 +66,15 @@ class VideoView(SQLModel):
     type: SampleType = SampleType.VIDEO
     width: int
     height: int
-    duration_s: Optional[float] = None
+    duration_s: float | None = None
     fps: float
     file_name: str
     file_path_abs: str
     sample_id: UUID
     sample: SampleView
     frame: Optional["FrameView"] = None
-    similarity_score: Optional[float] = None
-    order_value: Optional[float] = None
+    similarity_score: float | None = None
+    order_value: float | None = None
 
 
 class VideoViewsWithCount(BaseModel):
@@ -84,7 +84,7 @@ class VideoViewsWithCount(BaseModel):
 
     samples: list[VideoView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")
 
 
 class VideoFrameBase(SQLModel):
@@ -149,7 +149,7 @@ class VideoFrameViewsWithCount(BaseModel):
 
     samples: list[VideoFrameView] = PydanticField(..., alias="data")
     total_count: int
-    next_cursor: Optional[int] = PydanticField(None, alias="nextCursor")
+    next_cursor: int | None = PydanticField(None, alias="nextCursor")
 
 
 class VideoFieldsBoundsView(BaseModel):

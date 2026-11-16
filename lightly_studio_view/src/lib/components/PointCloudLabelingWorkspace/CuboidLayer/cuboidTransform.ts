@@ -20,14 +20,26 @@ export function restoreTransformSnapshot(
     obj.scale.copy(snapshot.scale);
 }
 
-export const GIZMO_MODES: Partial<Record<Domain.WorkspaceTool, 'translate' | 'rotate' | 'scale'>> =
-    {
-        translate: 'translate',
-        rotate: 'rotate'
-    };
+const EDIT_MODES = ['translate', 'rotate', 'resize'] as const;
 
-export function getCuboidGizmoMode(tool: Domain.WorkspaceTool) {
-    return GIZMO_MODES[tool];
+/**
+ * Returns the edit handles to show on a selected cuboid. While editing, orthographic views
+ * show all handles for every tool except cuboid creation; perspective shows only the
+ * handle of the active tool.
+ */
+export function getCuboidEditModes({
+    tool,
+    cameraMode,
+    isEditingMode
+}: {
+    tool: Domain.WorkspaceTool;
+    cameraMode: Domain.CameraMode;
+    isEditingMode: boolean;
+}): (typeof EDIT_MODES)[number][] {
+    if (!isEditingMode || tool === 'create-cuboid') return [];
+    if (cameraMode !== 'perspective') return [...EDIT_MODES];
+    const editMode = EDIT_MODES.find((mode) => mode === tool);
+    return editMode ? [editMode] : [];
 }
 
 export function getCuboidGizmoOptions(mode: string, cameraMode: Domain.CameraMode) {

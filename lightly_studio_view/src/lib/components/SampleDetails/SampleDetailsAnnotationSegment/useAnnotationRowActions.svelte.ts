@@ -42,8 +42,7 @@ export const useAnnotationRowActions = (
     const select = (annotationId: string) =>
         selectAnnotation({
             annotationId,
-            annotations: getAnnotations(),
-            collectionId: getCollectionId()
+            annotations: getAnnotations()
         });
 
     return {

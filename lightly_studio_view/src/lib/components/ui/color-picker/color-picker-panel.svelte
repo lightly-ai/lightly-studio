@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
     import { Slider } from '$lib/components/ui/slider';
-    import { X } from '@lucide/svelte';
+    import X from '@lucide/svelte/icons/x';
     import { hexToHsl, isHexColor } from './color-picker.helpers';
     import HueSlider from './hue-slider.svelte';
     import PresetSwatches from './preset-swatches.svelte';

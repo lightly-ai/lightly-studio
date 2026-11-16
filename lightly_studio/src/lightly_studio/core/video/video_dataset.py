@@ -97,7 +97,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         frame_collection = collection_resolver.get_by_id(
             session=self.session, collection_id=frame_collection_id
         )
-        assert frame_collection is not None
+        if frame_collection is None:
+            raise RuntimeError("Expected `frame_collection` to be set.")
         return VideoFrameDataset(collection=frame_collection)
 
     def get_sample(self, sample_id: UUID) -> VideoSample:
