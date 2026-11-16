@@ -137,6 +137,15 @@ describe('SampleDetailsToolbar', () => {
             expect(mockSampleDetailsToolbarContext.status).toBe('cursor');
         });
 
+        it('keeps the brush while a mask is selected, which it may still edit', () => {
+            mockAnnotationLabelContext.annotationId = 'mask-1';
+            mockSampleDetailsToolbarContext.status = 'brush';
+
+            render(SampleDetailsToolbar);
+
+            expect(mockSampleDetailsToolbarContext.status).toBe('brush');
+        });
+
         it('keeps the brush in the annotation details view, which only edits', () => {
             mockAnnotationLabelContext.isOnAnnotationDetailsView = true;
             mockSampleDetailsToolbarContext.status = 'brush';
