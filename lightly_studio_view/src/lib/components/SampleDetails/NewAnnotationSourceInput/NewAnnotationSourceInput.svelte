@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Plus } from '@lucide/svelte';
+    import Plus from '@lucide/svelte/icons/plus';
 
     interface Props {
         /** Names already taken; typing one of them selects it instead of creating a duplicate. */
