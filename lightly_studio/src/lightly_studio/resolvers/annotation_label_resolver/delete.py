@@ -6,18 +6,16 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.resolvers import evaluation_class_metric_resolver
+from lightly_studio.resolvers import annotation_resolver, evaluation_class_metric_resolver
 
 from .get_by_id import get_by_id
 
 
 def delete(session: Session, label_id: UUID) -> bool:
-    """Delete an annotation label and its evaluation class metrics.
+    """Delete an annotation label, its annotations and its evaluation class metrics.
 
-    The delete is not atomic. It commits twice: after the class metrics and after the label.
-    The label must have no annotations, so delete them first, for example with
-    ``annotation_resolver.delete_annotations``. Otherwise the label delete fails after its
-    class metrics are already deleted.
+    The delete is not atomic. It commits after the annotations, after the class metrics and
+    after the label. A failed delete can leave a partial delete, and a new call completes it.
 
     Args:
         session (Session): The database session.
@@ -30,6 +28,7 @@ def delete(session: Session, label_id: UUID) -> bool:
     if not label:
         return False
 
+    annotation_resolver.delete_annotations(session=session, annotation_label_ids=[label_id])
     evaluation_class_metric_resolver.delete_by_annotation_label_id(
         session=session, annotation_label_id=label_id
     )

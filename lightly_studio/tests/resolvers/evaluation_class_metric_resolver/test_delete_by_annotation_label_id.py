@@ -28,12 +28,28 @@ def test_delete_by_annotation_label_id(db_session: Session) -> None:
         records=[
             EvaluationClassMetricCreate(
                 evaluation_run_id=run.id,
-                annotation_label_id=label_id,
-                metric_name=metric_name,
+                annotation_label_id=cat_id,
+                metric_name="average_precision",
                 value=0.5,
-            )
-            for label_id in (cat_id, dog_id)
-            for metric_name in ("average_precision", "average_recall")
+            ),
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=cat_id,
+                metric_name="average_recall",
+                value=0.5,
+            ),
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=dog_id,
+                metric_name="average_precision",
+                value=0.5,
+            ),
+            EvaluationClassMetricCreate(
+                evaluation_run_id=run.id,
+                annotation_label_id=dog_id,
+                metric_name="average_recall",
+                value=0.5,
+            ),
         ],
     )
 
