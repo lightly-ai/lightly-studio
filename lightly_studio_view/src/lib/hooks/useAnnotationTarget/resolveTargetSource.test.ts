@@ -65,6 +65,13 @@ describe('resolveTargetSource', () => {
             resolveTargetSource({ ...base, sourceNames: undefined, isError: true }).blockedReason
         ).toBe(SOURCES_ERROR_MESSAGE);
     });
+
+    it('blocks after a failed load that left names cached', () => {
+        expect(resolveTargetSource({ ...base, pick: 'labels', isError: true })).toEqual({
+            targetSource: null,
+            blockedReason: SOURCES_ERROR_MESSAGE
+        });
+    });
 });
 
 describe('isPickRemoved', () => {
