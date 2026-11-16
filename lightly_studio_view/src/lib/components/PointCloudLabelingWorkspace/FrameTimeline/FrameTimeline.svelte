@@ -124,7 +124,6 @@
         {ticks}
         {tracks}
         {currentTick}
-        {isPlaying}
         {selectedAnnotationId}
         {bufferedRanges}
         {onSelectTick}

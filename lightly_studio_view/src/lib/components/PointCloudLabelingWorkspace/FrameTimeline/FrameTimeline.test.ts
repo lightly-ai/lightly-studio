@@ -312,5 +312,26 @@ describe('FrameTimeline', () => {
             await rerender({ ...longProps, sequenceId: 'sequence-b' });
             expect(rulerWidth()).toBe('100%');
         });
+
+        const manyTicks = {
+            ...defaultProps,
+            ticks: createTicks(Array.from({ length: 1000 }, () => null))
+        };
+        const zoomInDeeply = () => {
+            const timeline = screen.getByTestId('workspace-frame-timeline').lastElementChild!;
+            // jsdom has no layout; the wheel handler needs a width to convert pixels to ticks.
+            Object.defineProperty(timeline, 'clientWidth', { value: 500 });
+            return fireEvent.wheel(timeline, { deltaY: -1000, ctrlKey: true });
+        };
+
+        it('follows the current frame during playback', async () => {
+            const { rerender } = render(FrameTimeline, { props: manyTicks });
+            await zoomInDeeply();
+            // The ruler labels each tick with its one-based number; frame 501 is out of view.
+            expect(screen.queryByText('501')).not.toBeInTheDocument();
+
+            await rerender({ ...manyTicks, currentTick: 500, isPlaying: true });
+            expect(screen.getByText('501')).toBeInTheDocument();
+        });
     });
 });

@@ -9,7 +9,6 @@
         ticks: TickView[];
         tracks: SequenceTrackView[];
         currentTick: number;
-        isPlaying: boolean;
         selectedAnnotationId: string | null;
         bufferedRanges: ReadonlyArray<{ startIndex: number; endIndex: number }>;
         onSelectTick: (seqNumber: number) => void;
@@ -32,7 +31,6 @@
         ticks,
         tracks,
         currentTick,
-        isPlaying,
         selectedAnnotationId,
         bufferedRanges,
         onSelectTick,
@@ -64,10 +62,9 @@
         viewport.setOffset(container.scrollLeft / container.scrollWidth);
     };
 
-    // Keep the playing frame in view while zoomed.
+    // Keep the current frame in view while zoomed, so navigation and playback both follow it.
     $effect(() => {
         const index = ticks.findIndex((tick) => tick.seq_number === currentTick);
-        if (isPlaying) return;
         if (index >= 0) untrack(() => viewport.reveal(index));
     });
 
