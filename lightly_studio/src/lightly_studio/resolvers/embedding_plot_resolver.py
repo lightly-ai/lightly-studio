@@ -59,6 +59,20 @@ def mark_dirty(
         )
 
 
+def is_computed(session: Session, collection_id: UUID, embedding_model_id: UUID) -> bool:
+    """Return True if a clean plot is saved for the collection and embedding model.
+
+    A missing row, a dirty row, and the empty placeholder row from `mark_dirty` all count as
+    not computed. The query does not load the plot data, which can be large.
+    """
+    is_dirty = session.exec(
+        select(EmbeddingPlotTable.is_dirty)
+        .where(col(EmbeddingPlotTable.collection_id) == collection_id)
+        .where(col(EmbeddingPlotTable.embedding_model_id) == embedding_model_id)
+    ).one_or_none()
+    return is_dirty is False
+
+
 def encode(
     x: Sequence[float] | NDArray[np.float32],
     y: Sequence[float] | NDArray[np.float32],

@@ -16,13 +16,16 @@ from pydantic import BaseModel, Field
 from lightly_studio.api.routes.api.embedding_coloring import ColorBy, build_color_data
 from lightly_studio.api.routes.api.status import HTTP_STATUS_BAD_REQUEST, HTTP_STATUS_NOT_FOUND
 from lightly_studio.database.db_manager import SessionDep
+from lightly_studio.errors import NotFoundError
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.projection_axes import ProjectionAxes
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_embedding_model_resolver,
+    embedding_plot_resolver,
     image_resolver,
     mcap_group_sequence_resolver,
+    sample_embedding_resolver,
     twodim_embedding_resolver,
     video_resolver,
 )
@@ -47,6 +50,13 @@ class GetEmbeddings2DRequest(BaseModel):
         default=None,
         description="Project the embeddings onto two axes instead of using PaCMAP",
     )
+
+
+class Embeddings2DStatus(BaseModel):
+    """Saved state of the embedding plot for the default embedding model."""
+
+    is_computed: bool = Field(description="A clean plot is saved and loads without a compute")
+    embedding_count: int = Field(description="Number of embeddings that the plot compute uses")
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -155,6 +165,30 @@ def get_2d_embeddings(
         schema=schema,
     )
     return _arrow_response(table=table)
+
+
+@embeddings2d_router.get("/collections/{collection_id}/embeddings2d/status")
+def get_2d_embeddings_status(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="Collection Id")],
+) -> Embeddings2DStatus:
+    """Return whether the plot is saved and how many embeddings it covers, without a compute."""
+    if session.get(CollectionTable, collection_id) is None:
+        raise NotFoundError(f"Collection {collection_id} not found.")
+    embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
+        session=session,
+        collection_id=collection_id,
+    )
+    if embedding_model_id is None:
+        raise ValueError("No embedding model configured.")
+    return Embeddings2DStatus(
+        is_computed=embedding_plot_resolver.is_computed(
+            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+        ),
+        embedding_count=sample_embedding_resolver.get_embedding_count(
+            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+        ),
+    )
 
 
 def _arrow_response(table: pa.Table) -> Response:

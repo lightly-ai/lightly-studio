@@ -165,3 +165,117 @@ def test_mark_dirty__already_dirty(db_session: Session) -> None:
     db_session.refresh(plot)
     assert plot.is_dirty is True
     assert plot.write_token != old_token
+
+
+def test_is_computed__missing_row(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    model = create_embedding_model(session=db_session, collection_id=collection.collection_id)
+    assert (
+        embedding_plot_resolver.is_computed(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+        )
+        is False
+    )
+
+
+@pytest.mark.parametrize(("is_dirty", "expected"), [(False, True), (True, False)])
+def test_is_computed__saved_row(db_session: Session, is_dirty: bool, expected: bool) -> None:
+    collection = create_collection(session=db_session)
+    model = create_embedding_model(session=db_session, collection_id=collection.collection_id)
+    data = embedding_plot_resolver.encode(x=[1.0], y=[2.0], sample_ids=[uuid4()])
+    db_session.add(
+        EmbeddingPlotTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+            is_dirty=is_dirty,
+            data=data,
+        )
+    )
+    db_session.commit()
+    assert (
+        embedding_plot_resolver.is_computed(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+        )
+        is expected
+    )
+
+
+def test_is_computed__placeholder_row(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    model = create_embedding_model(session=db_session, collection_id=collection.collection_id)
+    db_session.add(
+        EmbeddingPlotTable(
+            collection_id=collection.collection_id, embedding_model_id=model.embedding_model_id
+        )
+    )
+    db_session.commit()
+    assert (
+        embedding_plot_resolver.is_computed(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+        )
+        is False
+    )
+
+
+def test_is_computed__other_collection_or_model(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    model = create_embedding_model(session=db_session, collection_id=collection.collection_id)
+    db_session.add_all(
+        [
+            EmbeddingPlotTable(
+                collection_id=collection.collection_id, embedding_model_id=uuid4(), is_dirty=False
+            ),
+            EmbeddingPlotTable(
+                collection_id=uuid4(), embedding_model_id=model.embedding_model_id, is_dirty=False
+            ),
+        ]
+    )
+    db_session.commit()
+    assert (
+        embedding_plot_resolver.is_computed(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+        )
+        is False
+    )
+
+
+def test_is_computed__dirty_after_embedding_write(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=2
+    )
+    db_session.add(
+        EmbeddingPlotTable(
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+            is_dirty=False,
+        )
+    )
+    db_session.commit()
+    sample = create_image(session=db_session, collection_id=collection.collection_id)
+    sample_embedding_resolver.create_many(
+        session=db_session,
+        sample_embeddings=[
+            SampleEmbeddingCreate(
+                sample_id=sample.sample_id,
+                embedding_model_id=model.embedding_model_id,
+                embedding=np.array([1.0, 2.0], dtype=np.float32),
+            )
+        ],
+    )
+    assert (
+        embedding_plot_resolver.is_computed(
+            session=db_session,
+            collection_id=collection.collection_id,
+            embedding_model_id=model.embedding_model_id,
+        )
+        is False
+    )
