@@ -1,5 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components';
