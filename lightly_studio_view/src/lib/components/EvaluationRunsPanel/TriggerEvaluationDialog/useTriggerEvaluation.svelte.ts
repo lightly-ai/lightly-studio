@@ -7,6 +7,7 @@ import type { CreateEvaluationRunData } from '$lib/api/lightly_studio_local/type
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
 import { usePostHog } from '$lib/hooks';
+import { getErrorMessage } from '$lib/api/ApiError';
 
 type EvaluationRunRequest = CreateEvaluationRunData['body'];
 
@@ -53,9 +54,7 @@ export const useTriggerEvaluation = (getParams: () => UseTriggerEvaluationParams
                         resolve(true);
                     },
                     onError: (error) => {
-                        const message =
-                            (error as { error?: string })?.error ?? 'Failed to start evaluation';
-                        toast.error(message);
+                        toast.error(getErrorMessage(error, 'Failed to start evaluation'));
                         resolve(false);
                     }
                 }

@@ -1,4 +1,5 @@
 import { getEvaluationConfusionMatrix } from '$lib/api/lightly_studio_local/sdk.gen';
+import { ApiError } from '$lib/api/ApiError';
 import { createQuery } from '@tanstack/svelte-query';
 
 interface Params {
@@ -25,7 +26,7 @@ export const useEvaluationConfusionMatrix = (getParams: () => Params) => {
                     });
                     return data ?? null;
                 } catch (error) {
-                    if ((error as { status?: number })?.status === 501) {
+                    if (error instanceof ApiError && error.status === 501) {
                         return null;
                     }
                     throw error;

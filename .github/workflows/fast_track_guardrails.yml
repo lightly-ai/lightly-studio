@@ -111,12 +111,12 @@ jobs:
             fast_track/package-lock.json
             lightly_studio_view/package-lock.json
 
-      # Build the webapp so backend guardrails can import the app: pytest's conftest imports
-      # the full app, and the webapp route raises at import time unless the dist exists.
-      - name: Build webapp for backend guardrails
+      # pytest's conftest imports the full app, and the webapp route raises at import time
+      # unless the webapp exists. A mock is enough, no test needs the real build.
+      - name: Create mock webapp for backend guardrails
         if: steps.changes.outputs.backend == 'true'
         working-directory: lightly_studio
-        run: make build-lightly_studio_view
+        run: make mock-webapp-dist
 
       # The backend/coverage guardrail only reads a report; the suite runs here. A failing
       # suite must not kill the job — the guardrail turns it into a fail verdict, and the

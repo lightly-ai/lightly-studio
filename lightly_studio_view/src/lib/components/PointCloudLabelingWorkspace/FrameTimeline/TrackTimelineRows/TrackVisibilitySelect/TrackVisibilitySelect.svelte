@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ChevronDown } from '@lucide/svelte';
+    import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import type { SequenceTrackView } from '$lib/api/lightly_studio_local/types.gen';
     import { Button } from '$lib/components/ui/button';
     import * as Popover from '$lib/components/ui/popover';

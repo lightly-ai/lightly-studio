@@ -66,7 +66,7 @@ function pointer(type: string, clientX: number, clientY: number) {
     return event as PointerEvent;
 }
 
-function startDrag() {
+function startDrag(downEvent = pointer('pointerdown', 250, 100)) {
     const ref: { current?: ReturnType<typeof useCuboidFaceResize> } = {};
     const instance = render(CuboidFaceResizeHarness, {
         props: {
@@ -87,7 +87,7 @@ function startDrag() {
         face: PLUS_X_FACE,
         event: {
             point: { x: 1, y: 0, z: 0 },
-            nativeEvent: pointer('pointerdown', 250, 100),
+            nativeEvent: downEvent,
             stopPropagation: vi.fn()
         } as unknown as Parameters<typeof resize.onFacePointerDown>[0]['event']
     });
@@ -97,6 +97,13 @@ function startDrag() {
 }
 
 describe('cuboid face resize interaction', () => {
+    it('keeps other canvas pointer handlers from starting a second drag', () => {
+        const downEvent = pointer('pointerdown', 250, 100);
+        const stopImmediatePropagation = vi.spyOn(downEvent, 'stopImmediatePropagation');
+        startDrag(downEvent);
+        expect(stopImmediatePropagation).toHaveBeenCalledOnce();
+    });
+
     it('previews the resize through the annotation without scaling the group', () => {
         startDrag();
         expect(controls.enabled).toBe(false);
