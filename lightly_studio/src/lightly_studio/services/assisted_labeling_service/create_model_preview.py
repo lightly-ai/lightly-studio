@@ -2,55 +2,53 @@
 
 from __future__ import annotations
 
-import logging
 import math
-from collections.abc import Set
 
-import numpy as np
 from lightly_studio_serve.labeling import PredictedAnnotation
 
+from lightly_studio.assisted_labeling import predicted_annotation_checks
 from lightly_studio.assisted_labeling.labeling_model_runner import LabelingModelRunner
-from lightly_studio.assisted_labeling.provider import ProviderError, ProviderImage
-from lightly_studio.core.annotation import annotation_create
+from lightly_studio.assisted_labeling.provider import ProviderImage
 from lightly_studio.models.assisted_labeling import (
     MAX_MODEL_PREVIEWS,
     AnnotationPreviewBox,
     ModelAnnotationPreview,
-    ModelAnnotationRequest,
     ModelAnnotationResponse,
 )
-
-logger = logging.getLogger(__name__)
+from lightly_studio.services.assisted_labeling_service import to_annotation_preview
 
 
 def create_model_preview(
     runner: LabelingModelRunner,
     image: ProviderImage,
-    request: ModelAnnotationRequest,
+    threshold: float,
 ) -> ModelAnnotationResponse:
     """Returns the previews of the predicted annotations sorted by score. Saves nothing.
 
-    Drops the predictions with a score below `request.threshold`, with an empty mask, or
-    with a box that is fully outside the image.
+    Drops the predictions with a score below `threshold`, with an empty mask, or with a
+    box that is fully outside the image.
     Returns at most `MAX_MODEL_PREVIEWS` previews.
 
     Args:
         runner: The runner of the labeling model.
         image: The image to label.
-        request: The preview request.
+        threshold: Minimum confidence score of a preview, from 0 to 1.
 
     Raises:
         NotFoundError: If the image file cannot be read.
-        ProviderError: If the model fails or returns a prediction that is not valid.
+        ProviderError: If the model fails, or if one prediction is not valid. A
+            prediction below `threshold` that is not valid fails the request too.
     """
-    predictions = runner.predict(image=image, threshold=request.threshold)
-    class_names = frozenset(runner.class_names)
-    for prediction in predictions:
-        _check_prediction(
-            prediction=prediction, class_names=class_names, width=image.width, height=image.height
-        )
+    predictions = runner.predict(image=image, threshold=threshold)
+    predicted_annotation_checks.check_predictions(
+        predictions=predictions,
+        task=runner.task,
+        class_names=runner.class_names,
+        width=image.width,
+        height=image.height,
+    )
     # A model can ignore the threshold
-    candidates = [prediction for prediction in predictions if prediction.score >= request.threshold]
+    candidates = [prediction for prediction in predictions if prediction.score >= threshold]
     candidates.sort(key=lambda prediction: -prediction.score)
     previews: list[ModelAnnotationPreview] = []
     for prediction in candidates:
@@ -61,54 +59,6 @@ def create_model_preview(
         if preview is not None:
             previews.append(preview)
     return ModelAnnotationResponse(predictions=previews)
-
-
-def _check_prediction(
-    prediction: PredictedAnnotation, class_names: Set[str], width: int, height: int
-) -> None:
-    """Refuse a prediction that LightlyStudio cannot show or save.
-
-    Args:
-        prediction: The prediction of the model.
-        class_names: The annotation classes that the model declares.
-        width: Image width in pixels.
-        height: Image height in pixels.
-
-    Raises:
-        ProviderError: If the prediction is not valid. The message names the field. It
-            does not hold the class name, because API callers see the message.
-    """
-    score = prediction.score
-    # A NaN fails the range check too
-    if not 0 <= score <= 1:
-        raise ProviderError(f"The model returned the score {score}, expected a value from 0 to 1.")
-    if prediction.class_name not in class_names:
-        logger.warning(
-            "A labeling model returned the class %r, which is not one of its class names.",
-            prediction.class_name,
-        )
-        raise ProviderError(
-            "The model returned a class that is not one of its class names. See the server log."
-        )
-    x_min, y_min, x_max, y_max = prediction.box
-    if not all(math.isfinite(value) for value in prediction.box):
-        raise ProviderError(
-            f"The model returned a box with a value that is not finite: {prediction.box}."
-        )
-    if x_min >= x_max or y_min >= y_max:
-        raise ProviderError(
-            f"The model returned the box {prediction.box}, "
-            "expected (x_min, y_min, x_max, y_max) with a positive size."
-        )
-    mask = prediction.mask
-    if mask is None:
-        return
-    if mask.shape != (height, width):
-        raise ProviderError(
-            f"The model returned a mask of shape {mask.shape}, expected ({height}, {width})."
-        )
-    if mask.dtype != np.bool_:
-        raise ProviderError(f"The model returned a mask of dtype {mask.dtype}, expected bool.")
 
 
 def _to_model_preview(
@@ -129,16 +79,13 @@ def _to_model_preview(
             segmentation_mask=None,
             score=prediction.score,
         )
-    if not np.any(prediction.mask):
+    encoded_mask = to_annotation_preview.encode_mask(mask=prediction.mask)
+    if encoded_mask is None:
         return None
-    segmentation_mask, (x, y, box_width, box_height) = (
-        annotation_create.segmentation_mask_and_bounding_box(
-            binary_mask=prediction.mask.astype(np.int_)
-        )
-    )
+    segmentation_mask, bbox = encoded_mask
     return ModelAnnotationPreview(
         class_name=prediction.class_name,
-        bbox=AnnotationPreviewBox(x=x, y=y, width=box_width, height=box_height),
+        bbox=bbox,
         segmentation_mask=segmentation_mask,
         score=prediction.score,
     )
