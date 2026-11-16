@@ -6,7 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.errors import AnnotationSourceInUseError
+from lightly_studio.errors import AnnotationSourceInUseError, NotFoundError
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -15,7 +15,6 @@ from lightly_studio.resolvers import (
     export_job_resolver,
     sample_resolver,
 )
-from lightly_studio.services.annotation_source_service import get_annotation_source
 
 
 def delete_annotation_source(
@@ -38,13 +37,31 @@ def delete_annotation_source(
         AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation source
             or it has child collections.
     """
-    source = get_annotation_source.get_annotation_source(
+    source = _get_annotation_source(
         session=session,
         dataset_collection_id=dataset_collection_id,
         annotation_source_id=annotation_source_id,
     )
     _check_not_in_use(session=session, source=source)
     return _delete_source(session=session, source=source)
+
+
+def _get_annotation_source(
+    session: Session, dataset_collection_id: UUID, annotation_source_id: UUID
+) -> CollectionTable:
+    """Return the annotation source collection that is a child of the given collection.
+
+    Raises:
+        NotFoundError: If the collection has no annotation source with this ID.
+    """
+    source = collection_resolver.get_by_id(session=session, collection_id=annotation_source_id)
+    if (
+        source is None
+        or source.sample_type != SampleType.ANNOTATION
+        or source.parent_collection_id != dataset_collection_id
+    ):
+        raise NotFoundError(f"Annotation source {annotation_source_id} not found.")
+    return source
 
 
 def _check_not_in_use(session: Session, source: CollectionTable) -> None:
@@ -89,9 +106,9 @@ def _delete_source(session: Session, source: CollectionTable) -> int:
     """Delete an annotation source with its annotations and the rows that point at it.
 
     Also deletes the captions of the annotations and their child collections. The caller
-    checks that the annotation source is not in use, so all child collections are caption
-    collections. The delete commits several times and is not atomic, see
-    ``annotation_resolver.delete_annotations_by_ids``.
+    refuses a source whose children are not captions, so every child here is a caption
+    collection with no children of its own. The delete commits several times and is not
+    atomic, see ``annotation_resolver.delete_annotations_by_ids``.
 
     Returns:
         The number of deleted annotations.
