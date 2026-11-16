@@ -17,7 +17,7 @@ export function getPlotComputeView(input: PlotComputeViewInput): PlotComputeView
     // A text axes layout is a projection, not a PaCMAP compute.
     if (isAxesLayout) return 'plot';
     if (isStatusError) return 'error';
-    if (status === undefined) return 'checking';
+    if (status === undefined) return isComputeStarted ? 'computing' : 'checking';
     if (status.is_computed) return 'plot';
     const isLarge = status.embedding_count >= PLOT_COMPUTE_CONFIRM_THRESHOLD;
     if (isLarge && !isComputeStarted) return 'prompt';
