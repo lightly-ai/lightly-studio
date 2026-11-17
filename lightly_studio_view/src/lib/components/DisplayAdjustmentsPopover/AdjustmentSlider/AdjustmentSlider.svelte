@@ -12,9 +12,9 @@
     let { label, min, max, step = 0.05, value = $bindable() }: Props = $props();
 </script>
 
-<div class="flex items-center gap-2">
+<div class="flex flex-col items-start gap-2">
     <span class="text-sm text-muted-foreground">{label}</span>
-    <div class="slider-small w-28">
+    <div class="slider-small w-full">
         <Slider type="single" bind:value {min} {max} {step} thumbLabel={label} />
     </div>
 </div>
