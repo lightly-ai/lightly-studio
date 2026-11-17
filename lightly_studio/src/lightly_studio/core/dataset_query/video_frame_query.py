@@ -37,6 +37,7 @@ class VideoFrameQuery(MatchExpression):
 
 
 def _validate_frame_criterion(criterion: MatchExpression) -> None:
+    # TODO(Lukas, 11/2026): Validate SampleEvaluationQuery.criteria and add nesting tests.
     if isinstance(criterion, (VideoFrameQuery, VideoEventQuery)):
         raise ValueError("Frame criteria cannot contain frame or event queries.")
     if isinstance(criterion, (AND, OR)):
