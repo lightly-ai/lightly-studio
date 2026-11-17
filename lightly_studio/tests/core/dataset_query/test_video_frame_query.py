@@ -1,23 +1,35 @@
 import pytest
+from sqlalchemy import func
 from sqlmodel import Session, select
 
 from lightly_studio.core.dataset_query import (
     AND,
     NOT,
     OR,
-    ClassificationField,
-    ClassificationQuery,
     ObjectDetectionField,
     ObjectDetectionQuery,
-    SegmentationMaskField,
-    SegmentationMaskQuery,
     VideoFrameQuery,
     VideoFrameSampleField,
 )
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.query_expr import (
+    AndExpr,
+    ClassificationMatchExpr,
+    EqualityComparisonOperator,
+    FieldRef,
+    ObjectDetectionMatchExpr,
+    OrdinalComparisonOperator,
+    OrdinalFloatExpr,
+    QueryExpr,
+    SegmentationMaskMatchExpr,
+    StringExpr,
+    VideoFrameMatchExpr,
+)
 from lightly_studio.models.video import VideoTable
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
@@ -30,11 +42,58 @@ PERSON = ObjectDetectionQuery(ObjectDetectionField.class_name == "person")
 CAR = ObjectDetectionQuery(ObjectDetectionField.class_name == "car")
 
 
+API_ANNOTATIONS = {
+    name: ObjectDetectionMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="object_detection", name="class_name"),
+            operator=EqualityComparisonOperator.EQ,
+            value=name,
+        )
+    )
+    for name in ["person", "car"]
+}
+
+
 class TestVideoFrameQuery:
     @pytest.mark.parametrize(
         ("expression", "expected_names"),
         [
             (VideoFrameQuery(PERSON, CAR), {"together.mp4"}),
+            (
+                QueryExpr(
+                    match_expr=VideoFrameMatchExpr(
+                        subexpr=AndExpr(children=list(API_ANNOTATIONS.values()))
+                    )
+                ),
+                {"together.mp4"},
+            ),
+            (
+                QueryExpr(
+                    match_expr=AndExpr(
+                        children=[
+                            VideoFrameMatchExpr(subexpr=expr) for expr in API_ANNOTATIONS.values()
+                        ]
+                    )
+                ),
+                {"together.mp4", "apart.mp4"},
+            ),
+            (
+                QueryExpr(
+                    match_expr=VideoFrameMatchExpr(
+                        subexpr=AndExpr(
+                            children=[
+                                API_ANNOTATIONS["car"],
+                                OrdinalFloatExpr(
+                                    field=FieldRef(table="video_frame", name="frame_timestamp_s"),
+                                    operator=OrdinalComparisonOperator.GTE,
+                                    value=1,
+                                ),
+                            ]
+                        )
+                    )
+                ),
+                {"apart.mp4"},
+            ),
             (VideoFrameQuery(AND(PERSON, CAR)), {"together.mp4"}),
             (AND(VideoFrameQuery(PERSON), VideoFrameQuery(CAR)), {"together.mp4", "apart.mp4"}),
             (VideoFrameQuery(OR(PERSON, CAR)), {"together.mp4", "apart.mp4"}),
@@ -46,7 +105,7 @@ class TestVideoFrameQuery:
         ],
     )
     def test_get__frame_correlation(
-        self, db_session: Session, expression: MatchExpression, expected_names: set[str]
+        self, db_session: Session, expression: MatchExpression | QueryExpr, expected_names: set[str]
     ) -> None:
         collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
         labels = {
@@ -78,7 +137,18 @@ class TestVideoFrameQuery:
                     for frame_index, class_name in frame_annotations
                 ],
             )
-        query = select(VideoTable).join(VideoTable.sample).where(expression.get())
+        query = select(VideoTable).join(VideoTable.sample)
+        if isinstance(expression, QueryExpr):
+            restored = QueryExpr.model_validate_json(expression.model_dump_json())
+            query = VideoFilter(sample_filter=SampleFilter(query_expr=restored)).apply(query=query)
+            assert db_session.exec(select(func.count()).select_from(query.subquery())).one() == len(
+                expected_names
+            )
+            for offset, name in enumerate(sorted(expected_names)):
+                page = query.order_by(VideoTable.file_name).offset(offset).limit(1)
+                assert [video.file_name for video in db_session.exec(page)] == [name]
+        else:
+            query = query.where(expression.get())
         assert {video.file_name for video in db_session.exec(query)} == expected_names
 
     @pytest.mark.parametrize(
@@ -86,20 +156,41 @@ class TestVideoFrameQuery:
         [
             (
                 AnnotationType.CLASSIFICATION,
-                ClassificationQuery(ClassificationField.source == "model"),
+                ClassificationMatchExpr(
+                    subexpr=StringExpr(
+                        field=FieldRef(table="classification", name="source"),
+                        operator=EqualityComparisonOperator.EQ,
+                        value="model",
+                    )
+                ),
             ),
             (
                 AnnotationType.OBJECT_DETECTION,
-                ObjectDetectionQuery(ObjectDetectionField.source == "model"),
+                ObjectDetectionMatchExpr(
+                    subexpr=StringExpr(
+                        field=FieldRef(table="object_detection", name="source"),
+                        operator=EqualityComparisonOperator.EQ,
+                        value="model",
+                    )
+                ),
             ),
             (
                 AnnotationType.SEGMENTATION_MASK,
-                SegmentationMaskQuery(SegmentationMaskField.source == "model"),
+                SegmentationMaskMatchExpr(
+                    subexpr=StringExpr(
+                        field=FieldRef(table="segmentation_mask", name="source"),
+                        operator=EqualityComparisonOperator.EQ,
+                        value="model",
+                    )
+                ),
             ),
         ],
     )
     def test_get__annotation_types_and_sources(
-        self, db_session: Session, annotation_type: AnnotationType, expression: MatchExpression
+        self,
+        db_session: Session,
+        annotation_type: AnnotationType,
+        expression: ClassificationMatchExpr | ObjectDetectionMatchExpr | SegmentationMaskMatchExpr,
     ) -> None:
         collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
         label = create_annotation_label(
@@ -125,5 +216,7 @@ class TestVideoFrameQuery:
                     for sample_id in video.frame_sample_ids
                 ],
             )
-        query = select(VideoTable).join(VideoTable.sample).where(VideoFrameQuery(expression).get())
+        query = select(VideoTable).join(VideoTable.sample)
+        query_expr = QueryExpr(match_expr=VideoFrameMatchExpr(subexpr=expression))
+        query = VideoFilter(sample_filter=SampleFilter(query_expr=query_expr)).apply(query=query)
         assert [video.file_name for video in db_session.exec(query)] == ["model.mp4"]

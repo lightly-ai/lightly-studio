@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Filter videos by annotations and timestamps on the same frame through API query expressions.
 - Filter videos by temporal events through API query expressions.
 - Python SDK: Find videos with annotations and timestamp conditions on the same frame using `VideoFrameQuery`.
 - Python SDK: Query videos by temporal event classes, sources, confidence, and time boundaries with `VideoEventQuery`.
