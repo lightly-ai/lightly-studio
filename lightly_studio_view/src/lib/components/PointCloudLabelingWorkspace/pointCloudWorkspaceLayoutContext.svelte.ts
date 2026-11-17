@@ -1,3 +1,4 @@
+import type { CuboidTarget } from './useCuboidTargetSource';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import { getContext, setContext } from 'svelte';
 import type { TickDetailView } from '$lib/api/lightly_studio_local/types.gen';
@@ -37,6 +38,8 @@ export interface PointCloudWorkspaceLayoutState {
     annotationClasses: readonly AnnotationClass[];
     /** Available annotation sources for the active sequence. */
     annotationSources: readonly AnnotationSource[];
+    /** The annotation source new cuboids go to. */
+    cuboidTarget: CuboidTarget;
     /** Shared annotation transforms and their persistence actions. */
     transforms: ReturnType<typeof createCuboidTransformState>;
     /** Tool selected in the main scene toolbar. */

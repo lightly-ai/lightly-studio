@@ -83,6 +83,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         snapshotAnnotations: data.snapshotAnnotations,
         annotationClasses: data.annotationClasses,
         annotationSources: data.annotationSources,
+        cuboidTarget: targetSource,
         transforms: editing.transforms,
         activeTool: editing.activeTool,
         effectiveTool: editing.effectiveTool,
