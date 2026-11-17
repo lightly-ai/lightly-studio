@@ -47,6 +47,10 @@
                     onDeleteCuboid={presentation.isEditingMode
                         ? editing.handleDeleteCuboid
                         : undefined}
+                    isCuboidHidden={controller.visibility.isCuboidHidden}
+                    isSourceHidden={controller.visibility.isSourceHidden}
+                    onToggleTrackVisibility={controller.visibility.toggleTrack}
+                    onToggleSourceVisibility={controller.visibility.toggleSource}
                 />
             </Pane>
         </PaneGroup>

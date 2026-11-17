@@ -55,7 +55,7 @@ vi.mock('./useWorkspaceSceneData/useWorkspaceSceneData.svelte', () => ({
     useWorkspaceSceneData: () => ({})
 }));
 vi.mock('./useWorkspaceEditing/useWorkspaceEditing.svelte', () => ({
-    useWorkspaceEditing: () => ({})
+    useWorkspaceEditing: () => ({ annotations: [], selectedCuboidId: null })
 }));
 
 describe('workspace query dependencies', () => {
