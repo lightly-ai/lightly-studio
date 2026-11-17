@@ -269,3 +269,20 @@ on dedicated pages.
 ### Querying the Dataset
 
 Use [Dataset Query in Python](search_and_filter.md#query-in-python) when you need reusable subsets in code for filtering, sorting, slicing, export, or sampling. Video query expressions use `VideoSampleField`.
+
+#### Query temporal events
+
+`VideoEventQuery` matches a temporal classification annotation. All criteria match the same event.
+
+```python
+from lightly_studio.core.dataset_query import VideoEventField, VideoEventQuery
+
+early_events = dataset.query().match(
+    VideoEventQuery(VideoEventField.class_name == "run", VideoEventField.start_time_s < 5)
+)
+```
+
+This matches a `run` event that starts before five seconds. Fields also include `end_time_s`,
+`source`, and `confidence`. Event times are in seconds relative to the video start.
+`ClassificationQuery` still matches both whole-video classifications and temporal events.
+Event queries are available through Python; query-editor support follows separately.
