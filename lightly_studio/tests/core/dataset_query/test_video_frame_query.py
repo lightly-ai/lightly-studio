@@ -7,10 +7,13 @@ from lightly_studio.core.dataset_query import (
     OR,
     ClassificationField,
     ClassificationQuery,
+    EvaluationMetricField,
     ObjectDetectionField,
     ObjectDetectionQuery,
+    SampleEvaluationQuery,
     SegmentationMaskField,
     SegmentationMaskQuery,
+    VideoEventQuery,
     VideoFrameQuery,
     VideoFrameSampleField,
 )
@@ -31,6 +34,40 @@ CAR = ObjectDetectionQuery(ObjectDetectionField.class_name == "car")
 
 
 class TestVideoFrameQuery:
+    @pytest.mark.parametrize("nested_query", [VideoFrameQuery(), VideoEventQuery()])
+    def test_init__reject_nested_evaluation_queries(self, nested_query: MatchExpression) -> None:
+        criteria = [
+            SampleEvaluationQuery("run", nested_query),
+            SampleEvaluationQuery("run", EvaluationMetricField("score") > 0.5, nested_query),
+            SampleEvaluationQuery("run", AND(PERSON, OR(CAR, NOT(nested_query)))),
+            NOT(SampleEvaluationQuery("run", nested_query)),
+            ClassificationQuery(SampleEvaluationQuery("run", nested_query)),
+            SampleEvaluationQuery("run", ObjectDetectionQuery(nested_query)),
+            SampleEvaluationQuery("run", SampleEvaluationQuery("other", nested_query)),
+        ]
+        for criterion in criteria:
+            with pytest.raises(ValueError, match="cannot contain frame or event queries"):
+                VideoFrameQuery(criterion)
+
+    @pytest.mark.parametrize(
+        "criterion",
+        [
+            SampleEvaluationQuery(run_name="run"),
+            SampleEvaluationQuery("run", EvaluationMetricField("score") > 0.5),
+            SampleEvaluationQuery(
+                "run", EvaluationMetricField("score") > 0.5, EvaluationMetricField("recall") > 0.8
+            ),
+            SampleEvaluationQuery(
+                "run",
+                AND(
+                    EvaluationMetricField("score") > 0.5, NOT(EvaluationMetricField("recall") < 0.8)
+                ),
+            ),
+        ],
+    )
+    def test_init__accept_evaluation_criteria(self, criterion: MatchExpression) -> None:
+        VideoFrameQuery(criterion).get()
+
     @pytest.mark.parametrize(
         ("expression", "expected_names"),
         [
