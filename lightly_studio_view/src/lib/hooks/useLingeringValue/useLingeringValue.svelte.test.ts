@@ -26,4 +26,22 @@ describe('useLingeringValue', () => {
         expect(lingering?.current).toBeNull();
         destroy();
     });
+
+    it('keeps showing a value that comes back before the hide delay ends', () => {
+        let value = $state<string | null>('pick');
+        let lingering: { readonly current: string | null } | undefined;
+        const destroy = $effect.root(() => {
+            lingering = useLingeringValue(() => value, 400);
+        });
+        flushSync();
+
+        value = null;
+        flushSync();
+        vi.advanceTimersByTime(300);
+        value = 'add';
+        flushSync();
+        vi.advanceTimersByTime(400);
+        expect(lingering?.current).toBe('add');
+        destroy();
+    });
 });

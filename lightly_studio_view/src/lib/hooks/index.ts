@@ -140,3 +140,4 @@ export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annota
 export { default as useAuth } from '$lib/hooks/useAuth/useAuth';
 export { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
+export { useLingeringValue } from '$lib/hooks/useLingeringValue/useLingeringValue.svelte';

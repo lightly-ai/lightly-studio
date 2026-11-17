@@ -5,7 +5,7 @@
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotSelectionChip from './PlotSelectionChip/PlotSelectionChip.svelte';
     import { getPickHint } from './PlotSelectionChip/PlotSelectionChip.helpers';
-    import { useLingeringValue } from './PlotSelectionChip/useLingeringValue.svelte';
+    import { useLingeringValue } from '$lib/hooks';
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
@@ -533,6 +533,9 @@
         isSequences ? null : getPickHint({ hoveredSampleId, pickedSampleIds })
     );
     const shownPickHint = useLingeringValue(() => pickHint, 400);
+    const selectionKind = $derived(
+        $plotSelectionCount === 0 ? null : pickedSampleIds.length > 0 ? 'picks' : 'region'
+    );
     // The card is rendered by this component (not the library's tooltip container)
     // so it always sits directly above the hovered point; the overlay proxy
     // provides the data → pixel conversion.
@@ -672,11 +675,7 @@
                             )}
                         >
                             <PlotSelectionChip
-                                selectionKind={$plotSelectionCount === 0
-                                    ? null
-                                    : pickedSampleIds.length > 0
-                                      ? 'picks'
-                                      : 'region'}
+                                {selectionKind}
                                 count={$plotSelectionCount}
                                 {itemLabel}
                                 onClear={clearSelection}
