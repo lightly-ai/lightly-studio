@@ -65,11 +65,9 @@
     }: Props = $props();
 
     const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
-    // A hidden source keeps its group header, the only place to show it again, also on a tick
-    // where it is the only source.
-    const showGroups = $derived(
-        groups.length > 1 || groups.some(({ sourceId }) => isSourceHidden(sourceId))
-    );
+    // The group header holds the source toggle, so it shows whenever sources can be toggled,
+    // also on a tick with only one source.
+    const showGroups = $derived(onToggleSourceVisibility !== undefined || groups.length > 1);
 
     function toggle(id: string): void {
         selectedCuboidId = selectedCuboidId === id ? null : id;

@@ -177,6 +177,17 @@ describe('PointCloudRightSidePanel', () => {
             expect(onToggleSourceVisibility).toHaveBeenCalledWith('ground-truth');
         });
 
+        it('shows the source toggle when only one source is on the tick', async () => {
+            const onToggleSourceVisibility = vi.fn();
+            render(PointCloudRightSidePanel, {
+                props: { ...defaultProps, cuboids: [cuboid], onToggleSourceVisibility }
+            });
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Hide source' }));
+
+            expect(onToggleSourceVisibility).toHaveBeenCalledWith('ground-truth');
+        });
+
         it('keeps the source toggle of a hidden source when it is the only source on the tick', () => {
             render(PointCloudRightSidePanel, {
                 props: {
