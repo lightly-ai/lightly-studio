@@ -51,6 +51,7 @@ export {
     formatEvaluationMetricLabel
 } from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
 export { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
+export { useTracks } from '$lib/hooks/useTracks/useTracks.svelte';
 export { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
 export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
 

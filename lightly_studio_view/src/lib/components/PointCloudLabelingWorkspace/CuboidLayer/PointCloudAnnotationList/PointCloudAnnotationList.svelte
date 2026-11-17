@@ -9,11 +9,14 @@
         groupAnnotationsBySource,
         resolveAnnotationClassName,
         resolveAnnotationSourceName,
-        buildAnnotationForest
+        buildAnnotationForest,
+        subtreeContainsId,
+        NO_PARENT_TRACK_GROUP_LABEL
     } from './pointCloudAnnotationList';
     import { resolveCuboidColor } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
     import PointCloudAnnotationListGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListGroup';
     import PointCloudAnnotationListItem from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListItem';
+    import PointCloudAnnotationParentGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationParentGroup';
     import { Typography } from '$lib/components/Typography';
 
     type AnnotationTreeNode = ReturnType<typeof buildAnnotationForest>[number];
@@ -103,11 +106,21 @@
         {@render annotationItem(node.cuboid)}
         {@render childRows(node.children)}
     {:else if !node.cuboid && node.children.length > 0}
-        {#each node.children as child (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
-            <div class="pl-4">
-                {@render annotationNode(child)}
-            </div>
-        {/each}
+        {@const firstChild = node.children[0].cuboid}
+        {#if firstChild}
+            <PointCloudAnnotationParentGroup
+                className={firstChild.parentTrackClassName ?? NO_PARENT_TRACK_GROUP_LABEL}
+                trackNumber={firstChild.parentTrackClassName ? firstChild.parentTrackNumber : null}
+                subtreeSize={node.subtreeSize}
+                autoExpandForId={selectedCuboidId && subtreeContainsId(node, selectedCuboidId)
+                    ? selectedCuboidId
+                    : null}
+            >
+                <div class="space-y-1">
+                    {@render childRows(node.children)}
+                </div>
+            </PointCloudAnnotationParentGroup>
+        {/if}
     {:else if node.cuboid}
         {@render annotationItem(node.cuboid)}
     {/if}

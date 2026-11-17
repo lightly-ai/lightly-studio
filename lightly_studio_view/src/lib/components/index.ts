@@ -18,6 +18,7 @@ export { LazyTrigger } from '$lib/components/LazyTrigger/';
 export { default as Logo } from '$lib/components/Logo/index.svelte';
 export { default as SampleAnnotation } from '$lib/components/SampleAnnotation/SampleAnnotation.svelte';
 export { default as SelectClassDialog } from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
+export { TrackSelect } from '$lib/components/TrackSelect';
 export { default as SampleAnnotationBox } from '$lib/components/SampleAnnotation/SampleAnnotationBox/SampleAnnotationBox.svelte';
 export { default as SampleAnnotationLabel } from '$lib/components/SampleAnnotation/SampleAnnotationLabel/SampleAnnotationLabel.svelte';
 export { default as SampleAnnotationSegmentationRLE } from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';

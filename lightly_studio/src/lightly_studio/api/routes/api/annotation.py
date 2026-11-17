@@ -32,6 +32,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     sample_embedding_resolver,
 )
+from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.resolvers.annotation_resolver.get_all import (
     GetAllAnnotationsResult,
 )
@@ -291,7 +292,12 @@ def get_annotation(
     annotation = annotations_service.get_annotation_by_id(
         session=session, annotation_id=annotation_id
     )
-    return AnnotationView.from_annotation_table(annotation=annotation)
+    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
+        session=session, annotations=[annotation]
+    )
+    return AnnotationView.from_annotation_table(
+        annotation=annotation, parent_track_class_names=parent_track_class_names
+    )
 
 
 @annotations_router.delete("/annotations/{annotation_id}")
