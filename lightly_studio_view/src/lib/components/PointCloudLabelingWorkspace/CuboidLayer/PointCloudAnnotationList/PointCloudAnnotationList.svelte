@@ -10,8 +10,7 @@
         resolveAnnotationClassName,
         resolveAnnotationSourceName,
         buildAnnotationForest,
-        subtreeContainsId,
-        NO_PARENT_TRACK_GROUP_LABEL
+        subtreeContainsId
     } from './pointCloudAnnotationList';
     import { resolveCuboidColor } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
     import PointCloudAnnotationListGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListGroup';
@@ -117,8 +116,8 @@
         {@const firstChild = node.children[0].cuboid}
         {#if firstChild}
             <PointCloudAnnotationParentGroup
-                className={firstChild.parentTrackClassName ?? NO_PARENT_TRACK_GROUP_LABEL}
-                trackNumber={firstChild.parentTrackClassName ? firstChild.parentTrackNumber : null}
+                className={firstChild.parentTrackClassName ?? ''}
+                trackNumber={firstChild.parentTrackNumber}
                 subtreeSize={node.subtreeSize}
                 autoExpandForId={selectedCuboidId && subtreeContainsId(node, selectedCuboidId)
                     ? selectedCuboidId
