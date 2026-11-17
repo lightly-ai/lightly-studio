@@ -336,6 +336,23 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     query.match(expr)
     ```
 
+    #### Video event queries
+
+    `VideoEventQuery` matches a temporal classification annotation. All criteria match the same event.
+
+    ```python
+    from lightly_studio.core.dataset_query import VideoEventField, VideoEventQuery
+
+    early_events = dataset.query().match(
+        VideoEventQuery(VideoEventField.class_name == "run", VideoEventField.start_time_s < 5)
+    )
+    ```
+
+    This matches a `run` event that starts before five seconds. Fields also include `end_time_s`,
+    `source`, and `confidence`. Event times are in seconds relative to the video start.
+    `ClassificationQuery` still matches both whole-video classifications and temporal events.
+    Event queries are available through Python; query-editor support follows separately.
+
     #### Sample evaluation queries
 
     Sample evaluation queries use `SampleEvaluationQuery(...)` together with

@@ -66,6 +66,7 @@ class StubLabelingModel(LabelingModel):
         self._class_names = list(class_names)
         self._predictions = list(predictions)
         self._error = error
+        self.is_ready = True
         self.images: list[Image] = []
         self.thresholds: list[float] = []
 
@@ -80,6 +81,10 @@ class StubLabelingModel(LabelingModel):
     @property
     def class_names(self) -> list[str]:
         return self._class_names
+
+    @property
+    def ready(self) -> bool:
+        return self.is_ready
 
     def predict(
         self,
