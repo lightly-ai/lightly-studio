@@ -69,7 +69,8 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         () => workspace,
         getOptions,
         () => data,
-        () => presentation.isEditingMode
+        () => presentation.isEditingMode,
+        () => targetSource
     );
     const getLayout = (): PointCloudWorkspaceLayoutState => ({
         workspace,

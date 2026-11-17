@@ -61,7 +61,13 @@ describe('useCreateCuboidAnnotation', () => {
         refetch: vi.fn()
     };
     const box = { center: [0, 0, 0.5], size: [1, 1, 1], yaw: 0 } satisfies CuboidBox;
+    let target = {
+        targetSource: 'labels' as string | null,
+        blockedReason: null as string | null,
+        needsPick: false
+    };
     const params: Params = {
+        getTarget: () => target,
         getCollectionId: () => 'collection-1',
         getDatasetId: () => 'dataset-1',
         getTickSampleId: () => 'sample-1',
@@ -70,6 +76,7 @@ describe('useCreateCuboidAnnotation', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        target = { targetSource: 'labels', blockedReason: null, needsPick: false };
         lastAnnotationLabel.set({});
         labels.data = [];
         labels.refetch = vi.fn().mockResolvedValue({ data: [] });
@@ -99,6 +106,7 @@ describe('useCreateCuboidAnnotation', () => {
                 parent_sample_id: 'sample-1',
                 annotation_type: 'cuboid_3d',
                 annotation_label_id: 'label-1',
+                annotation_collection_name: 'labels',
                 cuboid_3d: {
                     frame_id: 'lidar-front',
                     px: 1,
@@ -115,7 +123,32 @@ describe('useCreateCuboidAnnotation', () => {
             })
         );
         expect(onCreated).toHaveBeenCalledWith('annotation-1');
-        expect(toast.success).toHaveBeenCalledWith('Annotation created successfully');
+        expect(toast.success).toHaveBeenCalledWith('Cuboid added to labels');
+    });
+
+    it('stops with the reason while the annotation sources load', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        target = {
+            targetSource: null,
+            blockedReason: 'Loading annotation sources…',
+            needsPick: false
+        };
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
+
+        expect(toast.error).toHaveBeenCalledWith('Loading annotation sources…');
+        expect(requestLabel).not.toHaveBeenCalled();
+        expect(createAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('asks for a pick when no source is picked among several', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        target = { targetSource: null, blockedReason: null, needsPick: true };
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid(box, vi.fn());
+
+        expect(toast.error).toHaveBeenCalledWith('Pick where new annotations go.');
+        expect(createAnnotation).not.toHaveBeenCalled();
     });
 
     it('shows class selection when requested even if a class is remembered', async () => {

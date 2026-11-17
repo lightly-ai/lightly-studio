@@ -11,12 +11,15 @@ import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import { CUBOID_SOURCE_MESSAGES, type CuboidTarget } from '../useCuboidTargetSource';
 
 interface SceneFrame {
     frameId: string;
 }
 
 interface Params {
+    /** The annotation source new cuboids go to. */
+    getTarget: () => CuboidTarget;
     getCollectionId: () => string | undefined;
     getDatasetId: () => string;
     getTickSampleId: () => string | undefined;
@@ -28,6 +31,7 @@ interface CreateCuboidParams {
     box: CuboidBox;
     labelId: string;
     sampleId: string;
+    sourceName: string;
 }
 
 interface UseCreateCuboidAnnotationReturn {
@@ -46,12 +50,14 @@ function buildCuboidInput({
     frame,
     box,
     labelId,
-    sampleId
+    sampleId,
+    sourceName
 }: CreateCuboidParams): AnnotationCreateInput {
     return {
         parent_sample_id: sampleId,
         annotation_type: 'cuboid_3d',
         annotation_label_id: labelId,
+        annotation_collection_name: sourceName,
         cuboid_3d: {
             frame_id: frame?.frameId ?? '',
             px: box.center[0],
@@ -71,6 +77,7 @@ function buildCuboidInput({
 
 /** Creates point-cloud cuboids using the last selected annotation class when available. */
 export function useCreateCuboidAnnotation({
+    getTarget,
     getCollectionId,
     getDatasetId,
     getTickSampleId,
@@ -144,16 +151,18 @@ export function useCreateCuboidAnnotation({
         }
     }
 
-    async function saveCuboid(
-        box: CuboidBox,
-        sampleId: string,
-        labelId: string,
-        frame: SceneFrame | null
-    ): Promise<string> {
-        const input = buildCuboidInput({ frame, box, labelId, sampleId });
-        const annotation = await createAnnotation(input);
-        toast.success('Annotation created successfully');
+    async function saveCuboid(params: CreateCuboidParams): Promise<string> {
+        const annotation = await createAnnotation(buildCuboidInput(params));
+        toast.success(`Cuboid added to ${params.sourceName}`);
         return annotation.sample_id;
+    }
+
+    /** Returns the source for a new cuboid, or null after telling the user why there is none. */
+    function getTargetSourceOrExplain(): string | null {
+        const { targetSource, blockedReason, needsPick } = getTarget();
+        if (blockedReason) toast.error(blockedReason);
+        else if (needsPick) toast.error(CUBOID_SOURCE_MESSAGES.pick);
+        return targetSource;
     }
 
     async function handleCreateCuboid(
@@ -165,6 +174,7 @@ export function useCreateCuboidAnnotation({
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
+        if (!getTargetSourceOrExplain()) return;
         const labelName = await selectAnnotationLabel(collectionId, selectClass);
         if (!labelName) return;
         // Cancel if the active tick changed while the class dialog was open.
@@ -173,9 +183,18 @@ export function useCreateCuboidAnnotation({
         if (!labelId) return;
         // Cancel if the active sample or collection changed while finding/creating the label.
         if (getTickSampleId() !== sampleId || getCollectionId() !== collectionId) return;
+        // The user can change the source while the class dialog is open.
+        const sourceName = getTargetSourceOrExplain();
+        if (!sourceName) return;
         let annotationId: string;
         try {
-            annotationId = await saveCuboid(box, sampleId, labelId, capturedFrame);
+            annotationId = await saveCuboid({
+                frame: capturedFrame,
+                box,
+                labelId,
+                sampleId,
+                sourceName
+            });
         } catch {
             toast.error('Failed to create annotation. Please try again.');
             return;

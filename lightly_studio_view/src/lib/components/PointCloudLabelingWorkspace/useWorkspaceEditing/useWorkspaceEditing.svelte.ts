@@ -14,13 +14,15 @@ import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTrac
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
 import type { WorkspaceTool } from '../domain';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import type { CuboidTarget } from '../useCuboidTargetSource';
 
 /** Shared annotation selection, tools, and persistence for every scene viewport. */
 export function useWorkspaceEditing(
     getWorkspace: () => PointCloudWorkspaceContext,
     getOptions: () => WorkspaceOptions,
     getData: () => ReturnType<typeof useWorkspaceSceneData>,
-    getIsEditingMode: () => boolean
+    getIsEditingMode: () => boolean,
+    getTarget: () => CuboidTarget
 ) {
     const queryClient = useQueryClient();
     // Track bars show which ticks have annotations, so refresh them when that changes.
@@ -44,6 +46,7 @@ export function useWorkspaceEditing(
         handleClassDialogCancel,
         labels
     } = useCreateCuboidAnnotation({
+        getTarget,
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         getDatasetId: () => getOptions().datasetId,
         getTickSampleId: () => {
@@ -147,6 +150,11 @@ export function useWorkspaceEditing(
         await createCuboidAnnotation(
             box,
             async (annotationId) => {
+                // The first cuboid of a typed source creates the source, so list it.
+                const sourceName = getTarget().targetSource;
+                const isNewSource =
+                    sourceName && !getData().annotationSourceNames?.includes(sourceName);
+                if (isNewSource) void getData().refetchAnnotationSources();
                 await getWorkspace().tickDetails.refetch({ throwOnError: true });
                 selectedCuboidId = annotationId;
                 activeTool = 'select';
