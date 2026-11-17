@@ -17,6 +17,10 @@ export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
     // The status a Space pan interrupted, restored when the pan ends.
     panFrom?: ToolbarStatus;
+    modelLabeling?: {
+        modelId: string | null;
+        threshold: number;
+    };
     brush: {
         mode: BrushMode;
         size: number;

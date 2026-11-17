@@ -17,7 +17,11 @@ const annotations: AnnotationView[] = ['reference', 'prediction'].map((source) =
     created_at: new Date()
 }));
 
-vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
+vi.mock('$app/navigation', () => ({
+    afterNavigate: vi.fn(),
+    beforeNavigate: vi.fn(),
+    goto: vi.fn()
+}));
 vi.mock('$lib/hooks/useSettings', () => ({
     useSettings: () => ({
         enforceColoringByClassStore,
@@ -48,7 +52,7 @@ vi.mock('$lib/hooks/useLabelingModels', () => ({
     useLabelingModels: () => ({ models: [], disabledReason: 'Unavailable.' })
 }));
 vi.mock('$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte', () => ({
-    useLabelWithModel: () => ({ clear: vi.fn() })
+    useLabelWithModel: () => ({ clear: vi.fn(), pendingChange: null })
 }));
 // jsdom lacks the SVG matrix operations used to keep labels the same size while zooming.
 vi.mock('$lib/components/ZoomableContainer/unscale', () => ({ unscale: vi.fn() }));

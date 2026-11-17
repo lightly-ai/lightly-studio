@@ -28,6 +28,35 @@ const PREVIEW: ModelAnnotationPreview = {
 };
 
 const makeLabelWithModel = (overrides: Partial<LabelWithModel> = {}): LabelWithModel => ({
+    review: {
+        suggestions: (overrides.predictions ?? []).map((preview, id) => ({
+            id,
+            preview,
+            included: true
+        })),
+        includedSuggestions: (overrides.predictions ?? []).map((preview, id) => ({
+            id,
+            preview,
+            included: true
+        })),
+        focusedId: null,
+        focusedSuggestion: undefined,
+        focus: vi.fn(),
+        setIncluded: vi.fn(),
+        selectAll: vi.fn(),
+        selectNone: vi.fn(),
+        changeClass: vi.fn(),
+        replace: vi.fn(),
+        remove: vi.fn()
+    },
+    generationError: null,
+    needsRegeneration: false,
+    annotationSource: 'review',
+    annotationSourceBlockedReason: null,
+    pendingChange: null,
+    requestChange: vi.fn((action: () => void) => action()),
+    confirmChange: vi.fn(),
+    cancelChange: vi.fn(),
     predictions: [],
     isGenerating: false,
     isEmptyResult: false,
@@ -35,7 +64,6 @@ const makeLabelWithModel = (overrides: Partial<LabelWithModel> = {}): LabelWithM
     canSave: false,
     canGenerate: true,
     generate: vi.fn(),
-    removePrediction: vi.fn(),
     clear: vi.fn(),
     save: vi.fn(),
     ...overrides
@@ -57,10 +85,10 @@ describe('LabelWithModelPopUp', () => {
         const labelWithModel = makeLabelWithModel();
         render(LabelWithModelPopUp, { props: { ...defaultProps, labelWithModel } });
 
-        await fireEvent.click(screen.getByRole('button', { name: 'Run model' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Generate suggestions' }));
 
         expect(labelWithModel.generate).toHaveBeenCalledOnce();
-        expect(screen.getByText('0.50')).toBeInTheDocument();
+        expect(screen.getByText('50%')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument();
     });
 
@@ -78,13 +106,15 @@ describe('LabelWithModelPopUp', () => {
         });
         render(LabelWithModelPopUp, { props: { ...defaultProps, labelWithModel } });
 
-        await fireEvent.click(screen.getByRole('button', { name: 'Save 2' }));
-        await fireEvent.click(screen.getByRole('button', { name: 'Run again' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Save 2 annotations' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Generate again' }));
 
         expect(screen.getByText('2 suggested annotations')).toBeInTheDocument();
         expect(labelWithModel.save).toHaveBeenCalledOnce();
         expect(labelWithModel.generate).toHaveBeenCalledOnce();
-        expect(screen.queryByRole('button', { name: 'Run model' })).not.toBeInTheDocument();
+        expect(
+            screen.queryByRole('button', { name: 'Generate suggestions' })
+        ).not.toBeInTheDocument();
     });
 
     it('shows the save as toggle only for a segmentation model', async () => {

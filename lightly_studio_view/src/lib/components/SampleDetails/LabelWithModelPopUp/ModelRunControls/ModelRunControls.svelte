@@ -20,7 +20,7 @@
 </script>
 
 {#if predictionCount > 0}
-    <div class="flex items-center justify-between gap-2">
+    <div class="flex flex-wrap items-center justify-between gap-2">
         <span class="text-xs font-medium">{predictionCount} {annotationsLabel}</span>
         <Button
             variant="ghost"
@@ -34,18 +34,20 @@
             {:else}
                 <RotateCw class="size-3.5" />
             {/if}
-            Run again
+            Generate again
         </Button>
     </div>
-    <p class="text-xs text-muted-foreground">Delete the wrong ones, then save.</p>
+    <p class="text-xs text-muted-foreground">
+        Review the suggestions, correct their annotation classes, then save.
+    </p>
 {:else}
     <Button class="h-8 gap-1.5" disabled={!canGenerate} onclick={onRun}>
         {#if isGenerating}
             <Loader2 class="size-4 animate-spin" />
-            Running…
+            Generating suggestions…
         {:else}
             <Play class="size-4" />
-            Run model
+            Generate suggestions
         {/if}
     </Button>
     {#if isEmptyResult}

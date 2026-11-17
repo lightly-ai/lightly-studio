@@ -215,14 +215,14 @@ describe('useAssistedLabelingTools', () => {
         expect(context.status).toBe('cursor');
     });
 
-    it('drops the model results when the label with model tool is left', () => {
+    it('keeps model suggestions when switching tools', () => {
         const { context } = setup('label-with-model');
         mocks.clearLabelWithModel.mockClear();
 
         context.status = 'cursor';
         flushSync();
 
-        expect(mocks.clearLabelWithModel).toHaveBeenCalled();
+        expect(mocks.clearLabelWithModel).not.toHaveBeenCalled();
     });
 
     it('selects the first model and saves detections as boxes', () => {
@@ -244,5 +244,22 @@ describe('useAssistedLabelingTools', () => {
             modelId: 'segmenter',
             saveAs: 'mask'
         });
+    });
+    it('preserves model settings when the image component remounts', () => {
+        const { tools } = setup('label-with-model');
+        tools.state.modelId = 'segmenter';
+        tools.state.modelThreshold = 0.75;
+        cleanup();
+        let nextTools!: ReturnType<typeof useAssistedLabelingTools>;
+        cleanup = $effect.root(() => {
+            nextTools = useAssistedLabelingTools(() => ({
+                collectionId: 'collection-1',
+                sampleId: 'sample-2',
+                refetch: vi.fn()
+            }));
+        });
+        flushSync();
+        expect(nextTools.selectedModel?.id).toBe('segmenter');
+        expect(nextTools.state.modelThreshold).toBe(0.75);
     });
 });

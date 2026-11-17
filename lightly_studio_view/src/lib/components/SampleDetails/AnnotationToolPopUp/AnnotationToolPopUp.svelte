@@ -21,6 +21,8 @@
         // False hides everything below the tool controls, e.g. before a tool has results.
         showSaveControls?: boolean;
         saveLabel?: string;
+        clearLabel?: string;
+        panelWidth?: string;
         canSave: boolean;
         isSaving?: boolean;
         onSave: () => void;
@@ -38,6 +40,8 @@
         showSaveAs = true,
         showSaveControls = true,
         saveLabel = 'Done',
+        clearLabel = 'Reset',
+        panelWidth = '265px',
         canSave,
         isSaving = false,
         onSave,
@@ -51,7 +55,7 @@
     ] as const;
 </script>
 
-<div class="absolute bottom-11 w-[min(90vw,265px)]">
+<div class="absolute bottom-11" style:width={`min(90vw, ${panelWidth})`}>
     <div
         class="pointer-events-auto grid max-h-[70vh] gap-1.5 overflow-y-auto rounded-lg bg-muted p-2 shadow-md"
         role="dialog"
@@ -102,12 +106,12 @@
                 </div>
             {/if}
 
-            <div class="flex gap-1.5">
+            <div class="flex flex-wrap gap-1.5">
                 <Button class="h-8 flex-1" disabled={!canSave || isSaving} onclick={onSave}
                     >{isSaving ? 'Saving…' : saveLabel}</Button
                 >
                 <Button variant="outline" class="h-8 flex-1" disabled={isSaving} onclick={onClear}
-                    >Reset</Button
+                    >{clearLabel}</Button
                 >
             </div>
         {/if}

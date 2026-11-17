@@ -3,7 +3,8 @@ import { fromStore } from 'svelte/store';
 import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 import {
     isAssistedLabelingStatus,
-    useSampleDetailsToolbarContext
+    useSampleDetailsToolbarContext,
+    type SampleDetailsToolbarContext
 } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
 import { useLabelingModels } from '$lib/hooks/useLabelingModels';
@@ -24,6 +25,7 @@ interface UseAssistedLabelingToolsParams {
 
 // A class, so child components can update the fields without mutating a $state prop.
 class AssistedLabelingToolState {
+    constructor(private modelSettings: NonNullable<SampleDetailsToolbarContext['modelLabeling']>) {}
     saveAs = $state<'mask' | 'box'>('mask');
     smartSelectClass = $state<string | null>(null);
     instancesClass = $state<string | null>(null);
@@ -31,8 +33,18 @@ class AssistedLabelingToolState {
     maxInstances = $state(DEFAULT_MAX_INSTANCES);
     isDrawingInstancesBox = $state(false);
     // Null selects the first model of the server.
-    modelId = $state<string | null>(null);
-    modelThreshold = $state(DEFAULT_MODEL_THRESHOLD);
+    get modelId() {
+        return this.modelSettings.modelId;
+    }
+    set modelId(value: string | null) {
+        this.modelSettings.modelId = value;
+    }
+    get modelThreshold() {
+        return this.modelSettings.threshold;
+    }
+    set modelThreshold(value: number) {
+        this.modelSettings.threshold = value;
+    }
 }
 
 // Shares the tool state between the pop-ups and the overlays, and falls back to the cursor
@@ -43,7 +55,8 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const { context, setStatus } = useSampleDetailsToolbarContext();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
     const isEditingMode = fromStore(useGlobalStorage().isEditingMode);
-    const state = new AssistedLabelingToolState();
+    context.modelLabeling ??= { modelId: null, threshold: DEFAULT_MODEL_THRESHOLD };
+    const state = new AssistedLabelingToolState(context.modelLabeling);
     const stickyClass = useStickyClassName(() => getParams().collectionId);
 
     // A Space pan keeps the tool it interrupts active, so its prompts survive the pan.
@@ -139,7 +152,6 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         untrack(() => {
             if (tool !== 'smart-select') smartSelect.clear();
             if (tool !== 'find-instances') clearInstances();
-            if (tool !== 'label-with-model') labelWithModel.clear();
         });
     });
 

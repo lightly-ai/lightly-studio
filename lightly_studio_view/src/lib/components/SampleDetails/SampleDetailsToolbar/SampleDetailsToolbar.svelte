@@ -158,9 +158,9 @@
         },
         {
             id: 'label-with-model',
-            label: 'Label with model',
+            label: 'Model-assisted labeling',
             icon: ScanSearch,
-            hint: 'Labels the image with your own model.',
+            hint: 'Generate annotation suggestions with a model, then review and save them.',
             visible: showLabelWithModelTool,
             disabledReason: createToolDisabledReason
         }

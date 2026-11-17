@@ -124,7 +124,7 @@ describe('SampleDetailsToolbar', () => {
                 'Mask brush',
                 'Smart select',
                 'Find all instances',
-                'Label with model'
+                'Model-assisted labeling'
             ]) {
                 expect(getByLabelText(label)).toBeDisabled();
             }
@@ -323,12 +323,12 @@ describe('SampleDetailsToolbar', () => {
     });
 
     it('shows and activates the label with model tool when models are available', async () => {
-        expect(render(SampleDetailsToolbar).queryByLabelText('Label with model')).toBeNull();
+        expect(render(SampleDetailsToolbar).queryByLabelText('Model-assisted labeling')).toBeNull();
         cleanup();
         labelingModels.disabledReason = null;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Label with model'));
+        await fireEvent.click(getByLabelText('Model-assisted labeling'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('label-with-model');
     });
