@@ -9,7 +9,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from typing import Protocol, TypeVar, assert_never
 
-from lightly_studio.core.dataset_query import evaluation_query_translation
+from lightly_studio.core.dataset_query import evaluation_query_translation, video_query_validation
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import (
     ClassificationField,
@@ -33,8 +33,10 @@ from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskField,
     SegmentationMaskQuery,
 )
+from lightly_studio.core.dataset_query.video_event_query import VideoEventField, VideoEventQuery
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
@@ -99,6 +101,8 @@ _STRING_FIELDS: dict[tuple[str, str], _EqualityField[str]] = {
     ("video", "file_path_abs"): VideoSampleField.file_path_abs,
     ("classification", "class_name"): ClassificationField.class_name,
     ("classification", "source"): ClassificationField.source,
+    ("event", "class_name"): VideoEventField.class_name,
+    ("event", "source"): VideoEventField.source,
     ("object_detection", "class_name"): ObjectDetectionField.class_name,
     ("object_detection", "source"): ObjectDetectionField.source,
     ("segmentation_mask", "class_name"): SegmentationMaskField.class_name,
@@ -126,12 +130,15 @@ _DATETIME_FIELDS: dict[tuple[str, str], _OrdinalField[datetime]] = {
 
 _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
+    ("event", "start_time_s"): VideoEventField.start_time_s,
+    ("event", "end_time_s"): VideoEventField.end_time_s,
 }
 
 # Nullable numeric columns support ordinal comparisons in the query language.
 _ORDINAL_NULLABLE_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "duration_s"): VideoSampleField.duration_s,
     ("classification", "confidence"): ClassificationField.confidence,
+    ("event", "confidence"): VideoEventField.confidence,
     ("object_detection", "confidence"): ObjectDetectionField.confidence,
     ("segmentation_mask", "confidence"): SegmentationMaskField.confidence,
 }
@@ -245,7 +252,13 @@ def evaluation_metric_sort_to_order_by(
     return order_by
 
 
-def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PLR0912 C901
+def to_match_expression(expr: MatchExpr, sample_type: SampleType | None = None) -> MatchExpression:
+    """Validate video scope and translate a query expression."""
+    video_query_validation.validate(expr=expr, scope=sample_type.value if sample_type else None)
+    return _to_match_expression(expr=expr)
+
+
+def _to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PLR0912 C901
     """Translate a validated query-language expression to a dataset-query expression."""
     if isinstance(expr, MetadataComparisonExpr):
         return _metadata_to_match_expression(expr=expr)
@@ -287,13 +300,13 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PL
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
     if isinstance(expr, VideoEventMatchExpr):
-        raise QueryExprError("Video event queries are not supported.")
+        return VideoEventQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ClassificationMatchExpr):
-        return ClassificationQuery(to_match_expression(expr=expr.subexpr))
+        return ClassificationQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
-        return ObjectDetectionQuery(to_match_expression(expr=expr.subexpr))
+        return ObjectDetectionQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, SegmentationMaskMatchExpr):
-        return SegmentationMaskQuery(to_match_expression(expr=expr.subexpr))
+        return SegmentationMaskQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(
         expr,
         (
@@ -305,11 +318,11 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PL
     ):
         return evaluation_query_translation.to_match_expression(expr=expr)
     if isinstance(expr, AndExpr):
-        return AND(*(to_match_expression(expr=child) for child in expr.children))
+        return AND(*(_to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, OrExpr):
-        return OR(*(to_match_expression(expr=child) for child in expr.children))
+        return OR(*(_to_match_expression(expr=child) for child in expr.children))
     if isinstance(expr, NotExpr):
-        return NOT(to_match_expression(expr=expr.child))
+        return NOT(_to_match_expression(expr=expr.child))
     assert_never(expr)
 
 
