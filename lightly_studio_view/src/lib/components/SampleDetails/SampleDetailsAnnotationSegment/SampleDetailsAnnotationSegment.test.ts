@@ -26,7 +26,10 @@ const mocks = vi.hoisted(() => ({
     addReversibleAction: vi.fn(),
     deleteAnnotation: vi.fn(),
     followsTree: false,
-    labels: [{ annotation_label_id: 'label-cat', annotation_label_name: 'cat' }] as { annotation_label_id: string; annotation_label_name: string }[]
+    labels: [{ annotation_label_id: 'label-cat', annotation_label_name: 'cat' }] as {
+        annotation_label_id: string;
+        annotation_label_name: string;
+    }[]
 }));
 
 vi.mock('$lib/components/AnnotationTree', async (importOriginal) => ({

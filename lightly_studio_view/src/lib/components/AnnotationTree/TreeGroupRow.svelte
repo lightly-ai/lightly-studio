@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ChevronRight } from '@lucide/svelte';
+    import ChevronRight from '@lucide/svelte/icons/chevron-right';
     import { Checkbox } from '$lib/components/ui/checkbox/index.js';
     import { cn } from '$lib/utils/shadcn';
     import HighlightedText from './HighlightedText.svelte';

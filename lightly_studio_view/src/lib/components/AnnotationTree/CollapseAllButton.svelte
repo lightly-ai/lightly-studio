@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { ChevronsDownUp, ChevronsUpDown } from '@lucide/svelte';
+    import ChevronsDownUp from '@lucide/svelte/icons/chevrons-down-up';
+    import ChevronsUpDown from '@lucide/svelte/icons/chevrons-up-down';
 
     interface Props {
         anyOpen: boolean;

@@ -12,7 +12,7 @@ import {
     useImageAnnotationCountsBySampleTags,
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
-import { buildImageFilter } from '$lib/utils/buildImageFilter';
+import { buildImageAnnotationCountsFilter } from './imageAnnotationCountsFilter';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
@@ -475,7 +475,7 @@ describe('+layout.svelte collection-grid workspace', () => {
         // The counts query reads its filter lazily, so the test calls the params getter.
         const lastCountsAnnotationFilter = () => {
             vi.mocked(useImageAnnotationCounts).mock.lastCall?.[0]();
-            return vi.mocked(buildImageFilter).mock.lastCall?.[0].annotationFilter;
+            return vi.mocked(buildImageAnnotationCountsFilter).mock.lastCall?.[0].annotationFilter;
         };
 
         it('puts the tree filter into the counts filter', async () => {

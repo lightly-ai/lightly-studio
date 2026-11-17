@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Database } from '@lucide/svelte';
+    import Database from '@lucide/svelte/icons/database';
     import { ColorPicker } from '$lib/components/ui/color-picker';
     import { useClassColorPicker, useSourceColorPicker } from '$lib/hooks';
     import type { TreeMark } from './treeBranches';

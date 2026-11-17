@@ -218,7 +218,7 @@ describe('AnnotationTree', () => {
 
         await waitFor(() => expect(mocks.readImages).toHaveBeenCalled());
         const [request] = mocks.readImages.mock.calls[0];
-        expect(request.body.filters.sample_filter.annotations_filter).toBeUndefined();
+        expect(request.body.filters.sample_filter?.annotations_filter).toBeUndefined();
     });
 
     it('sends the images request without a tree filter when the pair counts fail', async () => {
@@ -227,7 +227,7 @@ describe('AnnotationTree', () => {
 
         await waitFor(() => expect(mocks.readImages).toHaveBeenCalled());
         const [request] = mocks.readImages.mock.calls[0];
-        expect(request.body.filters.sample_filter.annotations_filter).toBeUndefined();
+        expect(request.body.filters.sample_filter?.annotations_filter).toBeUndefined();
     });
 
     it('sends the images request without a tree filter when nothing is unticked', async () => {
@@ -235,7 +235,7 @@ describe('AnnotationTree', () => {
 
         await waitFor(() => expect(mocks.readImages).toHaveBeenCalled());
         const [request] = mocks.readImages.mock.calls[0];
-        expect(request.body.filters.sample_filter.annotations_filter).toBeUndefined();
+        expect(request.body.filters.sample_filter?.annotations_filter).toBeUndefined();
     });
 
     it('ticks only the class pairs and no "No annotations" row on a class bar click', async () => {

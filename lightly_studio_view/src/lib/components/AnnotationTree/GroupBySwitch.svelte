@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Database, Tag } from '@lucide/svelte';
+    import Database from '@lucide/svelte/icons/database';
+    import Tag from '@lucide/svelte/icons/tag';
     import { cn } from '$lib/utils/shadcn';
     import type { GroupBy } from './groupPairRows';
 
