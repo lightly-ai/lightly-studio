@@ -48,6 +48,9 @@ from lightly_studio.resolvers.annotation_resolver.get_by_id_with_payload import 
 from lightly_studio.resolvers.annotation_resolver.get_cuboid_frame_ids_by_sequence_ids import (
     get_cuboid_frame_ids_by_sequence_ids,
 )
+from lightly_studio.resolvers.annotation_resolver.get_cuboids_by_object_track_ids import (
+    get_cuboids_by_object_track_ids,
+)
 from lightly_studio.resolvers.annotation_resolver.get_label_ids_by_sample_ids import (
     get_label_ids_by_sample_ids,
 )
@@ -100,6 +103,7 @@ __all__ = [
     "get_by_id_with_payload",
     "get_by_ids",
     "get_cuboid_frame_ids_by_sequence_ids",
+    "get_cuboids_by_object_track_ids",
     "get_label_ids_by_sample_ids",
     "get_sample_ids",
     "get_unembedded_annotation_ids",
