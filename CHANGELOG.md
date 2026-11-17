@@ -30,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Fixed slow object detection and instance segmentation evaluations by avoiding repeated annotation loads.
 - Fixed slow evaluation saves by grouping similar results into fewer database inserts.
 - Fixed slow annotation grid loading by loading annotation details in batches.
 - Applying an empty query or a query with only comments now clears the query filter instead of showing a syntax error.
