@@ -16,6 +16,8 @@ const defaultProps = {
     onCategoricalValuesSet: vi.fn(),
     onCategoricalValuesClear: vi.fn()
 };
+// Fields start collapsed; this opens one by its name.
+const expand = (field: string) => fireEvent.click(screen.getByRole('button', { name: field }));
 afterEach(() => {
     storage.updateMetadataBounds({});
     storage.updateMetadataValues({});
@@ -38,6 +40,7 @@ it.each([
         storage.updateMetadataInfo([{ name: 'score', type, ...bound }]);
         const onFilterChanged = vi.fn();
         render(CombinedMetadataDimensionsFilters, { ...defaultProps, onFilterChanged });
+        await expand('score');
         const minimum = screen.getByRole('textbox', { name: 'score minimum' });
         await fireEvent.input(minimum, { target: { value: input } });
         await fireEvent.blur(minimum);
@@ -74,6 +77,7 @@ it.each(['width', 'height'] as const)('edits image %s in exact pixels', async (f
         showDimensions: true,
         onFilterChanged
     });
+    await expand(field === 'width' ? 'Width' : 'Height');
     const input = screen.getByRole('textbox', { name: new RegExp(`${field} minimum`, 'i') });
     await fireEvent.input(input, { target: { value: '250' } });
     await fireEvent.blur(input);
@@ -104,4 +108,20 @@ it('edits exact frame numbers and synchronizes slider changes', async () => {
     expect(onFilterChanged).toHaveBeenCalledExactlyOnceWith('frame_number', 250, 1000);
     await fireEvent.keyDown(screen.getAllByRole('slider')[0], { key: 'ArrowRight' });
     expect(input).toHaveValue('251');
+});
+
+it('hides and shows the slider of a numeric field from its name', async () => {
+    const bound = { min: 0, max: 1 };
+    storage.updateMetadataBounds({ score: bound });
+    storage.updateMetadataValues({ score: bound });
+    render(CombinedMetadataDimensionsFilters, defaultProps);
+    const toggle = screen.getByRole('button', { name: 'score' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+
+    await fireEvent.click(toggle);
+    expect(screen.getAllByRole('slider')).toHaveLength(2);
+
+    await fireEvent.click(toggle);
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
 });

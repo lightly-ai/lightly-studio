@@ -10,8 +10,11 @@
         disabled: boolean;
         loading: boolean;
         updating: boolean;
+        status?: string;
         onRemove?: () => void;
         onOpenChange?: (open: boolean) => void;
+        expanded: boolean;
+        onToggleExpanded?: () => void;
         children: Snippet;
     }
 
@@ -22,22 +25,17 @@
         disabled,
         loading,
         updating,
+        status,
         onRemove,
         onOpenChange,
+        expanded,
+        onToggleExpanded,
         children: content
     }: Props = $props();
 </script>
 
 {#if layout === 'list'}
-    <MetadataCategoricalFilterList
-        {fieldLabel}
-        {summary}
-        {disabled}
-        {loading}
-        {updating}
-        {onRemove}
-        {onOpenChange}
-    >
+    <MetadataCategoricalFilterList {fieldLabel} {status} {expanded} {onToggleExpanded} {onRemove}>
         {#snippet children()}
             {@render content()}
         {/snippet}

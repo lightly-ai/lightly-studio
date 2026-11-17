@@ -8,17 +8,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-
+- Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.
+- Filter videos with query expressions in the GUI using video fields, tags, metadata, and video annotations.
 - Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
 - Every filter list in the filter panel has a search, "Select all" and "Clear".
+- The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
 
 ### Changed
+
+- Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
 
 ### Deprecated
 
 ### Removed
 
+- BREAKING: Dropped Python 3.10 support. Upgrade to Python 3.11–3.15.
+
 ### Fixed
+
+- Fixed slow evaluation saves by grouping similar results into fewer database inserts.
+- Fixed slow annotation grid loading by loading annotation details in batches.
+- Applying an empty query or a query with only comments now clears the query filter instead of showing a syntax error.
+- Fixed slow grid loading by avoiding unnecessary database queries for each annotation.
 
 ### Security
 

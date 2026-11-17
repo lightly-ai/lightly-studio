@@ -48,6 +48,7 @@ export interface QueryParseError {
 
 export type QueryExprTranslationResult =
     | { status: 'ok'; queryExpr: QueryExpr }
+    | { status: 'empty' }
     | { status: 'error'; errors: QueryParseError[] };
 
 type QueryScope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
@@ -82,9 +83,12 @@ export function parseLightlyQuery(
     try {
         const scopeError = getQueryScopeError(parseResult.value, sampleType);
         if (scopeError) throw new Error(scopeError);
+        if (!parseResult.value.expression) return { status: 'empty' };
         return {
             status: 'ok',
-            queryExpr: toQueryExpr(parseResult.value)
+            queryExpr: {
+                match_expr: visit(parseResult.value.expression, getRootScope(parseResult.value))
+            }
         };
     } catch (error) {
         return {
@@ -92,16 +96,6 @@ export function parseLightlyQuery(
             errors: [{ message: toErrorMessage(error) }]
         };
     }
-}
-
-/**
- * Converts a Langium AST into a backend-compatible QueryExpr.
- */
-function toQueryExpr(parseResult: Query): QueryExpr {
-    const table = getRootScope(parseResult);
-    return {
-        match_expr: visit(parseResult.expression, table)
-    };
 }
 
 /**

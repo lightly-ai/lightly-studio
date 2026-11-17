@@ -21,7 +21,7 @@
     import SelectClassDialog from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import type { PendingChange } from '../pendingChange';
-    import { usePostHog } from '$lib/hooks';
+    import { isAnnotationSourceBlocked, usePostHog } from '$lib/hooks';
 
     type D3Event = D3DragEvent<SVGRectElement, unknown, unknown>;
 
@@ -185,6 +185,8 @@
         width: number;
         height: number;
     }) => {
+        // Without a target source the box would land in the backend's default source.
+        if (isAnnotationSourceBlocked(annotationLabelContext)) return;
         const pendingOperation = startCreateBoundingBoxPending();
 
         try {

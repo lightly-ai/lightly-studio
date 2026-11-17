@@ -662,6 +662,67 @@ def test_count_image_annotations_by_collection__count_mode_samples_with_filter(
     assert result["person"] == (1, 1)
 
 
+def test_count_image_annotations_by_collection__sources_only_filter(
+    test_client: TestClient,
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    collection_id = collection.collection_id
+    image_a = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/image_a.png"
+    )
+    image_b = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/path/to/image_b.png"
+    )
+    car_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    person_label = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="person"
+    )
+    source_a = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_a.sample_id, annotation_label_id=car_label.annotation_label_id
+            ),
+            AnnotationDetails(
+                sample_id=image_b.sample_id, annotation_label_id=car_label.annotation_label_id
+            ),
+        ],
+        collection_name="source_a",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=image_b.sample_id, annotation_label_id=person_label.annotation_label_id
+            ),
+        ],
+        collection_name="source_b",
+    )
+
+    # The frontend sends unused annotation filter fields as explicit nulls.
+    response = test_client.post(
+        f"/api/collections/{collection_id}/images/annotations/count",
+        json={
+            "filter": {
+                "sample_filter": {
+                    "annotations_filter": {
+                        "collection_ids": [str(source_a[0].annotation_collection_id)],
+                        "annotation_label_ids": None,
+                    }
+                }
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [{"label_name": "car", "current_count": 2, "total_count": 2}]
+
+
 def test_count_image_annotations_by_collection__count_mode_invalid(
     test_client: TestClient,
     db_session: Session,

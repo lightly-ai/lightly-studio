@@ -3,7 +3,8 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import {
         isAssistedLabelingStatus,
-        useSampleDetailsToolbarContext
+        useSampleDetailsToolbarContext,
+        type ToolbarStatus
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { onMount } from 'svelte';
     import { isOverlayTarget } from '$lib/utils';
@@ -79,6 +80,22 @@
         isAssistedLabelingView && labelingModels.disabledReason === null
     );
 
+    // The tools that create annotations stay off while the target source is unknown, so nothing
+    // is drawn only to be refused. The annotation details view only edits and needs no target.
+    const createToolDisabledReason = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView
+            ? undefined
+            : (annotationLabelContext.annotationSourceBlockedReason ?? undefined)
+    );
+    const CREATE_TOOLS: ToolbarStatus[] = [
+        'bounding-box',
+        'brush',
+        'slic',
+        'smart-select',
+        'find-instances',
+        'label-with-model'
+    ];
+
     const items = $derived<ToolbarItem[]>([
         {
             id: 'cursor',
@@ -101,7 +118,8 @@
             icon: VectorSquareIcon,
             shortcut: $settingsStore.key_toolbar_bounding_box,
             action: 'draw',
-            visible: !annotationLabelContext.isOnAnnotationDetailsView
+            visible: !annotationLabelContext.isOnAnnotationDetailsView,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'brush',
@@ -109,7 +127,8 @@
             icon: Brush,
             shortcut: $settingsStore.key_toolbar_segmentation_mask,
             action: 'paint',
-            visible: showSegmentationTool
+            visible: showSegmentationTool,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'slic',
@@ -118,28 +137,32 @@
             shortcut: $settingsStore.key_toolbar_slic ?? 'a',
             action: 'activate',
             hint: 'Build a mask by selecting image regions.',
-            visible: showSegmentationTool && slicAvailable
+            visible: showSegmentationTool && slicAvailable,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'smart-select',
             label: 'Smart select',
             icon: WandSparkles,
             hint: 'Segments the object that you click or box.',
-            visible: showAssistedLabelingTools
+            visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'find-instances',
             label: 'Find all instances',
             icon: Layers3,
             hint: 'Finds all objects that match a text prompt.',
-            visible: showAssistedLabelingTools
+            visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'label-with-model',
             label: 'Label with model',
             icon: ScanSearch,
             hint: 'Labels the image with your own model.',
-            visible: showLabelWithModelTool
+            visible: showLabelWithModelTool,
+            disabledReason: createToolDisabledReason
         }
     ]);
 
@@ -192,6 +215,13 @@
             setAnnotationType(AnnotationType.OBJECT_DETECTION);
         }
     };
+
+    $effect(() => {
+        if (!createToolDisabledReason) return;
+        // A selected mask stays editable while new annotations are blocked, as the brush allows.
+        if (annotationLabelContext.annotationId) return;
+        if (CREATE_TOOLS.includes(sampleDetailsToolbarContext.status)) setStatus('cursor');
+    });
 
     $effect(() => {
         const { status } = sampleDetailsToolbarContext;

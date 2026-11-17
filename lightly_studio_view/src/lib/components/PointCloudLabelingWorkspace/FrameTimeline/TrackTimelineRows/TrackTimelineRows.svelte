@@ -88,7 +88,7 @@
     {#if tracks.length > 0}
         <TrackRowsResizer {rowsHeight} getRenderedHeight={() => listElement?.clientHeight ?? 0} />
     {/if}
-    <div class="border-t px-2 py-1" data-testid="object-track-rows">
+    <div class="w-full border-t px-2 py-1" data-testid="object-track-rows">
         <TrackTimelineToolbar
             visibility={tracks.length > 0
                 ? {
@@ -103,7 +103,7 @@
             {onStartTrack}
         />
         <div
-            class="scrollbar-thin overflow-y-auto overflow-x-hidden overscroll-contain px-1"
+            class="scrollbar-thin w-full overflow-y-auto overflow-x-hidden overscroll-contain px-1 [scrollbar-gutter:stable]"
             style:max-height={`${rowsHeight.height}px`}
             bind:this={listElement}
             data-testid="object-track-list"
