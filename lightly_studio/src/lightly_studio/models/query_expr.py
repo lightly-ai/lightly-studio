@@ -232,6 +232,13 @@ class VideoEventMatchExpr(BaseModel):
     subexpr: MatchExpr
 
 
+class VideoFrameMatchExpr(BaseModel):
+    """Match a video with one frame that satisfies all criteria."""
+
+    type: Literal["video_frame_match_expr"] = "video_frame_match_expr"
+    subexpr: MatchExpr
+
+
 class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
@@ -281,6 +288,7 @@ MatchExpr: TypeAlias = Annotated[
     | FalseNegativeMatchExpr
     | ClassificationMatchExpr
     | VideoEventMatchExpr
+    | VideoFrameMatchExpr
     | ObjectDetectionMatchExpr
     | SegmentationMaskMatchExpr
     | AndExpr
@@ -297,6 +305,7 @@ EvaluationMetricNotExpr.model_rebuild()
 SampleEvaluationMatchExpr.model_rebuild()
 ClassificationMatchExpr.model_rebuild()
 VideoEventMatchExpr.model_rebuild()
+VideoFrameMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
 SegmentationMaskMatchExpr.model_rebuild()
 AndExpr.model_rebuild()

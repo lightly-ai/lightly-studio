@@ -9,12 +9,16 @@ from lightly_studio.models.query_expr import (
     ClassificationMatchExpr,
     EqualityComparisonOperator,
     FieldRef,
+    MetadataComparisonExpr,
     NotExpr,
+    ObjectDetectionMatchExpr,
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     QueryExpr,
+    SampleEvaluationMatchExpr,
     StringExpr,
     VideoEventMatchExpr,
+    VideoFrameMatchExpr,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -55,3 +59,40 @@ def test_event_scope() -> None:
     )
     with pytest.raises(QueryExprError, match="video collection"):
         image_filter.apply(query=select(ImageTable).join(ImageTable.sample))
+
+
+@pytest.mark.parametrize("table", ["image", "video", "event", "video_frame"])
+def test_invalid_frame_fields(table: str) -> None:
+    field = OrdinalFloatExpr(
+        field=FieldRef(table=table, name="width"), operator=OrdinalComparisonOperator.GT, value=1
+    )
+    for criterion in (field, ObjectDetectionMatchExpr(subexpr=field)):
+        expr = VideoFrameMatchExpr(subexpr=NotExpr(child=criterion))
+        with pytest.raises(QueryExprError):
+            query_translation.to_match_expression(expr=expr, sample_type=SampleType.VIDEO)
+
+
+def test_frame_scope() -> None:
+    field = OrdinalFloatExpr(
+        field=FieldRef(table="video_frame", name="frame_timestamp_s"),
+        operator=OrdinalComparisonOperator.GT,
+        value=1,
+    )
+    frame = VideoFrameMatchExpr(subexpr=field)
+    for criterion in (
+        frame,
+        VideoEventMatchExpr(subexpr=field),
+        SampleEvaluationMatchExpr(run_name="run"),
+        MetadataComparisonExpr(path="speed", operator=OrdinalComparisonOperator.GT, value=1),
+        ObjectDetectionMatchExpr(subexpr=frame),
+    ):
+        with pytest.raises(QueryExprError):
+            query_translation.to_match_expression(
+                expr=VideoFrameMatchExpr(subexpr=criterion), sample_type=SampleType.VIDEO
+            )
+    with pytest.raises(QueryExprError, match="video collection"):
+        query_translation.to_match_expression(
+            expr=NotExpr(child=frame), sample_type=SampleType.IMAGE
+        )
+    with pytest.raises(QueryExprError, match="frame query"):
+        query_translation.to_match_expression(expr=field, sample_type=SampleType.VIDEO)

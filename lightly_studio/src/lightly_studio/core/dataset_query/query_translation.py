@@ -34,6 +34,8 @@ from lightly_studio.core.dataset_query.segmentation_mask_query import (
     SegmentationMaskQuery,
 )
 from lightly_studio.core.dataset_query.video_event_query import VideoEventField, VideoEventQuery
+from lightly_studio.core.dataset_query.video_frame_query import VideoFrameQuery
+from lightly_studio.core.dataset_query.video_frame_sample_field import VideoFrameSampleField
 from lightly_studio.core.dataset_query.video_sample_field import VideoSampleField
 from lightly_studio.errors import QueryExprError
 from lightly_studio.models.collection import SampleType
@@ -60,6 +62,7 @@ from lightly_studio.models.query_expr import (
     StringExpr,
     TagsContainsExpr,
     VideoEventMatchExpr,
+    VideoFrameMatchExpr,
 )
 from lightly_studio.models.sort_direction import SortDirection
 
@@ -132,6 +135,7 @@ _ORDINAL_FLOAT_FIELDS: dict[tuple[str, str], _OrdinalField[Number]] = {
     ("video", "fps"): VideoSampleField.fps,
     ("event", "start_time_s"): VideoEventField.start_time_s,
     ("event", "end_time_s"): VideoEventField.end_time_s,
+    ("video_frame", "frame_timestamp_s"): VideoFrameSampleField.frame_timestamp_s,
 }
 
 # Nullable numeric columns support ordinal comparisons in the query language.
@@ -299,6 +303,8 @@ def _to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 P
     if isinstance(expr, TagsContainsExpr):
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
+    if isinstance(expr, VideoFrameMatchExpr):
+        return VideoFrameQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, VideoEventMatchExpr):
         return VideoEventQuery(_to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ClassificationMatchExpr):
