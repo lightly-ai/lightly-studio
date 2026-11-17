@@ -66,9 +66,6 @@ vi.mock('$lib/components', async () => {
         SidePanelToggleButton: stub
     };
 });
-vi.mock('$lib/components/ImageAdjustments', async () => ({
-    ImageAdjustments: (await import('./SampleDetailsPanel.stub.svelte')).default
-}));
 vi.mock('./SampleDetailsImageContainer/SampleDetailsImageContainer.svelte', async () => ({
     default: (await import('./SampleDetailsPanel.stub.svelte')).default
 }));
@@ -134,6 +131,36 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
         expect(toggleSampleSelection).not.toHaveBeenCalled();
         expect(handleEscape).not.toHaveBeenCalled();
     });
+
+    it('selects on space when a toolbar button has focus', async () => {
+        const { container } = render(SampleDetailsPanel, { props: defaultProps });
+        const button = container.appendChild(document.createElement('button'));
+        await fireEvent.keyDown(button, { key: ' ' });
+        expect(toggleSampleSelection).toHaveBeenCalledWith('sample-1', 'collection-1');
+    });
+
+    it('pans on space in editing mode when a toolbar button has focus', async () => {
+        isEditingMode.set(true);
+        const { container } = render(SampleDetailsPanel, { props: defaultProps });
+        const button = container.appendChild(document.createElement('button'));
+        mockToolbarContext.status = 'bounding-box';
+        await fireEvent.keyDown(button, { key: ' ' });
+        expect(mockToolbarContext.status).toBe('drag');
+    });
+
+    it.each([false, true])(
+        'ignores space on a button that opts out of the shortcut with editing=%s',
+        async (editing) => {
+            isEditingMode.set(editing);
+            const { container } = render(SampleDetailsPanel, { props: defaultProps });
+            const button = container.appendChild(document.createElement('button'));
+            button.setAttribute('data-ignore-space-shortcut', '');
+            mockToolbarContext.status = 'bounding-box';
+            expect(await fireEvent.keyDown(button, { key: ' ' })).toBe(true);
+            expect(toggleSampleSelection).not.toHaveBeenCalled();
+            expect(mockToolbarContext.status).toBe('bounding-box');
+        }
+    );
 
     it('restores the active tool when space is released after focus moves to a field', async () => {
         isEditingMode.set(true);
