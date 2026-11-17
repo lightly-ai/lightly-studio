@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import shutil
+import tempfile
 from pathlib import Path
 
 import pytest
@@ -62,3 +63,31 @@ def test_remove_export_artifact__is_dir_fails(tmp_path: Path, mocker: MockerFixt
     export_artifact.remove_export_artifact(export_path=str(export_dir))
 
     assert export_dir.exists()
+
+
+def test_remove_export_artifact__outside_temp_dir(
+    tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    # The fake temp directory does not contain the export artifact below.
+    mocker.patch.object(tempfile, "gettempdir", return_value=str(tmp_path / "temp"))
+    export_path = tmp_path / "outside" / "coco.json"
+    export_path.parent.mkdir()
+    export_path.write_text("{}")
+
+    with caplog.at_level(logging.WARNING):
+        export_artifact.remove_export_artifact(export_path=str(export_path))
+
+    assert f"Skipping export artifact outside the temp directory: {export_path}" in caplog.text
+    assert export_path.exists()
+
+
+def test_remove_export_artifact__temp_dir_itself(
+    tmp_path: Path, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch.object(tempfile, "gettempdir", return_value=str(tmp_path))
+
+    with caplog.at_level(logging.WARNING):
+        export_artifact.remove_export_artifact(export_path=str(tmp_path))
+
+    assert f"Skipping export artifact that is the temp directory itself: {tmp_path}" in caplog.text
+    assert tmp_path.exists()
