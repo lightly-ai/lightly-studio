@@ -167,7 +167,12 @@ class LabelingModelView(BaseModel):
 
 
 class LabelingModelsView(BaseModel):
-    """The labeling models that the GUI can run. Empty if no model is registered."""
+    """The labeling models that the GUI can run.
+
+    Attributes:
+        models: The registered labeling models that are ready. Empty if no model is
+            registered. Excludes models that are still loading.
+    """
 
     models: list[LabelingModelView]
 
