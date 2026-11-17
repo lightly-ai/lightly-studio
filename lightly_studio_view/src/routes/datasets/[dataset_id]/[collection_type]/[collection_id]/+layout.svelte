@@ -27,7 +27,7 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { setAnnotationClasses } from '$lib/hooks';
+    import { setAnnotationClasses, useUnannotatedSampleCount } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -354,6 +354,8 @@
         toggleAnnotationFilterSelection,
         setAnnotationFilterSelection,
         setAnnotationCounts,
+        setUnannotatedSampleCount,
+        includeUnannotatedSamples,
         pruneInvalidSelections
     } = useAnnotationsFilter({
         annotationLabels: annotationLabelsStore
@@ -397,8 +399,18 @@
     // backend restricts the counted annotations by their own collection id.
     const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
         useAnnotationCollectionsFilter();
+    // Only the image and video grids show the "No annotations" row.
+    const showsNoAnnotationsRow = $derived(isImages || isVideos);
+    const annotationFilterWithUnannotated = $derived<AnnotationsFilter | undefined>(
+        showsNoAnnotationsRow && $includeUnannotatedSamples
+            ? {
+                  ...($annotationFilterStore ?? { filter_type: 'annotations' }),
+                  include_unannotated_samples: true
+              }
+            : $annotationFilterStore
+    );
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
-        const base = $annotationFilterStore;
+        const base = annotationFilterWithUnannotated;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         // An empty list cannot be sent: the backend skips collection_ids when it is falsy, so
@@ -440,16 +452,35 @@
         enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
     }));
 
-    const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
-        collectionId,
-        filter: buildVideoAnnotationCountsFilter({
+    const videoAnnotationCountsFilter = $derived(
+        buildVideoAnnotationCountsFilter({
             videoFilter: $videoFilterFromHook,
             metadataFilters,
-            annotationFilter: $annotationFilterStore,
+            annotationFilter: annotationFilterWithUnannotated,
             videoBoundsValues: $videoBoundsValues
-        }),
+        })
+    );
+    const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
+        collectionId,
+        filter: videoAnnotationCountsFilter,
         enabled: isVideos && !$allSourcesHidden
     }));
+
+    const unannotatedSampleCountQuery = useUnannotatedSampleCount(() => ({
+        ...(isVideos
+            ? { sampleType: 'video' as const, collectionId, filter: videoAnnotationCountsFilter }
+            : {
+                  sampleType: 'image' as const,
+                  collectionId: datasetId,
+                  filter: imageAnnotationCountsFilter
+              }),
+        enabled: showsNoAnnotationsRow && !$allSourcesHidden
+    }));
+    $effect(() =>
+        setUnannotatedSampleCount(
+            showsNoAnnotationsRow ? unannotatedSampleCountQuery.data : undefined
+        )
+    );
 
     const videoFrameCountsCollectionId = $derived(
         isVideoFrameAnnotations ? (parentCollection?.collectionId ?? collectionId) : collectionId

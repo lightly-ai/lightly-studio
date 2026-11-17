@@ -4,6 +4,8 @@ import { defineConfig } from '@hey-api/openapi-ts';
 const READ_ONLY_POST_OPERATIONS = new Set([
     'count_image_annotations_by_collection',
     'count_image_annotations_by_sample_tags',
+    'count_unannotated_images',
+    'count_unannotated_videos',
     'count_video_frame_annotations',
     'count_video_frame_annotations_by_video_collection',
     'export_collection_scene_update_options',

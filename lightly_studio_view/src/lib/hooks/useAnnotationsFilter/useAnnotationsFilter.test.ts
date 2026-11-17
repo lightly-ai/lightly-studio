@@ -43,6 +43,12 @@ vi.mock('../useTags/useTags', () => ({
 }));
 
 import { useSelectedAnnotationsFilter, useAnnotationsFilter } from './useAnnotationsFilter';
+import {
+    NO_ANNOTATIONS_ROW_ID,
+    useUnannotatedSamplesFilter
+} from '../useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
+
+const { includeUnannotatedSamples, setIncludeUnannotatedSamples } = useUnannotatedSamplesFilter();
 
 describe('useSelectedAnnotationsFilter', () => {
     beforeEach(() => {
@@ -126,6 +132,53 @@ describe('useAnnotationsFilter', () => {
         selectedAnnotationFilterIds.set(new Set());
         annotationLabels = writable<AnnotationLabel[] | undefined>(mockLabels);
         trackEvent.mockClear();
+        setIncludeUnannotatedSamples(false);
+    });
+
+    it('puts the no annotations row first when its count is set', () => {
+        setIncludeUnannotatedSamples(true);
+        const { annotationFilterRows, setAnnotationCounts, setUnannotatedSampleCount } =
+            useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationCounts([{ label_name: 'cat', total_count: 10, current_count: 5 }]);
+        setUnannotatedSampleCount({ current_count: 2, total_count: 3 });
+
+        expect(get(annotationFilterRows)).toEqual([
+            { label_name: NO_ANNOTATIONS_ROW_ID, total_count: 3, current_count: 2, selected: true },
+            { label_name: 'cat', total_count: 10, current_count: 5, selected: false }
+        ]);
+    });
+
+    it('leaves out the no annotations row when there are no annotation classes', () => {
+        const { annotationFilterRows, setAnnotationCounts, setUnannotatedSampleCount } =
+            useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationCounts([]);
+        setUnannotatedSampleCount({ current_count: 3, total_count: 3 });
+
+        expect(get(annotationFilterRows)).toEqual([]);
+    });
+
+    it('toggleAnnotationFilterSelection toggles the no annotations row', () => {
+        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        toggleAnnotationFilterSelection(NO_ANNOTATIONS_ROW_ID);
+        expect(get(includeUnannotatedSamples)).toBe(true);
+
+        toggleAnnotationFilterSelection(NO_ANNOTATIONS_ROW_ID);
+        expect(get(includeUnannotatedSamples)).toBe(false);
+        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
+    });
+
+    it('setAnnotationFilterSelection selects the no annotations row with the labels', () => {
+        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
+
+        setAnnotationFilterSelection([NO_ANNOTATIONS_ROW_ID, 'cat']);
+        expect(get(includeUnannotatedSamples)).toBe(true);
+        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
+
+        setAnnotationFilterSelection([]);
+        expect(get(includeUnannotatedSamples)).toBe(false);
     });
 
     it('returns empty annotationFilterRows when no counts set', () => {

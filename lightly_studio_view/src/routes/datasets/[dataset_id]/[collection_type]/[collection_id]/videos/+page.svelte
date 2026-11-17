@@ -7,7 +7,7 @@
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
-    import { buildVideoFilter, useVideoFilters } from '$lib/hooks';
+    import { buildVideoFilter, useUnannotatedSamplesFilter, useVideoFilters } from '$lib/hooks';
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
@@ -30,6 +30,7 @@
     const { selectedAnnotationFilterIdsArray: selectedAnnotationsFilterIds } =
         useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
+    const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
         useGlobalStorage();
@@ -41,6 +42,7 @@
             annotation_frames_label_ids: $selectedAnnotationsFilterIds?.length
                 ? $selectedAnnotationsFilterIds
                 : undefined,
+            include_unannotated_samples: $includeUnannotatedSamples || undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_values: $metadataValues,
             categorical_metadata_values: $categoricalMetadataValues

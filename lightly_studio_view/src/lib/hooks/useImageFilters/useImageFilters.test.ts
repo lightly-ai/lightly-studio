@@ -239,6 +239,18 @@ describe('useImageFilters', () => {
             });
         });
 
+        it('sends the sources with include_unannotated_samples', () => {
+            const { imageFilter } = useImageFilters();
+            setParams({
+                filters: { collection_ids: ['c'], include_unannotated_samples: true }
+            });
+            expect(get(imageFilter)?.sample_filter?.annotations_filter).toEqual({
+                filter_type: 'annotations',
+                collection_ids: ['c'],
+                include_unannotated_samples: true
+            });
+        });
+
         it('passes categorical-only metadata', () => {
             const { imageFilter } = useImageFilters();
             vi.mocked(createMetadataFilters).mockReturnValueOnce([metadataFilter]);

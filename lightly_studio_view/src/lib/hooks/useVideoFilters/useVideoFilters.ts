@@ -26,6 +26,7 @@ export type VideoFilterParams = {
     filters?: {
         tag_ids?: string[];
         annotation_frames_label_ids?: string[];
+        include_unannotated_samples?: boolean;
         sample_ids?: string[];
         embedding_region?: EmbeddingRegion;
         metadata_values?: MetadataValues;
@@ -64,7 +65,8 @@ export const buildVideoFilter = (
         {
             ...videoBoundsFields($filterParams.video_bounds),
             frame_annotation_filter: getAnnotationsFilter({
-                annotation_label_ids: f.annotation_frames_label_ids
+                annotation_label_ids: f.annotation_frames_label_ids,
+                include_unannotated_samples: f.include_unannotated_samples
             })
         },
         buildSampleFilter({

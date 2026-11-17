@@ -4,6 +4,7 @@ import { writable, type Writable } from 'svelte/store';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import LabelsMenu from './LabelsMenu.svelte';
 import type { Annotation } from '$lib/types';
+import { NO_ANNOTATIONS_ROW_ID } from '$lib/hooks/useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
 
 vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
     useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
@@ -138,6 +139,28 @@ describe('LabelsMenu', () => {
         await userEvent.click(screen.getByRole('button', { name: 'Select all' }));
 
         expect(onSelectionChange).toHaveBeenCalledWith(['car', 'person']);
+    });
+
+    it('shows the no annotations row without a color legend or visibility toggle', () => {
+        mocks.selectedCollectionIds.set(['col-a']);
+        render(LabelsMenu, {
+            ...defaultProps,
+            showVisibilityToggle: true,
+            annotationFilterRows: writable<Annotation[]>([
+                {
+                    label_name: NO_ANNOTATIONS_ROW_ID,
+                    current_count: 2,
+                    total_count: 3,
+                    selected: false
+                },
+                { label_name: 'car', current_count: 1, total_count: 1, selected: false }
+            ])
+        });
+
+        expect(screen.getByText('No annotations')).toBeInTheDocument();
+        expect(screen.getByText('2 of 3')).toBeInTheDocument();
+        expect(screen.getAllByTestId('label-color-legend')).toHaveLength(1);
+        expect(screen.getAllByTestId('label-visibility-toggle')).toHaveLength(1);
     });
 
     it('shows a zero count when the filter matches no annotations of a label', () => {

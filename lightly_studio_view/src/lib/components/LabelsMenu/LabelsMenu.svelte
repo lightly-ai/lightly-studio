@@ -7,7 +7,7 @@
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useAnnotationClassVisibility } from '$lib/hooks';
+    import { NO_ANNOTATIONS_ROW_ID, useAnnotationClassVisibility } from '$lib/hooks';
     import LabelVisibilityToggle from './LabelVisibilityToggle/LabelVisibilityToggle.svelte';
 
     interface Props {
@@ -42,7 +42,7 @@
     const classItems = $derived(
         $annotationFilterRows.map(({ label_name, current_count, total_count, selected }) => ({
             id: label_name,
-            label: label_name,
+            label: label_name === NO_ANNOTATIONS_ROW_ID ? 'No annotations' : label_name,
             selected,
             count:
                 current_count === undefined
@@ -84,7 +84,7 @@
                 paged={false}
             >
                 {#snippet leading(item)}
-                    {#if showClassColorLegend}
+                    {#if showClassColorLegend && item.id !== NO_ANNOTATIONS_ROW_ID}
                         <AnnotationColorLegend
                             labelName={item.label}
                             className="h-3 w-3"
@@ -94,7 +94,7 @@
                     {/if}
                 {/snippet}
                 {#snippet trailing(item)}
-                    {#if showVisibilityToggle}
+                    {#if showVisibilityToggle && item.id !== NO_ANNOTATIONS_ROW_ID}
                         <LabelVisibilityToggle
                             isHidden={$hiddenClassNamesStore.includes(item.id)}
                             labelName={item.label}
