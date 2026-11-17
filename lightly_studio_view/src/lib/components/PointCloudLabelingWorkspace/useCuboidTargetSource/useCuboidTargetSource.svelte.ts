@@ -1,6 +1,6 @@
 import { untrack } from 'svelte';
 import { fromStore, get } from 'svelte/store';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useGlobalStorage } from '$lib/hooks';
 import {
     isCuboidPickRemoved,
     resolveCuboidTargetSource,
@@ -51,6 +51,12 @@ export function useCuboidTargetSource(
     );
 
     forgetRemovedPick(params.getCollectionId, params.getSourceNames);
+
+    // A typed source is exempt from the list check only until the list contains it. After that,
+    // a rename or delete must make the pick invalid like for any other source.
+    $effect(() => {
+        if (typedSource && params.getSourceNames()?.includes(typedSource)) typed = null;
+    });
 
     function setTarget(name: string, options?: { isNew?: boolean }) {
         const trimmed = name.trim();

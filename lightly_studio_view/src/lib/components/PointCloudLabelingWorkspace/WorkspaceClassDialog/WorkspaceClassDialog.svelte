@@ -4,22 +4,42 @@
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     import { CuboidSourceSection } from './CuboidSourceSection';
 
-    const { editing, data, targetSource } = useWorkspaceControllerContext();
+    const controller = useWorkspaceControllerContext();
+    const { editing, data, targetSource } = controller;
     const { showSelectClassDialog } = editing;
+    const getCollectionId = () => controller.options.annotationSourceCollectionId;
 
     // The source chosen in the dialog. It is applied only on confirm.
     let draftSource = $state<{ name: string; isNew: boolean } | null>(null);
+    let openedForCollectionId: string | undefined;
 
     $effect(() => {
         if (!$showSelectClassDialog) return;
         untrack(() => {
+            openedForCollectionId = getCollectionId();
             const name = targetSource.targetSource;
             draftSource = name ? { name, isNew: name === targetSource.typedSource } : null;
         });
     });
 
+    // Another tab can delete the drafted source while the dialog is open. Without sources, the
+    // default source is not listed but stays valid.
+    const validDraftSource = $derived.by(() => {
+        const names = data.annotationSourceNames ?? [];
+        const isValid =
+            draftSource &&
+            (draftSource.isNew || names.length === 0 || names.includes(draftSource.name));
+        return isValid ? draftSource : null;
+    });
+
     function confirm(label: string) {
-        if (draftSource) targetSource.setTarget(draftSource.name, { isNew: draftSource.isNew });
+        if (getCollectionId() !== openedForCollectionId) {
+            editing.handleClassDialogCancel();
+            return;
+        }
+        if (validDraftSource) {
+            targetSource.setTarget(validDraftSource.name, { isNew: validDraftSource.isNew });
+        }
         editing.handleClassSelected(label);
     }
 </script>
@@ -31,13 +51,13 @@
         .filter(Boolean) ?? []}
     onConfirm={confirm}
     onCancel={editing.handleClassDialogCancel}
-    canConfirm={draftSource !== null}
+    canConfirm={validDraftSource !== null}
     initialLabel={$showSelectClassDialog ? editing.getRememberedLabel() : undefined}
 >
     {#snippet extra()}
         <CuboidSourceSection
             sourceNames={data.annotationSourceNames ?? []}
-            selected={draftSource}
+            selected={validDraftSource}
             onSelect={(choice) => (draftSource = choice)}
         />
     {/snippet}

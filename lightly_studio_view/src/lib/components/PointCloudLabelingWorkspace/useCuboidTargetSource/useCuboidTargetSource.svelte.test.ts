@@ -90,4 +90,22 @@ describe('useCuboidTargetSource', () => {
         expect(target.typedSource).toBeNull();
         expect(target.targetSource).toBeNull();
     });
+
+    it('stops treating a typed source as new once it is listed', () => {
+        const { input, target } = setup();
+        target.setTarget('review', { isNew: true });
+        flushSync();
+        input.names = ['labels', 'predictions', 'review'];
+        flushSync();
+        expect(target.typedSource).toBeNull();
+        expect(target.targetSource).toBe('review');
+
+        // The source is deleted while another collection is open.
+        input.collectionId = 'c2';
+        flushSync();
+        input.collectionId = 'c1';
+        input.names = ['labels', 'predictions'];
+        flushSync();
+        expect(target.needsPick).toBe(true);
+    });
 });

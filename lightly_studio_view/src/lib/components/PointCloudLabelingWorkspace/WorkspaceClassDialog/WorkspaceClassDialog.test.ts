@@ -21,6 +21,9 @@ const setTarget = vi.fn();
 const handleClassSelected = vi.fn();
 const handleClassDialogCancel = vi.fn();
 
+const collection = { id: 'c1' };
+let names = ['labels', 'preds'];
+
 function setup(target: { targetSource: string | null; needsPick: boolean }) {
     controller.current = {
         editing: {
@@ -30,7 +33,12 @@ function setup(target: { targetSource: string | null; needsPick: boolean }) {
             handleClassDialogCancel,
             getRememberedLabel: () => 'car'
         },
-        data: { annotationSourceNames: ['labels', 'preds'] },
+        data: { annotationSourceNames: names },
+        options: {
+            get annotationSourceCollectionId() {
+                return collection.id;
+            }
+        },
         targetSource: { ...target, typedSource: null, blockedReason: null, setTarget }
     };
     render(WorkspaceClassDialog);
@@ -40,7 +48,11 @@ describe('WorkspaceClassDialog', () => {
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
     });
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => {
+        vi.clearAllMocks();
+        collection.id = 'c1';
+        names = ['labels', 'preds'];
+    });
 
     it('asks for a source when none is picked', async () => {
         setup({ targetSource: null, needsPick: true });
@@ -107,5 +119,24 @@ describe('WorkspaceClassDialog', () => {
 
         expect(setTarget).toHaveBeenCalledWith('review', { isNew: true });
         expect(handleClassSelected).toHaveBeenCalledWith('car');
+    });
+
+    it('does not confirm a source that is no longer listed', () => {
+        names = ['preds'];
+        setup({ targetSource: 'labels', needsPick: false });
+
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    });
+
+    it('cancels when the collection changed while the dialog was open', async () => {
+        const user = userEvent.setup();
+        setup({ targetSource: 'labels', needsPick: false });
+
+        collection.id = 'c2';
+        await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+        expect(setTarget).not.toHaveBeenCalled();
+        expect(handleClassSelected).not.toHaveBeenCalled();
+        expect(handleClassDialogCancel).toHaveBeenCalled();
     });
 });
