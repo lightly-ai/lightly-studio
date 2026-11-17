@@ -188,14 +188,7 @@ export interface AnnotationTrack {
 }
 
 /** Tools available to the interaction state machine. */
-export type WorkspaceTool =
-    | 'select'
-    | 'create-cuboid'
-    | 'translate'
-    | 'rotate'
-    | 'resize'
-    | 'pan'
-    | 'orbit';
+export type WorkspaceTool = 'select' | 'create-cuboid' | 'translate' | 'rotate' | 'resize';
 /** Main scene and orthographic camera modes. */
 export type CameraMode = 'perspective' | 'top' | 'side' | 'front';
 /** Handles that can be hovered or manipulated on a cuboid. */
