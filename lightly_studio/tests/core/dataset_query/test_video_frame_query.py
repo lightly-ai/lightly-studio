@@ -1,0 +1,138 @@
+import pytest
+from sqlmodel import Session, select
+
+from lightly_studio.core.dataset_query import (
+    AND,
+    NOT,
+    OR,
+    ClassificationField,
+    ClassificationQuery,
+    ObjectDetectionField,
+    ObjectDetectionQuery,
+    SegmentationMaskField,
+    SegmentationMaskQuery,
+    VideoEventQuery,
+    VideoFrameQuery,
+    VideoFrameSampleField,
+)
+from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.collection import SampleType
+from lightly_studio.models.video import VideoTable
+from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation_label,
+    create_annotations,
+    create_collection,
+)
+from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+
+PERSON = ObjectDetectionQuery(ObjectDetectionField.class_name == "person")
+CAR = ObjectDetectionQuery(ObjectDetectionField.class_name == "car")
+
+
+class TestVideoFrameQuery:
+    @pytest.mark.parametrize(
+        "criterion",
+        [VideoFrameQuery(), VideoEventQuery(), AND(PERSON, OR(NOT(VideoEventQuery()), CAR))],
+    )
+    def test_init__reject_nested_video_queries(self, criterion: MatchExpression) -> None:
+        with pytest.raises(ValueError, match="cannot contain frame or event queries"):
+            VideoFrameQuery(criterion)
+
+    @pytest.mark.parametrize(
+        ("expression", "expected_names"),
+        [
+            (VideoFrameQuery(PERSON, CAR), {"together.mp4"}),
+            (VideoFrameQuery(AND(PERSON, CAR)), {"together.mp4"}),
+            (AND(VideoFrameQuery(PERSON), VideoFrameQuery(CAR)), {"together.mp4", "apart.mp4"}),
+            (VideoFrameQuery(OR(PERSON, CAR)), {"together.mp4", "apart.mp4"}),
+            (VideoFrameQuery(NOT(PERSON)), {"together.mp4", "apart.mp4", "bare.mp4"}),
+            (NOT(VideoFrameQuery(PERSON)), {"bare.mp4", "empty.mp4"}),
+            (VideoFrameQuery(CAR, VideoFrameSampleField.frame_timestamp_s < 1), {"together.mp4"}),
+            (VideoFrameQuery(CAR, VideoFrameSampleField.frame_timestamp_s >= 1), {"apart.mp4"}),
+            (VideoFrameQuery(), {"together.mp4", "apart.mp4", "bare.mp4"}),
+        ],
+    )
+    def test_get__frame_correlation(
+        self, db_session: Session, expression: MatchExpression, expected_names: set[str]
+    ) -> None:
+        collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+        labels = {
+            name: create_annotation_label(
+                session=db_session, root_collection_id=collection.collection_id, label_name=name
+            )
+            for name in ["person", "car"]
+        }
+        for name, duration, frame_annotations in [
+            ("together.mp4", 2, [(0, "person"), (0, "car")]),
+            ("apart.mp4", 2, [(0, "person"), (1, "car")]),
+            ("bare.mp4", 2, []),
+            ("empty.mp4", 0, []),
+        ]:
+            video = create_video_with_frames(
+                session=db_session,
+                collection_id=collection.collection_id,
+                video=VideoStub(path=f"/data/{name}", duration_s=duration, fps=1),
+            )
+            create_annotations(
+                session=db_session,
+                collection_id=video.video_frames_collection_id,
+                annotations=[
+                    AnnotationDetails(
+                        sample_id=video.frame_sample_ids[frame_index],
+                        annotation_label_id=labels[class_name].annotation_label_id,
+                        annotation_type=AnnotationType.OBJECT_DETECTION,
+                    )
+                    for frame_index, class_name in frame_annotations
+                ],
+            )
+        query = select(VideoTable).join(VideoTable.sample).where(expression.get())
+        assert {video.file_name for video in db_session.exec(query)} == expected_names
+
+    @pytest.mark.parametrize(
+        ("annotation_type", "expression"),
+        [
+            (
+                AnnotationType.CLASSIFICATION,
+                ClassificationQuery(ClassificationField.source == "model"),
+            ),
+            (
+                AnnotationType.OBJECT_DETECTION,
+                ObjectDetectionQuery(ObjectDetectionField.source == "model"),
+            ),
+            (
+                AnnotationType.SEGMENTATION_MASK,
+                SegmentationMaskQuery(SegmentationMaskField.source == "model"),
+            ),
+        ],
+    )
+    def test_get__annotation_types_and_sources(
+        self, db_session: Session, annotation_type: AnnotationType, expression: MatchExpression
+    ) -> None:
+        collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+        label = create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name="person"
+        )
+        for source in ["model", "ground_truth"]:
+            video = create_video_with_frames(
+                session=db_session,
+                collection_id=collection.collection_id,
+                video=VideoStub(path=f"/data/{source}.mp4", duration_s=2, fps=1),
+            )
+            create_annotations(
+                session=db_session,
+                collection_id=video.video_frames_collection_id,
+                collection_name=source,
+                annotations=[
+                    AnnotationDetails(
+                        sample_id=sample_id,
+                        annotation_label_id=label.annotation_label_id,
+                        annotation_type=annotation_type,
+                        segmentation_mask=[0, 400],
+                    )
+                    for sample_id in video.frame_sample_ids
+                ],
+            )
+        query = select(VideoTable).join(VideoTable.sample).where(VideoFrameQuery(expression).get())
+        assert [video.file_name for video in db_session.exec(query)] == ["model.mp4"]

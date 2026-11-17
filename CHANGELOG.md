@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Python SDK: Find videos with annotations and timestamp conditions on the same frame using `VideoFrameQuery`.
 - Python SDK: Query videos by temporal event classes, sources, confidence, and time boundaries with `VideoEventQuery`.
 - Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.
 - Filter videos with query expressions in the GUI using video fields, tags, metadata, and video annotations.
