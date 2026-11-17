@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import threading
 import uuid
 from pathlib import Path
+from typing import Any
 from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from httpx import Response
 from lightly_studio_serve.labeling import ModelTask, PredictedAnnotation
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -23,6 +26,12 @@ from lightly_studio.models.image import ImageTable
 from tests.assisted_labeling import helpers
 from tests.assisted_labeling.helpers import StubLabelingModel
 from tests.helpers_resolvers import create_collection, create_image
+
+
+class _TaskRaisesModel(StubLabelingModel):
+    @property
+    def task(self) -> ModelTask:
+        raise RuntimeError("The model config is missing.")
 
 
 @pytest.fixture
@@ -71,6 +80,18 @@ def test_get_labeling_models__not_ready(
     assert [model["id"] for model in response.json()["models"]] == ["loaded"]
 
 
+def test_get_labeling_models__faulty_model(
+    test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model_registry.register(model=_TaskRaisesModel(model_id="faulty"))
+    model_registry.register(model=StubLabelingModel(model_id="working"))
+
+    response = test_client.get("/api/annotate/models")
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert [model["id"] for model in response.json()["models"]] == ["working"]
+
+
 def test_create_model_annotation_preview(
     db_session: Session,
     media_test_client: TestClient,
@@ -93,7 +114,7 @@ def test_create_model_annotation_preview(
     )
 
     response = media_test_client.post(
-        "/api/annotate/model",
+        "/api/annotate/models/predict",
         json={
             "collection_id": str(collection.collection_id),
             "sample_id": str(image.sample_id),
@@ -124,13 +145,11 @@ def test_create_model_annotation_preview__unknown_model(
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
 
-    response = media_test_client.post(
-        "/api/annotate/model",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "model_id": "m",
-        },
+    response = _post_model_preview(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        model_id="m",
     )
 
     assert response.status_code == HTTP_STATUS_NOT_FOUND
@@ -146,13 +165,11 @@ def test_create_model_annotation_preview__not_ready(
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
 
-    response = media_test_client.post(
-        "/api/annotate/model",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "model_id": "m",
-        },
+    response = _post_model_preview(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        model_id="m",
     )
 
     assert response.status_code == HTTP_STATUS_SERVICE_UNAVAILABLE
@@ -176,13 +193,11 @@ def test_create_model_annotation_preview__model_error(
         height=50,
     )
 
-    response = media_test_client.post(
-        "/api/annotate/model",
-        json={
-            "collection_id": str(collection.collection_id),
-            "sample_id": str(image.sample_id),
-            "model_id": "m",
-        },
+    response = _post_model_preview(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        model_id="m",
     )
 
     assert response.status_code == HTTP_STATUS_BAD_GATEWAY
@@ -198,7 +213,7 @@ def test_create_model_annotation_preview__invalid_threshold(
     model_registry.register(model=model)
 
     response = test_client.post(
-        "/api/annotate/model",
+        "/api/annotate/models/predict",
         json={
             "collection_id": str(uuid.uuid4()),
             "sample_id": str(uuid.uuid4()),
@@ -209,6 +224,124 @@ def test_create_model_annotation_preview__invalid_threshold(
 
     assert response.status_code == HTTP_STATUS_UNPROCESSABLE_ENTITY
     assert model.thresholds == []
+
+
+def test_create_model_annotation_preview__predict_thread(
+    db_session: Session,
+    media_test_client: TestClient,
+    model_registry: LabelingModelRegistry,
+    mocker: MockerFixture,
+    tmp_path: Path,
+) -> None:
+    thread_names: list[str] = []
+
+    def predict(*_args: Any, **_kwargs: Any) -> list[PredictedAnnotation]:
+        thread_names.append(threading.current_thread().name)
+        return []
+
+    model = StubLabelingModel(model_id="m")
+    mocker.patch.object(model, "predict", side_effect=predict)
+    model_registry.register(model=model)
+    collection = create_collection(session=db_session)
+    image = _create_png_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        tmp_path=tmp_path,
+        width=100,
+        height=50,
+    )
+
+    response = _post_model_preview(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        model_id="m",
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert len(thread_names) == 1
+    assert thread_names[0].startswith("labeling_model")
+
+
+def test_create_model_annotation_preview__unknown_sample(
+    db_session: Session, media_test_client: TestClient, model_registry: LabelingModelRegistry
+) -> None:
+    model = StubLabelingModel(model_id="m")
+    model_registry.register(model=model)
+    collection = create_collection(session=db_session)
+
+    response = _post_model_preview(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=uuid.uuid4(),
+        model_id="m",
+    )
+
+    assert response.status_code == HTTP_STATUS_NOT_FOUND
+    assert model.thresholds == []
+
+
+def test_create_model_annotation_preview__image_not_decodable(
+    db_session: Session,
+    media_test_client: TestClient,
+    model_registry: LabelingModelRegistry,
+    tmp_path: Path,
+) -> None:
+    model = StubLabelingModel(model_id="m")
+    model_registry.register(model=model)
+    collection = create_collection(session=db_session)
+    file_path = tmp_path / "image.png"
+    file_path.write_bytes(b"not an image")
+    image = create_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        file_path_abs=str(file_path),
+        width=100,
+        height=50,
+    )
+
+    response = _post_model_preview(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        model_id="m",
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
+    assert response.json() == {"error": "The image file 'image.png' cannot be decoded."}
+    assert model.thresholds == []
+
+
+def test_create_model_annotation_preview__undeclared_class(
+    db_session: Session,
+    media_test_client: TestClient,
+    model_registry: LabelingModelRegistry,
+    tmp_path: Path,
+) -> None:
+    model = StubLabelingModel(
+        model_id="m",
+        class_names=["cat"],
+        predictions=[PredictedAnnotation(class_name="dog", box=(10.0, 5.0, 30.0, 25.0), score=0.8)],
+    )
+    model_registry.register(model=model)
+    collection = create_collection(session=db_session)
+    image = _create_png_image(
+        session=db_session,
+        collection_id=collection.collection_id,
+        tmp_path=tmp_path,
+        width=100,
+        height=50,
+    )
+
+    response = _post_model_preview(
+        client=media_test_client,
+        collection_id=collection.collection_id,
+        sample_id=image.sample_id,
+        model_id="m",
+    )
+
+    assert response.status_code == HTTP_STATUS_BAD_GATEWAY
+    assert "not one of its annotation classes" in response.json()["error"]
 
 
 def _create_png_image(
@@ -224,3 +357,17 @@ def _create_png_image(
         width=width,
         height=height,
     )
+
+
+def _post_model_preview(
+    client: TestClient, collection_id: UUID, sample_id: UUID, model_id: str
+) -> Response:
+    response: Response = client.post(
+        "/api/annotate/models/predict",
+        json={
+            "collection_id": str(collection_id),
+            "sample_id": str(sample_id),
+            "model_id": model_id,
+        },
+    )
+    return response

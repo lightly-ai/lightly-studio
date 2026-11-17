@@ -30,6 +30,9 @@ from lightly_studio.utils import executor
 assisted_labeling_router = APIRouter(prefix="/annotate", tags=["annotate"])
 
 PROVIDER_MAX_WORKERS = 8
+# A labeling model computes on this machine and can fill the GPU memory. Its own pool keeps
+# a slow model from blocking the SAM3 requests.
+MODEL_MAX_WORKERS = 2
 
 
 @assisted_labeling_router.get("/status")
@@ -91,19 +94,25 @@ def get_labeling_models() -> LabelingModelsView:
     )
 
 
-@assisted_labeling_router.post("/model")
+@assisted_labeling_router.post("/models/predict")
 async def create_model_annotation_preview(
     request: ModelAnnotationRequest,
 ) -> ModelAnnotationResponse:
     """Returns previews of the annotations that a labeling model predicts. Saves nothing."""
     return await asyncio.get_running_loop().run_in_executor(
-        _get_provider_executor(), functools.partial(_create_model_preview, request=request)
+        _get_model_executor(), functools.partial(_create_model_preview, request=request)
     )
 
 
 def _get_provider_executor() -> ThreadPoolExecutor:
     return executor.get_media_executor(
         thread_name_prefix="assisted_labeling", max_workers=PROVIDER_MAX_WORKERS
+    )
+
+
+def _get_model_executor() -> ThreadPoolExecutor:
+    return executor.get_media_executor(
+        thread_name_prefix="labeling_model", max_workers=MODEL_MAX_WORKERS
     )
 
 
