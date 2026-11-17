@@ -19,7 +19,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNAUTHORIZED,
 )
 from lightly_studio.database import db_manager
-from lightly_studio.models.user import Role
+from lightly_studio.models.user import Role, UserTable
 
 
 @pytest.fixture
@@ -29,8 +29,8 @@ def client(db_session: Session) -> TestClient:
     exceptions.register_exception_handlers(app=app)
 
     @app.get("/identity")
-    def _get_identity(user: IdentityDep) -> dict[str, str | None]:
-        return {"email": user.email, "role": user.role.value}
+    def _get_identity(user: IdentityDep) -> dict[str, str | int | None]:
+        return {"email": user.email, "role": user.role.value, "user_id": user.user_id}
 
     @app.get("/editor")
     def _get_editor(
@@ -41,26 +41,31 @@ def client(db_session: Session) -> TestClient:
     return TestClient(app, raise_server_exceptions=False)
 
 
-def test_get_identity(client: TestClient, mocker: MockerFixture) -> None:
+def test_get_identity(client: TestClient, db_session: Session, mocker: MockerFixture) -> None:
     mocker.patch.object(deployment, "is_enterprise", return_value=True)
+    _add_user(session=db_session, user_id=7, email="ada@example.com", role="labeler")
 
+    # The role comes from auth.users, not from the header.
     response = client.get(
-        "/identity", headers={"X-User-Email": "ada@example.com", "X-User-Role": "labeler"}
+        "/identity", headers={"X-User-Email": "ada@example.com", "X-User-Role": "admin"}
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"email": "ada@example.com", "role": "labeler"}
+    assert response.json() == {"email": "ada@example.com", "role": "labeler", "user_id": 7}
 
 
-def test_get_identity__normalizes(client: TestClient, mocker: MockerFixture) -> None:
+def test_get_identity__normalizes(
+    client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
     mocker.patch.object(deployment, "is_enterprise", return_value=True)
+    _add_user(session=db_session, user_id=7, email="Ada@Example.com", role="editor")
 
     response = client.get(
-        "/identity", headers={"X-User-Email": " Ada@Example.com ", "X-User-Role": " Editor "}
+        "/identity", headers={"X-User-Email": " ADA@example.COM ", "X-User-Role": "editor"}
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"email": "ada@example.com", "role": "editor"}
+    assert response.json() == {"email": "ada@example.com", "role": "editor", "user_id": 7}
 
 
 @pytest.mark.parametrize(
@@ -70,13 +75,14 @@ def test_get_identity__normalizes(client: TestClient, mocker: MockerFixture) -> 
         {"X-User-Email": "ada@example.com"},
         {"X-User-Role": "admin"},
         {"X-User-Email": "  ", "X-User-Role": "admin"},
-        {"X-User-Email": "ada@example.com", "X-User-Role": "owner"},
+        {"X-User-Email": "ada@example.com", "X-User-Role": "  "},
     ],
 )
 def test_get_identity__invalid_headers(
-    client: TestClient, mocker: MockerFixture, headers: dict[str, str]
+    client: TestClient, db_session: Session, mocker: MockerFixture, headers: dict[str, str]
 ) -> None:
     mocker.patch.object(deployment, "is_enterprise", return_value=True)
+    _add_user(session=db_session, user_id=7, email="ada@example.com", role="admin")
 
     response = client.get("/identity", headers=headers)
 
@@ -99,27 +105,47 @@ def test_get_identity__invalid_headers(
     ],
 )
 def test_get_identity__repeated_header(
-    client: TestClient, mocker: MockerFixture, headers: list[tuple[str, str]]
+    client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+    headers: list[tuple[str, str]],
 ) -> None:
     mocker.patch.object(deployment, "is_enterprise", return_value=True)
+    _add_user(session=db_session, user_id=7, email="ada@example.com", role="admin")
+    _add_user(session=db_session, user_id=8, email="eve@example.com", role="admin")
 
     response = client.get("/identity", headers=headers)
 
     assert response.status_code == HTTP_STATUS_UNAUTHORIZED
 
 
-def test_get_identity__logs_unauthenticated_request(
-    client: TestClient, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+@pytest.mark.parametrize("status", ["pending", "inactive"])
+def test_get_identity__user_not_active(
+    client: TestClient, db_session: Session, mocker: MockerFixture, status: str
 ) -> None:
     mocker.patch.object(deployment, "is_enterprise", return_value=True)
+    _add_user(session=db_session, user_id=7, email="ada@example.com", role="admin", status=status)
 
     response = client.get(
-        "/identity", headers={"X-User-Email": "ada@example.com", "X-User-Role": "owner"}
+        "/identity", headers={"X-User-Email": "ada@example.com", "X-User-Role": "admin"}
+    )
+
+    assert response.status_code == HTTP_STATUS_UNAUTHORIZED
+
+
+def test_get_identity__logs_unauthenticated_request(
+    client: TestClient, db_session: Session, mocker: MockerFixture, caplog: pytest.LogCaptureFixture
+) -> None:
+    mocker.patch.object(deployment, "is_enterprise", return_value=True)
+    _add_user(session=db_session, user_id=7, email="ada@example.com", role="admin")
+
+    response = client.get(
+        "/identity", headers={"X-User-Email": "eve@example.com", "X-User-Role": "admin"}
     )
 
     assert response.status_code == HTTP_STATUS_UNAUTHORIZED
     assert response.json() == {"error": "The request has no valid user identity."}
-    assert "The X-User-Role header has an unknown role: 'owner'." in caplog.text
+    assert "No user has the email 'eve@example.com'." in caplog.text
 
 
 def test_get_identity__local(client: TestClient, mocker: MockerFixture) -> None:
@@ -128,7 +154,7 @@ def test_get_identity__local(client: TestClient, mocker: MockerFixture) -> None:
     response = client.get("/identity")
 
     assert response.status_code == HTTP_STATUS_OK
-    assert response.json() == {"email": None, "role": "admin"}
+    assert response.json() == {"email": None, "role": "admin", "user_id": None}
 
 
 @pytest.mark.parametrize(
@@ -160,9 +186,14 @@ def test_get_identity__local_with_headers(
     ],
 )
 def test_require_role(
-    client: TestClient, mocker: MockerFixture, role: str, expected_status: int
+    client: TestClient,
+    db_session: Session,
+    mocker: MockerFixture,
+    role: str,
+    expected_status: int,
 ) -> None:
     mocker.patch.object(deployment, "is_enterprise", return_value=True)
+    _add_user(session=db_session, user_id=7, email="ada@example.com", role=role)
 
     response = client.get(
         "/editor", headers={"X-User-Email": "ada@example.com", "X-User-Role": role}
@@ -193,3 +224,11 @@ def test_role_rank() -> None:
     ]
 
     assert ranks == sorted(set(ranks))
+
+
+def _add_user(
+    session: Session, user_id: int, email: str, role: str, status: str = "active"
+) -> None:
+    """Adds a user to the stand-in of `auth.users`. In production, the auth service adds it."""
+    session.add(UserTable(id=user_id, email=email, role=role, status=status))
+    session.commit()
