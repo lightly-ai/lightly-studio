@@ -10,7 +10,10 @@ from lightly_studio.core.dataset_query import (
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
+from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.video import VideoTable
+from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
@@ -19,12 +22,42 @@ from tests.helpers_resolvers import (
 )
 from tests.resolvers.video.helpers import VideoStub, create_video
 
+EVENT_QUERIES = {
+    end_time_s: QueryExpr.model_validate(
+        {
+            "match_expr": {
+                "type": "video_event_match_expr",
+                "subexpr": {
+                    "type": "and",
+                    "children": [
+                        {
+                            "type": "string_expr",
+                            "field": {"table": "event", "name": "class_name"},
+                            "operator": "==",
+                            "value": "run",
+                        },
+                        {
+                            "type": "ordinal_float_expr",
+                            "field": {"table": "event", "name": "end_time_s"},
+                            "operator": ">",
+                            "value": end_time_s,
+                        },
+                    ],
+                },
+            }
+        }
+    )
+    for end_time_s in [7, 8]
+}
+
 
 class TestVideoEventQuery:
     @pytest.mark.parametrize(
         ("expression", "expected_names"),
         [
             (VideoEventQuery(), {"events.mp4"}),
+            (EVENT_QUERIES[7], {"events.mp4"}),
+            (EVENT_QUERIES[8], set()),
             (ClassificationQuery(), {"events.mp4", "whole.mp4"}),
             (VideoEventQuery(VideoEventField.start_time_s < 3), set()),
             (VideoEventQuery(VideoEventField.start_time_s <= 3), {"events.mp4"}),
@@ -67,7 +100,7 @@ class TestVideoEventQuery:
         ],
     )
     def test_get__event_correlation(
-        self, db_session: Session, expression: MatchExpression, expected_names: set[str]
+        self, db_session: Session, expression: MatchExpression | QueryExpr, expected_names: set[str]
     ) -> None:
         collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
         labels = {
@@ -124,5 +157,11 @@ class TestVideoEventQuery:
                 ),
             ],
         )
-        query = select(VideoTable).join(VideoTable.sample).where(expression.get())
+        query = select(VideoTable).join(VideoTable.sample)
+        if isinstance(expression, QueryExpr):
+            query = VideoFilter(sample_filter=SampleFilter(query_expr=expression)).apply(
+                query=query
+            )
+        else:
+            query = query.where(expression.get())
         assert {video.file_name for video in db_session.exec(query)} == expected_names
