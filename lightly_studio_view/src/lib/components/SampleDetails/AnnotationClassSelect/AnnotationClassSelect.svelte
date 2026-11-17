@@ -13,6 +13,8 @@
         onChange: (value: string) => void;
         label?: string;
         className?: string;
+        disabled?: boolean;
+        labelledBy?: string;
     }
 
     let {
@@ -20,7 +22,9 @@
         value = null,
         onChange,
         label = 'Choose an annotation class',
-        className = ''
+        className = '',
+        disabled = false,
+        labelledBy
     }: Props = $props();
     const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
     const canCreateClass = useCanCreateAnnotationClass();
@@ -38,6 +42,8 @@
     {selectedItem}
     name="annotation-class"
     {label}
+    {disabled}
+    {labelledBy}
     placeholder="Select an annotation class"
     className={cn('w-full', className)}
     contentClassName="w-full"

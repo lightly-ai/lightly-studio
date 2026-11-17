@@ -27,10 +27,14 @@ describe('model suggestion visibility', () => {
         await tick();
         expect(pendingBox).toHaveAttribute('stroke', '#60a5fa');
         expect(pendingBox).toHaveAttribute('stroke-dasharray', '');
-        await fireEvent.click(screen.getByRole('button', { name: 'Review suggestion 1: cat' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Review suggestion: cat' }));
         expect(
             await screen.findByRole('button', { name: 'Resize northwest corner' })
         ).toBeInTheDocument();
+        expect(container.querySelector('[data-testid="suggestion-highlight"]')).toHaveAttribute(
+            'stroke',
+            'white'
+        );
         review.setHideAccepted(true);
         review.reject(review.suggestions[1].id);
         await tick();
@@ -39,11 +43,9 @@ describe('model suggestion visibility', () => {
         expect(container.querySelector('[data-testid="preview-class-tag"]')).toBeNull();
         review.setHideAccepted(false);
         await tick();
+        expect(screen.getByRole('button', { name: 'Review suggestion: cat' })).toBeInTheDocument();
         expect(
-            screen.getByRole('button', { name: 'Review suggestion 1: cat' })
-        ).toBeInTheDocument();
-        expect(
-            screen.queryByRole('button', { name: 'Review suggestion 2: dog' })
+            screen.queryByRole('button', { name: 'Review suggestion: dog' })
         ).not.toBeInTheDocument();
     });
 });

@@ -39,6 +39,19 @@ describe('model suggestion review', () => {
         expect(review.hideAccepted).toBe(false);
     });
 
+    it('changes the requested class independently of focus and preserves review state and geometry', () => {
+        const review = useModelSuggestionReview();
+        review.replace([{ ...preview }, { ...preview }]);
+        const [first, second] = review.suggestions;
+        review.accept(first.id);
+        review.focus(second.id);
+        review.changeClass(first.id, 'fox');
+        expect(first.preview.class_name).toBe('fox');
+        expect(second.preview.class_name).toBe('cat');
+        expect(first.status).toBe('accepted');
+        expect(first.box).toEqual(preview.bbox);
+    });
+
     it('clamps edited boxes to image bounds and keeps segmentation geometry unchanged', () => {
         const review = useModelSuggestionReview();
         review.replace([{ ...preview, segmentation_mask: [0, 1] }]);

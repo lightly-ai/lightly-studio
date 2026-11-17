@@ -191,7 +191,7 @@ describe('useLabelWithModel', () => {
         await generateResults(labelWithModel);
         const [first, second] = labelWithModel.review.suggestions;
         labelWithModel.review.focus(first.id);
-        labelWithModel.review.changeClass('fox');
+        labelWithModel.review.changeClass(first.id, 'fox');
         labelWithModel.review.accept(first.id);
         labelWithModel.review.reject(second.id);
         mocks.saveAnnotationPreviews.mockImplementationOnce(
@@ -212,12 +212,29 @@ describe('useLabelWithModel', () => {
         expect(labelWithModel.canSave).toBe(true);
     });
 
+    it('discards all review states and removes the navigation warning', async () => {
+        const { labelWithModel } = setup();
+        await generateResults(labelWithModel);
+        const [first, second] = labelWithModel.review.suggestions;
+        labelWithModel.review.accept(first.id);
+        labelWithModel.review.reject(second.id);
+        labelWithModel.review.focus(first.id);
+        labelWithModel.review.setHideAccepted(true);
+
+        labelWithModel.clear();
+
+        expect(labelWithModel.predictions).toEqual([]);
+        expect(labelWithModel.review.focusedSuggestion).toBeUndefined();
+        expect(labelWithModel.hasUnsavedSuggestions).toBe(false);
+        expect(labelWithModel.canSave).toBe(false);
+    });
+
     it('keeps class corrections and selection after failed regeneration', async () => {
         const { labelWithModel, params } = setup();
         await generateResults(labelWithModel);
         const first = labelWithModel.review.suggestions[0];
         labelWithModel.review.focus(first.id);
-        labelWithModel.review.changeClass('fox');
+        labelWithModel.review.changeClass(first.id, 'fox');
         labelWithModel.review.reject(first.id);
         params.threshold = 0.7;
         expect(labelWithModel.needsRegeneration).toBe(true);
@@ -316,7 +333,9 @@ describe('useLabelWithModel', () => {
         expect(labelWithModel.pendingChange).toBeNull();
         expect(labelWithModel.hasUnsavedSuggestions).toBe(false);
         await generateResults(labelWithModel);
-        labelWithModel.review.rejectAll();
+        labelWithModel.review.suggestions.forEach((suggestion) =>
+            labelWithModel.review.reject(suggestion.id)
+        );
         const navigate = vi.fn();
         labelWithModel.requestChange(navigate);
         expect(navigate).toHaveBeenCalledOnce();

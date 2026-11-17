@@ -3,9 +3,7 @@
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
     import ModelSuggestionBox from './ModelSuggestionBox/ModelSuggestionBox.svelte';
-    import { getSuggestionPreview } from './useModelSuggestionReview.svelte';
-    import { getModelSuggestionAppearance } from './modelSuggestionAppearance';
-    import PreviewClassTag from './PreviewClassTag/PreviewClassTag.svelte';
+    import ModelSuggestionPreview from './ModelSuggestionPreview/ModelSuggestionPreview.svelte';
     import type { useLabelWithModel } from './useLabelWithModel.svelte';
 
     type SaveAs = ComponentProps<typeof AnnotationPreview>['saveAs'];
@@ -24,6 +22,15 @@
 
     let { sample, scale, saveAs, labelWithModel, isPanning = false }: Props = $props();
 
+    const suggestions = $derived([
+        ...labelWithModel.review.suggestions.filter(
+            (suggestion) => suggestion.id !== labelWithModel.review.focusedId
+        ),
+        ...labelWithModel.review.suggestions.filter(
+            (suggestion) => suggestion.id === labelWithModel.review.focusedId
+        )
+    ]);
+
     // Escape clears focus first; a second Escape reaches the editor tool handler.
     const onKeyDown = (event: KeyboardEvent) => {
         if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
@@ -35,52 +42,17 @@
 
 <svelte:window onkeydowncapture={onKeyDown} />
 
-{#each labelWithModel.review.suggestions as suggestion, index (suggestion.id)}
-    {@const preview = getSuggestionPreview(suggestion, saveAs)}
+{#each suggestions as suggestion (suggestion.id)}
     {#if labelWithModel.review.isVisible(suggestion)}
-        {@const appearance = getModelSuggestionAppearance(suggestion.status)}
-        <g>
-            <AnnotationPreview
-                {preview}
-                image={sample}
-                {saveAs}
-                colorStroke={appearance.colorStroke}
-                colorFill={appearance.colorFill}
-                strokeDasharray={appearance.strokeDasharray}
-            />
-            <PreviewClassTag {preview} {scale} color={appearance.tagColor} />
-            <rect
-                x={preview.bbox.x}
-                y={preview.bbox.y}
-                width={preview.bbox.width}
-                height={preview.bbox.height}
-                fill="transparent"
-                stroke={labelWithModel.review.focusedId === suggestion.id
-                    ? appearance.colorStroke
-                    : 'transparent'}
-                stroke-width="3"
-                vector-effect="non-scaling-stroke"
-                role="button"
-                tabindex={labelWithModel.isSaving || labelWithModel.isGenerating || isPanning
-                    ? -1
-                    : 0}
-                aria-label={`Review suggestion ${index + 1}: ${suggestion.preview.class_name}`}
-                aria-pressed={labelWithModel.review.focusedId === suggestion.id}
-                onpointerdown={(event) => event.stopPropagation()}
-                onclick={(event) => {
-                    event.stopPropagation();
-                    if (!labelWithModel.isSaving && !labelWithModel.isGenerating && !isPanning)
-                        labelWithModel.review.focus(suggestion.id);
-                }}
-                onkeydown={(event) => {
-                    if (event.key !== 'Enter' && event.key !== ' ') return;
-                    event.preventDefault();
-                    event.stopPropagation();
-                    if (!labelWithModel.isSaving && !labelWithModel.isGenerating && !isPanning)
-                        labelWithModel.review.focus(suggestion.id);
-                }}
-            />
-        </g>
+        <ModelSuggestionPreview
+            {suggestion}
+            {sample}
+            {scale}
+            {saveAs}
+            isSelected={labelWithModel.review.focusedId === suggestion.id}
+            disabled={labelWithModel.isSaving || labelWithModel.isGenerating || isPanning}
+            onSelect={() => labelWithModel.review.focus(suggestion.id)}
+        />
     {/if}
 {/each}
 

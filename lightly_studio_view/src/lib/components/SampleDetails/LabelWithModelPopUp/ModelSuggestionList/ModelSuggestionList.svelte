@@ -37,10 +37,9 @@
 </label>
 <div class="flex gap-2">
     <Button variant="ghost" size="sm" {disabled} onclick={review.acceptAll}>Accept all</Button>
-    <Button variant="ghost" size="sm" {disabled} onclick={review.rejectAll}>Reject all</Button>
 </div>
 <ul class="max-h-48 overflow-y-auto" aria-label="Annotation suggestions">
-    {#each review.suggestions as suggestion, index (suggestion.id)}
-        <ModelSuggestionRow {collectionId} {suggestion} {index} {review} {disabled} />
+    {#each review.suggestions as suggestion (suggestion.id)}
+        <ModelSuggestionRow {collectionId} {suggestion} {review} {disabled} />
     {/each}
 </ul>

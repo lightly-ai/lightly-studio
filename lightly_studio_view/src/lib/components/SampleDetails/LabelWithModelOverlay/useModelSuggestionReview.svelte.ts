@@ -80,13 +80,8 @@ export const useModelSuggestionReview = () => {
                 suggestion.status = 'accepted';
             });
         },
-        rejectAll: () => {
-            suggestions.forEach((suggestion) => {
-                suggestion.status = 'rejected';
-            });
-        },
-        changeClass: (className: string) => {
-            const suggestion = suggestions.find((suggestion) => suggestion.id === focusedId);
+        changeClass: (id: number, className: string) => {
+            const suggestion = suggestions.find((suggestion) => suggestion.id === id);
             if (suggestion) suggestion.preview.class_name = className;
         },
         updateBox: (

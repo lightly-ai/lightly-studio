@@ -51,7 +51,6 @@ const makeLabelWithModel = (overrides: Partial<LabelWithModel> = {}): LabelWithM
         accept: vi.fn(),
         reject: vi.fn(),
         acceptAll: vi.fn(),
-        rejectAll: vi.fn(),
         updateBox: vi.fn(),
         pendingCount: 0,
         hasUnsavedSuggestions: true,
