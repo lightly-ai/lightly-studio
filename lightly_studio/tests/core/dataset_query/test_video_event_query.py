@@ -12,12 +12,14 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.video import VideoTable
+from lightly_studio.resolvers import sample_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.video_filter import VideoFilter
 from tests.helpers_resolvers import (
     AnnotationDetails,
     create_annotation_label,
     create_annotations,
+    create_caption,
     create_collection,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video
@@ -159,9 +161,22 @@ class TestVideoEventQuery:
         )
         query = select(VideoTable).join(VideoTable.sample)
         if isinstance(expression, QueryExpr):
-            query = VideoFilter(sample_filter=SampleFilter(query_expr=expression)).apply(
-                query=query
+            for video in videos.values():
+                create_caption(
+                    session=db_session,
+                    collection_id=collection.collection_id,
+                    parent_sample_id=video.sample_id,
+                    text="caption",
+                )
+            filters = SampleFilter(query_expr=expression)
+            result = sample_resolver.get_filtered_samples(
+                session=db_session, collection_id=collection.collection_id, filters=filters
             )
+            assert {sample.sample_id for sample in result.samples} == {
+                video.sample_id for video in videos.values() if video.file_name in expected_names
+            }
+            assert result.total_count == result.total_caption_count == len(expected_names)
+            query = VideoFilter(sample_filter=filters).apply(query=query)
         else:
             query = query.where(expression.get())
         assert {video.file_name for video in db_session.exec(query)} == expected_names
