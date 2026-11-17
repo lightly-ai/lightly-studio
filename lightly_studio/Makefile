@@ -429,12 +429,24 @@ test: mock-webapp-dist
 
 # Full-suite line coverage for the Fast Track coverage guardrail, which reads
 # coverage.json rather than running tests itself.
+# The DuckDB run skips every postgres_only test, so a Postgres run adds the lines that only
+# those tests reach. Without it, a change to a Postgres-only module reads as uncovered.
 .PHONY: test-coverage
 test-coverage: mock-webapp-dist
 	@echo "Running tests with coverage..."
-	uv run pytest -n auto --cov=src/lightly_studio \
-	  --cov-report=json:coverage.json \
-	  --cov-report=term-missing:skip-covered
+ifeq ($(OS),Windows_NT)
+	@powershell -Command "$$env:COVERAGE_FILE='.coverage.duckdb'; uv run pytest -n auto --cov=src/lightly_studio --cov-report="
+	@echo "Running the postgres_only tests with coverage..."
+	@powershell -Command "$$env:COVERAGE_FILE='.coverage.postgres'; uv run pytest --postgres -m postgres_only -n 3 --cov=src/lightly_studio --cov-report="
+else
+	COVERAGE_FILE=.coverage.duckdb uv run pytest -n auto --cov=src/lightly_studio --cov-report=
+	@echo "Running the postgres_only tests with coverage..."
+	COVERAGE_FILE=.coverage.postgres uv run pytest --postgres -m postgres_only -n 3 \
+	  --cov=src/lightly_studio --cov-report=
+endif
+	uv run coverage combine .coverage.duckdb .coverage.postgres
+	uv run coverage json -o coverage.json
+	uv run coverage report --show-missing --skip-covered
 
 .PHONY: test-postgres
 test-postgres: mock-webapp-dist
