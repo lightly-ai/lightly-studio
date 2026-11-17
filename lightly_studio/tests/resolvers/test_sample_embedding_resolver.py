@@ -200,6 +200,49 @@ def test_upsert_many__marks_saved_plots_dirty(db_session: Session) -> None:
     assert plot.write_token != old_token
 
 
+def test_upsert_many__no_commit_rolls_back(db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection.collection_id)
+    model = create_embedding_model(
+        session=db_session, collection_id=collection.collection_id, embedding_dimension=3
+    )
+    sample_embedding_resolver.upsert_many(
+        session=db_session,
+        sample_embeddings=[
+            _upsert_input(
+                sample_id=image.sample_id, model_id=model.embedding_model_id, vector=[0.5, 0.5, 0.5]
+            )
+        ],
+    )
+    plot = EmbeddingPlotTable(
+        collection_id=collection.collection_id,
+        embedding_model_id=model.embedding_model_id,
+        is_dirty=False,
+    )
+    db_session.add(plot)
+    db_session.commit()
+    old_token = plot.write_token
+
+    sample_embedding_resolver.upsert_many(
+        session=db_session,
+        sample_embeddings=[
+            _upsert_input(
+                sample_id=image.sample_id,
+                model_id=model.embedding_model_id,
+                vector=[0.25, 0.75, 0.125],
+            )
+        ],
+        commit=False,
+    )
+    db_session.rollback()
+
+    assert _stored_vectors(
+        session=db_session, sample_id=image.sample_id, embedding_model_id=model.embedding_model_id
+    ) == [[0.5, 0.5, 0.5]]
+    assert plot.is_dirty is False
+    assert plot.write_token == old_token
+
+
 def test_upsert_many__inserts_new_embedding(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
