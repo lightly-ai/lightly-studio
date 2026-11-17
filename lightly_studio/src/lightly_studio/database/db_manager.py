@@ -32,6 +32,7 @@ from sqlmodel import Session, SQLModel, create_engine
 import lightly_studio.api.db_tables  # noqa: F401, required for SQLModel to work properly
 from lightly_studio.database import db_migrations, db_url
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
+from lightly_studio.models.user import AuthSQLModel
 
 
 class DatabaseBackend(str, Enum):
@@ -371,9 +372,17 @@ def _initialize_postgres_schema(
 
 
 def _create_duckdb_schema(engine: Engine, engine_url: str) -> None:
-    """Create the DuckDB schema, raising a clear error if the file is locked elsewhere."""
+    """Create the DuckDB schema, raising a clear error if the file is locked elsewhere.
+
+    The schema also gets an empty stand-in of the auth service's `auth.users` table, so that
+    queries that join users also run without the auth service.
+    """
     try:
         SQLModel.metadata.create_all(engine)
+        with engine.connect() as conn:
+            conn.execute(statement=text("CREATE SCHEMA IF NOT EXISTS auth"))
+            conn.commit()
+        AuthSQLModel.metadata.create_all(engine)
     except OperationalError as e:
         if isinstance(e.orig, duckdb.IOException) and "Could not set lock" in str(e.orig):
             raise RuntimeError(

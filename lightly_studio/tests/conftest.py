@@ -37,6 +37,7 @@ from lightly_studio.models.collection import CollectionCreate, CollectionTable, 
 from lightly_studio.models.embedding_model import EmbeddingModelCreate
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.tag import TagCreate, TagTable
+from lightly_studio.models.user import UserTable
 from lightly_studio.resolvers import (
     annotation_label_resolver,
     annotation_resolver,
@@ -607,6 +608,9 @@ def _truncate_tables_duckdb(session: Session) -> None:
         else:
             session.execute(sqlalchemy.text(f'DELETE FROM "{table.name}"'))
             session.commit()
+    # Only DuckDB has the stand-in of the auth service's users table.
+    session.execute(sqlalchemy.delete(UserTable))
+    session.commit()
 
 
 def _delete_self_referential_table(session: Session, table: sqlalchemy.Table) -> None:
