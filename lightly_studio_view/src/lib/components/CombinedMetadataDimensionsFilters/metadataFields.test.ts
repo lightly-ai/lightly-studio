@@ -10,7 +10,7 @@ import {
     type RangeField
 } from './metadataFields';
 
-const range = (over: Partial<RangeField> = {}): RangeField => ({
+const range = (overrides: Partial<RangeField> = {}): RangeField => ({
     kind: 'range',
     id: fieldId('numeric', 'score'),
     source: 'numeric',
@@ -19,7 +19,7 @@ const range = (over: Partial<RangeField> = {}): RangeField => ({
     unit: '',
     bound: { min: 0, max: 1 },
     value: { min: 0, max: 1 },
-    ...over
+    ...overrides
 });
 const categorical = (selected: CategoricalMetadataValue[]): CategoricalField => ({
     kind: 'categorical',
@@ -31,13 +31,17 @@ const categorical = (selected: CategoricalMetadataValue[]): CategoricalField => 
 });
 
 it('a range at its bounds is not active', () => expect(isFieldActive(range())).toBe(false));
-it('a narrowed range is active', () =>
-    expect(isFieldActive(range({ value: { min: 0.2, max: 1 } }))).toBe(true));
+it.each([
+    { side: 'min', value: { min: 0.2, max: 1 } },
+    { side: 'max', value: { min: 0, max: 0.8 } }
+])('a range narrowed at its $side is active', ({ value }) =>
+    expect(isFieldActive(range({ value }))).toBe(true)
+);
 it('a field with equal bounds is never active', () =>
     expect(isFieldActive(range({ bound: { min: 5, max: 5 }, value: { min: 5, max: 5 } }))).toBe(
         false
     ));
-it('a categorical field with selected values is active', () => {
+it('a categorical field is active only with selected values', () => {
     expect(isFieldActive(categorical([]))).toBe(false);
     expect(isFieldActive(categorical([null]))).toBe(true);
 });

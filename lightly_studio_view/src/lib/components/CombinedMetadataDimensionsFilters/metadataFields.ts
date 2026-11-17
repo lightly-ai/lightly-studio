@@ -1,7 +1,7 @@
-import type { CategoricalMetadataValue } from '$lib/services/types';
-import { formatFloat, formatInteger } from '$lib/utils';
+import type { CategoricalMetadataValue, MetadataBounds } from '$lib/services/types';
+import { formatFloat } from '$lib/utils';
 
-export type Range = { min: number; max: number };
+export type Range = MetadataBounds[string];
 export type RangeSource = 'dimension' | 'numeric';
 
 export interface RangeField {
@@ -34,16 +34,18 @@ export const isFieldActive = (field: MetadataField): boolean =>
         ? field.value.min > field.bound.min || field.value.max < field.bound.max
         : field.selected.length > 0;
 
-export const orderByActive = (
-    fields: MetadataField[]
-): { fields: MetadataField[]; activeCount: number } => {
+export interface OrderedFields {
+    fields: MetadataField[];
+    activeCount: number;
+}
+
+export const orderByActive = (fields: MetadataField[]): OrderedFields => {
     const active = fields.filter(isFieldActive);
     const inactive = fields.filter((field) => !isFieldActive(field));
     return { fields: [...active, ...inactive], activeCount: active.length };
 };
 
 export const formatRangeSummary = (field: RangeField): string => {
-    const isInteger = Number.isInteger(field.bound.min) && Number.isInteger(field.bound.max);
-    const format = (num: number): string => (isInteger ? formatInteger(num) : formatFloat(num));
-    return `${format(field.value.min)}${field.unit} – ${format(field.value.max)}${field.unit}`;
+    const { value, unit } = field;
+    return `${formatFloat(value.min)}${unit} – ${formatFloat(value.max)}${unit}`;
 };
