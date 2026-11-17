@@ -6,6 +6,7 @@ from uuid import UUID
 import pytest
 from sqlmodel import Session
 
+from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.mcap_sequence_tracks import TrackAnnotationView
 from lightly_studio.models.sequence import SampleSequenceLinkTable
@@ -31,12 +32,12 @@ def test_extend_sequence_track__both_directions(db_session: Session) -> None:
     assert created == [1, 2, 5, 6]
     annotations = _track_annotations(session=db_session, setup=setup)
     assert [(a.seq_number, a.interpolated) for a in annotations] == [
-        (1, True),
+        (1, False),
         (2, True),
         (3, False),
         (4, False),
         (5, True),
-        (6, True),
+        (6, False),
     ]
 
 
@@ -48,6 +49,75 @@ def test_extend_sequence_track__copies_boundary_cuboid(db_session: Session) -> N
     cuboids = _cuboids_by_seq_number(session=db_session, setup=setup)
     assert set(cuboids) == {0, 1, 2, 3}
     assert len({cuboids[seq_number] for seq_number in cuboids}) == 1
+
+
+def test_extend_sequence_track__interpolates_up_to_the_new_edge(db_session: Session) -> None:
+    setup = _create_track(session=db_session, tick_count=4, covered=[0, 1])
+    (boundary,) = [
+        a for a in _track_annotations(session=db_session, setup=setup) if a.seq_number == 1
+    ]
+    annotation = annotation_resolver.get_by_id(
+        session=db_session, annotation_id=boundary.annotation_id
+    )
+    assert annotation is not None
+    assert annotation.cuboid_3d_details is not None
+    annotation_resolver.update_cuboid_3d(
+        session=db_session,
+        annotation_id=boundary.annotation_id,
+        cuboid_3d=Cuboid3DCreate.model_validate(
+            annotation.cuboid_3d_details.model_dump() | {"px": 4.0, "interpolated": True}
+        ),
+    )
+
+    _extend(session=db_session, setup=setup, start=0, end=3)
+
+    cuboids = _cuboids_by_seq_number(session=db_session, setup=setup)
+    assert [cuboids[seq_number][0] for seq_number in range(4)] == pytest.approx(
+        [1.0, 2.0, 3.0, 4.0]
+    )
+
+
+def test_extend_sequence_track__shrink_makes_new_edge_manual(db_session: Session) -> None:
+    setup = _create_track(session=db_session, tick_count=7, covered=[3])
+    _extend(session=db_session, setup=setup, start=0, end=6)
+
+    assert _extend(session=db_session, setup=setup, start=1, end=4) == []
+
+    annotations = _track_annotations(session=db_session, setup=setup)
+    assert [(a.seq_number, a.interpolated) for a in annotations] == [
+        (1, False),
+        (2, True),
+        (3, False),
+        (4, False),
+    ]
+
+
+def test_extend_sequence_track__shrink_keeps_untouched_edge(db_session: Session) -> None:
+    setup = _create_track(session=db_session, tick_count=5, covered=[0])
+    _extend(session=db_session, setup=setup, start=0, end=4)
+    _set_interpolated(session=db_session, setup=setup, seq_number=0)
+
+    _extend(session=db_session, setup=setup, start=0, end=2)
+
+    annotations = _track_annotations(session=db_session, setup=setup)
+    assert [(a.seq_number, a.interpolated) for a in annotations] == [
+        (0, True),
+        (1, True),
+        (2, False),
+    ]
+
+
+def test_extend_sequence_track__shrink_into_gap_adds_manual_edge(db_session: Session) -> None:
+    setup = _create_track(session=db_session, tick_count=5, covered=[0, 4])
+
+    assert _extend(session=db_session, setup=setup, start=2, end=4) == [2, 3]
+
+    annotations = _track_annotations(session=db_session, setup=setup)
+    assert [(a.seq_number, a.interpolated) for a in annotations] == [
+        (2, False),
+        (3, True),
+        (4, False),
+    ]
 
 
 def test_extend_sequence_track__retry_creates_nothing(db_session: Session) -> None:
@@ -119,6 +189,22 @@ def _extend(session: Session, setup: _Setup, start: int, end: int) -> list[int] 
         annotation_source_id=setup.source_id,
         start_seq_number=start,
         end_seq_number=end,
+    )
+
+
+def _set_interpolated(session: Session, setup: _Setup, seq_number: int) -> None:
+    (item,) = [
+        a for a in _track_annotations(session=session, setup=setup) if a.seq_number == seq_number
+    ]
+    annotation = annotation_resolver.get_by_id(session=session, annotation_id=item.annotation_id)
+    assert annotation is not None
+    assert annotation.cuboid_3d_details is not None
+    annotation_resolver.update_cuboid_3d(
+        session=session,
+        annotation_id=item.annotation_id,
+        cuboid_3d=Cuboid3DCreate.model_validate(
+            annotation.cuboid_3d_details.model_dump() | {"interpolated": True}
+        ),
     )
 
 
