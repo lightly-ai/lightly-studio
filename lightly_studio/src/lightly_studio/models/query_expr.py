@@ -329,7 +329,13 @@ def _validate_evaluation_scope(expr: MatchExpr, in_annotation: bool) -> None:
         if in_annotation:
             raise ValueError("Evaluation filters cannot be nested inside annotation queries.")
     elif isinstance(
-        expr, (ClassificationMatchExpr, ObjectDetectionMatchExpr, SegmentationMaskMatchExpr)
+        expr,
+        (
+            ClassificationMatchExpr,
+            ObjectDetectionMatchExpr,
+            SegmentationMaskMatchExpr,
+            VideoEventMatchExpr,
+        ),
     ):
         _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
     elif isinstance(expr, (AndExpr, OrExpr)):

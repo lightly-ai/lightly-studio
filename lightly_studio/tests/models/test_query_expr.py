@@ -11,12 +11,16 @@ from lightly_studio.models.query_expr import (
     AndExpr,
     ClassificationMatchExpr,
     DatetimeExpr,
+    EqualityComparisonOperator,
     EvaluationMetricComparisonExpr,
+    FieldRef,
     MetadataComparisonExpr,
     NotExpr,
     OrdinalComparisonOperator,
+    OrdinalFloatExpr,
     QueryExpr,
     StringExpr,
+    VideoEventMatchExpr,
 )
 
 
@@ -211,3 +215,17 @@ class TestQueryExpr:
                     }
                 }
             )
+
+    @pytest.mark.parametrize(
+        "name", ["class_name", "source", "confidence", "start_time_s", "end_time_s"]
+    )
+    def test_model_validate__video_event_round_trip(self, name: str) -> None:
+        field = FieldRef(table="event", name=name)
+        criterion = (
+            StringExpr(field=field, operator=EqualityComparisonOperator.EQ, value="run")
+            if name in {"class_name", "source"}
+            else OrdinalFloatExpr(field=field, operator=OrdinalComparisonOperator.GTE, value=0.5)
+        )
+        query = QueryExpr(match_expr=VideoEventMatchExpr(subexpr=NotExpr(child=criterion)))
+        restored = QueryExpr.model_validate_json(query.model_dump_json())
+        assert restored == query
