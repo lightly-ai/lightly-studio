@@ -33,12 +33,22 @@ describe('CuboidSourceSection', () => {
         const onSelect = vi.fn();
         render(CuboidSourceSection, { props: { ...defaultProps, onSelect } });
 
-        await fireEvent.click(screen.getByTestId('new-annotation-source-button'));
-        const input = screen.getByTestId('new-annotation-source-input');
-        await fireEvent.input(input, { target: { value: 'review' } });
-        await fireEvent.submit(input.closest('form')!);
+        await fireEvent.input(screen.getByTestId('cuboid-new-source-input'), {
+            target: { value: ' review ' }
+        });
 
-        expect(onSelect).toHaveBeenCalledWith({ name: 'review', isNew: true });
+        expect(onSelect).toHaveBeenLastCalledWith({ name: 'review', isNew: true });
+    });
+
+    it('selects a typed existing name as that source', async () => {
+        const onSelect = vi.fn();
+        render(CuboidSourceSection, { props: { ...defaultProps, onSelect } });
+
+        await fireEvent.input(screen.getByTestId('cuboid-new-source-input'), {
+            target: { value: 'preds' }
+        });
+
+        expect(onSelect).toHaveBeenLastCalledWith({ name: 'preds', isNew: false });
     });
 
     it('shows a selected new source as checked', () => {

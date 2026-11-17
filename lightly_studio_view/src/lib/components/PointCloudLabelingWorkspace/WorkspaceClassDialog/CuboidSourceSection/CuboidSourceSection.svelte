@@ -1,8 +1,6 @@
 <script lang="ts">
-    import {
-        AnnotationTargetRadio,
-        NewAnnotationSourceInput
-    } from '$lib/components/AnnotationSource';
+    import { AnnotationTargetRadio } from '$lib/components/AnnotationSource';
+    import { Input } from '$lib/components/ui/input';
 
     interface SourceChoice {
         name: string;
@@ -26,8 +24,11 @@
     );
     const selectedNew = $derived(selected?.isNew ? selected.name : null);
 
-    function selectTyped(name: string) {
-        onSelect({ name, isNew: !sourceNames.includes(name) });
+    // Typing selects the source at once, so the name is kept also when the user clicks Confirm
+    // without Enter.
+    function selectTyped(value: string) {
+        const name = value.trim();
+        if (name) onSelect({ name, isNew: !sourceNames.includes(name) });
     }
 </script>
 
@@ -44,5 +45,12 @@
             <span class="truncate">{name}</span>
         </div>
     {/each}
-    <NewAnnotationSourceInput existingNames={sourceNames} onSubmit={selectTyped} />
+    <Input
+        class="h-8 px-2 text-sm"
+        placeholder="New source name"
+        aria-label="New annotation source name"
+        oninput={(event) => selectTyped(event.currentTarget.value)}
+        onkeydown={(event) => event.key === 'Enter' && event.preventDefault()}
+        data-testid="cuboid-new-source-input"
+    />
 </div>

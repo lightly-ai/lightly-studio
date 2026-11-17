@@ -87,4 +87,25 @@ describe('WorkspaceClassDialog', () => {
         expect(setTarget).not.toHaveBeenCalled();
         expect(handleClassDialogCancel).toHaveBeenCalled();
     });
+
+    it('picks a new source typed with Enter', async () => {
+        const user = userEvent.setup();
+        setup({ targetSource: 'labels', needsPick: false });
+
+        await user.type(screen.getByTestId('cuboid-new-source-input'), 'review{Enter}');
+        await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+        expect(setTarget).toHaveBeenCalledWith('review', { isNew: true });
+    });
+
+    it('picks a new source typed without Enter before Confirm', async () => {
+        const user = userEvent.setup();
+        setup({ targetSource: 'labels', needsPick: false });
+
+        await user.type(screen.getByTestId('cuboid-new-source-input'), 'review');
+        await user.click(screen.getByRole('button', { name: 'Confirm' }));
+
+        expect(setTarget).toHaveBeenCalledWith('review', { isNew: true });
+        expect(handleClassSelected).toHaveBeenCalledWith('car');
+    });
 });

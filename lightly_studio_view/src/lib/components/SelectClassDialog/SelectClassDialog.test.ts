@@ -194,4 +194,11 @@ describe('SelectClassDialog', () => {
 
         expect(screen.getByText('Extra section')).toBeInTheDocument();
     });
+
+    it('keeps the class list closed when there is extra content', () => {
+        const extra = createRawSnippet(() => ({ render: () => '<p>Extra section</p>' }));
+        renderDialog({ extra });
+
+        expect(screen.queryByRole('option', { name: 'cat' })).not.toBeInTheDocument();
+    });
 });

@@ -13,7 +13,11 @@
         labels: string[];
         onConfirm: (label: string) => void;
         onCancel: () => void;
-        /** Content below the class list, for example more fields of the new annotation. */
+        /**
+         * Content above the class list, for example more fields of the new annotation. With it,
+         * the class list does not open by itself: its popover would cover the content and keep
+         * the focus.
+         */
         extra?: Snippet;
         /** Whether the caller allows to confirm, for example after its extra fields are set. */
         canConfirm?: boolean;
@@ -87,6 +91,7 @@
             </Dialog.Description>
         </Dialog.Header>
 
+        {@render extra?.()}
         <div class="min-w-0 space-y-1 py-2">
             <SelectList
                 onCreate={trackClassCreatedInPicker}
@@ -96,7 +101,7 @@
                 label="Select a class..."
                 placeholder={canCreateClass ? 'Search or create a class...' : 'Search a class...'}
                 className="w-full"
-                autoOpen
+                autoOpen={!extra}
                 autoFocus
                 onKeyboardConfirm={confirmItem}
             >
@@ -105,7 +110,6 @@
                 {/snippet}
             </SelectList>
         </div>
-        {@render extra?.()}
 
         <Dialog.Footer>
             <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
