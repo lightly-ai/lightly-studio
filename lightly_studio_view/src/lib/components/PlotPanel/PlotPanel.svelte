@@ -532,7 +532,9 @@
     const pickHint = $derived(
         isSequences ? null : getPickHint({ hoveredSampleId, pickedSampleIds })
     );
-    const shownPickHint = useLingeringValue(() => pickHint, 400);
+    const lingeringPickHint = useLingeringValue(() => pickHint, 400);
+    // A drag hides the hint at once; only the gaps between points get the delay.
+    const shownPickHint = $derived($rangeSelection === null ? lingeringPickHint.current : null);
     const selectionKind = $derived(
         $plotSelectionCount === 0 ? null : pickedSampleIds.length > 0 ? 'picks' : 'region'
     );
@@ -666,7 +668,7 @@
                         <PlotAxesLabels axes={$appliedTextAxes} />
                     {/if}
 
-                    {#if $plotSelectionCount > 0 || shownPickHint.current !== null}
+                    {#if $plotSelectionCount > 0 || shownPickHint !== null}
                         <!-- Below the top axis label, which it would overlap on a narrow plot. -->
                         <div
                             class={cn(
@@ -679,7 +681,7 @@
                                 count={$plotSelectionCount}
                                 {itemLabel}
                                 onClear={clearSelection}
-                                pickHint={shownPickHint.current}
+                                pickHint={shownPickHint}
                             />
                         </div>
                     {/if}
