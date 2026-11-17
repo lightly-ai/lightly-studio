@@ -225,6 +225,13 @@ class ClassificationMatchExpr(BaseModel):
     subexpr: MatchExpr
 
 
+class VideoEventMatchExpr(BaseModel):
+    """Match a temporal classification annotation on a video."""
+
+    type: Literal["video_event_match_expr"] = "video_event_match_expr"
+    subexpr: MatchExpr
+
+
 class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
@@ -273,6 +280,7 @@ MatchExpr: TypeAlias = Annotated[
     | FalsePositiveMatchExpr
     | FalseNegativeMatchExpr
     | ClassificationMatchExpr
+    | VideoEventMatchExpr
     | ObjectDetectionMatchExpr
     | SegmentationMaskMatchExpr
     | AndExpr
@@ -288,6 +296,7 @@ EvaluationMetricOrExpr.model_rebuild()
 EvaluationMetricNotExpr.model_rebuild()
 SampleEvaluationMatchExpr.model_rebuild()
 ClassificationMatchExpr.model_rebuild()
+VideoEventMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
 SegmentationMaskMatchExpr.model_rebuild()
 AndExpr.model_rebuild()
