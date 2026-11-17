@@ -8,10 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Filter videos by annotations and timestamps on the same frame through API query expressions.
-- Filter videos by temporal events through API query expressions.
-- Python SDK: Find videos with annotations and timestamp conditions on the same frame using `VideoFrameQuery`.
-- Python SDK: Query videos by temporal event classes, sources, confidence, and time boundaries with `VideoEventQuery`.
+- API query expressions can filter videos by temporal events or by annotations and timestamps on the same frame.
+- Python SDK: Use `VideoFrameQuery` to match annotations and timestamps on the same frame, or `VideoEventQuery` to match events by class, source, confidence, and time boundaries.
 - Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.
 - Filter videos with query expressions in the GUI using video fields, tags, metadata, and video annotations.
 - Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
