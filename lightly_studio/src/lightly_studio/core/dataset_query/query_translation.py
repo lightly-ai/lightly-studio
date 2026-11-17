@@ -57,6 +57,7 @@ from lightly_studio.models.query_expr import (
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
+    VideoEventMatchExpr,
 )
 from lightly_studio.models.sort_direction import SortDirection
 
@@ -285,6 +286,8 @@ def to_match_expression(expr: MatchExpr) -> MatchExpression:  # noqa: PLR0911 PL
     if isinstance(expr, TagsContainsExpr):
         accessor: _TagsAccessor = _lookup(mapping=_TAGS_FIELDS, field=expr.field, type_="tags")
         return accessor.contains(expr.tag_name)
+    if isinstance(expr, VideoEventMatchExpr):
+        raise QueryExprError("Video event queries are not supported.")
     if isinstance(expr, ClassificationMatchExpr):
         return ClassificationQuery(to_match_expression(expr=expr.subexpr))
     if isinstance(expr, ObjectDetectionMatchExpr):
