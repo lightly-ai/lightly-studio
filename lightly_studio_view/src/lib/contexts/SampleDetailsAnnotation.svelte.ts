@@ -36,6 +36,8 @@ export type AnnotationLabelContext = {
     lastCreatedAnnotationId?: string | null;
 
     isDrawing?: boolean;
+    // The selected box is being moved or resized.
+    isMovingAnnotation?: boolean;
     isErasing?: boolean;
     isDragging?: boolean;
     isChangingBrushSize?: boolean;

@@ -18,6 +18,8 @@
         annotationSourceName?: string;
         /** When true, numeric fields in the detail panel become editable. */
         editable?: boolean;
+        /** Track IDs already assigned to other annotations on the same frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
         /** Toggles the row's expanded state. */
         onToggle: (cuboidId: string) => void;
         /** Called when the user commits a geometry change in the detail panel. */
@@ -28,6 +30,8 @@
             labelName: string,
             annotationSourceId: string
         ) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => Promise<void>;
         /** Deletes this cuboid annotation. */
         onDelete?: (cuboidId: string) => void;
         /** Whether the cuboid is hidden in the scene. */
@@ -45,9 +49,11 @@
         isSelected,
         annotationSourceName,
         editable = false,
+        occupiedTrackIds,
         onToggle,
         onCuboidTransform,
         onLabelChange,
+        onTrackChange,
         onDelete,
         isHidden = false,
         isVisibilityLocked = false,
@@ -93,9 +99,11 @@
         <div class="px-4 pb-4 pt-1">
             <PointCloudAnnotationDetails
                 {annotationSourceName}
-                annotation={cuboid}
+                annotation={{ ...cuboid, annotationClassName: className }}
                 {editable}
+                {occupiedTrackIds}
                 onAnnotationChange={handleAnnotationChange}
+                {onTrackChange}
             />
         </div>
     {/if}

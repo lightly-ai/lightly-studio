@@ -43,6 +43,7 @@
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
                     onLabelChange={editing.handleLabelChange}
+                    onTrackChange={editing.handleTrackChange}
                     onDeleteCuboid={presentation.isEditingMode
                         ? editing.handleDeleteCuboid
                         : undefined}

@@ -45,6 +45,8 @@
             labelName: string,
             annotationSourceId: string
         ) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
         /** True when the cuboid is hidden in the scene. */
@@ -69,6 +71,7 @@
         editable = false,
         onCuboidTransform,
         onLabelChange,
+        onTrackChange,
         onDeleteCuboid,
         isCuboidHidden,
         isSourceHidden,
@@ -116,6 +119,7 @@
                 {editable}
                 {onCuboidTransform}
                 {onLabelChange}
+                {onTrackChange}
                 {onDeleteCuboid}
                 {isCuboidHidden}
                 {isSourceHidden}

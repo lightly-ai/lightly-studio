@@ -10,7 +10,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Header
 
-from lightly_studio.assisted_labeling import fal_sam3_provider
+from lightly_studio.assisted_labeling import fal_sam3_provider, labeling_model_lookup
 from lightly_studio.assisted_labeling.provider import ProviderImage
 from lightly_studio.database import db_manager
 from lightly_studio.models.assisted_labeling import (
@@ -19,6 +19,10 @@ from lightly_studio.models.assisted_labeling import (
     InstancesAnnotationResponse,
     InteractiveAnnotationRequest,
     InteractiveAnnotationResponse,
+    LabelingModelsView,
+    LabelingModelView,
+    ModelAnnotationRequest,
+    ModelAnnotationResponse,
 )
 from lightly_studio.services import assisted_labeling_service
 from lightly_studio.utils import executor
@@ -26,6 +30,9 @@ from lightly_studio.utils import executor
 assisted_labeling_router = APIRouter(prefix="/annotate", tags=["annotate"])
 
 PROVIDER_MAX_WORKERS = 8
+# A labeling model computes on this machine and can fill the GPU memory. Its own pool keeps
+# a slow model from blocking the SAM3 requests.
+MODEL_MAX_WORKERS = 2
 
 
 @assisted_labeling_router.get("/status")
@@ -76,9 +83,36 @@ async def create_instances_annotation_preview(
     )
 
 
+@assisted_labeling_router.get("/models")
+def get_labeling_models() -> LabelingModelsView:
+    """Returns the labeling models that the GUI can run."""
+    return LabelingModelsView(
+        models=[
+            LabelingModelView(id=runner.model_id, task=runner.task, class_names=runner.class_names)
+            for runner in labeling_model_lookup.list_runners()
+        ]
+    )
+
+
+@assisted_labeling_router.post("/models/predict")
+async def create_model_annotation_preview(
+    request: ModelAnnotationRequest,
+) -> ModelAnnotationResponse:
+    """Returns previews of the annotations that a labeling model predicts. Saves nothing."""
+    return await asyncio.get_running_loop().run_in_executor(
+        _get_model_executor(), functools.partial(_create_model_preview, request=request)
+    )
+
+
 def _get_provider_executor() -> ThreadPoolExecutor:
     return executor.get_media_executor(
         thread_name_prefix="assisted_labeling", max_workers=PROVIDER_MAX_WORKERS
+    )
+
+
+def _get_model_executor() -> ThreadPoolExecutor:
+    return executor.get_media_executor(
+        thread_name_prefix="labeling_model", max_workers=MODEL_MAX_WORKERS
     )
 
 
@@ -103,6 +137,14 @@ def _create_instances_preview(
         image=image,
         request=request,
         user_email=user_email,
+    )
+
+
+def _create_model_preview(request: ModelAnnotationRequest) -> ModelAnnotationResponse:
+    runner = labeling_model_lookup.get_runner(model_id=request.model_id)
+    image = _load_image(collection_id=request.collection_id, sample_id=request.sample_id)
+    return assisted_labeling_service.create_model_preview(
+        runner=runner, image=image, threshold=request.threshold
     )
 
 
