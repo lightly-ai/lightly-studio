@@ -4,6 +4,8 @@
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotSelectionChip from './PlotSelectionChip/PlotSelectionChip.svelte';
+    import { getPickHint } from './PlotSelectionChip/PlotSelectionChip.helpers';
+    import { useLingeringValue } from './PlotSelectionChip/useLingeringValue.svelte';
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
@@ -505,7 +507,7 @@
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
     // The array-based EmbeddingView only emits hover tooltips when querySelection
     // is provided; ours returns the nearest visible point with its sample ID.
-    let tooltip: DataPoint | null = $state(null);
+    let tooltip = $state<DataPoint | null>(null);
     const onTooltip = (value: DataPoint | null) => {
         tooltip = value;
     };
@@ -521,6 +523,16 @@
             typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
         commitPickedSampleIds
     });
+    const hoveredSampleId = $derived(
+        typeof tooltip?.identifier === 'string' && $rangeSelection === null
+            ? tooltip.identifier
+            : null
+    );
+    // Picking does not work on sequences.
+    const pickHint = $derived(
+        isSequences ? null : getPickHint({ hoveredSampleId, pickedSampleIds })
+    );
+    const shownPickHint = useLingeringValue(() => pickHint, 400);
     // The card is rendered by this component (not the library's tooltip container)
     // so it always sits directly above the hovered point; the overlay proxy
     // provides the data → pixel conversion.
@@ -651,15 +663,24 @@
                         <PlotAxesLabels axes={$appliedTextAxes} />
                     {/if}
 
-                    {#if $plotSelectionCount > 0}
+                    {#if $plotSelectionCount > 0 || shownPickHint.current !== null}
                         <!-- Below the top axis label, which it would overlap on a narrow plot. -->
                         <div
-                            class={cn('absolute left-2 z-10', showAxesLabels ? 'top-11' : 'top-2')}
+                            class={cn(
+                                'pointer-events-none absolute left-2 right-2 z-10',
+                                showAxesLabels ? 'top-11' : 'top-2'
+                            )}
                         >
                             <PlotSelectionChip
+                                selectionKind={$plotSelectionCount === 0
+                                    ? null
+                                    : pickedSampleIds.length > 0
+                                      ? 'picks'
+                                      : 'region'}
                                 count={$plotSelectionCount}
                                 {itemLabel}
                                 onClear={clearSelection}
+                                pickHint={shownPickHint.current}
                             />
                         </div>
                     {/if}
