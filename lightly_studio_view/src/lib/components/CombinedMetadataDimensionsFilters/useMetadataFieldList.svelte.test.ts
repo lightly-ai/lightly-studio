@@ -7,6 +7,7 @@ import {
 } from './useMetadataFieldList.svelte';
 import { isFieldActive } from './metadataFields';
 import { useDimensions, useGlobalStorage } from '$lib/hooks';
+import { getMetadataInfo } from '$lib/api/lightly_studio_local';
 
 const trackEvent = vi.fn();
 vi.mock('$lib/hooks', async (importOriginal) => ({
@@ -199,6 +200,35 @@ describe('useMetadataFieldList', () => {
         expect(list.fields).toEqual(before);
         expect(onRangeCommitted).not.toHaveBeenCalled();
         expect(trackEvent).not.toHaveBeenCalled();
+    });
+
+    it('loads the numeric fields of the collection', async () => {
+        vi.mocked(getMetadataInfo).mockResolvedValueOnce({
+            data: [
+                { name: 'confidence', type: 'float', min: 0, max: 1 },
+                { name: 'count', type: 'integer', min: 0, max: 5 },
+                { name: 'split', type: 'string' }
+            ]
+        } as Awaited<ReturnType<typeof getMetadataInfo>>);
+        const collectionId = '7f6a8c1e-3b4d-4e5f-9a0b-1c2d3e4f5a6b';
+        const list = setup({ getCollectionId: () => collectionId, getCategoricalKeys: () => [] });
+
+        await vi.waitFor(() =>
+            expect(ids(list)).toEqual([
+                'dimension:width',
+                'dimension:height',
+                'numeric:confidence',
+                'numeric:count'
+            ])
+        );
+        expect(getMetadataInfo).toHaveBeenCalledWith({ path: { collection_id: collectionId } });
+    });
+
+    it('a categorical key named like an object property is not active', () => {
+        const list = setup({ getCategoricalKeys: () => ['constructor'] });
+        expect(list.fields.find((f) => f.id === 'categorical:constructor')).toMatchObject({
+            selected: []
+        });
     });
 
     it('a store change from outside makes the field active', () => {

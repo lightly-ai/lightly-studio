@@ -108,6 +108,10 @@ export function useMetadataFieldList(
                 : [];
         });
 
+    // A metadata key can be any string, e.g. `constructor`, so read only own keys.
+    const selectedValues = (key: string) =>
+        Object.hasOwn(categoricalValues.current, key) ? categoricalValues.current[key] : [];
+
     const categoricalFields = (): CategoricalField[] =>
         params.getCategoricalKeys().map((key) => ({
             kind: 'categorical',
@@ -115,7 +119,7 @@ export function useMetadataFieldList(
             source: 'categorical',
             key,
             title: key,
-            selected: categoricalValues.current[key] ?? []
+            selected: selectedValues(key)
         }));
 
     const fields = $derived<MetadataField[]>([
