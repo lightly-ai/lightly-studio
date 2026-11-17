@@ -37,6 +37,8 @@ const defaultProps: Props = {
     annotationClasses: [],
     annotationSources: [],
     transforms: createCuboidTransformState({ onTransform: async () => true }),
+    isCuboidHidden: () => false,
+    isTickAnnotationHidden: () => false,
     activeTool: 'select',
     effectiveTool: 'select',
     isEditingMode: true,
