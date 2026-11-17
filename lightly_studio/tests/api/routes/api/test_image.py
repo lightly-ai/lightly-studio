@@ -738,6 +738,23 @@ def test_count_image_annotations_by_collection__count_mode_invalid(
     assert response.status_code == 422
 
 
+def test_count_unannotated_images(test_client: TestClient, db_session: Session) -> None:
+    collection = create_collection(session=db_session)
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="unannotated_1.png"), ImageStub(path="unannotated_2.png")],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/images/unannotated/count",
+        json={"filter": {"sample_filter": {"sample_ids": [str(images[0].sample_id)]}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"current_count": 1, "total_count": 2}
+
+
 def test_get_image_sample_ids(
     test_client: TestClient,
     db_session: Session,

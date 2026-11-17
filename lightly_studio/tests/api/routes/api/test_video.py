@@ -494,3 +494,20 @@ def test_count_video_frame_annotations_by_video_collection(
     assert result[1]["label_name"] == "car"
     assert result[1]["total_count"] == 1
     assert result[1]["current_count"] == 0
+
+
+def test_count_unannotated_videos(test_client: TestClient, db_session: Session) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    videos = create_videos(
+        session=db_session,
+        collection_id=collection.collection_id,
+        videos=[VideoStub(path="unannotated_1.mp4"), VideoStub(path="unannotated_2.mp4")],
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection.collection_id}/video/unannotated/count",
+        json={"filter": {"sample_filter": {"sample_ids": [str(videos[0])]}}},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == {"current_count": 1, "total_count": 2}

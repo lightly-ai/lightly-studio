@@ -1,6 +1,9 @@
 """Resolvers for database operations."""
 
 from lightly_studio.resolvers.sample_resolver.count_by_collection_id import count_by_collection_id
+from lightly_studio.resolvers.sample_resolver.count_unannotated_samples import (
+    count_unannotated_samples,
+)
 from lightly_studio.resolvers.sample_resolver.create import create
 from lightly_studio.resolvers.sample_resolver.create_many import create_many
 from lightly_studio.resolvers.sample_resolver.filter_new_paths import filter_new_paths
@@ -10,6 +13,7 @@ from lightly_studio.resolvers.sample_resolver.get_many_by_id import get_many_by_
 
 __all__ = [
     "count_by_collection_id",
+    "count_unannotated_samples",
     "create",
     "create_many",
     "filter_new_paths",

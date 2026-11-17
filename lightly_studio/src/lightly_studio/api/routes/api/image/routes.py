@@ -21,6 +21,7 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageView, ImageViewsWithCount
 from lightly_studio.models.metadata import HistogramView
 from lightly_studio.models.sort import ImageSortExpr
+from lightly_studio.models.unannotated_sample_count import UnannotatedSampleCount
 from lightly_studio.resolvers import (
     image_resolver,
 )
@@ -253,3 +254,27 @@ def count_image_annotations_by_collection(
         }
         for label_name, current_count, total_count in counts
     ]
+
+
+class ReadCountUnannotatedImagesRequest(BaseModel):
+    """Request body for counting the images without annotations."""
+
+    filter: ImageFilter | None = None
+
+
+@image_router.post("/collections/{collection_id}/images/unannotated/count")
+def count_unannotated_images(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ReadCountUnannotatedImagesRequest,
+) -> UnannotatedSampleCount:
+    """Count the images without annotations, in total and for the filter."""
+    return image_resolver.count_unannotated_images(
+        session=session,
+        collection_id=collection.collection_id,
+        image_filter=body.filter,
+    )
