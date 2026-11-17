@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from uuid import UUID
 
+import pytest
 from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
@@ -104,62 +105,36 @@ def test_query__annotation_filter__direct_video_annotations(db_session: Session)
     assert result[0].sample_id == video_with_annotation.sample_id
 
 
-def test_query__annotation_filter__include_unannotated_samples(db_session: Session) -> None:
-    collection_id, _ = _create_videos_with_frame_and_direct_annotations(session=db_session)
-
-    video_filter = VideoFilter(
-        frame_annotation_filter=AnnotationsFilter(include_unannotated_samples=True)
-    )
-
-    assert _filter_video_names(
-        session=db_session, video_filter=video_filter, collection_id=collection_id
-    ) == ["unannotated.mp4"]
-
-
-def test_query__annotation_filter__include_unannotated_samples_and_label(
-    db_session: Session,
+@pytest.mark.parametrize(
+    ("label_names", "expected_names"),
+    [
+        ([], ["unannotated.mp4"]),
+        (["car"], ["frame_car.mp4", "unannotated.mp4"]),
+    ],
+)
+def test_query__annotation_filter__include_unannotated_samples(
+    db_session: Session, label_names: list[str], expected_names: list[str]
 ) -> None:
-    collection_id, car_label_id = _create_videos_with_frame_and_direct_annotations(
-        session=db_session
-    )
-
-    video_filter = VideoFilter(
-        frame_annotation_filter=AnnotationsFilter(
-            annotation_label_ids=[car_label_id], include_unannotated_samples=True
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    frame_car, direct_running, _ = [
+        create_video_with_frames(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=VideoStub(path=path, duration_s=1.0, fps=2.0),
         )
-    )
-
-    assert _filter_video_names(
-        session=db_session, video_filter=video_filter, collection_id=collection_id
-    ) == ["frame_car.mp4", "unannotated.mp4"]
-
-
-def _create_videos_with_frame_and_direct_annotations(session: Session) -> tuple[UUID, UUID]:
-    """Create videos with a car on one of two frames, a direct annotation, and none."""
-    collection = create_collection(session=session, sample_type=SampleType.VIDEO)
-    frame_car = create_video_with_frames(
-        session=session,
-        collection_id=collection.collection_id,
-        video=VideoStub(path="frame_car.mp4", duration_s=1.0, fps=2.0),
-    )
-    direct = create_video_with_frames(
-        session=session,
-        collection_id=collection.collection_id,
-        video=VideoStub(path="direct_running.mp4", duration_s=1.0, fps=2.0),
-    )
-    create_video_with_frames(
-        session=session,
-        collection_id=collection.collection_id,
-        video=VideoStub(path="unannotated.mp4", duration_s=1.0, fps=2.0),
-    )
+        for path in ["frame_car.mp4", "direct_running.mp4", "unannotated.mp4"]
+    ]
     car_label = create_annotation_label(
-        session=session, root_collection_id=frame_car.video_frames_collection_id, label_name="car"
+        session=db_session,
+        root_collection_id=frame_car.video_frames_collection_id,
+        label_name="car",
     )
     running_label = create_annotation_label(
-        session=session, root_collection_id=collection.collection_id, label_name="running"
+        session=db_session, root_collection_id=collection.collection_id, label_name="running"
     )
+    # Only the first of the two frames has a car.
     create_annotations(
-        session=session,
+        session=db_session,
         collection_id=frame_car.video_frames_collection_id,
         annotations=[
             AnnotationDetails(
@@ -169,17 +144,31 @@ def _create_videos_with_frame_and_direct_annotations(session: Session) -> tuple[
         ],
     )
     create_annotations(
-        session=session,
+        session=db_session,
         collection_id=collection.collection_id,
         annotations=[
             AnnotationDetails(
-                sample_id=direct.video_sample_id,
+                sample_id=direct_running.video_sample_id,
                 annotation_label_id=running_label.annotation_label_id,
                 annotation_type=AnnotationType.CLASSIFICATION,
             )
         ],
     )
-    return collection.collection_id, car_label.annotation_label_id
+    labels = {"car": car_label, "running": running_label}
+
+    video_filter = VideoFilter(
+        frame_annotation_filter=AnnotationsFilter(
+            annotation_label_ids=[labels[name].annotation_label_id for name in label_names],
+            include_unannotated_samples=True,
+        )
+    )
+
+    assert (
+        _filter_video_names(
+            session=db_session, video_filter=video_filter, collection_id=collection.collection_id
+        )
+        == expected_names
+    )
 
 
 def _filter_video_names(
