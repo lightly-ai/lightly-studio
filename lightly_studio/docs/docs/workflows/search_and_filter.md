@@ -351,7 +351,6 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     This matches a `run` event that starts before five seconds. Fields also include `end_time_s`,
     `source`, and `confidence`. Event times are in seconds relative to the video start.
     `ClassificationQuery` still matches both whole-video classifications and temporal events.
-    Event queries are available through Python; query-editor support follows separately.
 
     #### Video frame queries
 
@@ -372,7 +371,7 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     `VideoFrameQuery(NOT(person))` requires a frame without a person. `NOT(VideoFrameQuery(person))`
     requires no frame with a person and includes videos without frames. Nested event and frame
-    queries are rejected. Frame queries are available through Python; query-editor support follows separately.
+    queries are rejected.
 
     #### Sample evaluation queries
 
