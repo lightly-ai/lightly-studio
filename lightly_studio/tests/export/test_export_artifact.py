@@ -11,7 +11,8 @@ from pytest_mock import MockerFixture
 from lightly_studio.export import export_artifact
 
 
-def test_remove_export_artifact(tmp_path: Path) -> None:
+def test_remove_export_artifact(tmp_path: Path, mocker: MockerFixture) -> None:
+    mocker.patch.object(tempfile, "gettempdir", return_value=str(tmp_path))
     export_path = tmp_path / "coco.json"
     export_path.write_text("{}")
 
@@ -21,6 +22,7 @@ def test_remove_export_artifact(tmp_path: Path) -> None:
 
 
 def test_remove_export_artifact__unlink_fails(tmp_path: Path, mocker: MockerFixture) -> None:
+    mocker.patch.object(tempfile, "gettempdir", return_value=str(tmp_path))
     export_path = tmp_path / "coco.json"
     export_path.write_text("{}")
     unlink = mocker.patch.object(Path, "unlink", side_effect=PermissionError("read-only"))
@@ -46,6 +48,7 @@ def test_remove_export_artifact__rmtree_fails(
 ) -> None:
     export_dir = tmp_path / "yolo"
     export_dir.mkdir()
+    mocker.patch.object(tempfile, "gettempdir", return_value=str(tmp_path))
     rmtree = mocker.patch.object(shutil, "rmtree")
 
     with caplog.at_level(logging.WARNING):
@@ -58,6 +61,7 @@ def test_remove_export_artifact__rmtree_fails(
 def test_remove_export_artifact__is_dir_fails(tmp_path: Path, mocker: MockerFixture) -> None:
     export_dir = tmp_path / "yolo"
     export_dir.mkdir()
+    mocker.patch.object(tempfile, "gettempdir", return_value=str(tmp_path))
     mocker.patch.object(Path, "is_dir", side_effect=PermissionError("no search permission"))
 
     export_artifact.remove_export_artifact(export_path=str(export_dir))
