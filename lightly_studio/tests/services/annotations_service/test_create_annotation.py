@@ -28,6 +28,7 @@ from lightly_studio.services.annotations_service.create_annotation import (
     create_annotation,
 )
 from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
+from tests.services.object_track_service import helpers as track_helpers
 
 
 def test_create_annotation_object_detection(
@@ -433,3 +434,40 @@ def test_create_annotation__failed_annotation_does_not_commit_new_track(
         session=db_session, dataset_id=collection.dataset_id
     )
     assert tracks == []
+
+
+def test_create_annotation__cuboid_on_track_interpolates_track(db_session: Session) -> None:
+    scene = track_helpers.create_scene(session=db_session)
+    ticks = track_helpers.add_sequence(session=db_session, scene=scene, timestamps=[0, 10, 20])
+    track = track_helpers.create_track(session=db_session, scene=scene, number=1)
+    track_helpers.add_cuboid(
+        session=db_session, scene=scene, tick_id=ticks[0], track=track, px=0.0, source="gt"
+    )
+
+    create_annotation(
+        session=db_session,
+        annotation=AnnotationCreateParams(
+            annotation_label_id=scene.label_id,
+            annotation_type=AnnotationType.CUBOID_3D,
+            annotation_collection_name="gt",
+            collection_id=scene.group_collection_id,
+            parent_sample_id=ticks[2],
+            object_track_id=track.object_track_id,
+            cuboid_3d=Cuboid3DCreate(
+                frame_id="odom",
+                px=10.0,
+                py=0.0,
+                pz=0.0,
+                qx=0.0,
+                qy=0.0,
+                qz=0.0,
+                qw=1.0,
+                sx=4.0,
+                sy=2.0,
+                sz=1.5,
+            ),
+        ),
+    )
+
+    by_tick = track_helpers.cuboids_by_tick(session=db_session, track=track)
+    assert track_helpers.px_of(by_tick[ticks[1]][0]) == pytest.approx(5.0)

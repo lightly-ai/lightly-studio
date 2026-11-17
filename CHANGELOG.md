@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
 - Pick single points in the embedding plot with Shift + click. The grid then shows only the picked images, annotations, or videos.
 - Hide an annotation track or a whole annotation source in the point cloud workspace with the eye buttons in the Annotations panel. Hidden annotations stay hidden on every frame of the sequence.
+- The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
 
 ### Changed
 

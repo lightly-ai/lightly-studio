@@ -2,24 +2,35 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PointCloudWorkspaceContext } from '../provider/types';
 import type { WorkspaceOptions } from '../workspaceOptions';
 import type { useWorkspaceSceneData } from '../useWorkspaceSceneData/useWorkspaceSceneData.svelte';
+import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
 import { useWorkspaceEditing } from './useWorkspaceEditing.svelte';
 
-vi.mock('@tanstack/svelte-query', () => ({ useQueryClient: () => ({}) }));
-const { createCuboid } = vi.hoisted(() => ({
+const { invalidateQueries, captured, createCuboid } = vi.hoisted(() => ({
+    invalidateQueries: vi.fn(),
+    captured: { onGeometryUpdated: (): Promise<unknown> => Promise.resolve() },
     createCuboid: vi.fn(async (_box: unknown, onCreated: (id: string) => Promise<void>) =>
         onCreated('cuboid-2')
     )
 }));
+
+vi.mock('@tanstack/svelte-query', () => ({ useQueryClient: () => ({ invalidateQueries }) }));
 vi.mock('../useCreateCuboidAnnotation', () => ({
     useCreateCuboidAnnotation: () => ({ handleCreateCuboid: createCuboid })
 }));
 vi.mock('../useDeleteCuboidAnnotation', () => ({ useDeleteCuboidAnnotation: () => ({}) }));
-vi.mock('../useUpdateCuboidAnnotation', () => ({ useUpdateCuboidAnnotation: () => ({}) }));
+vi.mock('../useUpdateCuboidAnnotation', () => ({
+    useUpdateCuboidAnnotation: (params: { onUpdated: () => Promise<unknown> }) => {
+        captured.onGeometryUpdated = params.onUpdated;
+        return {};
+    }
+}));
 vi.mock('../useStartSequenceTrack', () => ({ useStartSequenceTrack: () => ({}) }));
 vi.mock('../useExtendSequenceTrack', () => ({ useExtendSequenceTrack: () => ({}) }));
 vi.mock('../useDeleteSequenceTrack', () => ({ useDeleteSequenceTrack: () => ({}) }));
 vi.mock('../useUpdateCuboidClass', () => ({ useUpdateCuboidClass: () => ({}) }));
 
+const sequence = { datasetId: 'dataset-1', sequenceId: 'sequence-1' };
+const refetch = vi.fn().mockResolvedValue(undefined);
 let dispose = () => {};
 afterEach(() => dispose());
 
@@ -32,13 +43,11 @@ function setup(targetSource = 'labels') {
         annotationSourceNames: ['labels'],
         refetchAnnotationSources
     } as unknown as ReturnType<typeof useWorkspaceSceneData>;
-    const workspace = {
-        tickDetails: { refetch: vi.fn().mockResolvedValue(undefined) }
-    } as unknown as PointCloudWorkspaceContext;
+    const workspace = { tickDetails: { refetch } } as unknown as PointCloudWorkspaceContext;
     dispose = $effect.root(() => {
         editing = useWorkspaceEditing(
             () => workspace,
-            () => ({}) as WorkspaceOptions,
+            () => sequence as WorkspaceOptions,
             () => data,
             () => true,
             () => ({ targetSource, blockedReason: null, needsPick: false })
@@ -80,5 +89,18 @@ describe('useWorkspaceEditing', () => {
         const editing = setup('labels');
         await editing.handleCreateCuboid({ center: [0, 0, 0], size: [1, 1, 1], yaw: 0 });
         expect(refetchAnnotationSources).not.toHaveBeenCalled();
+    });
+
+    it('refreshes the other ticks after a cuboid geometry update', async () => {
+        setup();
+        refetch.mockClear();
+
+        await captured.onGeometryUpdated();
+
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: getTickDetailsSequenceQueryKey(sequence),
+            refetchType: 'none'
+        });
+        expect(refetch).toHaveBeenCalledOnce();
     });
 });

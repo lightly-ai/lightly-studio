@@ -20,6 +20,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     object_track_resolver,
 )
+from lightly_studio.services import object_track_service
 
 
 class AnnotationCreateParams(BaseModel):
@@ -53,7 +54,8 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
 
     When ``create_new_track`` is set, a new :class:`ObjectTrackTable` row is
     created atomically with the next available track number for the dataset,
-    and the annotation is linked to it.
+    and the annotation is linked to it. A cuboid added to a track interpolates the track
+    around it.
 
     Args:
         session: Database session for executing the operation.
@@ -92,6 +94,10 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
         session=session,
         collection_id=created_annotation.annotation_collection_id,
     )
+    if annotation.object_track_id is not None:
+        object_track_service.interpolate_around_cuboid(
+            session=session, annotation_id=created_annotation.sample_id
+        )
 
     return created_annotation
 
