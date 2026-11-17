@@ -6,7 +6,6 @@
     import type { IconProps } from '@lucide/svelte';
     import Hand from '@lucide/svelte/icons/hand';
     import Lasso from '@lucide/svelte/icons/lasso';
-    import MousePointerClick from '@lucide/svelte/icons/mouse-pointer-click';
     import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import {
         SELECTION_TOOLS,
@@ -31,8 +30,7 @@
     const TOOL_ICONS: Record<ToolMode, Component<IconProps>> = {
         pan: Hand,
         rectangle: SquareDashed,
-        lasso: Lasso,
-        pick: MousePointerClick
+        lasso: Lasso
     };
 
     const isMac = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.userAgent);

@@ -42,13 +42,8 @@ afterEach(() => {
 });
 
 describe('SELECTION_TOOLS', () => {
-    it('lists pan, rectangle, lasso and pick in order', () => {
-        expect(SELECTION_TOOLS.map((tool) => tool.mode)).toEqual([
-            'pan',
-            'rectangle',
-            'lasso',
-            'pick'
-        ]);
+    it('lists pan, rectangle and lassoButton in order', () => {
+        expect(SELECTION_TOOLS.map((tool) => tool.mode)).toEqual(['pan', 'rectangle', 'lasso']);
         expect(SELECTION_TOOLS.every((tool) => tool.label.length > 0)).toBe(true);
     });
 });

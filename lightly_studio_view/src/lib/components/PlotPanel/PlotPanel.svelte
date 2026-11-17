@@ -7,7 +7,7 @@
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
-    import { togglePickedSampleId } from './pickedSamples/pickedSamples';
+    import { usePointPicking } from './usePointPicking/usePointPicking';
     import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
@@ -23,16 +23,21 @@
     import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
     import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
-    import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
+    import {
+        createQuerySelection,
+        createSelectablePointCheck,
+        createThumbnailResolver
+    } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import {
         clearPlotSelectionCount,
+        EMPTY_PLOT_SELECTION,
         getPlotSelectionCount,
-        setPlotSelectionCount
+        setPlotSelectionCount,
+        type PlotSelection
     } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
@@ -91,14 +96,12 @@
     const {
         annotationPlotRegion,
         annotationPlotPickedSampleIds,
-        saveRegion: saveAnnotationRegion,
-        savePickedSampleIds: saveAnnotationPickedSampleIds
+        savePlotSelection: saveAnnotationPlotSelection
     } = useAnnotationPlotSelection();
 
     const imageFilter = $derived(isVideos || isSequences ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
     const sequenceFilter = $derived(isSequences ? sequenceFilters.mcapSequenceFilter : null);
-    // Samples picked one by one with shift-click. The plot holds either a region or picks.
     const pickedSampleIds = $derived.by(() => {
         if (isVideos) return $videoFilter?.sample_filter?.sample_ids ?? [];
         if (isImages) return $imageFilter?.sample_filter?.sample_ids ?? [];
@@ -278,40 +281,32 @@
     // Videos, images and annotations send the lasso as region geometry rather than a resolved
     // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
     // clearing removes the region entirely.
-    const saveRegion = (region: EmbeddingRegion | null) => {
+    const savePlotSelection = (selection: PlotSelection) => {
         if (isImages) {
-            imageFilters.updateEmbeddingRegion(region);
+            imageFilters.updatePlotSelection(selection);
         } else if (isVideos) {
-            videoFilters.updateEmbeddingRegion(region);
+            videoFilters.updatePlotSelection(selection);
         } else if (isSequences) {
-            sequenceFilters.updateEmbeddingRegion(region);
+            sequenceFilters.updateEmbeddingRegion(selection.embeddingRegion);
         } else {
-            saveAnnotationRegion(region);
-        }
-    };
-    const savePickedSampleIds = (sampleIds: string[]) => {
-        if (isImages) {
-            imageFilters.updateSampleIds(sampleIds);
-        } else if (isVideos) {
-            videoFilters.updateSampleIds(sampleIds);
-        } else if (isAnnotations) {
-            saveAnnotationPickedSampleIds(sampleIds);
+            saveAnnotationPlotSelection(selection);
         }
     };
     // A region drawn on the plot carries the axes of the layout, so the server resolves the
     // region in the same layout.
     const commitRegion = (polygon: Point[], count: number) => {
-        savePickedSampleIds([]);
-        saveRegion($plotAxes ? { polygon, axes: $plotAxes } : { polygon });
+        const embeddingRegion = $plotAxes ? { polygon, axes: $plotAxes } : { polygon };
+        savePlotSelection({ embeddingRegion, sampleIds: [] });
         setPlotSelectionCount(collectionId, count);
     };
+    // The sequences grid has no sample-id filter, so it does not support picks.
     const commitPickedSampleIds = (sampleIds: string[]) => {
+        if (isSequences) return;
         if (sampleIds.length === 0) {
             clearPlotFilter();
             return;
         }
-        saveRegion(null);
-        savePickedSampleIds(sampleIds);
+        savePlotSelection({ embeddingRegion: null, sampleIds });
         setPlotSelectionCount(collectionId, sampleIds.length);
         trackEvent('embedding_selection_made', {
             collection_id: collectionId,
@@ -320,13 +315,18 @@
         });
     };
     const clearPlotFilter = () => {
-        saveRegion(null);
-        savePickedSampleIds([]);
+        savePlotSelection(EMPTY_PLOT_SELECTION);
         clearPlotSelectionCount(collectionId);
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (event: MouseEvent) => {
         if ($rangeSelection === null) {
+            return;
+        }
+        if (isShortShiftDrag(event)) {
+            setRangeSelection(null);
+            pendingSelectionType = null;
+            pickPressedPoint();
             return;
         }
         const polygon = $rangeSelection;
@@ -509,6 +509,18 @@
     const onTooltip = (value: DataPoint | null) => {
         tooltip = value;
     };
+    const {
+        librarySelection,
+        onPointerDown: onPlotPointerDown,
+        onSelection,
+        isShortShiftDrag,
+        pickPressedPoint
+    } = usePointPicking({
+        getPickedSampleIds: () => pickedSampleIds,
+        getHoveredSampleId: () =>
+            typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
+        commitPickedSampleIds
+    });
     // The card is rendered by this component (not the library's tooltip container)
     // so it always sits directly above the hovered point; the overlay proxy
     // provides the data → pixel conversion.
@@ -532,9 +544,14 @@
             y: $arrowData?.y as Float32Array | undefined,
             sampleIds: $arrowData?.sample_id as string[] | undefined,
             category: $plotData?.category as Uint8Array | undefined,
-            fulfilsFilter: hasActiveFilter
-                ? ($arrowData?.fulfils_filter as Uint8Array | undefined)
-                : undefined
+            isSelectable: createSelectablePointCheck({
+                category: $plotData?.category as Uint8Array | undefined,
+                sampleIds: $arrowData?.sample_id as string[] | undefined,
+                fulfilsFilter: hasActiveFilter
+                    ? ($arrowData?.fulfils_filter as Uint8Array | undefined)
+                    : undefined,
+                pickedSampleIds
+            })
         })
     );
     const resolveThumbnail = $derived.by(() =>
@@ -549,25 +566,6 @@
             collectionId
         })
     );
-
-    // Shift-click picks in every tool. The library's selection callback does not pass the
-    // click modifier, so it is read on pointer down.
-    let isShiftClick = false;
-    const onPlotPointerDown = (event: PointerEvent) => {
-        isShiftClick = event.shiftKey;
-    };
-    // The library keeps its own point selection; reset it after every click so each shift-click
-    // reports only the clicked point and the library draws no selection of its own.
-    let librarySelection: DataPoint[] = $state([]);
-    const onSelection = (points: DataPoint[] | null) => {
-        librarySelection = [];
-        const clickedSampleId = points?.[0]?.identifier;
-        const isPickClick = isShiftClick || activeTool === 'pick';
-        if (!isPickClick || isSequences || typeof clickedSampleId !== 'string') {
-            return;
-        }
-        commitPickedSampleIds(togglePickedSampleId(pickedSampleIds, clickedSampleId));
-    };
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
@@ -630,7 +628,7 @@
                             {categoryColors}
                             tooltip={$rangeSelection ? null : tooltip}
                             {onTooltip}
-                            selection={librarySelection}
+                            selection={$librarySelection}
                             {onSelection}
                             {querySelection}
                             customTooltip={NoopTooltip}

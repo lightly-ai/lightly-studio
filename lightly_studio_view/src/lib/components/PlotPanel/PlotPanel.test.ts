@@ -44,8 +44,8 @@ const tagsStore = writable([
 
 const mockSetShowEmbeddingPlot = vi.fn();
 const mockSetRangeSelectionForCollection = vi.fn();
-const mockUpdateSampleIds = vi.fn();
-const mockUpdateEmbeddingRegion = vi.fn();
+const mockUpdatePlotSelection = vi.fn();
+const NO_PLOT_SELECTION = vi.hoisted(() => ({ embeddingRegion: null, sampleIds: [] }));
 const mockSetPlotSelectionCount = vi.fn();
 const mockClearPlotSelectionCount = vi.fn();
 let plotSelectionCountStore: Writable<number>;
@@ -113,14 +113,15 @@ vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
     useVideoFilters: () =>
         actualVideoFilters ?? {
             videoFilter: videoFilterStore,
-            updateSampleIds: vi.fn(),
-            updateEmbeddingRegion: (region: { polygon: { x: number; y: number }[] } | null) => {
-                mockUpdateEmbeddingRegion(region);
+            updatePlotSelection: (selection: {
+                embeddingRegion: { polygon: { x: number; y: number }[] } | null;
+            }) => {
+                mockUpdatePlotSelection(selection);
                 videoFilterStore.update((filter) => ({
                     ...filter,
                     sample_filter: {
                         ...filter?.sample_filter,
-                        embedding_region: region ?? undefined
+                        embedding_region: selection.embeddingRegion ?? undefined
                     }
                 }));
             }
@@ -131,14 +132,14 @@ vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
         filterParams: writable({ mode: 'normal', filters: {} }),
         imageFilter: imageFilterStore,
         updateFilterParams: vi.fn(),
-        updateSampleIds: mockUpdateSampleIds,
-        updateEmbeddingRegion: mockUpdateEmbeddingRegion
+        updatePlotSelection: mockUpdatePlotSelection
     })
 }));
 vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection', () => ({
     setPlotSelectionCount: (...args: [string, number]) => mockSetPlotSelectionCount(...args),
     clearPlotSelectionCount: (...args: [string]) => mockClearPlotSelectionCount(...args),
-    getPlotSelectionCount: () => plotSelectionCountStore
+    getPlotSelectionCount: () => plotSelectionCountStore,
+    EMPTY_PLOT_SELECTION: NO_PLOT_SELECTION
 }));
 vi.mock('$lib/hooks/useMetadataFilters/useMetadataFilters', () => ({
     useMetadataFilters: () => ({
@@ -278,10 +279,8 @@ describe('PlotPanel.svelte', () => {
         await fireEvent.keyDown(window, { key: 'Escape' });
 
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
-        // Images clear the region geometry, not a sample-id list.
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockUpdatePlotSelection).toHaveBeenCalledWith(NO_PLOT_SELECTION);
         expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
     });
 
     it('clears the video region and selection count when pressing Escape', async () => {
@@ -299,7 +298,7 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.keyDown(window, { key: 'Escape' });
 
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockUpdatePlotSelection).toHaveBeenCalledWith(NO_PLOT_SELECTION);
         expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
     });
 
@@ -322,9 +321,11 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith({ polygon });
+        expect(mockUpdatePlotSelection).toHaveBeenCalledWith({
+            embeddingRegion: { polygon },
+            sampleIds: []
+        });
         expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
-        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
@@ -342,9 +343,11 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith({ polygon });
+        expect(mockUpdatePlotSelection).toHaveBeenCalledWith({
+            embeddingRegion: { polygon },
+            sampleIds: []
+        });
         expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
-        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
         expect(usePlotDataSpy.mock.calls.at(-1)?.[0].highlightRegion).toEqual(polygon);
     });
 
@@ -456,7 +459,7 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
 
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockUpdatePlotSelection).toHaveBeenCalledWith(NO_PLOT_SELECTION);
         expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
         expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
     });
@@ -488,8 +491,7 @@ describe('PlotPanel.svelte', () => {
 
         await tick();
         expect(mockSetRangeSelectionForCollection).not.toHaveBeenCalled();
-        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
-        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
+        expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
     });
 
     it('should clear the region when selecting all selectable points', async () => {
@@ -513,7 +515,7 @@ describe('PlotPanel.svelte', () => {
         await fireEvent.mouseUp(window);
 
         // Selecting every selectable point is equivalent to no filter, so the region is cleared.
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockUpdatePlotSelection).toHaveBeenCalledWith(NO_PLOT_SELECTION);
         expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
         expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
@@ -543,7 +545,7 @@ describe('PlotPanel.svelte', () => {
         expect(get(useAnnotationPlotSelection().annotationPlotRegion)).toEqual({ polygon });
         expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
         // The image filter path must stay untouched on the annotations route.
-        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
+        expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
@@ -557,7 +559,10 @@ describe('PlotPanel.svelte', () => {
         ];
         // The selection is already committed: no live rangeSelection, region in the shared store.
         rangeSelectionStore = writable(null);
-        useAnnotationPlotSelection().saveRegion({ polygon });
+        useAnnotationPlotSelection().savePlotSelection({
+            embeddingRegion: { polygon },
+            sampleIds: []
+        });
 
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
@@ -634,9 +639,9 @@ describe('PlotPanel.svelte', () => {
         await fireEvent.mouseUp(window);
 
         // The server resolves the region on the same axes as the plot.
-        expect(mockUpdateEmbeddingRegion).toHaveBeenLastCalledWith({
-            polygon: SQUARE_POLYGON,
-            axes: TEXT_LAYOUT_AXES
+        expect(mockUpdatePlotSelection).toHaveBeenLastCalledWith({
+            embeddingRegion: { polygon: SQUARE_POLYGON, axes: TEXT_LAYOUT_AXES },
+            sampleIds: []
         });
     });
 
@@ -659,66 +664,33 @@ describe('PlotPanel.svelte', () => {
 
         mockClearPlotSelectionCount.mockImplementationOnce(() => plotSelectionCountStore.set(0));
         await user.click(screen.getByRole('button', { name: 'Clear plot filter' }));
-        expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+        expect(mockUpdatePlotSelection).toHaveBeenCalledWith(NO_PLOT_SELECTION);
         await waitFor(() =>
             expect(screen.queryByTestId('plot-selection-chip')).not.toBeInTheDocument()
         );
     });
 
-    describe('picking samples', () => {
-        const renderPlot = async () => {
-            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-                () => new DOMRect(0, 0, 400, 400)
-            );
-            const point = new Float32Array([0]);
-            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
-            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
-            return screen.findByRole('button', { name: 'Click point' });
-        };
+    it('treats a short shift-drag as a click and keeps the picks', async () => {
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+        imageFilterStore = writable({ sample_filter: { sample_ids: ['sample-1'] } });
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const plot = await screen.findByTestId('plot-viewport');
+        mockClearPlotSelectionCount.mockClear();
+
         // jsdom has no PointerEvent, so fireEvent.pointerDown drops the modifier keys.
-        const shiftPointerDown = (element: HTMLElement) =>
-            element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, shiftKey: true }));
+        plot.dispatchEvent(
+            new MouseEvent('pointerdown', { bubbles: true, shiftKey: true, clientX: 10 })
+        );
+        rangeSelectionStore.set(SQUARE_POLYGON);
+        await fireEvent.mouseUp(window, { clientX: 14 });
 
-        it('picks the clicked sample on shift-click and replaces the region', async () => {
-            const pointButton = await renderPlot();
-
-            shiftPointerDown(pointButton);
-            await fireEvent.click(pointButton);
-
-            expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
-            expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
-            expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
-        });
-
-        it('ignores a click without shift', async () => {
-            const pointButton = await renderPlot();
-
-            await fireEvent.pointerDown(pointButton);
-            await fireEvent.click(pointButton);
-
-            expect(mockUpdateSampleIds).not.toHaveBeenCalled();
-        });
-
-        it('picks the clicked sample on a plain click with the pick tool', async () => {
-            const pointButton = await renderPlot();
-
-            await fireEvent.click(screen.getByTestId('plot-tool-pick'));
-            await fireEvent.pointerDown(pointButton);
-            await fireEvent.click(pointButton);
-
-            expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
-        });
-
-        it('removes a picked sample on shift-click', async () => {
-            imageFilterStore.set({ sample_filter: { sample_ids: ['sample-1'] } });
-            const pointButton = await renderPlot();
-
-            shiftPointerDown(pointButton);
-            await fireEvent.click(pointButton);
-
-            expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
-            expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
-        });
+        expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
+        expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
+        expect(mockClearPlotSelectionCount).not.toHaveBeenCalled();
     });
 
     it('uses the text-axis viewport after resetting a user pan', async () => {
@@ -757,11 +729,11 @@ describe('PlotPanel.svelte', () => {
         mockClearPlotSelectionCount.mockClear();
         await openAxesEditor(user);
 
-        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
+        expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
         expect(mockClearPlotSelectionCount).not.toHaveBeenCalled();
         expect(screen.getByRole('button', { name: 'Apply axes' })).toBeInTheDocument();
         await user.keyboard('{Escape}');
-        expect(mockUpdateEmbeddingRegion).not.toHaveBeenCalled();
+        expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
         expect(screen.queryByRole('button', { name: 'Apply axes' })).not.toBeInTheDocument();
     });
 

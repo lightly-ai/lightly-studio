@@ -1,4 +1,4 @@
-export type ToolMode = 'pan' | 'rectangle' | 'lasso' | 'pick';
+export type ToolMode = 'pan' | 'rectangle' | 'lasso';
 
 type ShortcutKey = 'Shift' | 'Meta';
 
@@ -14,10 +14,9 @@ export interface ToolDescriptor {
     shortcut?: ToolShortcut;
 }
 
-// The pill's tools, in display order. Icons are mapped in the component so this module stays
-// free of Svelte and can be unit-tested as plain logic. The rectangle and lasso shortcuts are
-// embedding-atlas's own; they mirror the titles of its hidden buttons. Pick has no library
-// button: the library stays in its "none" mode and PlotPanel handles the click.
+// The pill's three tools, in display order. Icons are mapped in the component so this
+// module stays free of Svelte and can be unit-tested as plain logic.
+// The shortcuts are embedding-atlas's own; they mirror the titles of its hidden buttons.
 export const SELECTION_TOOLS: readonly ToolDescriptor[] = [
     { mode: 'pan', label: 'Pan' },
     {
@@ -29,11 +28,6 @@ export const SELECTION_TOOLS: readonly ToolDescriptor[] = [
         mode: 'lasso',
         label: 'Lasso select',
         shortcut: { keys: ['Shift', 'Meta'], action: 'drag a lasso' }
-    },
-    {
-        mode: 'pick',
-        label: 'Pick points',
-        shortcut: { keys: ['Shift'], action: 'click a point' }
     }
 ];
 

@@ -121,6 +121,7 @@
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
+            $annotationPlotPickedSampleIds.join(',') +
             (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +
             (queryParams.sort_by ? `sort:${JSON.stringify(queryParams.sort_by)}` : '')
     );

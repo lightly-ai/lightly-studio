@@ -1,28 +1,35 @@
-import { writable, type Readable } from 'svelte/store';
-import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
+import { derived, writable, type Readable } from 'svelte/store';
 import { useRegionFilterVisibility } from './useRegionFilterVisibility';
-import { clearPlotSelectionCount } from './useEmbeddingPlotSelection';
+import {
+    clearPlotSelectionCount,
+    EMPTY_PLOT_SELECTION,
+    type PlotSelection
+} from './useEmbeddingPlotSelection';
 
 // For images the lasso selection lives inside the image filter store; annotations have no such
-// store, so we keep the plot region here at module scope. The plot (writer) and the grid
+// store, so we keep the plot selection here at module scope. The plot (writer) and the grid
 // (reader) share it. The selection is sent to the backend as geometry (see LIG-9903), so we
 // store the polygon, not the resolved sample ids.
-const annotationPlotRegion = writable<EmbeddingRegion | null>(null);
-// Annotations picked one by one with shift-click.
-const annotationPlotPickedSampleIds = writable<string[]>([]);
+const annotationPlotSelection = writable<PlotSelection>(EMPTY_PLOT_SELECTION);
+const annotationPlotRegion = derived(
+    annotationPlotSelection,
+    (selection) => selection.embeddingRegion
+);
+const annotationPlotPickedSampleIds = derived(
+    annotationPlotSelection,
+    (selection) => selection.sampleIds
+);
 
 export function useAnnotationPlotSelection() {
     return {
         annotationPlotRegion,
         annotationPlotPickedSampleIds,
-        saveRegion: (region: EmbeddingRegion | null) => annotationPlotRegion.set(region),
-        savePickedSampleIds: (sampleIds: string[]) => annotationPlotPickedSampleIds.set(sampleIds)
+        savePlotSelection: (selection: PlotSelection) => annotationPlotSelection.set(selection)
     };
 }
 
 function clearAnnotationPlotFilter() {
-    annotationPlotRegion.set(null);
-    annotationPlotPickedSampleIds.set([]);
+    annotationPlotSelection.set(EMPTY_PLOT_SELECTION);
 }
 
 // Clears the shared annotation plot region and the plot-selection count for `collectionId`.
