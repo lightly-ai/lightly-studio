@@ -45,6 +45,8 @@ const imageFilter = derived(
                 // resolves the polygon to sample ids server-side.
                 embedding_region: f.embedding_region,
                 annotation_label_ids: f.annotation_label_ids,
+                annotation_pairs: f.annotation_pairs,
+                unannotated_collection_ids: f.unannotated_collection_ids,
                 tag_ids: f.tag_ids,
                 confusion_cell: f.confusion_cell,
                 metadata_filters: toMetadataFilters(

@@ -1,4 +1,4 @@
-import { SampleType } from '$lib/api/lightly_studio_local';
+import { SampleType, type AnnotationsFilter } from '$lib/api/lightly_studio_local';
 import { get } from 'svelte/store';
 import { useAdjacentSamples } from '../useAdjacentSamples/useAdjacentSamples';
 import { useAnnotationSortBy } from '$lib/hooks';
@@ -7,10 +7,13 @@ import { useTags } from '../useTags/useTags';
 
 export const useAdjacentAnnotations = ({
     sampleId,
-    collectionId
+    collectionId,
+    treeFilter
 }: {
     sampleId: string;
     collectionId: string;
+    /** The annotation tree filter of the Annotations grid. Set only when the grid shows the tree. */
+    treeFilter?: Pick<AnnotationsFilter, 'annotation_pairs'>;
 }) => {
     const { selectedAnnotationFilterIds, textEmbedding } = useGlobalStorage();
     const { tagsSelected } = useTags({ collection_id: collectionId });
@@ -27,10 +30,14 @@ export const useAdjacentAnnotations = ({
                 filters: {
                     filter_type: 'annotations',
                     collection_ids: [collectionId],
-                    annotation_label_ids:
-                        get(selectedAnnotationFilterIds).size > 0
-                            ? Array.from(get(selectedAnnotationFilterIds))
-                            : undefined,
+                    ...(treeFilter
+                        ? { annotation_pairs: treeFilter.annotation_pairs }
+                        : {
+                              annotation_label_ids:
+                                  get(selectedAnnotationFilterIds).size > 0
+                                      ? Array.from(get(selectedAnnotationFilterIds))
+                                      : undefined
+                          }),
                     tag_ids: get(tagsSelected).size > 0 ? Array.from(get(tagsSelected)) : undefined
                 },
                 annotation_sort_by: sortBy

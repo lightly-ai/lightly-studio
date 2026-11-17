@@ -5,10 +5,14 @@ interface GetSampleClassificationPillsParams {
     annotations: AnnotationView[];
     /** Whether annotations from a given source should be shown. */
     isSourceVisible: (sourceId: string) => boolean;
+    /** The tree eyes. When set, they decide in place of `isSourceVisible`. */
+    isAnnotationVisible?: (annotation: AnnotationView) => boolean;
     /** Whether more than one source is visible, which switches pill colors to per-source. */
     multipleSourcesVisible: boolean;
     collectionIdToName: Record<string, string>;
     enforceColoringByClass: boolean;
+    /** The saved "Color by" mode. When set, it decides in place of the automatic rule. */
+    colorMode?: 'class' | 'source';
 }
 
 interface CreateSampleClassificationPillParams {
@@ -76,18 +80,24 @@ function dedupeAndSortPills(pills: SampleClassificationPill[]): SampleClassifica
 export function getSampleClassificationPills({
     annotations,
     isSourceVisible,
+    isAnnotationVisible,
     multipleSourcesVisible,
     collectionIdToName,
-    enforceColoringByClass
+    enforceColoringByClass,
+    colorMode
 }: GetSampleClassificationPillsParams): SampleClassificationPill[] {
     const showSourceColors = resolveEffectiveColorBySource({
         multipleSourcesVisible,
-        enforceColoringByClass
+        enforceColoringByClass,
+        colorMode
     });
+    const isVisible =
+        isAnnotationVisible ??
+        ((annotation: AnnotationView) => isSourceVisible(annotation.annotation_collection_id));
 
     return dedupeAndSortPills(
         annotations
-            .filter((annotation) => isSourceVisible(annotation.annotation_collection_id))
+            .filter(isVisible)
             .filter(isClassificationAnnotation)
             .map((annotation) =>
                 createSampleClassificationPill({

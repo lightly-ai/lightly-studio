@@ -1,9 +1,13 @@
 import { type Page, expect } from '@playwright/test';
 import { waitForRequestsToSettle } from '../utils';
+import { AnnotationTree } from './annotation-tree';
 
 export class AnnotationsPage {
+    readonly annotationTree: AnnotationTree;
+
     constructor(public readonly page: Page) {
         this.page = page;
+        this.annotationTree = new AnnotationTree(page);
     }
 
     async goto() {
@@ -54,7 +58,7 @@ export class AnnotationsPage {
     async clickLabel(label: string) {
         const requestsSettled = waitForRequestsToSettle(this.page, '/annotations');
 
-        await this.page.getByTestId('labels-menu-name').getByText(label, { exact: true }).click();
+        await this.annotationTree.toggleClass(label);
 
         await requestsSettled;
         await expect(this.page.getByTestId('annotations-grid')).toBeVisible({

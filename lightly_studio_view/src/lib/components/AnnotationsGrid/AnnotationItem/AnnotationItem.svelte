@@ -2,6 +2,7 @@
     import { untrack } from 'svelte';
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import { AnnotationCanvas } from '$lib/components';
+    import { getTreeAnnotationVisibility } from '$lib/components/AnnotationTree';
     import { getBoundingBox } from '$lib/components/SampleAnnotation/utils';
     import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
@@ -80,7 +81,13 @@
     }
 
     const labelName = $derived(annotation.annotation_label.annotation_label_name);
-    const isAnnotationClassHidden = isClassHidden(untrack(() => labelName));
+    const isClassNameHidden = isClassHidden(untrack(() => labelName));
+    const treeVisibility = getTreeAnnotationVisibility();
+    // The tree eyes decide while the tree is on, else the hidden class names.
+    const isAnnotationClassHidden = $derived.by(() => {
+        const isVisible = treeVisibility();
+        return isVisible ? !isVisible(annotation) : $isClassNameHidden;
+    });
 
     const colorStroke = $derived.by(
         () => $customLabelColorsStore[labelName]?.color ?? getColorByLabel(labelName, 1).color
@@ -142,7 +149,7 @@
     `}
     >
         {#if isRLESegmentation}
-            <div class:invisible={$isHidden || $isAnnotationClassHidden}>
+            <div class:invisible={$isHidden || isAnnotationClassHidden}>
                 <AnnotationCanvas
                     sampleId={annotation.sample_id}
                     sourceWidth={sample.width}
@@ -166,7 +173,7 @@
         {/if}
         <div
             class="annotation-box"
-            class:invisible={$isHidden || $isAnnotationClassHidden}
+            class:invisible={$isHidden || isAnnotationClassHidden}
             style={`
             left: ${(containerWidth - annotationWidth * scale) / 2}px;
             top: ${(containerHeight - annotationHeight * scale) / 2}px;

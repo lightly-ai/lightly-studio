@@ -1,6 +1,11 @@
 <script lang="ts">
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { Segment } from '$lib/components';
+    import {
+        getSampleDetailsFollowTree,
+        useTreeAnnotationVisibility,
+        useTreeColorMode
+    } from '$lib/components/AnnotationTree';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import SampleDetailsSidePanelAnnotation from '../SampleDetailsSidePanel/SampleDetailsSidePanelAnnotation/SampleDetailsSidePanelAnnotation.svelte';
     import {
@@ -58,6 +63,12 @@
     const { enforceColoringByClassStore } = useSettings();
     const setTargetSource = useSetTargetSource(() => collectionId);
     const targetSource = $derived(annotationLabelContext.annotationSource ?? null);
+    const followsTree = getSampleDetailsFollowTree();
+    const treeColorMode = useTreeColorMode(followsTree);
+    const treeVisibility = useTreeAnnotationVisibility(() => ({
+        collectionId,
+        enabled: followsTree()
+    }));
 
     const annotationsSort = $derived.by(() => {
         return annotations
@@ -99,7 +110,9 @@
         getGroups: () => allSourceGroups,
         getLastCreatedAnnotationId: () => annotationLabelContext.lastCreatedAnnotationId,
         getHiddenIds: () => annotationsIdsToHide,
-        setHiddenIds: (ids) => (annotationsIdsToHide = ids)
+        setHiddenIds: (ids) => (annotationsIdsToHide = ids),
+        getTreeVisibility: () => treeVisibility.current,
+        getIsTreeReady: () => treeVisibility.ready
     });
 
     // Matches the details canvas: only visible sources count. The explicit class-color
@@ -107,7 +120,8 @@
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: countVisibleSources(annotationsSort, annotationsIdsToHide) >= 2,
-            enforceColoringByClass: $enforceColoringByClassStore
+            enforceColoringByClass: $enforceColoringByClassStore,
+            colorMode: treeColorMode.current
         })
     );
 </script>

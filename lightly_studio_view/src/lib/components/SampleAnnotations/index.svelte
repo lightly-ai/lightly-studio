@@ -24,12 +24,18 @@
         sample,
         objectFit = 'contain',
         outputWidth = sample.width,
-        outputHeight = sample.height
+        outputHeight = sample.height,
+        isAnnotationVisible,
+        colorMode
     }: {
         sample: SampleView;
         objectFit?: SampleImageObjectFit;
         outputWidth?: number;
         outputHeight?: number;
+        /** The tree eyes. When set, they decide in place of the source filter and class eye. */
+        isAnnotationVisible?: (annotation: AnnotationView) => boolean;
+        /** The saved "Color by" mode. When set, it decides in place of the automatic rule. */
+        colorMode?: 'class' | 'source';
     } = $props();
 
     const { isHidden } = useHideAnnotations();
@@ -76,18 +82,20 @@
         const sourceIsVisible = $isSourceVisible;
         const idToName = $collectionIdToName;
         const hiddenClasses = $hiddenClassNamesStore;
+        const isVisible =
+            isAnnotationVisible ??
+            ((annotation: AnnotationView) =>
+                sourceIsVisible(annotation.annotation_collection_id) &&
+                !hiddenClasses.includes(annotation.annotation_label.annotation_label_name));
         const colorBySource = resolveEffectiveColorBySource({
             multipleSourcesVisible: $multipleSourcesVisible,
-            enforceColoringByClass: $enforceColoringByClassStore
+            enforceColoringByClass: $enforceColoringByClassStore,
+            colorMode
         });
 
         return sample.annotations
-            .filter((annotation) => sourceIsVisible(annotation.annotation_collection_id))
+            .filter(isVisible)
             .filter((annotation) => annotation.annotation_type !== 'classification')
-            .filter(
-                (annotation) =>
-                    !hiddenClasses.includes(annotation.annotation_label.annotation_label_name)
-            )
             .map((annotation) => {
                 const canvas = mapToCanvasAnnotation(
                     annotation,

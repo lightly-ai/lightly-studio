@@ -12,10 +12,16 @@ import {
     useImageAnnotationCountsBySampleTags,
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
+import { buildImageAnnotationCountsFilter } from './imageAnnotationCountsFilter';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import type { LayoutLoadResult } from './+layout';
 import LayoutWorkspaceTestWrapper from './LayoutWorkspaceTestWrapper.test.svelte';
+
+const mocks = vi.hoisted(() => ({
+    featureFlags: [] as string[],
+    treeFilter: undefined as unknown
+}));
 
 vi.mock('$app/environment', () => ({ browser: false }));
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));
@@ -83,8 +89,18 @@ vi.mock('$lib/components/Header/MenuDialogHost.svelte', async () => ({
 vi.mock('$lib/components/QueryControl/QueryControl.svelte', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
-vi.mock('$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte', async () => ({
-    default: (await import('./LayoutStub.test.svelte')).default
+vi.mock('$lib/components/AnnotationTree', async () => ({
+    AnnotationTree: (await import('./AnnotationTreeStub.test.svelte')).default,
+    setSampleDetailsFollowTree: vi.fn(),
+    setFlatAnnotationTreeCollectionId: vi.fn(),
+    setFlatAnnotationTreeFilter: vi.fn(),
+    useTreeAnnotationsFilter: vi.fn(() => ({
+        get current() {
+            return mocks.treeFilter;
+        },
+        ready: true,
+        onlyClass: vi.fn()
+    }))
 }));
 vi.mock(
     '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte',
@@ -193,7 +209,10 @@ vi.mock('$lib/hooks', async () => ({
         refetch: vi.fn()
     })),
     usePostHog: vi.fn(() => ({ trackEvent: vi.fn() })),
-    useFeatureFlags: vi.fn(() => ({ featureFlags: writable([]), ready: Promise.resolve() })),
+    useFeatureFlags: vi.fn(() => ({
+        featureFlags: writable(mocks.featureFlags),
+        ready: Promise.resolve()
+    })),
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
     setAnnotationClasses: vi.fn(),
@@ -251,6 +270,7 @@ import * as useHasEmbeddingsModule from '$lib/hooks/useHasEmbeddings/useHasEmbed
 let mockActivePanel: ReturnType<typeof writable<PanelType>>;
 let mockFilterPanelCollapsed: ReturnType<typeof writable<boolean>>;
 let mockFilteredCaptionCount: ReturnType<typeof writable<number>>;
+const mockRetrieveParentCollection = vi.fn((): unknown => null);
 
 function setPageRoute(routeId: string | null): void {
     vi.spyOn(appState, 'page', 'get').mockReturnValue({
@@ -265,6 +285,9 @@ function setPageRoute(routeId: string | null): void {
 
 beforeEach(() => {
     vi.clearAllMocks();
+    mocks.featureFlags = [];
+    mocks.treeFilter = undefined;
+    mockRetrieveParentCollection.mockReturnValue(null);
 
     mockActivePanel = writable<PanelType>('none');
     mockFilterPanelCollapsed = writable(false);
@@ -280,7 +303,7 @@ beforeEach(() => {
         filteredAnnotationCount: writable(0),
         textEmbedding: writable(undefined),
         collections: writable({}),
-        retrieveParentCollection: vi.fn(() => null)
+        retrieveParentCollection: mockRetrieveParentCollection
     } as Partial<ReturnType<typeof useGlobalStorageModule.useGlobalStorage>> as ReturnType<
         typeof useGlobalStorageModule.useGlobalStorage
     >);
@@ -444,6 +467,66 @@ describe('+layout.svelte collection-grid workspace', () => {
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
+    });
+
+    describe('annotation tree on the images route', () => {
+        const pairs = [{ collection_id: 'source-1', annotation_label_id: 'person' }];
+
+        // The counts query reads its filter lazily, so the test calls the params getter.
+        const lastCountsAnnotationFilter = () => {
+            vi.mocked(useImageAnnotationCounts).mock.lastCall?.[0]();
+            return vi.mocked(buildImageAnnotationCountsFilter).mock.lastCall?.[0].annotationFilter;
+        };
+
+        it('puts the tree filter into the counts filter', async () => {
+            mocks.treeFilter = { annotation_pairs: pairs };
+            setPageRoute(APP_ROUTES.images);
+
+            render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+            await tick();
+
+            expect(lastCountsAnnotationFilter()).toEqual({
+                filter_type: 'annotations',
+                annotation_pairs: pairs
+            });
+        });
+    });
+
+    describe('annotation tree on the annotations route', () => {
+        const imagesParent = { sampleType: SampleType.IMAGE, collectionId: 'images-1' };
+
+        const renderAnnotations = async () => {
+            setPageRoute(APP_ROUTES.annotations);
+            render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+            await tick();
+        };
+
+        it('shows the flat tree of the tab source on the images collection tree', async () => {
+            mockRetrieveParentCollection.mockReturnValue(imagesParent);
+
+            await renderAnnotations();
+
+            expect(screen.getByTestId('annotation-tree-stub')).toHaveAttribute(
+                'data-collection-id',
+                'images-1'
+            );
+            expect(screen.getByTestId('annotation-tree-stub')).toHaveAttribute(
+                'data-source-id',
+                'test-collection-id'
+            );
+            expect(screen.getByTestId('annotation-tree-stub')).toHaveAttribute('data-flat', 'true');
+        });
+
+        it('keeps the old menus for annotations of video frames', async () => {
+            mockRetrieveParentCollection.mockReturnValue({
+                sampleType: SampleType.VIDEO_FRAME,
+                collectionId: 'frames-1'
+            });
+
+            await renderAnnotations();
+
+            expect(screen.queryByTestId('annotation-tree-stub')).not.toBeInTheDocument();
+        });
     });
 
     it('renders filter panel on videos route', async () => {

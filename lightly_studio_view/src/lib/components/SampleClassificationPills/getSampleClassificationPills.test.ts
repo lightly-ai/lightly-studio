@@ -88,6 +88,23 @@ describe('getSampleClassificationPills', () => {
         ]);
     });
 
+    it('uses the tree eyes per source and class in place of the source filter', () => {
+        const pills = getSampleClassificationPills({
+            annotations: [
+                createAnnotation({ annotationCollectionId: 'labels', annotationLabelName: 'car' }),
+                createAnnotation({ annotationCollectionId: 'labels', annotationLabelName: 'bus' })
+            ],
+            ...sourceFilter(['other']),
+            isAnnotationVisible: (annotation) =>
+                annotation.annotation_collection_id !== 'labels' ||
+                annotation.annotation_label.annotation_label_name !== 'car',
+            collectionIdToName: {},
+            enforceColoringByClass: false
+        });
+
+        expect(pills.map((pill) => pill.label)).toEqual(['bus']);
+    });
+
     it('dedupes identical visible labels across collections when source colors are off', () => {
         const pills = getSampleClassificationPills({
             annotations: [
@@ -262,6 +279,44 @@ describe('getSampleClassificationPills', () => {
                 title: 'truck'
             }
         ]);
+    });
+
+    it('colors by source when the saved mode is source despite one visible source', () => {
+        const pills = getSampleClassificationPills({
+            annotations: [
+                createAnnotation({
+                    annotationCollectionId: 'collection-1',
+                    annotationLabelName: 'car'
+                })
+            ],
+            ...sourceFilter(['collection-1']),
+            collectionIdToName: { 'collection-1': 'Ground Truth' },
+            enforceColoringByClass: true,
+            colorMode: 'source'
+        });
+
+        expect(pills.map((pill) => pill.colorKey)).toEqual(['Ground Truth']);
+    });
+
+    it('colors by class when the saved mode is class despite several visible sources', () => {
+        const pills = getSampleClassificationPills({
+            annotations: [
+                createAnnotation({
+                    annotationCollectionId: 'collection-1',
+                    annotationLabelName: 'car'
+                }),
+                createAnnotation({
+                    annotationCollectionId: 'collection-2',
+                    annotationLabelName: 'car'
+                })
+            ],
+            ...sourceFilter(['collection-1', 'collection-2']),
+            collectionIdToName: { 'collection-1': 'Ground Truth', 'collection-2': 'Predictions' },
+            enforceColoringByClass: false,
+            colorMode: 'class'
+        });
+
+        expect(pills.map((pill) => pill.colorKey)).toEqual(['car']);
     });
 
     it('truncates long labels for display', () => {

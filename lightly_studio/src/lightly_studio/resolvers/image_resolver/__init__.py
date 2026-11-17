@@ -3,8 +3,14 @@
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_collection import (
     count_image_annotations_by_collection,
 )
+from lightly_studio.resolvers.image_resolver.count_image_annotations_by_pair import (
+    count_image_annotations_by_pair,
+)
 from lightly_studio.resolvers.image_resolver.count_image_annotations_by_sample_tags import (
     count_image_annotations_by_sample_tags,
+)
+from lightly_studio.resolvers.image_resolver.count_unannotated_images_by_source import (
+    count_unannotated_images_by_source,
 )
 from lightly_studio.resolvers.image_resolver.create_many import create_many
 from lightly_studio.resolvers.image_resolver.delete import delete
@@ -40,7 +46,9 @@ __all__ = [
     "ImageField",
     "build_sample_ids_query",
     "count_image_annotations_by_collection",
+    "count_image_annotations_by_pair",
     "count_image_annotations_by_sample_tags",
+    "count_unannotated_images_by_source",
     "create_many",
     "delete",
     "get_adjacent_images",

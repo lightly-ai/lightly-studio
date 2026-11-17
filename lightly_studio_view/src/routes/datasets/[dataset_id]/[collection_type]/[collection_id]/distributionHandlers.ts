@@ -77,3 +77,19 @@ export function withoutCategoricalValues(
     delete next[metadataKey];
     return next;
 }
+
+/** Applies a class bar click to the annotation tree when it is shown, else to the class filter. */
+export function selectClassFromBar({
+    className,
+    showAnnotationTree,
+    onlyClass,
+    toggleClass
+}: {
+    className: string;
+    showAnnotationTree: boolean;
+    onlyClass: (className: string) => void;
+    toggleClass: (className: string) => void;
+}): void {
+    if (showAnnotationTree) onlyClass(className);
+    else toggleClass(className);
+}

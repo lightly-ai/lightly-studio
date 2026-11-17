@@ -48,7 +48,7 @@ vi.mock('$lib/hooks/useSettings', async () => {
         show_annotation_text_labels: false,
         show_sample_filenames: true,
         show_bounding_boxes_for_segmentation: true,
-        enforce_coloring_by_class: false,
+        annotation_color_mode: 'source',
         created_at: new Date('1970-01-01T00:00:00.000Z'),
         updated_at: new Date('1970-01-01T00:00:00.000Z'),
         key_toolbar_selection: 's',
@@ -284,6 +284,45 @@ describe('SampleAnnotations', () => {
         expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(false);
     });
 
+    it('draws by the tree eyes per source and class when they are given', async () => {
+        setShowBoundingBoxesForSegmentation(true);
+        // The tree replaces the class eye and the source selection.
+        useAnnotationClassVisibility().toggleClassVisibility('person');
+        useAnnotationCollectionsFilter().setSelectedCollectionIds([]);
+        const sample = createSample();
+        sample.annotations = [
+            {
+                ...sample.annotations[0],
+                sample_id: 'labels-car',
+                annotation_collection_id: 'labels'
+            },
+            {
+                ...sample.annotations[0],
+                sample_id: 'model-car',
+                annotation_collection_id: 'model_v1',
+                object_detection_details: { x: 50, y: 50, width: 10, height: 10 }
+            },
+            sample.annotations[1]
+        ];
+
+        render(SampleAnnotations, {
+            props: {
+                sample,
+                isAnnotationVisible: (annotation) =>
+                    !(
+                        annotation.annotation_collection_id === 'labels' &&
+                        annotation.annotation_label.annotation_label_name === 'car'
+                    )
+            }
+        });
+
+        await waitFor(() => {
+            expect(hasStrokeRectCall(mockContext, 50, 50, 10, 10)).toBe(true);
+            expect(hasStrokeRectCall(mockContext, 2, 3, 4, 5)).toBe(true);
+        });
+        expect(hasStrokeRectCall(mockContext, 10, 21, 30, 41)).toBe(false);
+    });
+
     describe('enforceColoringByClass setting', () => {
         const { setSelectedCollectionIds, setCollectionIdToName } =
             useAnnotationCollectionsFilter();
@@ -375,6 +414,48 @@ describe('SampleAnnotations', () => {
             } finally {
                 clearCustomColors();
             }
+        });
+
+        it('colors by the saved source mode with one source visible and enforce enabled', async () => {
+            const colorBySourceSpy = vi.spyOn(utils, 'getColorBySource');
+            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+
+            setSelectedCollectionIds(['col-a']);
+            setCollectionIdToName({ 'col-a': 'labels', 'col-b': 'model_v1' });
+            setEnforceColoringByClass(true);
+
+            render(SampleAnnotations, {
+                props: { sample: createTwoSourceSample(), colorMode: 'source' }
+            });
+
+            await waitFor(() => {
+                const sourceNames = colorBySourceSpy.mock.calls.map(([name]) => name);
+                expect(sourceNames).toContain('labels');
+            });
+            expect(colorByLabelSpy.mock.calls.map(([name]) => name)).not.toContain('car');
+
+            colorBySourceSpy.mockRestore();
+            colorByLabelSpy.mockRestore();
+        });
+
+        it('colors by the saved class mode with several sources visible and enforce disabled', async () => {
+            const colorByLabelSpy = vi.spyOn(utils, 'getColorByLabel');
+
+            setSelectedCollectionIds(['col-a', 'col-b']);
+            setCollectionIdToName({ 'col-a': 'labels', 'col-b': 'model_v1' });
+            setEnforceColoringByClass(false);
+
+            render(SampleAnnotations, {
+                props: { sample: createTwoSourceSample(), colorMode: 'class' }
+            });
+
+            await waitFor(() => {
+                const calledNames = colorByLabelSpy.mock.calls.map(([name]) => name);
+                expect(calledNames).toContain('car');
+                expect(calledNames).not.toContain('labels');
+            });
+
+            colorByLabelSpy.mockRestore();
         });
     });
 });

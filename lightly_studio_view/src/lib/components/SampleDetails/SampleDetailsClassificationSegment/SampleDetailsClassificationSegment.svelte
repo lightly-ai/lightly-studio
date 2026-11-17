@@ -24,6 +24,11 @@
         useAnnotationCollectionsFilter
     } from '$lib/hooks';
     import {
+        getSampleDetailsFollowTree,
+        useTreeAnnotationVisibility,
+        useTreeColorMode
+    } from '$lib/components/AnnotationTree';
+    import {
         computeSeededHiddenIds,
         groupAnnotationsBySource,
         isSourceGroupInitiallyOpen
@@ -91,23 +96,35 @@
 
     const annotationCollectionsQuery = useAnnotationCollections(() => ({ collectionId }));
     const { isSourceVisible } = useAnnotationCollectionsFilter();
+    const followsTree = getSampleDetailsFollowTree();
+    const treeColorMode = useTreeColorMode(followsTree);
+    const treeVisibility = useTreeAnnotationVisibility(() => ({
+        collectionId,
+        enabled: followsTree()
+    }));
     const annotationSources = $derived(annotationCollectionsQuery.data ?? []);
     const isGrouped = $derived(annotationSources.length > 1);
     const sourceGroups = $derived(
         isGrouped ? groupAnnotationsBySource(classificationAnnotations, annotationSources) : []
     );
 
-    // Hidden set implied by the grid filter, as a derived so it's readable at mount (unlike
-    // the effect-written `annotationsIdsToHide`); drives the seed and the initial collapse.
+    // Hidden set from the tree eyes or, without the tree, the grid source selection. It is a
+    // derived, so it is readable at mount (unlike the effect-written `annotationsIdsToHide`);
+    // it drives the seed and the initial collapse.
     const seededHiddenIds = $derived(
-        computeSeededHiddenIds(classificationAnnotations, $isSourceVisible)
+        computeSeededHiddenIds(
+            classificationAnnotations,
+            treeVisibility.current ??
+                ((annotation) => $isSourceVisible(annotation.annotation_collection_id))
+        )
     );
 
     // Local visibility changes must not alter source colors or card layout.
     const colorBySource = $derived(
         resolveEffectiveColorBySource({
             multipleSourcesVisible: countVisibleSources(classificationAnnotations) >= 2,
-            enforceColoringByClass: $enforceColoringByClassStore
+            enforceColoringByClass: $enforceColoringByClassStore,
+            colorMode: treeColorMode.current
         })
     );
 

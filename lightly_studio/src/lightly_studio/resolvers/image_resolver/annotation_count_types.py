@@ -40,3 +40,37 @@ class SampleTagAnnotationCounts:
     sample_tag_id: UUID
     sample_tag_name: str
     counts: tuple[AnnotationClassCount, ...]
+
+
+@dataclass(frozen=True)
+class AnnotationPairCount:
+    """Annotation count for one (annotation source, annotation class) pair.
+
+    Attributes:
+        annotation_collection_id: ID of the annotation source collection.
+        annotation_label_id: ID of the annotation class.
+        label_name: Name of the annotation class.
+        current_count: Count with the filter applied.
+        total_count: Count without the filter.
+    """
+
+    annotation_collection_id: UUID
+    annotation_label_id: UUID
+    label_name: str
+    current_count: int
+    total_count: int
+
+
+@dataclass(frozen=True)
+class UnannotatedImageCount:
+    """Count of images without any annotation in one annotation source.
+
+    Attributes:
+        annotation_collection_id: ID of the annotation source collection.
+        current_count: Count with the filter applied.
+        total_count: Count without the filter.
+    """
+
+    annotation_collection_id: UUID
+    current_count: int
+    total_count: int

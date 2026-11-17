@@ -5,6 +5,7 @@ import { useAnnotationClassVisibility } from '$lib/hooks';
 import { useCustomLabelColors } from '$lib/hooks/useCustomLabelColors';
 import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
 import AnnotationItem from './AnnotationItem.svelte';
+import AnnotationItemTreeTestWrapper from './AnnotationItemTreeTestWrapper.test.svelte';
 
 vi.mock('$lib/components', async () => {
     const module = await import('./AnnotationCanvas.mock.svelte');
@@ -90,5 +91,20 @@ describe('AnnotationItem', () => {
 
         expect(screen.getByTestId('mock-annotation-canvas').parentElement).toHaveClass('invisible');
         expect(container.querySelector('.annotation-box')).toHaveClass('invisible');
+    });
+
+    it('follows the tree eyes in place of the class visibility', async () => {
+        useAnnotationClassVisibility().hiddenClassNamesStore.set(['car']);
+
+        const { container, rerender } = render(AnnotationItemTreeTestWrapper, {
+            props: { itemProps: defaultProps, isAnnotationVisible: () => true }
+        });
+
+        expect(container.querySelector('.annotation-box')).not.toHaveClass('invisible');
+
+        await rerender({ itemProps: defaultProps, isAnnotationVisible: () => false });
+
+        expect(container.querySelector('.annotation-box')).toHaveClass('invisible');
+        expect(screen.getByTestId('mock-annotation-canvas').parentElement).toHaveClass('invisible');
     });
 });
