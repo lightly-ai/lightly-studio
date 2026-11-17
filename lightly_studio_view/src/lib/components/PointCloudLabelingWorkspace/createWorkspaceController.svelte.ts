@@ -10,6 +10,7 @@ import { useWorkspaceSceneData } from './useWorkspaceSceneData/useWorkspaceScene
 import { useWorkspaceEditing } from './useWorkspaceEditing/useWorkspaceEditing.svelte';
 import { useWorkspaceFullscreen } from './useWorkspaceFullscreen/useWorkspaceFullscreen.svelte';
 import { useCameraPane } from './useCameraPane/useCameraPane.svelte';
+import { useCuboidTargetSource } from './useCuboidTargetSource';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 
 /** Composes focused workspace controllers and projects their state for scene consumers. */
@@ -59,6 +60,11 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         () => (accumulating.current ? radius.current : 0)
     );
     const data = useWorkspaceSceneData(() => workspace, getOptions);
+    const targetSource = useCuboidTargetSource({
+        getCollectionId: () => getOptions().annotationSourceCollectionId,
+        getSourceNames: () => data.annotationSourceNames,
+        getIsError: () => data.annotationSourcesError
+    });
     const editing = useWorkspaceEditing(
         () => workspace,
         getOptions,
@@ -147,6 +153,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         cameraPane,
         playback,
         data,
+        targetSource,
         editing,
         accumulation,
         lidarSelection,
