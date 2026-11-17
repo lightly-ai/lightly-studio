@@ -66,9 +66,6 @@ vi.mock('$lib/components', async () => {
         SidePanelToggleButton: stub
     };
 });
-vi.mock('$lib/components/ImageAdjustments', async () => ({
-    ImageAdjustments: (await import('./SampleDetailsPanel.stub.svelte')).default
-}));
 vi.mock('./SampleDetailsImageContainer/SampleDetailsImageContainer.svelte', async () => ({
     default: (await import('./SampleDetailsPanel.stub.svelte')).default
 }));
