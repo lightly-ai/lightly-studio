@@ -640,6 +640,7 @@ def test_embed_annotation_crops__stores_fingerprint(
     [crop] = annotation_resolver.get_annotation_crops_for_ids(
         session=db_session, annotation_sample_ids=annotation_ids
     )
+    assert row.source_fingerprint == "bbox1:100,0,20,20"
     assert row.source_fingerprint == crop.source_fingerprint
 
 
@@ -673,6 +674,7 @@ def test_embed_annotation_crops__box_edited_during_run(
     [current] = annotation_resolver.get_annotation_crops_for_ids(
         session=db_session, annotation_sample_ids=annotation_ids
     )
+    assert row.source_fingerprint == "bbox1:10,0,20,20"
     assert row.source_fingerprint != current.source_fingerprint
 
 
