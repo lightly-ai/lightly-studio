@@ -1,5 +1,9 @@
 <script lang="ts">
-    import { Box, Move, MousePointer2, RotateCw, Scan } from '@lucide/svelte';
+    import Box from '@lucide/svelte/icons/box';
+    import Move from '@lucide/svelte/icons/move';
+    import MousePointer2 from '@lucide/svelte/icons/mouse-pointer-2';
+    import RotateCw from '@lucide/svelte/icons/rotate-cw';
+    import Scan from '@lucide/svelte/icons/scan';
     import { Toolbar, type ToolbarItem } from '$lib/components/ui/toolbar';
     import type { WorkspaceTool } from '../domain';
 

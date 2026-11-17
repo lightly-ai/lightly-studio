@@ -114,7 +114,7 @@ type WithoutTitle = Omit<UseDataParams, "title">;
 - **[Shadcn](https://next.shadcn-svelte.com/)** components from `$lib/components/ui` for standard UI elements (buttons, inputs, cards, tabs, alerts, tables).
 - **Project-specific components** from `$lib/components` when combining multiple Shadcn components, adding business logic, or needing custom behavior.
 - **[Bits-UI](https://www.bits-ui.com/)** as the base component library underlying Shadcn.
-- **[Lucide Icons](https://lucide.dev/icons/)** for all icons - import from `@lucide/svelte`.
+- **[Lucide Icons](https://lucide.dev/icons/)** for all icons - import each icon from its own file, `import Box from '@lucide/svelte/icons/box'`. Do not import icons from `@lucide/svelte`: that entry loads every icon and slows down tests. Type imports such as `IconProps` from `@lucide/svelte` are fine.
 - Use `cn()` from `$lib/utils` for conditional Tailwind class composition.
 - Prefer explicit props over object spreading - components should receive only the specific props they need. Exception: forwarding HTML attributes via `...rest`, or intentional wrapper/proxy components.
 

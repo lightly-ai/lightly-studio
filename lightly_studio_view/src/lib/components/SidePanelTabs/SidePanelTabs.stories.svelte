@@ -7,7 +7,7 @@
         component: SidePanelTabs,
         tags: ['autodocs'],
         argTypes: {
-            isImages: { control: 'boolean' },
+            supportsQuery: { control: 'boolean' },
             hasMediaWithEmbeddings: { control: 'boolean' },
             supportsEvaluation: { control: 'boolean' },
             supportsDistribution: { control: 'boolean' }
@@ -18,7 +18,7 @@
 <Story
     name="All Tabs"
     args={{
-        isImages: true,
+        supportsQuery: true,
         hasMediaWithEmbeddings: true,
         supportsEvaluation: true,
         supportsDistribution: true
@@ -28,7 +28,7 @@
 <Story
     name="Embeddings Only"
     args={{
-        isImages: false,
+        supportsQuery: false,
         hasMediaWithEmbeddings: true,
         supportsEvaluation: false,
         supportsDistribution: false
@@ -38,7 +38,7 @@
 <Story
     name="Images No Embeddings"
     args={{
-        isImages: true,
+        supportsQuery: true,
         hasMediaWithEmbeddings: false,
         supportsEvaluation: false,
         supportsDistribution: true
@@ -48,7 +48,7 @@
 <Story
     name="Images With Evaluation"
     args={{
-        isImages: true,
+        supportsQuery: true,
         hasMediaWithEmbeddings: false,
         supportsEvaluation: true,
         supportsDistribution: true
@@ -58,7 +58,7 @@
 <Story
     name="No Tabs"
     args={{
-        isImages: false,
+        supportsQuery: false,
         hasMediaWithEmbeddings: false,
         supportsEvaluation: false,
         supportsDistribution: false

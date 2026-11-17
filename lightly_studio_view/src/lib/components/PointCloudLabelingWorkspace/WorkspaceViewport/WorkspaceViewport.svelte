@@ -35,6 +35,7 @@
     selectedAnnotationId={layout.selectedCuboidId}
     hoveredAnnotationId={layout.hoveredCuboidId}
     activeTool={layout.effectiveTool}
+    isEditingMode={layout.isEditingMode}
     {cameraMode}
     isScaleSource={cameraMode === 'perspective' || scene.expandedProjection === cameraMode}
     onselect={layout.onSelect}

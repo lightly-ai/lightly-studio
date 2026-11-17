@@ -20,6 +20,10 @@
         onClear: () => void;
         onRemove?: () => void;
         layout?: 'dropdown' | 'list';
+        /** List layout only: whether the values show under the field name. */
+        expanded?: boolean;
+        /** List layout only: lets the user show or hide the values. */
+        onToggleExpanded?: () => void;
     }
 
     const {
@@ -34,7 +38,9 @@
         onSetValues,
         onClear,
         onRemove,
-        layout = 'dropdown'
+        layout = 'dropdown',
+        expanded = true,
+        onToggleExpanded
     }: Props = $props();
 
     const options = $derived(buildOptions(buckets, selectedValues));
@@ -49,6 +55,13 @@
                 )
               : `${selectedValues.length} selected`
     );
+    const status = $derived(
+        updating
+            ? 'Updating…'
+            : selectedValues.length > 0
+              ? `${selectedValues.length} selected`
+              : undefined
+    );
     const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
 </script>
 
@@ -59,7 +72,10 @@
     {disabled}
     {loading}
     {updating}
+    {status}
     {onRemove}
+    {expanded}
+    {onToggleExpanded}
 >
     {#snippet children()}
         <MetadataCategoricalFilterOptions

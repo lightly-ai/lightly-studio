@@ -1,10 +1,11 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
     import { page } from '$app/stores';
     import { derived as storeDerived } from 'svelte/store';
     import { Button } from '$lib/components';
     import * as Dialog from '$lib/components/ui/dialog';
-    import { LoaderCircle as Loader2 } from '@lucide/svelte';
+    import Loader2 from '@lucide/svelte/icons/loader-circle';
     import {
         executeOperator,
         getOperatorParameters,

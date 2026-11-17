@@ -6,7 +6,7 @@
     import { useAdjacentAnnotations } from '$lib/hooks/useAdjacentAnnotations/useAdjacentAnnotations';
     import { useEvaluationRuns } from '$lib/hooks';
     import { Tooltip } from '$lib/components/ui/tooltip';
-    import { TriangleAlert } from '@lucide/svelte';
+    import TriangleAlert from '@lucide/svelte/icons/triangle-alert';
 
     const STALE_WARNING =
         'Annotations changed after this evaluation ran, so the order you are stepping through is ' +

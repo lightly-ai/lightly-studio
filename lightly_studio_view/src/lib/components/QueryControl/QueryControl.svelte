@@ -1,7 +1,7 @@
 <script lang="ts">
     import FilterChip from '$lib/components/FilterChip/FilterChip.svelte';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import type { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
+    import type { useImageFilters } from '$lib/hooks';
     type QueryExpression = Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0];
 
     interface Props {

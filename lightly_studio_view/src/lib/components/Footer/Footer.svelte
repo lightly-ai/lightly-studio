@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { BookOpen, Mail } from '@lucide/svelte';
+    import BookOpen from '@lucide/svelte/icons/book-open';
+    import Mail from '@lucide/svelte/icons/mail';
     import { page } from '$app/state';
     import { version, git_sha, is_tagged_commit } from '$lib/version.json';
     import {

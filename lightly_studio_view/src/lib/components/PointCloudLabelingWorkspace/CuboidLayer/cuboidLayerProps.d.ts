@@ -16,6 +16,8 @@ export interface CuboidLayerProps {
     hoveredAnnotationId?: string | null;
     /** Tool selected in the main scene toolbar. */
     activeTool?: Domain.WorkspaceTool;
+    /** Whether annotation editing is enabled. */
+    isEditingMode?: boolean;
     /** Projection orientation used for rendering and editing. */
     cameraMode?: Domain.CameraMode;
     /** Retained cloud bounds used for ground placement and creation. */

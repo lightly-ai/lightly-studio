@@ -1,5 +1,10 @@
 <script lang="ts">
-    import { ArrowDown, ArrowLeft, ArrowRight, ArrowUp, RotateCcw, RotateCw } from '@lucide/svelte';
+    import ArrowDown from '@lucide/svelte/icons/arrow-down';
+    import ArrowLeft from '@lucide/svelte/icons/arrow-left';
+    import ArrowRight from '@lucide/svelte/icons/arrow-right';
+    import ArrowUp from '@lucide/svelte/icons/arrow-up';
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
+    import RotateCw from '@lucide/svelte/icons/rotate-cw';
     import { type SceneNavigationAction } from '$lib/components/PointCloudViewer';
     import { useNavigationHighlight } from './useNavigationHighlight/useNavigationHighlight.svelte';
 
