@@ -87,14 +87,14 @@ describe('LabelWithModelPopUp', () => {
         expect(screen.queryByRole('button', { name: 'Run model' })).not.toBeInTheDocument();
     });
 
-    it('shows the save as toggle only for a segmentation model', () => {
+    it('shows the save as toggle only for a segmentation model', async () => {
         const labelWithModel = makeLabelWithModel({ predictions: [PREVIEW], canSave: true });
         const { rerender } = render(LabelWithModelPopUp, {
             props: { ...defaultProps, labelWithModel }
         });
         expect(screen.queryByRole('group', { name: 'Save as' })).not.toBeInTheDocument();
 
-        rerender({ ...defaultProps, model: SEGMENTATION_MODEL, labelWithModel });
+        await rerender({ ...defaultProps, model: SEGMENTATION_MODEL, labelWithModel });
 
         expect(screen.getByRole('group', { name: 'Save as' })).toBeInTheDocument();
     });

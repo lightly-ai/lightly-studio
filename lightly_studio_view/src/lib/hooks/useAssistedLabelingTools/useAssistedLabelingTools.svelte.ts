@@ -106,6 +106,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
             threshold: state.modelThreshold,
             saveAs: modelSaveAs,
             annotationSource: annotationLabelContext.annotationSource,
+            annotationSourceBlockedReason: annotationLabelContext.annotationSourceBlockedReason,
             onSaved: refetch
         };
     });

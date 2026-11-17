@@ -2,7 +2,7 @@ import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { ModelAnnotationPreview } from '$lib/api/lightly_studio_local';
 import { createModelAnnotationPreviewMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
-import { useSaveAnnotationPreviews } from '$lib/hooks';
+import { isAnnotationSourceBlocked, useSaveAnnotationPreviews } from '$lib/hooks';
 import { getAnnotationPreviewErrorMessage } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 import { page } from '$app/state';
 
@@ -17,6 +17,7 @@ interface UseLabelWithModelParams {
     threshold: number;
     saveAs: SaveAs;
     annotationSource: string | null | undefined;
+    annotationSourceBlockedReason?: string | null;
     onSaved: () => void;
 }
 
@@ -121,7 +122,9 @@ export const useLabelWithModel = (
     };
 
     const save = async () => {
-        const { sampleId, saveAs, annotationSource, onSaved } = getParams();
+        const { sampleId, saveAs, annotationSource, annotationSourceBlockedReason, onSaved } =
+            getParams();
+        if (isAnnotationSourceBlocked({ annotationSourceBlockedReason })) return;
         if (!canSave()) return;
         isSaving = true;
         try {

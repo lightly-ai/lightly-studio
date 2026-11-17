@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/svelte-query', () => ({
     createMutation: () => ({ mutateAsync: mocks.mutateAsync })
 }));
-vi.mock('$lib/hooks', () => ({
+vi.mock('$lib/hooks', async () => ({
+    isAnnotationSourceBlocked: (
+        await import('$lib/hooks/useAnnotationTarget/annotationSourceGuard')
+    ).isAnnotationSourceBlocked,
     useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.toastError } }));
@@ -27,7 +30,7 @@ const dog = { ...cat, class_name: 'dog', bbox: { x: 5, y: 0, width: 2, height: 2
 
 let cleanup = () => {};
 
-const setup = () => {
+const setup = (blockedReason: string | null = null) => {
     const params = $state<{ sampleId: string; modelId: string | null }>({
         sampleId: 'sample-1',
         modelId: 'ltdetrv2-s-coco'
@@ -42,6 +45,7 @@ const setup = () => {
             threshold: 0.4,
             saveAs: 'box',
             annotationSource: 'source',
+            annotationSourceBlockedReason: blockedReason,
             onSaved
         }));
     });
@@ -129,6 +133,18 @@ describe('useLabelWithModel', () => {
         labelWithModel.removePrediction(labelWithModel.predictions[0]);
 
         expect(labelWithModel.predictions).toEqual([dog]);
+    });
+
+    it('keeps the predictions and tells why when the annotation source is blocked', async () => {
+        const { labelWithModel, onSaved } = setup('Pick where new annotations go.');
+        await generateResults(labelWithModel);
+
+        await labelWithModel.save();
+
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+        expect(mocks.toastError).toHaveBeenCalledWith('Pick where new annotations go.');
+        expect(labelWithModel.predictions).toHaveLength(2);
+        expect(onSaved).not.toHaveBeenCalled();
     });
 
     it('saves each prediction with its own class', async () => {
