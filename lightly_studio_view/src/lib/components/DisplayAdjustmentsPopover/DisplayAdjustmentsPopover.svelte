@@ -32,6 +32,7 @@
                     class="inline-flex h-10 w-10 items-center justify-center rounded-lg bg-muted/80 shadow-md backdrop-blur-sm"
                     aria-label="Display adjustments"
                     data-testid="display-adjustments-trigger"
+                    data-ignore-space-shortcut
                 >
                     <Sun class="size-4 text-muted-foreground" />
                 </button>
