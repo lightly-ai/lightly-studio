@@ -61,6 +61,12 @@ const filterPanelCollapsed = useSessionStorage<boolean>(
     false
 );
 
+// Whether the right side panel in sample/video details is collapsed.
+const isSampleDetailsSidePanelCollapsed = useSessionStorage<boolean>(
+    'lightlyStudio_isSampleDetailsSidePanelCollapsed',
+    false
+);
+
 // Metadata stores
 const metadataBounds = useSessionStorage<MetadataBounds>('lightlyStudio_metadata_bounds', {});
 const metadataValues = useSessionStorage<MetadataValues>('lightlyStudio_metadata_values', {});
@@ -413,6 +419,13 @@ export const useGlobalStorage = () => {
         openFilterPanel: () => filterPanelCollapsed.set(false),
         toggleFilterPanelCollapsed: () => {
             filterPanelCollapsed.update((collapsed) => !collapsed);
+        },
+
+        // Right side panel collapse state (sample/video details)
+        isSampleDetailsSidePanelCollapsed,
+        openSampleDetailsSidePanel: () => isSampleDetailsSidePanelCollapsed.set(false),
+        toggleSampleDetailsSidePanelCollapsed: () => {
+            isSampleDetailsSidePanelCollapsed.update((collapsed) => !collapsed);
         },
 
         activePanel,
