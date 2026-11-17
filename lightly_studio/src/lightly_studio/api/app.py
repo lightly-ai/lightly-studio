@@ -47,6 +47,7 @@ from lightly_studio.api.routes.api import (
     sampling,
     settings,
     text_embedding,
+    user,
     version,
     video,
 )
@@ -166,6 +167,7 @@ api_router.include_router(group.group_router)
 api_router.include_router(mcap_sequence.mcap_sequence_router)
 api_router.include_router(enterprise.enterprise_router)
 api_router.include_router(version.version_router)
+api_router.include_router(user.user_router)
 
 app.include_router(api_router)
 
