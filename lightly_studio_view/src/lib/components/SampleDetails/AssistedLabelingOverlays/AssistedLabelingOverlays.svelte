@@ -47,6 +47,7 @@
         />
     {:else if assistedLabeling.activeTool === 'label-with-model'}
         <LabelWithModelOverlay
+            isPanning={assistedLabeling.isPanning}
             {sample}
             {scale}
             saveAs={assistedLabeling.modelSaveAs}

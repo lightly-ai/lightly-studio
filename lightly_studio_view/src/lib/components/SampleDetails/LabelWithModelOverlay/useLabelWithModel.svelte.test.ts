@@ -145,6 +145,7 @@ describe('useLabelWithModel', () => {
     it('saves each prediction with its own class', async () => {
         const { labelWithModel, onSaved } = setup();
         await generateResults(labelWithModel);
+        labelWithModel.review.acceptAll();
         mocks.saveAnnotationPreviews.mockImplementationOnce(
             async ({ previews, onPreviewSaved }) => {
                 for (const { preview } of previews) onPreviewSaved(preview);
@@ -171,6 +172,7 @@ describe('useLabelWithModel', () => {
     it('keeps the unsaved predictions when the save fails', async () => {
         const { labelWithModel, onSaved } = setup();
         await generateResults(labelWithModel);
+        labelWithModel.review.acceptAll();
         mocks.saveAnnotationPreviews.mockImplementationOnce(
             async ({ previews, onPreviewSaved }) => {
                 onPreviewSaved(previews[0].preview);
@@ -184,13 +186,14 @@ describe('useLabelWithModel', () => {
         expect(mocks.toastError).toHaveBeenCalledOnce();
         expect(onSaved).not.toHaveBeenCalled();
     });
-    it('saves corrected classes only for included suggestions and keeps excluded suggestions', async () => {
+    it('saves corrected classes only for accepted suggestions and keeps rejected suggestions', async () => {
         const { labelWithModel } = setup();
         await generateResults(labelWithModel);
         const [first, second] = labelWithModel.review.suggestions;
         labelWithModel.review.focus(first.id);
         labelWithModel.review.changeClass('fox');
-        labelWithModel.review.setIncluded(second.id, false);
+        labelWithModel.review.accept(first.id);
+        labelWithModel.review.reject(second.id);
         mocks.saveAnnotationPreviews.mockImplementationOnce(
             async ({ previews, onPreviewSaved }) => {
                 expect(previews).toEqual([
@@ -205,7 +208,7 @@ describe('useLabelWithModel', () => {
         expect(labelWithModel.predictions).toEqual([dog]);
         expect(labelWithModel.canSave).toBe(false);
         expect(mocks.toastSuccess).toHaveBeenCalledWith('Saved 1 annotation.');
-        labelWithModel.review.setIncluded(second.id, true);
+        labelWithModel.review.accept(second.id);
         expect(labelWithModel.canSave).toBe(true);
     });
 
@@ -215,7 +218,7 @@ describe('useLabelWithModel', () => {
         const first = labelWithModel.review.suggestions[0];
         labelWithModel.review.focus(first.id);
         labelWithModel.review.changeClass('fox');
-        labelWithModel.review.setIncluded(first.id, false);
+        labelWithModel.review.reject(first.id);
         params.threshold = 0.7;
         expect(labelWithModel.needsRegeneration).toBe(true);
         mocks.mutateAsync.mockRejectedValueOnce(new Error('offline'));
@@ -225,7 +228,7 @@ describe('useLabelWithModel', () => {
         expect(labelWithModel.generationError).toContain('Could not generate suggestions');
         expect(labelWithModel.review.focusedSuggestion).toMatchObject({
             id: first.id,
-            included: false,
+            status: 'rejected',
             preview: { class_name: 'fox' }
         });
         expect(labelWithModel.needsRegeneration).toBe(true);
@@ -246,12 +249,12 @@ describe('useLabelWithModel', () => {
         expect(changeModel).toHaveBeenCalledOnce();
     });
 
-    it('ignores a stale inference response after the image changes', async () => {
-        const { labelWithModel, params } = setup();
+    it('ignores a stale inference response after closing the tool', async () => {
+        const { labelWithModel } = setup();
         const response = Promise.withResolvers<{ predictions: (typeof cat)[] }>();
         mocks.mutateAsync.mockReturnValueOnce(response.promise);
         const generation = labelWithModel.generate();
-        params.sampleId = 'sample-2';
+        labelWithModel.clear();
         flushSync();
         response.resolve({ predictions: [cat] });
         await generation;
@@ -261,6 +264,7 @@ describe('useLabelWithModel', () => {
     it('retries only the remaining selected suggestions after a partial save', async () => {
         const { labelWithModel } = setup();
         await generateResults(labelWithModel);
+        labelWithModel.review.acceptAll();
         mocks.saveAnnotationPreviews.mockImplementationOnce(
             async ({ previews, onPreviewSaved }) => {
                 onPreviewSaved(previews[0].preview);
@@ -276,5 +280,46 @@ describe('useLabelWithModel', () => {
         );
         await labelWithModel.save();
         expect(labelWithModel.predictions).toEqual([]);
+    });
+    it('saves only accepted results with the edited box', async () => {
+        const { labelWithModel } = setup();
+        await generateResults(labelWithModel);
+        expect(labelWithModel.canSave).toBe(false);
+        const first = labelWithModel.review.suggestions[0];
+        labelWithModel.review.updateBox(
+            first.id,
+            { x: 2, y: 3, width: 10, height: 15 },
+            { width: 100, height: 100 }
+        );
+        labelWithModel.review.accept(first.id);
+        mocks.saveAnnotationPreviews.mockImplementationOnce(
+            async ({ previews, onPreviewSaved }) => {
+                expect(previews).toEqual([
+                    {
+                        preview: { ...cat, bbox: { x: 2, y: 3, width: 10, height: 15 } },
+                        className: 'cat'
+                    }
+                ]);
+                onPreviewSaved(previews[0].preview);
+            }
+        );
+        await labelWithModel.save();
+        expect(labelWithModel.predictions).toEqual([dog]);
+        expect(labelWithModel.review.pendingCount).toBe(1);
+    });
+
+    it('clears pending confirmations when closing the tool and does not warn for rejected suggestions', async () => {
+        const { labelWithModel } = setup();
+        await generateResults(labelWithModel);
+        labelWithModel.requestChange(vi.fn());
+        labelWithModel.clear();
+        expect(labelWithModel.pendingChange).toBeNull();
+        expect(labelWithModel.hasUnsavedSuggestions).toBe(false);
+        await generateResults(labelWithModel);
+        labelWithModel.review.rejectAll();
+        const navigate = vi.fn();
+        labelWithModel.requestChange(navigate);
+        expect(navigate).toHaveBeenCalledOnce();
+        expect(labelWithModel.hasUnsavedSuggestions).toBe(false);
     });
 });

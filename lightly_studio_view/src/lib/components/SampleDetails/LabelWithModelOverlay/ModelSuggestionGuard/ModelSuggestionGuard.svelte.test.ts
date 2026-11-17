@@ -25,20 +25,13 @@ const setup = () => {
     const labelWithModel = $state<MutableGuardState>({
         isSaving: false,
         isGenerating: false,
-        predictions: [
-            {
-                class_name: 'cat',
-                bbox: { x: 0, y: 0, width: 10, height: 10 },
-                segmentation_mask: null,
-                score: 0.9
-            }
-        ],
+        hasUnsavedSuggestions: true,
         pendingChange: null,
         requestChange: (action) => {
             labelWithModel.pendingChange = action;
         },
         clear: vi.fn(() => {
-            labelWithModel.predictions = [];
+            labelWithModel.hasUnsavedSuggestions = false;
         }),
         confirmChange: () => {
             const action = labelWithModel.pendingChange;
@@ -74,7 +67,7 @@ describe('ModelSuggestionGuard', () => {
         mocks.navigate(navigation);
         await fireEvent.click(await screen.findByRole('button', { name: 'Keep reviewing' }));
         expect(navigation.cancel).toHaveBeenCalledOnce();
-        expect(labelWithModel.predictions).toHaveLength(1);
+        expect(labelWithModel.hasUnsavedSuggestions).toBe(true);
         expect(mocks.goto).not.toHaveBeenCalled();
 
         mocks.navigate(navigation);
@@ -92,6 +85,13 @@ describe('ModelSuggestionGuard', () => {
         labelWithModel.isSaving = false;
         mocks.navigate({ ...navigation, type: 'leave', willUnload: true, to: null });
         expect(navigation.cancel).toHaveBeenCalledTimes(2);
+        expect(labelWithModel.pendingChange).toBeNull();
+    });
+    it('allows navigation after the tool closes or all suggestions are rejected', () => {
+        const { labelWithModel, navigation } = setup();
+        labelWithModel.hasUnsavedSuggestions = false;
+        mocks.navigate(navigation);
+        expect(navigation.cancel).not.toHaveBeenCalled();
         expect(labelWithModel.pendingChange).toBeNull();
     });
 });

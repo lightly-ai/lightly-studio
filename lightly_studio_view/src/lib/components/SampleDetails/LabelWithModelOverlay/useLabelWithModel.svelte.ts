@@ -5,7 +5,7 @@ import { createModelAnnotationPreviewMutation } from '$lib/api/lightly_studio_lo
 import { isAnnotationSourceBlocked, useSaveAnnotationPreviews } from '$lib/hooks';
 import { getAnnotationPreviewErrorMessage } from '$lib/components/SampleDetails/AnnotationPreview/annotationPreview.helpers';
 import { page } from '$app/state';
-import { useModelSuggestionReview } from './useModelSuggestionReview.svelte';
+import { getSuggestionPreview, useModelSuggestionReview } from './useModelSuggestionReview.svelte';
 
 type SaveAs = Parameters<
     ReturnType<typeof useSaveAnnotationPreviews>['saveAnnotationPreviews']
@@ -33,6 +33,7 @@ interface UseLabelWithModelReturn {
     confirmChange: () => void;
     cancelChange: () => void;
     readonly predictions: ModelAnnotationPreview[];
+    readonly hasUnsavedSuggestions: boolean;
     readonly isGenerating: boolean;
     readonly isEmptyResult: boolean;
     readonly isSaving: boolean;
@@ -81,10 +82,11 @@ export const useLabelWithModel = (
         if (isSaveIgnored || !isSaving) review.replace([]);
         generationError = null;
         generatedThreshold = null;
+        pendingChange = null;
     };
 
     const canSave = () =>
-        review.includedSuggestions.length > 0 &&
+        review.acceptedSuggestions.length > 0 &&
         !isSaving &&
         !isGenerating &&
         !getParams().annotationSourceBlockedReason;
@@ -94,7 +96,7 @@ export const useLabelWithModel = (
 
     const requestChange = (action: () => void) => {
         if (isSaving || isGenerating) return;
-        if (predictions.length > 0) pendingChange = action;
+        if (review.hasUnsavedSuggestions) pendingChange = action;
         else action();
     };
 
@@ -155,7 +157,13 @@ export const useLabelWithModel = (
             getParams();
         if (isAnnotationSourceBlocked({ annotationSourceBlockedReason })) return;
         if (!canSave()) return;
-        const selectedPreviews = review.includedSuggestions.map((suggestion) => suggestion.preview);
+        const selectedSuggestions = [...review.acceptedSuggestions];
+        const savedPreviews = new Map(
+            selectedSuggestions.map((suggestion) => [
+                getSuggestionPreview(suggestion, saveAs),
+                suggestion.preview
+            ])
+        );
         isSaving = true;
         let savedCount = 0;
         try {
@@ -163,12 +171,12 @@ export const useLabelWithModel = (
                 sampleId,
                 saveAs,
                 annotationSource,
-                previews: selectedPreviews.map((preview) => ({
+                previews: [...savedPreviews.keys()].map((preview) => ({
                     preview,
                     className: preview.class_name
                 })),
                 onPreviewSaved: (preview) => {
-                    filterOutPrediction(preview);
+                    filterOutPrediction(savedPreviews.get(preview)!);
                     savedCount += 1;
                 }
             });
@@ -208,6 +216,9 @@ export const useLabelWithModel = (
         confirmChange,
         cancelChange: () => {
             pendingChange = null;
+        },
+        get hasUnsavedSuggestions() {
+            return review.hasUnsavedSuggestions;
         },
         get predictions() {
             return predictions;

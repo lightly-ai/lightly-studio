@@ -1,6 +1,5 @@
 <script lang="ts">
     import { Button } from '$lib/components/ui/button';
-    import { Checkbox } from '$lib/components/ui/checkbox';
     import { AnnotationClassSelect } from '$lib/components/SampleDetails/AnnotationClassSelect';
     import type { useModelSuggestionReview } from '$lib/components/SampleDetails/LabelWithModelOverlay/useModelSuggestionReview.svelte';
 
@@ -14,24 +13,21 @@
 </script>
 
 <p class="text-xs" aria-live="polite">
-    {review.includedSuggestions.length} of {review.suggestions.length} suggestions selected
+    {review.acceptedSuggestions.length} accepted · {review.pendingCount} pending · {review
+        .suggestions.length -
+        review.acceptedSuggestions.length -
+        review.pendingCount} rejected
 </p>
 <div class="flex gap-2">
-    <Button variant="ghost" size="sm" {disabled} onclick={review.selectAll}>Select all</Button>
-    <Button variant="ghost" size="sm" {disabled} onclick={review.selectNone}>Select none</Button>
+    <Button variant="ghost" size="sm" {disabled} onclick={review.acceptAll}>Accept all</Button>
+    <Button variant="ghost" size="sm" {disabled} onclick={review.rejectAll}>Reject all</Button>
 </div>
 <ul class="max-h-48 overflow-y-auto" aria-label="Annotation suggestions">
     {#each review.suggestions as suggestion, index (suggestion.id)}
-        <li class="flex items-center gap-2 rounded p-1">
-            <Checkbox
-                checked={suggestion.included}
-                {disabled}
-                aria-label={`Include suggestion ${index + 1}: ${suggestion.preview.class_name}`}
-                onCheckedChange={(checked) => review.setIncluded(suggestion.id, checked === true)}
-            />
+        <li class="flex flex-wrap items-center gap-1 rounded p-1">
             <Button
                 variant={review.focusedId === suggestion.id ? 'secondary' : 'ghost'}
-                class="min-w-0 flex-1 justify-between gap-2"
+                class="min-w-24 flex-1 justify-between gap-2 px-1"
                 {disabled}
                 aria-pressed={review.focusedId === suggestion.id}
                 onclick={() => review.focus(suggestion.id)}
@@ -39,6 +35,22 @@
                 <span class="truncate">{index + 1}. {suggestion.preview.class_name}</span>
                 <span>{Math.round(suggestion.preview.score * 100)}%</span>
             </Button>
+            <Button
+                size="sm"
+                variant={suggestion.status === 'accepted' ? 'default' : 'outline'}
+                {disabled}
+                aria-label={`Accept suggestion ${index + 1}`}
+                aria-pressed={suggestion.status === 'accepted'}
+                onclick={() => review.accept(suggestion.id)}>Accept</Button
+            >
+            <Button
+                size="sm"
+                variant={suggestion.status === 'rejected' ? 'destructive' : 'outline'}
+                {disabled}
+                aria-label={`Reject suggestion ${index + 1}`}
+                aria-pressed={suggestion.status === 'rejected'}
+                onclick={() => review.reject(suggestion.id)}>Reject</Button
+            >
         </li>
     {/each}
 </ul>

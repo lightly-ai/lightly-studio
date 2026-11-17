@@ -32,19 +32,25 @@ const makeLabelWithModel = (overrides: Partial<LabelWithModel> = {}): LabelWithM
         suggestions: (overrides.predictions ?? []).map((preview, id) => ({
             id,
             preview,
-            included: true
+            box: { ...preview.bbox },
+            status: 'accepted'
         })),
-        includedSuggestions: (overrides.predictions ?? []).map((preview, id) => ({
+        acceptedSuggestions: (overrides.predictions ?? []).map((preview, id) => ({
             id,
             preview,
-            included: true
+            box: { ...preview.bbox },
+            status: 'accepted'
         })),
         focusedId: null,
         focusedSuggestion: undefined,
         focus: vi.fn(),
-        setIncluded: vi.fn(),
-        selectAll: vi.fn(),
-        selectNone: vi.fn(),
+        accept: vi.fn(),
+        reject: vi.fn(),
+        acceptAll: vi.fn(),
+        rejectAll: vi.fn(),
+        updateBox: vi.fn(),
+        pendingCount: 0,
+        hasUnsavedSuggestions: true,
         changeClass: vi.fn(),
         replace: vi.fn(),
         remove: vi.fn()
@@ -58,6 +64,7 @@ const makeLabelWithModel = (overrides: Partial<LabelWithModel> = {}): LabelWithM
     confirmChange: vi.fn(),
     cancelChange: vi.fn(),
     predictions: [],
+    hasUnsavedSuggestions: false,
     isGenerating: false,
     isEmptyResult: false,
     isSaving: false,
@@ -106,7 +113,7 @@ describe('LabelWithModelPopUp', () => {
         });
         render(LabelWithModelPopUp, { props: { ...defaultProps, labelWithModel } });
 
-        await fireEvent.click(screen.getByRole('button', { name: 'Save 2 annotations' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Save 2 accepted' }));
         await fireEvent.click(screen.getByRole('button', { name: 'Generate again' }));
 
         expect(screen.getByText('2 suggested annotations')).toBeInTheDocument();

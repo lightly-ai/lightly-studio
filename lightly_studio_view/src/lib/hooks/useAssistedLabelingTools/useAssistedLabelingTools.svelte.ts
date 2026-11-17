@@ -152,6 +152,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         untrack(() => {
             if (tool !== 'smart-select') smartSelect.clear();
             if (tool !== 'find-instances') clearInstances();
+            if (tool !== 'label-with-model') labelWithModel.clear();
         });
     });
 

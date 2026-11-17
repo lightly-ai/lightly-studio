@@ -215,14 +215,14 @@ describe('useAssistedLabelingTools', () => {
         expect(context.status).toBe('cursor');
     });
 
-    it('keeps model suggestions when switching tools', () => {
+    it('discards model suggestions when closing the tool', () => {
         const { context } = setup('label-with-model');
         mocks.clearLabelWithModel.mockClear();
 
         context.status = 'cursor';
         flushSync();
 
-        expect(mocks.clearLabelWithModel).not.toHaveBeenCalled();
+        expect(mocks.clearLabelWithModel).toHaveBeenCalledOnce();
     });
 
     it('selects the first model and saves detections as boxes', () => {

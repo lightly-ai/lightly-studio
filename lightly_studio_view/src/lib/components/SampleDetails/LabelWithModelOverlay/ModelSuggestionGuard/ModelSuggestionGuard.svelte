@@ -10,7 +10,7 @@
             ReturnType<typeof useLabelWithModel>,
             | 'isSaving'
             | 'isGenerating'
-            | 'predictions'
+            | 'hasUnsavedSuggestions'
             | 'pendingChange'
             | 'requestChange'
             | 'clear'
@@ -33,7 +33,7 @@
             if (!navigation.willUnload) toast.info('Wait for the current operation to finish.');
             return;
         }
-        if (labelWithModel.predictions.length === 0) return;
+        if (!labelWithModel.hasUnsavedSuggestions) return;
         navigation.cancel();
         // The browser supplies its own confirmation when the document unloads.
         if (navigation.willUnload || !navigation.to) return;

@@ -38,7 +38,7 @@
         </Button>
     </div>
     <p class="text-xs text-muted-foreground">
-        Review the suggestions, correct their annotation classes, then save.
+        Accept or reject each suggestion. Save accepted annotations when ready.
     </p>
 {:else}
     <Button class="h-8 gap-1.5" disabled={!canGenerate} onclick={onRun}>

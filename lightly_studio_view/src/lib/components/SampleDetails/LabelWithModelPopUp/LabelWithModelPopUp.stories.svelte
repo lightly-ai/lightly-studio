@@ -43,6 +43,9 @@
         get predictions() {
             return review.suggestions.map((suggestion) => suggestion.preview);
         },
+        get hasUnsavedSuggestions() {
+            return review.hasUnsavedSuggestions;
+        },
         generationError: null,
         get needsRegeneration() {
             return generatedThreshold !== threshold;
@@ -57,13 +60,13 @@
         isEmptyResult: false,
         isSaving: false,
         get canSave() {
-            return review.includedSuggestions.length > 0;
+            return review.acceptedSuggestions.length > 0;
         },
         canGenerate: true,
         generate,
         clear: () => review.replace([]),
         save: async () => {
-            review.includedSuggestions.forEach((suggestion) => review.remove(suggestion.preview));
+            review.acceptedSuggestions.forEach((suggestion) => review.remove(suggestion.preview));
         }
     };
 </script>
