@@ -30,6 +30,12 @@
         ) => void;
         /** Deletes this cuboid annotation. */
         onDelete?: (cuboidId: string) => void;
+        /** Whether the cuboid is hidden in the scene. */
+        isHidden?: boolean;
+        /** True while the source is hidden, so the row toggle cannot show the cuboid. */
+        isVisibilityLocked?: boolean;
+        /** Hides or shows the track of this cuboid. */
+        onToggleVisibility?: (cuboid: CuboidAnnotation) => void;
     }
 
     let {
@@ -42,7 +48,10 @@
         onToggle,
         onCuboidTransform,
         onLabelChange,
-        onDelete
+        onDelete,
+        isHidden = false,
+        isVisibilityLocked = false,
+        onToggleVisibility
     }: Props = $props();
 
     function handleAnnotationChange(
@@ -61,7 +70,8 @@
 <div
     class={cn(
         'rounded-sm transition-colors',
-        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50'
+        isSelected ? 'border border-accent-foreground/20 bg-accent' : 'bg-card hover:bg-accent/50',
+        isHidden && 'opacity-60'
     )}
 >
     <PointCloudAnnotationHeader
@@ -75,6 +85,9 @@
         onLabelChange={(className) =>
             onLabelChange?.(cuboid.id, className, cuboid.annotationSourceId)}
         onDelete={onDelete ? () => onDelete(cuboid.id) : undefined}
+        {isHidden}
+        {isVisibilityLocked}
+        onToggleVisibility={onToggleVisibility ? () => onToggleVisibility(cuboid) : undefined}
     />
     {#if isSelected}
         <div class="px-4 pb-4 pt-1">
