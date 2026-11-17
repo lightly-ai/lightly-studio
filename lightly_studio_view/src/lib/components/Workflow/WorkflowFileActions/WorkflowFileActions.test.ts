@@ -17,7 +17,7 @@ const reviewerFile = {
 const renderActions = (props: Partial<ComponentProps<typeof WorkflowFileActions>> = {}) => {
     const onTransition = vi.fn().mockResolvedValue(undefined);
     render(WorkflowFileActions, {
-        props: { file: workflowFile, openFlags: 0, transitioning: false, onTransition, ...props }
+        props: { file: workflowFile, transitioning: false, onTransition, ...props }
     });
     return { onTransition };
 };
@@ -52,11 +52,12 @@ describe('WorkflowFileActions', () => {
         await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Cannot move a file'));
     });
 
-    it('lets the labeler resubmit a file in rework and counts the flags to address', () => {
-        renderActions({ file: { ...workflowFile, state: 'rework' }, openFlags: 2 });
+    it('lets the labeler resubmit a file in rework', async () => {
+        const { onTransition } = renderActions({ file: { ...workflowFile, state: 'rework' } });
 
-        expect(screen.getByRole('button', { name: 'Submit for review' })).toBeEnabled();
-        expect(screen.getByText('2 flags to address')).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'Submit for review' }));
+
+        expect(onTransition).toHaveBeenCalledWith('in_review');
     });
 
     it('offers no action when it is not the user’s turn', () => {
@@ -72,26 +73,29 @@ describe('WorkflowFileActions', () => {
 
         expect(onTransition).toHaveBeenCalledWith('accepted');
         expect(screen.queryByRole('button', { name: 'Submit for review' })).not.toBeInTheDocument();
-        expect(screen.queryByText(/Accepting clears/)).not.toBeInTheDocument();
     });
 
-    it('keeps send-back disabled and explains why until an object is flagged', () => {
-        renderActions({ file: reviewerFile });
+    it('lets the reviewer send a file back to rework in one click', async () => {
+        const { onTransition } = renderActions({ file: reviewerFile });
 
-        const sendBack = screen.getByRole('button', { name: 'Send back to Rework (0)' });
-        expect(sendBack).toBeDisabled();
-        expect(sendBack).toHaveAccessibleDescription(
-            'Flag at least one object to send the file back'
-        );
-    });
-
-    it('lets the reviewer send a flagged file back and warns that accepting clears the flags', async () => {
-        const { onTransition } = renderActions({ file: reviewerFile, openFlags: 3 });
-
-        expect(screen.getByText('Accepting clears 3 open flags')).toBeInTheDocument();
-        await fireEvent.click(screen.getByRole('button', { name: 'Send back to Rework (3)' }));
+        const sendBack = screen.getByRole('button', { name: 'Send back to Rework' });
+        expect(sendBack).toBeEnabled();
+        await fireEvent.click(sendBack);
 
         expect(onTransition).toHaveBeenCalledWith('rework');
+    });
+
+    it('shows a loading state on send-back while waiting for the service', async () => {
+        const onTransition = vi.fn(() => new Promise<void>(() => {}));
+        const { rerender } = render(WorkflowFileActions, {
+            props: { file: reviewerFile, transitioning: false, onTransition }
+        });
+
+        await fireEvent.click(screen.getByRole('button', { name: 'Send back to Rework' }));
+        await rerender({ file: reviewerFile, transitioning: true, onTransition });
+
+        expect(screen.getByRole('button', { name: 'Sending back…' })).toBeDisabled();
+        expect(screen.getByRole('button', { name: 'Accept' })).toBeDisabled();
     });
 
     it('offers nothing once the file is accepted', () => {

@@ -109,8 +109,6 @@
     const { user } = useAuth();
     const workflow = useWorkflowFileContext();
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler') && (workflow?.canEdit ?? true));
-    // Flags are not stored yet, so a file has none to address or clear.
-    const openFlags = 0;
     const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => collectionId);
 
     let isPanModeEnabled = $state(false);
@@ -306,7 +304,6 @@
                 {#if workflow?.file}
                     <WorkflowFileActions
                         file={workflow.file}
-                        {openFlags}
                         transitioning={workflow.transitioning}
                         onTransition={workflow.transition}
                     />
