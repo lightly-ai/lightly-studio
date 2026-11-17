@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getModelSuggestionAppearance } from '../modelSuggestionAppearance';
     import ResizableRectangle from '$lib/components/ResizableRectangle/ResizableRectangle.svelte';
     import type {
         ModelSuggestion,
@@ -25,7 +26,7 @@
 <ResizableRectangle
     bbox={box}
     {scale}
-    colorStroke="#ffffff"
+    colorStroke={getModelSuggestionAppearance(suggestion.status).colorStroke}
     onResize={updateBox}
     onMove={updateBox}
 />

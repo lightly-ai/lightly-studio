@@ -19,6 +19,7 @@ export const useModelSuggestionReview = () => {
     let suggestions = $state<ModelSuggestion[]>([]);
     let focusedId = $state<number | null>(null);
     let nextId = 0;
+    let hideAccepted = $state(false);
 
     const replace = (predictions: ModelAnnotationPreview[]) => {
         suggestions = predictions.map((preview) => ({
@@ -28,6 +29,7 @@ export const useModelSuggestionReview = () => {
             status: 'pending'
         }));
         focusedId = null;
+        hideAccepted = false;
     };
 
     const remove = (preview: ModelAnnotationPreview) => {
@@ -41,6 +43,15 @@ export const useModelSuggestionReview = () => {
     };
 
     return {
+        get hideAccepted() {
+            return hideAccepted;
+        },
+        setHideAccepted: (value: boolean) => {
+            hideAccepted = value;
+        },
+        isVisible: (suggestion: ModelSuggestion) =>
+            suggestion.status !== 'rejected' && !(hideAccepted && suggestion.status === 'accepted'),
+        undo: (id: number) => setStatus(id, 'pending'),
         get suggestions() {
             return suggestions;
         },

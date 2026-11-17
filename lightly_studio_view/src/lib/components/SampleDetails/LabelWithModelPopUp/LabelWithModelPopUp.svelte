@@ -11,6 +11,7 @@
 
     interface Props {
         collectionId: string;
+        onClose?: () => void;
         models: LabelingModelView[];
         model: LabelingModelView | null;
         onModelChange: (modelId: string) => void;
@@ -24,6 +25,7 @@
 
     let {
         collectionId,
+        onClose,
         models,
         model,
         onModelChange,
@@ -44,11 +46,12 @@
     panelWidth="360px"
     clearLabel="Discard suggestions"
     {collectionId}
+    {onClose}
     {saveAs}
     {onSaveAsChange}
     showSaveControls={predictionCount > 0}
     showSaveAs={model?.task === 'instance_segmentation'}
-    saveLabel={`Save ${acceptedCount} accepted`}
+    saveLabel={acceptedCount ? `Save accepted (${acceptedCount})` : 'Save accepted'}
     canSave={labelWithModel.canSave}
     isSaving={labelWithModel.isSaving}
     onSave={() => void labelWithModel.save()}
@@ -86,8 +89,8 @@
     {#if predictionCount > 0}
         <p class="text-xs text-muted-foreground">
             {saveAs === 'box'
-                ? 'Select a suggestion to move or resize its box.'
-                : 'To resize a box, choose Box under Save as.'}
+                ? 'Accept or reject suggestions. Select a box to resize it.'
+                : 'Accept or reject suggestions. Choose Box under Save as to resize.'}
         </p>
         <ModelSuggestionList {collectionId} review={labelWithModel.review} disabled={isBusy} />
         <p class="break-words text-xs text-muted-foreground">

@@ -11,9 +11,19 @@
         };
         image: { width: number };
         saveAs: 'mask' | 'box';
+        colorStroke?: string;
+        colorFill?: string;
+        strokeDasharray?: string;
     }
 
-    let { preview, image, saveAs }: Props = $props();
+    let {
+        preview,
+        image,
+        saveAs,
+        colorStroke = '#86efac',
+        colorFill = 'rgba(34, 197, 94, 0.55)',
+        strokeDasharray = '6 5'
+    }: Props = $props();
 
     const { maskOpacity } = useGlobalStorage();
 </script>
@@ -23,7 +33,7 @@
         <SampleAnnotationSegmentationRLE
             width={image.width}
             segmentation={preview.segmentation_mask}
-            colorFill="rgba(34, 197, 94, 0.55)"
+            {colorFill}
             opacity={getPreviewMaskOpacity({ maskOpacity: $maskOpacity })}
         />
     {/if}
@@ -33,10 +43,10 @@
         width={preview.bbox.width}
         height={preview.bbox.height}
         fill="none"
-        stroke="#86efac"
+        stroke={colorStroke}
         stroke-width="2"
         stroke-linejoin="round"
-        stroke-dasharray="6 5"
+        stroke-dasharray={strokeDasharray}
         vector-effect="non-scaling-stroke"
     />
 </g>

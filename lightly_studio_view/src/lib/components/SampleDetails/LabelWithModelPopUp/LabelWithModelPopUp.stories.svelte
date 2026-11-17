@@ -1,5 +1,8 @@
 <script module lang="ts">
     import { defineMeta } from '@storybook/addon-svelte-csf';
+    import LabelWithModelOverlay from '../LabelWithModelOverlay/LabelWithModelOverlay.svelte';
+    import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
+    import ZoomPanel from '$lib/components/ZoomPanel/ZoomPanel.svelte';
     import LabelWithModelPopUp from './LabelWithModelPopUp.svelte';
     const { Story } = defineMeta({
         title: 'Sample details/Model-assisted labeling',
@@ -32,7 +35,7 @@
             model.class_names.map((class_name, index) => ({
                 class_name,
                 score: 0.96 - index * 0.12,
-                bbox: { x: 0, y: 0, width: 10, height: 10 },
+                bbox: { x: 70 + index * 110, y: 50 + index * 120, width: 90, height: 100 },
                 segmentation_mask: null
             }))
         );
@@ -74,17 +77,36 @@
 <Story name="Review suggestions" asChild>
     <QueryClientProvider {client}>
         <div class="relative h-[720px] w-full bg-background p-4">
-            <LabelWithModelPopUp
-                collectionId="preview"
-                models={[model]}
-                {model}
-                onModelChange={() => {}}
-                {threshold}
-                onThresholdChange={(value) => (threshold = value)}
-                saveAs="box"
-                onSaveAsChange={() => {}}
-                {labelWithModel}
+            <svg class="h-full w-full" viewBox="0 0 600 700" aria-label="Suggestion preview">
+                <LabelWithModelOverlay
+                    sample={{ width: 600, height: 700 }}
+                    scale={1}
+                    saveAs="box"
+                    {labelWithModel}
+                />
+            </svg>
+            <SteppingNavigation
+                hasPrevious={true}
+                hasNext={true}
+                onPrevious={() => {}}
+                onNext={() => {}}
             />
+            <ZoomPanel scale={1} onZoomReset={() => {}} onZoomIn={() => {}} onZoomOut={() => {}}>
+                {#snippet content()}
+                    <LabelWithModelPopUp
+                        onClose={labelWithModel.clear}
+                        collectionId="preview"
+                        models={[model]}
+                        {model}
+                        onModelChange={() => {}}
+                        {threshold}
+                        onThresholdChange={(value) => (threshold = value)}
+                        saveAs="box"
+                        onSaveAsChange={() => {}}
+                        {labelWithModel}
+                    />
+                {/snippet}
+            </ZoomPanel>
         </div>
     </QueryClientProvider>
 </Story>

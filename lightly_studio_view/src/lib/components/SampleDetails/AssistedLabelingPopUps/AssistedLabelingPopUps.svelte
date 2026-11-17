@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { useSampleDetailsToolbarContext } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import SmartSelectPopUp from '$lib/components/SampleDetails/SmartSelectPopUp/SmartSelectPopUp.svelte';
     import FindInstancesPopUp from '$lib/components/SampleDetails/FindInstancesPopUp/FindInstancesPopUp.svelte';
     import LabelWithModelPopUp from '$lib/components/SampleDetails/LabelWithModelPopUp/LabelWithModelPopUp.svelte';
@@ -11,6 +12,7 @@
 
     let { collectionId, assistedLabeling }: Props = $props();
 
+    const { setStatus } = useSampleDetailsToolbarContext();
     const toolState = $derived(assistedLabeling.state);
     const smartSelect = $derived(assistedLabeling.smartSelect);
     const instances = $derived(assistedLabeling.instances);
@@ -49,6 +51,7 @@
 {:else if assistedLabeling.activeTool === 'label-with-model' && !assistedLabeling.isPanning}
     <LabelWithModelPopUp
         {collectionId}
+        onClose={() => setStatus('cursor')}
         models={assistedLabeling.labelingModels}
         model={assistedLabeling.selectedModel}
         onModelChange={(value) => (toolState.modelId = value)}

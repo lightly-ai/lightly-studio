@@ -27,7 +27,7 @@
     } = $props();
 </script>
 
-<div class="pointer-events-none absolute bottom-0 left-1 z-20 w-[200px]">
+<div class="pointer-events-none absolute bottom-0 left-1 z-40 w-[200px]">
     {#if content}
         {@render content()}
     {/if}

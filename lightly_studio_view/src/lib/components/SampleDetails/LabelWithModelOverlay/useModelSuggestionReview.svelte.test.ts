@@ -23,6 +23,22 @@ describe('model suggestion review', () => {
         expect(review.hasUnsavedSuggestions).toBe(true);
     });
 
+    it('hides reviewed boxes without changing decisions and resets visibility for new results', () => {
+        const review = useModelSuggestionReview();
+        review.replace([preview, { ...preview, class_name: 'dog' }]);
+        const [accepted, rejected] = review.suggestions;
+        review.accept(accepted.id);
+        review.reject(rejected.id);
+        expect(review.isVisible(rejected)).toBe(false);
+        review.setHideAccepted(true);
+        expect(review.isVisible(accepted)).toBe(false);
+        expect(review.acceptedSuggestions).toHaveLength(1);
+        review.undo(rejected.id);
+        expect(review.isVisible(rejected)).toBe(true);
+        review.replace([preview]);
+        expect(review.hideAccepted).toBe(false);
+    });
+
     it('clamps edited boxes to image bounds and keeps segmentation geometry unchanged', () => {
         const review = useModelSuggestionReview();
         review.replace([{ ...preview, segmentation_mask: [0, 1] }]);

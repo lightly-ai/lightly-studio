@@ -41,6 +41,10 @@ const makeLabelWithModel = (overrides: Partial<LabelWithModel> = {}): LabelWithM
             box: { ...preview.bbox },
             status: 'accepted'
         })),
+        hideAccepted: false,
+        setHideAccepted: vi.fn(),
+        isVisible: () => true,
+        undo: vi.fn(),
         focusedId: null,
         focusedSuggestion: undefined,
         focus: vi.fn(),
@@ -99,6 +103,17 @@ describe('LabelWithModelPopUp', () => {
         expect(screen.queryByRole('button', { name: /^Save/ })).not.toBeInTheDocument();
     });
 
+    it('closes from the panel header', async () => {
+        const onClose = vi.fn();
+        render(LabelWithModelPopUp, {
+            ...defaultProps,
+            onClose,
+            labelWithModel: makeLabelWithModel()
+        });
+        await fireEvent.click(screen.getByRole('button', { name: 'Close tool' }));
+        expect(onClose).toHaveBeenCalledOnce();
+    });
+
     it('shows a hint after an empty result', () => {
         const labelWithModel = makeLabelWithModel({ isEmptyResult: true });
         render(LabelWithModelPopUp, { props: { ...defaultProps, labelWithModel } });
@@ -113,7 +128,7 @@ describe('LabelWithModelPopUp', () => {
         });
         render(LabelWithModelPopUp, { props: { ...defaultProps, labelWithModel } });
 
-        await fireEvent.click(screen.getByRole('button', { name: 'Save 2 accepted' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Save accepted (2)' }));
         await fireEvent.click(screen.getByRole('button', { name: 'Generate again' }));
 
         expect(screen.getByText('2 suggested annotations')).toBeInTheDocument();

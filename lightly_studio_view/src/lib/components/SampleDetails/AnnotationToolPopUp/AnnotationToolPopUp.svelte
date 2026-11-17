@@ -1,12 +1,11 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
-    import Box from '@lucide/svelte/icons/box';
-    import SquareDashed from '@lucide/svelte/icons/square-dashed';
-    import { cn } from '$lib/utils';
+    import X from '@lucide/svelte/icons/x';
     import { Button } from '$lib/components/ui/button';
     import { AnnotationClassSelect } from '$lib/components/SampleDetails/AnnotationClassSelect';
 
-    type SaveAs = (typeof saveAsOptions)[number]['value'];
+    import SaveAsToggle from './SaveAsToggle.svelte';
+    type SaveAs = 'mask' | 'box';
 
     interface Props {
         title: string;
@@ -27,6 +26,7 @@
         isSaving?: boolean;
         onSave: () => void;
         onClear: () => void;
+        onClose?: () => void;
         children: Snippet;
     }
 
@@ -46,13 +46,9 @@
         isSaving = false,
         onSave,
         onClear,
+        onClose,
         children
     }: Props = $props();
-
-    const saveAsOptions = [
-        { value: 'mask', label: 'Mask', icon: SquareDashed },
-        { value: 'box', label: 'Box', icon: Box }
-    ] as const;
 </script>
 
 <div class="absolute bottom-11" style:width={`min(90vw, ${panelWidth})`}>
@@ -61,8 +57,18 @@
         role="dialog"
         aria-label={title}
     >
-        <div class="truncate text-sm font-semibold text-foreground">
-            {title}
+        <div class="flex items-center justify-between gap-2">
+            <div class="truncate text-sm font-semibold text-foreground">{title}</div>
+            {#if onClose}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    class="size-7 shrink-0"
+                    aria-label="Close tool"
+                    disabled={isSaving}
+                    onclick={onClose}><X class="size-4" /></Button
+                >
+            {/if}
         </div>
 
         {@render children()}
@@ -81,29 +87,7 @@
             {/if}
 
             {#if showSaveAs}
-                <div
-                    class="flex overflow-hidden rounded-md border border-border"
-                    role="group"
-                    aria-label="Save as"
-                >
-                    {#each saveAsOptions as option (option.value)}
-                        <Button
-                            variant="ghost"
-                            class={cn(
-                                'h-8 flex-1 gap-1 rounded-none',
-                                saveAs === option.value
-                                    ? 'bg-primary/20 text-primary hover:bg-primary/20 hover:text-primary'
-                                    : 'text-muted-foreground'
-                            )}
-                            aria-label={`Save as ${option.label}`}
-                            aria-pressed={saveAs === option.value}
-                            onclick={() => onSaveAsChange(option.value)}
-                        >
-                            <option.icon />
-                            {option.label}
-                        </Button>
-                    {/each}
-                </div>
+                <SaveAsToggle {saveAs} {onSaveAsChange} />
             {/if}
 
             <div class="flex flex-wrap gap-1.5">

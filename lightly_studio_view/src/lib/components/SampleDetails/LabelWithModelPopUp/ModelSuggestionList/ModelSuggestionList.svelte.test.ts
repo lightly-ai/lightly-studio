@@ -21,11 +21,23 @@ describe('ModelSuggestionList', () => {
         render(ModelSuggestionList, { collectionId: 'collection-1', review, disabled: false });
         await fireEvent.click(screen.getByRole('button', { name: 'Accept suggestion 1' }));
         expect(screen.getByText('1 accepted · 1 pending · 0 rejected')).toBeInTheDocument();
+        expect(screen.getByText('Accepted')).toBeInTheDocument();
+        await fireEvent.click(
+            screen.getByRole('button', { name: 'Undo decision for suggestion 1' })
+        );
+        expect(screen.getByRole('button', { name: 'Accept suggestion 1' })).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: 'Reject all' }));
         expect(screen.getByText('0 accepted · 0 pending · 2 rejected')).toBeInTheDocument();
+        expect(screen.getByText('All suggestions rejected.')).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: 'Accept all' }));
         expect(screen.getByText('2 accepted · 0 pending · 0 rejected')).toBeInTheDocument();
+        expect(screen.getByText('Review complete · 2 accepted')).toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('checkbox', { name: 'Hide accepted on image' }));
+        expect(review.hideAccepted).toBe(true);
+        expect(review.acceptedSuggestions).toHaveLength(2);
         await fireEvent.click(screen.getByRole('button', { name: '1. cat 90%' }));
+        await fireEvent.click(screen.getByRole('button', { name: 'Show on image' }));
+        expect(review.hideAccepted).toBe(false);
         expect(review.focusedSuggestion?.preview.class_name).toBe('cat');
         expect(screen.getByText('Annotation class')).toBeInTheDocument();
         review.changeClass('fox');
