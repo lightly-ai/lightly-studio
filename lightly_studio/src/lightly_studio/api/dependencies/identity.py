@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -12,19 +11,10 @@ from fastapi import Depends, Request
 from lightly_studio import deployment
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.errors import ForbiddenError, UnauthenticatedError
+from lightly_studio.models.user import Role
 
 _EMAIL_HEADER = "X-User-Email"
 _ROLE_HEADER = "X-User-Role"
-
-
-class Role(str, Enum):
-    """The role of a user. Each role includes the permissions of the roles before it."""
-
-    VIEWER = "viewer"
-    LABELER = "labeler"
-    EDITOR = "editor"
-    ADMIN = "admin"
-
 
 _ROLE_RANK: dict[Role, int] = {
     Role.VIEWER: 0,

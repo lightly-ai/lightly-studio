@@ -10,7 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio import deployment
 from lightly_studio.api.dependencies import identity
-from lightly_studio.api.dependencies.identity import Identity, IdentityDep, Role
+from lightly_studio.api.dependencies.identity import Identity, IdentityDep
 from lightly_studio.api.routes.api import exceptions
 from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_FORBIDDEN,
@@ -19,6 +19,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNAUTHORIZED,
 )
 from lightly_studio.database import db_manager
+from lightly_studio.models.user import Role
 
 
 @pytest.fixture
