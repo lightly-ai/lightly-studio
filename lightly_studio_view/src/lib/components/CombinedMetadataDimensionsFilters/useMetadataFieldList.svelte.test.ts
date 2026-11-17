@@ -1,17 +1,20 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { flushSync } from 'svelte';
-import { get } from 'svelte/store';
+import { get, type Readable } from 'svelte/store';
 import {
     useMetadataFieldList,
     type UseMetadataFieldListParams
 } from './useMetadataFieldList.svelte';
 import { isFieldActive } from './metadataFields';
-import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
-import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { useDimensions, useGlobalStorage } from '$lib/hooks';
 
 const trackEvent = vi.fn();
-vi.mock('$lib/hooks', () => ({ usePostHog: () => ({ trackEvent }) }));
-vi.mock('$lib/api/lightly_studio_local', () => ({
+vi.mock('$lib/hooks', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks')>()),
+    usePostHog: () => ({ trackEvent })
+}));
+vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/api/lightly_studio_local')>()),
     getMetadataInfo: vi.fn(() => Promise.resolve({ data: undefined }))
 }));
 vi.mock('$lib/services/loadDimensionBounds', () => ({
@@ -39,6 +42,13 @@ const setup = (overrides: Partial<UseMetadataFieldListParams> = {}) => {
 
 const ids = (list: ReturnType<typeof useMetadataFieldList>) => list.fields.map((f) => f.id);
 
+// Counts the writes to a store after subscribing, without the first call on subscribe.
+const countWrites = (store: Readable<unknown>) => {
+    let writes = -1;
+    const unsubscribe = store.subscribe(() => writes++);
+    return { count: () => writes, unsubscribe };
+};
+
 beforeEach(() => {
     trackEvent.mockClear();
     const storage = useGlobalStorage();
@@ -60,6 +70,11 @@ describe('useMetadataFieldList', () => {
             'numeric:score',
             'categorical:split'
         ]);
+    });
+
+    it('lists no width and height when image dimensions are hidden', () => {
+        const list = setup({ getShowImageDimensions: () => false });
+        expect(ids(list)).toEqual(['numeric:score', 'categorical:split']);
     });
 
     it('commitRange writes only the store of that field', () => {
@@ -127,26 +142,63 @@ describe('useMetadataFieldList', () => {
         const list = setup();
         list.commitRange('numeric:score', { min: 2, max: 3 });
         list.commitRange('dimension:width', { min: 20, max: 30 });
+        list.commitRange('dimension:height', { min: 50, max: 60 });
         trackEvent.mockClear();
         const writes = [
-            vi.spyOn(useDimensions(), 'updateDimensionsValues'),
-            vi.spyOn(storage, 'updateMetadataValues'),
-            vi.spyOn(storage, 'updateCategoricalMetadataValues')
+            countWrites(useDimensions().dimensionsValues),
+            countWrites(storage.metadataValues),
+            countWrites(storage.categoricalMetadataValues)
         ];
 
         list.resetAll();
 
-        for (const write of writes) expect(write.mock.calls.length).toBeLessThanOrEqual(1);
+        expect(writes.map((write) => write.count())).toEqual([1, 1, 1]);
+        for (const write of writes) write.unsubscribe();
 
         expect(list.fields.some(isFieldActive)).toBe(false);
-        expect(trackEvent).toHaveBeenCalledTimes(3);
+        expect(trackEvent).toHaveBeenCalledTimes(4);
         const names = trackEvent.mock.calls.map(([, props]) => props.field_name).sort();
-        expect(names).toEqual(['score', 'split', 'width']);
+        expect(names).toEqual(['height', 'score', 'split', 'width']);
         expect(trackEvent.mock.calls.map(([, props]) => props.source).sort()).toEqual([
             'categorical',
             'dimension',
+            'dimension',
             'numeric'
         ]);
+    });
+
+    it('reset sets a dimension back to its bounds', () => {
+        const list = setup();
+        list.commitRange('dimension:width', { min: 20, max: 30 });
+
+        list.reset('dimension:width');
+
+        expect(get(useDimensions().dimensionsValues)).toEqual(dimensionBounds);
+    });
+
+    it('reset does nothing for a field that is not active', () => {
+        const list = setup();
+        const writes = countWrites(useGlobalStorage().metadataValues);
+
+        list.reset('numeric:score');
+
+        expect(writes.count()).toBe(0);
+        expect(trackEvent).not.toHaveBeenCalled();
+        writes.unsubscribe();
+    });
+
+    it('commitRange and reset ignore unknown ids and categorical fields', () => {
+        const onRangeCommitted = vi.fn();
+        const list = setup({ onRangeCommitted });
+        const before = list.fields;
+
+        list.commitRange('numeric:missing', { min: 1, max: 2 });
+        list.commitRange('categorical:split', { min: 1, max: 2 });
+        list.reset('numeric:missing');
+
+        expect(list.fields).toEqual(before);
+        expect(onRangeCommitted).not.toHaveBeenCalled();
+        expect(trackEvent).not.toHaveBeenCalled();
     });
 
     it('a store change from outside makes the field active', () => {

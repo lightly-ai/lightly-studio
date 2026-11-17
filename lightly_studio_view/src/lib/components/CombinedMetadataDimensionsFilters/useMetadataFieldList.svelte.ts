@@ -1,7 +1,6 @@
 import { fromStore } from 'svelte/store';
-import { usePostHog } from '$lib/hooks';
-import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
-import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
+import { useDimensions, useMetadataFilters, usePostHog } from '$lib/hooks';
+import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import {
     fieldId,
     isFieldActive,
@@ -28,23 +27,27 @@ export interface UseMetadataFieldListReturn {
     resetAll: () => void;
 }
 
-const rangeField = (
-    source: RangeField['source'],
-    key: string,
-    title: string,
-    unit: string,
-    bound: Range,
-    value: Range
-): RangeField => ({
+interface RangeUpdate {
+    field: RangeField;
+    range: Range;
+}
+
+const rangeField = ({ bound, value, ...field }: Omit<RangeField, 'kind' | 'id'>): RangeField => ({
+    ...field,
     kind: 'range',
-    id: fieldId(source, key),
-    source,
-    key,
-    title,
-    unit,
+    id: fieldId(field.source, field.key),
     bound: { min: bound.min, max: bound.max },
     value: { min: value.min, max: value.max }
 });
+
+const withDimensionRange = (
+    values: DimensionBounds,
+    { field, range }: RangeUpdate
+): DimensionBounds => {
+    if (field.key === 'width') return { ...values, min_width: range.min, max_width: range.max };
+    if (field.key === 'height') return { ...values, min_height: range.min, max_height: range.max };
+    return values;
+};
 
 export function useMetadataFieldList(
     params: UseMetadataFieldListParams
@@ -70,22 +73,22 @@ export function useMetadataFieldList(
         const values = dimensionsValues.current;
         if (!params.getShowImageDimensions() || !bounds || !values) return [];
         return [
-            rangeField(
-                'dimension',
-                'width',
-                'Width',
-                'px',
-                { min: bounds.min_width, max: bounds.max_width },
-                { min: values.min_width, max: values.max_width }
-            ),
-            rangeField(
-                'dimension',
-                'height',
-                'Height',
-                'px',
-                { min: bounds.min_height, max: bounds.max_height },
-                { min: values.min_height, max: values.max_height }
-            )
+            rangeField({
+                source: 'dimension',
+                key: 'width',
+                title: 'Width',
+                unit: 'px',
+                bound: { min: bounds.min_width, max: bounds.max_width },
+                value: { min: values.min_width, max: values.max_width }
+            }),
+            rangeField({
+                source: 'dimension',
+                key: 'height',
+                title: 'Height',
+                unit: 'px',
+                bound: { min: bounds.min_height, max: bounds.max_height },
+                value: { min: values.min_height, max: values.max_height }
+            })
         ];
     };
 
@@ -100,7 +103,9 @@ export function useMetadataFieldList(
                 typeof bound.max === 'number' &&
                 typeof value.min === 'number' &&
                 typeof value.max === 'number';
-            return isNumeric ? [rangeField('numeric', key, key, '', bound, value)] : [];
+            return isNumeric
+                ? [rangeField({ source: 'numeric', key, title: key, unit: '', bound, value })]
+                : [];
         });
 
     const categoricalFields = (): CategoricalField[] =>
@@ -119,8 +124,6 @@ export function useMetadataFieldList(
         ...categoricalFields()
     ]);
 
-    type RangeUpdate = { field: RangeField; range: Range };
-
     const writeRanges = (updates: RangeUpdate[]): void => {
         const ofSource = (source: RangeSource) =>
             updates.filter(({ field }) => field.source === source);
@@ -135,17 +138,9 @@ export function useMetadataFieldList(
         const dimensionUpdates = ofSource('dimension');
         const dimensionValues = dimensionsValues.current;
         if (dimensionUpdates.length > 0 && dimensionValues) {
-            const next = { ...dimensionValues };
-            for (const { field, range } of dimensionUpdates) {
-                if (field.key === 'width') {
-                    next.min_width = range.min;
-                    next.max_width = range.max;
-                } else {
-                    next.min_height = range.min;
-                    next.max_height = range.max;
-                }
-            }
-            dimensions.updateDimensionsValues(next);
+            dimensions.updateDimensionsValues(
+                dimensionUpdates.reduce(withDimensionRange, dimensionValues)
+            );
         }
         if (ofSource('numeric').length > 0) {
             metadataStores.updateMetadataValues({ ...metadataValues.current, ...merge('numeric') });
@@ -186,7 +181,7 @@ export function useMetadataFieldList(
 
     const reset = (id: string): void => {
         const field = findField(id);
-        if (field) resetFields([field]);
+        if (field && isFieldActive(field)) resetFields([field]);
     };
 
     const resetAll = (): void => resetFields(fields.filter(isFieldActive));
