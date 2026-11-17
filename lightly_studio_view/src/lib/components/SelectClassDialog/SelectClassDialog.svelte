@@ -6,15 +6,30 @@
     import { Button } from '$lib/components';
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
+    import type { Snippet } from 'svelte';
 
     type Props = {
         open: boolean;
         labels: string[];
         onConfirm: (label: string) => void;
         onCancel: () => void;
+        /** Content below the class list, for example more fields of the new annotation. */
+        extra?: Snippet;
+        /** Whether the caller allows to confirm, for example after its extra fields are set. */
+        canConfirm?: boolean;
+        /** The class selected when the dialog opens. */
+        initialLabel?: string;
     };
 
-    let { open = $bindable(false), labels, onConfirm, onCancel }: Props = $props();
+    let {
+        open = $bindable(false),
+        labels,
+        onConfirm,
+        onCancel,
+        extra,
+        canConfirm = true,
+        initialLabel
+    }: Props = $props();
 
     const canCreateClass = useCanCreateAnnotationClass();
 
@@ -27,7 +42,14 @@
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
 
+    $effect(() => {
+        if (!open || !initialLabel || selectedItem) return;
+        selectedItem = { value: initialLabel, label: initialLabel };
+    });
+
     const confirmItem = (item: ListItem) => {
+        selectedItem = item;
+        if (!canConfirm) return;
         closedByConfirm = true;
         onConfirm(item.value);
         open = false;
@@ -83,12 +105,13 @@
                 {/snippet}
             </SelectList>
         </div>
+        {@render extra?.()}
 
         <Dialog.Footer>
             <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
             <Button
                 variant="default"
-                buttonProps={{ onclick: handleConfirm, disabled: !selectedItem }}
+                buttonProps={{ onclick: handleConfirm, disabled: !selectedItem || !canConfirm }}
             >
                 Confirm
             </Button>

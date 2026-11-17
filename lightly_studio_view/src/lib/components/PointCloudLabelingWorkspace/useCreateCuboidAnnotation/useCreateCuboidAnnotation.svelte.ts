@@ -43,6 +43,8 @@ interface UseCreateCuboidAnnotationReturn {
     showSelectClassDialog: ReturnType<typeof useSelectClassDialog>['open'];
     handleClassSelected: ReturnType<typeof useSelectClassDialog>['handleConfirm'];
     handleClassDialogCancel: ReturnType<typeof useSelectClassDialog>['handleCancel'];
+    /** The class remembered for the collection, preselected in the class dialog. */
+    getRememberedLabel: () => string | undefined;
     labels: ReturnType<typeof useAnnotationLabels>;
 }
 
@@ -165,6 +167,11 @@ export function useCreateCuboidAnnotation({
         return targetSource;
     }
 
+    function getRememberedLabel(): string | undefined {
+        const collectionId = getCollectionId();
+        return collectionId ? get(lastAnnotationLabel)[collectionId] : undefined;
+    }
+
     async function handleCreateCuboid(
         box: CuboidBox,
         onCreated: (annotationId: string) => void | Promise<void>,
@@ -174,8 +181,13 @@ export function useCreateCuboidAnnotation({
         const sampleId = getTickSampleId();
         const capturedFrame = getSceneFrame();
         if (!collectionId || !sampleId) return;
-        if (!getTargetSourceOrExplain()) return;
-        const labelName = await selectAnnotationLabel(collectionId, selectClass);
+        const { blockedReason, needsPick } = getTarget();
+        if (blockedReason) {
+            toast.error(blockedReason);
+            return;
+        }
+        // The dialog also asks for the source when none is picked.
+        const labelName = await selectAnnotationLabel(collectionId, selectClass || needsPick);
         if (!labelName) return;
         // Cancel if the active tick changed while the class dialog was open.
         if (getTickSampleId() !== sampleId) return;
@@ -210,6 +222,7 @@ export function useCreateCuboidAnnotation({
 
     return {
         handleCreateCuboid,
+        getRememberedLabel,
         showSelectClassDialog,
         handleClassSelected,
         handleClassDialogCancel,

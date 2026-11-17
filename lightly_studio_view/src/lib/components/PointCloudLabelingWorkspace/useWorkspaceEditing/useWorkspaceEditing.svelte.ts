@@ -44,6 +44,7 @@ export function useWorkspaceEditing(
         showSelectClassDialog,
         handleClassSelected,
         handleClassDialogCancel,
+        getRememberedLabel,
         labels
     } = useCreateCuboidAnnotation({
         getTarget,
@@ -183,6 +184,7 @@ export function useWorkspaceEditing(
         showSelectClassDialog,
         handleClassSelected,
         handleClassDialogCancel,
+        getRememberedLabel,
         labels,
         get annotations() {
             return displayedAnnotations.current;

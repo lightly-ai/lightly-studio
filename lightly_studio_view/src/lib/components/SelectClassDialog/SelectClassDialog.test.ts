@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom';
+import { createRawSnippet } from 'svelte';
 
 import SelectClassDialog from './SelectClassDialog.svelte';
 import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
@@ -19,6 +20,9 @@ describe('SelectClassDialog', () => {
         propOverrides: {
             open?: boolean;
             labels?: string[];
+            canConfirm?: boolean;
+            initialLabel?: string;
+            extra?: ReturnType<typeof createRawSnippet>;
         } = {}
     ) => {
         const onConfirm = vi.fn();
@@ -161,5 +165,33 @@ describe('SelectClassDialog', () => {
         await user.type(await screen.findByTestId('select-list-input'), 'zebra');
 
         expect(screen.getByText(/Create:/)).toBeInTheDocument();
+    });
+
+    it('does not confirm while the caller does not allow it', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ canConfirm: false });
+
+        await user.type(await screen.findByTestId('select-list-input'), 'fish{Enter}');
+
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    });
+
+    it('preselects the initial class', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ initialLabel: 'dog' });
+
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('dog');
+    });
+
+    it('renders extra content from the caller', () => {
+        const extra = createRawSnippet(() => ({ render: () => '<p>Extra section</p>' }));
+        renderDialog({ extra });
+
+        expect(screen.getByText('Extra section')).toBeInTheDocument();
     });
 });
