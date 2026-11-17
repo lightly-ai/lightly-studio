@@ -83,6 +83,7 @@ describe('FrameTimeline', () => {
         await fireEvent.pointerDown(slider);
         await fireEvent.input(slider, { target: { value: '1' } });
         expect(onSelectTick).not.toHaveBeenCalled();
+        expect(screen.getByTestId('timeline-playhead').style.left).toBe('50%');
 
         await fireEvent.change(slider, {
             target: { value: '2' }
@@ -91,6 +92,21 @@ describe('FrameTimeline', () => {
         expect(screen.getByLabelText('Playback speed')).toHaveTextContent('1×');
         expect(screen.getByRole('slider', { name: 'Frame position' })).toHaveAttribute('max', '2');
         expect(onSelectTick).toHaveBeenCalledWith(8);
+    });
+
+    it('restores the current-frame marker when seeking is cancelled', async () => {
+        const onSelectTick = vi.fn();
+        render(FrameTimeline, { props: { ...defaultProps, onSelectTick } });
+        const slider = screen.getByRole('slider', { name: 'Frame position' });
+        const initialPosition = screen.getByTestId('timeline-playhead').style.left;
+
+        await fireEvent.pointerDown(slider);
+        await fireEvent.input(slider, { target: { value: '1' } });
+        expect(screen.getByTestId('timeline-playhead').style.left).toBe('50%');
+        await fireEvent.pointerCancel(slider);
+
+        expect(onSelectTick).not.toHaveBeenCalled();
+        expect(screen.getByTestId('timeline-playhead').style.left).toBe(initialPosition);
     });
 
     it('reports the start and end of slider seeking', async () => {
@@ -226,5 +242,104 @@ describe('FrameTimeline', () => {
 
         expect(screen.getByRole('button', { name: 'Previous frame' })).toBeEnabled();
         expect(screen.getByRole('button', { name: 'Next frame' })).toBeDisabled();
+    });
+
+    describe('zoom', () => {
+        const longProps = {
+            ...defaultProps,
+            ticks: createTicks(Array.from({ length: 100 }, () => null))
+        };
+        const rulerWidth = () =>
+            (screen.getByTestId('timeline-scroll-container').firstElementChild as HTMLElement).style
+                .width;
+
+        it('zooms with the buttons and fits all frames again', async () => {
+            render(FrameTimeline, { props: longProps });
+            expect(rulerWidth()).toBe('100%');
+            expect(screen.getByLabelText('Fit timeline')).toBeDisabled();
+            expect(screen.getByTestId('timeline-playhead')).toBeInTheDocument();
+
+            await fireEvent.click(screen.getByLabelText('Zoom in timeline'));
+            expect(rulerWidth()).toBe('150%');
+
+            await fireEvent.click(screen.getByLabelText('Fit timeline'));
+            expect(rulerWidth()).toBe('100%');
+        });
+
+        it('zooms with ctrl+wheel but leaves a plain wheel alone', async () => {
+            render(FrameTimeline, { props: longProps });
+            const timeline = screen.getByTestId('workspace-frame-timeline').lastElementChild!;
+            // jsdom has no layout; the wheel handler needs a width to convert pixels to ticks.
+            Object.defineProperty(timeline, 'clientWidth', { value: 500 });
+
+            await fireEvent.wheel(timeline, { deltaY: -100 });
+            expect(rulerWidth()).toBe('100%');
+
+            await fireEvent.wheel(timeline, { deltaY: -100, ctrlKey: true });
+            expect(Number.parseFloat(rulerWidth() ?? '')).toBeGreaterThan(100);
+        });
+
+        it('cannot zoom a sequence with fewer than 10 frames', () => {
+            render(FrameTimeline, { props: defaultProps });
+            expect(screen.getByLabelText('Zoom in timeline')).toBeDisabled();
+        });
+
+        it('preserves zoom across frame navigation and playback with refreshed ticks', async () => {
+            const { rerender } = render(FrameTimeline, {
+                props: { ...longProps, sequenceId: 'sequence-a' }
+            });
+            await fireEvent.click(screen.getByLabelText('Zoom in timeline'));
+            expect(rulerWidth()).toBe('150%');
+
+            for (const [currentTick, isPlaying] of [
+                [50, false],
+                [51, true],
+                [99, false]
+            ] as const) {
+                await rerender({
+                    ...longProps,
+                    sequenceId: 'sequence-a',
+                    ticks: [...longProps.ticks],
+                    currentTick,
+                    isPlaying
+                });
+                expect(rulerWidth()).toBe('150%');
+                expect(screen.getByTestId('timeline-playhead').style.left).toBe(
+                    `${currentTick + 0.5}%`
+                );
+            }
+
+            await rerender({ ...longProps, sequenceId: 'sequence-b' });
+            expect(rulerWidth()).toBe('100%');
+        });
+
+        const manyTicks = {
+            ...defaultProps,
+            ticks: createTicks(Array.from({ length: 1000 }, () => null))
+        };
+        const zoomInDeeply = () => {
+            const timeline = screen.getByTestId('workspace-frame-timeline').lastElementChild!;
+            // jsdom has no layout; the wheel handler needs a width to convert pixels to ticks.
+            Object.defineProperty(timeline, 'clientWidth', { value: 500 });
+            return fireEvent.wheel(timeline, { deltaY: -1000, ctrlKey: true });
+        };
+
+        it('follows the current frame during playback', async () => {
+            const { rerender } = render(FrameTimeline, { props: manyTicks });
+            await zoomInDeeply();
+            // The ruler labels each tick with its one-based number; frame 501 is out of view.
+            expect(screen.queryByText('501')).not.toBeInTheDocument();
+
+            await rerender({ ...manyTicks, currentTick: 500, isPlaying: true });
+            expect(screen.getByText('501')).toBeInTheDocument();
+        });
+
+        it('renders only the marks near the viewport when zoomed in', async () => {
+            render(FrameTimeline, { props: manyTicks });
+            expect(screen.getAllByTestId('timeline-tick-mark')).toHaveLength(200);
+
+            await zoomInDeeply();
+            expect(screen.getAllByTestId('timeline-tick-mark').length).toBeLessThan(100);
+        });
     });
 });

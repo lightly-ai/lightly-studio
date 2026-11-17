@@ -61,6 +61,9 @@ The language supports filtering by image fields such as dimensions or file name,
 as well as logical combinations of these. For a full reference, see the
 [Lightly Query Language](lightly_query_language.md) documentation.
 
+The `History` button next to the `Apply` button lists the last 10 queries that you applied
+in the collection. Click a query to apply it again. The history is saved in your browser.
+
 Example queries:
 
 ```mysql
@@ -332,6 +335,23 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
     # Assign any of the previous expressions to a query:
     query.match(expr)
     ```
+
+    #### Video event queries
+
+    `VideoEventQuery` matches a temporal classification annotation. All criteria match the same event.
+
+    ```python
+    from lightly_studio.core.dataset_query import VideoEventField, VideoEventQuery
+
+    early_events = dataset.query().match(
+        VideoEventQuery(VideoEventField.class_name == "run", VideoEventField.start_time_s < 5)
+    )
+    ```
+
+    This matches a `run` event that starts before five seconds. Fields also include `end_time_s`,
+    `source`, and `confidence`. Event times are in seconds relative to the video start.
+    `ClassificationQuery` still matches both whole-video classifications and temporal events.
+    Event queries are available through Python; query-editor support follows separately.
 
     #### Sample evaluation queries
 

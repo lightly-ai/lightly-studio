@@ -6,13 +6,13 @@ import logging
 from collections import Counter, defaultdict
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from typing import assert_never
 from uuid import UUID, uuid4
 
 import numpy as np
 import sqlalchemy
 from numpy.typing import NDArray
 from sqlmodel import Session, col, select
-from typing_extensions import assert_never
 
 from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.annotation.annotation_base import (

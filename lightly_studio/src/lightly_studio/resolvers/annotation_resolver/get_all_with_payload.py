@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy.orm import aliased, joinedload, load_only
+from sqlalchemy.orm import aliased, joinedload, load_only, selectinload
 from sqlmodel import Session, col, func, select
 from sqlmodel.sql.expression import Select
 
@@ -210,6 +210,10 @@ def _build_base_query(
             )
             .join(SampleFromImage, col(SampleFromImage.sample_id) == col(ImageTable.sample_id))
             .options(
+                selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.tags),
+                selectinload(AnnotationBaseTable.object_detection_details),
+                selectinload(AnnotationBaseTable.cuboid_3d_details),
+                selectinload(AnnotationBaseTable.segmentation_details),
                 load_only(
                     ImageTable.file_path_abs,  # type: ignore[arg-type]
                     ImageTable.sample_id,  # type: ignore[arg-type]
@@ -231,6 +235,10 @@ def _build_base_query(
             )
             .join(VideoFrameTable.video)
             .options(
+                selectinload(AnnotationBaseTable.sample).selectinload(SampleTable.tags),
+                selectinload(AnnotationBaseTable.object_detection_details),
+                selectinload(AnnotationBaseTable.cuboid_3d_details),
+                selectinload(AnnotationBaseTable.segmentation_details),
                 load_only(VideoFrameTable.sample_id),  # type: ignore[arg-type]
                 joinedload(VideoFrameTable.video).load_only(
                     VideoTable.height,  # type: ignore[arg-type]

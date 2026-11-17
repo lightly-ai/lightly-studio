@@ -184,7 +184,6 @@ describe('useImageFilters', () => {
         it('pins every field', () => {
             const { imageFilter, updateQueryExpr } = useImageFilters();
             vi.mocked(createMetadataFilters).mockReturnValueOnce([metadataFilter]);
-            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
             setParams({
                 filters: {
                     dimensions: { min_width: 1, max_width: 2, min_height: 3, max_height: 4 },
@@ -196,6 +195,7 @@ describe('useImageFilters', () => {
                 },
                 metadata_values: { k: { min: 0, max: 1 } }
             });
+            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
             expect(get(imageFilter)).toEqual({
                 filter_type: 'image',
                 width: { min: 1, max: 2 },
