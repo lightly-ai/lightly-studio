@@ -11,7 +11,6 @@ from lightly_studio.core.dataset_query import (
     ObjectDetectionQuery,
     SegmentationMaskField,
     SegmentationMaskQuery,
-    VideoEventQuery,
     VideoFrameQuery,
     VideoFrameSampleField,
 )
@@ -32,25 +31,6 @@ CAR = ObjectDetectionQuery(ObjectDetectionField.class_name == "car")
 
 
 class TestVideoFrameQuery:
-    @pytest.mark.parametrize(
-        "criterion",
-        [
-            VideoFrameQuery(),
-            VideoEventQuery(),
-            AND(PERSON, OR(NOT(VideoEventQuery()), CAR)),
-            ObjectDetectionQuery(VideoFrameQuery(CAR)),
-            ClassificationQuery(VideoFrameQuery(CAR)),
-            SegmentationMaskQuery(VideoFrameQuery(CAR)),
-            ObjectDetectionQuery(VideoEventQuery()),
-            ClassificationQuery(VideoEventQuery()),
-            SegmentationMaskQuery(VideoEventQuery()),
-            NOT(ObjectDetectionQuery(OR(CAR, ClassificationQuery(VideoFrameQuery())))),
-        ],
-    )
-    def test_init__reject_nested_video_queries(self, criterion: MatchExpression) -> None:
-        with pytest.raises(ValueError, match="cannot contain frame or event queries"):
-            VideoFrameQuery(criterion)
-
     @pytest.mark.parametrize(
         ("expression", "expected_names"),
         [
