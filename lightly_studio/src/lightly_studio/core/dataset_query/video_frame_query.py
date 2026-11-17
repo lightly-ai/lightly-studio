@@ -3,7 +3,10 @@
 from sqlalchemy import ColumnElement
 
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
+from lightly_studio.core.dataset_query.classification_query import ClassificationQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
+from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionQuery
+from lightly_studio.core.dataset_query.segmentation_mask_query import SegmentationMaskQuery
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 
@@ -41,3 +44,5 @@ def _validate_frame_criterion(criterion: MatchExpression) -> None:
             _validate_frame_criterion(criterion=term)
     elif isinstance(criterion, NOT):
         _validate_frame_criterion(criterion=criterion.term)
+    elif isinstance(criterion, (ClassificationQuery, ObjectDetectionQuery, SegmentationMaskQuery)):
+        _validate_frame_criterion(criterion=criterion.criterion)
