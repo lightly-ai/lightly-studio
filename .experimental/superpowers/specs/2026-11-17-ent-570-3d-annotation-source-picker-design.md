@@ -170,6 +170,10 @@ source" is in the follow-up ticket (see Non-goals).
 - Viewport chip instead of a label in the tool rail.
 - The modal preselects the remembered class and the current source.
 - Loading or load error still blocks with a toast (no modal), as in 2D.
+- Picking a source needs role labeler or higher and editing mode, the same gate as 2D.
+- The 2D source radio and "New source" input are plain UI pieces; they move from
+  `SampleDetails/` to a neutral `components/AnnotationSource/` folder and 3D reuses them, so the
+  look matches and 3D never imports from `SampleDetails/`.
 
 ## Left to the builder
 
