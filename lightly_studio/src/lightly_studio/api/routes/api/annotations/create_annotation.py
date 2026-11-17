@@ -11,7 +11,6 @@ from pydantic import BaseModel
 
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.annotation.annotation_base import (
-    AnnotationBaseTable,
     AnnotationType,
     AnnotationView,
 )
@@ -32,6 +31,8 @@ class AnnotationCreateInput(BaseModel):
     annotation_type: AnnotationType
     annotation_collection_name: str | None = None
     parent_sample_id: UUID
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
     x: int | None = None
     y: int | None = None
     width: int | None = None
@@ -52,11 +53,12 @@ def create_annotation(
     ],
     session: SessionDep,
     create_annotation_input: Annotated[AnnotationCreateInput, Body()],
-) -> AnnotationBaseTable:
+) -> AnnotationView:
     """Create a new annotation."""
-    return annotations_service.create_annotation(
+    annotation = annotations_service.create_annotation(
         session=session,
         annotation=AnnotationCreateParams(
             collection_id=collection_id, **create_annotation_input.model_dump()
         ),
     )
+    return AnnotationView.from_annotation_table(annotation=annotation)
