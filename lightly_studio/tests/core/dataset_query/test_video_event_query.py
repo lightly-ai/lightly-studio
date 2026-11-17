@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 import pytest
 from sqlmodel import Session, select
 
@@ -13,7 +11,12 @@ from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoTable
-from tests.helpers_resolvers import create_annotation, create_annotation_label, create_collection
+from tests.helpers_resolvers import (
+    AnnotationDetails,
+    create_annotation_label,
+    create_annotations,
+    create_collection,
+)
 from tests.resolvers.video.helpers import VideoStub, create_video
 
 
@@ -81,24 +84,45 @@ class TestVideoEventQuery:
             )
             for name in ["events", "whole", "detection", "empty"]
         }
-        for video_name, class_name, source, annotation_type, start, end, confidence in [
-            ("events", "run", "ground_truth", AnnotationType.CLASSIFICATION, 3, 8, None),
-            ("events", "walk", "model", AnnotationType.CLASSIFICATION, 8, 10, 0.5),
-            ("whole", "run", "ground_truth", AnnotationType.CLASSIFICATION, None, None, None),
-            ("detection", "run", "ground_truth", AnnotationType.OBJECT_DETECTION, None, None, None),
-        ]:
-            create_annotation(
-                session=db_session,
-                collection_id=collection.collection_id,
-                sample_id=videos[video_name].sample_id,
-                annotation_label_id=labels[class_name].annotation_label_id,
-                annotation_type=annotation_type,
-                annotation_collection_name=source,
-                annotation_data={
-                    "start_time_s": start,
-                    "end_time_s": end,
-                    "confidence": confidence,
-                },
-            )
+        create_annotations(
+            session=db_session,
+            collection_id=collection.collection_id,
+            collection_name="ground_truth",
+            annotations=[
+                AnnotationDetails(
+                    sample_id=videos["events"].sample_id,
+                    annotation_label_id=labels["run"].annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                    start_time_s=3,
+                    end_time_s=8,
+                    confidence=None,
+                ),
+                AnnotationDetails(
+                    sample_id=videos["whole"].sample_id,
+                    annotation_label_id=labels["run"].annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                ),
+                AnnotationDetails(
+                    sample_id=videos["detection"].sample_id,
+                    annotation_label_id=labels["run"].annotation_label_id,
+                    annotation_type=AnnotationType.OBJECT_DETECTION,
+                ),
+            ],
+        )
+        create_annotations(
+            session=db_session,
+            collection_id=collection.collection_id,
+            collection_name="model",
+            annotations=[
+                AnnotationDetails(
+                    sample_id=videos["events"].sample_id,
+                    annotation_label_id=labels["walk"].annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                    start_time_s=8,
+                    end_time_s=10,
+                    confidence=0.5,
+                ),
+            ],
+        )
         query = select(VideoTable).join(VideoTable.sample).where(expression.get())
         assert {video.file_name for video in db_session.exec(query)} == expected_names
