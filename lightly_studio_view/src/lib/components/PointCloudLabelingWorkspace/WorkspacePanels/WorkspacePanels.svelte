@@ -49,6 +49,7 @@
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
                     onLabelChange={editing.handleLabelChange}
+                    onTrackChange={editing.handleTrackChange}
                     onDeleteCuboid={presentation.isEditingMode
                         ? editing.handleDeleteCuboid
                         : undefined}
@@ -56,6 +57,10 @@
                     pendingSourceName={targetSource.typedSource}
                     needsPick={targetSource.needsPick}
                     onPickSource={canPickSource ? targetSource.setTarget : undefined}
+                    isCuboidHidden={controller.visibility.isCuboidHidden}
+                    isSourceHidden={controller.visibility.isSourceHidden}
+                    onToggleTrackVisibility={controller.visibility.toggleTrack}
+                    onToggleSourceVisibility={controller.visibility.toggleSource}
                 />
             </Pane>
         </PaneGroup>

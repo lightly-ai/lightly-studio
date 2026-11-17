@@ -8,6 +8,7 @@
     import { AnnotationTargetRadio } from '$lib/components/AnnotationSource';
     import { slide } from 'svelte/transition';
     import type { Snippet } from 'svelte';
+    import AnnotationVisibilityButton from '../AnnotationVisibilityButton';
 
     interface Props {
         /** Display name of the annotation source group. */
@@ -16,6 +17,10 @@
         count: number;
         /** When this value changes to a new truthy string, the group auto-expands. */
         autoExpandForId?: string | null;
+        /** Whether the source is hidden in the scene. */
+        isHidden?: boolean;
+        /** Hides or shows the source; the eye button is omitted without it. */
+        onToggleVisibility?: () => void;
         /** Annotation rows rendered inside the collapsible body. */
         children: Snippet;
         /** Whether new cuboids go to this source. */
@@ -30,6 +35,8 @@
         name,
         count,
         autoExpandForId = null,
+        isHidden = false,
+        onToggleVisibility,
         children,
         isTarget = false,
         needsPick = false,
@@ -47,7 +54,7 @@
 </script>
 
 <Collapsible bind:open>
-    <div class="flex items-center gap-2">
+    <div class="flex items-center gap-1">
         {#if onPick}
             <AnnotationTargetRadio sourceName={name} {isTarget} {needsPick} onSetTarget={onPick} />
         {/if}
@@ -64,6 +71,9 @@
                 />
             </div>
         </CollapsibleTrigger>
+        {#if onToggleVisibility}
+            <AnnotationVisibilityButton noun="source" {isHidden} onToggle={onToggleVisibility} />
+        {/if}
     </div>
     <CollapsibleContent forceMount>
         {#if open}

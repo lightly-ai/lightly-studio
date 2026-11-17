@@ -22,6 +22,7 @@ const handleClassSelected = vi.fn();
 const handleClassDialogCancel = vi.fn();
 
 const collection = { id: 'c1' };
+const noTrack = { objectTrackId: null, isNewTrack: false };
 let names = ['labels', 'preds'];
 
 function setup(target: { targetSource: string | null; needsPick: boolean }) {
@@ -31,7 +32,9 @@ function setup(target: { targetSource: string | null; needsPick: boolean }) {
             labels: { data: [{ annotation_label_name: 'car' }] },
             handleClassSelected,
             handleClassDialogCancel,
-            getRememberedLabel: () => 'car'
+            getRememberedLabel: () => 'car',
+            tracks: { data: [] },
+            occupiedTrackIds: new Set()
         },
         data: { annotationSourceNames: names },
         options: {
@@ -74,7 +77,7 @@ describe('WorkspaceClassDialog', () => {
         await user.click(confirm);
 
         expect(setTarget).toHaveBeenCalledWith('preds', { isNew: false });
-        expect(handleClassSelected).toHaveBeenCalledWith('car');
+        expect(handleClassSelected).toHaveBeenCalledWith('car', noTrack);
         expect(setTarget.mock.invocationCallOrder[0]).toBeLessThan(
             handleClassSelected.mock.invocationCallOrder[0]
         );
@@ -118,7 +121,7 @@ describe('WorkspaceClassDialog', () => {
         await user.click(screen.getByRole('button', { name: 'Confirm' }));
 
         expect(setTarget).toHaveBeenCalledWith('review', { isNew: true });
-        expect(handleClassSelected).toHaveBeenCalledWith('car');
+        expect(handleClassSelected).toHaveBeenCalledWith('car', noTrack);
     });
 
     it('does not confirm a source that is no longer listed', () => {

@@ -66,7 +66,8 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
             getRememberedLabel: () => undefined,
-            labels: { data: [] }
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });

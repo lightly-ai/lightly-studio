@@ -9,11 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Choose the annotation source for new cuboids in the point cloud workspace, in the Annotations panel or when you create a cuboid.
+- Python SDK: Find videos with annotations and timestamp conditions on the same frame using `VideoFrameQuery`.
+- Python SDK: Query videos by temporal event classes, sources, confidence, and time boundaries with `VideoEventQuery`.
 - Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.
 - Filter videos with query expressions in the GUI using video fields, tags, metadata, and video annotations.
 - Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
 - Every filter list in the filter panel has a search, "Select all" and "Clear".
 - The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
+- Hide an annotation track or a whole annotation source in the point cloud workspace with the eye buttons in the Annotations panel. Hidden annotations stay hidden on every frame of the sequence.
 
 ### Changed
 

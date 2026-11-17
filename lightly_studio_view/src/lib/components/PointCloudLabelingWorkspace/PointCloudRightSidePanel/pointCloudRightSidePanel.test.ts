@@ -3,6 +3,10 @@ import { fireEvent, render, screen } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import * as hooks from '$lib/hooks';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
+import {
+    createCuboidAnnotation,
+    type CuboidAnnotation
+} from '$lib/components/PointCloudLabelingWorkspace/domain';
 import PointCloudRightSidePanel from './PointCloudRightSidePanel.svelte';
 
 vi.mock('$lib/hooks/useAuth/useAuth', () => ({
@@ -120,6 +124,101 @@ describe('PointCloudRightSidePanel', () => {
 
         expect(screen.getByTestId('segment-tag-name')).toHaveTextContent('lidar_dropout');
         expect(screen.getByTestId('point-cloud-tick-tags').inert).toBe(true);
+    });
+
+    describe('annotation visibility', () => {
+        const cuboid = createAnnotationFixture();
+        const predictedCuboid = createCuboidAnnotation({
+            ...cuboid,
+            id: 'annotation-1',
+            annotationSourceId: 'predictions'
+        });
+        const twoSourceProps = {
+            ...defaultProps,
+            cuboids: [cuboid, predictedCuboid],
+            annotationSources: [
+                { id: 'ground-truth', name: 'Ground Truth' },
+                { id: 'predictions', name: 'Predictions' }
+            ]
+        };
+
+        it('calls onToggleTrackVisibility with the cuboid when its eye is clicked', async () => {
+            const onToggleTrackVisibility = vi.fn();
+            render(PointCloudRightSidePanel, {
+                props: { ...defaultProps, cuboids: [cuboid], onToggleTrackVisibility }
+            });
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Hide annotation' }));
+
+            expect(onToggleTrackVisibility).toHaveBeenCalledWith(cuboid);
+        });
+
+        it('shows "Show annotation" for a hidden cuboid', () => {
+            render(PointCloudRightSidePanel, {
+                props: {
+                    ...defaultProps,
+                    cuboids: [cuboid],
+                    isCuboidHidden: () => true,
+                    onToggleTrackVisibility: vi.fn()
+                }
+            });
+
+            expect(screen.getByRole('button', { name: 'Show annotation' })).toBeInTheDocument();
+        });
+
+        it('toggles a source from its group header', async () => {
+            const onToggleSourceVisibility = vi.fn();
+            render(PointCloudRightSidePanel, {
+                props: { ...twoSourceProps, onToggleSourceVisibility }
+            });
+
+            await fireEvent.click(screen.getAllByRole('button', { name: 'Hide source' })[0]);
+
+            expect(onToggleSourceVisibility).toHaveBeenCalledWith('ground-truth');
+        });
+
+        it('shows the source toggle when only one source is on the tick', async () => {
+            const onToggleSourceVisibility = vi.fn();
+            render(PointCloudRightSidePanel, {
+                props: { ...defaultProps, cuboids: [cuboid], onToggleSourceVisibility }
+            });
+
+            await fireEvent.click(screen.getByRole('button', { name: 'Hide source' }));
+
+            expect(onToggleSourceVisibility).toHaveBeenCalledWith('ground-truth');
+        });
+
+        it('keeps the source toggle of a hidden source when it is the only source on the tick', () => {
+            render(PointCloudRightSidePanel, {
+                props: {
+                    ...defaultProps,
+                    cuboids: [cuboid],
+                    isSourceHidden: () => true,
+                    isCuboidHidden: () => true,
+                    onToggleTrackVisibility: vi.fn(),
+                    onToggleSourceVisibility: vi.fn()
+                }
+            });
+
+            expect(screen.getByRole('button', { name: 'Show source' })).toBeEnabled();
+        });
+
+        it('disables the row toggles of a hidden source', () => {
+            render(PointCloudRightSidePanel, {
+                props: {
+                    ...twoSourceProps,
+                    isSourceHidden: (sourceId: string) => sourceId === 'ground-truth',
+                    isCuboidHidden: (c: CuboidAnnotation) =>
+                        c.annotationSourceId === 'ground-truth',
+                    onToggleTrackVisibility: vi.fn(),
+                    onToggleSourceVisibility: vi.fn()
+                }
+            });
+
+            expect(screen.getByRole('button', { name: 'Show source' })).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Show annotation' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Hide annotation' })).toBeEnabled();
+        });
     });
 });
 

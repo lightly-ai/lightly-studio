@@ -14,11 +14,13 @@ from lightly_studio.models.annotation.annotation_base import (
     ImageAnnotationDetailsView,
     VideoFrameAnnotationDetailsView,
 )
+from lightly_studio.models.annotation.object_track import ObjectTrackTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.video import VideoFrameTable, VideoTable
 from lightly_studio.resolvers import collection_resolver
+from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 
 
 def get_by_id_with_payload(
@@ -114,6 +116,11 @@ def _get_video_frame_annotation_by_id(
                 VideoTable.file_path_abs,  # type: ignore[arg-type]
             ),
         )
+        .options(
+            joinedload(AnnotationBaseTable.object_track).joinedload(
+                ObjectTrackTable.parent_object_track
+            ),
+        )
         .where(col(AnnotationBaseTable.sample_id) == sample_id)
     )
 
@@ -124,9 +131,16 @@ def _get_video_frame_annotation_by_id(
 
     (annotation, payload) = row
 
+    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
+        session=session, annotations=[annotation]
+    )
+
     return AnnotationDetailsWithPayloadView(
         parent_sample_type=parent_sample_type,
-        annotation=AnnotationView.from_annotation_table(annotation=annotation),
+        annotation=AnnotationView.from_annotation_table(
+            annotation=annotation,
+            parent_track_class_names=parent_track_class_names,
+        ),
         parent_sample_data=VideoFrameAnnotationDetailsView.from_video_frame_table(
             video_frame=payload
         ),

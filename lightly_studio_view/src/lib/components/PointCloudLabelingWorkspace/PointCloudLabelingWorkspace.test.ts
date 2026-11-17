@@ -119,7 +119,8 @@ vi.mock('./useCreateCuboidAnnotation', async () => {
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
             getRememberedLabel: () => undefined,
-            labels: { data: [] }
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });

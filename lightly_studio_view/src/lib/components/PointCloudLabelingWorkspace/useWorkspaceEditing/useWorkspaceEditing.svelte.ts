@@ -12,6 +12,7 @@ import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
+import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
 import type { WorkspaceTool } from '../domain';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { CuboidTarget } from '../useCuboidTargetSource';
@@ -45,7 +46,8 @@ export function useWorkspaceEditing(
         handleClassSelected,
         handleClassDialogCancel,
         getRememberedLabel,
-        labels
+        labels,
+        tracks
     } = useCreateCuboidAnnotation({
         getTarget,
         getCollectionId: () => getOptions().annotationSourceCollectionId,
@@ -178,6 +180,22 @@ export function useWorkspaceEditing(
         setActiveTool(addingTrack ? 'create-cuboid' : 'select');
     }
 
+    async function handleTrackChange(): Promise<void> {
+        void refreshTracks();
+        void queryClient.invalidateQueries({
+            queryKey: getTickDetailsSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            }),
+            refetchType: 'none'
+        });
+        await getWorkspace().tickDetails.refetch({ throwOnError: true });
+    }
+
+    const occupiedTrackIds = $derived(
+        new Set(getData().cuboids.flatMap((c) => (c.trackId ? [c.trackId] : [])))
+    );
+
     const displayedAnnotations = fromStore(annotations);
     return {
         transforms,
@@ -186,6 +204,10 @@ export function useWorkspaceEditing(
         handleClassDialogCancel,
         getRememberedLabel,
         labels,
+        tracks,
+        get occupiedTrackIds() {
+            return occupiedTrackIds;
+        },
         get annotations() {
             return displayedAnnotations.current;
         },
@@ -227,6 +249,7 @@ export function useWorkspaceEditing(
         handleExtendTrack,
         handleDeleteTrack,
         handleLabelChange,
+        handleTrackChange,
         panelCuboidTransform
     };
 }

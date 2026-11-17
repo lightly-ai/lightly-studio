@@ -4,29 +4,41 @@
     import { LabelNotFound } from '$lib/components/LabelNotFound';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { ListItem } from '$lib/components/SelectList/types';
-    import type { Snippet } from 'svelte';
-    import { useClassDialogSelection } from './useClassDialogSelection.svelte';
+    import { SelectList } from '$lib/components/SelectList';
+    import type { ComponentProps, Snippet } from 'svelte';
+    import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
+    import { TrackSelect } from '$lib/components/TrackSelect';
+    import { filterTracksByAnnotationClass } from '$lib/components/TrackSelect/filterTracksByAnnotationClass';
+    import { useClassDialogForm } from './useClassDialogForm/useClassDialogForm';
 
-    type Props = {
+    interface Props {
         open: boolean;
         labels: string[];
-        onConfirm: (label: string) => void;
+        onConfirm: (
+            label: string,
+            track?: { objectTrackId: string | null; isNewTrack: boolean }
+        ) => void;
         onCancel: () => void;
+        showTrackSelect?: boolean;
+        tracks?: TrackWithClassNameView[];
+        /** Track IDs already assigned to annotations on the current frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
         /** Content above the class list. With it, the list does not open by itself and cover it. */
         extra?: Snippet;
         /** Whether the caller allows to confirm, for example after its extra fields are set. */
         canConfirm?: boolean;
         /** The class selected when the dialog opens. */
         initialLabel?: string;
-    };
+    }
 
     let {
         open = $bindable(false),
         labels,
         onConfirm,
         onCancel,
+        showTrackSelect = false,
+        tracks = [],
+        occupiedTrackIds = new Set(),
         extra,
         canConfirm = true,
         initialLabel
@@ -34,21 +46,42 @@
 
     const canCreateClass = useCanCreateAnnotationClass();
 
-    const selection = useClassDialogSelection({
-        getOpen: () => open,
-        setOpen: (isOpen) => (open = isOpen),
-        getInitialLabel: () => initialLabel,
-        getCanConfirm: () => canConfirm,
-        onConfirm: (label) => onConfirm(label),
-        onCancel: () => onCancel()
+    const items = $derived<ComponentProps<typeof SelectList>['items']>(
+        [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
+    );
+    const {
+        selectedItem,
+        trackValue,
+        handleConfirm,
+        handleCancel,
+        handleOpenChange,
+        handleClassSelect,
+        handleTrackValueChange,
+        handleKeyboardConfirm,
+        preselect
+    } = useClassDialogForm(() => ({
+        onConfirm,
+        onCancel,
+        showTrackSelect,
+        canConfirm,
+        onClose: () => {
+            open = false;
+        }
+    }));
+
+    $effect(() => {
+        if (open) preselect(initialLabel);
     });
 
-    const items = $derived<ListItem[]>(
-        [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
+    const availableTracks = $derived(
+        filterTracksByAnnotationClass(
+            tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id)),
+            $selectedItem?.value ?? null
+        )
     );
 </script>
 
-<Dialog.Root bind:open onOpenChange={selection.handleOpenChange}>
+<Dialog.Root bind:open onOpenChange={handleOpenChange}>
     <Dialog.Content class="max-w-sm">
         <Dialog.Header>
             <Dialog.Title>Select a Class</Dialog.Title>
@@ -64,14 +97,15 @@
             <SelectList
                 onCreate={trackClassCreatedInPicker}
                 allowCreate={canCreateClass}
-                bind:selectedItem={selection.selectedItem}
+                bind:selectedItem={$selectedItem}
                 {items}
                 label="Select a class..."
                 placeholder={canCreateClass ? 'Search or create a class...' : 'Search a class...'}
                 className="w-full"
                 autoOpen={!extra}
                 autoFocus
-                onKeyboardConfirm={selection.confirmItem}
+                onKeyboardConfirm={handleKeyboardConfirm}
+                onSelect={handleClassSelect}
             >
                 {#snippet notFound({ inputValue })}
                     <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
@@ -79,16 +113,23 @@
             </SelectList>
         </div>
 
+        {#if showTrackSelect}
+            <div class="min-w-0 space-y-1">
+                <span class="text-sm font-medium text-muted-foreground">Track</span>
+                <TrackSelect
+                    tracks={availableTracks}
+                    bind:value={$trackValue}
+                    className="w-full"
+                    onValueChange={handleTrackValueChange}
+                />
+            </div>
+        {/if}
+
         <Dialog.Footer>
-            <Button variant="outline" buttonProps={{ onclick: selection.handleCancel }}
-                >Cancel</Button
-            >
+            <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
             <Button
                 variant="default"
-                buttonProps={{
-                    onclick: selection.handleConfirm,
-                    disabled: !selection.selectedItem || !canConfirm
-                }}
+                buttonProps={{ onclick: handleConfirm, disabled: !$selectedItem || !canConfirm }}
             >
                 Confirm
             </Button>
