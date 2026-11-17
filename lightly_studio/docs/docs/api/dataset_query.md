@@ -55,6 +55,19 @@ and brackets for array indices: `metadata["odometry.speed"]` selects the `speed`
     options:
         members: [ClassificationQuery]
 
+## VideoEventField
+
+::: lightly_studio.core.dataset_query.video_event_query
+    options:
+        members: [VideoEventField]
+        show_if_no_docstring: true
+
+## VideoEventQuery
+
+::: lightly_studio.core.dataset_query.video_event_query
+    options:
+        members: [VideoEventQuery]
+
 ## ObjectDetectionField
 
 ::: lightly_studio.core.dataset_query.object_detection_query
