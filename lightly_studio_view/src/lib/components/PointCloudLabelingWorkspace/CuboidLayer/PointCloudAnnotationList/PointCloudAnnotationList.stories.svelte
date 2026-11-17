@@ -197,8 +197,12 @@
     args={{
         cuboids: [gtCuboid1, gtCuboid2, predCuboid],
         annotationSources: sources,
-        needsPick: true,
-        onPickSource: () => {}
+        sourcePicker: {
+            targetSourceName: null,
+            pendingSourceName: null,
+            needsPick: true,
+            onPick: () => {}
+        }
     }}
 />
 
@@ -207,7 +211,11 @@
     args={{
         cuboids: [gtCuboid1, gtCuboid2],
         annotationSources: sources,
-        targetSourceName: 'Predictions',
-        onPickSource: () => {}
+        sourcePicker: {
+            targetSourceName: 'Predictions',
+            pendingSourceName: null,
+            needsPick: false,
+            onPick: () => {}
+        }
     }}
 />

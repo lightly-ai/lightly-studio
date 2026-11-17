@@ -117,10 +117,14 @@
                 {onCuboidTransform}
                 {onLabelChange}
                 {onDeleteCuboid}
-                {targetSourceName}
-                {pendingSourceName}
-                {needsPick}
-                {onPickSource}
+                sourcePicker={onPickSource
+                    ? {
+                          targetSourceName: targetSourceName ?? null,
+                          pendingSourceName: pendingSourceName ?? null,
+                          needsPick: needsPick ?? false,
+                          onPick: onPickSource
+                      }
+                    : undefined}
             />
         </Segment>
     </div>

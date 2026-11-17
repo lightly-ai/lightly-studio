@@ -7,17 +7,14 @@
     import SelectList from '$lib/components/SelectList/SelectList.svelte';
     import type { ListItem } from '$lib/components/SelectList/types';
     import type { Snippet } from 'svelte';
+    import { useClassDialogSelection } from './useClassDialogSelection.svelte';
 
     type Props = {
         open: boolean;
         labels: string[];
         onConfirm: (label: string) => void;
         onCancel: () => void;
-        /**
-         * Content above the class list, for example more fields of the new annotation. With it,
-         * the class list does not open by itself: its popover would cover the content and keep
-         * the focus.
-         */
+        /** Content above the class list. With it, the list does not open by itself and cover it. */
         extra?: Snippet;
         /** Whether the caller allows to confirm, for example after its extra fields are set. */
         canConfirm?: boolean;
@@ -37,50 +34,21 @@
 
     const canCreateClass = useCanCreateAnnotationClass();
 
-    let selectedItem = $state<ListItem | undefined>(undefined);
-    // Track close origin so the onOpenChange(false) that fires when we set
-    // open = false from handleConfirm does not also invoke onCancel.
-    let closedByConfirm = false;
+    const selection = useClassDialogSelection({
+        getOpen: () => open,
+        setOpen: (isOpen) => (open = isOpen),
+        getInitialLabel: () => initialLabel,
+        getCanConfirm: () => canConfirm,
+        onConfirm: (label) => onConfirm(label),
+        onCancel: () => onCancel()
+    });
 
     const items = $derived<ListItem[]>(
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
-
-    $effect(() => {
-        if (!open || !initialLabel || selectedItem) return;
-        selectedItem = { value: initialLabel, label: initialLabel };
-    });
-
-    const confirmItem = (item: ListItem) => {
-        selectedItem = item;
-        if (!canConfirm) return;
-        closedByConfirm = true;
-        onConfirm(item.value);
-        open = false;
-        selectedItem = undefined;
-    };
-
-    const handleConfirm = () => {
-        if (selectedItem) confirmItem(selectedItem);
-    };
-
-    const handleCancel = () => {
-        onCancel();
-        open = false;
-        selectedItem = undefined;
-    };
-
-    const handleOpenChange = (isOpen: boolean) => {
-        if (isOpen) return;
-        if (closedByConfirm) {
-            closedByConfirm = false;
-            return;
-        }
-        handleCancel();
-    };
 </script>
 
-<Dialog.Root bind:open onOpenChange={handleOpenChange}>
+<Dialog.Root bind:open onOpenChange={selection.handleOpenChange}>
     <Dialog.Content class="max-w-sm">
         <Dialog.Header>
             <Dialog.Title>Select a Class</Dialog.Title>
@@ -96,14 +64,14 @@
             <SelectList
                 onCreate={trackClassCreatedInPicker}
                 allowCreate={canCreateClass}
-                bind:selectedItem
+                bind:selectedItem={selection.selectedItem}
                 {items}
                 label="Select a class..."
                 placeholder={canCreateClass ? 'Search or create a class...' : 'Search a class...'}
                 className="w-full"
                 autoOpen={!extra}
                 autoFocus
-                onKeyboardConfirm={confirmItem}
+                onKeyboardConfirm={selection.confirmItem}
             >
                 {#snippet notFound({ inputValue })}
                     <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
@@ -112,10 +80,15 @@
         </div>
 
         <Dialog.Footer>
-            <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
+            <Button variant="outline" buttonProps={{ onclick: selection.handleCancel }}
+                >Cancel</Button
+            >
             <Button
                 variant="default"
-                buttonProps={{ onclick: handleConfirm, disabled: !selectedItem || !canConfirm }}
+                buttonProps={{
+                    onclick: selection.handleConfirm,
+                    disabled: !selection.selectedItem || !canConfirm
+                }}
             >
                 Confirm
             </Button>

@@ -172,45 +172,42 @@ export function useCreateCuboidAnnotation({
         return collectionId ? get(lastAnnotationLabel)[collectionId] : undefined;
     }
 
-    async function handleCreateCuboid(
-        box: CuboidBox,
-        onCreated: (annotationId: string) => void | Promise<void>,
-        selectClass = false
-    ): Promise<void> {
-        const collectionId = getCollectionId();
-        const sampleId = getTickSampleId();
-        const capturedFrame = getSceneFrame();
-        if (!collectionId || !sampleId) return;
-        const { blockedReason, needsPick } = getTarget();
-        if (blockedReason) {
-            toast.error(blockedReason);
-            return;
-        }
+    function isBlocked(): boolean {
+        const { blockedReason } = getTarget();
+        if (blockedReason) toast.error(blockedReason);
+        return blockedReason !== null;
+    }
+
+    /** Asks for the class when needed and returns its ID, or null when the cuboid is cancelled. */
+    async function selectLabelId(
+        collectionId: string,
+        sampleId: string,
+        selectClass: boolean
+    ): Promise<string | null> {
         // The dialog also asks for the source when none is picked.
-        const labelName = await selectAnnotationLabel(collectionId, selectClass || needsPick);
-        if (!labelName) return;
+        const askInDialog = selectClass || getTarget().needsPick;
+        const labelName = await selectAnnotationLabel(collectionId, askInDialog);
         // Cancel if the active tick changed while the class dialog was open.
-        if (getTickSampleId() !== sampleId) return;
+        if (!labelName || getTickSampleId() !== sampleId) return null;
         const labelId = await findOrCreateLabelId(collectionId, labelName);
-        if (!labelId) return;
-        // Cancel if the active sample or collection changed while finding/creating the label.
-        if (getTickSampleId() !== sampleId || getCollectionId() !== collectionId) return;
-        // The user can change the source while the class dialog is open.
-        const sourceName = getTargetSourceOrExplain();
-        if (!sourceName) return;
-        let annotationId: string;
+        // Cancel if the active sample or collection changed while finding or creating the label.
+        const isSameScene = getTickSampleId() === sampleId && getCollectionId() === collectionId;
+        return isSameScene ? labelId : null;
+    }
+
+    async function trySaveCuboid(params: CreateCuboidParams): Promise<string | null> {
         try {
-            annotationId = await saveCuboid({
-                frame: capturedFrame,
-                box,
-                labelId,
-                sampleId,
-                sourceName
-            });
+            return await saveCuboid(params);
         } catch {
             toast.error('Failed to create annotation. Please try again.');
-            return;
+            return null;
         }
+    }
+
+    async function notifyCreated(
+        onCreated: (annotationId: string) => void | Promise<void>,
+        annotationId: string
+    ): Promise<void> {
         try {
             await onCreated(annotationId);
         } catch {
@@ -218,6 +215,24 @@ export function useCreateCuboidAnnotation({
                 'Annotation created, but the workspace could not refresh. Please try again.'
             );
         }
+    }
+
+    async function handleCreateCuboid(
+        box: CuboidBox,
+        onCreated: (annotationId: string) => void | Promise<void>,
+        selectClass = false
+    ): Promise<void> {
+        const collectionId = getCollectionId();
+        const sampleId = getTickSampleId();
+        const frame = getSceneFrame();
+        if (!collectionId || !sampleId || isBlocked()) return;
+        const labelId = await selectLabelId(collectionId, sampleId, selectClass);
+        if (!labelId) return;
+        // The user can change the source while the class dialog is open.
+        const sourceName = getTargetSourceOrExplain();
+        if (!sourceName) return;
+        const annotationId = await trySaveCuboid({ frame, box, labelId, sampleId, sourceName });
+        if (annotationId) await notifyCreated(onCreated, annotationId);
     }
 
     return {

@@ -135,3 +135,5 @@ export {
     PICK_SOURCE_MESSAGE
 } from '$lib/hooks/useAnnotationTarget/messages';
 export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
+export { default as useAuth } from '$lib/hooks/useAuth/useAuth';
+export { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';

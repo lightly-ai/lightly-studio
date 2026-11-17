@@ -157,6 +157,22 @@ interface GroupAnnotationsWithEmptySourcesParams extends GroupAnnotationsBySourc
 /** The ID of the group of a typed source that is not created yet. */
 export const PENDING_SOURCE_ID = 'pending-source';
 
+/** The state and action of the picker for the source that new cuboids go to. */
+export interface SourcePicker {
+    /** The source new cuboids go to. */
+    targetSourceName: string | null;
+    /** A typed source name that is not created yet. */
+    pendingSourceName: string | null;
+    /** Whether no source is picked among several. */
+    needsPick: boolean;
+    onPick: (name: string, options?: { isNew?: boolean }) => void;
+}
+
+/** Whether new cuboids can go to the source of a group: not to the unknown-source group. */
+export function isPickableSource(sourceId: string, sources: readonly AnnotationSource[]): boolean {
+    return sourceId === PENDING_SOURCE_ID || sources.some(({ id }) => id === sourceId);
+}
+
 /**
  * Groups cuboids by their annotation source and lists every source, also sources without
  * cuboids, so that the user can pick any of them for new cuboids.

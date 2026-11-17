@@ -4,8 +4,7 @@
     import PointCloudRightSidePanel from '../PointCloudRightSidePanel';
     import WorkspaceStatusPanel from '../WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
-    import useAuth from '$lib/hooks/useAuth/useAuth';
-    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { hasMinimumRole, useAuth } from '$lib/hooks';
     const controller = useWorkspaceControllerContext();
     const { workspace, editing, data, presentation, targetSource } = controller;
     const { user } = useAuth();
