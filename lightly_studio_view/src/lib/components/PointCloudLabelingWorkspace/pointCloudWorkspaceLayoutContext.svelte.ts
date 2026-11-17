@@ -39,6 +39,10 @@ export interface PointCloudWorkspaceLayoutState {
     annotationSources: readonly AnnotationSource[];
     /** Shared annotation transforms and their persistence actions. */
     transforms: ReturnType<typeof createCuboidTransformState>;
+    /** True when the user hid the source or the track of the cuboid. */
+    isCuboidHidden: (cuboid: CuboidAnnotation) => boolean;
+    /** True when the user hid the source or the track of the tick annotation. */
+    isTickAnnotationHidden: (annotation: TickDetailView['annotations'][number]) => boolean;
     /** Tool selected in the main scene toolbar. */
     activeTool: WorkspaceTool;
     /** Selected tool constrained by current editing permissions. */

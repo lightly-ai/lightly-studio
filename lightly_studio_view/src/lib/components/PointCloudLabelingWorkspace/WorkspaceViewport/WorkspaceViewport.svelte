@@ -15,6 +15,9 @@
     const getLayout = usePointCloudWorkspaceLayoutContext();
     const layout = $derived(getLayout());
     const annotations = $derived(layout.transforms.annotations);
+    const visibleCuboids = $derived(
+        $annotations.filter((cuboid) => !layout.isCuboidHidden(cuboid))
+    );
     const scene = useWorkspaceSceneLayout();
     const labels = { perspective: '3D scene', top: 'Top', side: 'Side', front: 'Front' };
 </script>
@@ -25,7 +28,7 @@
     colorMode={layout.colorMode}
     pointCloudBounds={layout.sceneFrame?.bounds ?? undefined}
     fitKey={layout.fitKey}
-    cuboids={$annotations}
+    cuboids={visibleCuboids}
     annotationClasses={layout.annotationClasses}
     annotationSources={layout.annotationSources}
     transforms={layout.transforms}
