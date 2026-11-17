@@ -43,6 +43,14 @@
         onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** True when the cuboid is hidden in the scene. */
+        isCuboidHidden?: (cuboid: CuboidAnnotation) => boolean;
+        /** True when every cuboid of the source is hidden in the scene. */
+        isSourceHidden?: (sourceId: string) => boolean;
+        /** Hides or shows the track of a cuboid; row eye buttons are omitted without it. */
+        onToggleTrackVisibility?: (cuboid: CuboidAnnotation) => void;
+        /** Hides or shows a source; group eye buttons are omitted without it. */
+        onToggleSourceVisibility?: (sourceId: string) => void;
     }
 
     let {
@@ -54,10 +62,17 @@
         onCuboidTransform,
         onLabelChange,
         onTrackChange,
-        onDeleteCuboid
+        onDeleteCuboid,
+        isCuboidHidden = () => false,
+        isSourceHidden = () => false,
+        onToggleTrackVisibility,
+        onToggleSourceVisibility
     }: Props = $props();
 
     const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
+    // The group header holds the source toggle, so it shows whenever sources can be toggled,
+    // also on a tick with only one source.
+    const showGroups = $derived(onToggleSourceVisibility !== undefined || groups.length > 1);
     const occupiedTrackIds = $derived(
         new Set(cuboids.flatMap((c) => (c.trackId ? [c.trackId] : [])))
     );
@@ -94,6 +109,9 @@
         {onLabelChange}
         {onTrackChange}
         onDelete={onDeleteCuboid}
+        isHidden={isCuboidHidden(cuboid)}
+        isVisibilityLocked={isSourceHidden(cuboid.annotationSourceId)}
+        onToggleVisibility={onToggleTrackVisibility}
     />
 {/snippet}
 
@@ -143,7 +161,7 @@
     <div class="flex h-full items-center justify-center">
         <Typography variant="body2" className="text-muted-foreground">No annotations</Typography>
     </div>
-{:else if groups.length <= 1}
+{:else if !showGroups}
     <div class="space-y-1">
         {@render annotationForest(groups[0]?.cuboids ?? [])}
     </div>
@@ -157,6 +175,10 @@
                 group.cuboids.some((c) => c.id === selectedCuboidId)
                     ? selectedCuboidId
                     : null}
+                isHidden={isSourceHidden(group.sourceId)}
+                onToggleVisibility={onToggleSourceVisibility
+                    ? () => onToggleSourceVisibility(group.sourceId)
+                    : undefined}
             >
                 <div class="space-y-1">
                     {@render annotationForest(group.cuboids)}

@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import pytest
 from sqlalchemy import func
 from sqlmodel import Session, select
@@ -6,8 +8,12 @@ from lightly_studio.core.dataset_query import (
     AND,
     NOT,
     OR,
+    ClassificationQuery,
+    EvaluationMetricField,
     ObjectDetectionField,
     ObjectDetectionQuery,
+    SampleEvaluationQuery,
+    VideoEventQuery,
     VideoFrameQuery,
     VideoFrameSampleField,
 )
@@ -55,6 +61,69 @@ API_ANNOTATIONS = {
 
 
 class TestVideoFrameQuery:
+    @pytest.mark.parametrize(
+        "nested_query", [VideoFrameQuery(), VideoEventQuery()], ids=["frame", "event"]
+    )
+    @pytest.mark.parametrize(
+        "wrap_criterion",
+        [
+            pytest.param(lambda query: SampleEvaluationQuery("run", query), id="direct"),
+            pytest.param(
+                lambda query: SampleEvaluationQuery(
+                    "run", EvaluationMetricField(metric_name="score") > 0.5, query
+                ),
+                id="multiple-criteria",
+            ),
+            pytest.param(
+                lambda query: SampleEvaluationQuery("run", AND(PERSON, OR(CAR, NOT(query)))),
+                id="boolean",
+            ),
+            pytest.param(lambda query: NOT(SampleEvaluationQuery("run", query)), id="negated"),
+            pytest.param(
+                lambda query: ClassificationQuery(SampleEvaluationQuery("run", query)),
+                id="classification",
+            ),
+            pytest.param(
+                lambda query: SampleEvaluationQuery("run", ObjectDetectionQuery(query)),
+                id="object-detection",
+            ),
+            pytest.param(
+                lambda query: SampleEvaluationQuery("run", SampleEvaluationQuery("other", query)),
+                id="nested-evaluation",
+            ),
+        ],
+    )
+    def test_init__reject_nested_evaluation_queries(
+        self,
+        nested_query: MatchExpression,
+        wrap_criterion: Callable[[MatchExpression], MatchExpression],
+    ) -> None:
+        criterion = wrap_criterion(nested_query)
+        with pytest.raises(ValueError, match="cannot contain frame or event queries"):
+            VideoFrameQuery(criterion)
+
+    @pytest.mark.parametrize(
+        "criterion",
+        [
+            SampleEvaluationQuery(run_name="run"),
+            SampleEvaluationQuery("run", EvaluationMetricField(metric_name="score") > 0.5),
+            SampleEvaluationQuery(
+                "run",
+                EvaluationMetricField(metric_name="score") > 0.5,
+                EvaluationMetricField(metric_name="recall") > 0.8,
+            ),
+            SampleEvaluationQuery(
+                "run",
+                AND(
+                    EvaluationMetricField(metric_name="score") > 0.5,
+                    NOT(EvaluationMetricField(metric_name="recall") < 0.8),
+                ),
+            ),
+        ],
+    )
+    def test_init__accept_evaluation_criteria(self, criterion: MatchExpression) -> None:
+        VideoFrameQuery(criterion).get()
+
     @pytest.mark.parametrize(
         ("expression", "expected_names"),
         [
