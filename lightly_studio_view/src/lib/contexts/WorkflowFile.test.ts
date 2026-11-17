@@ -9,13 +9,13 @@ type Context = ReturnType<typeof createWorkflowFileContext>;
 const json = (body: unknown, status = 200) =>
     Promise.resolve(new Response(JSON.stringify(body), { status }));
 
-/** Renders the context for a batch file that is in progress and waits for it to load. */
-const renderLoadedContext = async () => {
+/** Renders the context for a batch file and waits until it shows the expected state. */
+const renderLoadedContext = async (loadedState = 'in_progress') => {
     let context: Context | undefined;
     render(WorkflowFileContextTestWrapper, {
         props: { onContext: (value) => (context = value) }
     });
-    await waitFor(() => expect(screen.getByTestId('probe-state')).toHaveTextContent('in_progress'));
+    await waitFor(() => expect(screen.getByTestId('probe-state')).toHaveTextContent(loadedState));
     return context!;
 };
 
@@ -92,5 +92,60 @@ describe('createWorkflowFileContext', () => {
         await expect(context.transition('in_review')).rejects.toThrow(
             'Could not load the batch context (500)'
         );
+    });
+
+    describe('startWork', () => {
+        /** Serves the file in `state` and records every move the context asks for. */
+        const stubService = (file: typeof workflowFile) => {
+            let state = file.state;
+            const moves: string[] = [];
+            vi.stubGlobal(
+                'fetch',
+                vi.fn((url: string, init?: RequestInit) => {
+                    if (url.endsWith('/transitions')) {
+                        state = JSON.parse(String(init?.body)).state;
+                        moves.push(state);
+                        return json({});
+                    }
+                    return json({ ...file, state });
+                })
+            );
+            return moves;
+        };
+
+        it('moves a not-started file to in progress when its labeler annotates it', async () => {
+            const moves = stubService({ ...workflowFile, state: 'not_started' });
+            const context = await renderLoadedContext('not_started');
+
+            await context.startWork(workflowFile.sample_id);
+
+            expect(moves).toEqual(['in_progress']);
+            expect(screen.getByTestId('probe-state')).toHaveTextContent('in_progress');
+        });
+
+        it.each([
+            ['the file was already started', { state: 'in_progress' as const }],
+            [
+                'the reviewer annotates',
+                { state: 'not_started' as const, your_role: 'reviewer' as const }
+            ],
+            ['the user cannot edit the file', { state: 'not_started' as const, can_edit: false }]
+        ])('does nothing when %s', async (_, change) => {
+            const moves = stubService({ ...workflowFile, ...change });
+            const context = await renderLoadedContext(change.state);
+
+            await context.startWork(workflowFile.sample_id);
+
+            expect(moves).toEqual([]);
+        });
+
+        it('does nothing for an annotation on another sample', async () => {
+            const moves = stubService({ ...workflowFile, state: 'not_started' });
+            const context = await renderLoadedContext('not_started');
+
+            await context.startWork('another-sample');
+
+            expect(moves).toEqual([]);
+        });
     });
 });

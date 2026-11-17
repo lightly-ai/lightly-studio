@@ -22,6 +22,11 @@ type WorkflowFileContext = {
     transition(state: WorkflowFile['state']): Promise<void>;
     /** True while a move waits for the service. */
     readonly transitioning: boolean;
+    /**
+     * Call after an annotation was created on `sampleId`. The labeler's first annotation
+     * moves a Not started file to In progress; anything else changes nothing.
+     */
+    startWork(sampleId: string): Promise<void>;
 };
 
 const CONTEXT_KEY = 'workflow-file';
@@ -59,6 +64,18 @@ export function createWorkflowFileContext(
         },
         get transitioning() {
             return mutation.isPending;
+        },
+        async startWork(sampleId) {
+            const file = this.file;
+            if (
+                file?.sample_id !== sampleId ||
+                file.state !== 'not_started' ||
+                file.your_role !== 'labeler' ||
+                !file.can_edit
+            ) {
+                return;
+            }
+            await mutation.mutateAsync('in_progress');
         }
     };
     setContext(CONTEXT_KEY, context);

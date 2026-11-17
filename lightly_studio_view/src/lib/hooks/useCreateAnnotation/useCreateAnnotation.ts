@@ -7,11 +7,13 @@ import { createMutation } from '@tanstack/svelte-query';
 import { usePostHog } from '$lib/hooks';
 import { useInvalidateAnnotationQueries } from '$lib/hooks/useInvalidateAnnotationQueries';
 import { page } from '$app/state';
+import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 
 export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () => string }) => {
     const mutation = createMutation(() => createAnnotationMutation());
     const { trackEvent } = usePostHog();
     const refetch = useInvalidateAnnotationQueries();
+    const workflow = useWorkflowFileContext();
 
     // Pass `skipRefetch` to create many annotations and call `refetch` once at the end.
     const createAnnotation = async (
@@ -33,6 +35,8 @@ export const useCreateAnnotation = ({ getCollectionId }: { getCollectionId: () =
             parent_sample_type: page.params.collection_type,
             label_name: data.annotation_label.annotation_label_name
         });
+        // The annotation exists even if the batch file cannot move; the context shows its real state.
+        await workflow?.startWork(inputs.parent_sample_id).catch(() => undefined);
         return data;
     };
 

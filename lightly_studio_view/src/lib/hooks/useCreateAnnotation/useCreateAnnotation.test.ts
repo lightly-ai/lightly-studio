@@ -29,6 +29,11 @@ vi.mock('$lib/hooks/useInvalidateAnnotationGridQueries', () => ({
     useInvalidateAnnotationGridQueries
 }));
 
+const { startWork } = vi.hoisted(() => ({ startWork: vi.fn() }));
+vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
+    useWorkflowFileContext: () => ({ startWork })
+}));
+
 describe('useCreateAnnotation', () => {
     const invalidateQueries = vi.fn();
     const mockMutateAsync = vi.fn();
@@ -40,6 +45,7 @@ describe('useCreateAnnotation', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        startWork.mockResolvedValue(undefined);
         vi.mocked(createMutation).mockReturnValue({
             mutateAsync: mockMutateAsync
         } as unknown as ReturnType<typeof createMutation>);
@@ -120,5 +126,33 @@ describe('useCreateAnnotation', () => {
         expect(invalidateAnnotationGridQueries).not.toHaveBeenCalled();
         expect(invalidateQueries).not.toHaveBeenCalled();
         expect(trackEvent).not.toHaveBeenCalled();
+        expect(startWork).not.toHaveBeenCalled();
+    });
+
+    it('starts work on the batch file the annotation was created on', async () => {
+        mockMutateAsync.mockResolvedValue(created);
+
+        const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
+        await createAnnotation({
+            parent_sample_id: 's1',
+            annotation_type: 'object_detection',
+            annotation_label_id: 'l1'
+        } as AnnotationCreateInput);
+
+        expect(startWork).toHaveBeenCalledWith('s1');
+    });
+
+    it('still returns the annotation when the file cannot be started', async () => {
+        mockMutateAsync.mockResolvedValue(created);
+        startWork.mockRejectedValue(new Error('Cannot move a file'));
+
+        const { createAnnotation } = useCreateAnnotation({ getCollectionId: () => 'col-1' });
+        const result = await createAnnotation({
+            parent_sample_id: 's1',
+            annotation_type: 'object_detection',
+            annotation_label_id: 'l1'
+        } as AnnotationCreateInput);
+
+        expect(result).toBe(created);
     });
 });
