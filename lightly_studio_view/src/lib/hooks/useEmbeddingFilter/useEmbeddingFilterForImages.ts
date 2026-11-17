@@ -6,14 +6,17 @@ export function useEmbeddingFilterForImages(
     collectionId: Readable<string>,
     setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
-    const { updateEmbeddingRegion } = useImageFilters();
+    const { updateEmbeddingRegion, updateSampleIds } = useImageFilters();
 
     // The image lasso selection is stored as geometry (embedding_region) and sent to the
     // backend rather than as a resolved sample-id list (see LIG-9903), so the chip count comes
     // from the plot-propagated count and clearing removes the region.
     return useRegionFilterVisibility(
         collectionId,
-        () => updateEmbeddingRegion(null),
+        () => {
+            updateEmbeddingRegion(null);
+            updateSampleIds([]);
+        },
         setRangeSelectionForCollection
     );
 }

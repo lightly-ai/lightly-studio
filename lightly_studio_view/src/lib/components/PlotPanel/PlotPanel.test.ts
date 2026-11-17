@@ -281,7 +281,7 @@ describe('PlotPanel.svelte', () => {
         // Images clear the region geometry, not a sample-id list.
         expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
         expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
-        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
+        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
     });
 
     it('clears the video region and selection count when pressing Escape', async () => {
@@ -324,7 +324,7 @@ describe('PlotPanel.svelte', () => {
 
         expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith({ polygon });
         expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
-        expect(mockUpdateSampleIds).not.toHaveBeenCalled();
+        expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
         expect(mockSetRangeSelectionForCollection).toHaveBeenCalledWith('test-collection-id', null);
     });
 
@@ -663,6 +663,62 @@ describe('PlotPanel.svelte', () => {
         await waitFor(() =>
             expect(screen.queryByTestId('plot-selection-chip')).not.toBeInTheDocument()
         );
+    });
+
+    describe('picking samples', () => {
+        const renderPlot = async () => {
+            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+                () => new DOMRect(0, 0, 400, 400)
+            );
+            const point = new Float32Array([0]);
+            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            return screen.findByRole('button', { name: 'Click point' });
+        };
+        // jsdom has no PointerEvent, so fireEvent.pointerDown drops the modifier keys.
+        const shiftPointerDown = (element: HTMLElement) =>
+            element.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, shiftKey: true }));
+
+        it('picks the clicked sample on shift-click and replaces the region', async () => {
+            const pointButton = await renderPlot();
+
+            shiftPointerDown(pointButton);
+            await fireEvent.click(pointButton);
+
+            expect(mockUpdateEmbeddingRegion).toHaveBeenCalledWith(null);
+            expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
+            expect(mockSetPlotSelectionCount).toHaveBeenCalledWith('test-collection-id', 1);
+        });
+
+        it('ignores a click without shift', async () => {
+            const pointButton = await renderPlot();
+
+            await fireEvent.pointerDown(pointButton);
+            await fireEvent.click(pointButton);
+
+            expect(mockUpdateSampleIds).not.toHaveBeenCalled();
+        });
+
+        it('picks the clicked sample on a plain click with the pick tool', async () => {
+            const pointButton = await renderPlot();
+
+            await fireEvent.click(screen.getByTestId('plot-tool-pick'));
+            await fireEvent.pointerDown(pointButton);
+            await fireEvent.click(pointButton);
+
+            expect(mockUpdateSampleIds).toHaveBeenCalledWith(['sample-1']);
+        });
+
+        it('removes a picked sample on shift-click', async () => {
+            imageFilterStore.set({ sample_filter: { sample_ids: ['sample-1'] } });
+            const pointButton = await renderPlot();
+
+            shiftPointerDown(pointButton);
+            await fireEvent.click(pointButton);
+
+            expect(mockUpdateSampleIds).toHaveBeenCalledWith([]);
+            expect(mockClearPlotSelectionCount).toHaveBeenCalledWith('test-collection-id');
+        });
     });
 
     it('uses the text-axis viewport after resetting a user pan', async () => {

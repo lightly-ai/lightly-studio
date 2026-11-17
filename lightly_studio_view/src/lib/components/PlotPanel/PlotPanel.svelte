@@ -7,6 +7,7 @@
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
+    import { togglePickedSampleId } from './pickedSamples/pickedSamples';
     import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
@@ -87,14 +88,23 @@
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
     const sequenceFilters = useMcapSequenceFilters();
-    const { annotationPlotRegion, saveRegion: saveAnnotationRegion } = useAnnotationPlotSelection();
+    const {
+        annotationPlotRegion,
+        annotationPlotPickedSampleIds,
+        saveRegion: saveAnnotationRegion,
+        savePickedSampleIds: saveAnnotationPickedSampleIds
+    } = useAnnotationPlotSelection();
 
     const imageFilter = $derived(isVideos || isSequences ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
     const sequenceFilter = $derived(isSequences ? sequenceFilters.mcapSequenceFilter : null);
-    const activeSampleIds = $derived(
-        isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
-    );
+    // Samples picked one by one with shift-click. The plot holds either a region or picks.
+    const pickedSampleIds = $derived.by(() => {
+        if (isVideos) return $videoFilter?.sample_filter?.sample_ids ?? [];
+        if (isImages) return $imageFilter?.sample_filter?.sample_ids ?? [];
+        if (isAnnotations) return $annotationPlotPickedSampleIds;
+        return [];
+    });
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
     const { annotationFilter: selectedAnnotationsFilter } = $derived.by(() =>
@@ -210,7 +220,7 @@
         );
     });
 
-    const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
+    const hasActiveFilter = $derived(filter !== null || pickedSampleIds.length > 0);
 
     // Videos, images and annotations commit the lasso as region geometry. After the
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
@@ -235,7 +245,10 @@
     // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
     // canvas. The legend keeps showing the user's real toggle state.
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight = $rangeSelection !== null || committedHighlightRegion !== null;
+        const hasSelectionHighlight =
+            $rangeSelection !== null ||
+            committedHighlightRegion !== null ||
+            pickedSampleIds.length > 0;
         if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
@@ -249,7 +262,7 @@
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
             highlightRegion: committedHighlightRegion,
-            highlightedSampleIds: activeSampleIds,
+            highlightedSampleIds: pickedSampleIds,
             hasActiveFilter: hasActiveFilter,
             hiddenCategories: effectiveHiddenCategories
         })
@@ -276,14 +289,39 @@
             saveAnnotationRegion(region);
         }
     };
+    const savePickedSampleIds = (sampleIds: string[]) => {
+        if (isImages) {
+            imageFilters.updateSampleIds(sampleIds);
+        } else if (isVideos) {
+            videoFilters.updateSampleIds(sampleIds);
+        } else if (isAnnotations) {
+            saveAnnotationPickedSampleIds(sampleIds);
+        }
+    };
     // A region drawn on the plot carries the axes of the layout, so the server resolves the
     // region in the same layout.
     const commitRegion = (polygon: Point[], count: number) => {
+        savePickedSampleIds([]);
         saveRegion($plotAxes ? { polygon, axes: $plotAxes } : { polygon });
         setPlotSelectionCount(collectionId, count);
     };
-    const clearRegion = () => {
+    const commitPickedSampleIds = (sampleIds: string[]) => {
+        if (sampleIds.length === 0) {
+            clearPlotFilter();
+            return;
+        }
         saveRegion(null);
+        savePickedSampleIds(sampleIds);
+        setPlotSelectionCount(collectionId, sampleIds.length);
+        trackEvent('embedding_selection_made', {
+            collection_id: collectionId,
+            selection_type: 'pick',
+            selected_count: sampleIds.length
+        });
+    };
+    const clearPlotFilter = () => {
+        saveRegion(null);
+        savePickedSampleIds([]);
         clearPlotSelectionCount(collectionId);
     };
 
@@ -303,7 +341,7 @@
             selectedCount === 0 || (selectableCount !== null && selectedCount === selectableCount);
 
         if (selectsNothingOrEverything) {
-            clearRegion();
+            clearPlotFilter();
         } else {
             commitRegion(polygon, selectedCount);
             if (pendingSelectionType) {
@@ -394,7 +432,7 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        clearRegion();
+        clearPlotFilter();
     };
     // Videos and images track their committed selection on their filter stores; annotations use
     // the shared plot region store.
@@ -402,7 +440,7 @@
         isAnnotations ? $annotationPlotRegion !== null : committedSampleRegion !== null
     );
     const hasActiveSelection = $derived(
-        $rangeSelection !== null || activeSampleIds.length > 0 || regionSelected
+        $rangeSelection !== null || pickedSampleIds.length > 0 || regionSelected
     );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
@@ -493,7 +531,10 @@
             x: $arrowData?.x as Float32Array | undefined,
             y: $arrowData?.y as Float32Array | undefined,
             sampleIds: $arrowData?.sample_id as string[] | undefined,
-            category: $plotData?.category as Uint8Array | undefined
+            category: $plotData?.category as Uint8Array | undefined,
+            fulfilsFilter: hasActiveFilter
+                ? ($arrowData?.fulfils_filter as Uint8Array | undefined)
+                : undefined
         })
     );
     const resolveThumbnail = $derived.by(() =>
@@ -508,6 +549,25 @@
             collectionId
         })
     );
+
+    // Shift-click picks in every tool. The library's selection callback does not pass the
+    // click modifier, so it is read on pointer down.
+    let isShiftClick = false;
+    const onPlotPointerDown = (event: PointerEvent) => {
+        isShiftClick = event.shiftKey;
+    };
+    // The library keeps its own point selection; reset it after every click so each shift-click
+    // reports only the clicked point and the library draws no selection of its own.
+    let librarySelection: DataPoint[] = $state([]);
+    const onSelection = (points: DataPoint[] | null) => {
+        librarySelection = [];
+        const clickedSampleId = points?.[0]?.identifier;
+        const isPickClick = isShiftClick || activeTool === 'pick';
+        if (!isPickClick || isSequences || typeof clickedSampleId !== 'string') {
+            return;
+        }
+        commitPickedSampleIds(togglePickedSampleId(pickedSampleIds, clickedSampleId));
+    };
 
     const errorText = $derived.by(() => {
         if (embeddingsData.isError) {
@@ -557,6 +617,7 @@
             <div
                 class="embedding-plot-wrapper relative min-h-0 flex-1 overflow-hidden bg-black"
                 bind:this={plotContainer}
+                onpointerdowncapture={onPlotPointerDown}
             >
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
                     <div class="embedding-view h-full w-full">
@@ -569,6 +630,8 @@
                             {categoryColors}
                             tooltip={$rangeSelection ? null : tooltip}
                             {onTooltip}
+                            selection={librarySelection}
+                            {onSelection}
                             {querySelection}
                             customTooltip={NoopTooltip}
                             customOverlay={OverlayProxyReporter}

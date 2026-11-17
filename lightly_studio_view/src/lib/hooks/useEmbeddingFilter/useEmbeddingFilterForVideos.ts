@@ -6,13 +6,14 @@ export function useEmbeddingFilterForVideos(
     collectionId: Readable<string>,
     setRangeSelectionForCollection: (collectionId: string, selection: null) => void
 ) {
-    const { filterParams, updateEmbeddingRegion } = useVideoFilters();
+    const { filterParams, updateEmbeddingRegion, updateSampleIds } = useVideoFilters();
 
     return useRegionFilterVisibility(
         collectionId,
         () => {
             if (get(filterParams)?.collection_id === get(collectionId)) {
                 updateEmbeddingRegion(null);
+                updateSampleIds([]);
             }
         },
         setRangeSelectionForCollection

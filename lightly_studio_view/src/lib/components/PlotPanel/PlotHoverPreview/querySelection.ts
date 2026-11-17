@@ -1,4 +1,4 @@
-import { isUnselectableCategory } from '../plotCategories';
+import { HIDDEN_CATEGORY, isUnselectableCategory } from '../plotCategories';
 
 const HOVER_RADIUS_PX = 10;
 
@@ -7,6 +7,9 @@ interface CreateQuerySelectionParams {
     y: Float32Array | undefined;
     sampleIds: string[] | undefined;
     category: Uint8Array | undefined;
+    // When set, a point that passes the filters stays selectable although a plot selection
+    // greys it out, so the user can pick it.
+    fulfilsFilter?: ArrayLike<number>;
 }
 
 interface TooltipDataPoint {
@@ -22,7 +25,12 @@ interface TooltipDataPoint {
  * the hover radius.
  */
 export function createQuerySelection(params: CreateQuerySelectionParams) {
-    const { x, y, sampleIds, category } = params;
+    const { x, y, sampleIds, category, fulfilsFilter } = params;
+    const isSelectable = (index: number) => {
+        if (!category) return true;
+        if (!fulfilsFilter) return !isUnselectableCategory(category[index]);
+        return category[index] !== HIDDEN_CATEGORY && fulfilsFilter[index] !== 0;
+    };
     return async (queryX: number, queryY: number, unitDistance: number) => {
         if (!x || !y || !sampleIds) {
             return null;
@@ -31,7 +39,7 @@ export function createQuerySelection(params: CreateQuerySelectionParams) {
         let nearestIndex = -1;
         let nearestDistanceSq = maxDistance * maxDistance;
         for (let index = 0; index < x.length; index++) {
-            if (category && isUnselectableCategory(category[index])) {
+            if (!isSelectable(index)) {
                 continue;
             }
             const dx = x[index] - queryX;

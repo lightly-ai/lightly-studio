@@ -8,19 +8,28 @@ import { clearPlotSelectionCount } from './useEmbeddingPlotSelection';
 // (reader) share it. The selection is sent to the backend as geometry (see LIG-9903), so we
 // store the polygon, not the resolved sample ids.
 const annotationPlotRegion = writable<EmbeddingRegion | null>(null);
+// Annotations picked one by one with shift-click.
+const annotationPlotPickedSampleIds = writable<string[]>([]);
 
 export function useAnnotationPlotSelection() {
     return {
         annotationPlotRegion,
-        saveRegion: (region: EmbeddingRegion | null) => annotationPlotRegion.set(region)
+        annotationPlotPickedSampleIds,
+        saveRegion: (region: EmbeddingRegion | null) => annotationPlotRegion.set(region),
+        savePickedSampleIds: (sampleIds: string[]) => annotationPlotPickedSampleIds.set(sampleIds)
     };
+}
+
+function clearAnnotationPlotFilter() {
+    annotationPlotRegion.set(null);
+    annotationPlotPickedSampleIds.set([]);
 }
 
 // Clears the shared annotation plot region and the plot-selection count for `collectionId`.
 // The region store is global, but the count is per-collection, so leaving it set would keep the
 // Plot Filter chip visible after switching away from and back to the collection.
 export function clearAnnotationPlotSelection(collectionId: string) {
-    annotationPlotRegion.set(null);
+    clearAnnotationPlotFilter();
     clearPlotSelectionCount(collectionId);
 }
 
@@ -32,7 +41,7 @@ export function useEmbeddingFilterForAnnotations(
 ) {
     return useRegionFilterVisibility(
         collectionId,
-        () => annotationPlotRegion.set(null),
+        clearAnnotationPlotFilter,
         setRangeSelectionForCollection
     );
 }

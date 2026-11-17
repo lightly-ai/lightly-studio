@@ -44,4 +44,13 @@ describe('createQuerySelection', () => {
         const emptyQuery = createQuerySelection({ ...params, sampleIds: undefined });
         await expect(emptyQuery(0, 0, 0.5)).resolves.toBeNull();
     });
+
+    it('returns a point that a plot selection greys out but that passes the filters', async () => {
+        const query = createQuerySelection({
+            ...params,
+            category: new Uint8Array([EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]),
+            fulfilsFilter: new Uint8Array([1, 1])
+        });
+        await expect(query(0, 0, 0.5)).resolves.toMatchObject({ identifier: 'sample-a' });
+    });
 });
