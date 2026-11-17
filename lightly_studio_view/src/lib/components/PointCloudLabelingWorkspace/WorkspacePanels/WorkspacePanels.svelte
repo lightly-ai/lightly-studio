@@ -4,8 +4,15 @@
     import PointCloudRightSidePanel from '../PointCloudRightSidePanel';
     import WorkspaceStatusPanel from '../WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
+    import useAuth from '$lib/hooks/useAuth/useAuth';
+    import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     const controller = useWorkspaceControllerContext();
-    const { workspace, editing, data, presentation } = controller;
+    const { workspace, editing, data, presentation, targetSource } = controller;
+    const { user } = useAuth();
+    // The source for new cuboids is picked in edit mode only, like the other editing controls.
+    const canPickSource = $derived(
+        hasMinimumRole(user?.role, 'labeler') && presentation.isEditingMode
+    );
 </script>
 
 <div class="flex min-h-0 flex-1">
@@ -46,6 +53,10 @@
                     onDeleteCuboid={presentation.isEditingMode
                         ? editing.handleDeleteCuboid
                         : undefined}
+                    targetSourceName={targetSource.targetSource}
+                    pendingSourceName={targetSource.typedSource}
+                    needsPick={targetSource.needsPick}
+                    onPickSource={canPickSource ? targetSource.setTarget : undefined}
                 />
             </Pane>
         </PaneGroup>

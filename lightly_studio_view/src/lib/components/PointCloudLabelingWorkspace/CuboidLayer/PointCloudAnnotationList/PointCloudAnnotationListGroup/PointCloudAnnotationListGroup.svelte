@@ -5,6 +5,7 @@
         CollapsibleTrigger
     } from '$lib/components/ui/collapsible';
     import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import { AnnotationTargetRadio } from '$lib/components/AnnotationSource';
     import { slide } from 'svelte/transition';
     import type { Snippet } from 'svelte';
 
@@ -17,9 +18,23 @@
         autoExpandForId?: string | null;
         /** Annotation rows rendered inside the collapsible body. */
         children: Snippet;
+        /** Whether new cuboids go to this source. */
+        isTarget?: boolean;
+        /** Whether no source is picked yet, so the radio asks for a click. */
+        needsPick?: boolean;
+        /** Picks this source for new cuboids. Without it, the group has no radio. */
+        onPick?: () => void;
     }
 
-    let { name, count, autoExpandForId = null, children }: Props = $props();
+    let {
+        name,
+        count,
+        autoExpandForId = null,
+        children,
+        isTarget = false,
+        needsPick = false,
+        onPick
+    }: Props = $props();
 
     let open = $state(true);
 
@@ -32,19 +47,24 @@
 </script>
 
 <Collapsible bind:open>
-    <CollapsibleTrigger
-        class="flex w-full items-center justify-between py-1"
-        data-testid="point-cloud-annotation-list-group-header"
-    >
-        <span class="truncate text-sm font-medium">{name}</span>
-        <div class="flex shrink-0 items-center gap-2">
-            <span class="text-xs text-muted-foreground">{count}</span>
-            <ChevronDown
-                class="size-4 transition-transform"
-                style={`transform: ${open ? 'rotate(-180deg)' : 'rotate(0deg)'}; transition-duration: ${duration}ms`}
-            />
-        </div>
-    </CollapsibleTrigger>
+    <div class="flex items-center gap-2">
+        {#if onPick}
+            <AnnotationTargetRadio sourceName={name} {isTarget} {needsPick} onSetTarget={onPick} />
+        {/if}
+        <CollapsibleTrigger
+            class="flex min-w-0 flex-1 items-center justify-between py-1"
+            data-testid="point-cloud-annotation-list-group-header"
+        >
+            <span class="truncate text-sm font-medium">{name}</span>
+            <div class="flex shrink-0 items-center gap-2">
+                <span class="text-xs text-muted-foreground">{count}</span>
+                <ChevronDown
+                    class="size-4 transition-transform"
+                    style={`transform: ${open ? 'rotate(-180deg)' : 'rotate(0deg)'}; transition-duration: ${duration}ms`}
+                />
+            </div>
+        </CollapsibleTrigger>
+    </div>
     <CollapsibleContent forceMount>
         {#if open}
             <div class="mt-1" transition:slide={{ duration }}>

@@ -47,6 +47,14 @@
         ) => void;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** The source new cuboids go to. */
+        targetSourceName?: string | null;
+        /** A typed source name that is not created yet. */
+        pendingSourceName?: string | null;
+        /** Whether no source is picked among several. */
+        needsPick?: boolean;
+        /** Picks the source for new cuboids. Without it, the panel shows no source picker. */
+        onPickSource?: (name: string, options?: { isNew?: boolean }) => void;
     }
 
     let {
@@ -61,7 +69,11 @@
         editable = false,
         onCuboidTransform,
         onLabelChange,
-        onDeleteCuboid
+        onDeleteCuboid,
+        targetSourceName,
+        pendingSourceName,
+        needsPick,
+        onPickSource
     }: Props = $props();
 </script>
 
@@ -105,6 +117,10 @@
                 {onCuboidTransform}
                 {onLabelChange}
                 {onDeleteCuboid}
+                {targetSourceName}
+                {pendingSourceName}
+                {needsPick}
+                {onPickSource}
             />
         </Segment>
     </div>
