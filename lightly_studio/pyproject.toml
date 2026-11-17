@@ -56,7 +56,7 @@ dependencies = [
     # Mundig releases are published to PyPI: https://pypi.org/project/lightly-mundig/
     # To update, bump the pin below and relock:
     # uv lock --upgrade-package lightly-mundig==$version
-    "lightly-mundig==0.1.16",
+    "lightly-mundig==0.1.17",
     "pyarrow>=26.0.0",
     # PyAV 19 requires Python 3.12 and higher.
     "av>=10.0.0; python_version < '3.12'",
