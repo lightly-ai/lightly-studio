@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Every filter list in the filter panel has a search, "Select all" and "Clear".
 - The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
 - Hide an annotation track or a whole annotation source in the point cloud workspace with the eye buttons in the Annotations panel. Hidden annotations stay hidden on every frame of the sequence.
+- Filter the point cloud sequences by annotation class in the filter panel. A sequence matches when one of its frames has an annotation of that class.
 
 ### Changed
 
