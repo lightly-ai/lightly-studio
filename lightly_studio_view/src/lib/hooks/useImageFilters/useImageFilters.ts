@@ -15,6 +15,7 @@ import type {
     QueryExpr
 } from '$lib/api/lightly_studio_local';
 import type { ImageSortExpr } from '../useImagesInfinite/types';
+import type { PlotSelection } from '../useEmbeddingFilter/useEmbeddingPlotSelection';
 
 const filterParams = writable<ImagesInfiniteParams>({} as ImagesInfiniteParams);
 
@@ -91,6 +92,21 @@ export const useImageFilters = () => {
     };
 
     // updates only the embedding-plot region selection in the existing filter params
+    const updatePlotSelection = ({ embeddingRegion, sampleIds }: PlotSelection) => {
+        const params: ImagesInfiniteParams = get(filterParams);
+
+        if (params.mode !== 'normal') {
+            return;
+        }
+
+        filterParams.set(
+            patchFilters(params, {
+                embedding_region: embeddingRegion ?? undefined,
+                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
+            })
+        );
+    };
+
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
         const params: ImagesInfiniteParams = get(filterParams);
 
@@ -125,6 +141,7 @@ export const useImageFilters = () => {
         updateQueryExpr,
         updateSampleIds,
         updateEmbeddingRegion,
+        updatePlotSelection,
         updateConfusionCell,
         updateSortBy
     };

@@ -5,7 +5,14 @@ import type { useWorkspaceSceneData } from '../useWorkspaceSceneData/useWorkspac
 import { useWorkspaceEditing } from './useWorkspaceEditing.svelte';
 
 vi.mock('@tanstack/svelte-query', () => ({ useQueryClient: () => ({}) }));
-vi.mock('../useCreateCuboidAnnotation', () => ({ useCreateCuboidAnnotation: () => ({}) }));
+const { createCuboid } = vi.hoisted(() => ({
+    createCuboid: vi.fn(async (_box: unknown, onCreated: (id: string) => Promise<void>) =>
+        onCreated('cuboid-2')
+    )
+}));
+vi.mock('../useCreateCuboidAnnotation', () => ({
+    useCreateCuboidAnnotation: () => ({ handleCreateCuboid: createCuboid })
+}));
 vi.mock('../useDeleteCuboidAnnotation', () => ({ useDeleteCuboidAnnotation: () => ({}) }));
 vi.mock('../useUpdateCuboidAnnotation', () => ({ useUpdateCuboidAnnotation: () => ({}) }));
 vi.mock('../useStartSequenceTrack', () => ({ useStartSequenceTrack: () => ({}) }));
@@ -16,14 +23,25 @@ vi.mock('../useUpdateCuboidClass', () => ({ useUpdateCuboidClass: () => ({}) }))
 let dispose = () => {};
 afterEach(() => dispose());
 
-function setup() {
+const refetchAnnotationSources = vi.fn();
+
+function setup(targetSource = 'labels') {
     let editing!: ReturnType<typeof useWorkspaceEditing>;
+    const data = {
+        cuboids: [],
+        annotationSourceNames: ['labels'],
+        refetchAnnotationSources
+    } as unknown as ReturnType<typeof useWorkspaceSceneData>;
+    const workspace = {
+        tickDetails: { refetch: vi.fn().mockResolvedValue(undefined) }
+    } as unknown as PointCloudWorkspaceContext;
     dispose = $effect.root(() => {
         editing = useWorkspaceEditing(
-            () => ({}) as PointCloudWorkspaceContext,
+            () => workspace,
             () => ({}) as WorkspaceOptions,
-            () => ({ cuboids: [] }) as unknown as ReturnType<typeof useWorkspaceSceneData>,
-            () => true
+            () => data,
+            () => true,
+            () => ({ targetSource, blockedReason: null, needsPick: false })
         );
     });
     editing.selectedCuboidId = 'cuboid-1';
@@ -48,5 +66,19 @@ describe('useWorkspaceEditing', () => {
         const editing = setup();
         editing.activeTool = 'select';
         expect(editing.selectedCuboidId).toBe('cuboid-1');
+    });
+
+    it('reloads the sources after a cuboid created a new source', async () => {
+        refetchAnnotationSources.mockClear();
+        const editing = setup('review');
+        await editing.handleCreateCuboid({ center: [0, 0, 0], size: [1, 1, 1], yaw: 0 });
+        expect(refetchAnnotationSources).toHaveBeenCalledOnce();
+    });
+
+    it('does not reload the sources after a cuboid went to an existing source', async () => {
+        refetchAnnotationSources.mockClear();
+        const editing = setup('labels');
+        await editing.handleCreateCuboid({ center: [0, 0, 0], size: [1, 1, 1], yaw: 0 });
+        expect(refetchAnnotationSources).not.toHaveBeenCalled();
     });
 });

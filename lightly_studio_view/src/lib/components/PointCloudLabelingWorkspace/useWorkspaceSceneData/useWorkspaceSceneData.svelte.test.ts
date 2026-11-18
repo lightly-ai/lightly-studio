@@ -4,7 +4,14 @@ import type { AnnotationView } from '$lib/api/lightly_studio_local/types.gen';
 import type { PointCloudWorkspaceContext } from '../provider/types';
 import { useWorkspaceSceneData } from './useWorkspaceSceneData.svelte';
 
-vi.mock('$lib/hooks', () => ({ useAnnotationCollections: () => ({ data: [] }) }));
+const collectionsQuery = vi.hoisted(() => ({
+    current: {
+        data: [] as { collection_id: string; name: string }[] | undefined,
+        isError: false,
+        refetch: () => Promise.resolve()
+    }
+}));
+vi.mock('$lib/hooks', () => ({ useAnnotationCollections: () => collectionsQuery.current }));
 vi.mock('$lib/hooks/useCustomLabelColors', async () => {
     const { writable } = await import('svelte/store');
     return { useCustomLabelColors: () => ({ customLabelColorsStore: writable({}) }) };
@@ -123,5 +130,36 @@ describe('scene snapshot consistency', () => {
         workspace.isShowingSensorFrames = true;
         flushSync();
         expect(data.cuboids.map(({ id }) => id)).toEqual(['sensor-box']);
+    });
+});
+
+describe('annotation sources', () => {
+    it('has no source names until the sources load', () => {
+        collectionsQuery.current = { data: undefined, isError: false, refetch: vi.fn() };
+        const { data } = setup();
+        expect(data.annotationSourceNames).toBeUndefined();
+        expect(data.annotationSourcesError).toBe(false);
+    });
+
+    it('lists the loaded source names and reports a failed load', () => {
+        collectionsQuery.current = {
+            data: [
+                { collection_id: 's1', name: 'labels' },
+                { collection_id: 's2', name: 'predictions' }
+            ],
+            isError: true,
+            refetch: vi.fn()
+        };
+        const { data } = setup();
+        expect(data.annotationSourceNames).toEqual(['labels', 'predictions']);
+        expect(data.annotationSourcesError).toBe(true);
+    });
+
+    it('refetches the sources', async () => {
+        const refetch = vi.fn().mockResolvedValue(undefined);
+        collectionsQuery.current = { data: [], isError: false, refetch };
+        const { data } = setup();
+        await data.refetchAnnotationSources();
+        expect(refetch).toHaveBeenCalled();
     });
 });

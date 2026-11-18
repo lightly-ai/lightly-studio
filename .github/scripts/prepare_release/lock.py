@@ -17,6 +17,10 @@ from prepare_release.errors import PrepareReleaseError
 
 _LOCK_PACKAGE_SPLIT_RE = re.compile(r"(?=^\[\[package\]\]$)", re.MULTILINE)
 _LOCK_PACKAGE_NAME_RE = re.compile(r'^name = "(?P<name>[^"]+)"$', re.MULTILINE)
+# uv writes one quoted marker per line and can reorder them during a version bump.
+_RESOLUTION_MARKERS_RE = re.compile(
+    r'^(resolution-markers = \[\n)((?:    "[^\n]+",\n)+)(\])$', re.MULTILINE
+)
 
 
 def assert_lock_diff_narrow(before_text: str, after_text: str, package: str) -> None:
@@ -66,7 +70,8 @@ def _parse_lock_blocks(uv_lock_text: str) -> dict[str, list[str]]:
     before the first `[[package]]`) is kept under the empty-string key so
     it participates in the same diff check.
     """
-    chunks = _LOCK_PACKAGE_SPLIT_RE.split(uv_lock_text)
+    normalized_text = _RESOLUTION_MARKERS_RE.sub(_sort_marker_lines, uv_lock_text)
+    chunks = _LOCK_PACKAGE_SPLIT_RE.split(normalized_text)
     blocks: dict[str, list[str]] = {"": [chunks[0]]}
     for chunk in chunks[1:]:
         match = _LOCK_PACKAGE_NAME_RE.search(chunk)
@@ -74,3 +79,8 @@ def _parse_lock_blocks(uv_lock_text: str) -> dict[str, list[str]]:
             raise PrepareReleaseError("a uv.lock [[package]] block has no `name` field")
         blocks.setdefault(match.group("name"), []).append(chunk)
     return blocks
+
+
+def _sort_marker_lines(match: re.Match[str]) -> str:
+    opening, markers, closing = match.groups()
+    return opening + "".join(sorted(markers.splitlines(keepends=True))) + closing
