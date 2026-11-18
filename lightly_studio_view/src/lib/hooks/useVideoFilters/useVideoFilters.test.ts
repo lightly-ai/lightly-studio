@@ -3,8 +3,7 @@ import { get } from 'svelte/store';
 import { buildVideoFilter, useVideoFilters } from './useVideoFilters';
 import { waitFor } from '@testing-library/svelte';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import { createMetadataFilters } from '$lib/hooks';
-import { EMPTY_PLOT_SELECTION } from '../useEmbeddingFilter/useEmbeddingPlotSelection';
+import { createMetadataFilters, EMPTY_PLOT_SELECTION } from '$lib/hooks';
 
 const embeddingRegion = {
     polygon: [

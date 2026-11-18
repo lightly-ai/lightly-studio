@@ -135,3 +135,7 @@ export {
     PICK_SOURCE_MESSAGE
 } from '$lib/hooks/useAnnotationTarget/messages';
 export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
+export {
+    EMPTY_PLOT_SELECTION,
+    type PlotSelection
+} from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';

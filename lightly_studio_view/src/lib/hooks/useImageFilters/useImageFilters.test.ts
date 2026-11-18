@@ -3,8 +3,7 @@ import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { QueryExpr, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
-import { createMetadataFilters } from '$lib/hooks';
-import { EMPTY_PLOT_SELECTION } from '../useEmbeddingFilter/useEmbeddingPlotSelection';
+import { createMetadataFilters, EMPTY_PLOT_SELECTION } from '$lib/hooks';
 
 const queryExpr = {
     match_expr: {
