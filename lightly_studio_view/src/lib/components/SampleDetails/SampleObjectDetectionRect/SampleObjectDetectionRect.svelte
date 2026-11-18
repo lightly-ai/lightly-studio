@@ -220,7 +220,8 @@
                 annotation_label_name: className
             });
             return label.annotation_label_id!;
-        }
+        },
+        getDatasetId: () => datasetId
     });
 
     const onBoxCreated = (newAnnotation: AnnotationView, pendingToken: number) => {
