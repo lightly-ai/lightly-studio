@@ -61,20 +61,29 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
         if (pending.has(compute)) return;
         pending.add(compute);
         pendingComputes.set(collectionId, pending);
-        // A failed compute also ends, so the next one asks again above the threshold.
-        const endCompute = async () => {
-            await refetchStatus(collectionId);
+        const endCompute = () => {
             pending.delete(compute);
             if (pending.size > 0) return;
             pendingComputes.delete(collectionId);
             clearComputeStart(collectionId);
         };
-        void compute.then(endCompute, endCompute);
+        // A saved plot ends after the status refresh, so the prompt does not show over it.
+        // A failed compute ends at once, so the next one asks again above the threshold.
+        void compute.then(
+            () => refetchStatus(collectionId).then(endCompute),
+            () => {
+                endCompute();
+                void refetchStatus(collectionId);
+            }
+        );
     }
 
     $effect(() => {
         if (startedAt === null || freshStatus?.is_computed !== true) return;
-        untrack(() => clearComputeStart(getCollectionId()));
+        untrack(() => {
+            const collectionId = getCollectionId();
+            if (!pendingComputes.has(collectionId)) clearComputeStart(collectionId);
+        });
     });
 
     return {
