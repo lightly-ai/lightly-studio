@@ -9,7 +9,7 @@
         useSetTargetSource,
         useSettings
     } from '$lib/hooks';
-    import { NewAnnotationSourceInput } from '$lib/components/SampleDetails/NewAnnotationSourceInput';
+    import { NewAnnotationSourceInput } from '$lib/components/AnnotationSource';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';

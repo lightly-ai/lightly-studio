@@ -111,6 +111,14 @@ export function useWorkspaceSceneData(
         get annotationSources() {
             return annotationSources;
         },
+        /** The names of the annotation sources, undefined until they have loaded. */
+        get annotationSourceNames() {
+            return annotationCollectionsQuery.data?.map(({ name }) => name);
+        },
+        get annotationSourcesError() {
+            return annotationCollectionsQuery.isError;
+        },
+        refetchAnnotationSources: () => annotationCollectionsQuery.refetch(),
         get tick() {
             return tick;
         }

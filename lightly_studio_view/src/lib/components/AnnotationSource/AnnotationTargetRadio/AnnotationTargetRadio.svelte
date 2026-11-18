@@ -8,13 +8,13 @@
         /** Whether new annotations are written to this source. */
         isTarget: boolean;
         /** Whether the source is hidden. A hidden source can't take new annotations. */
-        isSourceHidden: boolean;
+        isSourceHidden?: boolean;
         /** Whether no source is picked yet, so every radio asks for a click. */
         needsPick: boolean;
         onSetTarget: () => void;
     }
 
-    let { sourceName, isTarget, isSourceHidden, needsPick, onSetTarget }: Props = $props();
+    let { sourceName, isTarget, isSourceHidden = false, needsPick, onSetTarget }: Props = $props();
 
     const label = $derived(
         isSourceHidden

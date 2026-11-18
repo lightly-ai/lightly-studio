@@ -58,11 +58,16 @@ import { toast } from 'svelte-sonner';
 import { useSelectAll } from './useSelectAll';
 import { fetchSampleIdsForImages } from './fetchSampleIdsForImages';
 import { fetchSampleIdsForVideos } from './fetchSampleIdsForVideos';
+import { fetchSampleIdsForAnnotations } from './fetchSampleIdsForAnnotations';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
+import {
+    clearAnnotationPlotSelection,
+    useAnnotationPlotSelection
+} from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 
 const collectionId = 'collection-1';
 
@@ -109,6 +114,7 @@ describe('useSelectAll', () => {
         videoFilterStore().set(null);
         frameParamsStore().set(null);
         annotationFilterStore().set(undefined);
+        clearAnnotationPlotSelection(collectionId);
     });
 
     it('records the captured filter and size into the sample store (images)', async () => {
@@ -152,6 +158,25 @@ describe('useSelectAll', () => {
 
         expect(annotationSnapshot()).toEqual({ filter: annotationFilter, size: 3 });
         expect(sampleSnapshot()).toBeNull();
+    });
+
+    it('limits an annotations select-all to the annotations picked in the plot', async () => {
+        annotationFilterStore().set({ filter_type: 'annotations', annotation_label_ids: ['a1'] });
+        useAnnotationPlotSelection().savePlotSelection({
+            embeddingRegion: null,
+            sampleIds: ['s1', 's2']
+        });
+
+        await useSelectAll(collectionId, 'annotations').handleSelectAll();
+
+        const pickedFilter = {
+            filter_type: 'annotations',
+            annotation_label_ids: ['a1'],
+            embedding_region: undefined,
+            sample_ids: ['s1', 's2']
+        };
+        expect(fetchSampleIdsForAnnotations).toHaveBeenCalledWith(collectionId, pickedFilter);
+        expect(annotationSnapshot()?.filter).toEqual(pickedFilter);
     });
 
     it('normalizes an empty annotations select-all to a conditionless typed filter', async () => {
