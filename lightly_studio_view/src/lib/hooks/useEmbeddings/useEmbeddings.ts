@@ -6,14 +6,22 @@ import { createQuery } from '@tanstack/svelte-query';
 type EmbeddingsColorBy = GetEmbeddings2dRequest['color_by'];
 type EmbeddingsAxes = GetEmbeddings2dRequest['axes'];
 
+interface UseEmbeddingsOptions {
+    enabled?: boolean;
+    getIsComputing?: () => boolean;
+    onCompute?: (compute: Promise<unknown>) => void;
+}
+
 export function useEmbeddings(
     collectionId: string,
     filters: GetEmbeddings2dRequest['filters'] | null,
     colorBy: EmbeddingsColorBy = null,
     axes: EmbeddingsAxes = null,
-    enabled = true,
-    getIsComputing: () => boolean = () => false,
-    onCompute: (compute: Promise<unknown>) => void = () => {}
+    {
+        enabled = true,
+        getIsComputing = () => false,
+        onCompute = () => {}
+    }: UseEmbeddingsOptions = {}
 ) {
     return createQuery(() => {
         const options = get2dEmbeddingsOptions({
