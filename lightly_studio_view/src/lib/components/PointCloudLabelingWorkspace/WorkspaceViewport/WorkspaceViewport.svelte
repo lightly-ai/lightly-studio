@@ -5,6 +5,7 @@
     import WorkspaceSceneHeader from '../WorkspaceSceneHeader/WorkspaceSceneHeader.svelte';
     import ViewportExpandButton from '../ViewportExpandButton/ViewportExpandButton.svelte';
     import { usePointCloudWorkspaceLayoutContext } from '../pointCloudWorkspaceLayoutContext.svelte';
+    import { CuboidTargetChip } from '../CuboidTargetChip';
     import { useWorkspaceSceneLayout } from '../workspaceSceneLayoutContext.svelte';
     /** Identifies one viewport within the shared workspace scene. */
     interface Props {
@@ -52,6 +53,15 @@
     {#snippet header()}
         {#if cameraMode === 'perspective'}
             <WorkspaceSceneHeader />
+            {#if layout.effectiveTool === 'create-cuboid'}
+                <div class="pointer-events-none flex justify-center pt-2">
+                    <CuboidTargetChip
+                        targetSource={layout.cuboidTarget.targetSource}
+                        needsPick={layout.cuboidTarget.needsPick}
+                        blockedReason={layout.cuboidTarget.blockedReason}
+                    />
+                </div>
+            {/if}
         {:else}
             <div class="pointer-events-none flex items-start justify-between px-2 py-1">
                 <span class="rounded bg-background/80 px-1.5 py-0.5 text-xs text-muted-foreground"

@@ -49,6 +49,14 @@
         onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** The source new cuboids go to. */
+        targetSourceName?: string | null;
+        /** A typed source name that is not created yet. */
+        pendingSourceName?: string | null;
+        /** Whether no source is picked among several. */
+        needsPick?: boolean;
+        /** Picks the source for new cuboids. Without it, the panel shows no source picker. */
+        onPickSource?: (name: string, options?: { isNew?: boolean }) => void;
         /** True when the cuboid is hidden in the scene. */
         isCuboidHidden?: (cuboid: CuboidAnnotation) => boolean;
         /** True when every cuboid of the source is hidden in the scene. */
@@ -76,7 +84,11 @@
         isCuboidHidden,
         isSourceHidden,
         onToggleTrackVisibility,
-        onToggleSourceVisibility
+        onToggleSourceVisibility,
+        targetSourceName,
+        pendingSourceName,
+        needsPick,
+        onPickSource
     }: Props = $props();
 </script>
 
@@ -121,6 +133,14 @@
                 {onLabelChange}
                 {onTrackChange}
                 {onDeleteCuboid}
+                sourcePicker={onPickSource
+                    ? {
+                          targetSourceName: targetSourceName ?? null,
+                          pendingSourceName: pendingSourceName ?? null,
+                          needsPick: needsPick ?? false,
+                          onPick: onPickSource
+                      }
+                    : undefined}
                 {isCuboidHidden}
                 {isSourceHidden}
                 {onToggleTrackVisibility}

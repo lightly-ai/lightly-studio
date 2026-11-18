@@ -7,6 +7,7 @@
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
+    import { usePointPicking } from './usePointPicking/usePointPicking';
     import { areTextAxesEqual } from './PlotTextAxesInputs/textAxesDraft';
     import { usePlotLayout, type PlotLayout } from './usePlotLayout/usePlotLayout';
     import { getDefaultViewport } from './usePlotLayout/textAxesViewport';
@@ -22,16 +23,21 @@
     import PlotHoverPreview from './PlotHoverPreview/PlotHoverPreview.svelte';
     import { getHoverPreviewState } from './PlotHoverPreview/hoverPreviewState';
     import { NoopTooltip, createOverlayProxyReporter } from './PlotHoverPreview/overlayProxy';
-    import { createQuerySelection, createThumbnailResolver } from './PlotHoverPreview';
+    import {
+        createQuerySelection,
+        createSelectablePointCheck,
+        createThumbnailResolver
+    } from './PlotHoverPreview';
     import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-    import type { EmbeddingRegion } from '$lib/api/lightly_studio_local';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
     import { useAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
     import {
         clearPlotSelectionCount,
+        EMPTY_PLOT_SELECTION,
         getPlotSelectionCount,
-        setPlotSelectionCount
+        setPlotSelectionCount,
+        type PlotSelection
     } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
@@ -88,14 +94,21 @@
     const imageFilters = useImageFilters();
     const videoFilters = useVideoFilters();
     const sequenceFilters = useMcapSequenceFilters();
-    const { annotationPlotRegion, saveRegion: saveAnnotationRegion } = useAnnotationPlotSelection();
+    const {
+        annotationPlotRegion,
+        annotationPlotPickedSampleIds,
+        savePlotSelection: saveAnnotationPlotSelection
+    } = useAnnotationPlotSelection();
 
     const imageFilter = $derived(isVideos || isSequences ? null : imageFilters.imageFilter);
     const videoFilter = $derived(isVideos ? videoFilters.videoFilter : null);
     const sequenceFilter = $derived(isSequences ? sequenceFilters.mcapSequenceFilter : null);
-    const activeSampleIds = $derived(
-        isVideos ? ($videoFilter?.sample_filter?.sample_ids ?? []) : []
-    );
+    const pickedSampleIds = $derived.by(() => {
+        if (isVideos) return $videoFilter?.sample_filter?.sample_ids ?? [];
+        if (isImages) return $imageFilter?.sample_filter?.sample_ids ?? [];
+        if (isAnnotations) return $annotationPlotPickedSampleIds;
+        return [];
+    });
 
     // The active annotation label/tag filter, mirroring what the annotations grid applies.
     const { annotationFilter: selectedAnnotationsFilter } = $derived.by(() =>
@@ -205,7 +218,7 @@
         );
     });
 
-    const hasActiveFilter = $derived(filter !== null || activeSampleIds.length > 0);
+    const hasActiveFilter = $derived(filter !== null || pickedSampleIds.length > 0);
 
     // Videos, images and annotations commit the lasso as region geometry. After the
     // selection is committed the live rangeSelection is cleared, so the plot re-derives the
@@ -230,7 +243,10 @@
     // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
     // canvas. The legend keeps showing the user's real toggle state.
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight = $rangeSelection !== null || committedHighlightRegion !== null;
+        const hasSelectionHighlight =
+            $rangeSelection !== null ||
+            committedHighlightRegion !== null ||
+            pickedSampleIds.length > 0;
         if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
@@ -244,7 +260,7 @@
             arrowData: $arrowData,
             rangeSelection: $rangeSelection,
             highlightRegion: committedHighlightRegion,
-            highlightedSampleIds: activeSampleIds,
+            highlightedSampleIds: pickedSampleIds,
             hasActiveFilter: hasActiveFilter,
             hiddenCategories: effectiveHiddenCategories
         })
@@ -260,30 +276,52 @@
     // Videos, images and annotations send the lasso as region geometry rather than a resolved
     // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
     // clearing removes the region entirely.
-    const saveRegion = (region: EmbeddingRegion | null) => {
+    const savePlotSelection = (selection: PlotSelection) => {
         if (isImages) {
-            imageFilters.updateEmbeddingRegion(region);
+            imageFilters.updatePlotSelection(selection);
         } else if (isVideos) {
-            videoFilters.updateEmbeddingRegion(region);
+            videoFilters.updatePlotSelection(selection);
         } else if (isSequences) {
-            sequenceFilters.updateEmbeddingRegion(region);
+            sequenceFilters.updateEmbeddingRegion(selection.embeddingRegion);
         } else {
-            saveAnnotationRegion(region);
+            saveAnnotationPlotSelection(selection);
         }
     };
     // A region drawn on the plot carries the axes of the layout, so the server resolves the
     // region in the same layout.
     const commitRegion = (polygon: Point[], count: number) => {
-        saveRegion($plotAxes ? { polygon, axes: $plotAxes } : { polygon });
+        const embeddingRegion = $plotAxes ? { polygon, axes: $plotAxes } : { polygon };
+        savePlotSelection({ embeddingRegion, sampleIds: [] });
         setPlotSelectionCount(collectionId, count);
     };
-    const clearRegion = () => {
-        saveRegion(null);
+    // The sequences grid has no sample-id filter, so it does not support picks.
+    const commitPickedSampleIds = (sampleIds: string[]) => {
+        if (isSequences) return;
+        if (sampleIds.length === 0) {
+            clearPlotFilter();
+            return;
+        }
+        savePlotSelection({ embeddingRegion: null, sampleIds });
+        setPlotSelectionCount(collectionId, sampleIds.length);
+        trackEvent('embedding_selection_made', {
+            collection_id: collectionId,
+            selection_type: 'pick',
+            selected_count: sampleIds.length
+        });
+    };
+    const clearPlotFilter = () => {
+        savePlotSelection(EMPTY_PLOT_SELECTION);
         clearPlotSelectionCount(collectionId);
     };
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (event: MouseEvent) => {
         if ($rangeSelection === null) {
+            return;
+        }
+        if (isShortShiftDrag(event)) {
+            setRangeSelection(null);
+            pendingSelectionType = null;
+            pickPressedPoint();
             return;
         }
         const polygon = $rangeSelection;
@@ -298,7 +336,7 @@
             selectedCount === 0 || (selectableCount !== null && selectedCount === selectableCount);
 
         if (selectsNothingOrEverything) {
-            clearRegion();
+            clearPlotFilter();
         } else {
             commitRegion(polygon, selectedCount);
             if (pendingSelectionType) {
@@ -389,7 +427,7 @@
 
     const clearSelection = () => {
         setRangeSelection(null);
-        clearRegion();
+        clearPlotFilter();
     };
     // Videos and images track their committed selection on their filter stores; annotations use
     // the shared plot region store.
@@ -397,7 +435,7 @@
         isAnnotations ? $annotationPlotRegion !== null : committedSampleRegion !== null
     );
     const hasActiveSelection = $derived(
-        $rangeSelection !== null || activeSampleIds.length > 0 || regionSelected
+        $rangeSelection !== null || pickedSampleIds.length > 0 || regionSelected
     );
 
     const onWindowKeyDown = (event: KeyboardEvent) => {
@@ -466,6 +504,18 @@
     const onTooltip = (value: DataPoint | null) => {
         tooltip = value;
     };
+    const {
+        librarySelection,
+        onPointerDown: onPlotPointerDown,
+        onSelection,
+        isShortShiftDrag,
+        pickPressedPoint
+    } = usePointPicking({
+        getPickedSampleIds: () => pickedSampleIds,
+        getHoveredSampleId: () =>
+            typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
+        commitPickedSampleIds
+    });
     // The card is rendered by this component (not the library's tooltip container)
     // so it always sits directly above the hovered point; the overlay proxy
     // provides the data → pixel conversion.
@@ -488,7 +538,15 @@
             x: $arrowData?.x as Float32Array | undefined,
             y: $arrowData?.y as Float32Array | undefined,
             sampleIds: $arrowData?.sample_id as string[] | undefined,
-            category: $plotData?.category as Uint8Array | undefined
+            category: $plotData?.category as Uint8Array | undefined,
+            isSelectable: createSelectablePointCheck({
+                category: $plotData?.category as Uint8Array | undefined,
+                sampleIds: $arrowData?.sample_id as string[] | undefined,
+                fulfilsFilter: hasActiveFilter
+                    ? ($arrowData?.fulfils_filter as Uint8Array | undefined)
+                    : undefined,
+                pickedSampleIds
+            })
         })
     );
     const resolveThumbnail = $derived.by(() =>
@@ -552,6 +610,7 @@
             <div
                 class="embedding-plot-wrapper relative min-h-0 flex-1 overflow-hidden bg-black"
                 bind:this={plotContainer}
+                onpointerdowncapture={onPlotPointerDown}
             >
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
                     <div class="embedding-view h-full w-full">
@@ -564,6 +623,8 @@
                             {categoryColors}
                             tooltip={$rangeSelection ? null : tooltip}
                             {onTooltip}
+                            selection={$librarySelection}
+                            {onSelection}
                             {querySelection}
                             customTooltip={NoopTooltip}
                             customOverlay={OverlayProxyReporter}

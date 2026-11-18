@@ -1,6 +1,6 @@
 ---
 name: clean-code
-description: Read before writing, refactoring, or reviewing code in any language in this repository. Gives the checkable clean-code rules for names, function shape, nesting, boolean flags, side effects, file size, dead code, duplication, error handling, lint suppressions, and comments.
+description: Read before writing, refactoring, or reviewing code in any language in this repository. Gives the checkable clean-code rules for consistency, names, constants, function shape, nesting, boolean flags, side effects, file size, dead code, duplication, error handling, root causes, lint suppressions, and comments.
 ---
 
 # Clean Code
@@ -8,12 +8,19 @@ description: Read before writing, refactoring, or reviewing code in any language
 Code must be self-descriptive. A reader understands it from the names and the structure, without
 comments. The language guides add the rules for Python, the backend, and the frontend.
 
+## Consistency
+
+- Do a task the same way as the nearby code does a similar task. Do not add a second pattern for
+  the same thing.
+
 ## Names
 
 - A name states what the value is or what the function does. Do not use `data`, `info`, `tmp`,
   `handle`, or `process` alone.
 - Use the term from the glossary skill for a domain noun.
 - Give a complex expression a name. Do not write it inline.
+- Give a literal number a name: use a constant. `0`, `1`, and `-1` are acceptable inline.
+- Do not write a double negative. Write `if is_valid`, not `if not is_invalid`.
 
 ```python
 # Bad
@@ -70,6 +77,8 @@ def export_json(samples):
 
 - Do not catch an exception that you do not handle. Do not write a bare `except Exception` or an
   empty `catch`.
+- Fix the cause of a bug, not the symptom. Do not add a special case or a retry that hides the
+  failure.
 
 ## Comments
 

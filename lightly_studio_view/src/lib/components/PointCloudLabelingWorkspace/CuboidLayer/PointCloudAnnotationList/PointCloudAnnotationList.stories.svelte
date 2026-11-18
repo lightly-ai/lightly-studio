@@ -193,3 +193,31 @@
         annotationSources: [sources[0]]
     }}
 />
+
+<Story
+    name="Pick a source"
+    args={{
+        cuboids: [gtCuboid1, gtCuboid2, predCuboid],
+        annotationSources: sources,
+        sourcePicker: {
+            targetSourceName: null,
+            pendingSourceName: null,
+            needsPick: true,
+            onPick: () => {}
+        }
+    }}
+/>
+
+<Story
+    name="Empty source picked"
+    args={{
+        cuboids: [gtCuboid1, gtCuboid2],
+        annotationSources: sources,
+        sourcePicker: {
+            targetSourceName: 'Predictions',
+            pendingSourceName: null,
+            needsPick: false,
+            onPick: () => {}
+        }
+    }}
+/>

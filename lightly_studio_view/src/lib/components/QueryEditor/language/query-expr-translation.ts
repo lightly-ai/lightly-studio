@@ -28,7 +28,6 @@ import {
     isSegmentationMaskFloatFieldName,
     isStringLiteral,
     isTagInExpression,
-    isVideoEqualityFloatFieldName,
     isVideoIntFieldName,
     isVideoOrdinalFloatFieldName,
     isVideoStringFieldName,
@@ -239,15 +238,6 @@ function visitComparisonExpression(
                         type: 'ordinal_float_expr',
                         field: { table, name: fieldName },
                         operator: toOrdinalComparisonOperator(expr.operator),
-                        value: right.value
-                    };
-                }
-                if (isVideoEqualityFloatFieldName(fieldName)) {
-                    return {
-                        type: 'equality_float_expr',
-                        field: { table, name: fieldName },
-                        // TODO: make Langium grammar more strict, so that `toEqualityComparisonOperator` is not needed
-                        operator: toEqualityComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }
