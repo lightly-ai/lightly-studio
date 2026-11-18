@@ -148,6 +148,7 @@ class TestQueryExpr:
             "classification_match_expr",
             "object_detection_match_expr",
             "segmentation_mask_match_expr",
+            "video_event_match_expr",
         ],
     )
     def test_model_validate__evaluation_inside_annotation(self, annotation_type: str) -> None:
