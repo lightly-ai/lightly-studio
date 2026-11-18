@@ -12,7 +12,8 @@ export function useEmbeddings(
     colorBy: EmbeddingsColorBy = null,
     axes: EmbeddingsAxes = null,
     enabled = true,
-    getIsComputing: () => boolean = () => false
+    getIsComputing: () => boolean = () => false,
+    onCompute: (compute: Promise<unknown>) => void = () => {}
 ) {
     return createQuery(() => {
         const options = get2dEmbeddingsOptions({
@@ -28,6 +29,11 @@ export function useEmbeddings(
                 ? (context) => {
                       if (!getIsComputing()) return fetchPlot(context);
                       const { client, queryKey, meta } = context;
+                      // The query promise settles after the last retry, not after this attempt.
+                      const compute = client
+                          .getQueryCache()
+                          .find({ queryKey, exact: true })?.promise;
+                      if (compute) onCompute(compute);
                       const signal = new AbortController().signal;
                       return fetchPlot({ client, queryKey, meta, signal });
                   }
