@@ -69,4 +69,36 @@ describe('SampleImageGridItem', () => {
             'cover'
         );
     });
+
+    it('shows the workflow state badge of a batched image', () => {
+        render(SampleImageGridItem, {
+            props: {
+                sample: {
+                    sample_id: 'image-1',
+                    annotations: [],
+                    workflow: { project_id: 'p', batch_id: 'b', state: 'in_review' }
+                } as unknown as ImageView,
+                tileWidth: 240,
+                tileHeight: 160
+            }
+        });
+
+        expect(screen.getByTestId('workflow-grid-state-badge')).toHaveTextContent('In review');
+    });
+
+    it('shows no workflow state badge for an image that is not batched', () => {
+        render(SampleImageGridItem, {
+            props: {
+                sample: {
+                    sample_id: 'image-1',
+                    annotations: [],
+                    workflow: null
+                } as unknown as ImageView,
+                tileWidth: 240,
+                tileHeight: 160
+            }
+        });
+
+        expect(screen.queryByTestId('workflow-grid-state-badge')).not.toBeInTheDocument();
+    });
 });

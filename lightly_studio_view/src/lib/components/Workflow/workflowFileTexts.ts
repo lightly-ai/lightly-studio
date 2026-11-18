@@ -11,6 +11,11 @@ export const WORKFLOW_STATES: Record<WorkflowFileState, { label: string; color: 
     accepted: { label: 'Accepted', color: '#3bd99f' }
 };
 
+/** Whether a value is a workflow file state, that is a key of `WORKFLOW_STATES`. */
+export function isWorkflowFileState(state: string): state is WorkflowFileState {
+    return Object.hasOwn(WORKFLOW_STATES, state);
+}
+
 /** Turn indicator colors from the design: green on the user's turn, gray otherwise. */
 export const TURN_COLORS = { yours: '#3bd99f', others: '#9f9fa6' };
 

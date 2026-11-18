@@ -2,6 +2,7 @@
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import SampleClassificationPills from '$lib/components/SampleClassificationPills/SampleClassificationPills.svelte';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import WorkflowStateBadge from '$lib/components/Workflow/WorkflowStateBadge/WorkflowStateBadge.svelte';
     import { hasValueBadge } from '$lib/components/SampleValueBadge/SampleValueBadge.helpers';
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import { useSettings } from '$lib/hooks/useSettings';
@@ -45,6 +46,9 @@
     hasRightOverlay={showMissingValue || hasValueBadge(sample.order_value, sample.similarity_score)}
 />
 <SampleAnnotations {sample} {objectFit} outputWidth={tileWidth} outputHeight={tileHeight} />
+{#if sample.workflow}
+    <WorkflowStateBadge state={sample.workflow.state} />
+{/if}
 
 <SampleValueBadge
     {showMissingValue}

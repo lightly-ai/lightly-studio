@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import cast
+from typing import Any, cast
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ColumnElement
+from sqlalchemy import ColumnElement, Row, Select
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
@@ -24,6 +24,7 @@ from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.workflow import SampleWorkflowView
 from lightly_studio.resolvers import embedding_region_resolver, workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.similarity_utils import (
@@ -60,6 +61,8 @@ class GetAllSamplesByCollectionIdResult(BaseModel):
     next_cursor: int | None = None
     similarity_scores: Sequence[float] | None = None
     order_values: Sequence[float | None] | None = None
+    workflows: Sequence[SampleWorkflowView | None] | None = None
+    """Each sample's batch and state in the dataset's workflow project, None if not batched."""
 
 
 def _get_load_options() -> LoaderOption:
@@ -97,10 +100,15 @@ def get_all_by_collection_id(  # noqa: PLR0913
     sample_ids: list[UUID] | None = None,
     order_by: list[OrderByExpression] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
-    """Retrieve samples for a specific collection with optional filtering."""
-    workflow_resolver.resolve_sample_filter(
-        session=session, collection_id=collection_id, filters=filters
+    """Retrieve samples for a specific collection with optional filtering.
+
+    When the dataset has a workflow project, the result also has each sample's batch and state
+    in it, from one LEFT JOIN in the page query.
+    """
+    workflow_project_id = workflow_resolver.get_dataset_project_id(
+        session=session, collection_id=collection_id
     )
+    workflow_resolver.set_filter_project_id(filters=filters, project_id=workflow_project_id)
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
     if (
@@ -133,6 +141,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
             pagination=pagination,
             filters=filters,
             sample_ids=sample_ids,
+            workflow_project_id=workflow_project_id,
         )
     return _get_all_without_similarity(
         session=session,
@@ -141,6 +150,7 @@ def get_all_by_collection_id(  # noqa: PLR0913
         filters=filters,
         sample_ids=sample_ids,
         order_by=order_by,
+        workflow_project_id=workflow_project_id,
     )
 
 
@@ -152,6 +162,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
     pagination: Paginated | None,
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
+    workflow_project_id: UUID | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples with similarity search - returns (ImageTable, float) tuples."""
     load_options = _get_load_options()
@@ -198,10 +209,18 @@ def _get_all_with_similarity(  # noqa: PLR0913
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
-    total_count = session.exec(total_count_query).one()
-    results = session.exec(samples_query).all()
+    page_query: Select[Any] = samples_query
+    if workflow_project_id is not None:
+        page_query = workflow_resolver.add_sample_workflow_columns(
+            query=page_query,
+            sample_id_column=col(ImageTable.sample_id),
+            project_id=workflow_project_id,
+        )
 
-    samples = [r[0] for r in results]
+    total_count = session.exec(total_count_query).one()
+    results = session.execute(page_query).all()
+
+    samples = [cast(ImageTable, r[0]) for r in results]
     similarity_scores = [distance_to_similarity(r[1]) for r in results]
 
     return GetAllSamplesByCollectionIdResult(
@@ -210,6 +229,7 @@ def _get_all_with_similarity(  # noqa: PLR0913
         next_cursor=_compute_next_cursor(pagination, total_count),
         similarity_scores=similarity_scores,
         order_values=None,
+        workflows=_get_workflows(rows=results, workflow_project_id=workflow_project_id),
     )
 
 
@@ -220,6 +240,7 @@ def _get_all_without_similarity(  # noqa: PLR0913
     filters: ImageFilter | None,
     sample_ids: list[UUID] | None,
     order_by: list[OrderByExpression] | None,
+    workflow_project_id: UUID | None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Get samples without similarity search.
 
@@ -281,6 +302,12 @@ def _get_all_without_similarity(  # noqa: PLR0913
         ordered_query = ordered_query.order_by(*expr.to_column_elements())
     if pagination is not None:
         ordered_query = ordered_query.offset(pagination.offset).limit(pagination.limit)
+    if workflow_project_id is not None:
+        ordered_query = workflow_resolver.add_sample_workflow_columns(
+            query=ordered_query,
+            sample_id_column=col(ImageTable.sample_id),
+            project_id=workflow_project_id,
+        )
 
     # Multi-column rows: ImageTable at index 0, sort value read by label.
     rows = session.execute(ordered_query).all()
@@ -293,4 +320,16 @@ def _get_all_without_similarity(  # noqa: PLR0913
         next_cursor=next_cursor,
         similarity_scores=None,
         order_values=order_values,
+        workflows=_get_workflows(rows=rows, workflow_project_id=workflow_project_id),
     )
+
+
+def _get_workflows(
+    rows: Sequence[Row[Any]], workflow_project_id: UUID | None
+) -> list[SampleWorkflowView | None]:
+    if workflow_project_id is None:
+        return [None] * len(rows)
+    return [
+        workflow_resolver.get_sample_workflow(row=row, project_id=workflow_project_id)
+        for row in rows
+    ]

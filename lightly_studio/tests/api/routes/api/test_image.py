@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from uuid import uuid4
 
+import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -24,6 +26,7 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
     GetAllSamplesByCollectionIdResult,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from tests import helpers_workflow
 from tests.helpers_resolvers import (
     AnnotationDetails,
     ImageStub,
@@ -695,3 +698,31 @@ def test_get_image_sample_ids(
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [str(image.sample_id)]
+
+
+@pytest.fixture
+def workflow_tables(db_session: Session) -> Generator[None, None, None]:
+    with helpers_workflow.workflow_tables(session=db_session):
+        yield
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_read_images__workflow(test_client: TestClient, db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    batched = create_image(
+        session=db_session, collection_id=collection_id, file_path_abs="/data/a.png"
+    )
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/data/b.png")
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={batched.sample_id: "rework"}
+    )
+
+    response = test_client.post(f"/api/collections/{collection_id}/images/list", json={})
+
+    assert response.status_code == HTTP_STATUS_OK
+    data = response.json()["data"]
+    assert data[0]["workflow"]["project_id"] == str(project_id)
+    assert data[0]["workflow"]["batch_id"]
+    assert data[0]["workflow"]["state"] == "rework"
+    assert data[1]["workflow"] is None

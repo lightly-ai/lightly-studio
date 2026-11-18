@@ -11,7 +11,9 @@ change. Change both places together.
 from __future__ import annotations
 
 from enum import Enum
+from uuid import UUID
 
+from pydantic import BaseModel
 from sqlalchemy import Column, MetaData, String, Table, Uuid
 
 
@@ -49,3 +51,11 @@ batch_file_table = Table(
     Column("state", String, nullable=False),
 )
 """A sample in a batch. A sample is in at most one batch of a project."""
+
+
+class SampleWorkflowView(BaseModel):
+    """The batch of a sample in the dataset's workflow project, and the sample's state there."""
+
+    project_id: UUID
+    batch_id: UUID
+    state: WorkflowStatus

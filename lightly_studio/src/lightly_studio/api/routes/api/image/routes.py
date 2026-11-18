@@ -90,10 +90,15 @@ def read_images(
     order_values: list[float | None] = (
         list(result.order_values) if result.order_values else [None] * len(result.samples)
     )
+    workflows = list(result.workflows) if result.workflows else [None] * len(result.samples)
     return ImageViewsWithCount(
         samples=[
-            ImageView.from_image_table(image=image, similarity_score=score, order_value=order_value)
-            for image, score, order_value in zip(result.samples, scores, order_values)
+            ImageView.from_image_table(
+                image=image, similarity_score=score, order_value=order_value, workflow=workflow
+            )
+            for image, score, order_value, workflow in zip(
+                result.samples, scores, order_values, workflows
+            )
         ],
         total_count=result.total_count,
         next_cursor=result.next_cursor,

@@ -4,6 +4,7 @@ from collections.abc import Generator
 from uuid import UUID
 
 import pytest
+import sqlalchemy
 from pydantic_core._pydantic_core import ValidationError
 from sqlmodel import Session
 
@@ -16,7 +17,7 @@ from lightly_studio.core.dataset_query.order_by import (
 )
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.image import ImageTable
-from lightly_studio.models.workflow import WorkflowStatus
+from lightly_studio.models.workflow import SampleWorkflowView, WorkflowStatus, batch_file_table
 from lightly_studio.resolvers import (
     image_resolver,
     metadata_resolver,
@@ -1381,3 +1382,163 @@ def test_get_all_by_collection_id__workflow_states(
         images[2].sample_id,
     ]
     assert result.total_count == 2
+
+
+def _create_batched_images(db_session: Session) -> tuple[UUID, UUID, list[ImageTable]]:
+    """Create a dataset with 3 images; a.png and b.png are batched, c.png is not."""
+    collection_id = create_collection(session=db_session).collection_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="a.png"), ImageStub(path="b.png"), ImageStub(path="c.png")],
+    )
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={images[0].sample_id: "in_review", images[1].sample_id: "accepted"},
+    )
+    return collection_id, project_id, images
+
+
+def _batch_id(db_session: Session, sample_id: UUID) -> UUID:
+    return db_session.execute(
+        sqlalchemy.select(batch_file_table.c.batch_id).where(
+            batch_file_table.c.sample_id == sample_id
+        )
+    ).scalar_one()
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow(db_session: Session) -> None:
+    collection_id, project_id, images = _create_batched_images(db_session=db_session)
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
+
+    assert [image.sample_id for image in result.samples] == [i.sample_id for i in images]
+    assert result.workflows == [
+        SampleWorkflowView(
+            project_id=project_id,
+            batch_id=_batch_id(db_session=db_session, sample_id=images[0].sample_id),
+            state=WorkflowStatus.IN_REVIEW,
+        ),
+        SampleWorkflowView(
+            project_id=project_id,
+            batch_id=_batch_id(db_session=db_session, sample_id=images[1].sample_id),
+            state=WorkflowStatus.ACCEPTED,
+        ),
+        None,
+    ]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow_with_filter_and_pagination(
+    db_session: Session,
+) -> None:
+    collection_id, _, images = _create_batched_images(db_session=db_session)
+    filters = ImageFilter(
+        sample_filter=SampleFilter(
+            workflow_states=[WorkflowStatus.ACCEPTED, WorkflowStatus.NOT_IN_WORKFLOW]
+        )
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=collection_id,
+        filters=filters,
+        pagination=Paginated(offset=0, limit=1),
+    )
+
+    assert [image.sample_id for image in result.samples] == [images[1].sample_id]
+    assert result.workflows is not None
+    assert [w.state if w else None for w in result.workflows] == [WorkflowStatus.ACCEPTED]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow_with_similarity(db_session: Session) -> None:
+    collection_id, _, images = _create_batched_images(db_session=db_session)
+    embedding_model = create_embedding_model(
+        session=db_session, collection_id=collection_id, embedding_dimension=2, set_as_default=True
+    )
+    for image, embedding in zip(images, [[1.0, 0.0], [0.0, 1.0], [-1.0, 0.0]]):
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding=embedding,
+            embedding_model_id=embedding_model.embedding_model_id,
+        )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id, text_embedding=[-1.0, 0.0]
+    )
+
+    assert [image.sample_id for image in result.samples] == [
+        images[2].sample_id,
+        images[1].sample_id,
+        images[0].sample_id,
+    ]
+    assert result.workflows is not None
+    assert [w.state if w else None for w in result.workflows] == [
+        None,
+        WorkflowStatus.ACCEPTED,
+        WorkflowStatus.IN_REVIEW,
+    ]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow_no_project(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="a.png"), ImageStub(path="b.png")],
+    )
+    statements: list[str] = []
+
+    def listener(*args: object) -> None:
+        statements.append(str(args[2]))
+
+    engine = db_session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        result = image_resolver.get_all_by_collection_id(
+            session=db_session, collection_id=collection_id
+        )
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+
+    assert result.workflows == [None, None]
+    assert not any("batch_file" in statement for statement in statements)
+
+
+def test_get_all_by_collection_id__workflow_no_workflow_tables(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    create_images(
+        db_session=db_session, collection_id=collection_id, images=[ImageStub(path="a.png")]
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id
+    )
+
+    assert result.workflows == [None]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow_one_join_per_page(db_session: Session) -> None:
+    collection_id, _, _ = _create_batched_images(db_session=db_session)
+    statements: list[str] = []
+
+    def listener(*args: object) -> None:
+        statements.append(str(args[2]))
+
+    engine = db_session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        image_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+
+    assert len([s for s in statements if "batch_file" in s]) == 1

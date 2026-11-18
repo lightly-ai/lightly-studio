@@ -15,6 +15,7 @@ from lightly_studio.models.caption import CaptionView
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.metadata import SampleMetadataView
 from lightly_studio.models.sample import SampleTable, SampleView
+from lightly_studio.models.workflow import SampleWorkflowView
 
 
 class ImageBase(SQLModel):
@@ -80,6 +81,8 @@ class ImageView(BaseModel):
     captions: list[CaptionView] = []
     similarity_score: float | None = None
     order_value: float | None = None
+    workflow: SampleWorkflowView | None = None
+    """The sample's batch and state in the dataset's workflow project, None if not batched."""
 
     @classmethod
     def from_image_table(
@@ -87,6 +90,7 @@ class ImageView(BaseModel):
         image: "ImageTable",
         similarity_score: float | None = None,
         order_value: float | None = None,
+        workflow: SampleWorkflowView | None = None,
     ) -> "ImageView":
         """Convert an ImageTable to an ImageView.
 
@@ -95,6 +99,7 @@ class ImageView(BaseModel):
             similarity_score: Similarity to a text/embedding query, when search is active.
             order_value: Primary sort value for the current grid sort, when provided by the
                 resolver. Mutually exclusive with ``similarity_score`` for the grid overlay.
+            workflow: The sample's batch and state in the dataset's workflow project.
         """
         return cls(
             file_name=image.file_name,
@@ -122,6 +127,7 @@ class ImageView(BaseModel):
             sample=SampleView.model_validate(image.sample),
             similarity_score=similarity_score,
             order_value=order_value,
+            workflow=workflow,
         )
 
 
