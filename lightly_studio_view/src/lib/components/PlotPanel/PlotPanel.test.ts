@@ -87,13 +87,15 @@ interface GateMockState {
     startedAt: number | null;
     statusError: string | null;
     startCompute: () => void;
+    trackCompute: (compute: Promise<unknown>) => void;
 }
 const DEFAULT_GATE_STATE: GateMockState = {
     view: 'plot',
     embeddingCount: 0,
     startedAt: null,
     statusError: null,
-    startCompute: () => {}
+    startCompute: () => {},
+    trackCompute: () => {}
 };
 // A reactive map, so a test can change the gate after render like the real hook does.
 const gateMock = vi.hoisted(() => ({ values: null as Map<string, unknown> | null }));
@@ -120,7 +122,8 @@ vi.mock('./usePlotComputeGate/usePlotComputeGate.svelte', async () => {
             get statusError() {
                 return read('statusError');
             },
-            startCompute: () => read('startCompute')()
+            startCompute: () => read('startCompute')(),
+            trackCompute: (compute: Promise<unknown>) => read('trackCompute')(compute)
         })
     };
 });
@@ -631,6 +634,7 @@ describe('PlotPanel.svelte', () => {
             null,
             null,
             true,
+            expect.any(Function),
             expect.any(Function)
         );
 
@@ -644,6 +648,7 @@ describe('PlotPanel.svelte', () => {
             { type: 'metadata_field', key: 'split' },
             null,
             true,
+            expect.any(Function),
             expect.any(Function)
         );
     });
@@ -663,6 +668,7 @@ describe('PlotPanel.svelte', () => {
             { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
             null,
             true,
+            expect.any(Function),
             expect.any(Function)
         );
     });
@@ -685,6 +691,7 @@ describe('PlotPanel.svelte', () => {
                 null,
                 TEXT_LAYOUT_AXES,
                 true,
+                expect.any(Function),
                 expect.any(Function)
             )
         );
@@ -950,6 +957,18 @@ describe('PlotPanel.svelte', () => {
             expect((useEmbeddings as vi.Mock).mock.lastCall?.[4]).toBe(false);
             await fireEvent.click(screen.getByRole('button', { name: 'Compute plot' }));
             expect(startCompute).toHaveBeenCalledOnce();
+        });
+
+        it('hands a running compute to the gate', () => {
+            const trackCompute = vi.fn();
+            setGate({ view: 'computing', trackCompute });
+            (useEmbeddings as vi.Mock).mockReturnValue(loadingPlot);
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            const compute = Promise.resolve();
+            (useEmbeddings as vi.Mock).mock.lastCall?.[6](compute);
+
+            expect(trackCompute).toHaveBeenCalledWith(compute);
         });
 
         it('keeps the request off when the filter changes under the prompt', async () => {

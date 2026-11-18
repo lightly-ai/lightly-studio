@@ -184,8 +184,7 @@
 
     const plotComputeGate = usePlotComputeGate({
         getCollectionId: () => collectionId,
-        getIsAxesLayout: () => $plotAxes !== null,
-        getPlotUpdatedAt: () => embeddingsData.dataUpdatedAt
+        getIsAxesLayout: () => $plotAxes !== null
     });
     // A separate derived, so a view change that keeps the request on does not create a new query.
     const isPlotRequestEnabled = $derived(plotComputeGate.isPlotRequestEnabled);
@@ -196,7 +195,8 @@
             $colorBy,
             $plotAxes,
             isPlotRequestEnabled,
-            () => plotComputeGate.view === 'computing'
+            () => plotComputeGate.view === 'computing',
+            plotComputeGate.trackCompute
         )
     );
 
