@@ -105,6 +105,19 @@ class TestLocalCollectionTransport:
         assert listener.call_count == 1
         assert fetched == root
 
+    def test_get_all_by_parent(self) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        root = transport.create(
+            collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
+        )
+        transport.create(collection=CollectionCreate(name="other", sample_type=SampleType.IMAGE))
+
+        roots = transport.get_all_by_parent(parent_collection_id=None, name=None)
+        by_name = transport.get_all_by_parent(parent_collection_id=None, name="root")
+
+        assert [collection.name for collection in roots] == ["root", "other"]
+        assert by_name == [root]
+
     def test_get_or_create_child(self) -> None:
         transport: CollectionTransport = LocalCollectionTransport()
         root = transport.create(
