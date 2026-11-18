@@ -8,6 +8,8 @@
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
+    import { useWorkflowGridFilter } from '$lib/hooks/useWorkflowGridFilter/useWorkflowGridFilter.svelte';
+    import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter';
 
     // The page layout provides data, but this route loads its own sequence data.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -18,12 +20,18 @@
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, setfilteredSampleCount } =
         useGlobalStorage();
-    const { mcapSequenceFilter, setCollectionId, updateTagIds } = useMcapSequenceFilters();
+    const { mcapSequenceFilter, setCollectionId, updateTagIds, updateWorkflowStates } =
+        useMcapSequenceFilters();
     const { tagsSelected } = $derived.by(() => useTags({ collection_id: collectionId }));
+
+    const workflowGrid = useWorkflowGridFilter(() => collectionId);
+    const { selectedWorkflowStates } = $derived(useWorkflowStatusFilter(collectionId));
+    const workflowStates = $derived(workflowGrid.statesToFilter($selectedWorkflowStates));
 
     $effect(() => {
         setCollectionId(collectionId);
         updateTagIds(Array.from($tagsSelected));
+        updateWorkflowStates(workflowStates);
     });
 
     const {
@@ -40,6 +48,8 @@
     $effect(() => {
         setfilteredSampleCount($totalCount);
     });
+
+    $effect(() => workflowGrid.onGridRefetching(query.isRefetching));
 
     const sequences = $derived(
         $sequenceData.map((sequence) => ({

@@ -11,7 +11,12 @@ from sqlmodel.sql.expression import Select
 
 from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
-from lightly_studio.resolvers import adjacents, mcap_group_sequence_resolver, similarity_utils
+from lightly_studio.resolvers import (
+    adjacents,
+    mcap_group_sequence_resolver,
+    similarity_utils,
+    workflow_resolver,
+)
 from lightly_studio.resolvers.mcap_group_sequence_resolver import sequence_grid_query
 from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
     McapSequenceFilter,
@@ -45,6 +50,9 @@ def get_adjacent_sequences(
     """
     mcap_group_sequence_resolver.resolve_embedding_region(
         session=session, collection_id=collection_id, sequence_filter=filters
+    )
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=filters
     )
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,

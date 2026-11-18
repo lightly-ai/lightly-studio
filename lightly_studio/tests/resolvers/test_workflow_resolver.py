@@ -12,11 +12,12 @@ from sqlmodel import Session, select
 
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.workflow import WorkflowStatus
-from lightly_studio.resolvers import workflow_resolver
+from lightly_studio.resolvers import mcap_group_sequence_resolver, workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from tests import helpers_workflow
 from tests.helpers_resolvers import ImageStub, create_collection, create_images
+from tests.resolvers.mcap_group_sequence_resolver import helpers as mcap_helpers
 
 
 @pytest.fixture
@@ -153,6 +154,32 @@ def test_get_status_counts__no_batch_files(db_session: Session) -> None:
     )
 
     assert counts[WorkflowStatus.NOT_IN_WORKFLOW] == 2
+    assert sum(counts.values()) == 2
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_status_counts__mcap_dataset_counts_sequences_only(db_session: Session) -> None:
+    """The groups and MCAP samples of a sequence live in child collections, not the root."""
+    batched = mcap_helpers.create_mcap_sequence(session=db_session)
+    mcap_helpers.add_mcap_ticks_to_sequence(
+        session=db_session, fixture=batched, ticks=[(100, 100), (200, None)]
+    )
+    dataset_id = batched.sequence_collection.collection_id
+    mcap_group_sequence_resolver.create(
+        session=db_session, collection_id=dataset_id, recording_id=batched.recording_id
+    )
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=dataset_id)
+    helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={batched.sample_id: "accepted"}
+    )
+
+    counts = workflow_resolver.get_status_counts(
+        session=db_session, dataset_id=dataset_id, project_id=project_id
+    )
+
+    # Two sequences, one of them batched. The ticks add no samples to the root collection.
+    assert counts[WorkflowStatus.ACCEPTED] == 1
+    assert counts[WorkflowStatus.NOT_IN_WORKFLOW] == 1
     assert sum(counts.values()) == 2
 
 

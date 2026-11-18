@@ -2,13 +2,15 @@ import { derived, get, writable } from 'svelte/store';
 import type {
     EmbeddingRegion,
     McapSequenceFilter,
-    SampleFilter
+    SampleFilter,
+    WorkflowStatus
 } from '$lib/api/lightly_studio_local';
 
 export type McapSequenceFilterParams = {
     collection_id: string;
     embedding_region?: EmbeddingRegion;
     tag_ids?: string[];
+    workflow_states?: WorkflowStatus[];
 };
 
 const filterParams = writable<McapSequenceFilterParams | null>(null);
@@ -27,6 +29,9 @@ export const buildMcapSequenceFilter = (
     if (params.tag_ids && params.tag_ids.length > 0) {
         sampleFilter.tag_ids = params.tag_ids;
     }
+    if (params.workflow_states && params.workflow_states.length > 0) {
+        sampleFilter.workflow_states = params.workflow_states;
+    }
 
     const filter: McapSequenceFilter = { filter_type: 'mcap_sequence' };
     if (Object.keys(sampleFilter).length > 0) {
@@ -40,8 +45,9 @@ const mcapSequenceFilter = derived(filterParams, ($filterParams) =>
 );
 
 /**
- * Filter state of the MCAP sequence grid. The filter panel writes the selected tags here and
- * the embedding plot the selected region. The grid and the plot read the filter.
+ * Filter state of the MCAP sequence grid. The filter panel writes the selected tags and
+ * workflow states here, and the embedding plot the selected region. The grid and the plot
+ * read the filter.
  */
 export const useMcapSequenceFilters = () => {
     // Resets the filter when the grid shows another collection.
@@ -60,6 +66,18 @@ export const useMcapSequenceFilters = () => {
         filterParams.set({ ...params, tag_ids: tagIds.length > 0 ? tagIds : undefined });
     };
 
+    // The grid passes undefined when the dataset has no workflow project or nothing is selected.
+    const updateWorkflowStates = (workflowStates: WorkflowStatus[] | undefined) => {
+        const params = get(filterParams);
+        if (!params) {
+            return;
+        }
+        filterParams.set({
+            ...params,
+            workflow_states: workflowStates?.length ? workflowStates : undefined
+        });
+    };
+
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
         const params = get(filterParams);
         if (!params) {
@@ -73,6 +91,7 @@ export const useMcapSequenceFilters = () => {
         mcapSequenceFilter,
         setCollectionId,
         updateEmbeddingRegion,
-        updateTagIds
+        updateTagIds,
+        updateWorkflowStates
     };
 };

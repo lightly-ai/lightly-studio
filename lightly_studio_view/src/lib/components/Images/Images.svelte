@@ -9,12 +9,10 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useWorkflowProject } from '$lib/hooks/useWorkflowProject/useWorkflowProject.svelte';
+    import { useWorkflowGridFilter } from '$lib/hooks/useWorkflowGridFilter/useWorkflowGridFilter.svelte';
     import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter';
-    import { useWorkflowStatusCounts } from '$lib/hooks/useWorkflowStatusCounts/useWorkflowStatusCounts.svelte';
-    import { trackGridReload } from '$lib/hooks/useWorkflowStatusCounts/trackGridReload';
     import { routeHelpers } from '$lib/routes';
-    import { onMount, untrack } from 'svelte';
+    import { onMount } from 'svelte';
     import type { Readable } from 'svelte/store';
     import {
         useImagesInfinite,
@@ -74,15 +72,9 @@
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 
-    // The workflow status filter applies only when the dataset has a workflow project, so a
-    // dataset without one runs no workflow SQL.
-    const workflowProject = useWorkflowProject(() => collection_id);
+    const workflowGrid = useWorkflowGridFilter(() => collection_id);
     const { selectedWorkflowStates } = $derived(useWorkflowStatusFilter(collection_id));
-    const workflowStates = $derived(
-        workflowProject.projectId && $selectedWorkflowStates.length > 0
-            ? $selectedWorkflowStates
-            : undefined
-    );
+    const workflowStates = $derived(workflowGrid.statesToFilter($selectedWorkflowStates));
 
     const samplesParams = $derived({
         collection_id,
@@ -139,21 +131,7 @@
         sort_by: $textEmbedding ? undefined : ($imageSortBy ?? undefined)
     }));
 
-    // The workflow status counts are not polled. They refresh when the grid reloads, so a
-    // state change made elsewhere shows up once the user is back on the grid.
-    const workflowStatusCounts = useWorkflowStatusCounts(() => ({
-        collectionId: collection_id,
-        projectId: workflowProject.projectId
-    }));
-    const onGridReload = trackGridReload();
-    $effect(() => {
-        // A refetch of the same grid query, not a filter change (that is a new query) and
-        // not the next page. Toggling a filter leaves the project-wide counts as they are.
-        const reloadStartedAt = onGridReload(infiniteSamples.isRefetching, Date.now());
-        if (reloadStartedAt !== null) {
-            untrack(() => workflowStatusCounts.refreshIfOlderThan(reloadStartedAt));
-        }
-    });
+    $effect(() => workflowGrid.onGridRefetching(infiniteSamples.isRefetching));
 
     // Derived list of samples from TanStack infinite query
     const samples: ImageView[] = $derived(

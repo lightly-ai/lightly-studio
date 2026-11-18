@@ -15,6 +15,24 @@ describe('buildMcapSequenceFilter', () => {
             sample_filter: { tag_ids: ['tag-1'] }
         });
     });
+
+    it('puts the selected workflow states into the sample filter', () => {
+        expect(
+            buildMcapSequenceFilter({
+                collection_id: 'collection-1',
+                workflow_states: ['accepted', 'not_in_workflow']
+            })
+        ).toEqual({
+            filter_type: 'mcap_sequence',
+            sample_filter: { workflow_states: ['accepted', 'not_in_workflow'] }
+        });
+    });
+
+    it('leaves out an empty workflow state list', () => {
+        expect(
+            buildMcapSequenceFilter({ collection_id: 'collection-1', workflow_states: [] })
+        ).toEqual({ filter_type: 'mcap_sequence' });
+    });
 });
 
 describe('useMcapSequenceFilters', () => {
@@ -40,6 +58,18 @@ describe('useMcapSequenceFilters', () => {
         expect(get(mcapSequenceFilter)?.sample_filter).toEqual({ tag_ids: ['tag-1'] });
 
         setCollectionId('collection-2');
+        expect(get(mcapSequenceFilter)).toEqual({ filter_type: 'mcap_sequence' });
+    });
+
+    it('updates the workflow states of the current collection', () => {
+        const { mcapSequenceFilter, setCollectionId, updateWorkflowStates } =
+            useMcapSequenceFilters();
+
+        setCollectionId('collection-3');
+        updateWorkflowStates(['in_review']);
+        expect(get(mcapSequenceFilter)?.sample_filter).toEqual({ workflow_states: ['in_review'] });
+
+        updateWorkflowStates(undefined);
         expect(get(mcapSequenceFilter)).toEqual({ filter_type: 'mcap_sequence' });
     });
 });

@@ -23,13 +23,39 @@ vi.mock('$app/state', () => ({
     }
 }));
 
-const { toggleSampleSelection } = vi.hoisted(() => ({ toggleSampleSelection: vi.fn() }));
+const { toggleSampleSelection, workflow, grid } = vi.hoisted(() => ({
+    toggleSampleSelection: vi.fn(),
+    workflow: { projectId: null as string | null, selected: [] as string[] },
+    // The params getter the page passes to the grid query.
+    grid: { getParams: null as (() => { filter: unknown }) | null }
+}));
+
+vi.mock('$lib/hooks/useWorkflowProject/useWorkflowProject.svelte', () => ({
+    useWorkflowProject: () => ({
+        get projectId() {
+            return workflow.projectId;
+        }
+    })
+}));
+
+vi.mock('$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter', () => ({
+    useWorkflowStatusFilter: () => ({ selectedWorkflowStates: writable(workflow.selected) })
+}));
+
+vi.mock('$lib/hooks/useWorkflowStatusCounts/useWorkflowStatusCounts.svelte', () => ({
+    useWorkflowStatusCounts: () => ({ counts: null, refreshIfOlderThan: vi.fn() })
+}));
 
 vi.mock('$lib/hooks/useTags/useTags', () => ({
     useTags: () => ({ tagsSelected: writable(new Set<string>()) })
 }));
 
-vi.mock('$lib/hooks', () => ({
+vi.mock('$lib/hooks', async () => ({
+    useMcapSequenceFilters: (
+        await vi.importActual<
+            typeof import('$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters')
+        >('$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters')
+    ).useMcapSequenceFilters,
     useGlobalStorage: () => ({
         setfilteredSampleCount: vi.fn(),
         sampleSize: writable({ width: 6, height: 200 }),
@@ -37,28 +63,26 @@ vi.mock('$lib/hooks', () => ({
         getSelectedSampleIds: () => writable(new Set<string>()),
         toggleSampleSelection
     }),
-    useMcapSequenceFilters: () => ({
-        mcapSequenceFilter: writable({ filter_type: 'mcap_sequence' }),
-        setCollectionId: vi.fn(),
-        updateTagIds: vi.fn()
-    }),
-    useMcapSequencesInfinite: () => ({
-        data: writable(
-            Array.from({ length: 11 }, (_, index) => ({
-                sample_id: `sequence-${index + 1}`,
-                sample_count: 5
-            }))
-        ),
-        query: {
-            isPending: false,
-            isSuccess: true,
-            isError: false,
-            hasNextPage: false,
-            isFetchingNextPage: false
-        },
-        loadMore: vi.fn(),
-        totalCount: writable(1)
-    })
+    useMcapSequencesInfinite: (getParams: () => { filter: unknown }) => {
+        grid.getParams = getParams;
+        return {
+            data: writable(
+                Array.from({ length: 11 }, (_, index) => ({
+                    sample_id: `sequence-${index + 1}`,
+                    sample_count: 5
+                }))
+            ),
+            query: {
+                isPending: false,
+                isSuccess: true,
+                isError: false,
+                hasNextPage: false,
+                isFetchingNextPage: false
+            },
+            loadMore: vi.fn(),
+            totalCount: writable(1)
+        };
+    }
 }));
 
 vi.mock('$lib/hooks/useMcapSequenceTicks/useMcapSequenceTicks.svelte', () => ({
@@ -98,6 +122,8 @@ class MockIntersectionObserver {
 describe('point-clouds/+page.svelte', () => {
     beforeEach(() => {
         vi.clearAllMocks();
+        workflow.projectId = null;
+        workflow.selected = [];
         global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
         global.IntersectionObserver =
             MockIntersectionObserver as unknown as typeof IntersectionObserver;
@@ -127,5 +153,17 @@ describe('point-clouds/+page.svelte', () => {
         expect(goto).toHaveBeenCalledOnce();
         const destination = vi.mocked(goto).mock.calls[0][0] as string;
         expect(destination).toContain(ROUTE_DATASET_ID);
+    });
+
+    it('filters the grid by the selected workflow states when the dataset has a project', () => {
+        workflow.projectId = 'project-1';
+        workflow.selected = ['accepted', 'not_in_workflow'];
+
+        render(Page, { props: { data: pageData } });
+
+        expect(grid.getParams?.().filter).toEqual({
+            filter_type: 'mcap_sequence',
+            sample_filter: { workflow_states: ['accepted', 'not_in_workflow'] }
+        });
     });
 });

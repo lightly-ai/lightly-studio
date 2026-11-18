@@ -96,7 +96,7 @@ vi.mock('$lib/components/ConfusionCellFilterItem', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
 vi.mock('$lib/components/Workflow/WorkflowStatusFilter/WorkflowStatusFilter.svelte', async () => ({
-    default: (await import('./LayoutStub.test.svelte')).default
+    default: (await import('./WorkflowStatusFilterStub.test.svelte')).default
 }));
 vi.mock('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte', async () => ({
     default: (await import('./DistributionPanelStub.test.svelte')).default
@@ -468,6 +468,24 @@ describe('+layout.svelte collection-grid workspace', () => {
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
+    });
+
+    it('shows the workflow status filter on the images and point-clouds routes only', async () => {
+        for (const route of [APP_ROUTES.images, APP_ROUTES.pointClouds]) {
+            setPageRoute(route);
+            const { unmount } = render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+            await tick();
+            expect(screen.getByTestId('workflow-status-filter')).toBeInTheDocument();
+            unmount();
+        }
+
+        for (const route of [APP_ROUTES.videos, APP_ROUTES.annotations, APP_ROUTES.groups]) {
+            setPageRoute(route);
+            const { unmount } = render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+            await tick();
+            expect(screen.queryByTestId('workflow-status-filter')).not.toBeInTheDocument();
+            unmount();
+        }
     });
 
     it('renders child route content on images route', async () => {

@@ -17,6 +17,9 @@ from lightly_studio.models.workflow import (
 from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.image_filter import ImageFilter
+from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
+    McapSequenceFilter,
+)
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 
 
@@ -106,7 +109,8 @@ def resolve_sample_filter(
     """Set the workflow project on a filter that filters by workflow status.
 
     Looks up the project once, from the dataset of the collection. A filter without
-    workflow status options runs no workflow SQL. Only image filters filter by workflow status.
+    workflow status options runs no workflow SQL. Only image and MCAP sequence filters
+    filter by workflow status.
 
     Args:
         session: The database session.
@@ -173,7 +177,9 @@ def get_samples_workflow(
 
 def _workflow_sample_filter(filters: GridFilterBase | None) -> SampleFilter | None:
     """Get the sample filter of a filter with workflow status options, else None."""
-    sample_filter = filters.sample_filter if isinstance(filters, ImageFilter) else None
+    sample_filter = (
+        filters.sample_filter if isinstance(filters, (ImageFilter, McapSequenceFilter)) else None
+    )
     if sample_filter is None or not sample_filter.workflow_states:
         return None
     return sample_filter

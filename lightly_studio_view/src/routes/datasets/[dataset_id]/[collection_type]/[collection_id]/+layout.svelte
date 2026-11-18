@@ -629,6 +629,7 @@
                                     {isImages}
                                     {isVideos}
                                     {isVideoFrames}
+                                    {isPointClouds}
                                 />
                                 <Tooltip content="Hide filters" position="bottom" class="w-max">
                                     <Button
@@ -666,7 +667,7 @@
                                 />
                             </div>
 
-                            {#if isImages}
+                            {#if isImages || isPointClouds}
                                 <WorkflowStatusFilter {collectionId} />
                             {/if}
 
@@ -683,7 +684,7 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
+                            <!-- Captions support only the tag filter; MCAP sequences support only the tag, workflow status and embedding filters. -->
                             {#if !isCaptions && !isPointClouds}
                                 <LabelsMenu
                                     {annotationFilterRows}

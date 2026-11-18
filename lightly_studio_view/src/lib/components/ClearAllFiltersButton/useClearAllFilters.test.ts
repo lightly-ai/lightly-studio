@@ -15,6 +15,13 @@ describe('useClearAllFilters', () => {
     const imagesGrid = { collectionId, isImages: true, isVideos: false, isVideoFrames: false };
     const videosGrid = { collectionId, isImages: false, isVideos: true, isVideoFrames: false };
     const framesGrid = { collectionId, isImages: false, isVideos: false, isVideoFrames: true };
+    const pointCloudsGrid = {
+        collectionId,
+        isImages: false,
+        isVideos: false,
+        isVideoFrames: false,
+        isPointClouds: true
+    };
     let storage: ReturnType<typeof useGlobalStorage>;
     const videoBounds = useVideoBounds();
     const framesBounds = useVideoFramesBounds();
@@ -95,6 +102,19 @@ describe('useClearAllFilters', () => {
         workflow.setWorkflowStates(['in_review']);
 
         const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
+        expect(get(hasActiveFilters)).toBe(true);
+
+        clearAllFilters();
+
+        expect(get(hasActiveFilters)).toBe(false);
+        expect(get(workflow.selectedWorkflowStates)).toEqual([]);
+    });
+
+    it('detects and clears the workflow status filter on the MCAP sequence grid', () => {
+        const workflow = useWorkflowStatusFilter(collectionId);
+        workflow.setWorkflowStates(['accepted']);
+
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(pointCloudsGrid);
         expect(get(hasActiveFilters)).toBe(true);
 
         clearAllFilters();

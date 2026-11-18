@@ -31,6 +31,7 @@ interface UseClearAllFiltersParams {
     isImages: boolean;
     isVideos: boolean;
     isVideoFrames: boolean;
+    isPointClouds?: boolean;
 }
 
 interface UseClearAllFiltersReturn {
@@ -63,7 +64,7 @@ export function useClearAllFilters(params: UseClearAllFiltersParams): UseClearAl
 
 // Only the filters that the sidebar of the current grid shows.
 function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
-    const { collectionId, isCaptions, isImages, isVideos, isVideoFrames } = params;
+    const { collectionId, isCaptions, isImages, isVideos, isVideoFrames, isPointClouds } = params;
     if (isCaptions) {
         return [useTagAndLabelFilters(collectionId, false), useMetadataFilterGroup()];
     }
@@ -72,8 +73,8 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
     if (isImages) {
         groups.push(useDimensionsFilter(), useAnnotationSourcesFilter());
         groups.push(useConfusionCellAndQueryFilter(collectionId));
-        groups.push(useWorkflowStatusFilterGroup(collectionId));
     }
+    if (isImages || isPointClouds) groups.push(useWorkflowStatusFilterGroup(collectionId));
     if (isVideos) {
         const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds();
         groups.push(rangeFilter(videoBounds, videoBoundsValues, updateVideoBoundsValues));

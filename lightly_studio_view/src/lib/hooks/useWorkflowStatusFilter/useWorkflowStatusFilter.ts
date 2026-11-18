@@ -12,7 +12,7 @@ interface UseWorkflowStatusFilterReturn {
     clearWorkflowStates: () => void;
 }
 
-/** The workflow status options selected in the images grid filter of a collection. */
+/** The workflow status options selected in the image or MCAP sequence grid filter of a collection. */
 export const useWorkflowStatusFilter = (collectionId: string): UseWorkflowStatusFilterReturn => {
     const selectedWorkflowStates = derived(
         selectedByCollection,

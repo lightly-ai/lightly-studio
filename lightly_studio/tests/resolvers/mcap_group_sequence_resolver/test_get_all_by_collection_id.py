@@ -21,6 +21,7 @@ from lightly_studio.models.sequence import (
     SampleSequenceLinkTable,
     SequenceTable,
 )
+from lightly_studio.models.workflow import WorkflowStatus
 from lightly_studio.resolvers import (
     collection_resolver,
     group_resolver,
@@ -35,6 +36,7 @@ from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter 
     McapSequenceFilter,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from tests import helpers_workflow
 from tests.helpers_resolvers import create_collection, create_embedding_model
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 
@@ -417,6 +419,35 @@ def test_get_all_by_collection_id__filters(db_session: Session) -> None:
 
     assert result.total_count == 1
     assert [sample.sample_id for sample in result.samples] == [seq_ids[2]]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow_states(db_session: Session) -> None:
+    """A workflow status filter restricts the sequences and the total count."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(session=db_session, collection_id=seq_col.collection_id, count=3)
+    project_id = helpers_workflow.create_project(
+        session=db_session, dataset_id=seq_col.collection_id
+    )
+    helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={seq_ids[0]: "accepted", seq_ids[1]: "in_progress"},
+    )
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=seq_col.collection_id,
+        pagination=None,
+        filters=McapSequenceFilter(
+            sample_filter=SampleFilter(
+                workflow_states=[WorkflowStatus.ACCEPTED, WorkflowStatus.NOT_IN_WORKFLOW]
+            )
+        ),
+    )
+
+    assert result.total_count == 2
+    assert [sample.sample_id for sample in result.samples] == [seq_ids[0], seq_ids[2]]
 
 
 def test_get_all_by_collection_id__text_embedding(db_session: Session) -> None:
