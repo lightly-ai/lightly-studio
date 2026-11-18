@@ -8,8 +8,8 @@ from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.local.local_collection_transport import LocalCollectionTransport
 from lightly_studio.transport.local.local_sample_transport import LocalSampleTransport
+from lightly_studio.transport.local.local_tag_transport import LocalTagTransport
 from lightly_studio.transport.metadata_transport import MetadataTransport
-from lightly_studio.transport.tag_transport import TagTransport
 
 
 class LocalTransport:
@@ -22,11 +22,7 @@ class LocalTransport:
         """Create the transports for each area."""
         self.collections = LocalCollectionTransport()
         self.samples = LocalSampleTransport()
-
-    @property
-    def tags(self) -> TagTransport:
-        """The transport for tags."""
-        raise AttributeError("The local tag transport does not exist yet.")
+        self.tags = LocalTagTransport()
 
     @property
     def metadata(self) -> MetadataTransport:
