@@ -8,6 +8,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## \[1.3.1\] - 2026-11-18
+
+### Added
+
 - Filter videos by frame rate in the query editor with comparisons such as `fps >= 29.97`.
 - Choose the annotation source for new cuboids in the point cloud workspace, in the Annotations panel or when you create a cuboid.
 - API query expressions can filter videos by temporal events or by annotations and timestamps on the same frame.
@@ -24,8 +39,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
 
-### Deprecated
-
 ### Removed
 
 - BREAKING: Dropped Python 3.10 support. Upgrade to Python 3.11–3.15.
@@ -39,8 +52,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed slow annotation grid loading by loading annotation details in batches.
 - Applying an empty query or a query with only comments now clears the query filter instead of showing a syntax error.
 - Fixed slow grid loading by avoiding unnecessary database queries for each annotation.
-
-### Security
 
 ## \[1.3.0\] - 2026-11-12
 
