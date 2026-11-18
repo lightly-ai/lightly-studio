@@ -1,14 +1,8 @@
 <script lang="ts">
     import { afterNavigate } from '$app/navigation';
     import { page } from '$app/state';
-    import {
-        Card,
-        CardContent,
-        SampleDetailsSidePanel,
-        SidePanelToggleButton
-    } from '$lib/components';
-    import BreadcrumbHeaderActions from './BreadcrumbHeaderActions/BreadcrumbHeaderActions.svelte';
-    import Separator from '$lib/components/ui/separator/separator.svelte';
+    import { Card, CardContent, SampleDetailsSidePanel } from '$lib/components';
+    import DetailsHeader from '$lib/components/DetailsHeader/DetailsHeader.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import { onMount, untrack, type Snippet } from 'svelte';
@@ -36,9 +30,6 @@
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
-    import WorkflowFileStatus from '$lib/components/Workflow/WorkflowFileStatus/WorkflowFileStatus.svelte';
-    import WorkflowFileActions from '$lib/components/Workflow/WorkflowFileActions/WorkflowFileActions.svelte';
-    import WorkflowReadOnlyBanner from '$lib/components/Workflow/WorkflowReadOnlyBanner/WorkflowReadOnlyBanner.svelte';
 
     const {
         sampleId,
@@ -289,37 +280,15 @@
     });
 </script>
 
+{#snippet headerBreadcrumb()}
+    {#if datasetCollection}
+        {@render breadcrumb({ collection: datasetCollection })}
+    {/if}
+{/snippet}
+
 {#if sample}
     <div class="flex h-full w-full flex-col space-y-4" data-testid={dataTestId}>
-        <div class="flex w-full items-center justify-between">
-            <div class="flex items-center gap-4">
-                {#if datasetCollection}
-                    {@render breadcrumb({ collection: datasetCollection })}
-                {/if}
-                {#if workflow?.file}
-                    <WorkflowFileStatus file={workflow.file} />
-                {/if}
-            </div>
-            <div class="flex items-center gap-1">
-                {#if workflow?.file}
-                    <WorkflowFileActions
-                        file={workflow.file}
-                        transitioning={workflow.transitioning}
-                        onTransition={workflow.transition}
-                    />
-                {/if}
-                <BreadcrumbHeaderActions {collectionId} />
-                <SidePanelToggleButton />
-            </div>
-        </div>
-        <Separator class="bg-border-hard" />
-        {#if workflow?.file}
-            <WorkflowReadOnlyBanner file={workflow.file} />
-        {:else if workflow?.isError}
-            <p role="alert" class="text-sm text-destructive">
-                Could not load the batch for this file. It stays read-only.
-            </p>
-        {/if}
+        <DetailsHeader {collectionId} breadcrumb={headerBreadcrumb} />
 
         <div class="flex min-h-0 flex-1 gap-4">
             <div class="flex-1">
