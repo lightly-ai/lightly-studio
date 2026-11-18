@@ -129,7 +129,8 @@ def read_annotation_collections_with_counts(
     for source in sources:
         parent = source.parent
         # An annotation collection is always the child of the collection it annotates.
-        assert parent is not None
+        if parent is None:
+            raise RuntimeError("Expected `parent` to be set.")
         definition = parent.group_component_definition
         views.append(
             AnnotationCollectionWithCountView(

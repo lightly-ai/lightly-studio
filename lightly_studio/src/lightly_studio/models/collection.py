@@ -135,7 +135,7 @@ class AnnotationCollectionWithCountView(AnnotationCollectionView):
     parent_collection_id: UUID
     """The collection whose samples the annotations belong to."""
     parent_sample_type: SampleType
-    parent_group_component_name: Optional[str] = None
+    parent_group_component_name: str | None = None
     """The component name of the parent, if the parent is a group component."""
 
 
