@@ -33,7 +33,7 @@ function getQueryOptions(
     const createQuerySpy = vi
         .spyOn(tanstackQuery, 'createQuery')
         .mockReturnValue({} as ReturnType<typeof tanstackQuery.createQuery>);
-    useEmbeddings('collection-1', null, null, null, enabled, getIsComputing, onCompute);
+    useEmbeddings('collection-1', null, null, null, { enabled, getIsComputing, onCompute });
     const getOptions = createQuerySpy.mock.lastCall?.[0] as () => EmbeddingsQueryOptions;
     return getOptions();
 }
