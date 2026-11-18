@@ -69,7 +69,11 @@ vi.mock('$lib/hooks', async () => ({
             data: writable(
                 Array.from({ length: 11 }, (_, index) => ({
                     sample_id: `sequence-${index + 1}`,
-                    sample_count: 5
+                    sample_count: 5,
+                    workflow:
+                        index === 0
+                            ? { project_id: 'project-1', batch_id: 'batch-1', state: 'rework' }
+                            : null
                 }))
             ),
             query: {
@@ -165,5 +169,13 @@ describe('point-clouds/+page.svelte', () => {
             filter_type: 'mcap_sequence',
             sample_filter: { workflow_states: ['accepted', 'not_in_workflow'] }
         });
+    });
+
+    it('shows the workflow state of a batched sequence on its card', () => {
+        render(Page, { props: { data: pageData } });
+
+        const badges = screen.getAllByTestId('workflow-grid-state-badge');
+        expect(badges).toHaveLength(1);
+        expect(badges[0]).toHaveAttribute('data-state', 'rework');
     });
 });

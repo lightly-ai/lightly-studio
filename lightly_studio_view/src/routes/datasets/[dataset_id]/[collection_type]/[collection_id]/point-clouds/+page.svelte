@@ -57,7 +57,8 @@
             fileName: sequence.file_name,
             sampleCount: sequence.sample_count,
             sequenceFrame: sequence.sequence_frame ?? null,
-            similarityScore: sequence.similarity_score ?? null
+            similarityScore: sequence.similarity_score ?? null,
+            workflowState: sequence.workflow?.state ?? null
         }))
     );
     const selectedSampleIds = $derived(getSelectedSampleIds(collectionId));

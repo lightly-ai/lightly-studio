@@ -21,7 +21,7 @@ from lightly_studio.models.sequence import (
     SampleSequenceLinkTable,
     SequenceTable,
 )
-from lightly_studio.models.workflow import WorkflowStatus
+from lightly_studio.models.workflow import SampleWorkflowView, WorkflowStatus
 from lightly_studio.resolvers import (
     collection_resolver,
     group_resolver,
@@ -448,6 +448,46 @@ def test_get_all_by_collection_id__workflow_states(db_session: Session) -> None:
 
     assert result.total_count == 2
     assert [sample.sample_id for sample in result.samples] == [seq_ids[0], seq_ids[2]]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow(db_session: Session) -> None:
+    """Each batched sequence has its batch and state; the others have none."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(session=db_session, collection_id=seq_col.collection_id, count=3)
+    project_id = helpers_workflow.create_project(
+        session=db_session, dataset_id=seq_col.collection_id
+    )
+    batch_id = helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={seq_ids[0]: "in_review", seq_ids[2]: "accepted"},
+    )
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=seq_col.collection_id, pagination=None
+    )
+
+    assert [sample.workflow for sample in result.samples] == [
+        SampleWorkflowView(
+            project_id=project_id, batch_id=batch_id, state=WorkflowStatus.IN_REVIEW
+        ),
+        None,
+        SampleWorkflowView(project_id=project_id, batch_id=batch_id, state=WorkflowStatus.ACCEPTED),
+    ]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow_no_project(db_session: Session) -> None:
+    """Without a workflow project, no sequence has a batch or state."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    _create_sequences(session=db_session, collection_id=seq_col.collection_id, count=2)
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=seq_col.collection_id, pagination=None
+    )
+
+    assert [sample.workflow for sample in result.samples] == [None, None]
 
 
 def test_get_all_by_collection_id__text_embedding(db_session: Session) -> None:

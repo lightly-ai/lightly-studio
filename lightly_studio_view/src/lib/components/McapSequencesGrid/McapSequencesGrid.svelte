@@ -5,7 +5,10 @@
     import { McapSequenceGridItem } from '$lib/components/McapSequenceGridItem';
     import { useGlobalStorage } from '$lib/hooks';
     import { useSettings } from '$lib/hooks/useSettings';
-    import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
+    import type {
+        McapSequenceFrame,
+        WorkflowStatus
+    } from '$lib/api/lightly_studio_local/types.gen';
 
     interface McapSequence {
         sampleId: string;
@@ -13,6 +16,7 @@
         sampleCount: number;
         sequenceFrame: McapSequenceFrame | null | undefined;
         similarityScore?: number | null;
+        workflowState?: WorkflowStatus | null;
     }
 
     interface Props {
@@ -110,6 +114,7 @@
                                     ? sequences[index].fileName
                                     : undefined}
                                 similarityScore={sequences[index].similarityScore}
+                                workflowState={sequences[index].workflowState}
                                 {width}
                                 {height}
                             />

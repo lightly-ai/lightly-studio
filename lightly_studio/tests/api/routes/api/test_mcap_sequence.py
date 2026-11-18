@@ -1,7 +1,9 @@
 """Tests for the MCAP sequence list endpoint."""
 
+from collections.abc import Generator
 from uuid import UUID
 
+import pytest
 from fastapi.testclient import TestClient
 from sqlmodel import Session
 
@@ -9,6 +11,7 @@ from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import mcap_group_sequence_resolver, recording_resolver
+from tests import helpers_workflow
 from tests.helpers_resolvers import create_collection
 
 
@@ -151,6 +154,45 @@ def test_get_mcap_sequence_sample_ids(test_client: TestClient, db_session: Sessi
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [str(seq_ids[0])]
+
+
+@pytest.fixture
+def workflow_tables(db_session: Session) -> Generator[None, None, None]:
+    with helpers_workflow.workflow_tables(session=db_session):
+        yield
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_list_mcap_sequences__workflow(test_client: TestClient, db_session: Session) -> None:
+    """Each batched sequence has its batch and state in the response."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    seq_ids = _create_sequences(
+        session=db_session, collection_id=seq_col.collection_id, dataset_id=seq_col.dataset_id
+    )
+    project_id = helpers_workflow.create_project(
+        session=db_session, dataset_id=seq_col.collection_id
+    )
+    batch_id = helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={seq_ids[0]: "rework"}
+    )
+
+    response = test_client.post(
+        f"/api/collections/{seq_col.collection_id}/mcap-sequences/list",
+        params={"cursor": 0, "limit": 10},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    workflow_by_sample_id = {
+        sample["sample_id"]: sample["workflow"] for sample in response.json()["data"]
+    }
+    assert workflow_by_sample_id == {
+        str(seq_ids[0]): {
+            "project_id": str(project_id),
+            "batch_id": str(batch_id),
+            "state": "rework",
+        },
+        str(seq_ids[1]): None,
+    }
 
 
 def _create_sequences(session: Session, collection_id: UUID, dataset_id: UUID) -> list[UUID]:

@@ -1,9 +1,13 @@
 <script lang="ts">
     import { untrack } from 'svelte';
     import { BoxIcon } from '@lucide/svelte';
-    import type { McapSequenceFrame } from '$lib/api/lightly_studio_local/types.gen';
+    import type {
+        McapSequenceFrame,
+        WorkflowStatus
+    } from '$lib/api/lightly_studio_local/types.gen';
     import { getMcapSequenceFrameURL } from '$lib/utils';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
+    import WorkflowStateBadge from '$lib/components/Workflow/WorkflowStateBadge/WorkflowStateBadge.svelte';
 
     interface Props {
         sampleCount: number;
@@ -13,6 +17,8 @@
         displayTextOnImage?: string;
         /** Similarity to the search query, when search is active. */
         similarityScore?: number | null;
+        /** The sequence's batch file state, when it is in a batch of the workflow project. */
+        workflowState?: WorkflowStatus | null;
     }
 
     let {
@@ -21,7 +27,8 @@
         height,
         sequenceFrame,
         displayTextOnImage,
-        similarityScore = null
+        similarityScore = null,
+        workflowState = null
     }: Props = $props();
 
     const frameUrl = $derived(
@@ -90,6 +97,10 @@
         >
             +{sampleCount - 1}
         </div>
+    {/if}
+    {#if workflowState}
+        <!-- Below 128px the label would truncate to one letter next to the selection box. -->
+        <WorkflowStateBadge state={workflowState} compact={width < 128} />
     {/if}
     <!-- Lifted above the file name and the frame count, which take the same corner. -->
     <div

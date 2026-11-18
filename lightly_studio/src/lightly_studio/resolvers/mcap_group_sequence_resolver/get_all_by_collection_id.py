@@ -23,6 +23,7 @@ from lightly_studio.models.mcap_group_sequence import (
 from lightly_studio.models.recording import RecordingTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable
+from lightly_studio.models.workflow import SampleWorkflowView
 from lightly_studio.resolvers import (
     mcap_group_sequence_resolver,
     similarity_utils,
@@ -47,7 +48,9 @@ def get_all_by_collection_id(
     Only sequences that have a corresponding ``McapGroupSequenceTable`` row are
     returned. Results are ordered by ascending ``created_at`` of the underlying sample.
     When ``text_embedding`` is given and the collection has a default embedding model,
-    only sequences with an embedding are returned, ordered by similarity.
+    only sequences with an embedding are returned, ordered by similarity. When the dataset has
+    a workflow project, each sequence also has its batch and state, from one query on the
+    page's sequences.
 
     Args:
         session: Database session for executing queries.
@@ -63,9 +66,10 @@ def get_all_by_collection_id(
     mcap_group_sequence_resolver.resolve_embedding_region(
         session=session, collection_id=collection_id, sequence_filter=filters
     )
-    workflow_resolver.resolve_sample_filter(
-        session=session, collection_id=collection_id, filters=filters
+    workflow_project_id = workflow_resolver.get_dataset_project_id(
+        session=session, collection_id=collection_id
     )
+    workflow_resolver.set_filter_project_id(filters=filters, project_id=workflow_project_id)
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
         collection_id=collection_id,
@@ -125,6 +129,12 @@ def get_all_by_collection_id(
         collection_id=collection_id,
     )
 
+    workflow_by_sample_id = _get_workflows(
+        session=session,
+        sequence_sample_ids=sequence_sample_ids,
+        workflow_project_id=workflow_project_id,
+    )
+
     file_name_by_recording_id = _get_file_names_by_recording_id(
         session=session,
         recording_ids=list({seq.recording_id for seq in sequences}),
@@ -138,6 +148,7 @@ def get_all_by_collection_id(
             sample_count=sequence_sample_counts.get(seq.sample_id, 0),
             sequence_frame=sequence_frames.get(seq.sample_id),
             similarity_score=similarity_scores.get(seq.sample_id),
+            workflow=workflow_by_sample_id.get(seq.sample_id),
         )
         for seq in sequences
     ]
@@ -146,6 +157,17 @@ def get_all_by_collection_id(
         samples=views,
         total_count=total_count,
         next_cursor=_compute_next_cursor(pagination=pagination, total_count=total_count),
+    )
+
+
+def _get_workflows(
+    session: Session, sequence_sample_ids: list[UUID], workflow_project_id: UUID | None
+) -> dict[UUID, SampleWorkflowView]:
+    """Get the batch and state of each page sequence that is batched, by sample ID."""
+    if workflow_project_id is None:
+        return {}
+    return workflow_resolver.get_samples_workflow(
+        session=session, project_id=workflow_project_id, sample_ids=sequence_sample_ids
     )
 
 

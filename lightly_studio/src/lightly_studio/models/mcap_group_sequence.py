@@ -17,6 +17,7 @@ from lightly_studio.models.mcap_group_component_definition import (
     McapGroupComponentDefinitionView,
 )
 from lightly_studio.models.recording import RecordingDetails, RecordingTable
+from lightly_studio.models.workflow import SampleWorkflowView
 
 
 class McapGroupSequenceTable(SQLModel, table=True):
@@ -97,6 +98,8 @@ class McapSequenceView(BaseModel):
     sample_count: int
     sequence_frame: McapSequenceFrame | None = None
     similarity_score: float | None = None
+    workflow: SampleWorkflowView | None = None
+    """The sequence's batch and state in the dataset's workflow project, None if not batched."""
 
 
 class McapSequenceViewsWithCount(BaseModel):

@@ -43,6 +43,29 @@ describe('McapSequenceGridItem', () => {
         expect(getByText('0.87')).toBeInTheDocument();
     });
 
+    it('shows the workflow state badge of a batched sequence', () => {
+        const { getByTestId } = render(McapSequenceGridItem, {
+            props: { ...defaultProps, workflowState: 'in_review' }
+        });
+
+        expect(getByTestId('workflow-grid-state-badge')).toHaveTextContent('In review');
+    });
+
+    it('shows only the state dot on tiles too narrow for the label', () => {
+        const { getByTestId, queryByTestId } = render(McapSequenceGridItem, {
+            props: { ...defaultProps, width: 100, height: 100, workflowState: 'accepted' }
+        });
+
+        expect(getByTestId('workflow-grid-state-badge')).toHaveAttribute('aria-label', 'Accepted');
+        expect(queryByTestId('workflow-grid-state-label')).not.toBeInTheDocument();
+    });
+
+    it('shows no workflow state badge for a sequence that is not batched', () => {
+        const { queryByTestId } = render(McapSequenceGridItem, { props: defaultProps });
+
+        expect(queryByTestId('workflow-grid-state-badge')).not.toBeInTheDocument();
+    });
+
     it('renders an img with the camera-frame URL when sequenceFrame is provided', () => {
         const sequenceFrame = {
             dataset_id: 'ds-recording',
