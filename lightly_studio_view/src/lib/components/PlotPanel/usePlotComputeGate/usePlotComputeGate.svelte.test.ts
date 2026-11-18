@@ -53,13 +53,15 @@ function createStatusQuery(data: Embeddings2dStatus | undefined): StatusQueryStu
 function mountGate(params: {
     collectionId: string | (() => string);
     isAxesLayout?: () => boolean;
+    plotRequestKey?: () => string;
 }) {
     const { collectionId } = params;
     let gate!: ReturnType<typeof usePlotComputeGate>;
     const dispose = $effect.root(() => {
         gate = usePlotComputeGate({
             getCollectionId: typeof collectionId === 'string' ? () => collectionId : collectionId,
-            getIsAxesLayout: params.isAxesLayout ?? (() => false)
+            getIsAxesLayout: params.isAxesLayout ?? (() => false),
+            getPlotRequestKey: params.plotRequestKey ?? (() => 'request')
         });
     });
     disposers.push(dispose);
@@ -321,6 +323,36 @@ describe('usePlotComputeGate', () => {
 
         expect(gate.view).toBe('prompt');
         expect(gate.isPlotRequestEnabled).toBe(false);
+    });
+
+    it('waits for a new status before a changed plot request', async () => {
+        const query = createStatusQuery(COMPUTED);
+        let finishRefetch = () => {};
+        query.refetch = vi.fn(
+            () =>
+                new Promise<void>((resolve) => {
+                    finishRefetch = () => {
+                        query.data = NOT_COMPUTED_LARGE;
+                        resolve();
+                    };
+                })
+        );
+        mocks.statusQueries['changed'] = query;
+        let plotRequestKey = $state('all');
+        const { gate } = mountGate({
+            collectionId: 'changed',
+            plotRequestKey: () => plotRequestKey
+        });
+        expect(gate.view).toBe('plot');
+
+        plotRequestKey = 'filtered';
+        flushSync();
+
+        expect(query.refetch).toHaveBeenCalledOnce();
+        expect(gate.isPlotRequestEnabled).toBe(false);
+
+        finishRefetch();
+        await vi.waitFor(() => expect(gate.view).toBe('prompt'));
     });
 
     it('ignores a status error from before the mount until the new request finishes', () => {
