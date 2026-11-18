@@ -189,15 +189,11 @@
     // A separate derived, so a view change that keeps the request on does not create a new query.
     const isPlotRequestEnabled = $derived(plotComputeGate.isPlotRequestEnabled);
     const embeddingsData = $derived(
-        useEmbeddings(
-            collectionId,
-            filter,
-            $colorBy,
-            $plotAxes,
-            isPlotRequestEnabled,
-            () => plotComputeGate.view === 'computing',
-            plotComputeGate.trackCompute
-        )
+        useEmbeddings(collectionId, filter, $colorBy, $plotAxes, {
+            enabled: isPlotRequestEnabled,
+            getIsComputing: () => plotComputeGate.view === 'computing',
+            onCompute: plotComputeGate.trackCompute
+        })
     );
 
     const {

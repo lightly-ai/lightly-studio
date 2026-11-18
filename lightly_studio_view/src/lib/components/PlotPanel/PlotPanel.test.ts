@@ -633,9 +633,11 @@ describe('PlotPanel.svelte', () => {
             expect.anything(),
             null,
             null,
-            true,
-            expect.any(Function),
-            expect.any(Function)
+            {
+                enabled: true,
+                getIsComputing: expect.any(Function),
+                onCompute: expect.any(Function)
+            }
         );
 
         await user.click(screen.getByTestId('plot-color-by-button'));
@@ -647,9 +649,11 @@ describe('PlotPanel.svelte', () => {
             expect.anything(),
             { type: 'metadata_field', key: 'split' },
             null,
-            true,
-            expect.any(Function),
-            expect.any(Function)
+            {
+                enabled: true,
+                getIsComputing: expect.any(Function),
+                onCompute: expect.any(Function)
+            }
         );
     });
 
@@ -667,9 +671,11 @@ describe('PlotPanel.svelte', () => {
             expect.anything(),
             { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
             null,
-            true,
-            expect.any(Function),
-            expect.any(Function)
+            {
+                enabled: true,
+                getIsComputing: expect.any(Function),
+                onCompute: expect.any(Function)
+            }
         );
     });
 
@@ -690,9 +696,11 @@ describe('PlotPanel.svelte', () => {
                 expect.anything(),
                 null,
                 TEXT_LAYOUT_AXES,
-                true,
-                expect.any(Function),
-                expect.any(Function)
+                {
+                    enabled: true,
+                    getIsComputing: expect.any(Function),
+                    onCompute: expect.any(Function)
+                }
             )
         );
 
@@ -954,7 +962,7 @@ describe('PlotPanel.svelte', () => {
             expect(
                 screen.getByText('300,000 images. The first compute can take several minutes.')
             ).toBeInTheDocument();
-            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4]).toBe(false);
+            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4].enabled).toBe(false);
             await fireEvent.click(screen.getByRole('button', { name: 'Compute plot' }));
             expect(startCompute).toHaveBeenCalledOnce();
         });
@@ -966,7 +974,7 @@ describe('PlotPanel.svelte', () => {
             render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
             const compute = Promise.resolve();
-            (useEmbeddings as vi.Mock).mock.lastCall?.[6](compute);
+            (useEmbeddings as vi.Mock).mock.lastCall?.[4].onCompute(compute);
 
             expect(trackCompute).toHaveBeenCalledWith(compute);
         });
@@ -981,7 +989,7 @@ describe('PlotPanel.svelte', () => {
             await tick();
 
             expect((useEmbeddings as vi.Mock).mock.calls.length).toBeGreaterThan(callCount);
-            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4]).toBe(false);
+            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4].enabled).toBe(false);
             expect(screen.getByRole('button', { name: 'Compute plot' })).toBeInTheDocument();
         });
 
@@ -993,8 +1001,8 @@ describe('PlotPanel.svelte', () => {
 
             expect(screen.getByText('Computing plot…')).toBeInTheDocument();
             expect(screen.queryByText('Loading embeddings data...')).not.toBeInTheDocument();
-            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4]).toBe(true);
-            const getIsComputing = (useEmbeddings as vi.Mock).mock.lastCall?.[5];
+            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4].enabled).toBe(true);
+            const getIsComputing = (useEmbeddings as vi.Mock).mock.lastCall?.[4].getIsComputing;
             expect(getIsComputing?.()).toBe(true);
             setGate({ view: 'plot' });
             expect(getIsComputing?.()).toBe(false);
@@ -1043,7 +1051,7 @@ describe('PlotPanel.svelte', () => {
             render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
             expect(screen.getByText('Loading embeddings data...')).toBeInTheDocument();
-            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4]).toBe(false);
+            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4].enabled).toBe(false);
         });
 
         it('names the items of the collection in the prompt', () => {
@@ -1076,7 +1084,7 @@ describe('PlotPanel.svelte', () => {
             render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
             expect(screen.getByText('Error loading embeddings: boom')).toBeInTheDocument();
-            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4]).toBe(false);
+            expect((useEmbeddings as vi.Mock).mock.lastCall?.[4].enabled).toBe(false);
         });
     });
 });
