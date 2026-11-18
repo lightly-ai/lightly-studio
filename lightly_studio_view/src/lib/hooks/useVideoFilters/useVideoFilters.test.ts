@@ -4,6 +4,7 @@ import { buildVideoFilter, useVideoFilters } from './useVideoFilters';
 import { waitFor } from '@testing-library/svelte';
 import { SortDirection } from '$lib/api/lightly_studio_local';
 import { createMetadataFilters } from '$lib/hooks';
+import { EMPTY_PLOT_SELECTION } from '../useEmbeddingFilter/useEmbeddingPlotSelection';
 
 const embeddingRegion = {
     polygon: [
@@ -202,9 +203,11 @@ describe('useVideoFilters', () => {
         });
     });
 
-    describe('updateEmbeddingRegion', () => {
+    describe('updatePlotSelection', () => {
+        const regionSelection = { embeddingRegion, sampleIds: [] };
+
         it('stores and clears geometry while preserving all other filters', () => {
-            const { filterParams, videoFilter, updateFilterParams, updateEmbeddingRegion } =
+            const { filterParams, videoFilter, updateFilterParams, updatePlotSelection } =
                 useVideoFilters();
             const params = {
                 collection_id: 'coll-1',
@@ -224,7 +227,7 @@ describe('useVideoFilters', () => {
             updateFilterParams(params);
             const originalFilter = get(videoFilter);
 
-            updateEmbeddingRegion(embeddingRegion);
+            updatePlotSelection(regionSelection);
 
             expect(get(filterParams)).toEqual({
                 ...params,
@@ -235,7 +238,7 @@ describe('useVideoFilters', () => {
                 sample_filter: { tag_ids: ['tag-1'], embedding_region: embeddingRegion }
             });
 
-            updateEmbeddingRegion(null);
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
 
             expect(get(filterParams)).toEqual({
                 ...params,
@@ -244,25 +247,16 @@ describe('useVideoFilters', () => {
             expect(get(videoFilter)).toEqual(originalFilter);
         });
 
-        it('preserves explicit sample IDs when geometry is set and cleared', () => {
-            const { videoFilter, updateFilterParams, updateEmbeddingRegion } = useVideoFilters();
+        it('replaces a region with picked sample IDs', () => {
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
             updateFilterParams({
                 collection_id: 'coll-1',
-                filters: { sample_ids: ['sample-1', 'sample-2'] }
+                filters: { embedding_region: embeddingRegion }
             });
 
-            updateEmbeddingRegion(embeddingRegion);
+            updatePlotSelection({ embeddingRegion: null, sampleIds: ['sample-1'] });
 
-            expect(get(videoFilter)?.sample_filter).toEqual({
-                sample_ids: ['sample-1', 'sample-2'],
-                embedding_region: embeddingRegion
-            });
-
-            updateEmbeddingRegion(null);
-
-            expect(get(videoFilter)?.sample_filter).toEqual({
-                sample_ids: ['sample-1', 'sample-2']
-            });
+            expect(get(videoFilter)?.sample_filter).toEqual({ sample_ids: ['sample-1'] });
         });
 
         it('preserves generated metadata filters when geometry is set and cleared', () => {
@@ -273,7 +267,7 @@ describe('useVideoFilters', () => {
             vi.mocked(createMetadataFilters)
                 .mockReturnValueOnce(metadataFilters)
                 .mockReturnValueOnce(metadataFilters);
-            const { videoFilter, updateFilterParams, updateEmbeddingRegion } = useVideoFilters();
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
             updateFilterParams({
                 collection_id: 'coll-1',
                 filters: {
@@ -282,14 +276,14 @@ describe('useVideoFilters', () => {
                 }
             });
 
-            updateEmbeddingRegion(embeddingRegion);
+            updatePlotSelection(regionSelection);
 
             expect(get(videoFilter)?.sample_filter).toEqual({
                 metadata_filters: metadataFilters,
                 embedding_region: embeddingRegion
             });
 
-            updateEmbeddingRegion(null);
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
 
             expect(get(videoFilter)?.sample_filter).toEqual({ metadata_filters: metadataFilters });
         });
@@ -321,17 +315,17 @@ describe('useVideoFilters', () => {
         });
 
         it('builds a geometry-only sample filter and removes it when cleared', () => {
-            const { videoFilter, updateFilterParams, updateEmbeddingRegion } = useVideoFilters();
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
             updateFilterParams({ collection_id: 'coll-1' });
 
-            updateEmbeddingRegion(embeddingRegion);
+            updatePlotSelection(regionSelection);
 
             expect(get(videoFilter)).toEqual({
                 filter_type: 'video',
                 sample_filter: { embedding_region: embeddingRegion }
             });
 
-            updateEmbeddingRegion(null);
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
 
             expect(get(videoFilter)).toEqual({ filter_type: 'video' });
         });
@@ -339,11 +333,10 @@ describe('useVideoFilters', () => {
         it.each([null, { collection_id: '' }])(
             'leaves uninitialized filters unchanged (%s)',
             (params) => {
-                const { filterParams, updateFilterParams, updateEmbeddingRegion } =
-                    useVideoFilters();
+                const { filterParams, updateFilterParams, updatePlotSelection } = useVideoFilters();
                 updateFilterParams(params as Parameters<typeof updateFilterParams>[0]);
 
-                updateEmbeddingRegion(embeddingRegion);
+                updatePlotSelection(regionSelection);
 
                 expect(get(filterParams)).toEqual(params);
             }

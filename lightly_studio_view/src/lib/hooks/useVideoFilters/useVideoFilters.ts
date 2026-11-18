@@ -129,15 +129,6 @@ export const useVideoFilters = () => {
         );
     };
 
-    const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
-        const params = get(filterParams);
-        if (!params?.collection_id) {
-            return;
-        }
-
-        filterParams.set(patchFilters(params, { embedding_region: embeddingRegion ?? undefined }));
-    };
-
     const updateSortBy = (sort: VideoSortFieldExpr[] | null) => {
         videoSortBy.set(sort);
     };
@@ -150,7 +141,6 @@ export const useVideoFilters = () => {
         videoSortBy,
         updateFilterParams,
         updateSampleIds,
-        updateEmbeddingRegion,
         updatePlotSelection,
         updateSortBy
     };
