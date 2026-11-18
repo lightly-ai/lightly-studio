@@ -46,17 +46,28 @@ resolution-markers = [
     "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 conflicts = [[
     { package = "lightly-studio", group = "cpu" },
@@ -391,17 +402,28 @@ name = "av"
 version = "17.0.0"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/b2/eb/abca886df3a091bc406feb5ff71b4c4f426beaae6b71b9697264ce8c7211/av-17.0.0.tar.gz", hash = "sha256:c53685df73775a8763c375c7b2d62a6cb149d992a26a4b098204da42ade8c3df", size = 4410769, upload-time = "2026-03-14T14:38:45.868Z" }
 wheels = [
@@ -628,7 +650,8 @@ name = "beautifulsoup4"
 version = "4.15.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "soupsieve" },
+    { name = "soupsieve", version = "2.10", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11.5'" },
+    { name = "soupsieve", version = "4.1.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11.5'" },
     { name = "typing-extensions" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/43/65/318323f98dbee45d42dff61d8f047181bc6f2268a9068cfad035a46be5af/beautifulsoup4-4.15.0.tar.gz", hash = "sha256:288e3ca7d54b06f2ac191970bc275c1939cb46d450b255bf6718b04aa37ab4f7", size = 632571, upload-time = "2026-06-07T16:44:20.453Z" }
@@ -2330,14 +2353,14 @@ wheels = [
 
 [[package]]
 name = "lightly-mundig"
-version = "0.1.16"
+version = "0.1.17"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e9/2c/b6bd38c74b93b0ac10ef2b444ba6a89231d8abe4010f97e20fd388ba44e1/lightly_mundig-0.1.16-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:05746039b42a28f11df053fdf81c2b2d8a023a63d8a2a714e229b850713814d2", size = 545583, upload-time = "2026-09-21T08:00:20.276Z" },
-    { url = "https://files.pythonhosted.org/packages/1a/45/f7356cb887fd1a782251616abaf80ac4ef28079a339843adde660b32dbc8/lightly_mundig-0.1.16-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:304e032603e14ed50d43cb968f95e4990097291d7c91c1aff1ef6ce0c7a68b8a", size = 528519, upload-time = "2026-09-21T08:01:59.833Z" },
-    { url = "https://files.pythonhosted.org/packages/1c/66/6d115c1c36025665eea173c22e828d42b667fe0416b3f7b5843eff3d7298/lightly_mundig-0.1.16-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:35e19386cf14b7a3167d3da61a8bbc8d717e4ebf82e0b7688919a077070b47ec", size = 1209271, upload-time = "2026-09-21T08:20:45.486Z" },
-    { url = "https://files.pythonhosted.org/packages/ae/ff/fda5ac885a85779d809121a84995eacc6a3f7df47ebab104923a722e41d8/lightly_mundig-0.1.16-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e6620834a6729f98fd1e8839e862f1752c7dbfc5aa58e61850a2b65d93498e47", size = 3972872, upload-time = "2026-09-21T08:18:09.068Z" },
-    { url = "https://files.pythonhosted.org/packages/cf/38/650446804703f1225a9030384cc33df0cec4c9cac038fff55cb072438946/lightly_mundig-0.1.16-cp39-abi3-win_amd64.whl", hash = "sha256:c8999c185e00808fae532a1a903ea46f2d3d1f191087a6d23640218074e50c38", size = 13125976, upload-time = "2026-09-21T08:23:34.198Z" },
+    { url = "https://files.pythonhosted.org/packages/83/af/c28db3ed0b79d7a85664251324c8d808af472ba003a88caf842fa45eff91/lightly_mundig-0.1.17-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:8105e0d6d943245e017e41957a6b0a19a00cccf774fd64a0935b05e8eab4084e", size = 546322, upload-time = "2026-11-16T15:50:01.94Z" },
+    { url = "https://files.pythonhosted.org/packages/71/2a/e92df6d40ce480887f2d2a650ccf2b4601d83fdf19f688523a5095ea8069/lightly_mundig-0.1.17-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:12206830d41d23db25d17cf20af4a376fcab7afc0c1209b7733c3c8f66583bca", size = 528397, upload-time = "2026-11-16T15:51:26.437Z" },
+    { url = "https://files.pythonhosted.org/packages/57/d5/2e4549910c77b673d685f3105dee5c9e34cf88bc8e9e2130754b1c7d5ca5/lightly_mundig-0.1.17-cp310-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:562d9321c1c200611a1ce7d77a9cdc912a7e80c487c780ef51568fc4a3a6f711", size = 1206983, upload-time = "2026-11-16T14:51:37.426Z" },
+    { url = "https://files.pythonhosted.org/packages/21/c3/0fe3895de81d9129a9c4b3bf3599bc1fcdc8577cc0cb0b65452cf6a6702c/lightly_mundig-0.1.17-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:8a1577c09b4078b822321a4c11ef50dedcdd0880fa966c5a14bc6519cc300e7f", size = 3894883, upload-time = "2026-11-16T14:48:17.977Z" },
+    { url = "https://files.pythonhosted.org/packages/ac/79/2b260a70219e3d2c3d721cf7d98b9554a5fbe5170e3b0065d58d67695463/lightly_mundig-0.1.17-cp310-abi3-win_amd64.whl", hash = "sha256:c9fc58dfe2531b286411fc26704ca96845169ff3de4fa7a6f9d46e0369ce5100", size = 13124621, upload-time = "2026-11-16T14:57:07.665Z" },
 ]
 
 [[package]]
@@ -2466,7 +2489,7 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "labelformat", specifier = ">=0.1.17" },
-    { name = "lightly-mundig", specifier = "==0.1.16" },
+    { name = "lightly-mundig", specifier = "==0.1.17" },
     { name = "lightly-studio-serve", editable = "lightly_studio_serve" },
     { name = "mcap", specifier = ">=1.6.0,<2.0" },
     { name = "mcap-ros2-support", specifier = ">=0.6.0,<0.7" },
@@ -2542,7 +2565,7 @@ gpu = [
 
 [[package]]
 name = "lightly-studio-serve"
-version = "0.1.2"
+version = "0.2.0"
 source = { editable = "lightly_studio_serve" }
 dependencies = [
     { name = "fastapi" },
@@ -3336,17 +3359,28 @@ name = "numpy"
 version = "2.4.3"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/10/8b/c265f4823726ab832de836cdd184d0986dcf94480f81e8739692a7ac7af2/numpy-2.4.3.tar.gz", hash = "sha256:483a201202b73495f00dbc83796c6ae63137a9bdade074f7648b3e32613412dd", size = 20727743, upload-time = "2026-03-09T07:58:53.426Z" }
 wheels = [
@@ -5260,17 +5294,28 @@ resolution-markers = [
     "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
     { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.12' or python_full_version >= '3.15'" },
@@ -5462,11 +5507,90 @@ wheels = [
 
 [[package]]
 name = "soupsieve"
-version = "2.9.2"
+version = "2.10"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/69/99/a6ca3beb3ccacb41fb3321d8a60e5566f9e6467601ef8eba6a17e1b89778/soupsieve-2.9.2.tar.gz", hash = "sha256:4a55d8cf158a9c2e587fa4922f1bbb91d68ac829e2d6f25403a85747c71daf74", size = 122445, upload-time = "2026-08-07T00:57:24.801Z" }
+resolution-markers = [
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/71/c3/1b817965ac12dc002d7c9cd7dfffdd7d4fbf9b45763ef2ffe7b86ee94670/soupsieve-2.10.tar.gz", hash = "sha256:49e9380d7d2905463583bafe285e818c7366a9ed7b3aee221c1ac79c905d8bc0", size = 124337, upload-time = "2026-09-24T02:36:35.048Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/eb/dc/ad025c1ee131eba60c69f4dd5779b18fcf1e6b21a343e2162a84d5d133c7/soupsieve-2.9.2-py3-none-any.whl", hash = "sha256:8089a26fd974ca7a1f30276d3d8492ab266ab15af581642dfe8aa162e0c1c823", size = 37370, upload-time = "2026-08-07T00:57:23.524Z" },
+    { url = "https://files.pythonhosted.org/packages/66/87/5ed59e1d0290564e2027ed066c52b059892c4637741337fc0967183c8d4d/soupsieve-2.10-py3-none-any.whl", hash = "sha256:8596eb8967d744174820280fa62b4542a2e955bfaccca73ed8a13c6eb8e9b502", size = 38019, upload-time = "2026-09-24T02:36:33.709Z" },
+]
+
+[[package]]
+name = "soupsieve"
+version = "4.1.1"
+source = { registry = "https://pypi.org/simple" }
+resolution-markers = [
+    "python_full_version >= '3.15' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.15' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.14.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.13.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+]
+sdist = { url = "https://files.pythonhosted.org/packages/1f/52/ee5646b65d98a252e807ccc37725363942372a4113072e0bce7ed22f8b84/soupsieve-4.1.1.tar.gz", hash = "sha256:b296bd2d2f65b1a78149f3d7bf6736a147d2c9e2dfbde0e4404639d748a02e03", size = 169784, upload-time = "2026-11-14T17:23:32.467Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cd/65/7fae69a095696195334a934eab23aeb12e2715e6c3f08025d2f91942750e/soupsieve-4.1.1-py3-none-any.whl", hash = "sha256:8ff3422dab0b720fb667ee79864d80531a0e57994a13eb701697719ffcb751f6", size = 55089, upload-time = "2026-11-14T17:23:31.001Z" },
 ]
 
 [[package]]
@@ -5714,16 +5838,26 @@ resolution-markers = [
     "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
     { name = "cuda-bindings", marker = "(python_full_version < '3.15' and sys_platform == 'linux' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
@@ -5781,7 +5915,8 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'linux'",
     "python_full_version == '3.13.*' and sys_platform == 'linux'",
     "python_full_version == '3.12.*' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and sys_platform == 'linux'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'linux'",
+    "python_full_version < '3.11.5' and sys_platform == 'linux'",
 ]
 dependencies = [
     { name = "filelock", marker = "(sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
@@ -5869,16 +6004,26 @@ resolution-markers = [
     "python_full_version == '3.12.*' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
     "python_full_version == '3.12.*' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
-    "python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'darwin' and sys_platform != 'emscripten' and sys_platform != 'linux' and sys_platform != 'win32' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'darwin' and extra == 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform == 'emscripten' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
+    "python_full_version < '3.11.5' and sys_platform != 'emscripten' and sys_platform != 'win32' and extra != 'group-14-lightly-studio-cpu' and extra != 'group-14-lightly-studio-gpu'",
 ]
 dependencies = [
     { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and sys_platform != 'linux') or (python_full_version < '3.12' and extra != 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },
@@ -5902,7 +6047,8 @@ resolution-markers = [
     "python_full_version == '3.14.*' and sys_platform == 'linux'",
     "python_full_version == '3.13.*' and sys_platform == 'linux'",
     "python_full_version == '3.12.*' and sys_platform == 'linux'",
-    "python_full_version < '3.12' and sys_platform == 'linux'",
+    "python_full_version >= '3.11.5' and python_full_version < '3.12' and sys_platform == 'linux'",
+    "python_full_version < '3.11.5' and sys_platform == 'linux'",
 ]
 dependencies = [
     { name = "numpy", version = "2.4.3", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version < '3.12' and sys_platform == 'linux' and extra == 'group-14-lightly-studio-cpu') or (extra == 'group-14-lightly-studio-cpu' and extra == 'group-14-lightly-studio-gpu')" },

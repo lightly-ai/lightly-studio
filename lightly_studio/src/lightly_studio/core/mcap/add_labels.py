@@ -10,7 +10,7 @@ import itertools
 import logging
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -187,6 +187,7 @@ def write_sequence_labels(  # noqa: PLR0913
             f"No label of annotation MCAP '{annotation_mcap_uri}' matches a tick of the "
             f"sequence. The annotations of annotation source '{annotation_source}' are kept."
         )
+    untracked_ids = _assign_untracked_track_ids(matched=matched)
     parent_by_source = _parent_by_source_track(matched=matched)
     if overwrite:
         # The delete comes before the track allocation, so new tracks reuse freed numbers.
@@ -197,7 +198,10 @@ def write_sequence_labels(  # noqa: PLR0913
             group_ids=[entry.sample_id for entry in entries],
         )
     track_ids = _allocate_tracks(
-        session=session, dataset_id=dataset.dataset_id, parent_by_source=parent_by_source
+        session=session,
+        dataset_id=dataset.dataset_id,
+        parent_by_source=parent_by_source,
+        untracked_ids=untracked_ids,
     )
     annotations = _annotation_creates(
         session=session, dataset_id=dataset.dataset_id, matched=matched, track_ids=track_ids
@@ -320,12 +324,41 @@ def _entity_timestamps(messages: Sequence[tuple[int, SceneUpdateLabels]]) -> lis
     return timestamps
 
 
+def _assign_untracked_track_ids(matched: MatchResult) -> set[int]:
+    """Give each untracked cuboid its own track id that no other cuboid uses.
+
+    The new ids are greater than all track ids and parent track ids of the matched cuboids.
+
+    Returns:
+        The new track ids.
+    """
+    cuboids = [
+        cuboid for group_cuboids in matched.cuboids_by_group.values() for cuboid in group_cuboids
+    ]
+    used_ids = {cuboid.track_id for cuboid in cuboids if cuboid.track_id is not None} | {
+        cuboid.parent_track_id for cuboid in cuboids if cuboid.parent_track_id is not None
+    }
+    first_new_id = max(used_ids, default=0) + 1
+    new_ids = itertools.count(start=first_new_id)
+    for group_id, group_cuboids in matched.cuboids_by_group.items():
+        matched.cuboids_by_group[group_id] = [
+            replace(cuboid, track_id=next(new_ids)) if cuboid.track_id is None else cuboid
+            for cuboid in group_cuboids
+        ]
+    end_id = next(new_ids)
+    return set(range(first_new_id, end_id))
+
+
 def _allocate_tracks(
-    session: Session, dataset_id: UUID, parent_by_source: Mapping[int, int | None]
+    session: Session,
+    dataset_id: UUID,
+    parent_by_source: Mapping[int, int | None],
+    untracked_ids: set[int],
 ) -> dict[int, UUID]:
     """Create a dataset-unique track for each source_track_id and link it to its parent track.
 
-    Roots are created before children, so the parent foreign key resolves.
+    Roots are created before children, so the parent foreign key resolves. The tracks of
+    `untracked_ids` get no source_track_id, because the source has no track for them.
     """
     if not parent_by_source:
         return {}
@@ -344,6 +377,7 @@ def _allocate_tracks(
         dataset_id=dataset_id,
         numbers=numbers[: len(roots)],
         links=[(source_id, None) for source_id in roots],
+        untracked_ids=untracked_ids,
     )
     if children:
         track_ids.update(
@@ -352,6 +386,7 @@ def _allocate_tracks(
                 dataset_id=dataset_id,
                 numbers=numbers[len(roots) :],
                 links=[(source_id, track_ids[parent_id]) for source_id, parent_id in children],
+                untracked_ids=untracked_ids,
             )
         )
     return track_ids
@@ -368,9 +403,10 @@ def _parent_by_source_track(matched: MatchResult) -> dict[int, int | None]:
     parent_by_source: dict[int, int | None] = {}
     for cuboids in matched.cuboids_by_group.values():
         for cuboid in cuboids:
-            parent_id = parent_by_source.setdefault(cuboid.track_id, cuboid.parent_track_id)
+            track_id = _require_track_id(cuboid=cuboid)
+            parent_id = parent_by_source.setdefault(track_id, cuboid.parent_track_id)
             if parent_id != cuboid.parent_track_id:
-                raise ValueError(f"Track {cuboid.track_id} has more than one parent track id.")
+                raise ValueError(f"Track {track_id} has more than one parent track id.")
     for parent_id in list(parent_by_source.values()):
         if parent_id is not None:
             parent_by_source.setdefault(parent_id, None)
@@ -379,15 +415,24 @@ def _parent_by_source_track(matched: MatchResult) -> dict[int, int | None]:
     return parent_by_source
 
 
+def _require_track_id(cuboid: CuboidLabel) -> int:
+    """Return the track id of a cuboid that `_assign_untracked_track_ids` has processed."""
+    if cuboid.track_id is None:
+        raise ValueError("Cuboid has no track id. Assign the untracked track ids first.")
+    return cuboid.track_id
+
+
 def _create_source_tracks(
     session: Session,
     dataset_id: UUID,
     numbers: Sequence[int],
     links: Sequence[tuple[int, UUID | None]],
+    untracked_ids: set[int],
 ) -> dict[int, UUID]:
     """Insert tracks and map each source_track_id to its object_track_id.
 
-    The tracks get the object_track_numbers in `numbers`, in the order of `links`.
+    The tracks get the object_track_numbers in `numbers`, in the order of `links`. The
+    tracks of `untracked_ids` are stored without a source_track_id.
     """
     created_ids = object_track_resolver.create_many(
         session=session,
@@ -395,7 +440,7 @@ def _create_source_tracks(
             ObjectTrackCreate(
                 object_track_number=number,
                 dataset_id=dataset_id,
-                source_track_id=source_id,
+                source_track_id=None if source_id in untracked_ids else source_id,
                 parent_object_track_id=parent_object_track_id,
             )
             for number, (source_id, parent_object_track_id) in zip(numbers, links)
@@ -437,7 +482,7 @@ def _annotation_creates(
             annotation_label_id=label_ids[cuboid.class_name],
             annotation_type=AnnotationType.CUBOID_3D,
             parent_sample_id=group_id,
-            object_track_id=track_ids[cuboid.track_id],
+            object_track_id=track_ids[_require_track_id(cuboid=cuboid)],
             cuboid_3d=_cuboid_create(cuboid=cuboid),
         )
         for group_id, cuboids in matched.cuboids_by_group.items()

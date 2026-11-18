@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlalchemy import event
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
@@ -12,9 +13,11 @@ from lightly_studio.api.routes.api.status import (
 )
 from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.image import ImageView
 from lightly_studio.resolvers import (
     collection_resolver,
     image_resolver,
+    tag_resolver,
 )
 from lightly_studio.resolvers.image_filter import (
     FilterDimensions,
@@ -33,6 +36,7 @@ from tests.helpers_resolvers import (
     create_collection,
     create_image,
     create_images,
+    create_tag,
 )
 from tests.resolvers.video.helpers import VideoStub, create_video
 
@@ -408,6 +412,51 @@ def test_get_image_histograms__unknown_field_returns_422(
     )
 
     assert response.status_code == 422
+
+
+def test_read_image__batched_annotation_details(
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_id = create_image(session=db_session, collection_id=collection_id).sample_id
+    label_id = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="cat"
+    ).annotation_label_id
+    annotations = create_annotations(
+        session=db_session,
+        collection_id=collection_id,
+        annotations=[
+            AnnotationDetails(sample_id=image_id, annotation_label_id=label_id, x=10),
+            AnnotationDetails(sample_id=image_id, annotation_label_id=label_id, x=12),
+        ],
+    )
+    tag = create_tag(
+        session=db_session, collection_id=annotations[0].sample.collection_id, tag_name="review"
+    )
+    tag_resolver.add_sample_ids_to_tag_id(
+        session=db_session, tag_id=tag.tag_id, sample_ids=[annotations[0].sample_id]
+    )
+    db_session.expunge_all()
+    image = image_resolver.get_by_id(session=db_session, sample_id=image_id)
+    assert image is not None
+    expected = ImageView.from_image_table(image=image).model_dump(mode="json")
+    db_session.expunge_all()
+
+    connection = db_session.connection()
+    record_statement = mocker.stub()
+    event.listen(connection, "before_cursor_execute", record_statement)
+    try:
+        response = test_client.get(f"/api/images/{image_id}")
+    finally:
+        event.remove(connection, "before_cursor_execute", record_statement)
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == expected
+    box_detail_queries = sum(
+        "FROM object_detection_annotation" in call.args[2]
+        for call in record_statement.call_args_list
+    )
+    assert box_detail_queries == 1
 
 
 def test_count_image_annotations_by_collection__with_image_filter(

@@ -65,7 +65,9 @@ vi.mock('$lib/components/PointCloudLabelingWorkspace/useCreateCuboidAnnotation',
             showSelectClassDialog: writable(false),
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
-            labels: { data: [] }
+            getRememberedLabel: () => undefined,
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });
@@ -75,7 +77,14 @@ vi.mock('$lib/hooks', async () => {
     const featureFlags = writable<string[]>([]);
     return {
         useFeatureFlags: () => ({ featureFlags: readonly(featureFlags) }),
-        useGlobalStorage: () => ({ isEditingMode: writable(false) }),
+        useGlobalStorage: () => ({
+            isEditingMode: writable(false),
+            lastAnnotationSource: writable({}),
+            updateLastAnnotationSource: vi.fn(),
+            removeLastAnnotationSource: vi.fn()
+        }),
+        useAuth: () => ({ user: undefined }),
+        hasMinimumRole: () => true,
         useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
         useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() }),
         useCanCreateAnnotationClass: () => true,

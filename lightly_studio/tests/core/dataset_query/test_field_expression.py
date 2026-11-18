@@ -146,7 +146,7 @@ class TestNullableNumericalField:
         returned_query = query.where(expr.get())
 
         sql = str(returned_query.compile(compile_kwargs={"literal_binds": True})).lower()
-        assert "where annotation_base.confidence >= 0.7" in sql
+        assert "where annotation_base.confidence >= cast(0.7 as float)" in sql
 
     def test_operators__null_does_not_match(self, db_session: Session) -> None:
         dataset = create_collection(session=db_session)

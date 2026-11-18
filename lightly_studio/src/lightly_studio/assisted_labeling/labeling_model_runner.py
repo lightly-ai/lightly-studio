@@ -19,6 +19,7 @@ from lightly_studio.assisted_labeling.provider import (
     ProviderError,
     ProviderImage,
     ProviderNotCalledError,
+    ProviderUnavailableError,
 )
 
 logger = logging.getLogger(__name__)
@@ -50,6 +51,8 @@ class LabelingModelRunner(Protocol):
             The predicted annotations, as the model returned them.
 
         Raises:
+            ProviderUnavailableError: If the model cannot answer now, for example because
+                it is still loading.
             NotFoundError: If the image file cannot be read.
             ProviderNotCalledError: If the run fails before it reaches the model.
             ProviderError: If the model fails.
@@ -60,23 +63,32 @@ class LocalLabelingModelRunner:
     """Runs a labeling model that is registered in this process."""
 
     def __init__(self, model: LabelingModel) -> None:
-        """Create a runner for the model."""
+        """Create a runner for the model.
+
+        The runner reads the ID, the task and the class names of the model once, here.
+
+        Raises:
+            Exception: Any error that a property of the model raises.
+        """
         self._model = model
+        self._model_id = model.model_id
+        self._task = model.task
+        self._class_names = list(model.class_names)
 
     @property
     def model_id(self) -> str:
         """Unique ID of the model."""
-        return self._model.model_id
+        return self._model_id
 
     @property
     def task(self) -> ModelTask:
         """The kind of annotations that the model predicts."""
-        return self._model.task
+        return self._task
 
     @property
     def class_names(self) -> list[str]:
         """Names of the annotation classes that the model can predict."""
-        return self._model.class_names
+        return self._class_names
 
     def predict(self, image: ProviderImage, threshold: float) -> list[PredictedAnnotation]:
         """Decode the image file and predict its annotations with the model.
@@ -84,10 +96,15 @@ class LocalLabelingModelRunner:
         The model gets an RGB image.
 
         Raises:
+            ProviderUnavailableError: If the model is still loading.
             NotFoundError: If the image file cannot be read.
             ProviderNotCalledError: If the image file cannot be decoded.
             ProviderError: If the model raises an error.
         """
+        if not self._model.ready:
+            raise ProviderUnavailableError(
+                f"The labeling model {self.model_id!r} is still loading. Try again later."
+            )
         pil_image = _decode(image=image)
         try:
             return self._model.predict(image=pil_image, threshold=threshold)
