@@ -1,4 +1,5 @@
 <script lang="ts">
+    import ModelSuggestionGuard from '$lib/components/SampleDetails/LabelWithModelOverlay/ModelSuggestionGuard/ModelSuggestionGuard.svelte';
     import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { ZoomableContainer } from '$lib/components';
@@ -237,6 +238,8 @@
         return true;
     });
 </script>
+
+<ModelSuggestionGuard labelWithModel={assistedLabeling.labelWithModel} />
 
 <ZoomableContainer
     width={sample.width}

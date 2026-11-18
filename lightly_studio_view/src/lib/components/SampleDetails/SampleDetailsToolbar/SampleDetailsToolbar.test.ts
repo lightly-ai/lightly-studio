@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
@@ -50,6 +50,12 @@ vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => assistedLabelingStatus
 }));
 
+const labelingModels = { disabledReason: 'Unavailable.' as string | null };
+
+vi.mock('$lib/hooks/useLabelingModels', () => ({
+    useLabelingModels: () => labelingModels
+}));
+
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/contexts/SampleDetailsToolbar.svelte')>()),
     useSampleDetailsToolbarContext: () => ({
@@ -91,6 +97,7 @@ describe('SampleDetailsToolbar', () => {
     beforeEach(() => {
         mockSampleDetailsToolbarContext.status = 'cursor';
         mockSampleDetailsToolbarContext.brush.mode = 'brush';
+        labelingModels.disabledReason = 'Unavailable.';
 
         mockAnnotationLabelContext.annotationType = null;
         mockAnnotationLabelContext.annotationLabel = null;
@@ -109,13 +116,15 @@ describe('SampleDetailsToolbar', () => {
         });
 
         it('disables the create tools and explains why', async () => {
+            labelingModels.disabledReason = null;
             const { getByLabelText, getByRole } = render(SampleDetailsToolbar);
 
             for (const label of [
                 'Bounding Box Tool',
                 'Mask brush',
                 'Smart select',
-                'Find all instances'
+                'Find all instances',
+                'Model-assisted labeling'
             ]) {
                 expect(getByLabelText(label)).toBeDisabled();
             }
@@ -311,6 +320,17 @@ describe('SampleDetailsToolbar', () => {
         expect(view.getByRole('tooltip')).toHaveTextContent(
             'Finds all objects that match a text prompt.'
         );
+    });
+
+    it('shows and activates the label with model tool when models are available', async () => {
+        expect(render(SampleDetailsToolbar).queryByLabelText('Model-assisted labeling')).toBeNull();
+        cleanup();
+        labelingModels.disabledReason = null;
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Model-assisted labeling'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('label-with-model');
     });
 
     it('resets the annotation type of the previous tool in smart select', () => {

@@ -15,9 +15,11 @@
     import Brush from '@lucide/svelte/icons/brush';
     import Bot from '@lucide/svelte/icons/bot';
     import Layers3 from '@lucide/svelte/icons/layers-3';
+    import ScanSearch from '@lucide/svelte/icons/scan-search';
     import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
+    import { useLabelingModels } from '$lib/hooks/useLabelingModels';
     import { isFrameDetailsRoute } from '$lib/routes';
     import { page } from '$app/state';
 
@@ -66,11 +68,16 @@
     } = useSampleDetailsToolbarContext();
 
     const assistedLabelingStatus = useAssistedLabelingStatus();
+    const labelingModels = useLabelingModels();
     // Assisted labeling supports images only, not video frames.
+    const isAssistedLabelingView = $derived(
+        !annotationLabelContext.isOnAnnotationDetailsView && !isFrameDetailsRoute(page.route.id)
+    );
     const showAssistedLabelingTools = $derived(
-        !annotationLabelContext.isOnAnnotationDetailsView &&
-            !isFrameDetailsRoute(page.route.id) &&
-            assistedLabelingStatus.disabledReason === null
+        isAssistedLabelingView && assistedLabelingStatus.disabledReason === null
+    );
+    const showLabelWithModelTool = $derived(
+        isAssistedLabelingView && labelingModels.disabledReason === null
     );
 
     // The tools that create annotations stay off while the target source is unknown, so nothing
@@ -85,7 +92,8 @@
         'brush',
         'slic',
         'smart-select',
-        'find-instances'
+        'find-instances',
+        'label-with-model'
     ];
 
     const items = $derived<ToolbarItem[]>([
@@ -146,6 +154,14 @@
             icon: Layers3,
             hint: 'Finds all objects that match a text prompt.',
             visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
+        },
+        {
+            id: 'label-with-model',
+            label: 'Model-assisted labeling',
+            icon: ScanSearch,
+            hint: 'Generate annotation suggestions with a model, then review and save them.',
+            visible: showLabelWithModelTool,
             disabledReason: createToolDisabledReason
         }
     ]);
@@ -284,6 +300,7 @@
                 break;
             case 'smart-select':
             case 'find-instances':
+            case 'label-with-model':
                 setStatus(tool);
                 break;
         }

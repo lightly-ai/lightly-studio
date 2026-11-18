@@ -3,7 +3,7 @@ import { getContext, setContext } from 'svelte';
 export type BrushMode = 'brush' | 'eraser';
 export type SlicLevel = 'coarse' | 'medium' | 'fine';
 export type SlicStatus = 'idle' | 'computing' | 'ready' | 'error';
-export type AssistedLabelingStatus = 'smart-select' | 'find-instances';
+export type AssistedLabelingStatus = 'smart-select' | 'find-instances' | 'label-with-model';
 export type ToolbarStatus =
     | 'bounding-box'
     | 'brush'
@@ -17,6 +17,10 @@ export type SampleDetailsToolbarContext = {
     status: ToolbarStatus;
     // The status a Space pan interrupted, restored when the pan ends.
     panFrom?: ToolbarStatus;
+    modelLabeling?: {
+        modelId: string | null;
+        threshold: number;
+    };
     brush: {
         mode: BrushMode;
         size: number;
@@ -91,4 +95,4 @@ export function useSampleDetailsToolbarContext(): {
 }
 
 export const isAssistedLabelingStatus = (status: ToolbarStatus): status is AssistedLabelingStatus =>
-    status === 'smart-select' || status === 'find-instances';
+    status === 'smart-select' || status === 'find-instances' || status === 'label-with-model';
