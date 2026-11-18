@@ -27,6 +27,16 @@ const COMPUTED: Embeddings2dStatus = { is_computed: true, embedding_count: 300_0
 
 let disposers: (() => void)[] = [];
 
+function createCompute() {
+    let succeed = () => {};
+    let fail = () => {};
+    const promise = new Promise<void>((resolve, reject) => {
+        succeed = () => resolve();
+        fail = () => reject(new Error('Server error'));
+    });
+    return { promise, succeed, fail };
+}
+
 function createStatusQuery(data: Embeddings2dStatus | undefined): StatusQueryStub {
     const query: StatusQueryStub = $state({
         data,
@@ -38,17 +48,12 @@ function createStatusQuery(data: Embeddings2dStatus | undefined): StatusQueryStu
     return query;
 }
 
-function mountGate(params: {
-    collectionId: string;
-    plotUpdatedAt?: () => number;
-    isAxesLayout?: () => boolean;
-}) {
+function mountGate(params: { collectionId: string; isAxesLayout?: () => boolean }) {
     let gate!: ReturnType<typeof usePlotComputeGate>;
     const dispose = $effect.root(() => {
         gate = usePlotComputeGate({
             getCollectionId: () => params.collectionId,
-            getIsAxesLayout: params.isAxesLayout ?? (() => false),
-            getPlotUpdatedAt: params.plotUpdatedAt ?? (() => 0)
+            getIsAxesLayout: params.isAxesLayout ?? (() => false)
         });
     });
     disposers.push(dispose);
@@ -131,132 +136,97 @@ describe('usePlotComputeGate', () => {
         expect(gate.isPlotRequestEnabled).toBe(false);
     });
 
-    it('starts the timer itself below the threshold', () => {
+    it('starts the timer when a compute below the threshold starts', () => {
         vi.useFakeTimers({ now: 2_000_000 });
         mocks.statusQueries['small'] = createStatusQuery(NOT_COMPUTED_SMALL);
         const { gate } = mountGate({ collectionId: 'small' });
 
         expect(gate.view).toBe('computing');
+        expect(gate.startedAt).toBeNull();
+
+        gate.trackCompute(createCompute().promise);
+        flushSync();
+
         expect(gate.startedAt).toBe(2_000_000);
     });
 
-    it('refetches status and clears the start once the plot loads', () => {
+    it('refetches the status and ends the compute once it succeeds', async () => {
         const query = createStatusQuery(NOT_COMPUTED_LARGE);
         query.refetch = vi.fn(async () => {
             query.data = COMPUTED;
         });
-        mocks.statusQueries['loaded'] = query;
-        let plotUpdatedAt = $state(0);
-        const { gate } = mountGate({ collectionId: 'loaded', plotUpdatedAt: () => plotUpdatedAt });
+        mocks.statusQueries['success'] = query;
+        const { gate } = mountGate({ collectionId: 'success' });
+        const compute = createCompute();
         gate.startCompute();
-        flushSync();
+        gate.trackCompute(compute.promise);
 
-        plotUpdatedAt = 1_000;
-        flushSync();
+        compute.succeed();
 
+        await vi.waitFor(() => expect(gate.startedAt).toBeNull());
+        flushSync();
         expect(query.refetch).toHaveBeenCalledOnce();
-        expect(gate.startedAt).toBeNull();
         expect(gate.view).toBe('plot');
     });
 
-    it('ends the compute once the status refresh after the load finishes, even if the plot is dirty again', async () => {
-        vi.useFakeTimers({ now: 1_000_000 });
-        const query = createStatusQuery(NOT_COMPUTED_LARGE);
-        let finishRefresh = () => {};
-        query.refetch = vi.fn(
-            () =>
-                new Promise<void>((resolve) => {
-                    finishRefresh = () => {
-                        query.data = { is_computed: false, embedding_count: 300_001 };
-                        resolve();
-                    };
-                })
-        );
-        mocks.statusQueries['dirty-again'] = query;
-        let plotUpdatedAt = $state(0);
-        const { gate } = mountGate({
-            collectionId: 'dirty-again',
-            plotUpdatedAt: () => plotUpdatedAt
-        });
+    it('asks again above the threshold after a compute fails', async () => {
+        mocks.statusQueries['failed'] = createStatusQuery(NOT_COMPUTED_LARGE);
+        const { gate } = mountGate({ collectionId: 'failed' });
+        const compute = createCompute();
         gate.startCompute();
-        flushSync();
+        gate.trackCompute(compute.promise);
 
-        // The refresh can finish in the same millisecond as the load, so only its completion decides.
-        plotUpdatedAt = 1_005_000;
-        flushSync();
+        compute.fail();
 
-        expect(query.refetch).toHaveBeenCalledOnce();
-        expect(gate.startedAt).toBe(1_000_000);
-        expect(gate.view).toBe('computing');
-
-        finishRefresh();
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
         flushSync();
-
         expect(gate.view).toBe('prompt');
     });
 
-    it('ends the compute after a load even when the status cache had expired', async () => {
-        vi.useFakeTimers({ now: 1_000_000 });
+    it('ends a compute that finishes while the panel is closed', async () => {
         const query = createStatusQuery(NOT_COMPUTED_LARGE);
-        mocks.statusQueries['expired-load'] = query;
-        const first = mountGate({ collectionId: 'expired-load' });
+        mocks.statusQueries['closed'] = query;
+        const first = mountGate({ collectionId: 'closed' });
+        const compute = createCompute();
         first.gate.startCompute();
-        flushSync();
+        first.gate.trackCompute(compute.promise);
         first.dispose();
 
-        query.data = undefined;
-        query.isFetchedAfterMount = false;
-        query.refetch = vi.fn(async () => {
-            query.data = { is_computed: false, embedding_count: 300_001 };
-            query.isFetchedAfterMount = true;
-        });
-        const { gate } = mountGate({
-            collectionId: 'expired-load',
-            plotUpdatedAt: () => 1_005_000
-        });
+        compute.succeed();
+        await vi.waitFor(() => expect(query.refetch).toHaveBeenCalledOnce());
+        const { gate } = mountGate({ collectionId: 'closed' });
 
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
         flushSync();
         expect(gate.view).toBe('prompt');
     });
 
-    it('keeps a running compute when a text axes plot loads', async () => {
-        vi.useFakeTimers({ now: 1_000_000 });
-        const query = createStatusQuery(NOT_COMPUTED_LARGE);
-        mocks.statusQueries['axes-load'] = query;
-        let isAxesLayout = $state(false);
-        let plotUpdatedAt = $state(0);
-        const { gate } = mountGate({
-            collectionId: 'axes-load',
-            plotUpdatedAt: () => plotUpdatedAt,
-            isAxesLayout: () => isAxesLayout
-        });
-        gate.startCompute();
-        flushSync();
+    it('ends a retried compute once', async () => {
+        const query = createStatusQuery(NOT_COMPUTED_SMALL);
+        mocks.statusQueries['retried'] = query;
+        const { gate } = mountGate({ collectionId: 'retried' });
+        const compute = createCompute();
+        gate.trackCompute(compute.promise);
+        gate.trackCompute(compute.promise);
 
-        isAxesLayout = true;
-        plotUpdatedAt = 1_005_000;
-        flushSync();
-        await Promise.resolve();
-        // Back on the PaCMAP layout, the plot query of the running compute has no data yet.
-        isAxesLayout = false;
-        plotUpdatedAt = 0;
-        flushSync();
+        compute.succeed();
 
-        expect(gate.startedAt).toBe(1_000_000);
-        expect(gate.view).toBe('computing');
+        await vi.waitFor(() => expect(gate.startedAt).toBeNull());
+        expect(query.refetch).toHaveBeenCalledOnce();
     });
 
-    it('keeps the start while only an older cached plot is loaded', () => {
-        vi.useFakeTimers({ now: 1_000_000 });
-        mocks.statusQueries['cached-old'] = createStatusQuery(NOT_COMPUTED_LARGE);
-        const { gate } = mountGate({ collectionId: 'cached-old', plotUpdatedAt: () => 999_000 });
-        gate.startCompute();
-        flushSync();
+    it('does not restart the timer when the status stays dirty after a compute', async () => {
+        mocks.statusQueries['dirty-again'] = createStatusQuery(NOT_COMPUTED_SMALL);
+        const { gate } = mountGate({ collectionId: 'dirty-again' });
+        const compute = createCompute();
+        gate.trackCompute(compute.promise);
 
-        expect(gate.startedAt).toBe(1_000_000);
+        compute.succeed();
+
+        await vi.waitFor(() => expect(gate.startedAt).toBeNull());
+        flushSync();
         expect(gate.view).toBe('computing');
+        expect(gate.startedAt).toBeNull();
     });
 
     it('shows computing on remount after the status cache expired', () => {
@@ -274,21 +244,6 @@ describe('usePlotComputeGate', () => {
 
         expect(gate.view).toBe('computing');
         expect(gate.isPlotRequestEnabled).toBe(true);
-    });
-
-    it('refetches the status once per plot load while embeddings keep changing', () => {
-        const query = createStatusQuery(NOT_COMPUTED_SMALL);
-        let embeddingCount = NOT_COMPUTED_SMALL.embedding_count;
-        query.refetch = vi.fn(async () => {
-            embeddingCount += 1;
-            query.data = { is_computed: false, embedding_count: embeddingCount };
-        });
-        mocks.statusQueries['ingesting'] = query;
-        mountGate({ collectionId: 'ingesting', plotUpdatedAt: () => 1_000 });
-
-        flushSync();
-
-        expect(query.refetch).toHaveBeenCalledOnce();
     });
 
     it('waits for a status fetched after mount before it allows the plot request', () => {
