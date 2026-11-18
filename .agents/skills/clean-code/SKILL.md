@@ -20,7 +20,7 @@ comments. The language guides add the rules for Python, the backend, and the fro
 - Use the term from the glossary skill for a domain noun.
 - Give a complex expression a name. Do not write it inline.
 - Give a literal number a name: use a constant. `0`, `1`, and `-1` are acceptable inline.
-- Name a boolean for the positive case. Write `if is_valid`, not `if not is_invalid`.
+- Do not write a double negative. Write `if is_valid`, not `if not is_invalid`.
 
 ```python
 # Bad
