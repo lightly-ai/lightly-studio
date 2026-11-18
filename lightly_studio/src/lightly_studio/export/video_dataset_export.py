@@ -58,6 +58,7 @@ class VideoDatasetExport:
         if output_csv is None:
             output_csv = DEFAULT_CLASSIFICATION_EXPORT_FILENAME
         classification_csv.write_classifications_csv(
+            session=self.session,
             samples=self.samples,
             output_csv=Path(output_csv),
             annotation_collection_id=annotation_collection_id,
