@@ -45,10 +45,12 @@ export function useCategoricalFieldCounts(
     const distributions = $derived.by(() => {
         const filtered = query.data ?? {};
         const all = allValuesQuery.data ?? {};
+        // A field only in `all` still lists its values, e.g. when the filtered request fails.
+        const fields = new Set([...Object.keys(filtered), ...Object.keys(all)]);
         return Object.fromEntries(
-            Object.entries(filtered).map(([field, buckets]) => [
+            [...fields].map((field) => [
                 field,
-                withAllValues(buckets, all[field] ?? [])
+                withAllValues(filtered[field] ?? [], all[field] ?? [])
             ])
         );
     });

@@ -53,15 +53,16 @@ describe('useCategoricalFieldCounts', () => {
         expect(counts.updating).toBe(true);
     });
 
+    const bucket = (id: string, count: number) => ({ id, kind: 'value', value: id, count });
+
     it('lists values outside the filter with a count of 0', () => {
-        const bucket = (id: string, count: number) => ({ id, kind: 'value', value: id, count });
         queryMock
             .mockReturnValueOnce({ data: { split: [bucket('train', 3)] }, isFetching: false })
             .mockReturnValueOnce({
                 data: { split: [bucket('train', 9), bucket('val', 4)] },
                 isFetching: false
             });
-        const filter: MetadataValueCountsFilter = { filter_type: 'image' };
+        const filter: MetadataValueCountsFilter = { filter_type: 'image', width: { min: 100 } };
         const counts = useCategoricalFieldCounts(() => ({
             collectionId,
             filter,
@@ -69,7 +70,22 @@ describe('useCategoricalFieldCounts', () => {
         }));
 
         expect(counts.distributions.split).toEqual([bucket('train', 3), bucket('val', 0)]);
-        expect(queryMock.mock.calls[1][0]()).toMatchObject({ filter: { filter_type: 'image' } });
+        expect(queryMock.mock.calls[0][0]().filter).toBe(filter);
+        expect(queryMock.mock.calls[1][0]().filter).toEqual({ filter_type: 'image' });
+    });
+
+    it('keeps listing all values when the filtered request has no data', () => {
+        queryMock
+            .mockReturnValueOnce({ data: undefined, isFetching: false, error: new Error('down') })
+            .mockReturnValueOnce({ data: { split: [bucket('val', 4)] }, isFetching: false });
+        const counts = useCategoricalFieldCounts(() => ({
+            collectionId,
+            filter: { filter_type: 'image' },
+            fields: ['split']
+        }));
+
+        expect(counts.distributions.split).toEqual([bucket('val', 0)]);
+        expect(counts.error).toBe('down');
     });
 
     it('skips the all-values request without a filter', () => {
