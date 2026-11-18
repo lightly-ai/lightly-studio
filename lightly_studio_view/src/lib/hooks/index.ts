@@ -21,7 +21,10 @@ export {
 } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
 export { useNumericMetadataDistribution } from '$lib/hooks/useNumericMetadataDistribution';
 export { useImageFieldDistribution } from '$lib/hooks/useImageFieldDistribution';
-export { useCategoricalMetadataDistribution } from '$lib/hooks/useCategoricalMetadataDistribution';
+export {
+    useCategoricalMetadataDistribution,
+    type MetadataValueCountsFilter
+} from '$lib/hooks/useCategoricalMetadataDistribution';
 export { useMetadataDistributionsBySampleTags } from '$lib/hooks/useMetadataDistributionsBySampleTags';
 export { useFramesFilter } from '$lib/hooks/useFramesFilter/useFramesFilter';
 export { useCaptions } from '$lib/hooks/useCaptions/useCaptions';
