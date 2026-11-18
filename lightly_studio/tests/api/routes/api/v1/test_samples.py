@@ -16,7 +16,9 @@ from tests.helpers_resolvers import create_collection, create_image
 
 
 def test_v1_query_samples__pages(test_client: TestClient, db_session: Session) -> None:
-    collection_id = create_collection(session=db_session).collection_id
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    ).collection_id
     for path in ["/a.png", "/b.png", "/c.png"]:
         create_image(session=db_session, collection_id=collection_id, file_path_abs=path)
     url = f"/api/v1/collections/{collection_id}/samples:query"
@@ -38,12 +40,15 @@ def test_v1_query_samples__pages(test_client: TestClient, db_session: Session) -
         ({"cursor": "not a cursor"}, HTTP_STATUS_BAD_REQUEST),
         ({"include": ["metadata"]}, HTTP_STATUS_BAD_REQUEST),
         ({"limit": 1001}, HTTP_STATUS_UNPROCESSABLE_ENTITY),
+        ({"cursor": "x", "offset": 1}, HTTP_STATUS_UNPROCESSABLE_ENTITY),
     ],
 )
 def test_v1_query_samples__bad_request(
     test_client: TestClient, db_session: Session, body: dict[str, object], status_code: int
 ) -> None:
-    collection_id = create_collection(session=db_session).collection_id
+    collection_id = create_collection(
+        session=db_session, sample_type=SampleType.IMAGE
+    ).collection_id
 
     response = test_client.post(f"/api/v1/collections/{collection_id}/samples:query", json=body)
 
