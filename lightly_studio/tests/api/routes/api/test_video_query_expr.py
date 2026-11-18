@@ -15,7 +15,7 @@ from tests.helpers_resolvers import (
     create_caption,
     create_collection,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_with_frames
 
 
 @dataclass
@@ -183,3 +183,27 @@ def test_video_queries__reject_image_collection(
     )
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
     assert "video collection" in response.json()["error"]
+
+
+def test_fps_comparison__fractional_boundary(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    for fps in (24, 29.97, 30):
+        create_video(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=VideoStub(path=f"/videos/{fps}.mp4", fps=fps),
+        )
+
+    for operator, names in [(">", ["30.mp4"]), (">=", ["29.97.mp4", "30.mp4"])]:
+        expression = {
+            "type": "ordinal_float_expr",
+            "field": {"table": "video", "name": "fps"},
+            "operator": operator,
+            "value": 29.97,
+        }
+        response = test_client.post(
+            f"/api/collections/{collection.collection_id}/video/",
+            json={"filter": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+        )
+        assert response.status_code == HTTP_STATUS_OK
+        assert sorted(video["file_name"] for video in response.json()["data"]) == names
