@@ -115,7 +115,9 @@ def test_build_sequence_messages__cuboids_ordered_by_track_id(
         target_frame_id="odom",
     )
 
-    track_ids = [cuboid.track_id for cuboid in messages[0][1].cuboids]
+    cuboids = messages[0][1].cuboids
+    track_ids = [cuboid.track_id for cuboid in cuboids if cuboid.track_id is not None]
+    assert len(track_ids) == len(cuboids)
     assert len(set(track_ids)) == 3
     assert track_ids == sorted(track_ids)
 
