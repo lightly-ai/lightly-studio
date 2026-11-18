@@ -5,6 +5,7 @@
         CollapsibleTrigger
     } from '$lib/components/ui/collapsible';
     import ChevronDown from '@lucide/svelte/icons/chevron-down';
+    import { AnnotationTargetRadio } from '$lib/components/AnnotationSource';
     import { slide } from 'svelte/transition';
     import type { Snippet } from 'svelte';
     import AnnotationVisibilityButton from '../AnnotationVisibilityButton';
@@ -22,6 +23,12 @@
         onToggleVisibility?: () => void;
         /** Annotation rows rendered inside the collapsible body. */
         children: Snippet;
+        /** Whether new cuboids go to this source. */
+        isTarget?: boolean;
+        /** Whether no source is picked yet, so the radio asks for a click. */
+        needsPick?: boolean;
+        /** Picks this source for new cuboids. Without it, the group has no radio. */
+        onPick?: () => void;
     }
 
     let {
@@ -30,7 +37,10 @@
         autoExpandForId = null,
         isHidden = false,
         onToggleVisibility,
-        children
+        children,
+        isTarget = false,
+        needsPick = false,
+        onPick
     }: Props = $props();
 
     let open = $state(true);
@@ -45,6 +55,9 @@
 
 <Collapsible bind:open>
     <div class="flex items-center gap-1">
+        {#if onPick}
+            <AnnotationTargetRadio sourceName={name} {isTarget} {needsPick} onSetTarget={onPick} />
+        {/if}
         <CollapsibleTrigger
             class="flex min-w-0 flex-1 items-center justify-between py-1"
             data-testid="point-cloud-annotation-list-group-header"

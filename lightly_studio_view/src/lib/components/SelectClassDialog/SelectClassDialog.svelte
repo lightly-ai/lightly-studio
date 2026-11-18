@@ -5,7 +5,7 @@
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
     import { SelectList } from '$lib/components/SelectList';
-    import type { ComponentProps } from 'svelte';
+    import type { ComponentProps, Snippet } from 'svelte';
     import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
     import { TrackSelect } from '$lib/components/TrackSelect';
     import { filterTracksByAnnotationClass } from '$lib/components/TrackSelect/filterTracksByAnnotationClass';
@@ -23,6 +23,12 @@
         tracks?: TrackWithClassNameView[];
         /** Track IDs already assigned to annotations on the current frame. */
         occupiedTrackIds?: ReadonlySet<string>;
+        /** Content above the class list. With it, the list does not open by itself and cover it. */
+        extra?: Snippet;
+        /** Whether the caller allows to confirm, for example after its extra fields are set. */
+        canConfirm?: boolean;
+        /** The class selected when the dialog opens. */
+        initialLabel?: string;
     }
 
     let {
@@ -32,7 +38,10 @@
         onCancel,
         showTrackSelect = false,
         tracks = [],
-        occupiedTrackIds = new Set()
+        occupiedTrackIds = new Set(),
+        extra,
+        canConfirm = true,
+        initialLabel
     }: Props = $props();
 
     const canCreateClass = useCanCreateAnnotationClass();
@@ -48,15 +57,21 @@
         handleOpenChange,
         handleClassSelect,
         handleTrackValueChange,
-        handleKeyboardConfirm
+        handleKeyboardConfirm,
+        preselect
     } = useClassDialogForm(() => ({
         onConfirm,
         onCancel,
         showTrackSelect,
+        canConfirm,
         onClose: () => {
             open = false;
         }
     }));
+
+    $effect(() => {
+        if (open) preselect(initialLabel);
+    });
 
     const availableTracks = $derived(
         filterTracksByAnnotationClass(
@@ -77,6 +92,7 @@
             </Dialog.Description>
         </Dialog.Header>
 
+        {@render extra?.()}
         <div class="min-w-0 space-y-1 py-2">
             <SelectList
                 onCreate={trackClassCreatedInPicker}
@@ -86,7 +102,7 @@
                 label="Select a class..."
                 placeholder={canCreateClass ? 'Search or create a class...' : 'Search a class...'}
                 className="w-full"
-                autoOpen
+                autoOpen={!extra}
                 autoFocus
                 onKeyboardConfirm={handleKeyboardConfirm}
                 onSelect={handleClassSelect}
@@ -113,7 +129,7 @@
             <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
             <Button
                 variant="default"
-                buttonProps={{ onclick: handleConfirm, disabled: !$selectedItem }}
+                buttonProps={{ onclick: handleConfirm, disabled: !$selectedItem || !canConfirm }}
             >
                 Confirm
             </Button>

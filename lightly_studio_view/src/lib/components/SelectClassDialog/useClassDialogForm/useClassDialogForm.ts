@@ -12,6 +12,8 @@ interface Options {
     onCancel: () => void;
     onClose: () => void;
     showTrackSelect: boolean;
+    /** Whether the caller allows to confirm, for example after its extra fields are set. */
+    canConfirm?: boolean;
 }
 
 export function useClassDialogForm(getOptions: () => Options) {
@@ -35,6 +37,7 @@ export function useClassDialogForm(getOptions: () => Options) {
     }
 
     function confirmWith(label: string) {
+        if (getOptions().canConfirm === false) return;
         closedByConfirm = true;
         const { onConfirm, showTrackSelect } = getOptions();
         if (showTrackSelect) onConfirm(label, trackSelection);
@@ -81,8 +84,13 @@ export function useClassDialogForm(getOptions: () => Options) {
         handleOpenChange,
         handleClassSelect,
         handleTrackValueChange,
+        /** Selects the class the dialog opens with, unless the user already picked one. */
+        preselect: (label: string | undefined) => {
+            if (label && !get(selectedItem)) selectedItem.set({ value: label, label });
+        },
         handleKeyboardConfirm: (item: ListItem) => {
-            if (getOptions().showTrackSelect) {
+            const { showTrackSelect, canConfirm } = getOptions();
+            if (showTrackSelect || canConfirm === false) {
                 selectedItem.set(item);
                 return;
             }
