@@ -3,11 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, cast
+from typing import cast
 from uuid import UUID
 
 from pydantic import BaseModel
-from sqlalchemy import ColumnElement, Row, Select
+from sqlalchemy import ColumnElement
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.orm.interfaces import LoaderOption
 from sqlmodel import Session, col, func, select
@@ -103,7 +103,8 @@ def get_all_by_collection_id(  # noqa: PLR0913
     """Retrieve samples for a specific collection with optional filtering.
 
     When the dataset has a workflow project, the result also has each sample's batch and state
-    in it, from one LEFT JOIN in the page query.
+    in it, from one query on the page's samples. The lookup is not joined into the page query:
+    Postgres would join every sample of the collection before the sort and the offset.
     """
     workflow_project_id = workflow_resolver.get_dataset_project_id(
         session=session, collection_id=collection_id
@@ -209,16 +210,8 @@ def _get_all_with_similarity(  # noqa: PLR0913
     if pagination is not None:
         samples_query = samples_query.offset(pagination.offset).limit(pagination.limit)
 
-    page_query: Select[Any] = samples_query
-    if workflow_project_id is not None:
-        page_query = workflow_resolver.add_sample_workflow_columns(
-            query=page_query,
-            sample_id_column=col(ImageTable.sample_id),
-            project_id=workflow_project_id,
-        )
-
     total_count = session.exec(total_count_query).one()
-    results = session.execute(page_query).all()
+    results = session.execute(samples_query).all()
 
     samples = [cast(ImageTable, r[0]) for r in results]
     similarity_scores = [distance_to_similarity(r[1]) for r in results]
@@ -229,7 +222,9 @@ def _get_all_with_similarity(  # noqa: PLR0913
         next_cursor=_compute_next_cursor(pagination, total_count),
         similarity_scores=similarity_scores,
         order_values=None,
-        workflows=_get_workflows(rows=results, workflow_project_id=workflow_project_id),
+        workflows=_get_workflows(
+            session=session, samples=samples, workflow_project_id=workflow_project_id
+        ),
     )
 
 
@@ -302,12 +297,6 @@ def _get_all_without_similarity(  # noqa: PLR0913
         ordered_query = ordered_query.order_by(*expr.to_column_elements())
     if pagination is not None:
         ordered_query = ordered_query.offset(pagination.offset).limit(pagination.limit)
-    if workflow_project_id is not None:
-        ordered_query = workflow_resolver.add_sample_workflow_columns(
-            query=ordered_query,
-            sample_id_column=col(ImageTable.sample_id),
-            project_id=workflow_project_id,
-        )
 
     # Multi-column rows: ImageTable at index 0, sort value read by label.
     rows = session.execute(ordered_query).all()
@@ -320,16 +309,21 @@ def _get_all_without_similarity(  # noqa: PLR0913
         next_cursor=next_cursor,
         similarity_scores=None,
         order_values=order_values,
-        workflows=_get_workflows(rows=rows, workflow_project_id=workflow_project_id),
+        workflows=_get_workflows(
+            session=session, samples=samples, workflow_project_id=workflow_project_id
+        ),
     )
 
 
 def _get_workflows(
-    rows: Sequence[Row[Any]], workflow_project_id: UUID | None
+    session: Session, samples: Sequence[ImageTable], workflow_project_id: UUID | None
 ) -> list[SampleWorkflowView | None]:
+    """Get each page sample's batch and state, aligned with `samples`."""
     if workflow_project_id is None:
-        return [None] * len(rows)
-    return [
-        workflow_resolver.get_sample_workflow(row=row, project_id=workflow_project_id)
-        for row in rows
-    ]
+        return [None] * len(samples)
+    by_sample_id = workflow_resolver.get_samples_workflow(
+        session=session,
+        project_id=workflow_project_id,
+        sample_ids=[sample.sample_id for sample in samples],
+    )
+    return [by_sample_id.get(sample.sample_id) for sample in samples]

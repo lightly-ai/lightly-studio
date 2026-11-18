@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Any
 from uuid import UUID
 
 import sqlalchemy
-from sqlalchemy import ColumnElement, Row, Select
-from sqlalchemy.orm import Mapped
 from sqlmodel import Session, func, select
 
 from lightly_studio.models.sample import SampleTable
@@ -21,9 +18,6 @@ from lightly_studio.resolvers import collection_resolver
 from lightly_studio.resolvers.grid_filter_base import GridFilterBase
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-
-_BATCH_ID_LABEL = "workflow_batch_id"
-_STATE_LABEL = "workflow_state"
 
 
 def get_project_id(session: Session, dataset_id: UUID) -> UUID | None:
@@ -144,56 +138,6 @@ def set_filter_project_id(filters: GridFilterBase | None, project_id: UUID | Non
     sample_filter = _workflow_sample_filter(filters=filters)
     if sample_filter is not None:
         sample_filter.set_workflow_project_id(project_id=project_id)
-
-
-def add_sample_workflow_columns(
-    query: Select[Any], sample_id_column: ColumnElement[UUID] | Mapped[UUID], project_id: UUID
-) -> Select[Any]:
-    """Add each sample's batch and state in the project to a query, with one LEFT JOIN.
-
-    Read the values back from each row with `get_sample_workflow`.
-
-    Args:
-        query: The query that selects samples.
-        sample_id_column: The sample ID column of the query.
-        project_id: The dataset's workflow project.
-
-    Returns:
-        The query, with the batch ID and the state added to the SELECT list.
-    """
-    # An alias, so the workflow status filter's subqueries on `batch_file` don't correlate to
-    # this join.
-    sample_batch_file = batch_file_table.alias("sample_batch_file")
-    return query.outerjoin(
-        sample_batch_file,
-        sqlalchemy.and_(
-            sample_batch_file.c.sample_id == sample_id_column,
-            sample_batch_file.c.project_id == project_id,
-        ),
-    ).add_columns(
-        sample_batch_file.c.batch_id.label(_BATCH_ID_LABEL),
-        sample_batch_file.c.state.label(_STATE_LABEL),
-    )
-
-
-def get_sample_workflow(row: Row[Any], project_id: UUID) -> SampleWorkflowView | None:
-    """Read a sample's batch and state from a row of `add_sample_workflow_columns`.
-
-    Args:
-        row: A row of a query that `add_sample_workflow_columns` changed.
-        project_id: The project passed to `add_sample_workflow_columns`.
-
-    Returns:
-        The sample's batch and state, or None if the sample is in no batch of the project.
-    """
-    batch_id = getattr(row, _BATCH_ID_LABEL, None)
-    if batch_id is None:
-        return None
-    return SampleWorkflowView(
-        project_id=project_id,
-        batch_id=batch_id,
-        state=WorkflowStatus(getattr(row, _STATE_LABEL)),
-    )
 
 
 def get_samples_workflow(

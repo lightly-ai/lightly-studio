@@ -1527,7 +1527,10 @@ def test_get_all_by_collection_id__workflow_no_workflow_tables(db_session: Sessi
 
 
 @pytest.mark.usefixtures("workflow_tables")
-def test_get_all_by_collection_id__workflow_one_join_per_page(db_session: Session) -> None:
+def test_get_all_by_collection_id__workflow_reads_only_the_page(db_session: Session) -> None:
+    # The batch lookup runs on the page's samples only. Joined into the sorted, paged query,
+    # Postgres joins every sample of the collection before the sort (ticket 06: +37 ms at
+    # offset 20,000 on 100k samples).
     collection_id, _, _ = _create_batched_images(db_session=db_session)
     statements: list[str] = []
 
@@ -1537,8 +1540,17 @@ def test_get_all_by_collection_id__workflow_one_join_per_page(db_session: Sessio
     engine = db_session.get_bind()
     sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
     try:
-        image_resolver.get_all_by_collection_id(session=db_session, collection_id=collection_id)
+        result = image_resolver.get_all_by_collection_id(
+            session=db_session,
+            collection_id=collection_id,
+            pagination=Paginated(offset=1, limit=1),
+        )
     finally:
         sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
 
-    assert len([s for s in statements if "batch_file" in s]) == 1
+    batch_file_statements = [s for s in statements if "batch_file" in s]
+    assert len(batch_file_statements) == 1
+    assert "OFFSET" not in batch_file_statements[0]
+    assert "ORDER BY" not in batch_file_statements[0]
+    assert result.workflows is not None
+    assert len(result.workflows) == 1
