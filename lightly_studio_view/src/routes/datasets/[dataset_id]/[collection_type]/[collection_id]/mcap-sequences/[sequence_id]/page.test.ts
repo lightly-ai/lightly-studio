@@ -42,7 +42,7 @@ vi.mock(
 vi.mock('$app/state', () => ({
     page: {
         url: new URL(
-            'http://localhost/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-1'
+            'http://localhost/datasets/dataset-1/mcap/collection-1/mcap-sequences/sequence-1'
         ),
         params: { dataset_id: 'dataset-1' },
         state: {}
@@ -135,7 +135,7 @@ const mockPageData = {
     sequenceId: 'sequence-1'
 } as unknown as PageData;
 
-describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', () => {
+describe('[collection_type]/[collection_id]/mcap-sequences/[sequence_id] page', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         summaryData = undefined;
@@ -189,7 +189,7 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         await user.click(screen.getByRole('button', { name: 'Next sequence' }));
 
         expect(goto).toHaveBeenCalledExactlyOnceWith(
-            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-2'
+            '/datasets/dataset-1/mcap/collection-1/mcap-sequences/sequence-2'
         );
     });
 
@@ -202,7 +202,7 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         await user.click(screen.getByRole('button', { name: 'Previous sequence' }));
 
         expect(goto).toHaveBeenCalledExactlyOnceWith(
-            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-0'
+            '/datasets/dataset-1/mcap/collection-1/mcap-sequences/sequence-0'
         );
     });
 });
@@ -218,7 +218,7 @@ describe('point-cloud sequence page load', () => {
                 sequence_id: 'sequence'
             },
             url: new URL(
-                `http://localhost/datasets/root-collection/group/group-collection/point-clouds/sequence${search}`
+                `http://localhost/datasets/root-collection/group/group-collection/mcap-sequences/sequence${search}`
             ),
             parent: async () => parentData
         } as unknown as Parameters<typeof load>[0]);
