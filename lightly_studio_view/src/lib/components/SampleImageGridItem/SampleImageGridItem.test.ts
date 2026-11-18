@@ -86,6 +86,26 @@ describe('SampleImageGridItem', () => {
         expect(screen.getByTestId('workflow-grid-state-badge')).toHaveTextContent('In review');
     });
 
+    it('shows only the state dot on tiles too narrow for the label', () => {
+        render(SampleImageGridItem, {
+            props: {
+                sample: {
+                    sample_id: 'image-1',
+                    annotations: [],
+                    workflow: { project_id: 'p', batch_id: 'b', state: 'in_review' }
+                } as unknown as ImageView,
+                tileWidth: 100,
+                tileHeight: 100
+            }
+        });
+
+        expect(screen.getByTestId('workflow-grid-state-badge')).toHaveAttribute(
+            'aria-label',
+            'In review'
+        );
+        expect(screen.queryByTestId('workflow-grid-state-label')).not.toBeInTheDocument();
+    });
+
     it('shows no workflow state badge for an image that is not batched', () => {
         render(SampleImageGridItem, {
             props: {

@@ -47,7 +47,8 @@
 />
 <SampleAnnotations {sample} {objectFit} outputWidth={tileWidth} outputHeight={tileHeight} />
 {#if sample.workflow}
-    <WorkflowStateBadge state={sample.workflow.state} />
+    <!-- Below 128px the label would truncate to one letter next to the selection box. -->
+    <WorkflowStateBadge state={sample.workflow.state} compact={tileWidth < 128} />
 {/if}
 
 <SampleValueBadge
