@@ -1,7 +1,6 @@
 <script lang="ts">
-    // eslint-disable-next-line no-restricted-imports -- Legacy. Convert to $app/state.
-    import { page } from '$app/stores';
-    import { derived as storeDerived } from 'svelte/store';
+    import { page } from '$app/state';
+    import { toStore } from 'svelte/store';
     import { onMount } from 'svelte';
     import {
         getOperators,
@@ -59,21 +58,20 @@
         isOperatorDialogOpen = true;
     };
 
-    const pageContext = storeDerived(
-        page,
-        ($p) =>
+    const pageContext = toStore(
+        () =>
             ({
-                routeId: $p.route.id,
-                collectionId: $p.params.collection_id ?? '',
-                sampleId: $p.params.sampleId || $p.params.sample_id || null,
-                annotationId: $p.params.annotationId || null,
-                sampleType: ($p.params.collection_type as SampleType) ?? null
+                routeId: page.route.id,
+                collectionId: page.params.collection_id ?? '',
+                sampleId: page.params.sampleId || page.params.sample_id || null,
+                annotationId: page.params.annotationId || null,
+                sampleType: (page.params.collection_type as SampleType) ?? null
             }) satisfies PageContext
     );
 
     const { currentScope } = useOperatorContext(pageContext);
 
-    const isDataset = $derived($page.data.collection?.parent_collection_id === null);
+    const isDataset = $derived(page.data.collection?.parent_collection_id === null);
 
     const isApplicable = (operator: RegisteredOperatorMetadata): boolean => {
         if ($currentScope === null) return false;

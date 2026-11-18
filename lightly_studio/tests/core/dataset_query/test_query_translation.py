@@ -27,6 +27,7 @@ from lightly_studio.models.query_expr import (
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
+    VideoEventMatchExpr,
 )
 
 
@@ -41,6 +42,18 @@ def test_to_match_expression__metadata_numbers(
     assert translated.path == "odometry.acc[1]"
     assert translated.comparison == operator.value
     assert translated.value == value
+
+
+def test_to_match_expression__event_without_video_scope() -> None:
+    expr = VideoEventMatchExpr(
+        subexpr=StringExpr(
+            field=FieldRef(table="event", name="class_name"),
+            operator=EqualityComparisonOperator.EQ,
+            value="run",
+        )
+    )
+    with pytest.raises(QueryExprError):
+        query_translation.to_match_expression(expr=expr)
 
 
 def test_to_match_expression__string_eq() -> None:

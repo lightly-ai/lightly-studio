@@ -45,8 +45,18 @@
             labelName: string,
             annotationSourceId: string
         ) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** True when the cuboid is hidden in the scene. */
+        isCuboidHidden?: (cuboid: CuboidAnnotation) => boolean;
+        /** True when every cuboid of the source is hidden in the scene. */
+        isSourceHidden?: (sourceId: string) => boolean;
+        /** Hides or shows the track of a cuboid. */
+        onToggleTrackVisibility?: (cuboid: CuboidAnnotation) => void;
+        /** Hides or shows every cuboid of a source. */
+        onToggleSourceVisibility?: (sourceId: string) => void;
     }
 
     let {
@@ -61,7 +71,12 @@
         editable = false,
         onCuboidTransform,
         onLabelChange,
-        onDeleteCuboid
+        onTrackChange,
+        onDeleteCuboid,
+        isCuboidHidden,
+        isSourceHidden,
+        onToggleTrackVisibility,
+        onToggleSourceVisibility
     }: Props = $props();
 </script>
 
@@ -104,7 +119,12 @@
                 {editable}
                 {onCuboidTransform}
                 {onLabelChange}
+                {onTrackChange}
                 {onDeleteCuboid}
+                {isCuboidHidden}
+                {isSourceHidden}
+                {onToggleTrackVisibility}
+                {onToggleSourceVisibility}
             />
         </Segment>
     </div>
