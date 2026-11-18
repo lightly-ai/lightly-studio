@@ -1,6 +1,6 @@
 [project]
 name = "lightly-studio-serve"
-version = "0.1.2"
+version = "0.2.0"
 description = "Serve your own embedding model to LightlyStudio over HTTP."
 readme = "README.md"
 # Matches the Python versions supported by lightly-studio.
