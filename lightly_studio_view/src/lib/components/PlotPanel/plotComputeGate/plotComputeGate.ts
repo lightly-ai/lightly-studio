@@ -19,7 +19,8 @@ export function getPlotComputeView(input: PlotComputeViewInput): PlotComputeView
     if (isStatusError) return 'error';
     if (status === undefined) return isComputeStarted ? 'computing' : 'checking';
     if (status.is_computed) return 'plot';
-    const isLarge = status.embedding_count >= PLOT_COMPUTE_CONFIRM_THRESHOLD;
+    // The status has a count whenever no plot is saved.
+    const isLarge = (status.embedding_count ?? 0) >= PLOT_COMPUTE_CONFIRM_THRESHOLD;
     if (isLarge && !isComputeStarted) return 'prompt';
     return 'computing';
 }

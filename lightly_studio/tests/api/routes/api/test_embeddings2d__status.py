@@ -36,7 +36,7 @@ def test_get_2d_embeddings_status__computed(test_client: TestClient, db_session:
     response = test_client.get(f"/api/collections/{collection_id}/embeddings2d/status")
 
     assert response.status_code == 200
-    assert response.json() == {"is_computed": True, "embedding_count": 3}
+    assert response.json() == {"is_computed": True, "embedding_count": None}
 
 
 def test_get_2d_embeddings_status__not_computed(
