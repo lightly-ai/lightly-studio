@@ -43,10 +43,15 @@ describe('detectScopeAt', () => {
     });
     it.each([
         { text: '# classification(\nwidth', scope: 'image' },
+        { text: 'frame(', scope: 'image' },
+        { text: 'video: object_detection(frame(', scope: 'object_detection' },
+        { text: 'video: (frame(', scope: 'frame' },
+        { text: 'video: frame(NOT (classification(source = "model") OR ', scope: 'frame' },
+        { text: 'video: frame(object_detection(', scope: 'object_detection' },
         { text: '# note\nvideo: fps', scope: 'video' },
         { text: 'classification(# )\nclass_name', scope: 'classification' },
         { text: 'file_name = "#classification(" AND width', scope: 'image' }
-    ])('ignores comments while resolving $scope scope', ({ text, scope }) => {
+    ])('resolves $text to $scope scope', ({ text, scope }) => {
         expect(detectScopeAt(text, text.length)).toBe(scope);
     });
 });

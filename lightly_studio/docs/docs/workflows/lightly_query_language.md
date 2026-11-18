@@ -68,6 +68,26 @@ fps >= 29.97
 duration_s > 10 AND fps = 30
 ```
 
+## Video frame queries
+
+Use `frame(...)` to return videos with a matching frame. Inside it, combine annotation
+functions with `frame_timestamp_s`, the frame’s presentation timestamp in seconds on the video’s
+timeline. The first frame can have a nonzero timestamp.
+
+```mysql
+# A person appears on a frame with a timestamp below 5 seconds
+frame(object_detection(class_name = "person") AND frame_timestamp_s < 5)
+
+# A person and a car appear on the same frame
+frame(object_detection(class_name = "person") AND object_detection(class_name = "car"))
+
+# Both appear in the video, possibly on different frames
+frame(object_detection(class_name = "person")) AND frame(object_detection(class_name = "car"))
+```
+
+`frame(NOT object_detection(class_name = "car"))` requires at least one frame without a car detection.
+`NOT frame(object_detection(class_name = "car"))` matches videos with no car detections on any frame, including videos with no frames.
+
 ## Metadata filtering
 
 Use `metadata["path"]` to compare sample metadata. Quote the path with double or single quotes.

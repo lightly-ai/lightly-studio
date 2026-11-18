@@ -50,13 +50,12 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 ## Query in GUI
 
-In an image or video collection, click `Add query filter` in the left sidebar to open the
-query editor.
+On the Images or Videos page, select `Query` in the sidebar to open the query editor.
 
 ![Query filter](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_query_v1.0.0.png){ width="100%" }
 
 You can filter images and videos by dimensions or file name. For videos, you can also filter by
-frame rate (`fps`) and duration in seconds (`duration_s`). See the
+frame rate (`fps`) and duration in seconds (`duration_s`), or [match annotations on a frame](lightly_query_language.md#video-frame-queries). See the
 [Lightly Query Language reference](lightly_query_language.md) for tag and annotation filters
 and examples of combining conditions.
 
