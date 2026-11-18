@@ -11,6 +11,7 @@ from lightly_studio.resolvers.collection_resolver.delete import delete
 from lightly_studio.resolvers.collection_resolver.delete_dependent_rows import (
     delete_dependent_rows,
 )
+from lightly_studio.resolvers.collection_resolver.delete_subtree import delete_subtree
 from lightly_studio.resolvers.collection_resolver.export import (
     export,
     get_filtered_samples_count,
@@ -57,6 +58,7 @@ from lightly_studio.resolvers.collection_resolver.get_parent_collection_by_sampl
 from lightly_studio.resolvers.collection_resolver.get_parent_collection_id import (
     get_parent_collection_id,
 )
+from lightly_studio.resolvers.collection_resolver.get_subtree import get_subtree
 from lightly_studio.resolvers.collection_resolver.get_table_by_name import get_table_by_name
 from lightly_studio.resolvers.collection_resolver.update import update
 
@@ -66,6 +68,7 @@ __all__ = [
     "create_group_components",
     "delete",
     "delete_dependent_rows",
+    "delete_subtree",
     "export",
     "get_all",
     "get_annotation_collections",
@@ -84,6 +87,7 @@ __all__ = [
     "get_parent_collection_by_sample_id",
     "get_parent_collection_id",
     "get_root_collection",
+    "get_subtree",
     "get_table_by_name",
     "update",
 ]
