@@ -140,9 +140,7 @@ def read_annotation_collections_with_counts(
                 annotation_count=counts.get(source.collection_id, 0),
                 parent_collection_id=parent.collection_id,
                 parent_sample_type=parent.sample_type,
-                parent_group_component_name=definition.group_component_name
-                if definition
-                else None,
+                parent_group_component_name=definition.group_component_name if definition else None,
             )
         )
     return views

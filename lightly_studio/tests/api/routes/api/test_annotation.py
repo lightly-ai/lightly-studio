@@ -395,7 +395,6 @@ def test_read_annotation_collections(
     ]
 
 
-
 def test_read_annotation_collections_with_counts(
     test_client: TestClient,
     db_session: Session,
