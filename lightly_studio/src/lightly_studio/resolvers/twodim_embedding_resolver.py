@@ -53,7 +53,7 @@ def get_plot(session: Session, collection_id: UUID, embedding_model_id: UUID) ->
         raise ValueError(f"Embedding model {embedding_model_id} not found.")
     key = (collection_id, embedding_model_id)
     plot = session.get(EmbeddingPlotTable, key, populate_existing=True)
-    if plot is not None and not plot.is_dirty:
+    if embedding_plot_resolver.is_ready(plot=plot):
         return plot.data
     if plot is None:
         plot = EmbeddingPlotTable(
