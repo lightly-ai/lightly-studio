@@ -32,13 +32,13 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
     useTags: () => ({ tagsSelected: writable(new Set<string>()) })
 }));
 
-vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
-    useSelectedAnnotationsFilter: () => ({
-        selectedAnnotationFilterIdsArray: writable(['label-1'])
-    })
-}));
-
 vi.mock('$lib/hooks', () => ({
+    useAnnotationLabels: () => ({
+        data: [{ annotation_label_id: 'label-1' }, { annotation_label_id: 'label-2' }]
+    }),
+    useSelectedAnnotationsFilter: () => ({
+        selectedAnnotationFilterIdsArray: writable(['label-1', 'other-dataset-label'])
+    }),
     useGlobalStorage: () => ({
         setfilteredSampleCount: vi.fn(),
         sampleSize: writable({ width: 6, height: 200 }),
@@ -139,7 +139,7 @@ describe('point-clouds/+page.svelte', () => {
         expect(destination).toContain(ROUTE_DATASET_ID);
     });
 
-    it('filters the sequences by the selected labels', () => {
+    it('filters the sequences by the selected labels of the collection', () => {
         render(Page, { props: { data: pageData } });
 
         expect(updateAnnotationLabelIds).toHaveBeenCalledWith(['label-1']);

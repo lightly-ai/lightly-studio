@@ -11,6 +11,7 @@ import {
     useImageAnnotationCounts,
     useImageAnnotationCountsBySampleTags,
     useMcapSequenceAnnotationCounts,
+    useMcapSequenceFilters,
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
@@ -407,6 +408,20 @@ describe('point-clouds annotation counts', () => {
 
         const { setAnnotationCounts } = vi.mocked(useAnnotationsFilter).mock.results[0].value;
         expect(setAnnotationCounts).toHaveBeenCalledWith(sequenceCounts);
+    });
+
+    it('waits for the sequence filter of the shown collection', async () => {
+        // The grid page sets the filter collection after the layout reads the new route.
+        useMcapSequenceFilters().setCollectionId('previous-collection-id');
+        setPageRoute(APP_ROUTES.pointClouds);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const [[getParams]] = vi.mocked(useMcapSequenceAnnotationCounts).mock.calls;
+        expect(getParams().enabled).toBe(false);
+        useMcapSequenceFilters().setCollectionId('test-collection-id');
+        expect(getParams().enabled).toBe(true);
     });
 });
 

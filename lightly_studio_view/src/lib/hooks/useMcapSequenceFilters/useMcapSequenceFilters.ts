@@ -4,7 +4,7 @@ import type {
     McapSequenceFilter,
     SampleFilter
 } from '$lib/api/lightly_studio_local';
-import { getAnnotationsFilter } from '$lib/utils/gridFilter/getAnnotationsFilter';
+import { getAnnotationsFilter } from '$lib/utils/gridFilter';
 
 export type McapSequenceFilterParams = {
     collection_id: string;

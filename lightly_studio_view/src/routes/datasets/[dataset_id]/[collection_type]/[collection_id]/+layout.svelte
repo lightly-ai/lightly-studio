@@ -460,11 +460,16 @@
         enabled: isVideos && !$allSourcesHidden
     }));
 
-    const { mcapSequenceFilter } = useMcapSequenceFilters();
+    const { filterParams: mcapSequenceFilterParams, mcapSequenceFilter } = useMcapSequenceFilters();
+    // The grid page sets the filter collection after this layout reads a new route. Until then
+    // the filter still belongs to the previous collection.
+    const isMcapSequenceFilterOfCollection = $derived(
+        $mcapSequenceFilterParams?.collection_id === collectionId
+    );
     const mcapSequenceAnnotationCountsQuery = useMcapSequenceAnnotationCounts(() => ({
         collectionId,
         filter: $mcapSequenceFilter,
-        enabled: isPointClouds && $mcapSequenceFilter !== null && !$allSourcesHidden
+        enabled: isPointClouds && isMcapSequenceFilterOfCollection && !$allSourcesHidden
     }));
 
     const videoFrameCountsCollectionId = $derived(

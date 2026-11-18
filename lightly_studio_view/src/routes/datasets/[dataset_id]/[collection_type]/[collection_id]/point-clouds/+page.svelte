@@ -4,11 +4,17 @@
     import { page } from '$app/state';
     import { get } from 'svelte/store';
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
-    import { useGlobalStorage, useMcapSequenceFilters, useMcapSequencesInfinite } from '$lib/hooks';
+    import {
+        useAnnotationLabels,
+        useGlobalStorage,
+        useMcapSequenceFilters,
+        useMcapSequencesInfinite,
+        useSelectedAnnotationsFilter
+    } from '$lib/hooks';
     import { useTags } from '$lib/hooks/useTags/useTags';
-    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { routeHelpers } from '$lib/routes';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
+    import { selectCollectionLabelIds } from './selectCollectionLabelIds';
 
     // The page layout provides data, but this route loads its own sequence data.
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -23,11 +29,19 @@
         useMcapSequenceFilters();
     const { tagsSelected } = $derived.by(() => useTags({ collection_id: collectionId }));
     const { selectedAnnotationFilterIdsArray } = useSelectedAnnotationsFilter();
+    const annotationLabels = useAnnotationLabels(() => ({ collectionId }));
 
     $effect(() => {
         setCollectionId(collectionId);
         updateTagIds(Array.from($tagsSelected));
-        updateAnnotationLabelIds($selectedAnnotationFilterIdsArray);
+        updateAnnotationLabelIds(
+            selectCollectionLabelIds({
+                selectedLabelIds: $selectedAnnotationFilterIdsArray,
+                collectionLabelIds: annotationLabels.data?.flatMap(
+                    (label) => label.annotation_label_id ?? []
+                )
+            })
+        );
     });
 
     const {
