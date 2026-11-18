@@ -6,7 +6,6 @@ import { getPlotComputeView, isPlotRequestEnabled, type PlotComputeView } from '
 interface UsePlotComputeGateParams {
     getCollectionId: () => string;
     getIsAxesLayout: () => boolean;
-    getPlotUpdatedAt: () => number;
 }
 
 interface UsePlotComputeGateReturn {
@@ -16,13 +15,16 @@ interface UsePlotComputeGateReturn {
     readonly startedAt: number | null;
     readonly statusError: string | null;
     startCompute(): void;
+    trackCompute(compute: Promise<unknown>): void;
 }
 
 // Module scope, so a compute that runs on keeps its start time when the panel closes and opens.
 const computeStartTimes = writable<Record<string, number>>({});
+// Each retry of a compute gives the same promise again.
+const trackedComputes = new WeakSet<Promise<unknown>>();
 
 export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotComputeGateReturn {
-    const { getCollectionId, getIsAxesLayout, getPlotUpdatedAt } = params;
+    const { getCollectionId, getIsAxesLayout } = params;
     const statusQuery = useEmbeddingPlotStatus(getCollectionId);
     const startTimes = fromStore(computeStartTimes);
 
@@ -47,27 +49,19 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
         );
     }
 
-    // Below the threshold the compute starts without a click, so the timer starts here.
-    $effect(() => {
-        if (view === 'computing' && startedAt === null) untrack(startCompute);
-    });
-
-    // A finished compute saves the plot, so the status is outdated once per plot load. A load after
-    // the start ends the compute once the status refresh after it finishes, even if the plot is
-    // dirty again: a kept start would skip the prompt next time.
-    $effect(() => {
-        const plotUpdatedAt = getPlotUpdatedAt();
-        // A text axes plot is a projection, so its load says nothing about a PaCMAP compute.
-        if (plotUpdatedAt === 0 || getIsAxesLayout()) return;
-        untrack(() => {
-            if (statusQuery.data?.is_computed === true) return;
-            const collectionId = getCollectionId();
-            const isLoadedAfterStart = startedAt !== null && plotUpdatedAt > startedAt;
-            void statusQuery.refetch().then(() => {
-                if (isLoadedAfterStart) clearComputeStart(collectionId);
-            });
-        });
-    });
+    // The compute can outlive the panel, so its promise, not an effect, ends it.
+    function trackCompute(compute: Promise<unknown>) {
+        startCompute();
+        if (trackedComputes.has(compute)) return;
+        trackedComputes.add(compute);
+        const collectionId = getCollectionId();
+        // A failed compute also ends, so the next one asks again above the threshold.
+        const endCompute = async () => {
+            await statusQuery.refetch();
+            clearComputeStart(collectionId);
+        };
+        void compute.then(endCompute, endCompute);
+    }
 
     $effect(() => {
         if (startedAt === null || freshStatus?.is_computed !== true) return;
@@ -91,7 +85,8 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
             if (!statusQuery.isError) return null;
             return statusQuery.error?.message || 'Unknown error';
         },
-        startCompute
+        startCompute,
+        trackCompute
     };
 }
 
