@@ -83,6 +83,45 @@ Nothing is published to PyPI yet. Once it is released, installing it will be:
 pip install lightly-studio-serve
 ```
 
+## Serve a labeling model
+
+A labeling model suggests annotations for the open image in the LightlyStudio GUI. Subclass
+`LabelingModel` and pass an instance as `labeling_model`:
+
+```python
+from lightly_studio_serve import LabelingModel, ModelTask, PredictedAnnotation, serve
+from PIL.Image import Image
+
+
+class MyModel(LabelingModel):
+    model_id = "my-detector"
+    task = ModelTask.OBJECT_DETECTION
+    class_names = ["car", "person"]
+
+    def predict(self, image: Image, threshold: float) -> list[PredictedAnnotation]:
+        # Run your model here.
+        return [PredictedAnnotation(class_name="car", box=(10, 20, 110, 80), score=0.9)]
+
+
+serve(labeling_model=MyModel(), api_key="your-secret-key")
+```
+
+The server has the endpoints `GET /v1/labeling/describe` and `POST /v1/labeling/predict`.
+The API key, TLS and the request size limit work the same as for an embedder. You can serve
+an embedder and a labeling model from one server: pass both to `serve`.
+
+Connect a dataset to the server with `ls.register_remote_labeling_model`:
+
+```python
+import lightly_studio as ls
+
+ls.register_remote_labeling_model(
+    dataset=dataset, url="http://127.0.0.1:8080", api_key="your-secret-key"
+)
+```
+
+The conformance kit below checks embedders only.
+
 ## Check your implementation
 
 The protocol is the contract, so a server in any language can serve LightlyStudio. Point
