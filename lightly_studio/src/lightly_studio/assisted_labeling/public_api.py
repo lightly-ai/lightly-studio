@@ -18,5 +18,8 @@ def register_labeling_model(model: LabelingModel) -> None:
 
     Args:
         model: The model to register. A model with the same ``model_id`` is replaced.
+
+    Raises:
+        ValueError: If ``model_id`` is empty or longer than 200 characters.
     """
     labeling_model_registry.get_registry().register(model=model)

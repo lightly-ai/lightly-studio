@@ -87,7 +87,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'fps',
                 type: 'float',
-                description: 'Frames per second. Equality only (`=`, `!=`).'
+                description: 'Frames per second.'
             },
             { name: 'duration_s', type: 'float', description: 'Duration in seconds.' },
             { name: 'file_name', type: 'string', description: 'Video file name.' },

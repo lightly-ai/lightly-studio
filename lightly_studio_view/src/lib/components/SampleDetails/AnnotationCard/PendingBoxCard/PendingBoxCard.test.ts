@@ -110,7 +110,7 @@ describe('PendingBoxCard', () => {
         expect(get(usePendingBoxClass().request)).not.toBeNull();
     });
 
-    it('keeps the box while panning with Space', async () => {
+    it('keeps the box while a pan is in progress', async () => {
         setup('drag');
 
         await pointerDown(document.body, 0);

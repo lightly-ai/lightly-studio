@@ -256,6 +256,34 @@ def test_write_sequence_labels__links_parent_tracks(
     assert sorted(track.object_track_number for track in tracks) == [1, 2, 3, 4]
 
 
+def test_write_sequence_labels__untracked_cuboids_get_own_tracks(
+    patch_collection: None,  # noqa: ARG001
+    tmp_path: Path,
+) -> None:
+    dataset, sequence, group_ids = _index_recording(tmp_path=tmp_path)
+    timestamp_ns = helpers.LIDAR_LOG_TIMES_NS[0]
+    # Track 7 has a parent 8. The untracked ids must not reuse 7 or 8.
+    cuboids = (
+        _cuboid(timestamp_ns=timestamp_ns, track_id=7, parent_track_id=8),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=None, px=5.0),
+        _cuboid(timestamp_ns=timestamp_ns, track_id=None, px=6.0),
+    )
+
+    _write_cuboids(dataset=dataset, sequence=sequence, cuboids=cuboids)
+
+    annotations = _cuboid_annotations(group_ids=group_ids)
+    assert len({annotation.object_track_id for annotation in annotations}) == 3
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+    )
+    untracked_tracks = [track for track in tracks if track.source_track_id is None]
+    source_ids = {track.source_track_id for track in tracks if track.source_track_id is not None}
+    assert len(untracked_tracks) == 2
+    assert source_ids == {7, 8}
+    assert all(track.parent_object_track_id is None for track in untracked_tracks)
+    assert sorted(track.object_track_number for track in tracks) == [1, 2, 3, 4]
+
+
 def test_write_sequence_labels__conflicting_parent_tracks(
     patch_collection: None,  # noqa: ARG001
     tmp_path: Path,
@@ -319,7 +347,7 @@ def _index_recording(tmp_path: Path) -> tuple[McapDataset, McapSequence, list[UU
 
 
 def _cuboid(
-    timestamp_ns: int, track_id: int, px: float = 4.0, parent_track_id: int | None = None
+    timestamp_ns: int, track_id: int | None, px: float = 4.0, parent_track_id: int | None = None
 ) -> CuboidLabel:
     return CuboidLabel(
         timestamp_ns=timestamp_ns,

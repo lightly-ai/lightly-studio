@@ -8,7 +8,6 @@ export { default as AnnotationItem } from '$lib/components/AnnotationsGrid/Annot
 export { default as Card } from '$lib/components/Card/Card.svelte';
 export { default as CardContent } from '$lib/components/CardContent/CardContent.svelte';
 export { default as CombinedMetadataDimensionsFilters } from '$lib/components/CombinedMetadataDimensionsFilters/CombinedMetadataDimensionsFilters.svelte';
-export { default as DimensionFilters } from '$lib/components/DimensionFilters/index.svelte';
 export { default as ExportSamples } from '$lib/components/ExportSamples/ExportSamples.svelte';
 export { default as Checkbox } from '$lib/components/Form/Checkbox/Checkbox.svelte';
 export { default as Header } from '$lib/components/Header/Header.svelte';
@@ -18,6 +17,7 @@ export { LazyTrigger } from '$lib/components/LazyTrigger/';
 export { default as Logo } from '$lib/components/Logo/index.svelte';
 export { default as SampleAnnotation } from '$lib/components/SampleAnnotation/SampleAnnotation.svelte';
 export { default as SelectClassDialog } from '$lib/components/SelectClassDialog/SelectClassDialog.svelte';
+export { TrackSelect } from '$lib/components/TrackSelect';
 export { default as SampleAnnotationBox } from '$lib/components/SampleAnnotation/SampleAnnotationBox/SampleAnnotationBox.svelte';
 export { default as SampleAnnotationLabel } from '$lib/components/SampleAnnotation/SampleAnnotationLabel/SampleAnnotationLabel.svelte';
 export { default as SampleAnnotationSegmentationRLE } from '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/SampleAnnotationSegmentationRLE.svelte';

@@ -149,6 +149,57 @@ export function groupAnnotationsBySource({
     return groups;
 }
 
+interface GroupAnnotationsWithEmptySourcesParams extends GroupAnnotationsBySourceParams {
+    /** A typed source name that is not created yet. It gets an empty group. */
+    pendingSourceName: string | null;
+}
+
+/** The ID of the group of a typed source that is not created yet. */
+export const PENDING_SOURCE_ID = 'pending-source';
+
+/** The state and action of the picker for the source that new cuboids go to. */
+export interface SourcePicker {
+    /** The source new cuboids go to. */
+    targetSourceName: string | null;
+    /** A typed source name that is not created yet. */
+    pendingSourceName: string | null;
+    /** Whether no source is picked among several. */
+    needsPick: boolean;
+    onPick: (name: string, options?: { isNew?: boolean }) => void;
+}
+
+/** Whether new cuboids can go to the source of a group: not to the unknown-source group. */
+export function isPickableSource(sourceId: string, sources: readonly AnnotationSource[]): boolean {
+    return sourceId === PENDING_SOURCE_ID || sources.some(({ id }) => id === sourceId);
+}
+
+/**
+ * Groups cuboids by their annotation source and lists every source, also sources without
+ * cuboids, so that the user can pick any of them for new cuboids.
+ */
+export function groupAnnotationsWithEmptySources({
+    cuboids,
+    sources,
+    pendingSourceName
+}: GroupAnnotationsWithEmptySourcesParams): AnnotationGroup[] {
+    const filled = groupAnnotationsBySource({ cuboids, sources });
+    const groups: AnnotationGroup[] = sources.map(
+        (source) =>
+            filled.find((group) => group.sourceId === source.id) ?? {
+                sourceId: source.id,
+                sourceName: source.name,
+                cuboids: []
+            }
+    );
+    const isPendingNew =
+        pendingSourceName && !sources.some((source) => source.name === pendingSourceName);
+    if (isPendingNew) {
+        groups.push({ sourceId: PENDING_SOURCE_ID, sourceName: pendingSourceName, cuboids: [] });
+    }
+    const unknown = filled.filter((group) => !sources.some(({ id }) => id === group.sourceId));
+    return [...groups, ...unknown];
+}
+
 /** A node in the annotation tree, holding a cuboid and its direct subtree. */
 interface AnnotationTreeNode {
     /** The cuboid at this node, or null for absent parent group headers. */

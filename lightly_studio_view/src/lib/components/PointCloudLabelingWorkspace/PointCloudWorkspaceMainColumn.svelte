@@ -98,7 +98,9 @@
             displayFrameId={layout.workspace.referenceFrameId}
             selectedChannelIds={layout.selectedCameraChannelIds}
             batch={layout.cameraBatch}
-            annotations={layout.snapshotAnnotations}
+            annotations={layout.snapshotAnnotations.filter(
+                (annotation) => !layout.isTickAnnotationHidden(annotation)
+            )}
             annotationClasses={layout.annotationClasses}
             canProject={!layout.workspace.isShowingSensorFrames}
             onPlaybackToggle={layout.onPlayToggle}
