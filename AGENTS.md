@@ -33,9 +33,9 @@ make static-checks
 uv run pytest <affected_tests>
 ```
 
-Run `uv run pytest -n 8` for the full testsuite, use sparingly. To also rebuild the
-frontend, run `make build-lightly_studio_view`. It takes several minutes, avoid if not needed.
-Avoid `make test`, it is for CI, it rebuilds the frontend and takes long.
+Run `make test` for the full testsuite, use sparingly. The tests need only a mock webapp, which
+`make test` creates. To build the real frontend, run `make build-lightly_studio_view`. It takes
+several minutes, avoid if not needed.
 
 Read `lightly_studio/Makefile` for detailed commands.
 

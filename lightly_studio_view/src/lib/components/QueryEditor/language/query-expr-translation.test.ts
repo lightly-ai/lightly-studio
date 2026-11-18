@@ -37,6 +37,20 @@ function createParser(): LangiumParser {
 
 const parser = createParser();
 
+it.each(['=', '!=', '<', '<=', '>', '>='])('translates fps %s 29.97', (operator) => {
+    expect(parseLightlyQuery(parser, `video: fps ${operator} 29.97`)).toEqual({
+        status: 'ok',
+        queryExpr: {
+            match_expr: {
+                type: 'ordinal_float_expr',
+                field: { table: 'video', name: 'fps' },
+                operator: operator === '=' ? '==' : operator,
+                value: 29.97
+            }
+        }
+    });
+});
+
 describe('collection query scope', () => {
     it.each(['', ' \n\t ', '# width > 100', '# first\r\n# second\r\n'])(
         'treats a document without an expression as empty: %s',
