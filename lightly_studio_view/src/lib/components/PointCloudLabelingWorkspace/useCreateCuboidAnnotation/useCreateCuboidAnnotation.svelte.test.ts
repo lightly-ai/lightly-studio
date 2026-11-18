@@ -15,8 +15,10 @@ const {
     useAnnotationLabels,
     useCreateAnnotation,
     useCreateLabel,
-    useGlobalStorage
+    useGlobalStorage,
+    startWork
 } = vi.hoisted(() => ({
+    startWork: vi.fn(),
     createAnnotation: vi.fn(),
     createLabel: vi.fn(),
     handleCancel: vi.fn(),
@@ -49,6 +51,10 @@ vi.mock('$lib/hooks', async () => {
     };
 });
 
+vi.mock('$lib/contexts/WorkflowFile.svelte', () => ({
+    useWorkflowFileContext: () => ({ startWork })
+}));
+
 vi.mock('svelte-sonner', () => ({
     toast: { error: vi.fn(), success: vi.fn() }
 }));
@@ -63,6 +69,7 @@ describe('useCreateCuboidAnnotation', () => {
         getCollectionId: () => 'collection-1',
         getDatasetId: () => 'dataset-1',
         getTickSampleId: () => 'sample-1',
+        getSequenceId: () => 'sequence-1',
         getSceneFrame: () => ({
             bounds: { min: [0, 0, 0], max: [10, 10, 10] },
             frameId: 'lidar-front'
@@ -81,6 +88,38 @@ describe('useCreateCuboidAnnotation', () => {
         useCreateAnnotation.mockReturnValue({ createAnnotation });
         useCreateLabel.mockReturnValue({ createLabel });
         useGlobalStorage.mockReturnValue({ lastAnnotationLabel, updateLastAnnotationLabel });
+        startWork.mockResolvedValue(undefined);
+    });
+
+    it('starts work on the sequence’s batch file once the cuboid is saved', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], vi.fn());
+
+        expect(startWork).toHaveBeenCalledWith('sequence-1');
+    });
+
+    it('does not start work when the cuboid could not be saved', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
+        createAnnotation.mockRejectedValue(new Error('boom'));
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], vi.fn());
+
+        expect(startWork).not.toHaveBeenCalled();
+    });
+
+    it('keeps the cuboid when the batch file cannot move', async () => {
+        lastAnnotationLabel.set({ 'collection-1': 'car' });
+        labels.data = [{ annotation_label_name: 'car', annotation_label_id: 'label-1' }];
+        startWork.mockRejectedValue(new Error('conflict'));
+        const onCreated = vi.fn();
+
+        await useCreateCuboidAnnotation(params).handleCreateCuboid([0, 0, 0], onCreated);
+
+        expect(onCreated).toHaveBeenCalledWith('annotation-1');
+        expect(toast.error).not.toHaveBeenCalled();
     });
 
     it('creates a cuboid with the remembered class and scene frame geometry', async () => {

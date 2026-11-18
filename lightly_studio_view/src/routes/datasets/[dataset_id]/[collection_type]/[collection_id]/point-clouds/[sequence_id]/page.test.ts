@@ -5,12 +5,23 @@ import { goto } from '$app/navigation';
 import Page from './+page.svelte';
 import { load } from './+page';
 import type { PageData } from './$types';
+import { workflowFile } from '$lib/components/Workflow/workflowFile.fixture';
+import type { WorkflowFile } from '$lib/hooks';
 
 let summaryData: { file_name: string; lidar_channels: []; camera_channels: [] } | undefined;
 const adjacentSequences = vi.hoisted(() => ({
     data: undefined as
         | { previous_sample_id: string | null; next_sample_id: string | null }
         | undefined
+}));
+
+const SEQUENCE_URL =
+    'http://localhost/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-1';
+const pageState = vi.hoisted(() => ({ url: new URL('http://localhost/') }));
+const workflowMocks = vi.hoisted(() => ({
+    file: undefined as WorkflowFile | undefined,
+    params: [] as unknown[],
+    mutateAsync: vi.fn()
 }));
 
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
@@ -41,9 +52,9 @@ vi.mock(
 
 vi.mock('$app/state', () => ({
     page: {
-        url: new URL(
-            'http://localhost/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-1'
-        ),
+        get url() {
+            return pageState.url;
+        },
         params: { dataset_id: 'dataset-1' },
         state: {}
     }
@@ -115,6 +126,20 @@ vi.mock('$lib/hooks', async () => {
             cancel: vi.fn()
         }),
         // The workspace header shows the edit, plugins and settings actions.
+        // The sequence opened from a batch reads its batch file.
+        useWorkflowFile: (getParams: () => unknown) => {
+            const params = getParams();
+            workflowMocks.params.push(params);
+            return {
+                query: {
+                    data: params ? workflowMocks.file : undefined,
+                    isError: false
+                }
+            };
+        },
+        useWorkflowFileTransition: () => ({
+            mutation: { mutateAsync: workflowMocks.mutateAsync, isPending: false }
+        }),
         useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
         useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) }),
         usePostHog: () => ({ trackEvent: vi.fn() })
@@ -135,6 +160,61 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         vi.clearAllMocks();
         summaryData = undefined;
         adjacentSequences.data = undefined;
+        pageState.url = new URL(SEQUENCE_URL);
+        workflowMocks.file = undefined;
+        workflowMocks.params = [];
+        workflowMocks.mutateAsync.mockResolvedValue(undefined);
+    });
+
+    describe('opened from a batch', () => {
+        beforeEach(() => {
+            pageState.url = new URL(
+                `${SEQUENCE_URL}?workflow_project=project-1&workflow_batch=batch-1`
+            );
+        });
+
+        it('reads the sequence’s batch file and lets the labeler submit it', async () => {
+            workflowMocks.file = { ...workflowFile, sample_id: 'sequence-1' };
+            const user = userEvent.setup();
+            render(Page, { props: { data: mockPageData } });
+
+            const header = await screen.findByTestId('workspace-header');
+            expect(workflowMocks.params).toContainEqual({
+                projectId: 'project-1',
+                batchId: 'batch-1',
+                sampleId: 'sequence-1'
+            });
+            expect(within(header).getByTestId('workflow-state-badge')).toHaveTextContent(
+                'In progress'
+            );
+            await user.click(within(header).getByRole('button', { name: 'Submit for review' }));
+            expect(workflowMocks.mutateAsync).toHaveBeenCalledWith('in_review');
+        });
+
+        it('locks editing when it is not the user’s turn', async () => {
+            workflowMocks.file = {
+                ...workflowFile,
+                sample_id: 'sequence-1',
+                state: 'in_review',
+                can_edit: false
+            };
+            render(Page, { props: { data: mockPageData } });
+
+            const header = await screen.findByTestId('workspace-header');
+            expect(within(header).getByRole('status')).toHaveTextContent(
+                'You submitted this file. It’s read-only while marta@example.com reviews it.'
+            );
+            expect(within(header).getByTestId('breadcrumb-edit-button')).toBeDisabled();
+        });
+    });
+
+    it('shows no workflow parts and keeps editing open outside a batch', async () => {
+        render(Page, { props: { data: mockPageData } });
+
+        const header = await screen.findByTestId('workspace-header');
+        expect(within(header).queryByTestId('workflow-file-status')).not.toBeInTheDocument();
+        expect(within(header).queryByRole('status')).not.toBeInTheDocument();
+        expect(within(header).getByTestId('breadcrumb-edit-button')).toBeEnabled();
     });
 
     it('renders the workspace', async () => {

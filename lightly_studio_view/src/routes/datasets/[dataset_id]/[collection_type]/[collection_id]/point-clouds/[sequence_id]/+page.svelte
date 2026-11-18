@@ -7,6 +7,10 @@
     import { getTickNumberFromHash } from './getTickNumberFromHash';
     import { routeHelpers } from '$lib/routes';
     import { useAdjacentMcapSequences } from '$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences';
+    import {
+        createWorkflowFileContext,
+        getWorkflowParams
+    } from '$lib/contexts/WorkflowFile.svelte';
 
     const { data }: { data: PageData } = $props();
     const {
@@ -17,6 +21,9 @@
         collectionType,
         sequenceId
     } = $derived(data);
+    // A sequence opened from a hosted workflow batch is that batch's file: the header shows
+    // its state and transitions, and editing follows whose turn it is.
+    createWorkflowFileContext(() => getWorkflowParams(page.url, sequenceId));
     const tickNumber = $derived(getTickNumberFromHash(page.url.hash));
     // The workspace loads the same summary, so this query is deduplicated by TanStack.
     const { summary } = useMcapSequenceSummary({

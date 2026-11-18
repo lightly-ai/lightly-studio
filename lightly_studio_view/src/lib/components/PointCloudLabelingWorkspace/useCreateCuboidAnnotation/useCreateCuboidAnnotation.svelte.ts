@@ -7,6 +7,7 @@ import {
     useGlobalStorage,
     useSelectClassDialog
 } from '$lib/hooks';
+import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 import { get } from 'svelte/store';
 import { toast } from 'svelte-sonner';
 import type { AnnotationCreateInput } from '$lib/api/lightly_studio_local';
@@ -21,6 +22,8 @@ interface Params {
     getCollectionId: () => string | undefined;
     getDatasetId: () => string;
     getTickSampleId: () => string | undefined;
+    /** MCAP sequence the cuboid belongs to; it is the batch file of a labeling workflow. */
+    getSequenceId: () => string;
     getSceneFrame: () => SceneFrame | null;
 }
 
@@ -85,6 +88,7 @@ export function useCreateCuboidAnnotation({
     getCollectionId,
     getDatasetId,
     getTickSampleId,
+    getSequenceId,
     getSceneFrame
 }: Params): UseCreateCuboidAnnotationReturn {
     const {
@@ -99,6 +103,7 @@ export function useCreateCuboidAnnotation({
     });
     const labels = useAnnotationLabels(() => ({ collectionId: getCollectionId() ?? '' }));
     const { lastAnnotationLabel, updateLastAnnotationLabel } = useGlobalStorage();
+    const workflow = useWorkflowFileContext();
 
     async function selectAnnotationLabel(collectionId: string): Promise<string | null> {
         const stored = get(lastAnnotationLabel)[collectionId] ?? null;
@@ -187,6 +192,9 @@ export function useCreateCuboidAnnotation({
             toast.error('Failed to create annotation. Please try again.');
             return;
         }
+        // A labeler's first cuboid moves a Not started batch file to In progress. The cuboid
+        // exists even if the file cannot move; the header shows the file's real state.
+        await workflow?.startWork(getSequenceId()).catch(() => undefined);
         try {
             await onCreated(annotationId);
         } catch {

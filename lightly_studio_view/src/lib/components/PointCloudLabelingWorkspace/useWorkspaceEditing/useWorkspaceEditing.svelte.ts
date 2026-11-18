@@ -44,6 +44,7 @@ export function useWorkspaceEditing(
     } = useCreateCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         getDatasetId: () => getOptions().datasetId,
+        getSequenceId: () => getOptions().sequenceId,
         getTickSampleId: () => {
             const { tick, snapshot } = getData();
             if (!tick || tick.isStale || snapshot?.tick !== getWorkspace().currentTick)
