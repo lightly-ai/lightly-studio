@@ -4,8 +4,10 @@
     import PointCloudRightSidePanel from '../PointCloudRightSidePanel';
     import WorkspaceStatusPanel from '../WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
+    import { useSidePanel } from '../useSidePanel/useSidePanel.svelte';
     const controller = useWorkspaceControllerContext();
     const { workspace, editing, data, presentation } = controller;
+    const sidePanel = useSidePanel(() => editing.selectedCuboidId);
 </script>
 
 <div class="flex min-h-0 flex-1">
@@ -30,7 +32,16 @@
                     <span class="size-1 rounded-full bg-muted-foreground"></span>
                 </div>
             </PaneResizer>
-            <Pane defaultSize={22} minSize={16} maxSize={40}>
+            <Pane
+                bind:this={sidePanel.pane}
+                defaultSize={22}
+                minSize={16}
+                maxSize={40}
+                collapsedSize={0}
+                collapsible
+                onCollapse={() => sidePanel.setCollapsed(true)}
+                onExpand={() => sidePanel.setCollapsed(false)}
+            >
                 <PointCloudRightSidePanel
                     cuboids={editing.annotations}
                     annotationClasses={data.annotationClasses}

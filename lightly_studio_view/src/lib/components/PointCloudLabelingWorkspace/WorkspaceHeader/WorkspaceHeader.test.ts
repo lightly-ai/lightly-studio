@@ -50,7 +50,7 @@ const visibleButtonNames = () =>
         .filter(Boolean);
 
 describe('WorkspaceHeader', () => {
-    it('shows the breadcrumb, edit actions, camera strip and fullscreen in one row', () => {
+    it('shows the breadcrumb, edit actions, camera strip, fullscreen and side-panel toggle in one row', () => {
         render(WorkspaceHeader, { props: defaultProps });
 
         expect(screen.getByTestId('workspace-breadcrumb')).toHaveTextContent('drive.mcap');
@@ -60,9 +60,9 @@ describe('WorkspaceHeader', () => {
             'Plugins',
             'Settings',
             'Hide camera strip',
-            'Enter fullscreen'
+            'Enter fullscreen',
+            'Hide side panel'
         ]);
-        expect(screen.queryByTestId('side-panel-toggle')).not.toBeInTheDocument();
     });
 
     it('shows only the breadcrumb, camera strip and fullscreen in fullscreen', () => {

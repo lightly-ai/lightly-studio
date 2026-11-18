@@ -44,7 +44,7 @@
     class={['flex shrink-0 flex-col gap-2 pb-2', compact && 'border-b']}
     data-testid="workspace-header"
 >
-    <DetailsHeader collectionId={collectionId ?? ''} {compact} showSidePanelToggle={false}>
+    <DetailsHeader collectionId={collectionId ?? ''} {compact}>
         {#snippet breadcrumb()}
             <WorkspaceBreadcrumb {sequenceId} {sourcePath} />
         {/snippet}

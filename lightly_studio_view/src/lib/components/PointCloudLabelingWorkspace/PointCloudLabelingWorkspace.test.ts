@@ -131,7 +131,10 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
             // The header's edit actions read these.
             setIsEditingMode: vi.fn(),
             reversibleActions: writable([]),
-            executeReversibleAction: vi.fn()
+            executeReversibleAction: vi.fn(),
+            // The right side panel and its header toggle read the shared collapsed flag.
+            isSampleDetailsSidePanelCollapsed: writable(false),
+            toggleSampleDetailsSidePanelCollapsed: vi.fn()
         })
     };
 });
