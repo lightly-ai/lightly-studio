@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pick single points in the embedding plot with Shift + click. The grid then shows only the picked images, annotations, or videos.
 - Hide an annotation track or a whole annotation source in the point cloud workspace with the eye buttons in the Annotations panel. Hidden annotations stay hidden on every frame of the sequence.
 
+- Python SDK: Label images in the GUI with your own model. Subclass `ls.LabelingModel` and call `ls.register_labeling_model` before `ls.start_gui`. The new "Label with model" tool shows the suggested annotations, and you save the correct ones.
+
 ### Changed
 
 - Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
