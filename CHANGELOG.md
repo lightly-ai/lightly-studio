@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- The embedding plot shows a hint for what Shift + click does on the hovered point: pick, add, or remove.
 
 ### Changed
 
