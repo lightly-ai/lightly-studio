@@ -7,6 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 
+import numpy as np
 from sqlalchemy import ColumnElement, Float, cast
 from sqlalchemy.orm import InstrumentedAttribute, Mapped
 
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
 
 
 T = TypeVar("T")
+_MAX_FLOAT32 = float(np.finfo(np.float32).max)
 
 """Conditions themselves, in the format <field> <operator> <value>
 
@@ -60,6 +62,7 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
         # Compare at the column's precision so inclusive bounds include the stored value.
         if (
             isinstance(self.value, float)
+            and abs(self.value) <= _MAX_FLOAT32
             and isinstance(table_property, InstrumentedAttribute)
             and isinstance(table_property.type, Float)
         ):

@@ -185,7 +185,7 @@ def test_video_queries__reject_image_collection(
     assert "video collection" in response.json()["error"]
 
 
-def test_fps_comparison__fractional_boundary(db_session: Session, test_client: TestClient) -> None:
+def test_fps_comparison__float_bounds(db_session: Session, test_client: TestClient) -> None:
     collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     for fps in (24, 29.97, 30):
         create_video(
@@ -194,12 +194,18 @@ def test_fps_comparison__fractional_boundary(db_session: Session, test_client: T
             video=VideoStub(path=f"/videos/{fps}.mp4", fps=fps),
         )
 
-    for operator, names in [(">", ["30.mp4"]), (">=", ["29.97.mp4", "30.mp4"])]:
+    all_names = ["24.mp4", "29.97.mp4", "30.mp4"]
+    for operator, bound, names in [
+        (">", 29.97, ["30.mp4"]),
+        (">=", 29.97, ["29.97.mp4", "30.mp4"]),
+        ("<", 1e100, all_names),
+        (">", -1e100, all_names),
+    ]:
         expression = {
             "type": "ordinal_float_expr",
             "field": {"table": "video", "name": "fps"},
             "operator": operator,
-            "value": 29.97,
+            "value": bound,
         }
         response = test_client.post(
             f"/api/collections/{collection.collection_id}/video/",
