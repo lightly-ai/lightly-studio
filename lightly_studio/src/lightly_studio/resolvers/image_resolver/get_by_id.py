@@ -17,4 +17,4 @@ def get_by_id(
     query = select(ImageTable).where(ImageTable.sample_id == sample_id)
     if load_option is not None:
         query = query.options(load_option)
-    return session.exec(query).one_or_none()
+    return session.exec(query).unique().one_or_none()

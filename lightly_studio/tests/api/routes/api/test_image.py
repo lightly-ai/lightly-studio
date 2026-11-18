@@ -4,6 +4,7 @@ from uuid import uuid4
 
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
+from sqlalchemy import event
 from sqlmodel import Session
 
 from lightly_studio.api.routes.api.status import (
@@ -414,7 +415,7 @@ def test_get_image_histograms__unknown_field_returns_422(
 
 
 def test_read_image__batched_annotation_details(
-    test_client: TestClient, db_session: Session
+    test_client: TestClient, db_session: Session, mocker: MockerFixture
 ) -> None:
     collection_id = create_collection(session=db_session).collection_id
     image_id = create_image(session=db_session, collection_id=collection_id).sample_id
@@ -441,10 +442,21 @@ def test_read_image__batched_annotation_details(
     expected = ImageView.from_image_table(image=image).model_dump(mode="json")
     db_session.expunge_all()
 
-    response = test_client.get(f"/api/images/{image_id}")
+    connection = db_session.connection()
+    record_statement = mocker.stub()
+    event.listen(connection, "before_cursor_execute", record_statement)
+    try:
+        response = test_client.get(f"/api/images/{image_id}")
+    finally:
+        event.remove(connection, "before_cursor_execute", record_statement)
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == expected
+    box_detail_queries = sum(
+        "FROM object_detection_annotation" in call.args[2]
+        for call in record_statement.call_args_list
+    )
+    assert box_detail_queries == 1
 
 
 def test_count_image_annotations_by_collection__with_image_filter(
