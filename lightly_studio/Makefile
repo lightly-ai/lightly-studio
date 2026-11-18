@@ -427,16 +427,10 @@ test: mock-webapp-dist
 	@echo "Running tests..."
 	PYTHONPATH=$(PWD) uv run pytest -n auto
 
-.PHONY: test-ci
-test-ci:
-	@echo "Running tests..."
-	uv run pytest
-
 # Full-suite line coverage for the Fast Track coverage guardrail, which reads
-# coverage.json rather than running tests itself. Deliberately has no `build`
-# prerequisite: its `clean` step would delete a webapp build the caller made.
+# coverage.json rather than running tests itself.
 .PHONY: test-coverage
-test-coverage:
+test-coverage: mock-webapp-dist
 	@echo "Running tests with coverage..."
 	uv run pytest -n auto --cov=src/lightly_studio \
 	  --cov-report=json:coverage.json \
@@ -447,7 +441,8 @@ test-postgres: mock-webapp-dist
 	@echo "Running tests against Postgres..."
 	uv run pytest --postgres -n 3
 
-# Alembic loads lightly_studio package code that expects dist_lightly_studio_view_app.
+# The app does not start without dist_lightly_studio_view_app/index.html. The tests and Alembic
+# need only this mock.
 .PHONY: mock-webapp-dist
 mock-webapp-dist:
 ifeq ($(OS),Windows_NT)
