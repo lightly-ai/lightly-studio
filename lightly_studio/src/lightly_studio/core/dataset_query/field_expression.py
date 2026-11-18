@@ -63,6 +63,7 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
         if (
             isinstance(self.value, float)
             and abs(self.value) <= _MAX_FLOAT32
+            and (self.value == 0 or np.float32(self.value) != 0)
             and isinstance(table_property, InstrumentedAttribute)
             and isinstance(table_property.type, Float)
         ):

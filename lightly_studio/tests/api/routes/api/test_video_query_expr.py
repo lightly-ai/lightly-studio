@@ -213,3 +213,26 @@ def test_fps_comparison__float_bounds(db_session: Session, test_client: TestClie
         )
         assert response.status_code == HTTP_STATUS_OK
         assert sorted(video["file_name"] for video in response.json()["data"]) == names
+
+
+def test_duration_comparison__bounds_near_zero(
+    test_client: TestClient, videos: VideoCollection
+) -> None:
+    for operator, bound, names in [
+        (">=", 1e-50, ["first.mp4", "narrow.mp4", "second.mp4"]),
+        ("<=", -1e-50, []),
+        ("==", 1e-50, []),
+        ("==", 0.0, ["empty.mp4"]),
+    ]:
+        expression = {
+            "type": "ordinal_float_expr",
+            "field": {"table": "video", "name": "duration_s"},
+            "operator": operator,
+            "value": bound,
+        }
+        response = test_client.post(
+            f"/api/collections/{videos.collection_id}/video/",
+            json={"filter": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+        )
+        assert response.status_code == HTTP_STATUS_OK
+        assert sorted(video["file_name"] for video in response.json()["data"]) == names
