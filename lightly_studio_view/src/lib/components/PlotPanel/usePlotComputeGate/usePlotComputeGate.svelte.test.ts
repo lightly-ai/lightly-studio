@@ -18,7 +18,9 @@ const mocks = vi.hoisted(() => ({
 vi.mock('$lib/hooks/useEmbeddingPlotStatus/useEmbeddingPlotStatus', () => ({
     useEmbeddingPlotStatus: (getCollectionId: () => string) => {
         return mocks.statusQueries[getCollectionId()];
-    }
+    },
+    useRefetchEmbeddingPlotStatus: () => (collectionId: string) =>
+        mocks.statusQueries[collectionId].refetch()
 }));
 
 const NOT_COMPUTED_LARGE: Embeddings2dStatus = { is_computed: false, embedding_count: 300_000 };
@@ -48,11 +50,15 @@ function createStatusQuery(data: Embeddings2dStatus | undefined): StatusQueryStu
     return query;
 }
 
-function mountGate(params: { collectionId: string; isAxesLayout?: () => boolean }) {
+function mountGate(params: {
+    collectionId: string | (() => string);
+    isAxesLayout?: () => boolean;
+}) {
+    const { collectionId } = params;
     let gate!: ReturnType<typeof usePlotComputeGate>;
     const dispose = $effect.root(() => {
         gate = usePlotComputeGate({
-            getCollectionId: () => params.collectionId,
+            getCollectionId: typeof collectionId === 'string' ? () => collectionId : collectionId,
             getIsAxesLayout: params.isAxesLayout ?? (() => false)
         });
     });
@@ -201,18 +207,58 @@ describe('usePlotComputeGate', () => {
         expect(gate.view).toBe('prompt');
     });
 
-    it('ends a retried compute once', async () => {
+    it('keeps the first start and ends a retried compute once', async () => {
+        vi.useFakeTimers({ now: 1_000_000 });
         const query = createStatusQuery(NOT_COMPUTED_SMALL);
         mocks.statusQueries['retried'] = query;
         const { gate } = mountGate({ collectionId: 'retried' });
         const compute = createCompute();
         gate.trackCompute(compute.promise);
+        vi.setSystemTime(1_005_000);
         gate.trackCompute(compute.promise);
+        flushSync();
+        expect(gate.startedAt).toBe(1_000_000);
 
         compute.succeed();
 
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
         expect(query.refetch).toHaveBeenCalledOnce();
+    });
+
+    it('keeps the start until every compute of the collection ends', async () => {
+        mocks.statusQueries['two'] = createStatusQuery(NOT_COMPUTED_LARGE);
+        const { gate } = mountGate({ collectionId: 'two' });
+        const first = createCompute();
+        const second = createCompute();
+        gate.startCompute();
+        gate.trackCompute(first.promise);
+        gate.trackCompute(second.promise);
+
+        first.succeed();
+        await vi.waitFor(() => expect(mocks.statusQueries['two'].refetch).toHaveBeenCalledOnce());
+        flushSync();
+        expect(gate.view).toBe('computing');
+
+        second.succeed();
+        await vi.waitFor(() => expect(gate.startedAt).toBeNull());
+    });
+
+    it('refetches the status of the collection whose compute ended', async () => {
+        mocks.statusQueries['switch-a'] = createStatusQuery(NOT_COMPUTED_SMALL);
+        mocks.statusQueries['switch-b'] = createStatusQuery(NOT_COMPUTED_SMALL);
+        let collectionId = $state('switch-a');
+        const { gate } = mountGate({ collectionId: () => collectionId });
+        const compute = createCompute();
+        gate.trackCompute(compute.promise);
+
+        collectionId = 'switch-b';
+        flushSync();
+        compute.succeed();
+
+        await vi.waitFor(() =>
+            expect(mocks.statusQueries['switch-a'].refetch).toHaveBeenCalledOnce()
+        );
+        expect(mocks.statusQueries['switch-b'].refetch).not.toHaveBeenCalled();
     });
 
     it('does not restart the timer when the status stays dirty after a compute', async () => {
@@ -261,6 +307,23 @@ describe('usePlotComputeGate', () => {
 
         expect(gate.view).toBe('prompt');
         expect(gate.isPlotRequestEnabled).toBe(false);
+    });
+
+    it('ignores a status error from before the mount until the new request finishes', () => {
+        const query = createStatusQuery(COMPUTED);
+        query.isFetchedAfterMount = false;
+        query.isError = true;
+        query.error = new Error('old');
+        mocks.statusQueries['old-error'] = query;
+        const { gate } = mountGate({ collectionId: 'old-error' });
+
+        expect(gate.view).toBe('checking');
+        expect(gate.statusError).toBeNull();
+
+        query.isFetchedAfterMount = true;
+        flushSync();
+
+        expect(gate.view).toBe('error');
     });
 
     it('reports the status error and keeps the plot request off', () => {
