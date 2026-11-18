@@ -282,6 +282,40 @@ describe('SelectList', () => {
         });
     });
 
+    it('shows pinnedTop items even when search does not match them', async () => {
+        const user = userEvent.setup();
+        render(SelectList, {
+            props: {
+                items: mockItems,
+                pinnedTop: [{ value: 'pinned-top', label: 'Always On Top' }],
+                allowCreate: false
+            }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'zzz');
+
+        expect(screen.getByRole('option', { name: 'Always On Top' })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'Item 1' })).not.toBeInTheDocument();
+    });
+
+    it('shows pinnedBottom items even when search does not match them', async () => {
+        const user = userEvent.setup();
+        render(SelectList, {
+            props: {
+                items: mockItems,
+                pinnedBottom: [{ value: 'pinned-bottom', label: 'Always At Bottom' }],
+                allowCreate: false
+            }
+        });
+
+        await user.click(screen.getByTestId('select-list-trigger'));
+        await user.type(screen.getByTestId('select-list-input'), 'zzz');
+
+        expect(screen.getByRole('option', { name: 'Always At Bottom' })).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'Item 1' })).not.toBeInTheDocument();
+    });
+
     it('selects existing item when pressing Enter with different casing', async () => {
         const user = userEvent.setup();
         const onSelect = vi.fn();

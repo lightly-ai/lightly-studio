@@ -4,7 +4,11 @@ import pytest
 from lightly_studio_serve.labeling import ModelTask, PredictedAnnotation
 
 from lightly_studio.assisted_labeling.labeling_model_runner import LocalLabelingModelRunner
-from lightly_studio.assisted_labeling.provider import ProviderError, ProviderNotCalledError
+from lightly_studio.assisted_labeling.provider import (
+    ProviderError,
+    ProviderNotCalledError,
+    ProviderUnavailableError,
+)
 from tests.assisted_labeling import helpers
 from tests.assisted_labeling.helpers import StubLabelingModel
 
@@ -55,3 +59,13 @@ class TestLocalLabelingModelRunner:
             LocalLabelingModelRunner(model=model).predict(image=image, threshold=0.3)
 
         assert model.images == []
+
+    def test_predict__not_ready(self) -> None:
+        model = StubLabelingModel(model_id="m")
+        model.is_ready = False
+        image = helpers.make_image(width=4, height=2, data=helpers.png_bytes(width=4, height=2))
+
+        with pytest.raises(ProviderUnavailableError, match=r"'m' is still loading"):
+            LocalLabelingModelRunner(model=model).predict(image=image, threshold=0.3)
+
+        assert model.thresholds == []

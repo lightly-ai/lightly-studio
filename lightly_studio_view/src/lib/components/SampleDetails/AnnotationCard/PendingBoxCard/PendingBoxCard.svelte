@@ -26,8 +26,9 @@
         pickClass(collectionId, className);
         resolve(className);
     };
-    // A click anywhere outside the card drops the box, like Esc. Right and middle clicks and
-    // Space-drag panning keep it.
+    // A click anywhere outside the card drops the box, like Esc. Right and middle clicks keep
+    // it, as does a pan already in progress. Space cannot start one from here: the search field
+    // has focus, and a class name may contain a space.
     const handlePointerDownOutside = (event: PointerEvent) => {
         if (event.button !== 0 || toolbarContext.status === 'drag') return;
         cancel();
