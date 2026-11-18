@@ -92,21 +92,19 @@
 
     const annotationId = $derived(annotationProp.sample_id);
 
-    const {
-        annotation: annotationResp,
-        updateAnnotation,
-        refetch
-    } = useAnnotation(() => ({
+    // The parent passes the full annotation, so only use the hook to save edits.
+    const { updateAnnotation, refetch } = useAnnotation(() => ({
         collectionId,
         annotationId,
-        onUpdate
+        onUpdate,
+        enabled: false
     }));
 
     const { updateAnnotations: updateAnnotationsRaw } = useUpdateAnnotationsMutation({
         getCollectionId: () => page.params.collection_id!
     });
 
-    const annotation = $derived(annotationResp.data || annotationProp);
+    const annotation = $derived(annotationProp);
 
     const annotationLabelName = $derived(annotation.annotation_label.annotation_label_name);
 
@@ -191,7 +189,10 @@
                                                 collectionId,
                                                 addReversibleAction,
                                                 updateAnnotations: updateAnnotationsRaw,
-                                                refresh: refetch
+                                                refresh: () => {
+                                                    refetch();
+                                                    onUpdate();
+                                                }
                                             });
                                             await updateAnnotation({
                                                 annotation_id: annotationId,

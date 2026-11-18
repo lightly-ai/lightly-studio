@@ -1,5 +1,5 @@
-import { render, screen } from '@testing-library/svelte';
-import { describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen } from '@testing-library/svelte';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { page } from '$app/state';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 import SampleDetailsSidePanelAnnotation from './SampleDetailsSidePanelAnnotation.svelte';
@@ -20,8 +20,19 @@ vi.mock('$app/state', async () => {
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({ data: [] })
 }));
+const mocks = vi.hoisted(() => ({
+    useAnnotation: vi.fn(),
+    refetch: vi.fn(),
+    addAnnotationLabelChangeToUndoStack: vi.fn()
+}));
 vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
-    useAnnotation: () => ({ annotation: {}, updateAnnotation: vi.fn(), refetch: vi.fn() })
+    useAnnotation: mocks.useAnnotation
+}));
+vi.mock('$lib/services/addAnnotationLabelChangeToUndoStack', () => ({
+    addAnnotationLabelChangeToUndoStack: mocks.addAnnotationLabelChangeToUndoStack
+}));
+vi.mock('$lib/components/SelectList/SelectList.svelte', async () => ({
+    default: (await import('./SelectListStub.test.svelte')).default
 }));
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
     useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
@@ -54,6 +65,37 @@ const defaultProps = {
 };
 
 describe('SampleDetailsSidePanelAnnotation', () => {
+    beforeEach(() => {
+        page.data.globalStorage.isEditingMode.set(false);
+        mocks.refetch.mockReset();
+        mocks.addAnnotationLabelChangeToUndoStack.mockReset();
+        mocks.useAnnotation.mockReset().mockReturnValue({
+            updateAnnotation: vi.fn().mockResolvedValue(undefined),
+            refetch: mocks.refetch
+        });
+    });
+
+    it('shows the annotation it gets without fetching it again', () => {
+        render(SampleDetailsSidePanelAnnotation, defaultProps);
+
+        expect(screen.getByLabelText('Select hole annotation')).toBeInTheDocument();
+        const params = mocks.useAnnotation.mock.calls[0][0]();
+        expect(params).toMatchObject({ annotationId: 'annotation', enabled: false });
+    });
+
+    it('refreshes the image when a class change is undone', async () => {
+        page.data.globalStorage.isEditingMode.set(true);
+        const onUpdate = vi.fn();
+        render(SampleDetailsSidePanelAnnotation, { ...defaultProps, onUpdate });
+
+        await fireEvent.click(screen.getByTestId('pick-class'));
+        const { refresh } = mocks.addAnnotationLabelChangeToUndoStack.mock.calls[0][0];
+        refresh();
+
+        expect(mocks.refetch).toHaveBeenCalledTimes(1);
+        expect(onUpdate).toHaveBeenCalledTimes(1);
+    });
+
     it.each([false, true])('keeps confidence visible with editing=%s', async (editing) => {
         page.data.globalStorage.isEditingMode.set(editing);
         const props = { ...defaultProps, annotation: { ...annotation, confidence: 0.41 } };

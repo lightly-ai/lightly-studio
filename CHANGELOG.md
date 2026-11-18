@@ -33,6 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Images with many annotations open faster by loading annotation details together.
+- Images with many annotations open faster on a remote server: the image view no longer requests each annotation on its own.
 - Fixed slow box, mask, and classification exports by loading annotations in batches.
 - Fixed slow object detection and instance segmentation evaluations by avoiding repeated annotation loads.
 - Fixed slow evaluation saves by grouping similar results into fewer database inserts.

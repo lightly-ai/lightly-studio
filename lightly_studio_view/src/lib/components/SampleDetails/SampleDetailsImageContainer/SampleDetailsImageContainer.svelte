@@ -308,7 +308,7 @@
                         annotation.sample_id === annotationLabelContext.annotationId}
                 >
                     <SampleDetailsAnnotation
-                        annotationId={annotation.sample_id}
+                        {annotation}
                         {sampleId}
                         {collectionId}
                         {isResizable}
