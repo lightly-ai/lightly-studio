@@ -56,7 +56,9 @@ class Embeddings2DStatus(BaseModel):
     """Saved state of the embedding plot for the default embedding model."""
 
     is_computed: bool = Field(description="A clean plot is saved and loads without a compute")
-    embedding_count: int = Field(description="Number of embeddings that the plot compute uses")
+    embedding_count: int | None = Field(
+        description="Number of embeddings that a plot compute uses, None if a plot is saved"
+    )
 
 
 @embeddings2d_router.post("/collections/{collection_id}/embeddings2d/default")
@@ -172,7 +174,7 @@ def get_2d_embeddings_status(
     session: SessionDep,
     collection_id: Annotated[UUID, Path(title="Collection Id")],
 ) -> Embeddings2DStatus:
-    """Return whether the plot is saved and how many embeddings it covers, without a compute."""
+    """Return whether the plot is saved and, if not, how many embeddings a compute uses."""
     if session.get(CollectionTable, collection_id) is None:
         raise NotFoundError(f"Collection {collection_id} not found.")
     embedding_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
@@ -181,14 +183,18 @@ def get_2d_embeddings_status(
     )
     if embedding_model_id is None:
         raise NotFoundError(f"Collection {collection_id} has no default embedding model.")
-    return Embeddings2DStatus(
-        is_computed=embedding_plot_resolver.is_computed(
-            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
-        ),
-        embedding_count=sample_embedding_resolver.get_embedding_count(
-            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
-        ),
+    is_computed = embedding_plot_resolver.is_computed(
+        session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
     )
+    # Counting a large collection is slow, and only a compute needs the count.
+    embedding_count = (
+        None
+        if is_computed
+        else sample_embedding_resolver.get_embedding_count(
+            session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
+        )
+    )
+    return Embeddings2DStatus(is_computed=is_computed, embedding_count=embedding_count)
 
 
 def _arrow_response(table: pa.Table) -> Response:
