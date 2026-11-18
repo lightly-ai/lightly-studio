@@ -9,7 +9,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import embedding_region_resolver
+from lightly_studio.resolvers import embedding_region_resolver, workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -31,6 +31,9 @@ def export(
     Returns:
         List of file paths
     """
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=collection_filter
+    )
     # Resolve any embedding-plot region selection to concrete sample ids before the query is
     # built (the point-in-polygon test needs the session, which `_build_export_query` lacks).
     sample_filter = collection_filter.sample_filter if collection_filter is not None else None
@@ -64,6 +67,9 @@ def get_filtered_samples_count(
     Returns:
         Count of files to be exported
     """
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=collection_filter
+    )
     # Resolve any embedding-plot region selection to concrete sample ids before the query is
     # built (the point-in-polygon test needs the session, which `_build_export_query` lacks).
     sample_filter = collection_filter.sample_filter if collection_filter is not None else None

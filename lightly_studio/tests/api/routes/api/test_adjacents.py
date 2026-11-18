@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from uuid import UUID, uuid4
 
 import pytest
@@ -13,10 +14,16 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.models.collection import SampleType
-from tests import helpers_resolvers
+from tests import helpers_resolvers, helpers_workflow
 from tests.helpers_resolvers import AnnotationDetails, ImageStub
 from tests.resolvers.mcap_group_sequence_resolver import helpers as mcap_sequence_helpers
 from tests.resolvers.video.helpers import VideoStub, create_video
+
+
+@pytest.fixture
+def workflow_tables(db_session: Session) -> Generator[None, None, None]:
+    with helpers_workflow.workflow_tables(session=db_session):
+        yield
 
 
 def test_get_adjacent_samples__returns_adjacents_for_images(
@@ -330,3 +337,42 @@ def test_get_adjacent_samples__annotations_match_grid_ordering(
         pytest.fail("Adjacency chain did not terminate, the next pointers likely cycle.")
 
     assert walked_sample_ids == grid_sample_ids
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_samples__respects_workflow_states(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/images/{name}.png"
+        )
+        for name in ["a", "b", "c", "d"]
+    ]
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={images[0].sample_id: "rework", images[2].sample_id: "accepted"},
+    )
+
+    response = test_client.post(
+        f"/api/samples/{images[1].sample_id}/adjacents",
+        json={
+            "sample_type": "image",
+            "collection_id": str(collection_id),
+            "filters": {
+                "filter_type": "image",
+                "sample_filter": {"workflow_states": ["rework", "not_in_workflow"]},
+            },
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["previous_sample_id"] == str(images[0].sample_id)
+    assert result["next_sample_id"] == str(images[3].sample_id)
+    assert result["total_count"] == 3

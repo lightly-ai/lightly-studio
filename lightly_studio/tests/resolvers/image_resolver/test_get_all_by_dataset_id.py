@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from uuid import UUID
 
 import pytest
@@ -15,6 +16,7 @@ from lightly_studio.core.dataset_query.order_by import (
 )
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.models.image import ImageTable
+from lightly_studio.models.workflow import WorkflowStatus
 from lightly_studio.resolvers import (
     image_resolver,
     metadata_resolver,
@@ -29,6 +31,7 @@ from lightly_studio.resolvers.image_resolver.get_all_by_collection_id import (
     _coerce_order_value,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from tests import helpers_workflow
 from tests.helpers_resolvers import (
     AnnotationDetails,
     ImageStub,
@@ -48,6 +51,12 @@ from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     create_run,
     create_sample_metrics,
 )
+
+
+@pytest.fixture
+def workflow_tables(db_session: Session) -> Generator[None, None, None]:
+    with helpers_workflow.workflow_tables(session=db_session):
+        yield
 
 
 def test_get_all_by_collection_id(db_session: Session) -> None:
@@ -1339,3 +1348,36 @@ def test_get_all_by_collection_id__sort_by_metadata_places_missing_values_last(
 
     assert [s.file_name for s in ascending.samples] == ["a.png", "b.png", "c.png"]
     assert [s.file_name for s in descending.samples] == ["b.png", "a.png", "c.png"]
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_all_by_collection_id__workflow_states(
+    db_session: Session,
+) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection_id,
+        images=[ImageStub(path="a.png"), ImageStub(path="b.png"), ImageStub(path="c.png")],
+    )
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={images[0].sample_id: "accepted", images[1].sample_id: "in_progress"},
+    )
+    filters = ImageFilter(
+        sample_filter=SampleFilter(
+            workflow_states=[WorkflowStatus.ACCEPTED, WorkflowStatus.NOT_IN_WORKFLOW]
+        )
+    )
+
+    result = image_resolver.get_all_by_collection_id(
+        session=db_session, collection_id=collection_id, filters=filters
+    )
+
+    assert [image.sample_id for image in result.samples] == [
+        images[0].sample_id,
+        images[2].sample_id,
+    ]
+    assert result.total_count == 2

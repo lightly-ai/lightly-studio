@@ -3,6 +3,8 @@
 from typing import Literal
 from uuid import UUID
 
+import sqlalchemy
+from pydantic import PrivateAttr
 from sqlalchemy.orm import aliased
 from sqlmodel import col, select
 from sqlmodel.sql.expression import SelectOfScalar
@@ -17,6 +19,7 @@ from lightly_studio.models.metadata import SampleMetadataTable
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.tag import TagTable
+from lightly_studio.models.workflow import WorkflowStatus, batch_file_table
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.metadata_resolver import metadata_filter
 from lightly_studio.resolvers.metadata_resolver.metadata_filter import MetadataFilter
@@ -35,6 +38,12 @@ class SampleFilter(RegionSampleIdsFilter):
     annotations_filter: AnnotationsFilter | None = None
     confusion_cell: ConfusionCell | None = None
 
+    # Workflow status options, combined with OR. Set the dataset's workflow project with
+    # `set_workflow_project_id` before `apply`.
+    workflow_states: list[WorkflowStatus] | None = None
+    _workflow_project_id: UUID | None = PrivateAttr(default=None)
+    _workflow_project_is_set: bool = PrivateAttr(default=False)
+
     # Query expression filter
     #
     # Adds an arbitrary "where" condition that can be expressed with QueryExpr.
@@ -52,10 +61,22 @@ class SampleFilter(RegionSampleIdsFilter):
         query = self._apply_confusion_cell_filter(query)
         query = self._apply_metadata_filters(query)
         query = self._apply_captions_filter(query)
+        query = self._apply_workflow_states_filter(query)
         query = self._apply_region_sample_ids_filter(
             query, sample_id_column=col(SampleTable.sample_id)
         )
         return self._apply_query_expr_filter(query)
+
+    def set_workflow_project_id(self, project_id: UUID | None) -> None:
+        """Set the workflow project that `workflow_states` refers to.
+
+        The server looks the project up from the dataset. It is not part of the request body.
+
+        Args:
+            project_id: The dataset's workflow project, or None if the dataset has none.
+        """
+        self._workflow_project_id = project_id
+        self._workflow_project_is_set = True
 
     def _apply_sample_ids_filter(self, query: QueryType) -> QueryType:
         if self.sample_ids:
@@ -162,6 +183,42 @@ class SampleFilter(RegionSampleIdsFilter):
         if self.has_captions:
             return query.where(col(SampleTable.captions).any())
         return query.where(~col(SampleTable.captions).any())
+
+    def _apply_workflow_states_filter(self, query: QueryType) -> QueryType:
+        if not self.workflow_states:
+            return query
+        if not self._workflow_project_is_set:
+            raise ValueError("Set the workflow project before filtering by workflow status.")
+        options = set(self.workflow_states)
+        if options == set(WorkflowStatus):
+            return query
+
+        states = [option.value for option in options if option != WorkflowStatus.NOT_IN_WORKFLOW]
+        project_id = self._workflow_project_id
+        if project_id is None:
+            # Without a project, every sample is "Not in workflow". No workflow SQL runs.
+            if WorkflowStatus.NOT_IN_WORKFLOW in options:
+                return query
+            return query.where(sqlalchemy.false())
+
+        conditions: list[sqlalchemy.ColumnElement[bool]] = []
+        if states:
+            conditions.append(
+                col(SampleTable.sample_id).in_(
+                    select(batch_file_table.c.sample_id).where(
+                        batch_file_table.c.project_id == project_id,
+                        batch_file_table.c.state.in_(states),
+                    )
+                )
+            )
+        if WorkflowStatus.NOT_IN_WORKFLOW in options:
+            conditions.append(
+                ~sqlalchemy.exists().where(
+                    batch_file_table.c.project_id == project_id,
+                    batch_file_table.c.sample_id == col(SampleTable.sample_id),
+                )
+            )
+        return query.where(sqlalchemy.or_(*conditions))
 
     def _apply_query_expr_filter(self, query: QueryType) -> QueryType:
         if self.query_expr is None:

@@ -44,6 +44,7 @@ const withNormalFilters = (
             ...(base.filters?.sample_filter ?? {}),
             annotations_filter: getAnnotationsFilter(filters),
             tag_ids: filters.tag_ids?.length ? filters.tag_ids : undefined,
+            workflow_states: filters.workflow_states?.length ? filters.workflow_states : undefined,
             sample_ids: filters.sample_ids?.length ? filters.sample_ids : undefined,
             confusion_cell: filters.confusion_cell ?? undefined,
             // Lasso/rectangle selection sent as geometry; the backend resolves it to sample

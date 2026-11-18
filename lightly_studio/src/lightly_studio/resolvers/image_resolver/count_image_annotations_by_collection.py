@@ -7,6 +7,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.resolvers import workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.image_resolver import annotation_count_helpers, annotation_count_types
 from lightly_studio.resolvers.image_resolver.annotation_count_types import AnnotationCountMode
@@ -43,6 +44,9 @@ def count_image_annotations_by_collection(
         session=session,
         collection_id=collection_id,
         image_filter=image_filter,
+    )
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=image_filter
     )
     annotation_collection_ids = annotation_count_helpers.get_annotation_collection_ids(
         image_filter=image_filter,

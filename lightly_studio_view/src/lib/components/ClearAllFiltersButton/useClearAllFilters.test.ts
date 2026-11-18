@@ -7,6 +7,7 @@ import {
     useVideoFramesBounds
 } from '$lib/hooks';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
+import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter';
 import { useClearAllFilters } from './useClearAllFilters';
 
 describe('useClearAllFilters', () => {
@@ -39,6 +40,7 @@ describe('useClearAllFilters', () => {
         framesBounds.updateVideoFramesBoundsValues(fullFramesBounds);
         sources.setCollectionIdToName({ 'source-1': 'GT', 'source-2': 'Predictions' });
         sources.setSelectedCollectionIds(['source-1', 'source-2']);
+        useWorkflowStatusFilter(collectionId).clearWorkflowStates();
     });
 
     it('reports no active filters by default', () => {
@@ -86,6 +88,19 @@ describe('useClearAllFilters', () => {
         expect(get(storage.categoricalMetadataValues)).toEqual({});
         expect(get(storage.selectedAnnotationFilterIds).has('label-1')).toBe(true);
         expect(get(sources.selectedCollectionIds)).toEqual(['source-1']);
+    });
+
+    it('detects and clears the workflow status filter on the images grid', () => {
+        const workflow = useWorkflowStatusFilter(collectionId);
+        workflow.setWorkflowStates(['in_review']);
+
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
+        expect(get(hasActiveFilters)).toBe(true);
+
+        clearAllFilters();
+
+        expect(get(hasActiveFilters)).toBe(false);
+        expect(get(workflow.selectedWorkflowStates)).toEqual([]);
     });
 
     it('detects and clears video bounds on the videos grid', () => {

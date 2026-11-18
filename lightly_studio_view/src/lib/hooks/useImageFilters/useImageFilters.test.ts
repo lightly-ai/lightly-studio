@@ -68,6 +68,28 @@ describe('useImageFilters', () => {
         });
     });
 
+    describe('imageFilter workflow states', () => {
+        it('includes workflow_states, so adjacents and the plot follow the grid', () => {
+            const { imageFilter, updateFilterParams } = useImageFilters();
+            updateFilterParams({
+                ...normalFilterParams,
+                filters: { workflow_states: ['rework'] }
+            } as typeof normalFilterParams);
+
+            expect(get(imageFilter)?.sample_filter?.workflow_states).toEqual(['rework']);
+        });
+
+        it('omits workflow_states when no option is selected', () => {
+            const { imageFilter, updateFilterParams } = useImageFilters();
+            updateFilterParams({
+                ...normalFilterParams,
+                filters: { workflow_states: [] }
+            } as typeof normalFilterParams);
+
+            expect(get(imageFilter)?.sample_filter).toBeUndefined();
+        });
+    });
+
     describe('updateConfusionCell', () => {
         const cell = {
             evaluation_run_id: 'run-1',

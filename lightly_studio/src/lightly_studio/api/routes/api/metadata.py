@@ -20,7 +20,11 @@ from lightly_studio.models.metadata import (
     MetadataInfoView,
     MetadataValueCountsView,
 )
-from lightly_studio.resolvers import collection_embedding_model_resolver, collection_resolver
+from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
+    collection_resolver,
+    workflow_resolver,
+)
 from lightly_studio.resolvers.grid_filter import CollectionFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.metadata_resolver.sample import (
@@ -89,7 +93,9 @@ def get_metadata_histograms(
         Mapping of metadata key to its histogram.
     """
     if request is not None:
-        _validate_filter_type(session=session, collection_id=collection_id, filters=request.filters)
+        _validate_and_resolve_filter(
+            session=session, collection_id=collection_id, filters=request.filters
+        )
     return metadata_info_resolver.get_metadata_histograms(
         session=session,
         collection_id=collection_id,
@@ -141,7 +147,9 @@ def get_metadata_value_counts(
     Returns:
         Mapping of categorical metadata key to its value counts.
     """
-    _validate_filter_type(session=session, collection_id=collection_id, filters=request.filters)
+    _validate_and_resolve_filter(
+        session=session, collection_id=collection_id, filters=request.filters
+    )
     return metadata_value_counts_resolver.get_metadata_value_counts(
         session=session,
         collection_id=collection_id,
@@ -270,12 +278,13 @@ def compute_similarity_metadata(
         ) from e
 
 
-def _validate_filter_type(
+def _validate_and_resolve_filter(
     session: Session, collection_id: UUID, filters: CollectionFilter | None
 ) -> None:
     """Raise if ``filters`` is for a different sample type than the collection.
 
     A filter for the wrong sample type matches no samples, so the distributions would be empty.
+    Also sets the workflow project on an image filter that filters by workflow status.
     """
     if filters is None:
         return
@@ -283,6 +292,9 @@ def _validate_filter_type(
     if collection is None:
         raise NotFoundError(f"Collection with ID {collection_id} not found.")
     if collection.sample_type == SampleType.IMAGE and isinstance(filters, ImageFilter):
+        workflow_resolver.resolve_sample_filter(
+            session=session, collection_id=collection_id, filters=filters
+        )
         return
     if collection.sample_type == SampleType.VIDEO and isinstance(filters, VideoFilter):
         return

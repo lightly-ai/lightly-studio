@@ -9,6 +9,8 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useWorkflowProject } from '$lib/hooks/useWorkflowProject/useWorkflowProject.svelte';
+    import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter';
     import { routeHelpers } from '$lib/routes';
     import { onMount } from 'svelte';
     import type { Readable } from 'svelte/store';
@@ -66,6 +68,16 @@
     } = useGlobalStorage();
     const columnCount = $derived($sampleSize.width);
 
+    // The workflow status filter applies only when the dataset has a workflow project, so a
+    // dataset without one runs no workflow SQL.
+    const workflowProject = useWorkflowProject(() => collection_id);
+    const { selectedWorkflowStates } = $derived(useWorkflowStatusFilter(collection_id));
+    const workflowStates = $derived(
+        workflowProject.projectId && $selectedWorkflowStates.length > 0
+            ? $selectedWorkflowStates
+            : undefined
+    );
+
     const samplesParams = $derived({
         collection_id,
         mode: 'normal' as const,
@@ -74,6 +86,7 @@
                 ? $selectedAnnotationFilterIds
                 : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
+            workflow_states: workflowStates,
             dimensions: $dimensions ?? undefined
         },
         metadata_values: $metadataValues,

@@ -11,6 +11,7 @@ from lightly_studio.resolvers import (
     embedding_region_resolver,
     mcap_group_sequence_resolver,
     video_resolver,
+    workflow_resolver,
 )
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.grid_filter import GridFilter
@@ -57,4 +58,7 @@ def build_sample_ids_query(
             collection_id=collection_id,
             region=grid_filter.embedding_region,
         )
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=grid_filter
+    )
     return grid_filter.build_sample_ids_query(collection_id=collection_id)

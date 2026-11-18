@@ -14,7 +14,7 @@ from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import embedding_region_resolver
+from lightly_studio.resolvers import embedding_region_resolver, workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 
 
@@ -73,6 +73,9 @@ def get_for_export(
         .join(ImageTable.sample)
         .options(eager_sample)
         .where(SampleTable.collection_id == collection_id)
+    )
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=collection_filter
     )
     if collection_filter is not None:
         sample_filter = collection_filter.sample_filter

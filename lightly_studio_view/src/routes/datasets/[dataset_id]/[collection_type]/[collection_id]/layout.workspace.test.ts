@@ -94,6 +94,9 @@ vi.mock('$lib/components/ClearAllFiltersButton', async () => ({
 vi.mock('$lib/components/ConfusionCellFilterItem', async () => ({
     default: (await import('./LayoutStub.test.svelte')).default
 }));
+vi.mock('$lib/components/Workflow/WorkflowStatusFilter/WorkflowStatusFilter.svelte', async () => ({
+    default: (await import('./LayoutStub.test.svelte')).default
+}));
 vi.mock('$lib/components/DatasetDistributionPanel/DatasetDistributionPanel.svelte', async () => ({
     default: (await import('./DistributionPanelStub.test.svelte')).default
 }));

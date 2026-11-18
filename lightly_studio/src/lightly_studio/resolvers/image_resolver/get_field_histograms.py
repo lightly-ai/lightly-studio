@@ -12,7 +12,7 @@ from sqlmodel import Session, col, func, select
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.metadata import HistogramView
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import histogram_bins
+from lightly_studio.resolvers import histogram_bins, workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.type_definitions import QueryType
 
@@ -53,6 +53,9 @@ def get_field_histograms(
     Returns:
         Mapping of field name to its histogram. Empty when the collection has no images.
     """
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=filters
+    )
     histograms: dict[str, HistogramView] = {}
     for field in IMAGE_FIELDS:
         if fields is not None and field not in fields:

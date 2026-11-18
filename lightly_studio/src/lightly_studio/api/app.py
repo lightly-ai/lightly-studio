@@ -49,6 +49,7 @@ from lightly_studio.api.routes.api import (
     text_embedding,
     version,
     video,
+    workflow,
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
@@ -166,6 +167,7 @@ api_router.include_router(group.group_router)
 api_router.include_router(mcap_sequence.mcap_sequence_router)
 api_router.include_router(enterprise.enterprise_router)
 api_router.include_router(version.version_router)
+api_router.include_router(workflow.workflow_router)
 
 app.include_router(api_router)
 

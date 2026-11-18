@@ -72,6 +72,7 @@
     } from '$lib/utils/buildAnnotationCountsFilters';
     import EmbeddingSelectionFilterItem from '$lib/components/EmbeddingSelectionFilterItem/EmbeddingSelectionFilterItem.svelte';
     import ConfusionCellFilterItem from '$lib/components/ConfusionCellFilterItem';
+    import WorkflowStatusFilter from '$lib/components/Workflow/WorkflowStatusFilter/WorkflowStatusFilter.svelte';
     import ClearAllFiltersButton from '$lib/components/ClearAllFiltersButton';
     import {
         useSelectionSummary,
@@ -664,6 +665,10 @@
                                     allowAssign={!isCaptions}
                                 />
                             </div>
+
+                            {#if isImages}
+                                <WorkflowStatusFilter {collectionId} />
+                            {/if}
 
                             <EmbeddingSelectionFilterItem
                                 {collectionIdStore}

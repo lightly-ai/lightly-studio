@@ -85,6 +85,29 @@ describe('buildRequestBody', () => {
             expect(result.filters?.sample_filter?.tag_ids).toBeUndefined();
         });
 
+        it('propagates workflow_states', () => {
+            const result = buildRequestBody(
+                {
+                    collection_id: 'col-1',
+                    mode: 'normal',
+                    filters: { workflow_states: ['in_review', 'not_in_workflow'] }
+                },
+                0
+            );
+            expect(result.filters?.sample_filter?.workflow_states).toEqual([
+                'in_review',
+                'not_in_workflow'
+            ]);
+        });
+
+        it('omits workflow_states when empty', () => {
+            const result = buildRequestBody(
+                { collection_id: 'col-1', mode: 'normal', filters: { workflow_states: [] } },
+                0
+            );
+            expect(result.filters?.sample_filter?.workflow_states).toBeUndefined();
+        });
+
         it('propagates sample_ids', () => {
             const result = buildRequestBody(
                 { collection_id: 'col-1', mode: 'normal', filters: { sample_ids: ['s1'] } },

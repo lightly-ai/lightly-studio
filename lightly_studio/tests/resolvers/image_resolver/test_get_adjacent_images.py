@@ -1,22 +1,33 @@
+from collections.abc import Generator
+
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import (
     OrderByEvaluationMetricField,
+    OrderByExpression,
     OrderByField,
     OrderByMetadataField,
 )
+from lightly_studio.models.workflow import WorkflowStatus
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from tests import helpers_resolvers
+from tests import helpers_resolvers, helpers_workflow
 from tests.helpers_resolvers import AnnotationDetails
 from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     SampleMetricStub,
     create_run,
     create_sample_metrics,
 )
+
+
+@pytest.fixture
+def workflow_tables(db_session: Session) -> Generator[None, None, None]:
+    with helpers_workflow.workflow_tables(session=db_session):
+        yield
 
 
 def test_get_adjacent_images__orders_by_path(db_session: Session) -> None:
@@ -472,3 +483,55 @@ def test_get_adjacent_images__sort_by_evaluation_metric(db_session: Session) -> 
     assert result.previous_sample_id == image_b.sample_id
     assert result.sample_id == image_c.sample_id
     assert result.next_sample_id == image_a.sample_id
+
+
+@pytest.mark.parametrize(
+    "order_by",
+    [
+        None,
+        # A metadata sort takes the window-function path.
+        [OrderByMetadataField("score")],
+    ],
+)
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_images__respects_workflow_states(
+    db_session: Session,
+    order_by: list[OrderByExpression] | None,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/images/{name}.png"
+        )
+        for name in ["a", "b", "c", "d", "e"]
+    ]
+    metadata_resolver.bulk_update_metadata(
+        db_session, [(image.sample_id, {"score": index}) for index, image in enumerate(images)]
+    )
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={
+            images[0].sample_id: "in_review",
+            images[1].sample_id: "accepted",
+            images[2].sample_id: "in_review",
+            images[4].sample_id: "in_review",
+        },
+    )
+    filters = ImageFilter(sample_filter=SampleFilter(workflow_states=[WorkflowStatus.IN_REVIEW]))
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[2].sample_id,
+        collection_id=collection_id,
+        filters=filters,
+        order_by=order_by,
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == images[0].sample_id
+    assert result.next_sample_id == images[4].sample_id
+    assert result.current_sample_position == 2
+    assert result.total_count == 3

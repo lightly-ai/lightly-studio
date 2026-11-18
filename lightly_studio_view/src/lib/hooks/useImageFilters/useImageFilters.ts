@@ -103,6 +103,11 @@ const imageFilter = derived(
             sampleFilter.confusion_cell = confusionCell;
         }
 
+        const workflowStates = $filterParams.filters?.workflow_states;
+        if (workflowStates && workflowStates.length > 0) {
+            sampleFilter.workflow_states = workflowStates;
+        }
+
         if ($filterParams.metadata_values || $filterParams.categorical_metadata_values) {
             const metadataFilters = createMetadataFilters(
                 $filterParams.metadata_values ?? {},

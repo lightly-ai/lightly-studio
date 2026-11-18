@@ -34,6 +34,7 @@ from lightly_studio.resolvers import (
     collection_resolver,
     export_job_resolver,
     mcap_group_sequence_resolver,
+    workflow_resolver,
 )
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
@@ -404,6 +405,9 @@ def export_collection_captions_prepare(
     """Generate the captions export and persist its path."""
     dataset_query = DatasetQuery(dataset=collection, session=session)
     if body.image_filter is not None:
+        workflow_resolver.resolve_sample_filter(
+            session=session, collection_id=collection.collection_id, filters=body.image_filter
+        )
         dataset_query.filter_by_sample_ids(
             body.image_filter.build_sample_ids_query(collection.collection_id)
         )
@@ -584,6 +588,9 @@ def _annotations_exporter(
 
     image_query = DatasetQuery(dataset=collection, session=session)
     if image_filter is not None:
+        workflow_resolver.resolve_sample_filter(
+            session=session, collection_id=collection.collection_id, filters=image_filter
+        )
         image_query.filter_by_sample_ids(
             image_filter.build_sample_ids_query(collection.collection_id)
         )

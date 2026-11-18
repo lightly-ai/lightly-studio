@@ -14,6 +14,7 @@ import { useEmbeddingFilterForVideos } from '$lib/hooks/useEmbeddingFilter/useEm
 import { useEmbeddingFilterForAnnotations } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 import { useEmbeddingFilterForMcapSequences } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForMcapSequences';
 import { getPlotSelectionCount } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
+import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter';
 
 type Range = { min: number; max: number };
 type RangeMap = Partial<Record<string, Range>>;
@@ -42,8 +43,8 @@ interface UseClearAllFiltersReturn {
  * them at once.
  *
  * Covers tags, annotation classes and sources, numeric and categorical metadata,
- * dimensions, video and frame bounds, the embedding plot region, the confusion cell
- * and the query filter, as far as the grid shows them. The sample selection is kept.
+ * dimensions, video and frame bounds, the embedding plot region, the confusion cell,
+ * the query filter and the workflow status, as far as the grid shows them. The sample selection is kept.
  */
 export function useClearAllFilters(params: UseClearAllFiltersParams): UseClearAllFiltersReturn {
     const groups = useFilterGroups(params);
@@ -71,6 +72,7 @@ function useFilterGroups(params: UseClearAllFiltersParams): FilterGroup[] {
     if (isImages) {
         groups.push(useDimensionsFilter(), useAnnotationSourcesFilter());
         groups.push(useConfusionCellAndQueryFilter(collectionId));
+        groups.push(useWorkflowStatusFilterGroup(collectionId));
     }
     if (isVideos) {
         const { videoBounds, videoBoundsValues, updateVideoBoundsValues } = useVideoBounds();
@@ -183,6 +185,14 @@ function useConfusionCellAndQueryFilter(collectionId: string): FilterGroup {
             if (get(hasConfusionCell)) updateConfusionCell(null);
             updateQueryExpr(undefined);
         }
+    };
+}
+
+function useWorkflowStatusFilterGroup(collectionId: string): FilterGroup {
+    const { selectedWorkflowStates, clearWorkflowStates } = useWorkflowStatusFilter(collectionId);
+    return {
+        isActive: derived(selectedWorkflowStates, ($states) => $states.length > 0),
+        clear: clearWorkflowStates
     };
 }
 

@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
 from lightly_studio.models.adjacents import AdjacentResultView
-from lightly_studio.resolvers import similarity_utils
+from lightly_studio.resolvers import similarity_utils, workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.image_resolver.get_adjacent_images.get_adjacent_images_keyset import (
     get_adjacent_images_keyset,
@@ -46,6 +46,9 @@ def get_adjacent_images(  # noqa: PLR0913
         The adjacency result, or ``None`` if the anchor is not in the (filtered)
         collection.
     """
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=filters
+    )
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
         collection_id=collection_id,

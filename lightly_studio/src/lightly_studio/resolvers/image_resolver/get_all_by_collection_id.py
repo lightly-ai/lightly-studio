@@ -24,7 +24,7 @@ from lightly_studio.database import db_array
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.resolvers import embedding_region_resolver
+from lightly_studio.resolvers import embedding_region_resolver, workflow_resolver
 from lightly_studio.resolvers.image_filter import ImageFilter
 from lightly_studio.resolvers.similarity_utils import (
     apply_similarity_join,
@@ -98,6 +98,9 @@ def get_all_by_collection_id(  # noqa: PLR0913
     order_by: list[OrderByExpression] | None = None,
 ) -> GetAllSamplesByCollectionIdResult:
     """Retrieve samples for a specific collection with optional filtering."""
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=filters
+    )
     # Resolve any embedding-plot region selection to concrete sample ids on the filter before the
     # query is built (the point-in-polygon test needs the session, which `apply` lacks).
     if (
