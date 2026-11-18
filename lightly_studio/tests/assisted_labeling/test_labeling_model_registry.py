@@ -4,6 +4,7 @@ import pytest
 
 from lightly_studio.assisted_labeling import labeling_model_registry
 from lightly_studio.assisted_labeling.labeling_model_registry import LabelingModelRegistry
+from lightly_studio.models.assisted_labeling import MAX_MODEL_ID_LENGTH
 from tests.assisted_labeling.helpers import StubLabelingModel
 
 
@@ -30,6 +31,23 @@ class TestLabelingModelRegistry:
 
         assert registry.list_models() == [new, other]
         assert "Replacing labeling model 'm'." in caplog.text
+
+    def test_register__longest_id(self) -> None:
+        registry = LabelingModelRegistry()
+        model = StubLabelingModel(model_id="m" * MAX_MODEL_ID_LENGTH)
+
+        registry.register(model=model)
+
+        assert registry.list_models() == [model]
+
+    @pytest.mark.parametrize("model_id", ["", "m" * (MAX_MODEL_ID_LENGTH + 1)])
+    def test_register__invalid_id_length(self, model_id: str) -> None:
+        registry = LabelingModelRegistry()
+
+        with pytest.raises(ValueError, match=r"must have 1 to 200 characters"):
+            registry.register(model=StubLabelingModel(model_id=model_id))
+
+        assert registry.list_models() == []
 
     def test_get(self) -> None:
         registry = LabelingModelRegistry()

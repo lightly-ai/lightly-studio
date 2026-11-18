@@ -2,6 +2,7 @@
     import ChevronDown from '@lucide/svelte/icons/chevron-down';
     import Trash2 from '@lucide/svelte/icons/trash-2';
     import PointCloudAnnotationLabel from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationDetails/PointCloudAnnotationLabel';
+    import AnnotationVisibilityButton from '../../AnnotationVisibilityButton';
     import { Typography } from '$lib/components/Typography';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { Button } from '$lib/components/ui/button';
@@ -17,6 +18,10 @@
         onToggle: () => void;
         onLabelChange?: (className: string) => void;
         onDelete?: () => void;
+        isHidden?: boolean;
+        /** True while the source is hidden; only the source toggle shows the row again. */
+        isVisibilityLocked?: boolean;
+        onToggleVisibility?: () => void;
     }
 
     let {
@@ -28,7 +33,10 @@
         editable,
         onToggle,
         onLabelChange,
-        onDelete
+        onDelete,
+        isHidden = false,
+        isVisibilityLocked = false,
+        onToggleVisibility
     }: Props = $props();
 </script>
 
@@ -79,6 +87,14 @@
                 >
             {/if}
         </button>
+    {/if}
+    {#if onToggleVisibility}
+        <AnnotationVisibilityButton
+            noun="annotation"
+            {isHidden}
+            disabled={isVisibilityLocked}
+            onToggle={onToggleVisibility}
+        />
     {/if}
     {#if onDelete}
         <Tooltip content="Delete annotation">

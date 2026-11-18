@@ -118,7 +118,9 @@ vi.mock('./useCreateCuboidAnnotation', async () => {
             showSelectClassDialog: writable(false),
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
-            labels: { data: [] }
+            getRememberedLabel: () => undefined,
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });
@@ -127,7 +129,10 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
     return {
         useGlobalStorage: () => ({
-            isEditingMode: writable(true)
+            isEditingMode: writable(true),
+            lastAnnotationSource: writable({}),
+            updateLastAnnotationSource: vi.fn(),
+            removeLastAnnotationSource: vi.fn()
         })
     };
 });

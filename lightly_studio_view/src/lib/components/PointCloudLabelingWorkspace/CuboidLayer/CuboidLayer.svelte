@@ -85,11 +85,15 @@
         untrack(() => onhover?.(null, null));
     });
 
+    // Draws the live transform state, limited to the cuboids the viewport shows.
+    const shownIds = $derived(new Set(cuboids.map(({ id }) => id)));
+
     $effect(() => {
+        const shownAnnotations = $annotations.filter(({ id }) => shownIds.has(id));
         const visibleAnnotations =
             cameraMode === 'perspective'
-                ? $annotations
-                : $annotations.filter(({ id }) => id === selectedAnnotationId);
+                ? shownAnnotations
+                : shownAnnotations.filter(({ id }) => id === selectedAnnotationId);
         const next = createCuboidRenderItems(visibleAnnotations, cameraMode);
         renderCuboids = next;
         return () => disposeCuboidRenderItems(next);

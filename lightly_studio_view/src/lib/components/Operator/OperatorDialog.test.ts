@@ -14,7 +14,20 @@ const { page } = await vi.hoisted(async () => {
     };
 });
 
-vi.mock('$app/stores', () => ({ page }));
+vi.mock('$app/state', async () => {
+    const { fromStore } = await import('svelte/store');
+    const current = fromStore(page);
+    return {
+        page: {
+            get route() {
+                return current.current.route;
+            },
+            get params() {
+                return current.current.params;
+            }
+        }
+    };
+});
 vi.mock('@tanstack/svelte-query', () => ({
     useQueryClient: () => ({ invalidateQueries: vi.fn() })
 }));
