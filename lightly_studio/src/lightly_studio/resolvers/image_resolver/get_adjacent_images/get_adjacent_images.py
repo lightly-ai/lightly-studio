@@ -46,9 +46,32 @@ def get_adjacent_images(  # noqa: PLR0913
         The adjacency result, or ``None`` if the anchor is not in the (filtered)
         collection.
     """
-    workflow_resolver.resolve_sample_filter(
-        session=session, collection_id=collection_id, filters=filters
+    # Look the project up once: for the workflow status filter and the neighbours' batches.
+    project_id = workflow_resolver.get_dataset_project_id(
+        session=session, collection_id=collection_id
     )
+    workflow_resolver.set_filter_project_id(filters=filters, project_id=project_id)
+    result = _get_adjacent_images(
+        session=session,
+        sample_id=sample_id,
+        collection_id=collection_id,
+        filters=filters,
+        text_embedding=text_embedding,
+        order_by=order_by,
+    )
+    if result is None or project_id is None:
+        return result
+    return _with_neighbour_workflow(session=session, result=result, project_id=project_id)
+
+
+def _get_adjacent_images(  # noqa: PLR0913
+    session: Session,
+    sample_id: UUID,
+    collection_id: UUID,
+    filters: ImageFilter | None,
+    text_embedding: list[float] | None,
+    order_by: list[OrderByExpression] | None,
+) -> AdjacentResultView | None:
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
         collection_id=collection_id,
@@ -73,6 +96,30 @@ def get_adjacent_images(  # noqa: PLR0913
         distance_expr=distance_expr,
         embedding_model_id=embedding_model_id,
         order_by=order_by,
+    )
+
+
+def _with_neighbour_workflow(
+    session: Session, result: AdjacentResultView, project_id: UUID
+) -> AdjacentResultView:
+    """Add the neighbours' batch and state, so the detail view can open them in workflow mode."""
+    neighbour_ids = [
+        neighbour_id
+        for neighbour_id in (result.previous_sample_id, result.next_sample_id)
+        if neighbour_id is not None
+    ]
+    workflows = workflow_resolver.get_samples_workflow(
+        session=session, project_id=project_id, sample_ids=neighbour_ids
+    )
+    return result.model_copy(
+        update={
+            "previous_workflow": workflows.get(result.previous_sample_id)
+            if result.previous_sample_id
+            else None,
+            "next_workflow": workflows.get(result.next_sample_id)
+            if result.next_sample_id
+            else None,
+        }
     )
 
 

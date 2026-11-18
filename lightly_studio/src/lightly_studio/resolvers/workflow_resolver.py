@@ -196,6 +196,37 @@ def get_sample_workflow(row: Row[Any], project_id: UUID) -> SampleWorkflowView |
     )
 
 
+def get_samples_workflow(
+    session: Session, project_id: UUID, sample_ids: list[UUID]
+) -> dict[UUID, SampleWorkflowView]:
+    """Get the batch and state of a few samples in a project, with one query.
+
+    Args:
+        session: The database session.
+        project_id: The dataset's workflow project.
+        sample_ids: The samples to look up.
+
+    Returns:
+        The batch and state of each sample that is in a batch of the project, by sample ID.
+    """
+    if not sample_ids:
+        return {}
+    rows = session.execute(
+        select(
+            batch_file_table.c.sample_id, batch_file_table.c.batch_id, batch_file_table.c.state
+        ).where(
+            batch_file_table.c.project_id == project_id,
+            batch_file_table.c.sample_id.in_(sample_ids),
+        )
+    ).all()
+    return {
+        sample_id: SampleWorkflowView(
+            project_id=project_id, batch_id=batch_id, state=WorkflowStatus(state)
+        )
+        for sample_id, batch_id, state in rows
+    }
+
+
 def _workflow_sample_filter(filters: GridFilterBase | None) -> SampleFilter | None:
     """Get the sample filter of a filter with workflow status options, else None."""
     sample_filter = filters.sample_filter if isinstance(filters, ImageFilter) else None

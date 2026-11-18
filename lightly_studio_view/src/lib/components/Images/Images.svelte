@@ -24,6 +24,10 @@
     import { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
     import type { ImageView } from '$lib/api/lightly_studio_local';
     import { goto } from '$app/navigation';
+    import {
+        datasetNavOptions,
+        toWorkflowSampleURL
+    } from '$lib/components/Workflow/datasetNavigation';
     import { isEqual } from 'lodash-es';
     import { mergeExternalFilters, paramsWithoutExternalFilters } from './syncFilterParams';
     import { clearPlotSelectionForCollection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
@@ -177,7 +181,7 @@
         // Registered synchronously so Svelte can invoke the returned cleanup on unmount.
         function handleOpenFirstSample() {
             const firstSample = samples[0];
-            if (firstSample) handleOnDoubleClick(firstSample.sample_id);
+            if (firstSample) handleOnDoubleClick(firstSample);
         }
         const cleanupOnboarding =
             useOnboarding().registerOpenFirstSampleHandler(handleOpenFirstSample);
@@ -246,16 +250,21 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
 
-    function handleOnDoubleClick(sampleId: string) {
+    // A sample in a batch opens in workflow mode. Prev/next follows this grid's order either way.
+    function handleOnDoubleClick(sample: ImageView) {
         if (datasetId && collectionType) {
             useOnboarding().dispatchOpeningSample(collection_id);
             goto(
-                routeHelpers.toSample({
-                    sampleId,
-                    datasetId,
-                    collectionType,
-                    collectionId: collection_id
-                })
+                toWorkflowSampleURL(
+                    routeHelpers.toSample({
+                        sampleId: sample.sample_id,
+                        datasetId,
+                        collectionType,
+                        collectionId: collection_id
+                    }),
+                    sample.workflow
+                ),
+                datasetNavOptions
             );
         }
     }
@@ -348,7 +357,7 @@
                                         }),
                                         fileName: samples[index].file_name
                                     }}
-                                    ondblclick={() => handleOnDoubleClick(samples[index].sample_id)}
+                                    ondblclick={() => handleOnDoubleClick(samples[index])}
                                     onSelect={(event) =>
                                         handleGridItemSelect(
                                             event,

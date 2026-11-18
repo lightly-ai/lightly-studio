@@ -5,7 +5,10 @@ declare global {
         // interface Error {}
         // interface Locals {}
         // interface PageData {}
-        // interface PageState {}
+        interface PageState {
+            /** Set when a sample is opened from the dataset grid; see `datasetNavigation.ts`. */
+            nav?: 'dataset';
+        }
         // interface Platform {}
     }
 }

@@ -13,6 +13,7 @@
     import SampleDetailsNavigation from './SampleDetailsNavigation/SampleDetailsNavigation.svelte';
     import WorkflowBreadcrumb from '$lib/components/Workflow/WorkflowBreadcrumb/WorkflowBreadcrumb.svelte';
     import WorkflowNavigation from '$lib/components/Workflow/WorkflowNavigation/WorkflowNavigation.svelte';
+    import { followsBatchOrder } from '$lib/components/Workflow/datasetNavigation';
     import {
         createWorkflowFileContext,
         getWorkflowParams
@@ -47,6 +48,11 @@
     // A sample opened from a hosted workflow batch shows the batch instead of the collection.
     const workflow = createWorkflowFileContext(() => getWorkflowParams(page.url, sampleId));
 
+    // Opened from the dataset grid, prev/next follows the grid, also in workflow mode.
+    const batchOrder = $derived(
+        followsBatchOrder({ workflowActive: workflow.active, state: page.state })
+    );
+
     let sampleURL = $derived(getImageURLById(sampleId));
     const sampleImage = $derived(image.data as ImageView | undefined);
 </script>
@@ -67,7 +73,7 @@
     >
         {#if children}
             {@render children()}
-            {#if !workflow.active}
+            {#if !batchOrder}
                 <SampleDetailsNavigation />
             {:else if workflow.file}
                 <WorkflowNavigation

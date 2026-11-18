@@ -10,7 +10,7 @@ from lightly_studio.core.dataset_query.order_by import (
     OrderByField,
     OrderByMetadataField,
 )
-from lightly_studio.models.workflow import WorkflowStatus
+from lightly_studio.models.workflow import SampleWorkflowView, WorkflowStatus
 from lightly_studio.resolvers import image_resolver, metadata_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
@@ -535,3 +535,83 @@ def test_get_adjacent_images__respects_workflow_states(
     assert result.next_sample_id == images[4].sample_id
     assert result.current_sample_position == 2
     assert result.total_count == 3
+
+
+@pytest.mark.parametrize(
+    "order_by",
+    [
+        None,
+        [OrderByMetadataField("score")],
+    ],
+)
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_images__returns_neighbour_workflow(
+    db_session: Session,
+    order_by: list[OrderByExpression] | None,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/images/{name}.png"
+        )
+        for name in ["a", "b", "c", "d"]
+    ]
+    metadata_resolver.bulk_update_metadata(
+        db_session, [(image.sample_id, {"score": index}) for index, image in enumerate(images)]
+    )
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    batch_a = helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={images[0].sample_id: "in_review"}
+    )
+    batch_b = helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={images[1].sample_id: "in_review", images[2].sample_id: "accepted"},
+    )
+
+    middle = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[1].sample_id,
+        collection_id=collection_id,
+        order_by=order_by,
+    )
+    last = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[3].sample_id,
+        collection_id=collection_id,
+        order_by=order_by,
+    )
+
+    assert middle is not None
+    assert middle.previous_workflow == SampleWorkflowView(
+        project_id=project_id, batch_id=batch_a, state=WorkflowStatus.IN_REVIEW
+    )
+    assert middle.next_workflow == SampleWorkflowView(
+        project_id=project_id, batch_id=batch_b, state=WorkflowStatus.ACCEPTED
+    )
+    assert last is not None
+    assert last.previous_workflow is not None
+    assert last.previous_workflow.batch_id == batch_b
+    assert last.next_workflow is None
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_images__no_neighbour_workflow_without_project(db_session: Session) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session,
+            collection_id=collection.collection_id,
+            file_path_abs=f"/images/{name}.png",
+        )
+        for name in ["a", "b", "c"]
+    ]
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session, sample_id=images[1].sample_id, collection_id=collection.collection_id
+    )
+
+    assert result is not None
+    assert result.previous_workflow is None
+    assert result.next_workflow is None

@@ -376,3 +376,36 @@ def test_get_adjacent_samples__respects_workflow_states(
     assert result["previous_sample_id"] == str(images[0].sample_id)
     assert result["next_sample_id"] == str(images[3].sample_id)
     assert result["total_count"] == 3
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_samples__returns_neighbour_workflow(
+    db_session: Session,
+    test_client: TestClient,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/images/{name}.png"
+        )
+        for name in ["a", "b", "c"]
+    ]
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    batch_id = helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={images[2].sample_id: "in_review"}
+    )
+
+    response = test_client.post(
+        f"/api/samples/{images[1].sample_id}/adjacents",
+        json={"sample_type": "image", "collection_id": str(collection_id)},
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    result = response.json()
+    assert result["previous_workflow"] is None
+    assert result["next_workflow"] == {
+        "project_id": str(project_id),
+        "batch_id": str(batch_id),
+        "state": "in_review",
+    }

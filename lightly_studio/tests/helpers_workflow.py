@@ -41,8 +41,8 @@ def create_project(session: Session, dataset_id: UUID) -> UUID:
     return project_id
 
 
-def add_batch_files(session: Session, project_id: UUID, states: Mapping[UUID, str]) -> None:
-    """Put samples in one batch of a project, each with its workflow state.
+def add_batch_files(session: Session, project_id: UUID, states: Mapping[UUID, str]) -> UUID:
+    """Put samples in one new batch of a project and return the batch id.
 
     Args:
         session: The database session.
@@ -58,3 +58,4 @@ def add_batch_files(session: Session, project_id: UUID, states: Mapping[UUID, st
         ],
     )
     session.commit()
+    return batch_id
