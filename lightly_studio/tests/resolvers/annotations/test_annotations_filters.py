@@ -7,7 +7,7 @@ from uuid import UUID
 
 import pytest
 from pytest_mock import MockerFixture
-from sqlmodel import Session
+from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.api.routes.api.validators import Paginated
@@ -16,6 +16,8 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationCreate,
     AnnotationType,
 )
+from lightly_studio.models.image import ImageTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import annotation_resolver
 from lightly_studio.resolvers import annotation_resolver as annotations_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import (
@@ -23,9 +25,13 @@ from lightly_studio.resolvers.annotations.annotations_filter import (
 )
 from lightly_studio.resolvers.region_sample_ids_filter import RegionSampleIdsFilter
 from tests.helpers_resolvers import (
+    AnnotationDetails,
+    ImageStub,
     create_annotation_label,
+    create_annotations,
     create_collection,
     create_image,
+    create_images,
     create_tag,
 )
 
@@ -230,6 +236,119 @@ def test_filter_delegates_region_filtering_to_mixin(
     assert all(call.kwargs["sample_id_column"].key == "sample_id" for call in spy.call_args_list)
     assert len(filtered_annotations) == 1
     assert filtered_annotations[0].sample_id == annotation1.sample_id
+
+
+@pytest.mark.parametrize(
+    ("label_names", "expected_paths"),
+    [
+        ([], ["unannotated.png"]),
+        (["car"], ["car.png", "unannotated.png"]),
+    ],
+)
+def test_apply_to_parent_sample_query__include_unannotated_samples(
+    db_session: Session, label_names: list[str], expected_paths: list[str]
+) -> None:
+    collection = create_collection(session=db_session)
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[
+            ImageStub(path="car.png"),
+            ImageStub(path="dog.png"),
+            ImageStub(path="unannotated.png"),
+        ],
+    )
+    labels = {
+        name: create_annotation_label(
+            session=db_session, root_collection_id=collection.collection_id, label_name=name
+        )
+        for name in ["car", "dog"]
+    }
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=images[0].sample_id, annotation_label_id=labels["car"].annotation_label_id
+            ),
+            AnnotationDetails(
+                sample_id=images[1].sample_id, annotation_label_id=labels["dog"].annotation_label_id
+            ),
+        ],
+    )
+
+    annotations_filter = AnnotationsFilter(
+        annotation_label_ids=[labels[name].annotation_label_id for name in label_names],
+        include_unannotated_samples=True,
+    )
+
+    assert (
+        _filter_image_paths(
+            session=db_session,
+            annotations_filter=annotations_filter,
+            collection_id=collection.collection_id,
+        )
+        == expected_paths
+    )
+
+
+def test_apply_to_parent_sample_query__include_unannotated_samples_in_sources(
+    db_session: Session,
+) -> None:
+    collection = create_collection(session=db_session)
+    images = create_images(
+        db_session=db_session,
+        collection_id=collection.collection_id,
+        images=[ImageStub(path="in_source_a.png"), ImageStub(path="in_source_b.png")],
+    )
+    car_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    source_a = create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=images[0].sample_id, annotation_label_id=car_label.annotation_label_id
+            )
+        ],
+        collection_name="source_a",
+    )
+    create_annotations(
+        session=db_session,
+        collection_id=collection.collection_id,
+        annotations=[
+            AnnotationDetails(
+                sample_id=images[1].sample_id, annotation_label_id=car_label.annotation_label_id
+            )
+        ],
+        collection_name="source_b",
+    )
+
+    annotations_filter = AnnotationsFilter(
+        collection_ids=[source_a[0].annotation_collection_id],
+        include_unannotated_samples=True,
+    )
+
+    assert _filter_image_paths(
+        session=db_session,
+        annotations_filter=annotations_filter,
+        collection_id=collection.collection_id,
+    ) == ["in_source_b.png"]
+
+
+def _filter_image_paths(
+    session: Session, annotations_filter: AnnotationsFilter, collection_id: UUID
+) -> list[str]:
+    query = (
+        select(ImageTable)
+        .join(ImageTable.sample)
+        .where(col(SampleTable.collection_id) == collection_id)
+    )
+    query = annotations_filter.apply_to_parent_sample_query(
+        query=query, sample_id_column=col(ImageTable.sample_id)
+    )
+    return sorted(image.file_name for image in session.exec(query).all())
 
 
 def _count_sample_joins(query: SelectOfScalar[UUID]) -> int:
