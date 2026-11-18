@@ -31,6 +31,8 @@ _NSEC_FIELDS = ("nsec", "nanosec", "nanoseconds")
 
 _CLASS_KEY = "class"
 _TRACK_ID_KEY = "track_id"
+# Prediction topics write the track id under this key.
+_TRACK_KEY = "track"
 _PARENT_TRACK_ID_KEY = "parent_track_id"
 _INTERPOLATED_KEY = "interpolated"
 _NOTE_KEY = "note"
@@ -95,11 +97,8 @@ def _cuboid_entity(cuboid: CuboidLabel, frame_id: str) -> dict[str, Any]:
         "frame_locked": False,
         "metadata": [
             {"key": _CLASS_KEY, "value": cuboid.class_name},
-            {"key": _TRACK_ID_KEY, "value": str(cuboid.track_id)},
-            {
-                "key": _PARENT_TRACK_ID_KEY,
-                "value": "" if cuboid.parent_track_id is None else str(cuboid.parent_track_id),
-            },
+            {"key": _TRACK_ID_KEY, "value": _optional_str(cuboid.track_id)},
+            {"key": _PARENT_TRACK_ID_KEY, "value": _optional_str(cuboid.parent_track_id)},
             {"key": _INTERPOLATED_KEY, "value": "true" if cuboid.interpolated else "false"},
         ],
         "arrows": [],
@@ -154,6 +153,11 @@ def _frame_tags_entity(frame_tags: FrameTags, frame_id: str) -> dict[str, Any]:
     }
 
 
+def _optional_str(value: int | None) -> str:
+    """Returns the metadata value of an optional integer. `None` is the empty string."""
+    return "" if value is None else str(value)
+
+
 def _time(timestamp_ns: int) -> dict[str, int]:
     """Returns a Time dict for a nanosecond timestamp."""
     return {
@@ -178,7 +182,7 @@ def _cuboid(entity: Any) -> CuboidLabel:
         timestamp_ns=_timestamp_ns(message_fields.require_field(entity, _TIMESTAMP_FIELDS)),
         frame_id=str(message_fields.require_field(entity, _FRAME_ID_FIELDS)),
         class_name=_require_metadata(metadata, _CLASS_KEY),
-        track_id=_parse_int(_require_metadata(metadata, _TRACK_ID_KEY), _TRACK_ID_KEY),
+        track_id=_track_id(metadata=metadata),
         parent_track_id=_optional_int(metadata.get(_PARENT_TRACK_ID_KEY)),
         interpolated=_parse_bool(metadata.get(_INTERPOLATED_KEY)),
         position=position,
@@ -235,6 +239,18 @@ def _require_metadata(metadata: Mapping[str, str], key: str) -> str:
     if value is None or value == "":
         raise McapAccessError(f"SceneEntity metadata is missing '{key}'.")
     return value
+
+
+def _track_id(metadata: Mapping[str, str]) -> int | None:
+    """Returns the track id from the `track_id` key, or else from the `track` key.
+
+    Returns `None` for an untracked detection that has neither key.
+    """
+    for key in (_TRACK_ID_KEY, _TRACK_KEY):
+        value = metadata.get(key)
+        if value is not None and value != "":
+            return _parse_int(value, key)
+    return None
 
 
 def _optional_int(value: str | None) -> int | None:

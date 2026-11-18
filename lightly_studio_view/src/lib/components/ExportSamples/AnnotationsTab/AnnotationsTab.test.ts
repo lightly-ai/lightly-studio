@@ -61,6 +61,7 @@ describe('AnnotationsTab', () => {
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
             updateEmbeddingRegion: vi.fn(),
+            updatePlotSelection: vi.fn(),
             videoSortBy: writable(null),
             updateSortBy: vi.fn()
         });
@@ -122,6 +123,7 @@ describe('AnnotationsTab', () => {
             updateFilterParams: vi.fn(),
             updateSampleIds: vi.fn(),
             updateEmbeddingRegion: vi.fn(),
+            updatePlotSelection: vi.fn(),
             videoSortBy: writable(null),
             updateSortBy: vi.fn()
         });
