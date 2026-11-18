@@ -1,10 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createLabelIdLookup } from './createLabelIdLookup';
 
-const setup = (createLabel: (className: string) => Promise<string>) =>
+const setup = (
+    createLabel: (className: string) => Promise<string>,
+    getDatasetId: () => string = () => 'dataset-1'
+) =>
     createLabelIdLookup({
         getLabels: async () => [{ annotation_label_name: 'cat', annotation_label_id: 'cat-id' }],
-        createLabel
+        createLabel,
+        getDatasetId
     });
 
 describe('createLabelIdLookup', () => {
@@ -40,5 +44,19 @@ describe('createLabelIdLookup', () => {
         await expect(getLabelId('dog')).rejects.toThrow('offline');
 
         await expect(getLabelId('dog')).resolves.toBe('dog-id');
+    });
+
+    it('creates the class again in another dataset', async () => {
+        const createLabel = vi
+            .fn()
+            .mockResolvedValueOnce('dog-id-of-dataset-1')
+            .mockResolvedValueOnce('dog-id-of-dataset-2');
+        let datasetId = 'dataset-1';
+        const getLabelId = setup(createLabel, () => datasetId);
+
+        await expect(getLabelId('dog')).resolves.toBe('dog-id-of-dataset-1');
+        datasetId = 'dataset-2';
+
+        await expect(getLabelId('dog')).resolves.toBe('dog-id-of-dataset-2');
     });
 });
