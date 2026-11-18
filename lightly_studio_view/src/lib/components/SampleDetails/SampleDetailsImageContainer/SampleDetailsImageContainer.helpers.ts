@@ -25,3 +25,20 @@ export const reuseUnchangedAnnotations = (
         return old && isEqual(old, annotation) ? old : annotation;
     });
 };
+
+interface GetDrawerLabelParams {
+    isAnnotationSelected: boolean;
+    contextLabel: string | null | undefined;
+    stickyClass: string | undefined;
+}
+
+/**
+ * The class whose color the drawing tools use. A selected annotation keeps its class. Otherwise
+ * the next annotation gets the sticky class, so the stroke shows that one.
+ */
+export const getDrawerLabel = ({
+    isAnnotationSelected,
+    contextLabel,
+    stickyClass
+}: GetDrawerLabelParams): string | null =>
+    (isAnnotationSelected ? contextLabel : stickyClass) ?? null;

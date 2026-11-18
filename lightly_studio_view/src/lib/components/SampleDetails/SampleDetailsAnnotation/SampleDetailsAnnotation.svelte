@@ -9,6 +9,7 @@
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { addAnnotationUpdateToUndoStack } from '$lib/services/addAnnotationUpdateToUndoStack';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
+    import { onDestroy } from 'svelte';
     import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
 
     const {
@@ -48,7 +49,16 @@
         annotationId: annotation.sample_id,
         enabled: false
     }));
-    const { setCurrentBoundingBox } = useAnnotationLabelContext();
+    const { setCurrentBoundingBox, setIsMovingAnnotation, setMovedAnnotation } =
+        useAnnotationLabelContext();
+    // The box is remounted after an edit, so a drag can't be left marked as running. Only the
+    // instance that started the drag resets it.
+    let isDragging = false;
+    const setDragging = (value: boolean) => {
+        isDragging = value;
+        setIsMovingAnnotation(value);
+    };
+    onDestroy(() => isDragging && setIsMovingAnnotation(false));
 
     let selectionBox = $derived(getBoundingBox(annotation));
     const showBoundingBox = $derived(
@@ -58,6 +68,7 @@
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         setCurrentBoundingBox(bbox);
         const previousAnnotation = annotation;
+        setMovedAnnotation(previousAnnotation.sample_id, bbox);
         const _update = async () => {
             try {
                 await updateAnnotation({
@@ -101,6 +112,8 @@
                 }}
                 {isResizable}
                 {onBoundingBoxChanged}
+                onDragStart={() => setDragging(true)}
+                onDragStop={() => setDragging(false)}
                 {highlight}
                 {scale}
                 {colorBySource}

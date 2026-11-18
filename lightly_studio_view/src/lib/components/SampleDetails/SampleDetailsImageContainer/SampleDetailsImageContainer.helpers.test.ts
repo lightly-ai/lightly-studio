@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isPanEnabled, reuseUnchangedAnnotations } from './SampleDetailsImageContainer.helpers';
+import {
+    getDrawerLabel,
+    isPanEnabled,
+    reuseUnchangedAnnotations
+} from './SampleDetailsImageContainer.helpers';
 import type { AnnotationView } from '$lib/api/lightly_studio_local';
 
 const params = {
@@ -34,5 +38,29 @@ describe('reuseUnchangedAnnotations', () => {
         expect(next[0]).toBe(previous[0]);
         expect(next[1]).not.toBe(previous[1]);
         expect(next.map((annotation) => annotation.sample_id)).toEqual(['a', 'b', 'c']);
+    });
+});
+
+describe('getDrawerLabel', () => {
+    it('uses the sticky class when nothing is selected', () => {
+        expect(
+            getDrawerLabel({ isAnnotationSelected: false, contextLabel: 'cat', stickyClass: 'dog' })
+        ).toBe('dog');
+    });
+
+    it('has no class when nothing is selected and no class is sticky', () => {
+        expect(
+            getDrawerLabel({
+                isAnnotationSelected: false,
+                contextLabel: 'cat',
+                stickyClass: undefined
+            })
+        ).toBeNull();
+    });
+
+    it('uses the class of the selected annotation', () => {
+        expect(
+            getDrawerLabel({ isAnnotationSelected: true, contextLabel: 'cat', stickyClass: 'dog' })
+        ).toBe('cat');
     });
 });

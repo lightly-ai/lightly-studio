@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { AnnotationClassAddRow } from '../AnnotationClassAddRow';
+    import { NameListAddRow } from '$lib/components/Settings/NameList';
     import { AnnotationClassRow } from '../AnnotationClassRow';
 
     interface AnnotationClassItem {
@@ -40,7 +40,7 @@
 
 <ul class="mx-auto flex max-w-lg flex-col">
     {#if addName && isAddEnterTarget}
-        <AnnotationClassAddRow name={addName} isEnterTarget {onAdd} />
+        <NameListAddRow name={addName} isEnterTarget {onAdd} kind="annotation class" />
     {/if}
     {#if isLoading}
         <li class="px-2 py-3 text-sm text-muted-foreground">Loading annotation classes…</li>
@@ -73,6 +73,6 @@
         />
     {/each}
     {#if addName && !isAddEnterTarget}
-        <AnnotationClassAddRow name={addName} isEnterTarget={false} {onAdd} />
+        <NameListAddRow name={addName} isEnterTarget={false} {onAdd} kind="annotation class" />
     {/if}
 </ul>
