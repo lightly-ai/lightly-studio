@@ -8,30 +8,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.
-- Filter videos with query expressions in the GUI using video fields, tags, metadata, and video annotations.
-- Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
-- Every filter list in the filter panel has a search, "Select all" and "Clear".
-- The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
 
 ### Changed
-
-- Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
 
 ### Deprecated
 
 ### Removed
 
-- BREAKING: Dropped Python 3.10 support. Upgrade to Python 3.11–3.15.
+### Fixed
+
+### Security
+
+## \[1.4.0\] - 2026-11-18
+
+### Added
+
+- Filtering
+    - Reapply any of the last 10 queries used in a collection from the query history.
+    - Search any filter list, select all its values, or clear the selection.
+    - Shift-click individual points in the embedding plot to show the selected images, annotations, or videos in the grid.
+
+- Video queries
+    - Python SDK: Use `VideoFrameQuery` to find videos where annotations and timestamps match on the same frame. Use `VideoEventQuery` to find events by annotation class, annotation source, confidence, or start and end times.
+    - Filter videos in the GUI query editor by duration, frame rate, tags, metadata, or video annotations. For example, `fps >= 29.97` finds videos at or above 29.97 frames per second.
+
+- Labeling
+    - Choose an annotation source in the Annotations panel when labeling images. Choose “New source” to create one with your first annotation.
+    - Python SDK: Register a custom labeling model with `register_labeling_model()`. Use the REST API to list available models and preview their predictions on an image.
+
+- Documentation
+    - The Enterprise guide explains how to use custom embeddings.
+
+### Changed
+
+- Filtering
+    - Find image dimensions and numeric and categorical metadata together in the Metadata section. Expand a field to filter by it, or search by name when there are more than eight fields.
+
+### Removed
+
+- BREAKING: LightlyStudio no longer supports Python 3.10. Upgrade to Python 3.11–3.15 before installing this release.
 
 ### Fixed
 
-- Fixed slow evaluation saves by grouping similar results into fewer database inserts.
-- Fixed slow annotation grid loading by loading annotation details in batches.
-- Applying an empty query or a query with only comments now clears the query filter instead of showing a syntax error.
-- Fixed slow grid loading by avoiding unnecessary database queries for each annotation.
+- Filtering and annotations
+    - Applying an empty query or one containing only comments clears the query filter.
+    - Annotation class counts load faster in the image sidebar, both with an annotation source selected and with no filters applied.
+    - Grids with annotated samples load faster, and images with many annotations open faster in the detail view.
+    - You can delete annotations that have metadata.
 
-### Security
+- Evaluation and export
+    - Object detection and instance segmentation evaluations run faster, and evaluation results save faster.
+    - Bounding box, segmentation mask, and classification exports finish faster.
+    - Deleting a dataset now succeeds even if an exported file cannot be removed.
 
 ## \[1.3.0\] - 2026-11-12
 

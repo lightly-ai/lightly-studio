@@ -12,15 +12,18 @@ import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
+import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
 import type { WorkspaceTool } from '../domain';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
+import type { CuboidTarget } from '../useCuboidTargetSource';
 
 /** Shared annotation selection, tools, and persistence for every scene viewport. */
 export function useWorkspaceEditing(
     getWorkspace: () => PointCloudWorkspaceContext,
     getOptions: () => WorkspaceOptions,
     getData: () => ReturnType<typeof useWorkspaceSceneData>,
-    getIsEditingMode: () => boolean
+    getIsEditingMode: () => boolean,
+    getTarget: () => CuboidTarget
 ) {
     const queryClient = useQueryClient();
     // Track bars show which ticks have annotations, so refresh them when that changes.
@@ -42,8 +45,11 @@ export function useWorkspaceEditing(
         showSelectClassDialog,
         handleClassSelected,
         handleClassDialogCancel,
-        labels
+        getRememberedLabel,
+        labels,
+        tracks
     } = useCreateCuboidAnnotation({
+        getTarget,
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         getDatasetId: () => getOptions().datasetId,
         getTickSampleId: () => {
@@ -147,6 +153,11 @@ export function useWorkspaceEditing(
         await createCuboidAnnotation(
             box,
             async (annotationId) => {
+                // The first cuboid of a typed source creates the source, so list it.
+                const sourceName = getTarget().targetSource;
+                const isNewSource =
+                    sourceName && !getData().annotationSourceNames?.includes(sourceName);
+                if (isNewSource) void getData().refetchAnnotationSources();
                 await getWorkspace().tickDetails.refetch({ throwOnError: true });
                 selectedCuboidId = annotationId;
                 activeTool = 'select';
@@ -169,13 +180,34 @@ export function useWorkspaceEditing(
         setActiveTool(addingTrack ? 'create-cuboid' : 'select');
     }
 
+    async function handleTrackChange(): Promise<void> {
+        void refreshTracks();
+        void queryClient.invalidateQueries({
+            queryKey: getTickDetailsSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            }),
+            refetchType: 'none'
+        });
+        await getWorkspace().tickDetails.refetch({ throwOnError: true });
+    }
+
+    const occupiedTrackIds = $derived(
+        new Set(getData().cuboids.flatMap((c) => (c.trackId ? [c.trackId] : [])))
+    );
+
     const displayedAnnotations = fromStore(annotations);
     return {
         transforms,
         showSelectClassDialog,
         handleClassSelected,
         handleClassDialogCancel,
+        getRememberedLabel,
         labels,
+        tracks,
+        get occupiedTrackIds() {
+            return occupiedTrackIds;
+        },
         get annotations() {
             return displayedAnnotations.current;
         },
@@ -217,6 +249,7 @@ export function useWorkspaceEditing(
         handleExtendTrack,
         handleDeleteTrack,
         handleLabelChange,
+        handleTrackChange,
         panelCuboidTransform
     };
 }
