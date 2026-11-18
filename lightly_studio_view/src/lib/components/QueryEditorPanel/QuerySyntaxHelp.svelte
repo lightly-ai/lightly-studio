@@ -19,7 +19,7 @@
             {sampleType === 'video' ? 'Video' : 'Image'} fields: <code>file_name</code>,
             <code>file_path_abs</code>, <code>width</code>, <code>height</code>,
             {#if sampleType === 'video'}
-                <code>duration_s</code>, <code>fps</code> (equality only).
+                <code>duration_s</code>, <code>fps</code>.
             {:else}
                 <code>created_at</code>
             {/if}
