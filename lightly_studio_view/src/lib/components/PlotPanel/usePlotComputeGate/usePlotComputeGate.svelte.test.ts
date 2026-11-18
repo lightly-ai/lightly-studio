@@ -175,8 +175,10 @@ describe('usePlotComputeGate', () => {
         expect(gate.view).toBe('plot');
     });
 
-    it('asks again above the threshold after a compute fails', async () => {
-        mocks.statusQueries['failed'] = createStatusQuery(NOT_COMPUTED_LARGE);
+    it('asks again above the threshold as soon as a compute fails', async () => {
+        const query = createStatusQuery(NOT_COMPUTED_LARGE);
+        query.refetch = vi.fn(() => new Promise(() => {}));
+        mocks.statusQueries['failed'] = query;
         const { gate } = mountGate({ collectionId: 'failed' });
         const compute = createCompute();
         gate.startCompute();
@@ -241,6 +243,18 @@ describe('usePlotComputeGate', () => {
 
         second.succeed();
         await vi.waitFor(() => expect(gate.startedAt).toBeNull());
+    });
+
+    it('keeps the start while a compute runs, even if a fresh status says computed', () => {
+        const query = createStatusQuery(NOT_COMPUTED_SMALL);
+        mocks.statusQueries['still-running'] = query;
+        const { gate } = mountGate({ collectionId: 'still-running' });
+        gate.trackCompute(createCompute().promise);
+
+        query.data = COMPUTED;
+        flushSync();
+
+        expect(gate.startedAt).toEqual(expect.any(Number));
     });
 
     it('refetches the status of the collection whose compute ended', async () => {
