@@ -9,7 +9,12 @@ from lightly_studio.api.routes.api.status import HTTP_STATUS_OK
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import mcap_group_sequence_resolver, recording_resolver
-from tests.helpers_resolvers import create_collection
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+)
+from tests.resolvers.mcap_group_sequence_resolver import helpers
 
 
 def test_list_mcap_sequences(test_client: TestClient, db_session: Session) -> None:
@@ -151,6 +156,39 @@ def test_get_mcap_sequence_sample_ids(test_client: TestClient, db_session: Sessi
 
     assert response.status_code == HTTP_STATUS_OK
     assert response.json() == [str(seq_ids[0])]
+
+
+def test_count_mcap_sequence_annotations_by_collection(
+    test_client: TestClient, db_session: Session
+) -> None:
+    """Returns the sequence counts of each label of the group annotations."""
+    sequence = helpers.create_mcap_sequence(session=db_session)
+    [group_id] = helpers.add_mcap_ticks_to_sequence(
+        session=db_session, fixture=sequence, ticks=[(100, 100)]
+    )
+    collection_id = sequence.sequence_collection.collection_id
+    car = create_annotation_label(
+        session=db_session, root_collection_id=collection_id, label_name="car"
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=sequence.group_collection.collection_id,
+        sample_id=group_id,
+        annotation_label_id=car.annotation_label_id,
+    )
+
+    response = test_client.post(
+        f"/api/collections/{collection_id}/mcap-sequences/annotations/count",
+        json={
+            "filter": {
+                "filter_type": "mcap_sequence",
+                "group_annotation_filter": {"annotation_label_ids": [str(car.annotation_label_id)]},
+            }
+        },
+    )
+
+    assert response.status_code == HTTP_STATUS_OK
+    assert response.json() == [{"label_name": "car", "total_count": 1, "current_count": 1}]
 
 
 def _create_sequences(session: Session, collection_id: UUID, dataset_id: UUID) -> list[UUID]:
