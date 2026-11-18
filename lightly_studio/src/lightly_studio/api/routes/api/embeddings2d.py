@@ -180,7 +180,7 @@ def get_2d_embeddings_status(
         collection_id=collection_id,
     )
     if embedding_model_id is None:
-        raise ValueError("No embedding model configured.")
+        raise NotFoundError(f"Collection {collection_id} has no default embedding model.")
     return Embeddings2DStatus(
         is_computed=embedding_plot_resolver.is_computed(
             session=session, collection_id=collection_id, embedding_model_id=embedding_model_id
