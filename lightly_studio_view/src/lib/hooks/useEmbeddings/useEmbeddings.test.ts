@@ -1,20 +1,29 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as tanstackQuery from '@tanstack/svelte-query';
-import { QueryClient, type QueryFunctionContext } from '@tanstack/svelte-query';
+import { QueryClient, QueryObserver, type QueryFunctionContext } from '@tanstack/svelte-query';
 import { useEmbeddings } from './useEmbeddings';
 
-const mocks = vi.hoisted(() => ({ failuresBeforeSuccess: 0 }));
+const mocks = vi.hoisted(() => ({
+    failuresBeforeSuccess: 0,
+    requestCount: 0,
+    isPending: false,
+    resolveRequest: () => {}
+}));
 
 vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
     get2dEmbeddingsOptions: () => ({
         queryKey: ['embeddings2d'],
-        queryFn: async (context: QueryFunctionContext) => {
-            void context.signal;
+        queryFn: async ({ signal }: QueryFunctionContext) => {
+            mocks.requestCount += 1;
             if (mocks.failuresBeforeSuccess > 0) {
                 mocks.failuresBeforeSuccess -= 1;
                 throw new Error('Server error');
             }
-            return new Blob();
+            if (!mocks.isPending) return new Blob();
+            return new Promise<Blob>((resolve, reject) => {
+                mocks.resolveRequest = () => resolve(new Blob());
+                signal.addEventListener('abort', () => reject(signal.reason));
+            });
         }
     })
 }));
@@ -38,26 +47,28 @@ function getQueryOptions(
     return getOptions();
 }
 
-// TanStack aborts a fetch on unmount only if the query function read the signal.
-async function readsAbortSignal(options: EmbeddingsQueryOptions): Promise<boolean> {
-    let isSignalRead = false;
-    const context = {
-        client: new QueryClient(),
-        queryKey: ['embeddings2d'],
-        meta: undefined,
-        get signal() {
-            isSignalRead = true;
-            return new AbortController().signal;
-        }
-    } as unknown as QueryFunctionContext;
-    await options.queryFn(context);
-    return isSignalRead;
+// Closes the panel while its plot request runs, reopens it, and counts the plot requests.
+async function closeAndReopenPanel(getIsComputing: () => boolean): Promise<number> {
+    mocks.isPending = true;
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const options = { ...getQueryOptions(true, getIsComputing), queryKey: ['embeddings2d'] };
+    const closePanel = new QueryObserver(client, options).subscribe(() => {});
+    await vi.waitFor(() => expect(mocks.requestCount).toBe(1));
+    closePanel();
+
+    const reopenedPanel = new QueryObserver(client, options);
+    reopenedPanel.subscribe(() => {});
+    mocks.resolveRequest();
+    await vi.waitFor(() => expect(reopenedPanel.getCurrentResult().isSuccess).toBe(true));
+    return mocks.requestCount;
 }
 
 describe('useEmbeddings', () => {
     afterEach(() => {
         vi.restoreAllMocks();
         mocks.failuresBeforeSuccess = 0;
+        mocks.requestCount = 0;
+        mocks.isPending = false;
     });
 
     it.each([
@@ -72,16 +83,12 @@ describe('useEmbeddings', () => {
         expect(getQueryOptions().refetchOnWindowFocus).toBe(false);
     });
 
-    it('keeps a running compute alive when the panel closes', async () => {
-        const options = getQueryOptions(true, () => true);
-
-        expect(await readsAbortSignal(options)).toBe(false);
+    it('joins a running compute when the panel closes and opens again', async () => {
+        expect(await closeAndReopenPanel(() => true)).toBe(1);
     });
 
-    it('lets a saved plot download abort when the panel closes', async () => {
-        const options = getQueryOptions(true, () => false);
-
-        expect(await readsAbortSignal(options)).toBe(true);
+    it('aborts a saved plot download when the panel closes', async () => {
+        expect(await closeAndReopenPanel(() => false)).toBe(2);
     });
 
     it('gives onCompute one promise for a compute that settles after the last retry', async () => {
