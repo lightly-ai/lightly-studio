@@ -19,6 +19,11 @@ from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_co
 from tests.helpers_resolvers import create_annotation, create_annotation_label, create_tag
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 
+# The labels on each group of the two sequences that the count tests create. "car" is on both
+# sequences, twice on sequence A. "person" is only on sequence B.
+SEQUENCE_A_GROUP_LABELS = [["car"], ["car"]]
+SEQUENCE_B_GROUP_LABELS = [["car", "person"]]
+
 
 def test_count_annotations_by_collection__counts_distinct_sequences(db_session: Session) -> None:
     """A label on several groups of one sequence counts the sequence once."""
@@ -130,6 +135,7 @@ def test_count_annotations_by_collection__annotation_type(db_session: Session) -
         collection_id=sequence.group_collection.collection_id,
         sample_id=group,
         annotation_label_id=car.annotation_label_id,
+        annotation_type=AnnotationType.OBJECT_DETECTION,
     )
     create_annotation(
         session=db_session,
@@ -151,15 +157,9 @@ def test_count_annotations_by_collection__annotation_type(db_session: Session) -
 def _create_two_annotated_sequences(
     session: Session,
 ) -> tuple[helpers.McapSequenceFixture, helpers.McapSequenceFixture, dict[str, UUID]]:
-    """Sequence A has two groups with "car". Sequence B has one group with "car" and "person"."""
+    """Creates sequences A and B with SEQUENCE_A_GROUP_LABELS and SEQUENCE_B_GROUP_LABELS."""
     sequence_a = helpers.create_mcap_sequence(session=session)
     sequence_b = helpers.add_mcap_sequence(session=session, fixture=sequence_a)
-    groups_a = helpers.add_mcap_ticks_to_sequence(
-        session=session, fixture=sequence_a, ticks=[(100, 100), (200, 200)]
-    )
-    [group_b] = helpers.add_mcap_ticks_to_sequence(
-        session=session, fixture=sequence_b, ticks=[(300, 300)]
-    )
     root_collection_id = sequence_a.sequence_collection.collection_id
     labels = {
         name: create_annotation_label(
@@ -167,13 +167,21 @@ def _create_two_annotated_sequences(
         ).annotation_label_id
         for name in ("car", "person")
     }
-    annotated_groups = [(groups_a[0], "car"), (groups_a[1], "car"), (group_b, "car")]
-    annotated_groups.append((group_b, "person"))
-    for group_id, label_name in annotated_groups:
-        create_annotation(
+    for sequence, group_labels in (
+        (sequence_a, SEQUENCE_A_GROUP_LABELS),
+        (sequence_b, SEQUENCE_B_GROUP_LABELS),
+    ):
+        group_ids = helpers.add_mcap_ticks_to_sequence(
             session=session,
-            collection_id=sequence_a.group_collection.collection_id,
-            sample_id=group_id,
-            annotation_label_id=labels[label_name],
+            fixture=sequence,
+            ticks=[(100 * (index + 1), 100 * (index + 1)) for index in range(len(group_labels))],
         )
+        for group_id, label_names in zip(group_ids, group_labels):
+            for label_name in label_names:
+                create_annotation(
+                    session=session,
+                    collection_id=sequence.group_collection.collection_id,
+                    sample_id=group_id,
+                    annotation_label_id=labels[label_name],
+                )
     return sequence_a, sequence_b, labels
