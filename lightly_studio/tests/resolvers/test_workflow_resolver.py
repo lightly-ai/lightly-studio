@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Generator
+from uuid import UUID
 
 import pytest
+import sqlalchemy
 from pytest_mock import MockerFixture
 from sqlmodel import Session, select
 
@@ -96,3 +98,81 @@ def test_resolve_sample_filter__no_workflow_states(
     )
 
     spy.assert_not_called()
+
+
+def _create_dataset_with_states(db_session: Session, states: list[str | None]) -> tuple[UUID, UUID]:
+    """Create a dataset with one image per entry, and put the images with a state in a batch.
+
+    Returns:
+        The dataset id and its project id.
+    """
+    dataset = create_collection(session=db_session)
+    images = create_images(
+        db_session=db_session,
+        collection_id=dataset.collection_id,
+        images=[ImageStub(path=f"{index}.png") for index in range(len(states))],
+    )
+    project_id = helpers_workflow.create_project(
+        session=db_session, dataset_id=dataset.collection_id
+    )
+    batched = {image.sample_id: state for image, state in zip(images, states) if state is not None}
+    if batched:
+        helpers_workflow.add_batch_files(session=db_session, project_id=project_id, states=batched)
+    return dataset.collection_id, project_id
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_status_counts(db_session: Session) -> None:
+    dataset_id, project_id = _create_dataset_with_states(
+        db_session=db_session,
+        states=[None, None, "not_started", "in_progress", "in_progress", "rework", "accepted"],
+    )
+    # Another project's batch files don't count.
+    _create_dataset_with_states(db_session=db_session, states=["in_review", "accepted"])
+
+    counts = workflow_resolver.get_status_counts(
+        session=db_session, dataset_id=dataset_id, project_id=project_id
+    )
+
+    assert counts == {
+        WorkflowStatus.NOT_IN_WORKFLOW: 2,
+        WorkflowStatus.NOT_STARTED: 1,
+        WorkflowStatus.IN_PROGRESS: 2,
+        WorkflowStatus.IN_REVIEW: 0,
+        WorkflowStatus.REWORK: 1,
+        WorkflowStatus.ACCEPTED: 1,
+    }
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_status_counts__no_batch_files(db_session: Session) -> None:
+    dataset_id, project_id = _create_dataset_with_states(db_session=db_session, states=[None, None])
+
+    counts = workflow_resolver.get_status_counts(
+        session=db_session, dataset_id=dataset_id, project_id=project_id
+    )
+
+    assert counts[WorkflowStatus.NOT_IN_WORKFLOW] == 2
+    assert sum(counts.values()) == 2
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_status_counts__single_query(db_session: Session) -> None:
+    dataset_id, project_id = _create_dataset_with_states(
+        db_session=db_session, states=[None, "not_started", "in_review", "accepted"]
+    )
+    statements: list[str] = []
+
+    def listener(*args: object) -> None:
+        statements.append(str(args[2]))
+
+    engine = db_session.get_bind()
+    sqlalchemy.event.listen(engine, "before_cursor_execute", listener)
+    try:
+        workflow_resolver.get_status_counts(
+            session=db_session, dataset_id=dataset_id, project_id=project_id
+        )
+    finally:
+        sqlalchemy.event.remove(engine, "before_cursor_execute", listener)
+
+    assert len(statements) == 1

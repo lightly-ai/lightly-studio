@@ -5,6 +5,10 @@ import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useW
 import WorkflowStatusFilter from './WorkflowStatusFilter.svelte';
 
 const workflowProject = vi.hoisted(() => ({ projectId: null as string | null }));
+const workflowCounts = vi.hoisted(() => ({
+    counts: null as Record<string, number> | null,
+    params: [] as { collectionId: string; projectId: string | null }[]
+}));
 const navigation = vi.hoisted(() => ({ goto: vi.fn(), replaceState: vi.fn(), pushState: vi.fn() }));
 
 vi.mock('$lib/hooks/useWorkflowProject/useWorkflowProject.svelte', () => ({
@@ -13,6 +17,19 @@ vi.mock('$lib/hooks/useWorkflowProject/useWorkflowProject.svelte', () => ({
             return workflowProject.projectId;
         }
     })
+}));
+vi.mock('$lib/hooks/useWorkflowStatusCounts/useWorkflowStatusCounts.svelte', () => ({
+    useWorkflowStatusCounts: (
+        getParams: () => { collectionId: string; projectId: string | null }
+    ) => {
+        workflowCounts.params.push(getParams());
+        return {
+            get counts() {
+                return workflowCounts.counts;
+            },
+            refreshIfOlderThan: vi.fn()
+        };
+    }
 }));
 vi.mock('$app/navigation', () => navigation);
 
@@ -28,6 +45,8 @@ const OPTIONS = [
 describe('WorkflowStatusFilter', () => {
     beforeEach(() => {
         workflowProject.projectId = null;
+        workflowCounts.counts = null;
+        workflowCounts.params = [];
         useWorkflowStatusFilter('collection-1').clearWorkflowStates();
         vi.clearAllMocks();
     });
@@ -61,5 +80,43 @@ describe('WorkflowStatusFilter', () => {
         expect(navigation.goto).not.toHaveBeenCalled();
         expect(navigation.replaceState).not.toHaveBeenCalled();
         expect(navigation.pushState).not.toHaveBeenCalled();
+    });
+
+    it('shows the project-wide count of each option', () => {
+        workflowProject.projectId = 'project-1';
+        workflowCounts.counts = {
+            not_in_workflow: 1200,
+            not_started: 5,
+            in_progress: 0,
+            in_review: 3,
+            rework: 1,
+            accepted: 40
+        };
+
+        render(WorkflowStatusFilter, { collectionId: 'collection-1' });
+
+        expect(workflowCounts.params[0]).toEqual({
+            collectionId: 'collection-1',
+            projectId: 'project-1'
+        });
+        expect(
+            screen
+                .getAllByTestId('workflow-status-filter-count')
+                .map((row) => row.textContent?.trim())
+        ).toEqual(['1,200', '5', '0', '3', '1', '40']);
+    });
+
+    it('shows no counts while they load', () => {
+        workflowProject.projectId = 'project-1';
+
+        render(WorkflowStatusFilter, { collectionId: 'collection-1' });
+
+        expect(screen.queryAllByTestId('workflow-status-filter-count')).toHaveLength(0);
+    });
+
+    it('passes no project to the counts when the dataset has none', () => {
+        render(WorkflowStatusFilter, { collectionId: 'collection-1' });
+
+        expect(workflowCounts.params[0]).toEqual({ collectionId: 'collection-1', projectId: null });
     });
 });

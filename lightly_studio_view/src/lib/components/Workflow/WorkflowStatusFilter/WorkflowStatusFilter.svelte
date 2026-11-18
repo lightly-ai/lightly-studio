@@ -4,6 +4,8 @@
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { WORKFLOW_STATES } from '$lib/components/Workflow/workflowFileTexts';
     import { useWorkflowProject } from '$lib/hooks/useWorkflowProject/useWorkflowProject.svelte';
+    import { useWorkflowStatusCounts } from '$lib/hooks/useWorkflowStatusCounts/useWorkflowStatusCounts.svelte';
+    import { formatInteger } from '$lib/utils/formatter';
     import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter';
 
     interface Props {
@@ -20,6 +22,11 @@
     ];
 
     const project = useWorkflowProject(() => collectionId);
+    // Project-wide counts: they ignore the other filters on purpose.
+    const statusCounts = useWorkflowStatusCounts(() => ({
+        collectionId,
+        projectId: project.projectId
+    }));
     const { selectedWorkflowStates, toggleWorkflowState, setWorkflowStates } = $derived(
         useWorkflowStatusFilter(collectionId)
     );
@@ -27,7 +34,10 @@
     const items = $derived(
         OPTIONS.map((option) => ({
             ...option,
-            selected: $selectedWorkflowStates.includes(option.id)
+            selected: $selectedWorkflowStates.includes(option.id),
+            count: statusCounts.counts
+                ? formatInteger(statusCounts.counts[option.id] ?? 0)
+                : undefined
         }))
     );
 </script>
