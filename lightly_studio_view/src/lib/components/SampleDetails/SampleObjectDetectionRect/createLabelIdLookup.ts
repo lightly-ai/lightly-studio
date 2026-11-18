@@ -3,6 +3,8 @@ interface LabelIdLookupParams {
     getLabels: () => Promise<{ annotation_label_name: string; annotation_label_id?: string }[]>;
     /** Creates the class and returns its ID. */
     createLabel: (className: string) => Promise<string>;
+    /** The dataset of the classes. A creation is reused inside one dataset only. */
+    getDatasetId: () => string;
 }
 
 /**
@@ -10,7 +12,11 @@ interface LabelIdLookupParams {
  * missing. Boxes drawn while a class is created share that creation, so a sticky new class is
  * created once. A failed creation is forgotten, so the next box tries again.
  */
-export const createLabelIdLookup = ({ getLabels, createLabel }: LabelIdLookupParams) => {
+export const createLabelIdLookup = ({
+    getLabels,
+    createLabel,
+    getDatasetId
+}: LabelIdLookupParams) => {
     const creations = new Map<string, Promise<string>>();
 
     return async (className: string): Promise<string> => {
@@ -19,12 +25,15 @@ export const createLabelIdLookup = ({ getLabels, createLabel }: LabelIdLookupPar
             (label) => label.annotation_label_name === className
         )?.annotation_label_id;
         if (existing) return existing;
+        // The component stays mounted across a dataset switch, so a creation of the dataset
+        // that is left must not answer for the one that is opened.
+        const creationKey = `${getDatasetId()}\n${className}`;
         // No await between the lookup and the set, so a second box always finds the creation.
-        let creation = creations.get(className);
+        let creation = creations.get(creationKey);
         if (!creation) {
             creation = createLabel(className);
-            creations.set(className, creation);
-            creation.catch(() => creations.delete(className));
+            creations.set(creationKey, creation);
+            creation.catch(() => creations.delete(creationKey));
         }
         return creation;
     };
