@@ -97,19 +97,6 @@ def test_assert_lock_diff_narrow__change_to_first_of_duplicate_blocks_raises():
         lock.assert_lock_diff_narrow(SAMPLE_LOCK_WITH_DUPLICATE, after, package="lightly-studio")
 
 
-def test_parse_lock_blocks():
-    blocks = lock._parse_lock_blocks(SAMPLE_LOCK)
-    assert set(blocks) == {"", "alpha", "lightly-studio"}
-    assert 'version = "1.0.5"' in blocks["lightly-studio"][0]
-
-
-def test_parse_lock_blocks__preserves_duplicate_package_blocks():
-    blocks = lock._parse_lock_blocks(SAMPLE_LOCK_WITH_DUPLICATE)
-    assert len(blocks["alpha"]) == 2
-    assert "< '3.11'" in blocks["alpha"][0]
-    assert ">= '3.11'" in blocks["alpha"][1]
-
-
 def test_assert_lock_diff_narrow__reordered_resolution_markers():
     markers = """resolution-markers = [
     "python_full_version < '3.11'",
@@ -128,3 +115,16 @@ def test_assert_lock_diff_narrow__changed_resolution_marker_raises():
     after = SAMPLE_LOCK_WITH_DUPLICATE.replace("< '3.11'", "< '3.12'")
     with pytest.raises(PrepareReleaseError, match="alpha"):
         lock.assert_lock_diff_narrow(SAMPLE_LOCK_WITH_DUPLICATE, after, package="lightly-studio")
+
+
+def test_parse_lock_blocks():
+    blocks = lock._parse_lock_blocks(SAMPLE_LOCK)
+    assert set(blocks) == {"", "alpha", "lightly-studio"}
+    assert 'version = "1.0.5"' in blocks["lightly-studio"][0]
+
+
+def test_parse_lock_blocks__preserves_duplicate_package_blocks():
+    blocks = lock._parse_lock_blocks(SAMPLE_LOCK_WITH_DUPLICATE)
+    assert len(blocks["alpha"]) == 2
+    assert "< '3.11'" in blocks["alpha"][0]
+    assert ">= '3.11'" in blocks["alpha"][1]
