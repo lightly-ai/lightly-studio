@@ -541,7 +541,7 @@ describe('useSyntaxCompletion', () => {
 
         expect(result.suggestions[0].detail).toBe('Video.fps: float');
         expect(result.suggestions[0].documentation).toEqual({
-            value: 'Frames per second. Equality only (`=`, `!=`).'
+            value: 'Frames per second.'
         });
     });
 

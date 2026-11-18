@@ -19,23 +19,30 @@ const region: EmbeddingRegion = {
         { x: 1, y: 1 }
     ]
 };
+const regionSelection = { embeddingRegion: region, sampleIds: [] };
+const pickSelection = { embeddingRegion: null, sampleIds: ['annotation-1'] };
 
 describe('useAnnotationPlotSelection', () => {
     beforeEach(() => {
         clearAnnotationPlotSelection('coll-1');
     });
 
-    it('stores the plot region in a shared store', () => {
-        const { annotationPlotRegion, saveRegion } = useAnnotationPlotSelection();
-        saveRegion(region);
+    it('stores the plot region and the picks in a shared store', () => {
+        const { annotationPlotRegion, annotationPlotPickedSampleIds, savePlotSelection } =
+            useAnnotationPlotSelection();
+        savePlotSelection(regionSelection);
         expect(get(annotationPlotRegion)).toEqual(region);
+
+        savePlotSelection(pickSelection);
+        expect(get(annotationPlotRegion)).toBeNull();
+        expect(get(annotationPlotPickedSampleIds)).toEqual(['annotation-1']);
     });
 
     it('clearAnnotationPlotSelection resets the store', () => {
-        const { annotationPlotRegion, saveRegion } = useAnnotationPlotSelection();
-        saveRegion(region);
+        const { annotationPlotPickedSampleIds, savePlotSelection } = useAnnotationPlotSelection();
+        savePlotSelection(pickSelection);
         clearAnnotationPlotSelection('coll-1');
-        expect(get(annotationPlotRegion)).toBeNull();
+        expect(get(annotationPlotPickedSampleIds)).toEqual([]);
     });
 
     it('clearAnnotationPlotSelection also clears the plot-selection count', () => {
@@ -70,9 +77,12 @@ describe('useEmbeddingFilterForAnnotations', () => {
         expect(get(effectiveCount)).toBe(2);
     });
 
-    it('clearFilter clears the region, count and range selection', () => {
-        const { saveRegion } = useAnnotationPlotSelection();
-        saveRegion(region);
+    it.each([
+        { name: 'region', selection: regionSelection },
+        { name: 'picks', selection: pickSelection }
+    ])('clearFilter clears the $name, count and range selection', ({ selection }) => {
+        const { savePlotSelection } = useAnnotationPlotSelection();
+        savePlotSelection(selection);
         setPlotSelectionCount('coll-1', 3);
 
         const { clearFilter, effectiveCount } = useEmbeddingFilterForAnnotations(
@@ -81,8 +91,10 @@ describe('useEmbeddingFilterForAnnotations', () => {
         );
         clearFilter();
 
-        const { annotationPlotRegion } = useAnnotationPlotSelection();
+        const { annotationPlotRegion, annotationPlotPickedSampleIds } =
+            useAnnotationPlotSelection();
         expect(get(annotationPlotRegion)).toBeNull();
+        expect(get(annotationPlotPickedSampleIds)).toEqual([]);
         expect(get(effectiveCount)).toBe(0);
         expect(setRangeSelection).toHaveBeenCalledWith('coll-1', null);
     });
