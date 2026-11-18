@@ -6,6 +6,7 @@ import { getPlotComputeView, isPlotRequestEnabled, type PlotComputeView } from '
 interface UsePlotComputeGateParams {
     getCollectionId: () => string;
     getIsAxesLayout: () => boolean;
+    getPlotRequestKey: () => string;
 }
 
 interface UsePlotComputeGateReturn {
@@ -24,15 +25,21 @@ const computeStartTimes = writable<Record<string, number>>({});
 const pendingComputes = new Map<string, Set<Promise<unknown>>>();
 
 export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotComputeGateReturn {
-    const { getCollectionId, getIsAxesLayout } = params;
+    const { getCollectionId, getIsAxesLayout, getPlotRequestKey } = params;
     const statusQuery = useEmbeddingPlotStatus(getCollectionId);
     const refetchStatus = useRefetchEmbeddingPlotStatus();
     const startTimes = fromStore(computeStartTimes);
 
     const startedAt = $derived(startTimes.current[getCollectionId()] ?? null);
+    const plotRequestKey = $derived(getPlotRequestKey());
+    // Embeddings can change while the panel is open, so a new plot request waits for a new status.
+    let checkedPlotRequestKey = $state(untrack(getPlotRequestKey));
     // A cached status can be outdated after embeddings were added, so only a fresh one decides.
     // A compute started in this tab is the exception: the server answers no request while it runs.
-    const isStatusTrusted = $derived(statusQuery.isFetchedAfterMount || startedAt !== null);
+    const isStatusTrusted = $derived(
+        startedAt !== null ||
+            (statusQuery.isFetchedAfterMount && checkedPlotRequestKey === plotRequestKey)
+    );
     const freshStatus = $derived(isStatusTrusted ? statusQuery.data : undefined);
     // An error from before this mount stays in the cache until the new request finishes.
     const isStatusError = $derived(statusQuery.isError && statusQuery.isFetchedAfterMount);
@@ -77,6 +84,14 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
             }
         );
     }
+
+    $effect(() => {
+        const key = plotRequestKey;
+        if (key === untrack(() => checkedPlotRequestKey)) return;
+        void untrack(() => statusQuery.refetch()).then(() => {
+            checkedPlotRequestKey = key;
+        });
+    });
 
     $effect(() => {
         if (startedAt === null || freshStatus?.is_computed !== true) return;
