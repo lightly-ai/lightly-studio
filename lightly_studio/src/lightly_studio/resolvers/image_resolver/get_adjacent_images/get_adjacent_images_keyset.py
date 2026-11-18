@@ -41,20 +41,30 @@ def get_adjacent_images_keyset(
         order_by: Requested sort; ``None`` means the default ``file_path_abs`` sort.
 
     Returns:
-        The adjacency result, or ``None`` if the anchor is filtered out.
+        The adjacency result, or ``None`` if the anchor is not in the collection. An anchor
+        outside the filter keeps its place: its neighbours are the closest matching samples.
     """
     sort_keys = _keyset_sort_keys(order_by)
+    sort_columns = [column for column, _ in sort_keys]
 
     anchor = keyset_seek.fetch_anchor(
         session=session,
         query=_keyset_query(
-            columns=[column for column, _ in sort_keys],
-            collection_id=collection_id,
-            filters=filters,
+            columns=sort_columns, collection_id=collection_id, filters=filters
         ).where(col(ImageTable.sample_id) == sample_id),
     )
+    anchor_in_query = anchor is not None
+    if anchor is None and filters:
+        # The sample may have left the filter while open (e.g. a reviewer accepted it under an
+        # "In review" filter). Seek from its sort-key position (a cursor) all the same.
+        anchor = keyset_seek.fetch_anchor(
+            session=session,
+            query=_keyset_query(
+                columns=sort_columns, collection_id=collection_id, filters=None
+            ).where(col(ImageTable.sample_id) == sample_id),
+        )
     if anchor is None:
-        # The sample is not part of the (filtered) collection.
+        # The sample is not part of the collection.
         return None
 
     return keyset_seek.get_adjacent_result(
@@ -67,6 +77,7 @@ def get_adjacent_images_keyset(
         ),
         sort_keys=sort_keys,
         anchor=anchor,
+        anchor_in_query=anchor_in_query,
     )
 
 

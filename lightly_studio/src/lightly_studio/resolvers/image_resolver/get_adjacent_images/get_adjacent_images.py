@@ -43,8 +43,10 @@ def get_adjacent_images(  # noqa: PLR0913
         order_by: Requested sort; ``None`` means the default ``file_path_abs`` sort.
 
     Returns:
-        The adjacency result, or ``None`` if the anchor is not in the (filtered)
-        collection.
+        The adjacency result, or ``None`` if the anchor is not in the collection. An
+        anchor that no longer matches the filters (e.g. a reviewer accepted it under an
+        "In review" filter) keeps its place: its neighbours are the closest matching
+        samples in the sort order, and it still counts in the position and total.
     """
     # Look the project up once: for the workflow status filter and the neighbours' batches.
     project_id = workflow_resolver.get_dataset_project_id(

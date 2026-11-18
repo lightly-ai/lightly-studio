@@ -615,3 +615,161 @@ def test_get_adjacent_images__no_neighbour_workflow_without_project(db_session: 
     assert result is not None
     assert result.previous_workflow is None
     assert result.next_workflow is None
+
+
+@pytest.mark.parametrize(
+    ("order_by", "text_embedding"),
+    [
+        # Plain sort: keyset path.
+        (None, None),
+        # Joined sort: window path.
+        ([OrderByMetadataField("score")], None),
+        # Similarity: window path with the similarity join.
+        (None, [1.0, 0.0]),
+    ],
+)
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_images__keeps_place_when_sample_left_the_filter(
+    db_session: Session,
+    order_by: list[OrderByExpression] | None,
+    text_embedding: list[float] | None,
+) -> None:
+    """A reviewer accepted the open sample, so it no longer matches "In review".
+
+    Prev/next still follow the filtered order from the sample's position, and the sample keeps
+    its place in the position and total, as in the grid that has not reloaded yet.
+    """
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+    embedding_model = helpers_resolvers.create_embedding_model(
+        session=db_session,
+        collection_id=collection_id,
+        embedding_model_name="embedding-for-adjacency",
+        embedding_dimension=2,
+        set_as_default=True,
+    )
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/images/{name}.png"
+        )
+        for name in ["a", "b", "c", "d", "e"]
+    ]
+    for index, image in enumerate(images):
+        # The angle to [1, 0] grows with the index, so similarity order is a, b, c, d, e.
+        helpers_resolvers.create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding_model_id=embedding_model.embedding_model_id,
+            embedding=[1.0, index * 0.5],
+        )
+    metadata_resolver.bulk_update_metadata(
+        db_session, [(image.sample_id, {"score": index}) for index, image in enumerate(images)]
+    )
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={
+            images[0].sample_id: "in_review",
+            images[1].sample_id: "in_review",
+            # The open sample, just accepted.
+            images[2].sample_id: "accepted",
+            images[3].sample_id: "accepted",
+            images[4].sample_id: "in_review",
+        },
+    )
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[2].sample_id,
+        collection_id=collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(workflow_states=[WorkflowStatus.IN_REVIEW])),
+        text_embedding=text_embedding,
+        order_by=order_by,
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == images[1].sample_id
+    assert result.sample_id == images[2].sample_id
+    assert result.next_sample_id == images[4].sample_id
+    assert result.current_sample_position == 3
+    assert result.total_count == 4
+    assert result.next_workflow is not None
+    assert result.next_workflow.state == WorkflowStatus.IN_REVIEW
+
+
+@pytest.mark.parametrize("order_by", [None, [OrderByMetadataField("score")]])
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_images__sample_outside_filter_at_the_edges(
+    db_session: Session,
+    order_by: list[OrderByExpression] | None,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    collection_id = collection.collection_id
+    images = [
+        helpers_resolvers.create_image(
+            session=db_session, collection_id=collection_id, file_path_abs=f"/images/{name}.png"
+        )
+        for name in ["a", "b", "c"]
+    ]
+    metadata_resolver.bulk_update_metadata(
+        db_session, [(image.sample_id, {"score": index}) for index, image in enumerate(images)]
+    )
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={
+            images[0].sample_id: "rework",
+            images[1].sample_id: "in_review",
+            images[2].sample_id: "accepted",
+        },
+    )
+    filters = ImageFilter(sample_filter=SampleFilter(workflow_states=[WorkflowStatus.IN_REVIEW]))
+
+    first = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[0].sample_id,
+        collection_id=collection_id,
+        filters=filters,
+        order_by=order_by,
+    )
+    last = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=images[2].sample_id,
+        collection_id=collection_id,
+        filters=filters,
+        order_by=order_by,
+    )
+
+    assert first is not None
+    assert (first.previous_sample_id, first.next_sample_id) == (None, images[1].sample_id)
+    assert (first.current_sample_position, first.total_count) == (1, 2)
+    assert last is not None
+    assert (last.previous_sample_id, last.next_sample_id) == (images[1].sample_id, None)
+    assert (last.current_sample_position, last.total_count) == (2, 2)
+
+
+@pytest.mark.parametrize("order_by", [None, [OrderByMetadataField("score")]])
+def test_get_adjacent_images__sample_of_another_collection_with_filter(
+    db_session: Session,
+    order_by: list[OrderByExpression] | None,
+) -> None:
+    collection = helpers_resolvers.create_collection(session=db_session)
+    other = helpers_resolvers.create_collection(session=db_session, collection_name="other")
+    image = helpers_resolvers.create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/images/a.png"
+    )
+    helpers_resolvers.create_image(
+        session=db_session, collection_id=other.collection_id, file_path_abs="/images/b.png"
+    )
+
+    result = image_resolver.get_adjacent_images(
+        session=db_session,
+        sample_id=image.sample_id,
+        collection_id=other.collection_id,
+        filters=ImageFilter(sample_filter=SampleFilter(sample_ids=[image.sample_id])),
+        order_by=order_by,
+    )
+
+    assert result is None

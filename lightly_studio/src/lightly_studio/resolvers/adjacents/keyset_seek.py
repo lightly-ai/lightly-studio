@@ -26,21 +26,25 @@ SortColumn = ColumnElement[Any] | Mapped[Any]
 SortKey = tuple[SortColumn, bool]
 
 
-def get_adjacent_result(
+def get_adjacent_result(  # noqa: PLR0913
     session: Session,
     sample_id: UUID,
     base_query: SelectOfScalar[UUID],
     sort_keys: list[SortKey],
     anchor: tuple[Any, ...],
+    anchor_in_query: bool = True,
 ) -> AdjacentResultView:
     """Assemble the adjacency result from two seeks and two counts.
 
     Args:
         session: Database session.
-        sample_id: The anchor sample, already known to be in ``base_query``.
+        sample_id: The anchor sample.
         base_query: Selects the candidate sample ids, filters applied.
         sort_keys: The total, deterministic ordering to seek along.
         anchor: The anchor's sort-key values, positionally aligned with ``sort_keys``.
+        anchor_in_query: Whether ``base_query`` returns the anchor. When it does not (the
+            sample left the filter while open), the seeks still start from the anchor's
+            sort-key position, and the anchor is counted as if it still matched.
 
     Returns:
         The neighbours plus the anchor's 1-based position and the total.
@@ -69,7 +73,7 @@ def get_adjacent_result(
             ),
         )
         + 1,
-        total_count=_count(session=session, query=base_query),
+        total_count=_count(session=session, query=base_query) + (0 if anchor_in_query else 1),
     )
 
 

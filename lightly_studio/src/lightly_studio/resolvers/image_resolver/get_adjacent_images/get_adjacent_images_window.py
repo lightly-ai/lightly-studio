@@ -15,7 +15,7 @@ from uuid import UUID
 import sqlalchemy
 from sqlalchemy.sql.elements import ColumnElement
 from sqlmodel import Session, col, select
-from sqlmodel.sql.expression import Select
+from sqlmodel.sql.expression import Select, SelectOfScalar
 
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderByField
@@ -51,7 +51,8 @@ def get_adjacent_images_window(  # noqa: PLR0913
         order_by: Requested dataset sort; may be empty for the default sort.
 
     Returns:
-        The adjacency result, or ``None`` if the anchor is filtered out.
+        The adjacency result, or ``None`` if the anchor is not in the collection. An anchor
+        outside the filter keeps its place: its neighbours are the closest matching samples.
     """
     # TODO(Horatiu, 06/2026): Unify ordering for adjacency queries. Similarity sort is
     # injected via ``ordering_expression`` and rebuilds the window query, while dataset
@@ -69,13 +70,44 @@ def get_adjacent_images_window(  # noqa: PLR0913
         )
 
     if filters:
-        base_query = filters.apply(base_query)
+        result = adjacents.get_sample_adjacent_info(
+            session=session,
+            sample_id=sample_id,
+            samples_query=filters.apply(base_query),
+        )
+        if result is not None:
+            return result
+        # The sample may have left the filter while open (e.g. a reviewer accepted it under an
+        # "In review" filter). Keep it in the window so its neighbours are the closest matching
+        # samples; a sample outside the collection still finds no row.
+        base_query = base_query.where(
+            sqlalchemy.or_(
+                col(ImageTable.sample_id) == sample_id,
+                col(ImageTable.sample_id).in_(
+                    _filtered_sample_ids(collection_id=collection_id, filters=filters)
+                ),
+            )
+        )
 
     return adjacents.get_sample_adjacent_info(
         session=session,
         sample_id=sample_id,
         samples_query=base_query,
     )
+
+
+def _filtered_sample_ids(collection_id: UUID, filters: ImageFilter) -> SelectOfScalar[UUID]:
+    """Select the ids of the collection's images that match the filters.
+
+    Not correlated: it runs inside a query over the same image and sample tables.
+    """
+    query = (
+        select(col(ImageTable.sample_id))
+        .select_from(ImageTable)
+        .join(ImageTable.sample)
+        .where(col(SampleTable.collection_id) == collection_id)
+    )
+    return filters.apply(query).correlate(None)
 
 
 def _base_query(
