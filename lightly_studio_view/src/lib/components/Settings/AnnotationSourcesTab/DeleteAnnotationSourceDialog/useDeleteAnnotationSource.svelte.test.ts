@@ -1,5 +1,6 @@
 import { get } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from '$lib/api/ApiError';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 import { useDeleteAnnotationSource } from './useDeleteAnnotationSource.svelte';
 
@@ -120,7 +121,8 @@ describe('useDeleteAnnotationSource', () => {
             'these evaluation runs first.';
         setup('predictions');
 
-        mocks.onError?.({ error: message });
+        // The API client turns an HTTP error into an `ApiError`, so the hook never sees the body.
+        mocks.onError?.(ApiError.fromResponseBody({ error: message }, 409));
 
         expect(mocks.toastError).toHaveBeenCalledWith(message);
         expect(mocks.onDeleted).not.toHaveBeenCalled();
