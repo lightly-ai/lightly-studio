@@ -64,7 +64,7 @@
     const status = $derived(updating ? 'Updating…' : undefined);
     // No summary until the values load, so the total in "N of M" is known.
     const headerSummary = $derived(
-        buckets.length > 0 ? `${selectedValues.length} of ${buckets.length}` : undefined
+        buckets.length > 0 ? `${selectedValues.length} of ${options.length}` : undefined
     );
     const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
 </script>

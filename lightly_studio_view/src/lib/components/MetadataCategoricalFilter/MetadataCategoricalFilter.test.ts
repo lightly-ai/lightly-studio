@@ -101,6 +101,14 @@ describe('MetadataCategoricalFilter', () => {
             expect(screen.getByText('2 of 3')).toBeVisible();
         });
 
+        it('counts only selectable values in "N of M"', () => {
+            const other = { id: 'other', kind: 'other' as const, label: 'Other', count: 5 };
+            render(MetadataCategoricalFilter, {
+                props: { ...listProps, buckets: [city, rural, other], expanded: false }
+            });
+            expect(screen.getByText('2 of 2')).toBeVisible();
+        });
+
         it('shows no summary until the values are loaded', () => {
             render(MetadataCategoricalFilter, {
                 props: { ...listProps, buckets: [], expanded: false }
