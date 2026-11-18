@@ -1,7 +1,7 @@
 import { deleteAnnotationSourceMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { createMutation } from '@tanstack/svelte-query';
 import { useGlobalStorage, useInvalidateAnnotationSourceQueries } from '$lib/hooks';
-import { getApiErrorMessage } from '$lib/utils';
+import { getErrorMessage } from '$lib/api/ApiError';
 import { toast } from 'svelte-sonner';
 
 interface Params {
@@ -36,7 +36,7 @@ export const useDeleteAnnotationSource = (getParams: () => Params) => {
         },
         onError: (error) => {
             toast.error(
-                getApiErrorMessage(error, 'Could not delete the annotation source. Try again.')
+                getErrorMessage(error, 'Could not delete the annotation source. Try again.')
             );
         }
     }));
