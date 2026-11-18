@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { DATASET_NAV, followsBatchOrder, toWorkflowSampleURL } from './datasetNavigation';
+import {
+    DATASET_NAV,
+    followsBatchOrder,
+    toBatchSampleURL,
+    toWorkflowSampleURL
+} from './datasetNavigation';
 
 describe('toWorkflowSampleURL', () => {
     it('adds the batch params for a sample in a batch', () => {
@@ -17,6 +22,18 @@ describe('toWorkflowSampleURL', () => {
         );
         expect(toWorkflowSampleURL('/datasets/d/image/c/images/s', undefined)).toBe(
             '/datasets/d/image/c/images/s'
+        );
+    });
+});
+
+describe('toBatchSampleURL', () => {
+    it('keeps the current batch params and drops the hash', () => {
+        const current = new URL(
+            'http://localhost/datasets/d/image/c/images/s1?workflow_project=p1&workflow_batch=b1#tick=3'
+        );
+
+        expect(toBatchSampleURL('/datasets/d/image/c/images/s2', current)).toBe(
+            '/datasets/d/image/c/images/s2?workflow_project=p1&workflow_batch=b1'
         );
     });
 });

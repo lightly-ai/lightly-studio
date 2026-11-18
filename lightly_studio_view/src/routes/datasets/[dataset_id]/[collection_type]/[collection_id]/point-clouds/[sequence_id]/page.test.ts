@@ -22,7 +22,10 @@ const adjacentSequences = vi.hoisted(() => ({
 
 const SEQUENCE_URL =
     'http://localhost/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-1';
-const pageState = vi.hoisted(() => ({ url: new URL('http://localhost/') }));
+const pageState = vi.hoisted(() => ({
+    url: new URL('http://localhost/'),
+    state: {} as App.PageState
+}));
 const workflowMocks = vi.hoisted(() => ({
     file: undefined as WorkflowFile | undefined,
     params: [] as unknown[],
@@ -61,7 +64,9 @@ vi.mock('$app/state', () => ({
             return pageState.url;
         },
         params: { dataset_id: 'dataset-1' },
-        state: {}
+        get state() {
+            return pageState.state;
+        }
     }
 }));
 
@@ -166,6 +171,7 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         summaryData = undefined;
         adjacentSequences.data = undefined;
         pageState.url = new URL(SEQUENCE_URL);
+        pageState.state = {};
         workflowMocks.file = undefined;
         workflowMocks.params = [];
         workflowMocks.mutateAsync.mockResolvedValue(undefined);
@@ -194,6 +200,74 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
             );
             await user.click(within(header).getByRole('button', { name: 'Submit for review' }));
             expect(workflowMocks.mutateAsync).toHaveBeenCalledWith('in_review');
+        });
+
+        it('steps through the batch in batch order when opened from the batch file list', async () => {
+            workflowMocks.file = {
+                ...workflowFile,
+                sample_id: 'sequence-1',
+                previous_sample_id: 'sequence-7',
+                next_sample_id: 'sequence-9'
+            };
+            // The grid neighbours are not used in batch order.
+            adjacentSequences.data = { previous_sample_id: 'grid-0', next_sample_id: 'grid-2' };
+            const user = userEvent.setup();
+            render(Page, { props: { data: mockPageData } });
+
+            await user.click(await screen.findByRole('button', { name: 'Previous sequence' }));
+            await user.click(screen.getByRole('button', { name: 'Next sequence' }));
+
+            expect(vi.mocked(goto).mock.calls).toEqual([
+                [
+                    '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-7?workflow_project=project-1&workflow_batch=batch-1'
+                ],
+                [
+                    '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-9?workflow_project=project-1&workflow_batch=batch-1'
+                ]
+            ]);
+        });
+
+        it('disables next at the last file of the batch', async () => {
+            workflowMocks.file = {
+                ...workflowFile,
+                sample_id: 'sequence-1',
+                previous_sample_id: 'sequence-7',
+                next_sample_id: null
+            };
+            adjacentSequences.data = { previous_sample_id: 'grid-0', next_sample_id: 'grid-2' };
+            render(Page, { props: { data: mockPageData } });
+
+            expect(await screen.findByRole('button', { name: 'Next sequence' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Previous sequence' })).toBeEnabled();
+        });
+
+        it('disables previous at the first file of the batch', async () => {
+            workflowMocks.file = {
+                ...workflowFile,
+                sample_id: 'sequence-1',
+                previous_sample_id: null,
+                next_sample_id: 'sequence-9'
+            };
+            adjacentSequences.data = { previous_sample_id: 'grid-0', next_sample_id: 'grid-2' };
+            render(Page, { props: { data: mockPageData } });
+
+            expect(await screen.findByRole('button', { name: 'Previous sequence' })).toBeDisabled();
+            expect(screen.getByRole('button', { name: 'Next sequence' })).toBeEnabled();
+        });
+
+        it('keeps grid order when opened from the grid', async () => {
+            pageState.state = { nav: 'dataset' };
+            workflowMocks.file = { ...workflowFile, sample_id: 'sequence-1' };
+            adjacentSequences.data = { previous_sample_id: null, next_sample_id: 'grid-2' };
+            const user = userEvent.setup();
+            render(Page, { props: { data: mockPageData } });
+
+            await user.click(await screen.findByRole('button', { name: 'Next sequence' }));
+
+            expect(goto).toHaveBeenCalledExactlyOnceWith(
+                '/datasets/dataset-1/mcap/collection-1/point-clouds/grid-2',
+                { state: { nav: 'dataset' } }
+            );
         });
 
         it('locks editing when it is not the user’s turn', async () => {

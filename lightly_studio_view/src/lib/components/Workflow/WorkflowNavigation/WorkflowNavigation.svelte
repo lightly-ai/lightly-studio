@@ -4,6 +4,7 @@
     import SteppingNavigation from '$lib/components/SteppingNavigation/SteppingNavigation.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import { routeHelpers } from '$lib/routes';
+    import { toBatchSampleURL } from '$lib/components/Workflow/datasetNavigation';
 
     interface Props {
         previousSampleId: string | null;
@@ -14,15 +15,17 @@
 
     const { context } = useAnnotationLabelContext();
 
-    // Keep the batch parameters so the next sample opens in the same batch.
     const toURL = (sampleId: string | null) =>
         sampleId
-            ? `${routeHelpers.toSample({
-                  sampleId,
-                  datasetId: page.params.dataset_id!,
-                  collectionType: page.params.collection_type!,
-                  collectionId: page.params.collection_id!
-              })}${page.url.search}`
+            ? toBatchSampleURL(
+                  routeHelpers.toSample({
+                      sampleId,
+                      datasetId: page.params.dataset_id!,
+                      collectionType: page.params.collection_type!,
+                      collectionId: page.params.collection_id!
+                  }),
+                  page.url
+              )
             : null;
 
     const previousURL = $derived(toURL(previousSampleId));

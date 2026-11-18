@@ -6,11 +6,7 @@
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
     import { getTickNumberFromHash } from './getTickNumberFromHash';
     import { routeHelpers } from '$lib/routes';
-    import {
-        datasetNavOptions,
-        toWorkflowSampleURL
-    } from '$lib/components/Workflow/datasetNavigation';
-    import { useAdjacentMcapSequences } from '$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences';
+    import { useSequenceNeighbours } from './useSequenceNeighbours.svelte';
     import {
         createWorkflowFileContext,
         getWorkflowParams
@@ -27,7 +23,7 @@
     } = $derived(data);
     // A sequence opened from a hosted workflow batch is that batch's file: the header shows
     // its state and transitions, and editing follows whose turn it is.
-    createWorkflowFileContext(() => getWorkflowParams(page.url, sequenceId));
+    const workflow = createWorkflowFileContext(() => getWorkflowParams(page.url, sequenceId));
     const tickNumber = $derived(getTickNumberFromHash(page.url.hash));
     // The workspace loads the same summary, so this query is deduplicated by TanStack.
     const { summary } = useMcapSequenceSummary({
@@ -61,33 +57,12 @@
         { label: summary.data?.file_name ?? `Point cloud ${sequenceId}` }
     ]);
 
-    // Neighbours in the sequences grid order of the SEQUENCE collection.
-    const { query: adjacentSequencesQuery } = $derived(
-        useAdjacentMcapSequences({ sampleId: sequenceId, collectionId })
-    );
-    const adjacent = $derived(adjacentSequencesQuery.data);
-    const previousSequenceId = $derived(adjacent?.previous_sample_id);
-    const nextSequenceId = $derived(adjacent?.next_sample_id);
-
-    // Opens on the first tick: the tick hash of the current sequence is not carried over. A
-    // neighbour in a batch opens in workflow mode and keeps stepping in grid order.
-    const goToSequence = (
-        targetSequenceId: string,
-        workflow: Parameters<typeof toWorkflowSampleURL>[1]
-    ) => {
-        void goto(
-            toWorkflowSampleURL(
-                routeHelpers.toPointCloudLabeling({
-                    datasetId: page.params.dataset_id!,
-                    collectionType,
-                    collectionId,
-                    sequenceId: targetSequenceId
-                }),
-                workflow
-            ),
-            datasetNavOptions
-        );
-    };
+    const neighbours = useSequenceNeighbours({
+        getSequenceId: () => sequenceId,
+        getCollectionId: () => collectionId,
+        getCollectionType: () => collectionType,
+        workflow
+    });
 
     const updateTickNumber = (nextTickNumber: number) => {
         const url = new URL(page.url);
@@ -116,12 +91,8 @@
             {sourcePath}
             {tickNumber}
             onTickChange={updateTickNumber}
-            onPreviousSequence={previousSequenceId
-                ? () => goToSequence(previousSequenceId, adjacent?.previous_workflow)
-                : undefined}
-            onNextSequence={nextSequenceId
-                ? () => goToSequence(nextSequenceId, adjacent?.next_workflow)
-                : undefined}
+            onPreviousSequence={neighbours.onPreviousSequence}
+            onNextSequence={neighbours.onNextSequence}
         />
     </div>
 </div>

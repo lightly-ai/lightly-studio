@@ -24,6 +24,15 @@ export function toWorkflowSampleURL(
     return `${sampleURL}?${params}`;
 }
 
+/**
+ * The URL of a neighbour in batch order: it keeps the current batch params, so the neighbour
+ * opens in the same batch. The hash (e.g. the MCAP tick) belongs to the current sample and is
+ * dropped.
+ */
+export function toBatchSampleURL(sampleURL: string, currentURL: URL): string {
+    return `${sampleURL}${currentURL.search}`;
+}
+
 /** Whether prev/next steps through the batch instead of the dataset grid. */
 export function followsBatchOrder({
     workflowActive,
