@@ -13,6 +13,7 @@ comments. The language guides add the rules for Python, the backend, and the fro
 - Look at how the nearby code does a similar task. Use the same pattern if it is a good design.
 - Old code is not always correct. Do not copy a pattern that breaks a rule in this skill or in the
   language guides. Tell the user about the problem and propose a better design.
+- Do not refactor the old code in the same change. Propose the refactor as a separate PR.
 - Do not add a second pattern for the same thing without a reason. Give the reason to the user.
 
 ## Names
