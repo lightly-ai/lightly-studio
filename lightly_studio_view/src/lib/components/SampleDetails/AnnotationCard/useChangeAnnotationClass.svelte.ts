@@ -34,9 +34,16 @@ export const useChangeAnnotationClass = (getParams: () => Params) => {
 
     // A second pick while the first request runs would update twice and add two undo entries.
     let isChanging = false;
+    // The class of the last change, which the `annotation` prop shows only one refresh later.
+    // Without it a second pick reads the class from before the first one.
+    let changed: { annotationId: string; className: string } | undefined;
     const changeClass = async (className: string) => {
         const { annotation, collectionId, refetch } = getParams();
-        if (isChanging || className === annotation.annotation_label.annotation_label_name) return;
+        const currentClass =
+            changed?.annotationId === annotation.sample_id
+                ? changed.className
+                : annotation.annotation_label.annotation_label_name;
+        if (isChanging || className === currentClass) return;
         isChanging = true;
         try {
             await updateAnnotations([
@@ -46,9 +53,15 @@ export const useChangeAnnotationClass = (getParams: () => Params) => {
                     label_name: className
                 }
             ]);
+            changed = { annotationId: annotation.sample_id, className };
             // Undo restores the class the annotation had before the request.
             addAnnotationLabelChangeToUndoStack({
-                annotations: [annotation],
+                annotations: [
+                    {
+                        sample_id: annotation.sample_id,
+                        annotation_label: { annotation_label_name: currentClass }
+                    }
+                ],
                 collectionId,
                 addReversibleAction,
                 updateAnnotations,

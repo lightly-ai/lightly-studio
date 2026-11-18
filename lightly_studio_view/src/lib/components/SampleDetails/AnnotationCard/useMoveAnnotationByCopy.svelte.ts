@@ -91,6 +91,7 @@ export const useMoveAnnotationByCopy = (getCollectionId: () => string) => {
         addAnnotationMoveToUndoStack({
             copy,
             original: isOriginalDeleted ? originalInput : null,
+            originalId: annotation.sample_id,
             addReversibleAction,
             createAnnotation,
             deleteAnnotation,
