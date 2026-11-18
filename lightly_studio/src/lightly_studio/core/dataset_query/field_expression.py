@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import TYPE_CHECKING, Generic, Literal, TypeVar
 
 from sqlalchemy import ColumnElement, Float, cast
-from sqlalchemy.orm import Mapped
+from sqlalchemy.orm import InstrumentedAttribute, Mapped
 
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 
@@ -58,9 +58,12 @@ class OrdinalFieldExpression(MatchExpression, Generic[T]):
         }
         # DuckDB stores FLOAT columns at single precision but binds Python floats as DOUBLE.
         # Compare at the column's precision so inclusive bounds include the stored value.
-        column_type = table_property.__clause_element__().type
-        if isinstance(column_type, Float) and isinstance(self.value, float):
-            return operations[self.operator](table_property, cast(self.value, column_type))
+        if (
+            isinstance(self.value, float)
+            and isinstance(table_property, InstrumentedAttribute)
+            and isinstance(table_property.type, Float)
+        ):
+            return operations[self.operator](table_property, cast(self.value, table_property.type))
         return operations[self.operator](table_property, self.value)
 
 
