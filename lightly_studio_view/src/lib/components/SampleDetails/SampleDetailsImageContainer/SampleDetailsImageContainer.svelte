@@ -30,7 +30,7 @@
     import AssistedLabelingPopUps from '$lib/components/SampleDetails/AssistedLabelingPopUps/AssistedLabelingPopUps.svelte';
     import AssistedLabelingOverlays from '$lib/components/SampleDetails/AssistedLabelingOverlays/AssistedLabelingOverlays.svelte';
     import { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
-    import { isPanEnabled } from './SampleDetailsImageContainer.helpers';
+    import { isPanEnabled, reuseUnchangedAnnotations } from './SampleDetailsImageContainer.helpers';
     import { getPreviewMaskOpacity } from '../previewMaskOpacity';
 
     type SampleDetailsImageContainerProps = {
@@ -92,8 +92,13 @@
     }));
     // The local hidden set is the single source of truth for visibility on the
     // details page; the grid's annotation source filter only seeds it.
+    let previousAnnotations: AnnotationView[] = [];
+    const annotations = $derived.by(() => {
+        previousAnnotations = reuseUnchangedAnnotations(previousAnnotations, sample.annotations);
+        return previousAnnotations;
+    });
     const actualAnnotationsToShow = $derived.by(() => {
-        return sample.annotations
+        return annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
             .sort((a, b) => {
                 if (a.sample_id === annotationLabelContext.annotationId) return 1;
