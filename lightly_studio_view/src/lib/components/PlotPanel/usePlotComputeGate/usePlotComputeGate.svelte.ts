@@ -1,6 +1,6 @@
 import { fromStore, writable } from 'svelte/store';
 import { untrack } from 'svelte';
-import { useEmbeddingPlotStatus } from '$lib/hooks';
+import { useEmbeddingPlotStatus, useRefetchEmbeddingPlotStatus } from '$lib/hooks';
 import { getPlotComputeView, isPlotRequestEnabled, type PlotComputeView } from '../plotComputeGate';
 
 interface UsePlotComputeGateParams {
@@ -20,12 +20,13 @@ interface UsePlotComputeGateReturn {
 
 // Module scope, so a compute that runs on keeps its start time when the panel closes and opens.
 const computeStartTimes = writable<Record<string, number>>({});
-// Each retry of a compute gives the same promise again.
-const trackedComputes = new WeakSet<Promise<unknown>>();
+// Two computes of one collection can run at once, for example after a filter change.
+const pendingComputes = new Map<string, Set<Promise<unknown>>>();
 
 export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotComputeGateReturn {
     const { getCollectionId, getIsAxesLayout } = params;
     const statusQuery = useEmbeddingPlotStatus(getCollectionId);
+    const refetchStatus = useRefetchEmbeddingPlotStatus();
     const startTimes = fromStore(computeStartTimes);
 
     const startedAt = $derived(startTimes.current[getCollectionId()] ?? null);
@@ -33,10 +34,12 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
     // A compute started in this tab is the exception: the server answers no request while it runs.
     const isStatusTrusted = $derived(statusQuery.isFetchedAfterMount || startedAt !== null);
     const freshStatus = $derived(isStatusTrusted ? statusQuery.data : undefined);
+    // An error from before this mount stays in the cache until the new request finishes.
+    const isStatusError = $derived(statusQuery.isError && statusQuery.isFetchedAfterMount);
     const view = $derived(
         getPlotComputeView({
             status: freshStatus,
-            isStatusError: statusQuery.isError,
+            isStatusError,
             isAxesLayout: getIsAxesLayout(),
             isComputeStarted: startedAt !== null
         })
@@ -52,12 +55,18 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
     // The compute can outlive the panel, so its promise, not an effect, ends it.
     function trackCompute(compute: Promise<unknown>) {
         startCompute();
-        if (trackedComputes.has(compute)) return;
-        trackedComputes.add(compute);
         const collectionId = getCollectionId();
+        const pending = pendingComputes.get(collectionId) ?? new Set();
+        // Each retry of a compute gives the same promise again.
+        if (pending.has(compute)) return;
+        pending.add(compute);
+        pendingComputes.set(collectionId, pending);
         // A failed compute also ends, so the next one asks again above the threshold.
         const endCompute = async () => {
-            await statusQuery.refetch();
+            await refetchStatus(collectionId);
+            pending.delete(compute);
+            if (pending.size > 0) return;
+            pendingComputes.delete(collectionId);
             clearComputeStart(collectionId);
         };
         void compute.then(endCompute, endCompute);
@@ -82,7 +91,7 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
             return startedAt;
         },
         get statusError() {
-            if (!statusQuery.isError) return null;
+            if (!isStatusError) return null;
             return statusQuery.error?.message || 'Unknown error';
         },
         startCompute,
