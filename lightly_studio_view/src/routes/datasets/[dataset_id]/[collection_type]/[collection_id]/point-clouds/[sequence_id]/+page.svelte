@@ -6,6 +6,10 @@
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
     import { getTickNumberFromHash } from './getTickNumberFromHash';
     import { routeHelpers } from '$lib/routes';
+    import {
+        datasetNavOptions,
+        toWorkflowSampleURL
+    } from '$lib/components/Workflow/datasetNavigation';
     import { useAdjacentMcapSequences } from '$lib/hooks/useAdjacentMcapSequences/useAdjacentMcapSequences';
     import {
         createWorkflowFileContext,
@@ -61,18 +65,27 @@
     const { query: adjacentSequencesQuery } = $derived(
         useAdjacentMcapSequences({ sampleId: sequenceId, collectionId })
     );
-    const previousSequenceId = $derived(adjacentSequencesQuery.data?.previous_sample_id);
-    const nextSequenceId = $derived(adjacentSequencesQuery.data?.next_sample_id);
+    const adjacent = $derived(adjacentSequencesQuery.data);
+    const previousSequenceId = $derived(adjacent?.previous_sample_id);
+    const nextSequenceId = $derived(adjacent?.next_sample_id);
 
-    // Opens on the first tick: the tick hash of the current sequence is not carried over.
-    const goToSequence = (targetSequenceId: string) => {
+    // Opens on the first tick: the tick hash of the current sequence is not carried over. A
+    // neighbour in a batch opens in workflow mode and keeps stepping in grid order.
+    const goToSequence = (
+        targetSequenceId: string,
+        workflow: Parameters<typeof toWorkflowSampleURL>[1]
+    ) => {
         void goto(
-            routeHelpers.toPointCloudLabeling({
-                datasetId: page.params.dataset_id!,
-                collectionType,
-                collectionId,
-                sequenceId: targetSequenceId
-            })
+            toWorkflowSampleURL(
+                routeHelpers.toPointCloudLabeling({
+                    datasetId: page.params.dataset_id!,
+                    collectionType,
+                    collectionId,
+                    sequenceId: targetSequenceId
+                }),
+                workflow
+            ),
+            datasetNavOptions
         );
     };
 
@@ -104,9 +117,11 @@
             {tickNumber}
             onTickChange={updateTickNumber}
             onPreviousSequence={previousSequenceId
-                ? () => goToSequence(previousSequenceId)
+                ? () => goToSequence(previousSequenceId, adjacent?.previous_workflow)
                 : undefined}
-            onNextSequence={nextSequenceId ? () => goToSequence(nextSequenceId) : undefined}
+            onNextSequence={nextSequenceId
+                ? () => goToSequence(nextSequenceId, adjacent?.next_workflow)
+                : undefined}
         />
     </div>
 </div>

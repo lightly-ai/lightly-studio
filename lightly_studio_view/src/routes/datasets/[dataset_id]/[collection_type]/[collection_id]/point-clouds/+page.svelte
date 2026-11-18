@@ -7,6 +7,10 @@
     import { useGlobalStorage, useMcapSequenceFilters, useMcapSequencesInfinite } from '$lib/hooks';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { routeHelpers } from '$lib/routes';
+    import {
+        datasetNavOptions,
+        toWorkflowSampleURL
+    } from '$lib/components/Workflow/datasetNavigation';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
     import { useWorkflowGridFilter } from '$lib/hooks/useWorkflowGridFilter/useWorkflowGridFilter.svelte';
     import { useWorkflowStatusFilter } from '$lib/hooks/useWorkflowStatusFilter/useWorkflowStatusFilter';
@@ -84,15 +88,23 @@
 
     // An MCAP component's sample is its sequence, so the sample id doubles as the sequence id.
     // The dataset slot carries a collection id (what the collection layout resolves the hierarchy
-    // by); the labeling page derives the real dataset id from the loaded collection.
+    // by); the labeling page derives the real dataset id from the loaded collection. A batched
+    // sequence opens in workflow mode and steps in grid order.
     const handleSequenceOpen = (sampleId: string) => {
+        const workflow = $sequenceData.find(
+            (sequence) => sequence.sample_id === sampleId
+        )?.workflow;
         void goto(
-            routeHelpers.toPointCloudLabeling({
-                datasetId,
-                collectionType,
-                collectionId,
-                sequenceId: sampleId
-            })
+            toWorkflowSampleURL(
+                routeHelpers.toPointCloudLabeling({
+                    datasetId,
+                    collectionType,
+                    collectionId,
+                    sequenceId: sampleId
+                }),
+                workflow
+            ),
+            datasetNavOptions
         );
     };
 </script>

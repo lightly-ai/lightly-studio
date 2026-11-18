@@ -178,4 +178,26 @@ describe('point-clouds/+page.svelte', () => {
         expect(badges).toHaveLength(1);
         expect(badges[0]).toHaveAttribute('data-state', 'rework');
     });
+
+    it('opens a batched sequence in workflow mode, stepping in grid order', async () => {
+        render(Page, { props: { data: pageData } });
+
+        await fireEvent.dblClick(screen.getByRole('button', { name: 'View MCAP sequence 1' }));
+
+        const [destination, options] = vi.mocked(goto).mock.calls[0];
+        const url = new URL(destination as string, 'http://localhost');
+        expect(url.pathname).toContain('sequence-1');
+        expect(url.searchParams.get('workflow_project')).toBe('project-1');
+        expect(url.searchParams.get('workflow_batch')).toBe('batch-1');
+        expect(options).toEqual({ state: { nav: 'dataset' } });
+    });
+
+    it('opens a sequence that is not batched without workflow params', async () => {
+        render(Page, { props: { data: pageData } });
+
+        await fireEvent.dblClick(screen.getByRole('button', { name: 'View MCAP sequence 2' }));
+
+        const destination = vi.mocked(goto).mock.calls[0][0] as string;
+        expect(new URL(destination, 'http://localhost').search).toBe('');
+    });
 });

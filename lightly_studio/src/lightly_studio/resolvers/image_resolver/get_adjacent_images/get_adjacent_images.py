@@ -63,7 +63,9 @@ def get_adjacent_images(  # noqa: PLR0913
     )
     if result is None or project_id is None:
         return result
-    return _with_neighbour_workflow(session=session, result=result, project_id=project_id)
+    return workflow_resolver.add_neighbour_workflow(
+        session=session, result=result, project_id=project_id
+    )
 
 
 def _get_adjacent_images(  # noqa: PLR0913
@@ -98,30 +100,6 @@ def _get_adjacent_images(  # noqa: PLR0913
         distance_expr=distance_expr,
         embedding_model_id=embedding_model_id,
         order_by=order_by,
-    )
-
-
-def _with_neighbour_workflow(
-    session: Session, result: AdjacentResultView, project_id: UUID
-) -> AdjacentResultView:
-    """Add the neighbours' batch and state, so the detail view can open them in workflow mode."""
-    neighbour_ids = [
-        neighbour_id
-        for neighbour_id in (result.previous_sample_id, result.next_sample_id)
-        if neighbour_id is not None
-    ]
-    workflows = workflow_resolver.get_samples_workflow(
-        session=session, project_id=project_id, sample_ids=neighbour_ids
-    )
-    return result.model_copy(
-        update={
-            "previous_workflow": workflows.get(result.previous_sample_id)
-            if result.previous_sample_id
-            else None,
-            "next_workflow": workflows.get(result.next_sample_id)
-            if result.next_sample_id
-            else None,
-        }
     )
 
 

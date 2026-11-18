@@ -17,7 +17,7 @@ class AdjacentResultView(BaseModel):
     next_sample_id: UUID | None
     current_sample_position: int
     total_count: int
-    # The neighbours' labeling-workflow batch and state. Set only for image samples of a dataset
-    # with a workflow project, and None for a neighbour in no batch.
+    # The neighbours' labeling-workflow batch and state. Set only for image and MCAP sequence
+    # samples of a dataset with a workflow project, and None for a neighbour in no batch.
     previous_workflow: SampleWorkflowView | None = None
     next_workflow: SampleWorkflowView | None = None

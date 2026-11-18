@@ -7,6 +7,7 @@ from uuid import UUID
 import sqlalchemy
 from sqlmodel import Session, func, select
 
+from lightly_studio.models.adjacents import AdjacentResultView
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.workflow import (
     SampleWorkflowView,
@@ -173,6 +174,40 @@ def get_samples_workflow(
         )
         for sample_id, batch_id, state in rows
     }
+
+
+def add_neighbour_workflow(
+    session: Session, result: AdjacentResultView, project_id: UUID
+) -> AdjacentResultView:
+    """Add the neighbours' batch and state, so the detail view can open them in workflow mode.
+
+    Args:
+        session: The database session.
+        result: The adjacency result of a sample.
+        project_id: The dataset's workflow project.
+
+    Returns:
+        A copy of the result with the previous and next neighbour's batch and state, None for
+        a neighbour in no batch.
+    """
+    neighbour_ids = [
+        neighbour_id
+        for neighbour_id in (result.previous_sample_id, result.next_sample_id)
+        if neighbour_id is not None
+    ]
+    workflows = get_samples_workflow(
+        session=session, project_id=project_id, sample_ids=neighbour_ids
+    )
+    return result.model_copy(
+        update={
+            "previous_workflow": workflows.get(result.previous_sample_id)
+            if result.previous_sample_id
+            else None,
+            "next_workflow": workflows.get(result.next_sample_id)
+            if result.next_sample_id
+            else None,
+        }
+    )
 
 
 def _workflow_sample_filter(filters: GridFilterBase | None) -> SampleFilter | None:

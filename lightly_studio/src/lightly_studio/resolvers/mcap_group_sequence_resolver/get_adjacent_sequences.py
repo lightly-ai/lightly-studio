@@ -44,16 +44,18 @@ def get_adjacent_sequences(
         text_embedding: Optional embedding to order the sequences by similarity to.
 
     Returns:
-        The adjacency result with the previous/next sequence IDs and the anchor's
-        position, or ``None`` when the anchor is not an MCAP sequence of the filtered
-        collection.
+        The adjacency result with the previous/next sequence IDs, their workflow batch and
+        state when the dataset has a workflow project, and the anchor's position, or ``None``
+        when the anchor is not an MCAP sequence of the filtered collection.
     """
     mcap_group_sequence_resolver.resolve_embedding_region(
         session=session, collection_id=collection_id, sequence_filter=filters
     )
-    workflow_resolver.resolve_sample_filter(
-        session=session, collection_id=collection_id, filters=filters
+    # Look the project up once: for the workflow status filter and the neighbours' batches.
+    project_id = workflow_resolver.get_dataset_project_id(
+        session=session, collection_id=collection_id
     )
+    workflow_resolver.set_filter_project_id(filters=filters, project_id=project_id)
     embedding_model_id, distance_expr = similarity_utils.get_distance_expression(
         session=session,
         collection_id=collection_id,
@@ -68,10 +70,15 @@ def get_adjacent_sequences(
         embedding_model_id=embedding_model_id,
         filters=filters,
     )
-    return adjacents.get_sample_adjacent_info(
+    result = adjacents.get_sample_adjacent_info(
         session=session,
         sample_id=sample_id,
         samples_query=samples_query,
+    )
+    if result is None or project_id is None:
+        return result
+    return workflow_resolver.add_neighbour_workflow(
+        session=session, result=result, project_id=project_id
     )
 
 

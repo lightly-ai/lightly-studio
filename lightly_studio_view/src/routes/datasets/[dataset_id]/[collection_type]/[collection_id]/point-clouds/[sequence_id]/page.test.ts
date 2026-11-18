@@ -11,7 +11,12 @@ import type { WorkflowFile } from '$lib/hooks';
 let summaryData: { file_name: string; lidar_channels: []; camera_channels: [] } | undefined;
 const adjacentSequences = vi.hoisted(() => ({
     data: undefined as
-        | { previous_sample_id: string | null; next_sample_id: string | null }
+        | {
+              previous_sample_id: string | null;
+              next_sample_id: string | null;
+              previous_workflow?: { project_id: string; batch_id: string; state: string } | null;
+              next_workflow?: { project_id: string; batch_id: string; state: string } | null;
+          }
         | undefined
 }));
 
@@ -273,7 +278,8 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         await user.click(screen.getByRole('button', { name: 'Next sequence' }));
 
         expect(goto).toHaveBeenCalledExactlyOnceWith(
-            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-2'
+            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-2',
+            { state: { nav: 'dataset' } }
         );
     });
 
@@ -286,8 +292,34 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         await user.click(screen.getByRole('button', { name: 'Previous sequence' }));
 
         expect(goto).toHaveBeenCalledExactlyOnceWith(
-            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-0'
+            '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-0',
+            { state: { nav: 'dataset' } }
         );
+    });
+
+    it('opens each batched neighbour in workflow mode with its own batch', async () => {
+        adjacentSequences.data = {
+            previous_sample_id: 'sequence-0',
+            next_sample_id: 'sequence-2',
+            previous_workflow: { project_id: 'project-1', batch_id: 'batch-1', state: 'rework' },
+            next_workflow: { project_id: 'project-1', batch_id: 'batch-2', state: 'not_started' }
+        };
+        const user = userEvent.setup();
+        render(Page, { props: { data: mockPageData } });
+
+        await user.click(await screen.findByRole('button', { name: 'Previous sequence' }));
+        await user.click(screen.getByRole('button', { name: 'Next sequence' }));
+
+        expect(vi.mocked(goto).mock.calls).toEqual([
+            [
+                '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-0?workflow_project=project-1&workflow_batch=batch-1',
+                { state: { nav: 'dataset' } }
+            ],
+            [
+                '/datasets/dataset-1/mcap/collection-1/point-clouds/sequence-2?workflow_project=project-1&workflow_batch=batch-2',
+                { state: { nav: 'dataset' } }
+            ]
+        ]);
     });
 });
 

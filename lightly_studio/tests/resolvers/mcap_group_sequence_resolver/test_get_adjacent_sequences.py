@@ -17,7 +17,7 @@ from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingCreate
 from lightly_studio.models.sequence import SequenceTable
-from lightly_studio.models.workflow import WorkflowStatus
+from lightly_studio.models.workflow import SampleWorkflowView, WorkflowStatus
 from lightly_studio.resolvers import (
     mcap_group_sequence_resolver,
     recording_resolver,
@@ -218,6 +218,64 @@ def test_get_adjacent_sequences__workflow_states(db_session: Session) -> None:
     assert result is not None
     assert result.next_sample_id == SEQ_ID_C
     assert result.total_count == 2
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_sequences__neighbour_workflow(db_session: Session) -> None:
+    """The neighbours carry their own batch and state, or none when they are not batched."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    _create_sequences(
+        session=db_session,
+        collection=seq_col,
+        created_at_by_sample_id={
+            SEQ_ID_A: datetime(2024, 1, 1, tzinfo=timezone.utc),
+            SEQ_ID_B: datetime(2024, 1, 2, tzinfo=timezone.utc),
+            SEQ_ID_C: datetime(2024, 1, 3, tzinfo=timezone.utc),
+        },
+    )
+    project_id = helpers_workflow.create_project(
+        session=db_session, dataset_id=seq_col.collection_id
+    )
+    previous_batch_id = helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={SEQ_ID_A: "rework"}
+    )
+    # The anchor is in another batch: the neighbour keeps its own.
+    helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={SEQ_ID_B: "in_progress"}
+    )
+
+    result = mcap_group_sequence_resolver.get_adjacent_sequences(
+        session=db_session, sample_id=SEQ_ID_B, collection_id=seq_col.collection_id
+    )
+
+    assert result is not None
+    assert result.previous_workflow == SampleWorkflowView(
+        project_id=project_id, batch_id=previous_batch_id, state=WorkflowStatus.REWORK
+    )
+    assert result.next_workflow is None
+
+
+def test_get_adjacent_sequences__no_neighbour_workflow_without_project(
+    db_session: Session,
+) -> None:
+    """Without a workflow project, the neighbours have no batch or state."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    _create_sequences(
+        session=db_session,
+        collection=seq_col,
+        created_at_by_sample_id={
+            SEQ_ID_A: datetime(2024, 1, 1, tzinfo=timezone.utc),
+            SEQ_ID_B: datetime(2024, 1, 2, tzinfo=timezone.utc),
+        },
+    )
+
+    result = mcap_group_sequence_resolver.get_adjacent_sequences(
+        session=db_session, sample_id=SEQ_ID_A, collection_id=seq_col.collection_id
+    )
+
+    assert result is not None
+    assert result.next_sample_id == SEQ_ID_B
+    assert result.next_workflow is None
 
 
 def test_get_adjacent_sequences__anchor_filtered_out(db_session: Session) -> None:
