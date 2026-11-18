@@ -34,6 +34,8 @@ from tests.helpers_resolvers import create_collection, create_embedding_model, c
 SEQ_ID_A = UUID("00000000-0000-0000-0000-000000000001")
 SEQ_ID_B = UUID("00000000-0000-0000-0000-000000000002")
 SEQ_ID_C = UUID("00000000-0000-0000-0000-000000000003")
+SEQ_ID_D = UUID("00000000-0000-0000-0000-000000000004")
+SEQ_ID_E = UUID("00000000-0000-0000-0000-000000000005")
 
 
 def test_get_adjacent_sequences(db_session: Session) -> None:
@@ -278,7 +280,8 @@ def test_get_adjacent_sequences__no_neighbour_workflow_without_project(
     assert result.next_workflow is None
 
 
-def test_get_adjacent_sequences__anchor_filtered_out(db_session: Session) -> None:
+def test_get_adjacent_sequences__anchor_filtered_out_keeps_its_place(db_session: Session) -> None:
+    """B no longer matches the filter: its neighbours are the closest matching sequences."""
     seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
     _create_sequences(
         session=db_session,
@@ -295,6 +298,135 @@ def test_get_adjacent_sequences__anchor_filtered_out(db_session: Session) -> Non
         sample_id=SEQ_ID_B,
         collection_id=seq_col.collection_id,
         filters=McapSequenceFilter(sample_filter=SampleFilter(sample_ids=[SEQ_ID_A, SEQ_ID_C])),
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == SEQ_ID_A
+    assert result.next_sample_id == SEQ_ID_C
+    assert result.current_sample_position == 2
+    assert result.total_count == 3
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_get_adjacent_sequences__keeps_place_when_sequence_left_the_status_filter(
+    db_session: Session,
+) -> None:
+    """The user started work on the open sequence C, so it no longer matches "Not started".
+
+    Prev/next still follow the filtered order from C's position, and C keeps its place in the
+    position and total, as in the grid that has not reloaded yet. The neighbours keep their
+    own batches.
+    """
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    _create_sequences(
+        session=db_session,
+        collection=seq_col,
+        created_at_by_sample_id={
+            SEQ_ID_A: datetime(2024, 1, 1, tzinfo=timezone.utc),
+            SEQ_ID_B: datetime(2024, 1, 2, tzinfo=timezone.utc),
+            SEQ_ID_C: datetime(2024, 1, 3, tzinfo=timezone.utc),
+            SEQ_ID_D: datetime(2024, 1, 4, tzinfo=timezone.utc),
+            SEQ_ID_E: datetime(2024, 1, 5, tzinfo=timezone.utc),
+        },
+    )
+    project_id = helpers_workflow.create_project(
+        session=db_session, dataset_id=seq_col.collection_id
+    )
+    first_batch_id = helpers_workflow.add_batch_files(
+        session=db_session,
+        project_id=project_id,
+        states={
+            SEQ_ID_A: "not_started",
+            SEQ_ID_B: "not_started",
+            SEQ_ID_C: "in_progress",
+            SEQ_ID_D: "in_progress",
+        },
+    )
+    second_batch_id = helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={SEQ_ID_E: "not_started"}
+    )
+
+    result = mcap_group_sequence_resolver.get_adjacent_sequences(
+        session=db_session,
+        sample_id=SEQ_ID_C,
+        collection_id=seq_col.collection_id,
+        filters=McapSequenceFilter(
+            sample_filter=SampleFilter(workflow_states=[WorkflowStatus.NOT_STARTED])
+        ),
+    )
+
+    assert result is not None
+    assert result.previous_sample_id == SEQ_ID_B
+    assert result.next_sample_id == SEQ_ID_E
+    assert result.current_sample_position == 3
+    assert result.total_count == 4
+    assert result.previous_workflow == SampleWorkflowView(
+        project_id=project_id, batch_id=first_batch_id, state=WorkflowStatus.NOT_STARTED
+    )
+    assert result.next_workflow == SampleWorkflowView(
+        project_id=project_id, batch_id=second_batch_id, state=WorkflowStatus.NOT_STARTED
+    )
+
+
+@pytest.mark.parametrize(
+    ("anchor_id", "expected_neighbours", "expected_position"),
+    [
+        (SEQ_ID_A, (None, SEQ_ID_B), 1),
+        (SEQ_ID_C, (SEQ_ID_B, None), 2),
+    ],
+)
+def test_get_adjacent_sequences__anchor_filtered_out_at_the_edges(
+    db_session: Session,
+    anchor_id: UUID,
+    expected_neighbours: tuple[UUID | None, UUID | None],
+    expected_position: int,
+) -> None:
+    """Filtered out at either end, the anchor has a neighbour only on the inner side."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    _create_sequences(
+        session=db_session,
+        collection=seq_col,
+        created_at_by_sample_id={
+            SEQ_ID_A: datetime(2024, 1, 1, tzinfo=timezone.utc),
+            SEQ_ID_B: datetime(2024, 1, 2, tzinfo=timezone.utc),
+            SEQ_ID_C: datetime(2024, 1, 3, tzinfo=timezone.utc),
+        },
+    )
+
+    result = mcap_group_sequence_resolver.get_adjacent_sequences(
+        session=db_session,
+        sample_id=anchor_id,
+        collection_id=seq_col.collection_id,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(sample_ids=[SEQ_ID_B])),
+    )
+
+    assert result is not None
+    assert (result.previous_sample_id, result.next_sample_id) == expected_neighbours
+    assert result.current_sample_position == expected_position
+
+
+def test_get_adjacent_sequences__filtered_anchor_of_another_collection(
+    db_session: Session,
+) -> None:
+    """A sequence outside the collection still has no neighbours, also with a filter."""
+    seq_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    other_col = create_collection(session=db_session, sample_type=SampleType.SEQUENCE)
+    _create_sequences(
+        session=db_session,
+        collection=seq_col,
+        created_at_by_sample_id={SEQ_ID_A: datetime(2024, 1, 1, tzinfo=timezone.utc)},
+    )
+    _create_sequences(
+        session=db_session,
+        collection=other_col,
+        created_at_by_sample_id={SEQ_ID_B: datetime(2024, 1, 2, tzinfo=timezone.utc)},
+    )
+
+    result = mcap_group_sequence_resolver.get_adjacent_sequences(
+        session=db_session,
+        sample_id=SEQ_ID_B,
+        collection_id=seq_col.collection_id,
+        filters=McapSequenceFilter(sample_filter=SampleFilter(sample_ids=[SEQ_ID_A])),
     )
 
     assert result is None

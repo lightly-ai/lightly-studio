@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import ColumnElement, func
+from sqlalchemy import ColumnElement, func, or_
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import Select
 
@@ -46,7 +46,9 @@ def get_adjacent_sequences(
     Returns:
         The adjacency result with the previous/next sequence IDs, their workflow batch and
         state when the dataset has a workflow project, and the anchor's position, or ``None``
-        when the anchor is not an MCAP sequence of the filtered collection.
+        when the anchor is not an MCAP sequence of the collection. An anchor that no longer
+        matches the filters keeps its place: its neighbours are the closest matching
+        sequences, and it still counts in the position and total.
     """
     mcap_group_sequence_resolver.resolve_embedding_region(
         session=session, collection_id=collection_id, sequence_filter=filters
@@ -64,21 +66,56 @@ def get_adjacent_sequences(
     order_by = sequence_grid_query.default_order()
     if distance_expr is not None:
         order_by = [distance_expr, *order_by]
-    samples_query = sequence_grid_query.scope_query(
-        query=_window_query(order_by=order_by),
-        collection_id=collection_id,
-        embedding_model_id=embedding_model_id,
-        filters=filters,
-    )
-    result = adjacents.get_sample_adjacent_info(
+    result = _get_adjacent_info(
         session=session,
         sample_id=sample_id,
-        samples_query=samples_query,
+        collection_id=collection_id,
+        filters=filters,
+        embedding_model_id=embedding_model_id,
+        order_by=order_by,
     )
     if result is None or project_id is None:
         return result
     return workflow_resolver.add_neighbour_workflow(
         session=session, result=result, project_id=project_id
+    )
+
+
+def _get_adjacent_info(  # noqa: PLR0913
+    session: Session,
+    sample_id: UUID,
+    collection_id: UUID,
+    filters: McapSequenceFilter | None,
+    embedding_model_id: UUID | None,
+    order_by: list[ColumnElement[Any]],
+) -> AdjacentResultView | None:
+    """Get the anchor's neighbours and position in the scoped, ordered sequences."""
+    window_query = sequence_grid_query.scope_query(
+        query=_window_query(order_by=order_by),
+        collection_id=collection_id,
+        embedding_model_id=embedding_model_id,
+        filters=None,
+    )
+    if filters is None:
+        return adjacents.get_sample_adjacent_info(
+            session=session, sample_id=sample_id, samples_query=window_query
+        )
+    result = adjacents.get_sample_adjacent_info(
+        session=session, sample_id=sample_id, samples_query=filters.apply(window_query)
+    )
+    if result is not None:
+        return result
+    # The open sequence can leave the filter, for example when it is accepted under an
+    # "In review" filter. Keep it in the window, so its neighbours are the closest matching
+    # sequences. A sequence outside the collection still finds no row.
+    sequence_id = col(McapGroupSequenceTable.sample_id)
+    matching_ids = filters.build_sample_ids_query(collection_id=collection_id).correlate(None)
+    return adjacents.get_sample_adjacent_info(
+        session=session,
+        sample_id=sample_id,
+        samples_query=window_query.where(
+            or_(sequence_id == sample_id, sequence_id.in_(matching_ids))
+        ),
     )
 
 

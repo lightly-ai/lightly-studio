@@ -14,6 +14,7 @@ from lightly_studio.api.routes.api.status import (
     HTTP_STATUS_UNPROCESSABLE_ENTITY,
 )
 from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import mcap_group_sequence_resolver
 from tests import helpers_resolvers, helpers_workflow
 from tests.helpers_resolvers import AnnotationDetails, ImageStub
 from tests.resolvers.mcap_group_sequence_resolver import helpers as mcap_sequence_helpers
@@ -244,6 +245,12 @@ def test_get_adjacent_samples__mcap_sequences_with_filter(
     test_client: TestClient,
 ) -> None:
     sequence = mcap_sequence_helpers.create_mcap_sequence(session=db_session)
+    # A second sequence in the same collection, which the filter leaves out.
+    mcap_group_sequence_resolver.create(
+        session=db_session,
+        collection_id=sequence.sequence_collection.collection_id,
+        recording_id=sequence.recording_id,
+    )
 
     response = test_client.post(
         f"/api/samples/{sequence.sample_id}/adjacents",
@@ -252,14 +259,17 @@ def test_get_adjacent_samples__mcap_sequences_with_filter(
             "collection_id": str(sequence.sequence_collection.collection_id),
             "filters": {
                 "filter_type": "mcap_sequence",
-                "sample_filter": {"sample_ids": [str(uuid4())]},
+                "sample_filter": {"sample_ids": [str(sequence.sample_id)]},
             },
         },
     )
 
     assert response.status_code == HTTP_STATUS_OK
-    # The only sequence is filtered out.
-    assert response.json() is None
+    result = response.json()
+    assert result["sample_id"] == str(sequence.sample_id)
+    assert result["previous_sample_id"] is None
+    assert result["next_sample_id"] is None
+    assert result["total_count"] == 1
 
 
 def test_get_adjacent_samples__annotations_match_grid_ordering(
