@@ -23,10 +23,19 @@ vi.mock('$app/state', () => ({
     }
 }));
 
-const { toggleSampleSelection } = vi.hoisted(() => ({ toggleSampleSelection: vi.fn() }));
+const { toggleSampleSelection, updateAnnotationLabelIds } = vi.hoisted(() => ({
+    toggleSampleSelection: vi.fn(),
+    updateAnnotationLabelIds: vi.fn()
+}));
 
 vi.mock('$lib/hooks/useTags/useTags', () => ({
     useTags: () => ({ tagsSelected: writable(new Set<string>()) })
+}));
+
+vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
+    useSelectedAnnotationsFilter: () => ({
+        selectedAnnotationFilterIdsArray: writable(['label-1'])
+    })
 }));
 
 vi.mock('$lib/hooks', () => ({
@@ -40,6 +49,7 @@ vi.mock('$lib/hooks', () => ({
     useMcapSequenceFilters: () => ({
         mcapSequenceFilter: writable({ filter_type: 'mcap_sequence' }),
         setCollectionId: vi.fn(),
+        updateAnnotationLabelIds,
         updateTagIds: vi.fn()
     }),
     useMcapSequencesInfinite: () => ({
@@ -127,5 +137,11 @@ describe('point-clouds/+page.svelte', () => {
         expect(goto).toHaveBeenCalledOnce();
         const destination = vi.mocked(goto).mock.calls[0][0] as string;
         expect(destination).toContain(ROUTE_DATASET_ID);
+    });
+
+    it('filters the sequences by the selected labels', () => {
+        render(Page, { props: { data: pageData } });
+
+        expect(updateAnnotationLabelIds).toHaveBeenCalledWith(['label-1']);
     });
 });

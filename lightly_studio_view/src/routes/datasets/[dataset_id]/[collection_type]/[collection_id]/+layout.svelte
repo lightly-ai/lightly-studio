@@ -27,7 +27,11 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { setAnnotationClasses } from '$lib/hooks';
+    import {
+        setAnnotationClasses,
+        useMcapSequenceAnnotationCounts,
+        useMcapSequenceFilters
+    } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -437,7 +441,12 @@
     const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         filter: imageAnnotationCountsFilter,
-        enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
+        enabled:
+            !isVideos &&
+            !isVideoFrames &&
+            !isVideoFrameAnnotations &&
+            !isPointClouds &&
+            !$allSourcesHidden
     }));
 
     const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
@@ -449,6 +458,13 @@
             videoBoundsValues: $videoBoundsValues
         }),
         enabled: isVideos && !$allSourcesHidden
+    }));
+
+    const { mcapSequenceFilter } = useMcapSequenceFilters();
+    const mcapSequenceAnnotationCountsQuery = useMcapSequenceAnnotationCounts(() => ({
+        collectionId,
+        filter: $mcapSequenceFilter,
+        enabled: isPointClouds && $mcapSequenceFilter !== null && !$allSourcesHidden
     }));
 
     const videoFrameCountsCollectionId = $derived(
@@ -468,6 +484,9 @@
         }
         if (isVideos) {
             return videoAnnotationCountsQuery;
+        }
+        if (isPointClouds) {
+            return mcapSequenceAnnotationCountsQuery;
         }
         return imageAnnotationCountsQuery;
     });
@@ -698,8 +717,8 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
-                            {#if !isCaptions && !isPointClouds}
+                            <!-- Captions support only the tag filter. -->
+                            {#if !isCaptions}
                                 <LabelsMenu
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>

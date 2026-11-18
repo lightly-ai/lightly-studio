@@ -6,6 +6,7 @@
     import { McapSequencesGrid } from '$lib/components/McapSequencesGrid';
     import { useGlobalStorage, useMcapSequenceFilters, useMcapSequencesInfinite } from '$lib/hooks';
     import { useTags } from '$lib/hooks/useTags/useTags';
+    import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { routeHelpers } from '$lib/routes';
     import { selectRangeByAnchor } from '$lib/utils/selectRangeByAnchor';
 
@@ -18,12 +19,15 @@
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, setfilteredSampleCount } =
         useGlobalStorage();
-    const { mcapSequenceFilter, setCollectionId, updateTagIds } = useMcapSequenceFilters();
+    const { mcapSequenceFilter, setCollectionId, updateAnnotationLabelIds, updateTagIds } =
+        useMcapSequenceFilters();
     const { tagsSelected } = $derived.by(() => useTags({ collection_id: collectionId }));
+    const { selectedAnnotationFilterIdsArray } = useSelectedAnnotationsFilter();
 
     $effect(() => {
         setCollectionId(collectionId);
         updateTagIds(Array.from($tagsSelected));
+        updateAnnotationLabelIds($selectedAnnotationFilterIdsArray);
     });
 
     const {

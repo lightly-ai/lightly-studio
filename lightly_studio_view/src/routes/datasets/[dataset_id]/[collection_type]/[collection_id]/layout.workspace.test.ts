@@ -10,6 +10,7 @@ import type { PanelType } from '$lib/hooks/useGlobalStorage';
 import {
     useImageAnnotationCounts,
     useImageAnnotationCountsBySampleTags,
+    useMcapSequenceAnnotationCounts,
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
@@ -176,11 +177,13 @@ vi.mock('$lib/hooks', async () => ({
     ...(await import('$lib/hooks/useVideoFilters/useVideoFilters')),
     ...(await import('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter')),
     ...(await import('$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js')),
+    ...(await import('$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters')),
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
         clearSelection: vi.fn()
     })),
     useImageAnnotationCounts: vi.fn(() => ({ data: undefined })),
+    useMcapSequenceAnnotationCounts: vi.fn(() => ({ data: undefined })),
     useImageAnnotationCountsQueryKey: ['imageAnnotationCounts'],
     useNumericMetadataDistribution: vi.fn(() => ({
         data: { score: { binEdges: [0, 1], counts: [1] } }
@@ -387,6 +390,23 @@ describe('annotation label pruning', () => {
             vi.mocked(useAnnotationsFilter).mock.results[0].value;
         expect(setAnnotationCounts).toHaveBeenCalled();
         expect(pruneInvalidSelections).not.toHaveBeenCalled();
+    });
+});
+
+describe('point-clouds annotation counts', () => {
+    it('feeds the sequence counts to the label filter', async () => {
+        const sequenceCounts = [{ label_name: 'car', total_count: 2, current_count: 1 }];
+        vi.mocked(useMcapSequenceAnnotationCounts).mockReturnValue({
+            data: sequenceCounts,
+            isFetching: false
+        } as unknown as ReturnType<typeof useMcapSequenceAnnotationCounts>);
+        setPageRoute(APP_ROUTES.pointClouds);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const { setAnnotationCounts } = vi.mocked(useAnnotationsFilter).mock.results[0].value;
+        expect(setAnnotationCounts).toHaveBeenCalledWith(sequenceCounts);
     });
 });
 
