@@ -17,14 +17,18 @@ const original: AnnotationCreateInput = {
     height: 4
 };
 
-const setup = (restore: AnnotationCreateInput | null) => {
+const setup = (
+    restore: AnnotationCreateInput | null,
+    ids: { copyId?: string; originalId?: string; restoredId?: string } = {}
+) => {
     const actions: ReversibleAction[] = [];
-    const createAnnotation = vi.fn().mockResolvedValue({ sample_id: 'restored' });
+    const createAnnotation = vi.fn().mockResolvedValue({ sample_id: ids.restoredId ?? 'restored' });
     const deleteAnnotation = vi.fn().mockResolvedValue(undefined);
     const refetch = vi.fn();
     addAnnotationMoveToUndoStack({
-        copy: { sample_id: 'copy', annotation_type: 'object_detection' },
+        copy: { sample_id: ids.copyId ?? 'copy', annotation_type: 'object_detection' },
         original: restore,
+        originalId: ids.originalId ?? 'original',
         addReversibleAction: (action) => actions.push(action),
         createAnnotation,
         deleteAnnotation,
@@ -64,5 +68,28 @@ describe('addAnnotationMoveToUndoStack', () => {
         await expect(action.execute()).rejects.toThrow('offline');
 
         expect(deleteAnnotation).not.toHaveBeenCalled();
+    });
+
+    it('deletes the copy once when a retry follows a failed delete', async () => {
+        const { action, createAnnotation, deleteAnnotation } = setup(original);
+        deleteAnnotation.mockRejectedValueOnce(new Error('offline'));
+
+        await expect(action.execute()).rejects.toThrow('offline');
+        await action.execute();
+
+        expect(createAnnotation).toHaveBeenCalledOnce();
+        expect(deleteAnnotation).toHaveBeenCalledTimes(2);
+    });
+
+    it('deletes the re-created annotation when undoing the move before it', async () => {
+        // The annotation moved from source A to B, and then from B to C.
+        const toB = setup(original, { originalId: 'a', copyId: 'b', restoredId: 'a-again' });
+        const toC = setup(original, { originalId: 'b', copyId: 'c', restoredId: 'b-again' });
+
+        await toC.action.execute();
+        await toB.action.execute();
+
+        expect(toC.deleteAnnotation).toHaveBeenCalledExactlyOnceWith('c', 'object_detection');
+        expect(toB.deleteAnnotation).toHaveBeenCalledExactlyOnceWith('b-again', 'object_detection');
     });
 });
