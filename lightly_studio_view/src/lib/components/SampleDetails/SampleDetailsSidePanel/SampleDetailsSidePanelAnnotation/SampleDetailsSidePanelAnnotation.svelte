@@ -189,10 +189,7 @@
                                                 collectionId,
                                                 addReversibleAction,
                                                 updateAnnotations: updateAnnotationsRaw,
-                                                refresh: () => {
-                                                    refetch();
-                                                    onUpdate();
-                                                }
+                                                refresh: refetch
                                             });
                                             await updateAnnotation({
                                                 annotation_id: annotationId,
