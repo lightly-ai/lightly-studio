@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from typing import TypeGuard
 from uuid import UUID, uuid4
 
 import numpy as np
 import pyarrow as pa
 from numpy.typing import NDArray
 from pyarrow import ipc
+from sqlalchemy.orm import defer
 from sqlmodel import Session, col, select, update
 
 from lightly_studio.database import db_insert
@@ -65,12 +67,18 @@ def is_computed(session: Session, collection_id: UUID, embedding_model_id: UUID)
     A missing row, a dirty row, and the empty placeholder row from `mark_dirty` all count as
     not computed. The query does not load the plot data, which can be large.
     """
-    is_dirty = session.exec(
-        select(EmbeddingPlotTable.is_dirty)
-        .where(col(EmbeddingPlotTable.collection_id) == collection_id)
-        .where(col(EmbeddingPlotTable.embedding_model_id) == embedding_model_id)
-    ).one_or_none()
-    return is_dirty is False
+    plot = session.get(
+        EmbeddingPlotTable,
+        (collection_id, embedding_model_id),
+        options=[defer(EmbeddingPlotTable.data)],  # type: ignore[arg-type]
+        populate_existing=True,
+    )
+    return is_ready(plot=plot)
+
+
+def is_ready(plot: EmbeddingPlotTable | None) -> TypeGuard[EmbeddingPlotTable]:
+    """Return True if the plot row holds a clean plot that loads without a compute."""
+    return plot is not None and not plot.is_dirty
 
 
 def encode(
