@@ -1,5 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as tanstackQuery from '@tanstack/svelte-query';
+import { QueryClient } from '@tanstack/svelte-query';
+import { get2dEmbeddingsStatusQueryKey } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { useEmbeddingPlotStatus, useRefetchEmbeddingPlotStatus } from '$lib/hooks';
 
 describe('useEmbeddingPlotStatus', () => {
@@ -23,18 +25,23 @@ describe('useEmbeddingPlotStatus', () => {
         expect(keyB.path.collection_id).toBe('collection-b');
     });
 
-    it('refetches the status of the named collection', async () => {
-        const refetchQueries = vi.fn(async () => undefined);
-        vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue({
-            refetchQueries
-        } as unknown as tanstackQuery.QueryClient);
-        const refetchStatus = useRefetchEmbeddingPlotStatus();
+    it('refetches the status of the named collection only', async () => {
+        const client = new QueryClient();
+        vi.spyOn(tanstackQuery, 'useQueryClient').mockReturnValue(client);
+        const fetchStatus = vi.fn(async (collectionId: string) => ({ collectionId }));
+        for (const collectionId of ['collection-a', 'collection-b']) {
+            await client.fetchQuery({
+                queryKey: get2dEmbeddingsStatusQueryKey({ path: { collection_id: collectionId } }),
+                queryFn: () => fetchStatus(collectionId)
+            });
+        }
 
-        await refetchStatus('collection-a');
+        await useRefetchEmbeddingPlotStatus()('collection-a');
 
-        const [{ queryKey }] = refetchQueries.mock.lastCall as unknown as [
-            { queryKey: [{ path: { collection_id: string } }] }
-        ];
-        expect(queryKey[0].path.collection_id).toBe('collection-a');
+        expect(fetchStatus.mock.calls).toEqual([
+            ['collection-a'],
+            ['collection-b'],
+            ['collection-a']
+        ]);
     });
 });
