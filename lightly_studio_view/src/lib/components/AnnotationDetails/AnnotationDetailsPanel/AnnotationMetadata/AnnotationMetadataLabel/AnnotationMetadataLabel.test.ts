@@ -8,15 +8,6 @@ const mocks = vi.hoisted(() => ({
     addAnnotationLabelChangeToUndoStack: vi.fn()
 }));
 
-vi.mock('$app/state', async () => {
-    const { writable } = await import('svelte/store');
-    return {
-        page: {
-            params: { collection_id: 'images' },
-            data: { globalStorage: { isEditingMode: writable(true) } }
-        }
-    };
-});
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: () => ({ data: [] })
 }));

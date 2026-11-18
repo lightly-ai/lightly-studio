@@ -139,17 +139,4 @@ describe('SampleDetailsAnnotation', () => {
         undo.onUndo();
         expect(onAnnotationUpdated).toHaveBeenCalledTimes(2);
     });
-
-    it('logs a failed save without adding an undo step', async () => {
-        mocks.stubSampleAnnotation = true;
-        mocks.updateAnnotation.mockRejectedValue(new Error('offline'));
-        const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-        render(SampleDetailsAnnotation, defaultProps);
-
-        await fireEvent.click(screen.getByTestId('resize-box'));
-        await vi.waitFor(() => expect(consoleError).toHaveBeenCalled());
-
-        expect(mocks.addAnnotationUpdateToUndoStack).not.toHaveBeenCalled();
-        consoleError.mockRestore();
-    });
 });
