@@ -1,13 +1,15 @@
-"""Query the image samples of a collection, one page at a time."""
+"""Query the image samples of a collection, one page at a time, with keyset paging."""
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
+from sqlalchemy import ColumnElement, and_, or_
 from sqlmodel import Session, col, select
 from sqlmodel.sql.expression import SelectOfScalar
 
@@ -29,6 +31,7 @@ from lightly_studio.models.sample_query import (
     SortKey,
 )
 from lightly_studio.models.sort_direction import SortDirection
+from lightly_studio.services.sample_services import sample_query_cursor
 
 # Only annotation match expressions correlate their table with the image.
 _ANNOTATION_SCOPES: dict[type[BaseModel], str] = {
@@ -44,6 +47,7 @@ _SUPPORTED_INCLUDES: set[SampleInclude] = set()
 class _SortColumn:
     name: str
     ascending: bool
+    parse: Callable[[Any], Any]
 
     @property
     def column(self) -> Any:
@@ -58,14 +62,22 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
         QueryExprError: If the filter or the sort uses an unknown field.
     """
     _check_includes(includes=request.include)
-    if request.cursor is not None:
-        raise ValueError("Paging with a cursor is not supported yet.")
     sort_columns = _sort_columns(sort=request.sort)
+    hash_ = sample_query_cursor.query_hash(collection_id=collection_id, request=request)
     query = _filtered_query(collection_id=collection_id, request=request)
+    if request.cursor is not None:
+        after = sample_query_cursor.decode(cursor=request.cursor, query_hash=hash_)
+        query = query.where(_after(sort_columns=sort_columns, values=after))
     query = query.order_by(*(c.column if c.ascending else c.column.desc() for c in sort_columns))
-    images = session.exec(query.offset(request.offset).limit(request.limit)).all()
-    records = [_to_record(image=image, collection_id=collection_id) for image in images]
-    return SamplePage(samples=records)
+    offset = request.offset if request.cursor is None else 0
+    images = session.exec(query.offset(offset).limit(request.limit + 1)).all()
+    page = images[: request.limit]
+    next_cursor = None
+    if len(images) > request.limit:
+        after = [getattr(page[-1], c.name) for c in sort_columns]
+        next_cursor = sample_query_cursor.encode(query_hash=hash_, after=after)
+    records = [_to_record(image=image, collection_id=collection_id) for image in page]
+    return SamplePage(samples=records, next_cursor=next_cursor)
 
 
 def _filtered_query(collection_id: UUID, request: SampleQueryRequest) -> SelectOfScalar[ImageTable]:
@@ -108,12 +120,55 @@ def _sort_columns(sort: Sequence[SortKey]) -> list[_SortColumn]:
     for key in keys:
         if key.field.table != "image" or key.field.name not in _SORT_FIELDS:
             raise QueryExprError(f"Unknown sort field: {key.field.table}.{key.field.name}")
+        parse = _CURSOR_PARSERS[key.field.name]
         ascending = key.direction == SortDirection.asc
-        columns.append(_SortColumn(name=key.field.name, ascending=ascending))
+        columns.append(_SortColumn(name=key.field.name, ascending=ascending, parse=parse))
     # The sample ID breaks ties, so the order is total and no sample is skipped.
-    columns.append(_SortColumn(name="sample_id", ascending=True))
+    columns.append(_SortColumn(name="sample_id", ascending=True, parse=_parse_uuid))
     return columns
+
+
+def _after(sort_columns: Sequence[_SortColumn], values: Sequence[Any]) -> ColumnElement[bool]:
+    """Match the rows that come after `values` in the sort order."""
+    if len(values) != len(sort_columns):
+        raise ValueError("The cursor is not valid.")
+    try:
+        parsed = [c.parse(value) for c, value in zip(sort_columns, values)]
+    except (TypeError, ValueError) as error:
+        raise ValueError("The cursor is not valid.") from error
+    clauses = []
+    for index, sort_column in enumerate(sort_columns):
+        equal = [c.column == v for c, v in zip(sort_columns[:index], parsed[:index])]
+        value = parsed[index]
+        beyond = sort_column.column > value if sort_column.ascending else sort_column.column < value
+        clauses.append(and_(*equal, beyond))
+    return or_(*clauses)
 
 
 def _to_record(image: ImageTable, collection_id: UUID) -> ImageSampleRecord:
     return ImageSampleRecord(**image.model_dump(), collection_id=collection_id)
+
+
+def _parse_int(value: Any) -> int:
+    if type(value) is not int:
+        raise TypeError("The cursor value is not an integer.")
+    return value
+
+
+def _parse_str(value: Any) -> str:
+    if not isinstance(value, str):
+        raise TypeError("The cursor value is not a string.")
+    return value
+
+
+def _parse_uuid(value: Any) -> UUID:
+    return UUID(_parse_str(value=value))
+
+
+_CURSOR_PARSERS: dict[str, Callable[[Any], Any]] = {
+    "file_name": _parse_str,
+    "file_path_abs": _parse_str,
+    "created_at": datetime.fromisoformat,
+    "width": _parse_int,
+    "height": _parse_int,
+}

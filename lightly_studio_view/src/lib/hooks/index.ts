@@ -51,6 +51,7 @@ export {
     formatEvaluationMetricLabel
 } from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
 export { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
+export { useTracks } from '$lib/hooks/useTracks/useTracks.svelte';
 export { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
 export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
 
@@ -61,6 +62,7 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+export { useUpdateTrackMutation } from '$lib/hooks/useUpdateTrackMutation/useUpdateTrackMutation.svelte';
 export {
     AnnotationClassNotAvailableError,
     getCreateLabelErrorMessage,

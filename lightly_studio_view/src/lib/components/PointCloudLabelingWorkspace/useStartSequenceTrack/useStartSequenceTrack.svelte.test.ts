@@ -12,7 +12,8 @@ vi.mock('@tanstack/svelte-query', () => ({
     useQueryClient: () => ({ invalidateQueries })
 }));
 vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
-    startSequenceTrackMutation: () => ({})
+    startSequenceTrackMutation: () => ({}),
+    getTracksQueryKey: () => [{ _id: 'getTracks' }]
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
@@ -30,7 +31,7 @@ describe('useStartSequenceTrack', () => {
         onStarted.mockResolvedValue(undefined);
     });
 
-    it('starts the track, then refreshes the track bars, tick details and the tick', async () => {
+    it('starts the track, then refreshes the track bars, track list, tick details and the tick', async () => {
         const started = await useStartSequenceTrack(params).handleStartTrack('annotation-1');
 
         expect(started).toBe(true);
@@ -39,7 +40,7 @@ describe('useStartSequenceTrack', () => {
             body: { annotation_id: 'annotation-1' }
         });
         const queryIds = invalidateQueries.mock.calls.map(([{ queryKey }]) => queryKey[0]._id);
-        expect(queryIds).toEqual(['getSequenceTracks', 'getTickDetails']);
+        expect(queryIds).toEqual(['getSequenceTracks', 'getTracks', 'getTickDetails']);
         expect(onStarted).toHaveBeenCalledOnce();
     });
 

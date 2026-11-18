@@ -9,11 +9,13 @@
         groupAnnotationsBySource,
         resolveAnnotationClassName,
         resolveAnnotationSourceName,
-        buildAnnotationForest
+        buildAnnotationForest,
+        subtreeContainsId
     } from './pointCloudAnnotationList';
     import { resolveCuboidColor } from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/cuboidColors';
     import PointCloudAnnotationListGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListGroup';
     import PointCloudAnnotationListItem from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListItem';
+    import PointCloudAnnotationParentGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationParentGroup';
     import { Typography } from '$lib/components/Typography';
 
     type AnnotationTreeNode = ReturnType<typeof buildAnnotationForest>[number];
@@ -37,8 +39,18 @@
             labelName: string,
             annotationSourceId: string
         ) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** True when the cuboid is hidden in the scene. */
+        isCuboidHidden?: (cuboid: CuboidAnnotation) => boolean;
+        /** True when every cuboid of the source is hidden in the scene. */
+        isSourceHidden?: (sourceId: string) => boolean;
+        /** Hides or shows the track of a cuboid; row eye buttons are omitted without it. */
+        onToggleTrackVisibility?: (cuboid: CuboidAnnotation) => void;
+        /** Hides or shows a source; group eye buttons are omitted without it. */
+        onToggleSourceVisibility?: (sourceId: string) => void;
     }
 
     let {
@@ -49,10 +61,21 @@
         editable = false,
         onCuboidTransform,
         onLabelChange,
-        onDeleteCuboid
+        onTrackChange,
+        onDeleteCuboid,
+        isCuboidHidden = () => false,
+        isSourceHidden = () => false,
+        onToggleTrackVisibility,
+        onToggleSourceVisibility
     }: Props = $props();
 
     const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
+    // The group header holds the source toggle, so it shows whenever sources can be toggled,
+    // also on a tick with only one source.
+    const showGroups = $derived(onToggleSourceVisibility !== undefined || groups.length > 1);
+    const occupiedTrackIds = $derived(
+        new Set(cuboids.flatMap((c) => (c.trackId ? [c.trackId] : [])))
+    );
 
     function toggle(id: string): void {
         selectedCuboidId = selectedCuboidId === id ? null : id;
@@ -81,9 +104,14 @@
         })}
         onToggle={toggle}
         {editable}
+        {occupiedTrackIds}
         {onCuboidTransform}
         {onLabelChange}
+        {onTrackChange}
         onDelete={onDeleteCuboid}
+        isHidden={isCuboidHidden(cuboid)}
+        isVisibilityLocked={isSourceHidden(cuboid.annotationSourceId)}
+        onToggleVisibility={onToggleTrackVisibility}
     />
 {/snippet}
 
@@ -103,11 +131,21 @@
         {@render annotationItem(node.cuboid)}
         {@render childRows(node.children)}
     {:else if !node.cuboid && node.children.length > 0}
-        {#each node.children as child (child.cuboid?.id ?? child.children[0]?.cuboid?.id)}
-            <div class="pl-4">
-                {@render annotationNode(child)}
-            </div>
-        {/each}
+        {@const firstChild = node.children[0].cuboid}
+        {#if firstChild}
+            <PointCloudAnnotationParentGroup
+                className={firstChild.parentTrackClassName ?? ''}
+                trackNumber={firstChild.parentTrackNumber}
+                subtreeSize={node.subtreeSize}
+                autoExpandForId={selectedCuboidId && subtreeContainsId(node, selectedCuboidId)
+                    ? selectedCuboidId
+                    : null}
+            >
+                <div class="space-y-1">
+                    {@render childRows(node.children)}
+                </div>
+            </PointCloudAnnotationParentGroup>
+        {/if}
     {:else if node.cuboid}
         {@render annotationItem(node.cuboid)}
     {/if}
@@ -123,7 +161,7 @@
     <div class="flex h-full items-center justify-center">
         <Typography variant="body2" className="text-muted-foreground">No annotations</Typography>
     </div>
-{:else if groups.length <= 1}
+{:else if !showGroups}
     <div class="space-y-1">
         {@render annotationForest(groups[0]?.cuboids ?? [])}
     </div>
@@ -137,6 +175,10 @@
                 group.cuboids.some((c) => c.id === selectedCuboidId)
                     ? selectedCuboidId
                     : null}
+                isHidden={isSourceHidden(group.sourceId)}
+                onToggleVisibility={onToggleSourceVisibility
+                    ? () => onToggleSourceVisibility(group.sourceId)
+                    : undefined}
             >
                 <div class="space-y-1">
                     {@render annotationForest(group.cuboids)}
