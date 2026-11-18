@@ -1,6 +1,5 @@
 import { validate as validateUUID } from 'uuid';
-import { useCategoricalMetadataDistribution } from '$lib/hooks';
-import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
+import { useCategoricalMetadataDistribution, type MetadataValueCountsFilter } from '$lib/hooks';
 import { withAllValues } from './withAllValues';
 
 interface Options {
@@ -11,7 +10,18 @@ interface Options {
     fields: string[];
 }
 
-export function useCategoricalFieldCounts(getOptions: () => Options) {
+export interface UseCategoricalFieldCountsReturn {
+    /** Value counts per field, including values outside the filter with a count of 0. */
+    readonly distributions: Record<string, ReturnType<typeof withAllValues>>;
+    readonly loading: boolean;
+    readonly updating: boolean;
+    readonly error: string | undefined;
+    refetch: () => void;
+}
+
+export function useCategoricalFieldCounts(
+    getOptions: () => Options
+): UseCategoricalFieldCountsReturn {
     const query = useCategoricalMetadataDistribution(() => {
         const { collectionId, filter, fields } = getOptions();
         return {

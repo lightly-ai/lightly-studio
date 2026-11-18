@@ -3,7 +3,7 @@
     import CategoricalMetadataFilters from '$lib/components/CategoricalMetadataFilters/CategoricalMetadataFilters.svelte';
     import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
+    import type { MetadataValueCountsFilter } from '$lib/hooks';
     import type { CategoricalMetadataValue, MetadataValues } from '$lib/services/types';
     import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
     import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';

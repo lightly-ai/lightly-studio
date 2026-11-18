@@ -49,7 +49,7 @@
     } from '$lib/routes';
     import type { GridType } from '$lib/types';
     import type { CategoricalMetadataValue } from '$lib/services/types';
-    import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
+    import type { MetadataValueCountsFilter } from '$lib/hooks';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage.js';
     import QueryControl from '$lib/components/QueryControl/QueryControl.svelte';
     import { PaneGroup, Pane, PaneResizer } from 'paneforge';

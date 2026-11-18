@@ -1,6 +1,6 @@
 <script lang="ts">
     import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
-    import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
+    import type { MetadataValueCountsFilter } from '$lib/hooks';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { useCategoricalFieldCounts } from './useCategoricalFieldCounts.svelte';

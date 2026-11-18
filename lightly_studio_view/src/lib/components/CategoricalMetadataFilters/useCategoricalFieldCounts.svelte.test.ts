@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { MetadataValueCountsFilter } from '$lib/hooks/useCategoricalMetadataDistribution/useCategoricalMetadataDistribution.svelte';
+import type { MetadataValueCountsFilter } from '$lib/hooks';
 import { useCategoricalFieldCounts } from './useCategoricalFieldCounts.svelte';
 
 const collectionId = '123e4567-e89b-42d3-a456-426614174000';
