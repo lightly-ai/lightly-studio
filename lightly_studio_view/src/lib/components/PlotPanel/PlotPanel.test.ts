@@ -98,7 +98,10 @@ const DEFAULT_GATE_STATE: GateMockState = {
     trackCompute: () => {}
 };
 // A reactive map, so a test can change the gate after render like the real hook does.
-const gateMock = vi.hoisted(() => ({ values: null as Map<string, unknown> | null }));
+const gateMock = vi.hoisted(() => ({
+    values: null as Map<string, unknown> | null,
+    getPlotRequestKey: (() => '') as () => string
+}));
 vi.mock('./usePlotComputeGate/usePlotComputeGate.svelte', async () => {
     const { SvelteMap } = await import('svelte/reactivity');
     const { isPlotRequestEnabled } = await import('./plotComputeGate/plotComputeGate');
@@ -106,25 +109,28 @@ vi.mock('./usePlotComputeGate/usePlotComputeGate.svelte', async () => {
     gateMock.values = values;
     const read = <K extends keyof GateMockState>(key: K) => values.get(key) as GateMockState[K];
     return {
-        usePlotComputeGate: () => ({
-            get view() {
-                return read('view');
-            },
-            get isPlotRequestEnabled() {
-                return isPlotRequestEnabled(read('view'));
-            },
-            get embeddingCount() {
-                return read('embeddingCount');
-            },
-            get startedAt() {
-                return read('startedAt');
-            },
-            get statusError() {
-                return read('statusError');
-            },
-            startCompute: () => read('startCompute')(),
-            trackCompute: (compute: Promise<unknown>) => read('trackCompute')(compute)
-        })
+        usePlotComputeGate: (params: { getPlotRequestKey: () => string }) => {
+            gateMock.getPlotRequestKey = params.getPlotRequestKey;
+            return {
+                get view() {
+                    return read('view');
+                },
+                get isPlotRequestEnabled() {
+                    return isPlotRequestEnabled(read('view'));
+                },
+                get embeddingCount() {
+                    return read('embeddingCount');
+                },
+                get startedAt() {
+                    return read('startedAt');
+                },
+                get statusError() {
+                    return read('statusError');
+                },
+                startCompute: () => read('startCompute')(),
+                trackCompute: (compute: Promise<unknown>) => read('trackCompute')(compute)
+            };
+        }
     };
 });
 const setGate = (state: Partial<GateMockState>) => {
@@ -677,6 +683,18 @@ describe('PlotPanel.svelte', () => {
                 onCompute: expect.any(Function)
             }
         );
+    });
+
+    it('gives the gate a new plot request key when the color changes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        const initialKey = gateMock.getPlotRequestKey();
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'tags' }));
+        await tick();
+
+        expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
     });
 
     it('lays the plot out on the committed text axes and saves them with the lasso region', async () => {

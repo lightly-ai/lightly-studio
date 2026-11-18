@@ -184,7 +184,8 @@
 
     const plotComputeGate = usePlotComputeGate({
         getCollectionId: () => collectionId,
-        getIsAxesLayout: () => $plotAxes !== null
+        getIsAxesLayout: () => $plotAxes !== null,
+        getPlotRequestKey: () => JSON.stringify([filter, $colorBy, $plotAxes])
     });
     // A separate derived, so a view change that keeps the request on does not create a new query.
     const isPlotRequestEnabled = $derived(plotComputeGate.isPlotRequestEnabled);
