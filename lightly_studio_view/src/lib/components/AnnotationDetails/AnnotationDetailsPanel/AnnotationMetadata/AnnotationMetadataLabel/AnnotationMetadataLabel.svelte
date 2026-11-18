@@ -74,7 +74,11 @@
                     collectionId,
                     addReversibleAction,
                     updateAnnotations: updateAnnotationsRaw,
-                    refresh: refetch
+                    // The drawn box reads the annotation details, not the per-annotation query.
+                    refresh: () => {
+                        refetch();
+                        onUpdate?.();
+                    }
                 });
 
                 updateAnnotation({
