@@ -1,6 +1,7 @@
 """Queries for videos with matching frames."""
 
 from sqlalchemy import ColumnElement
+from sqlmodel import col, select
 
 from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import ClassificationQuery
@@ -9,7 +10,8 @@ from lightly_studio.core.dataset_query.object_detection_query import ObjectDetec
 from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
 from lightly_studio.core.dataset_query.segmentation_mask_query import SegmentationMaskQuery
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
-from lightly_studio.models.video import VideoFrameTable, VideoTable
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.video import VideoFrameTable
 
 
 class VideoFrameQuery(MatchExpression):
@@ -34,7 +36,15 @@ class VideoFrameQuery(MatchExpression):
 
     def get(self) -> ColumnElement[bool]:
         """Get a single frame-existence expression for the combined criteria."""
-        return VideoTable.frames.any(VideoFrameTable.sample.has(self._criterion.get()))
+        return (
+            select(VideoFrameTable.sample_id)
+            .where(
+                col(VideoFrameTable.parent_sample_id) == col(SampleTable.sample_id),
+                VideoFrameTable.sample.has(self._criterion.get()),
+            )
+            .correlate(SampleTable)
+            .exists()
+        )
 
 
 def _validate_frame_criterion(criterion: MatchExpression) -> None:

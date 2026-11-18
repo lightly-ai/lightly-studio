@@ -30,6 +30,7 @@ from labelformat.model.object_detection import (
 from sqlmodel import Session
 
 from lightly_studio.core.sample import Sample
+from lightly_studio.export import annotation_batches
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.resolvers import annotation_label_resolver
 
@@ -69,14 +70,14 @@ class LightlyStudioInputBase:
         """Initializes the adapter.
 
         Args:
-            session: The SQLModel session to use for database access. Used only in the
-                constructor to fetch the labels for the given dataset.
+            session: The SQLModel session to use for database access.
             dataset_id: The dataset ID for label retrieval.
             samples: Dataset samples.
             annotation_collection_id: If provided, only annotations belonging to this
                 annotation collection are exported. If None, all annotations are exported.
             sample_to_image: Strategy mapping a sample to a labelformat `Image`.
         """
+        self._session = session
         self._samples = list(samples)
         self._annotation_collection_id = annotation_collection_id
         self._sample_to_image = sample_to_image
@@ -104,19 +105,15 @@ class LightlyStudioInputBase:
                 sample=sample, image_id=idx, use_relative_filename=self.USE_RELATIVE_FILENAME
             )
 
-    def _annotations_of_collection_and_type(
-        self, sample: Sample, annotation_type: AnnotationType
-    ) -> Iterable[AnnotationBaseTable]:
-        # TODO(malte, 07/2026): We can optimise in the future to filter annotations in a DB
-        # query instead of loading every annotation per sample and filtering in Python.
-        for annotation in sample.sample_table.annotations:
-            if annotation.annotation_type != annotation_type:
-                continue
-            if (
-                self._annotation_collection_id is None
-                or annotation.annotation_collection_id == self._annotation_collection_id
-            ):
-                yield annotation
+    def _samples_with_annotations(
+        self, annotation_type: AnnotationType
+    ) -> Iterable[tuple[Sample, list[AnnotationBaseTable]]]:
+        return annotation_batches.iter_sample_annotations(
+            session=self._session,
+            samples=self._samples,
+            annotation_type=annotation_type,
+            annotation_collection_id=self._annotation_collection_id,
+        )
 
 
 class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionInput):
@@ -124,15 +121,15 @@ class LightlyStudioObjectDetectionInput(LightlyStudioInputBase, ObjectDetectionI
 
     def get_labels(self) -> Iterable[ImageObjectDetection]:
         """Returns the labels for export."""
-        for idx, sample in enumerate(self._samples):
+        for idx, (sample, sample_annotations) in enumerate(
+            self._samples_with_annotations(annotation_type=AnnotationType.OBJECT_DETECTION)
+        ):
             objects = [
                 _annotation_to_single_obj_det(
                     annotation=annotation,
                     label_id_to_category=self._label_id_to_category,
                 )
-                for annotation in self._annotations_of_collection_and_type(
-                    sample=sample, annotation_type=AnnotationType.OBJECT_DETECTION
-                )
+                for annotation in sample_annotations
             ]
             yield ImageObjectDetection(
                 image=self._sample_to_image(
@@ -160,14 +157,14 @@ class LightlyStudioInstanceSegmentationInput(LightlyStudioInputBase, InstanceSeg
 
     def get_labels(self) -> Iterable[ImageInstanceSegmentation]:
         """Returns the labels for export."""
-        for idx, sample in enumerate(self._samples):
+        for idx, (sample, sample_annotations) in enumerate(
+            self._samples_with_annotations(annotation_type=AnnotationType.SEGMENTATION_MASK)
+        ):
             image = self._sample_to_image(
                 sample=sample, image_id=idx, use_relative_filename=self.USE_RELATIVE_FILENAME
             )
             objects = []
-            for annotation in self._annotations_of_collection_and_type(
-                sample=sample, annotation_type=AnnotationType.SEGMENTATION_MASK
-            ):
+            for annotation in sample_annotations:
                 obj = _annotation_to_single_inst_seg(
                     annotation=annotation,
                     label_id_to_category=self._label_id_to_category,
@@ -223,7 +220,7 @@ def _annotation_to_single_obj_det(
         xmax=annotation.object_detection_details.x + annotation.object_detection_details.width,
         ymax=annotation.object_detection_details.y + annotation.object_detection_details.height,
     )
-    category = label_id_to_category[annotation.annotation_label.annotation_label_id]
+    category = label_id_to_category[annotation.annotation_label_id]
     return SingleObjectDetection(
         category=category,
         box=box,
@@ -254,7 +251,7 @@ def _annotation_to_single_inst_seg(
         height=image_height,
         bounding_box=box,
     )
-    category = label_id_to_category[annotation.annotation_label.annotation_label_id]
+    category = label_id_to_category[annotation.annotation_label_id]
     return SingleInstanceSegmentation(
         category=category,
         segmentation=segmentation,
