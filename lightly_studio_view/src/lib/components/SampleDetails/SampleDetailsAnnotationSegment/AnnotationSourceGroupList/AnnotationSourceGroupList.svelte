@@ -3,7 +3,7 @@
     import { SampleDetailsAnnotationSourceGroup } from '$lib/components';
     import type { Snippet } from 'svelte';
     import { AnnotationTargetHint } from '$lib/components/SampleDetails/AnnotationTargetHint';
-    import { AnnotationTargetRadio } from '$lib/components/SampleDetails/AnnotationTargetRadio';
+    import { AnnotationTargetRadio } from '$lib/components/AnnotationSource';
     import type { useAnnotationPanelVisibility } from '../useAnnotationPanelVisibility.svelte';
 
     type Visibility = ReturnType<typeof useAnnotationPanelVisibility>;

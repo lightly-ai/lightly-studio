@@ -225,6 +225,20 @@ class ClassificationMatchExpr(BaseModel):
     subexpr: MatchExpr
 
 
+class VideoEventMatchExpr(BaseModel):
+    """Match a temporal classification annotation on a video."""
+
+    type: Literal["video_event_match_expr"] = "video_event_match_expr"
+    subexpr: MatchExpr
+
+
+class VideoFrameMatchExpr(BaseModel):
+    """Match a video with one frame that satisfies all criteria."""
+
+    type: Literal["video_frame_match_expr"] = "video_frame_match_expr"
+    subexpr: MatchExpr
+
+
 class ObjectDetectionMatchExpr(BaseModel):
     """Leaf node checking if a sample has a matching object detection annotation."""
 
@@ -273,6 +287,8 @@ MatchExpr: TypeAlias = Annotated[
     | FalsePositiveMatchExpr
     | FalseNegativeMatchExpr
     | ClassificationMatchExpr
+    | VideoEventMatchExpr
+    | VideoFrameMatchExpr
     | ObjectDetectionMatchExpr
     | SegmentationMaskMatchExpr
     | AndExpr
@@ -288,6 +304,8 @@ EvaluationMetricOrExpr.model_rebuild()
 EvaluationMetricNotExpr.model_rebuild()
 SampleEvaluationMatchExpr.model_rebuild()
 ClassificationMatchExpr.model_rebuild()
+VideoEventMatchExpr.model_rebuild()
+VideoFrameMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
 SegmentationMaskMatchExpr.model_rebuild()
 AndExpr.model_rebuild()
@@ -320,7 +338,13 @@ def _validate_evaluation_scope(expr: MatchExpr, in_annotation: bool) -> None:
         if in_annotation:
             raise ValueError("Evaluation filters cannot be nested inside annotation queries.")
     elif isinstance(
-        expr, (ClassificationMatchExpr, ObjectDetectionMatchExpr, SegmentationMaskMatchExpr)
+        expr,
+        (
+            ClassificationMatchExpr,
+            ObjectDetectionMatchExpr,
+            SegmentationMaskMatchExpr,
+            VideoEventMatchExpr,
+        ),
     ):
         _validate_evaluation_scope(expr=expr.subexpr, in_annotation=True)
     elif isinstance(expr, (AndExpr, OrExpr)):

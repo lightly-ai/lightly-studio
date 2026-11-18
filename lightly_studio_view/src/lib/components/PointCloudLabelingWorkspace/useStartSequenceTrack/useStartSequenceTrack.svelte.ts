@@ -1,4 +1,7 @@
-import { startSequenceTrackMutation } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import {
+    getTracksQueryKey,
+    startSequenceTrackMutation
+} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import { getTickDetailsSequenceQueryKey } from '$lib/hooks/useTickDetails/getTickDetailsOptions';
 import { createMutation, useQueryClient } from '@tanstack/svelte-query';
 import { toast } from 'svelte-sonner';
@@ -34,6 +37,10 @@ export function useStartSequenceTrack({ getDatasetId, getSequenceId, onStarted }
         const sequence = { datasetId: getDatasetId(), sequenceId: getSequenceId() };
         void queryClient.invalidateQueries({
             queryKey: getSequenceTracksSequenceQueryKey(sequence)
+        });
+        // Track selects in the annotation details list the dataset tracks.
+        void queryClient.invalidateQueries({
+            queryKey: getTracksQueryKey({ path: { dataset_id: getDatasetId() } })
         });
         void queryClient.invalidateQueries({ queryKey: getTickDetailsSequenceQueryKey(sequence) });
         try {

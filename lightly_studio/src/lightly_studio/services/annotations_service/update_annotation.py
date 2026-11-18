@@ -26,6 +26,9 @@ class AnnotationUpdate(BaseModel):
     start_time_s: float | None = None
     end_time_s: float | None = None
     cuboid_3d: Cuboid3DCreate | None = None
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
+    update_object_track: bool = False
 
 
 def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> AnnotationBaseTable:
@@ -74,6 +77,15 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             session=session,
             annotation_id=annotation_update.annotation_id,
             cuboid_3d=annotation_update.cuboid_3d,
+        )
+
+    if annotation_update.update_object_track:
+        result = annotations_service.update_annotation_object_track(
+            session=session,
+            annotation_id=annotation_update.annotation_id,
+            collection_id=annotation_update.collection_id,
+            object_track_id=annotation_update.object_track_id,
+            create_new_track=annotation_update.create_new_track,
         )
 
     if result is None:
