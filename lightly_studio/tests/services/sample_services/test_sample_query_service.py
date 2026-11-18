@@ -94,11 +94,12 @@ def test_query_samples__pages(db_session: Session, sort: list[SortKey]) -> None:
 
 def test_query_samples__include_tags(db_session: Session) -> None:
     collection_id = create_collection(session=db_session).collection_id
-    image = create_image(session=db_session, collection_id=collection_id)
+    tagged = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
+    create_image(session=db_session, collection_id=collection_id, file_path_abs="/b.png")
     for name in ["b", "a"]:
         tag = create_tag(session=db_session, collection_id=collection_id, tag_name=name)
         tag_resolver.add_sample_ids_to_tag_id(
-            session=db_session, tag_id=tag.tag_id, sample_ids=[image.sample_id]
+            session=db_session, tag_id=tag.tag_id, sample_ids=[tagged.sample_id]
         )
     request = SampleQueryRequest(include=[SampleInclude.TAGS])
 
@@ -106,7 +107,7 @@ def test_query_samples__include_tags(db_session: Session) -> None:
         session=db_session, collection_id=collection_id, request=request
     )
 
-    assert page.samples[0].tags == ["a", "b"]
+    assert {s.file_name: s.tags for s in page.samples} == {"a.png": ["a", "b"], "b.png": []}
 
 
 def test_query_samples__cursor_of_other_sort__raises(db_session: Session) -> None:

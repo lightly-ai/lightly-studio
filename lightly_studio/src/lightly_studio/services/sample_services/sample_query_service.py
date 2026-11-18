@@ -77,7 +77,8 @@ def query_samples(session: Session, collection_id: UUID, request: SampleQueryReq
     if len(images) > request.limit:
         after = [getattr(page[-1], c.name) for c in sort_columns]
         next_cursor = sample_query_cursor.encode(query_hash=hash_, after=after)
-    tags = _tag_names(session=session, images=page, include=request.include)
+    sample_ids = [image.sample_id for image in page]
+    tags = _tag_names(session=session, sample_ids=sample_ids, include=request.include)
     records = [_to_record(image=image, collection_id=collection_id, tags=tags) for image in page]
     return SamplePage(samples=records, next_cursor=next_cursor)
 
@@ -148,11 +149,10 @@ def _after(sort_columns: Sequence[_SortColumn], values: Sequence[Any]) -> Column
 
 
 def _tag_names(
-    session: Session, images: Sequence[ImageTable], include: Sequence[SampleInclude]
+    session: Session, sample_ids: Sequence[UUID], include: Sequence[SampleInclude]
 ) -> dict[UUID, list[str]] | None:
     if SampleInclude.TAGS not in include:
         return None
-    sample_ids = [image.sample_id for image in images]
     return tag_resolver.get_names_by_sample_ids(session=session, sample_ids=sample_ids)
 
 
