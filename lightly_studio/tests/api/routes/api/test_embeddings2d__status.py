@@ -13,6 +13,8 @@ from lightly_studio.resolvers import collection_embedding_model_resolver, twodim
 from tests.helpers_resolvers import (
     create_collection,
     create_embedding_model,
+    create_image,
+    create_sample_embedding,
     fill_db_with_samples_and_embeddings,
 )
 
@@ -72,13 +74,44 @@ def test_get_2d_embeddings_status__dirty(test_client: TestClient, db_session: Se
 def test_get_2d_embeddings_status__counts_default_model_only(
     test_client: TestClient, db_session: Session
 ) -> None:
-    collection_id = fill_db_with_samples_and_embeddings(
-        session=db_session, n_samples=3, embedding_model_names=["model_a", "model_b"]
+    collection = create_collection(session=db_session)
+    default_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="model_a",
+        embedding_dimension=2,
+        set_as_default=True,
     )
+    other_model = create_embedding_model(
+        session=db_session,
+        collection_id=collection.collection_id,
+        embedding_model_name="model_b",
+        embedding_dimension=2,
+    )
+    first = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/a.png"
+    )
+    second = create_image(
+        session=db_session, collection_id=collection.collection_id, file_path_abs="/b.png"
+    )
+    # The default model has 1 embedding, the other model has 2.
+    create_sample_embedding(
+        session=db_session,
+        sample_id=first.sample_id,
+        embedding_model_id=default_model.embedding_model_id,
+        embedding=[1.0, 2.0],
+    )
+    for image in (first, second):
+        create_sample_embedding(
+            session=db_session,
+            sample_id=image.sample_id,
+            embedding_model_id=other_model.embedding_model_id,
+            embedding=[1.0, 2.0],
+        )
 
-    response = test_client.get(f"/api/collections/{collection_id}/embeddings2d/status")
+    response = test_client.get(f"/api/collections/{collection.collection_id}/embeddings2d/status")
 
-    assert response.json() == {"is_computed": False, "embedding_count": 3}
+    assert response.json() == {"is_computed": False, "embedding_count": 1}
 
 
 def test_get_2d_embeddings_status__no_embeddings(
@@ -93,6 +126,16 @@ def test_get_2d_embeddings_status__no_embeddings(
 
     assert response.status_code == 200
     assert response.json() == {"is_computed": False, "embedding_count": 0}
+
+
+def test_get_2d_embeddings_status__no_default_model(
+    test_client: TestClient, db_session: Session
+) -> None:
+    collection = create_collection(session=db_session)
+
+    response = test_client.get(f"/api/collections/{collection.collection_id}/embeddings2d/status")
+
+    assert response.status_code == 404
 
 
 def test_get_2d_embeddings_status__unknown_collection(test_client: TestClient) -> None:
