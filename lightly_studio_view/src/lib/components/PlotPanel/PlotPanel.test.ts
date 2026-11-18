@@ -658,9 +658,7 @@ describe('PlotPanel.svelte', () => {
         expect(screen.queryByTestId('plot-selection-chip')).not.toBeInTheDocument();
 
         plotSelectionCountStore.set(3);
-        expect(await screen.findByTestId('plot-selection-chip')).toHaveTextContent(
-            'Plot filter: 3 images'
-        );
+        expect(await screen.findByTestId('plot-selection-chip')).toHaveTextContent(/^3 images$/);
 
         mockClearPlotSelectionCount.mockImplementationOnce(() => plotSelectionCountStore.set(0));
         await user.click(screen.getByRole('button', { name: 'Clear plot filter' }));
