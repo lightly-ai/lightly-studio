@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { Snippet } from 'svelte';
     import { Input } from '$lib/components/ui/input';
+    import { cn } from '$lib/utils';
     import FilterListActions from './FilterListActions/FilterListActions.svelte';
     import FilterListRows from './FilterListRows/FilterListRows.svelte';
     import { matchesSearch, selectAllMatching, type FilterListItem } from './filterList.helpers';
@@ -33,6 +34,8 @@
         customRowId?: string | null;
         /** Whether long lists render in pages of 50 rows. Turn off for short lists like tags. */
         paged?: boolean;
+        /** Classes of the box around the rows, e.g. a max height so only the rows scroll. */
+        rowsClass?: string;
     }
 
     const {
@@ -49,7 +52,8 @@
         trailing,
         customRow,
         customRowId = null,
-        paged = true
+        paged = true,
+        rowsClass
     }: Props = $props();
 
     const list = useFilterListState({
@@ -76,19 +80,29 @@
             onClear={() => onSelectionChange([])}
         />
     {/if}
-    <FilterListRows
-        items={list.shown}
-        {onToggle}
-        pinnedItem={pinnedVisible ? pinnedItem : undefined}
-        search={list.search}
-        {testId}
-        nextPageCount={list.nextPageCount}
-        onShowMore={list.showMore}
-        {leading}
-        {trailing}
-        {customRow}
-        {customRowId}
-    />
+    {#snippet rows()}
+        <FilterListRows
+            items={list.shown}
+            onToggle={(id) => {
+                list.keep(id);
+                onToggle(id);
+            }}
+            pinnedItem={pinnedVisible ? pinnedItem : undefined}
+            search={list.search}
+            {testId}
+            nextPageCount={list.nextPageCount}
+            onShowMore={list.showMore}
+            {leading}
+            {trailing}
+            {customRow}
+            {customRowId}
+        />
+    {/snippet}
+    {#if rowsClass}
+        <div class={cn('space-y-2', rowsClass)}>{@render rows()}</div>
+    {:else}
+        {@render rows()}
+    {/if}
     {#if items.length === 0 && emptyText}
         <p class="text-sm text-diffuse-foreground">{emptyText}</p>
     {:else if items.length > 0 && list.matching.length === 0 && !pinnedVisible}

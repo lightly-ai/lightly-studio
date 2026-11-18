@@ -11,7 +11,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@tanstack/svelte-query', () => ({
     createMutation: () => ({ mutateAsync: mocks.mutateAsync })
 }));
-vi.mock('$lib/hooks', () => ({
+vi.mock('$lib/hooks', async () => ({
+    isAnnotationSourceBlocked: (
+        await import('$lib/hooks/useAnnotationTarget/annotationSourceGuard')
+    ).isAnnotationSourceBlocked,
     useSaveAnnotationPreviews: () => ({ saveAnnotationPreviews: mocks.saveAnnotationPreviews })
 }));
 vi.mock('svelte-sonner', () => ({ toast: { error: mocks.toastError } }));
@@ -36,7 +39,10 @@ let cleanup = () => {};
 
 const params = $state({ sampleId: 'sample-1' });
 
-const setup = ({ annotationClass = null }: { annotationClass?: string | null } = {}) => {
+const setup = ({
+    annotationClass = null,
+    blockedReason = null
+}: { annotationClass?: string | null; blockedReason?: string | null } = {}) => {
     params.sampleId = 'sample-1';
     let smartSelect!: ReturnType<typeof useSmartSelect>;
     cleanup = $effect.root(() => {
@@ -46,6 +52,7 @@ const setup = ({ annotationClass = null }: { annotationClass?: string | null } =
             saveAs: 'mask',
             annotationClass,
             annotationSource: 'source',
+            annotationSourceBlockedReason: blockedReason,
             onSaved: vi.fn()
         }));
     });
@@ -118,6 +125,19 @@ describe('useSmartSelect', () => {
             })
         );
         expect(smartSelect.preview).toBeNull();
+    });
+
+    it('saves nothing while no annotation source can take new annotations', async () => {
+        mocks.mutateAsync.mockResolvedValue({ prediction });
+        const smartSelect = setup({ blockedReason: 'Pick where new annotations go.' });
+        smartSelect.addPoint(point, 'cat');
+        await vi.waitFor(() => expect(smartSelect.preview).not.toBeNull());
+
+        await smartSelect.save();
+
+        expect(mocks.saveAnnotationPreviews).not.toHaveBeenCalled();
+        expect(mocks.toastError).toHaveBeenCalledWith('Pick where new annotations go.');
+        expect(smartSelect.preview).toEqual(prediction);
     });
 
     it('saves the selected class even when its name is empty', async () => {

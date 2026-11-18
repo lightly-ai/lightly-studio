@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { LoaderCircle } from '@lucide/svelte';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { AnnotationType, type AnnotationView } from '$lib/api/lightly_studio_local';
     import { ZoomableContainer } from '$lib/components';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -20,7 +20,6 @@
     import { useSettings } from '$lib/hooks';
     import { throttle } from 'lodash-es';
     import BrushToolPopUp from '../BrushToolPopUp/BrushToolPopUp.svelte';
-    import { AnnotationSourcePill } from '$lib/components';
     import SlicToolPopUp from '../SlicToolPopUp/SlicToolPopUp.svelte';
     import SampleDetailsToolbar from '../SampleDetailsToolbar/SampleDetailsToolbar.svelte';
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
@@ -263,11 +262,6 @@
         {/if}
     {/snippet}
     {#snippet zoomPanelContent()}
-        {#if $isEditingMode && !annotationLabelContext.isOnAnnotationDetailsView}
-            <div class="mb-1">
-                <AnnotationSourcePill {collectionId} />
-            </div>
-        {/if}
         {#if shouldShowBrushToolPopup}
             <BrushToolPopUp />
         {/if}

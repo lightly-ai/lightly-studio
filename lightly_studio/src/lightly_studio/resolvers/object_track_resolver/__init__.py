@@ -14,7 +14,11 @@ from lightly_studio.resolvers.object_track_resolver.delete_empty_by_ids import (
 from lightly_studio.resolvers.object_track_resolver.get_all_by_dataset_id import (
     get_all_by_dataset_id,
 )
+from lightly_studio.resolvers.object_track_resolver.get_all_with_class_name_by_dataset_id import (
+    get_all_with_class_name_by_dataset_id,
+)
 from lightly_studio.resolvers.object_track_resolver.get_by_id import get_by_id
+from lightly_studio.resolvers.object_track_resolver.update_parent_track import update_parent_track
 
 __all__ = [
     "add_annotation_to_object_track",
@@ -23,5 +27,7 @@ __all__ = [
     "delete_by_id",
     "delete_empty_by_ids",
     "get_all_by_dataset_id",
+    "get_all_with_class_name_by_dataset_id",
     "get_by_id",
+    "update_parent_track",
 ]

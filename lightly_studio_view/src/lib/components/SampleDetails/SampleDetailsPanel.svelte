@@ -6,7 +6,7 @@
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { onMount, untrack, type Snippet } from 'svelte';
+    import { untrack, type Snippet } from 'svelte';
 
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
@@ -26,6 +26,7 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
+    import { useAnnotationTarget } from '$lib/hooks';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
 
     const {
@@ -76,7 +77,7 @@
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
-    const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
+    const { isEditingMode } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations.
     // isOnAnnotationDetailsView is re-synced via $effect when the prop changes.
@@ -98,6 +99,12 @@
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
+    // Always mounted, also without the Annotations panel, so drawing is always guarded.
+    useAnnotationTarget({
+        getCollectionId: () => collectionId,
+        getAnnotations: () => sample?.annotations ?? [],
+        getHiddenIds: () => annotationsIdsToHide
+    });
     let previousAnnotationType: AnnotationType | null | undefined;
     // Handle keyboard events
     const handleKeyDownEvent = (event: KeyboardEvent) => {
@@ -117,36 +124,38 @@
                     handleEscape();
                 }
                 break;
-            // Add spacebar handling for selection toggle
-            case ' ': // Space key
-                // Prevent default space behavior (like page scrolling)
-                event.preventDefault();
-                event.stopPropagation();
-
-                // Toggle selection based on context
-                if (!$isEditingMode) {
-                    if (isOnAnnotationDetailsView) {
-                        toggleSampleAnnotationCropSelection(
-                            collectionId,
-                            sample.annotations![0].sample_id
-                        );
-                    } else {
-                        toggleSampleSelection(sampleId, collectionId);
-                    }
-                } else {
-                    if (!isPanModeEnabled) {
-                        previousAnnotationType = annotationLabelContext.annotationType;
-                        sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
-                        sampleDetailsToolbarContext.status = 'drag';
-                        annotationLabelContext.annotationType = null;
-                    }
-                    isPanModeEnabled = true;
-                }
+            case ' ':
+                handleSpaceKeyDown(event);
                 break;
         }
 
         // Always pass to the hide annotations handler
         handleKeyEvent(event);
+    };
+
+    /** Space toggles the selection, or starts pan mode while editing. */
+    const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        // Space would scroll the page.
+        event.preventDefault();
+        event.stopPropagation();
+
+        if ($isEditingMode) {
+            if (!isPanModeEnabled) {
+                previousAnnotationType = annotationLabelContext.annotationType;
+                sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
+                sampleDetailsToolbarContext.status = 'drag';
+                annotationLabelContext.annotationType = null;
+            }
+            isPanModeEnabled = true;
+            return;
+        }
+
+        if (isOnAnnotationDetailsView) {
+            toggleSampleAnnotationCropSelection(collectionId, sample.annotations![0].sample_id);
+            return;
+        }
+
+        toggleSampleSelection(sampleId, collectionId);
     };
 
     const handleKeyUpEvent = (event: KeyboardEvent) => {
@@ -188,8 +197,7 @@
             return;
         selectAnnotation({
             annotationId,
-            annotations: sample.annotations ?? [],
-            collectionId
+            annotations: sample.annotations ?? []
         });
     };
 
@@ -231,11 +239,6 @@
             sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
-    });
-
-    onMount(() => {
-        annotationLabelContext.annotationLabel = $lastAnnotationLabel[collectionId];
-        annotationLabelContext.annotationSource = $lastAnnotationSource[collectionId];
     });
 </script>
 

@@ -4,9 +4,13 @@ import {
     UNKNOWN_SOURCE_NAME,
     areAllAnnotationsHidden,
     computeSeededHiddenIds,
+    findGroupOfAnnotation,
     groupAnnotationsBySource,
     isSourceGroupInitiallyOpen,
-    toggleSourceVisibility
+    isSourceShown,
+    listAllSourceGroups,
+    toggleAnnotationVisibility,
+    toggleAnnotationsVisibility
 } from './SampleDetailsAnnotationSegment.helpers';
 
 const createAnnotation = (sampleId: string, sourceId: string, labelName: string): AnnotationView =>
@@ -123,24 +127,26 @@ describe('areAllAnnotationsHidden', () => {
     });
 });
 
-describe('toggleSourceVisibility', () => {
+describe('toggleAnnotationsVisibility', () => {
     const annotations = [
         createAnnotation('gt-1', groundTruthSource.collection_id, 'cat'),
         createAnnotation('gt-2', groundTruthSource.collection_id, 'dog')
     ];
 
     it('hides all annotations of the source when at least one is visible', () => {
-        expect(toggleSourceVisibility(annotations, new Set(['gt-1']))).toEqual(
+        expect(toggleAnnotationsVisibility(annotations, new Set(['gt-1']))).toEqual(
             new Set(['gt-1', 'gt-2'])
         );
     });
 
     it('shows all annotations of the source when all are hidden', () => {
-        expect(toggleSourceVisibility(annotations, new Set(['gt-1', 'gt-2']))).toEqual(new Set());
+        expect(toggleAnnotationsVisibility(annotations, new Set(['gt-1', 'gt-2']))).toEqual(
+            new Set()
+        );
     });
 
     it('does not affect hidden annotations of other sources', () => {
-        expect(toggleSourceVisibility(annotations, new Set(['other-1']))).toEqual(
+        expect(toggleAnnotationsVisibility(annotations, new Set(['other-1']))).toEqual(
             new Set(['other-1', 'gt-1', 'gt-2'])
         );
     });
@@ -148,7 +154,7 @@ describe('toggleSourceVisibility', () => {
     it('does not mutate the given hidden set', () => {
         const hiddenAnnotationIds = new Set(['gt-1']);
 
-        toggleSourceVisibility(annotations, hiddenAnnotationIds);
+        toggleAnnotationsVisibility(annotations, hiddenAnnotationIds);
 
         expect(hiddenAnnotationIds).toEqual(new Set(['gt-1']));
     });
@@ -232,5 +238,74 @@ describe('isSourceGroupInitiallyOpen', () => {
             true
         );
         expect(isSourceGroupInitiallyOpen(annotations, new Set(), 'a2', false)).toBe(true);
+    });
+});
+
+describe('listAllSourceGroups', () => {
+    const gtAnnotation = createAnnotation('a1', groundTruthSource.collection_id, 'cat');
+    const groups = [
+        {
+            id: groundTruthSource.collection_id,
+            name: groundTruthSource.name,
+            annotations: [gtAnnotation]
+        }
+    ];
+
+    it('adds an empty group for each source without annotations, in source order', () => {
+        const result = listAllSourceGroups(groups, [predictionsSource, groundTruthSource], null);
+
+        expect(result.map((group) => [group.name, group.annotations.length])).toEqual([
+            [predictionsSource.name, 0],
+            [groundTruthSource.name, 1]
+        ]);
+    });
+
+    it('adds the typed target source last when it does not exist yet', () => {
+        const result = listAllSourceGroups(groups, [groundTruthSource], 'Review');
+
+        expect(result.map((group) => group.name)).toEqual([groundTruthSource.name, 'Review']);
+    });
+
+    it('adds no extra group when the target source exists', () => {
+        const result = listAllSourceGroups(groups, [groundTruthSource], groundTruthSource.name);
+
+        expect(result).toHaveLength(1);
+    });
+});
+
+describe('toggleAnnotationVisibility', () => {
+    it('hides a shown annotation and shows a hidden one without mutating the set', () => {
+        const hidden = new Set(['a1']);
+
+        expect(toggleAnnotationVisibility('a2', hidden)).toEqual(new Set(['a1', 'a2']));
+        expect(toggleAnnotationVisibility('a1', hidden)).toEqual(new Set());
+        expect(hidden).toEqual(new Set(['a1']));
+    });
+});
+
+describe('isSourceShown', () => {
+    it('follows the grid filter until the user sets the visibility', () => {
+        expect(isSourceShown(undefined, true)).toBe(true);
+        expect(isSourceShown(undefined, false)).toBe(false);
+        expect(isSourceShown(true, true)).toBe(false);
+        expect(isSourceShown(false, false)).toBe(true);
+    });
+});
+
+describe('findGroupOfAnnotation', () => {
+    it('returns the group that holds the annotation', () => {
+        const groundTruth = {
+            id: 'source-gt',
+            name: 'Ground truth',
+            annotations: [createAnnotation('gt-1', 'source-gt', 'cat')]
+        };
+        const predictions = {
+            id: 'source-pred',
+            name: 'Predictions',
+            annotations: [createAnnotation('pred-1', 'source-pred', 'cat')]
+        };
+
+        expect(findGroupOfAnnotation([groundTruth, predictions], 'pred-1')).toBe(predictions);
+        expect(findGroupOfAnnotation([groundTruth, predictions], 'missing')).toBeUndefined();
     });
 });

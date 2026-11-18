@@ -1,6 +1,5 @@
 """Tests for delete_dataset resolver."""
 
-import tempfile
 import uuid
 from pathlib import Path
 
@@ -633,8 +632,10 @@ def test_delete_dataset__with_export_job__leaves_artifact_outside_temp_dir(
     db_session: Session, tmp_path: Path, mocker: MockerFixture
 ) -> None:
     # Arrange - the fake temp directory does not contain the export artifact below
-    # The package exports a `delete_dataset` function that hides the module of the same name
-    mocker.patch.object(tempfile, "gettempdir", return_value=str(tmp_path / "temp"))
+    mocker.patch(
+        "lightly_studio.export.export_artifact.tempfile.gettempdir",
+        return_value=str(tmp_path / "temp"),
+    )
     dataset = create_collection(session=db_session, collection_name="to_delete")
     collection_id = dataset.collection_id  # Capture before delete
     export_path = tmp_path / "outside" / "coco.json"

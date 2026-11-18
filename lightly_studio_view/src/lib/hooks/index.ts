@@ -51,6 +51,7 @@ export {
     formatEvaluationMetricLabel
 } from '$lib/hooks/useImageSortFields/useImageSortFields.svelte';
 export { useSelectClassDialog } from '$lib/hooks/useSelectClassDialog/useSelectClassDialog';
+export { useTracks } from '$lib/hooks/useTracks/useTracks.svelte';
 export { usePendingOperations } from '$lib/hooks/usePendingOperations/usePendingOperations';
 export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
 
@@ -61,6 +62,7 @@ export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPrevie
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
 export { useUpdateAnnotationsMutation } from '$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation';
+export { useUpdateTrackMutation } from '$lib/hooks/useUpdateTrackMutation/useUpdateTrackMutation.svelte';
 export {
     AnnotationClassNotAvailableError,
     getCreateLabelErrorMessage,
@@ -124,5 +126,17 @@ export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassCo
 export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
 export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
+export { useQueryHistory } from '$lib/hooks/useQueryHistory/useQueryHistory';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
+export { useAnnotationTarget } from '$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte';
+export { useSetTargetSource } from '$lib/hooks/useAnnotationTarget/useSetTargetSource';
+export { DEFAULT_SOURCE_NAME } from '$lib/hooks/useAnnotationTarget/resolveTargetSource';
+export {
+    LOADING_SOURCES_MESSAGE,
+    PICK_SOURCE_MESSAGE
+} from '$lib/hooks/useAnnotationTarget/messages';
+export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
+export { default as useAuth } from '$lib/hooks/useAuth/useAuth';
+export { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';

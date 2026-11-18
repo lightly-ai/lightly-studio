@@ -7,6 +7,8 @@ import threading
 
 from lightly_studio_serve.labeling import LabelingModel
 
+from lightly_studio.models.assisted_labeling import MAX_MODEL_ID_LENGTH
+
 logger = logging.getLogger(__name__)
 
 
@@ -22,8 +24,18 @@ class LabelingModelRegistry:
         self._lock = threading.Lock()
 
     def register(self, model: LabelingModel) -> None:
-        """Register a model. A model with the same ID is replaced and keeps its position."""
+        """Register a model. A model with the same ID is replaced and keeps its position.
+
+        Raises:
+            ValueError: If the model ID is empty or longer than `MAX_MODEL_ID_LENGTH`.
+        """
         model_id = model.model_id
+        # The GUI sends the ID back in a preview request, which allows only this length
+        if not 0 < len(model_id) <= MAX_MODEL_ID_LENGTH:
+            raise ValueError(
+                f"The labeling model ID must have 1 to {MAX_MODEL_ID_LENGTH} characters, "
+                f"not {len(model_id)}."
+            )
         with self._lock:
             if model_id in self._model_id_to_model:
                 logger.warning("Replacing labeling model %r.", model_id)

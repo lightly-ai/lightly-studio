@@ -15,6 +15,7 @@ import type {
     VideoSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
+import type { PlotSelection } from '../useEmbeddingFilter/useEmbeddingPlotSelection';
 import type { useImageFilters } from '$lib/hooks';
 type QueryExpression = NonNullable<
     Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0]
@@ -114,6 +115,20 @@ export const useVideoFilters = () => {
         );
     };
 
+    const updatePlotSelection = ({ embeddingRegion, sampleIds }: PlotSelection) => {
+        const params = get(filterParams);
+        if (!params?.collection_id) {
+            return;
+        }
+
+        filterParams.set(
+            patchFilters(params, {
+                embedding_region: embeddingRegion ?? undefined,
+                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
+            })
+        );
+    };
+
     const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
         const params = get(filterParams);
         if (!params?.collection_id) {
@@ -136,6 +151,7 @@ export const useVideoFilters = () => {
         updateFilterParams,
         updateSampleIds,
         updateEmbeddingRegion,
+        updatePlotSelection,
         updateSortBy
     };
 };
