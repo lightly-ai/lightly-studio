@@ -578,7 +578,7 @@
 </script>
 
 <div class="flex-none">
-    {#if !(isSampleDetails || isAnnotationDetails || isGroupDetails || isFrameDetails)}
+    {#if !(isSampleDetails || isAnnotationDetails || isGroupDetails || isFrameDetails || isPointCloudLabeling)}
         <Header
             {collection}
             showTour={onboardingEnabled}

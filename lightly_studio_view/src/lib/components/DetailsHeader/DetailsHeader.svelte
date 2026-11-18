@@ -18,11 +18,23 @@
         extraActions?: Snippet;
         /** Shows the button that collapses the page's side panel. */
         showSidePanelToggle?: boolean;
+        /**
+         * Shows only the breadcrumb and extra actions, e.g. in fullscreen. The edit actions
+         * stay mounted (hidden) so their keyboard shortcuts keep working.
+         */
+        compact?: boolean;
     }
 
-    const { collectionId, breadcrumb, extraActions, showSidePanelToggle = true }: Props = $props();
+    const {
+        collectionId,
+        breadcrumb,
+        extraActions,
+        showSidePanelToggle = true,
+        compact = false
+    }: Props = $props();
 
-    const workflow = useWorkflowFileContext();
+    const context = useWorkflowFileContext();
+    const workflow = $derived(compact ? undefined : context);
 </script>
 
 <div class="flex w-full items-center justify-between">
@@ -40,14 +52,18 @@
                 onTransition={workflow.transition}
             />
         {/if}
-        <BreadcrumbHeaderActions {collectionId} />
+        <div class={compact ? 'hidden' : 'contents'} hidden={compact}>
+            <BreadcrumbHeaderActions {collectionId} />
+        </div>
         {@render extraActions?.()}
-        {#if showSidePanelToggle}
+        {#if showSidePanelToggle && !compact}
             <SidePanelToggleButton />
         {/if}
     </div>
 </div>
-<Separator class="bg-border-hard" />
+{#if !compact}
+    <Separator class="bg-border-hard" />
+{/if}
 {#if workflow?.file}
     <WorkflowReadOnlyBanner file={workflow.file} />
 {:else if workflow?.isError}

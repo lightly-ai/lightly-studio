@@ -3,7 +3,6 @@
     import { goto } from '$app/navigation';
     import { page } from '$app/state';
     import { useMcapSequenceSummary } from '$lib/hooks';
-    import { LayoutCard } from '$lib/components';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
     import { getTickNumberFromHash } from './getTickNumberFromHash';
     import { routeHelpers } from '$lib/routes';
@@ -84,10 +83,14 @@
     };
 </script>
 
-<div class="flex h-full min-h-0 w-full flex-1 px-4 pb-4" data-testid="point-cloud-labeling-route">
-    <LayoutCard className="min-h-0 overflow-hidden px-4 py-2">
+<div
+    class="flex h-full min-h-0 w-full flex-1 bg-card px-2 pb-2 pt-4"
+    data-testid="point-cloud-labeling-route"
+>
+    <div class="h-full min-h-0 w-full overflow-hidden">
         <PointCloudLabelingWorkspace
             {datasetId}
+            {collectionId}
             {annotationSourceCollectionId}
             {sequenceId}
             {sourcePath}
@@ -98,5 +101,5 @@
                 : undefined}
             onNextSequence={nextSequenceId ? () => goToSequence(nextSequenceId) : undefined}
         />
-    </LayoutCard>
+    </div>
 </div>

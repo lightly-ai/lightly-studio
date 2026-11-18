@@ -6,6 +6,11 @@ export interface WorkspaceOptions {
     datasetId: string;
     /** GROUP collection containing the point cloud annotation sources. */
     annotationSourceCollectionId?: string;
+    /**
+     * Collection the header's edit, plugin and settings actions apply to. Without it the
+     * header shows only the breadcrumb, camera strip and fullscreen buttons.
+     */
+    collectionId?: string;
     /** MCAP sequence being labeled, used to resolve per-tick camera frames. */
     sequenceId: string;
     /** 1-based tick to open on (from the route hash); defaults to the first frame. */

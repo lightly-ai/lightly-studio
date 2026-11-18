@@ -127,7 +127,11 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
     return {
         useGlobalStorage: () => ({
-            isEditingMode: writable(true)
+            isEditingMode: writable(true),
+            // The header's edit actions read these.
+            setIsEditingMode: vi.fn(),
+            reversibleActions: writable([]),
+            executeReversibleAction: vi.fn()
         })
     };
 });

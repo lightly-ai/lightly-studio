@@ -1,12 +1,13 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { createRawSnippet } from 'svelte';
-import { writable } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import DetailsHeader from './DetailsHeader.svelte';
 import { workflowFile } from '$lib/components/Workflow/workflowFile.fixture';
 import type { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
 
 const mocks = vi.hoisted(() => ({
+    isEditingMode: undefined as unknown as import('svelte/store').Writable<boolean>,
     workflow: undefined as
         | Partial<NonNullable<ReturnType<typeof useWorkflowFileContext>>>
         | undefined
@@ -16,8 +17,8 @@ vi.mock('$lib/hooks', async () => {
     const { writable } = await import('svelte/store');
     return {
         useGlobalStorage: () => ({
-            isEditingMode: writable(false),
-            setIsEditingMode: vi.fn(),
+            isEditingMode: mocks.isEditingMode,
+            setIsEditingMode: (value: boolean) => mocks.isEditingMode.set(value),
             reversibleActions: writable([]),
             executeReversibleAction: vi.fn()
         }),
@@ -54,6 +55,7 @@ const renderHeader = (props: Record<string, unknown> = {}) =>
 
 describe('DetailsHeader', () => {
     beforeEach(() => {
+        mocks.isEditingMode = writable(false);
         mocks.workflow = undefined;
     });
 
@@ -128,5 +130,29 @@ describe('DetailsHeader', () => {
         expect(screen.getByRole('alert')).toHaveTextContent(
             'Could not load the batch for this file. It stays read-only.'
         );
+    });
+
+    it('shows only the breadcrumb and extra actions when compact, keeping the edit shortcut', async () => {
+        mocks.workflow = {
+            active: true,
+            canEdit: true,
+            isError: false,
+            transitioning: false,
+            file: workflowFile
+        };
+
+        renderHeader({ extraActions, compact: true });
+
+        expect(screen.getByTestId('test-breadcrumb')).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Enter fullscreen' })).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Plugins' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: 'Settings' })).not.toBeInTheDocument();
+        expect(screen.getByTestId('breadcrumb-edit-button')).not.toBeVisible();
+        expect(screen.queryByTestId('side-panel-toggle')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('workflow-file-status')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('workflow-file-actions')).not.toBeInTheDocument();
+
+        await fireEvent.keyDown(window, { key: 'e' });
+        expect(get(mocks.isEditingMode)).toBe(true);
     });
 });

@@ -47,6 +47,7 @@ vi.mock('paneforge', async () => {
 });
 vi.mock('$lib/components', async () => {
     const { default: Stub } = await import('./LayoutStub.test.svelte');
+    const { default: HeaderStub } = await import('./HeaderStub.test.svelte');
     // The footer text is asserted in the tests, so it renders for real.
     const { default: Footer } = await import('$lib/components/Footer/Footer.svelte');
     return {
@@ -61,7 +62,7 @@ vi.mock('$lib/components', async () => {
         ShowFiltersButton: Stub,
         TagsMenu: Stub,
         SidePanelTabs: Stub,
-        Header: Stub,
+        Header: HeaderStub,
         Separator: Stub
     };
 });
@@ -544,6 +545,29 @@ describe('+layout.svelte details-route bypass', () => {
 
         expect(screen.getByTestId('layout-test-child')).toBeInTheDocument();
     });
+});
+
+// Global header
+
+describe('+layout.svelte global header', () => {
+    it('hides the global header on the point-cloud labeling route', async () => {
+        setPageRoute(APP_ROUTES.pointCloudLabeling);
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        expect(screen.queryByTestId('global-header')).not.toBeInTheDocument();
+    });
+
+    it.each([APP_ROUTES.pointClouds, APP_ROUTES.videoDetails, APP_ROUTES.images])(
+        'keeps the global header on %s',
+        async (route) => {
+            setPageRoute(route);
+            render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+            await tick();
+
+            expect(screen.getByTestId('global-header')).toBeInTheDocument();
+        }
+    );
 });
 
 // Filter sidebar collapse/expand

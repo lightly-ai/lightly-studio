@@ -8,6 +8,7 @@
 </script>
 
 <WorkspaceHeader
+    collectionId={controller.options.collectionId}
     sequenceId={controller.options.sequenceId}
     sourcePath={controller.options.sourcePath}
     isFullscreen={fullscreen.isFullscreen}

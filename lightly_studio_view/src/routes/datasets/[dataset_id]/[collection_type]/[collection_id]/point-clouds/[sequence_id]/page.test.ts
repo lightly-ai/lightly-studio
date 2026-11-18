@@ -1,5 +1,5 @@
 import { beforeEach, describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/svelte';
+import { render, screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { goto } from '$app/navigation';
 import Page from './+page.svelte';
@@ -113,7 +113,11 @@ vi.mock('$lib/hooks', async () => {
             bufferedRanges: [],
             errors: new Map(),
             cancel: vi.fn()
-        })
+        }),
+        // The workspace header shows the edit, plugins and settings actions.
+        useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
+        useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) }),
+        usePostHog: () => ({ trackEvent: vi.fn() })
     };
 });
 
@@ -139,6 +143,15 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         await waitFor(() =>
             expect(screen.getByTestId('point-cloud-labeling-workspace')).toBeInTheDocument()
         );
+    });
+
+    it('shows the edit, plugins and settings actions in the workspace header', async () => {
+        render(Page, { props: { data: mockPageData } });
+
+        const header = await screen.findByTestId('workspace-header');
+        expect(within(header).getByTestId('breadcrumb-edit-button')).toBeVisible();
+        expect(within(header).getByRole('button', { name: 'Plugins' })).toBeInTheDocument();
+        expect(within(header).getByRole('button', { name: 'Settings' })).toBeInTheDocument();
     });
 
     it('shows the recording file name in the breadcrumb once the summary loads', async () => {
