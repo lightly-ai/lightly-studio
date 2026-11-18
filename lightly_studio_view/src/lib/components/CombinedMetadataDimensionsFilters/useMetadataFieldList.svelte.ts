@@ -1,5 +1,11 @@
 import { fromStore } from 'svelte/store';
-import { useDimensions, useMetadataFilters, usePostHog } from '$lib/hooks';
+import {
+    useDimensions,
+    useMetadataFilters,
+    usePostHog,
+    useVideoBounds,
+    useVideoFramesBounds
+} from '$lib/hooks';
 import type { DimensionBounds } from '$lib/services/loadDimensionBounds';
 import {
     fieldId,
@@ -14,13 +20,15 @@ import {
 export interface UseMetadataFieldListParams {
     getCollectionId: () => string;
     getShowImageDimensions: () => boolean;
+    getIsVideos: () => boolean;
+    getIsVideoFrames: () => boolean;
     getCategoricalKeys: () => string[];
     /** Called after a range commit, for the existing range analytics. */
     onRangeCommitted?: (key: string, min: number, max: number) => void;
 }
 
 export interface UseMetadataFieldListReturn {
-    /** All fields in default order: dimensions, numeric, categorical. */
+    /** All fields in default order: dimensions, video, frame number, numeric, categorical. */
     readonly fields: MetadataField[];
     commitRange: (id: string, range: Range) => void;
     reset: (id: string) => void;
@@ -58,14 +66,25 @@ export function useMetadataFieldList(
     const dimensionsBounds = fromStore(dimensions.dimensionsBounds);
     const dimensionsValues = fromStore(dimensions.dimensionsValues);
 
+    const videoStores = useVideoBounds();
+    const videoBounds = fromStore(videoStores.videoBounds);
+    const videoValues = fromStore(videoStores.videoBoundsValues);
+
+    const frameStores = useVideoFramesBounds();
+    const frameBounds = fromStore(frameStores.videoFramesBounds);
+    const frameValues = fromStore(frameStores.videoFramesBoundsValues);
+
     const metadataStores = useMetadataFilters();
     const metadataBounds = fromStore(metadataStores.metadataBounds);
     const metadataValues = fromStore(metadataStores.metadataValues);
     const categoricalValues = fromStore(metadataStores.categoricalMetadataValues);
 
-    // The metadata hook fetches its bounds when given a collection id.
+    // The video hooks and the metadata hook fetch their bounds when given a collection id.
     $effect(() => {
-        useMetadataFilters(params.getCollectionId());
+        const collectionId = params.getCollectionId();
+        if (params.getIsVideos()) useVideoBounds(collectionId);
+        if (params.getIsVideoFrames()) useVideoFramesBounds(collectionId);
+        useMetadataFilters(collectionId);
     });
 
     const dimensionFields = (): RangeField[] => {
@@ -88,6 +107,43 @@ export function useMetadataFieldList(
                 unit: 'px',
                 bound: { min: bounds.min_height, max: bounds.max_height },
                 value: { min: values.min_height, max: values.max_height }
+            })
+        ];
+    };
+
+    const videoFields = (): RangeField[] => {
+        const bounds = videoBounds.current;
+        const values = videoValues.current;
+        if (!params.getIsVideos() || !bounds || !values) return [];
+        const field = (key: 'width' | 'height' | 'fps' | 'duration_s', title: string, unit = '') =>
+            rangeField({
+                source: 'video',
+                key,
+                title,
+                unit,
+                bound: bounds[key],
+                value: values[key]
+            });
+        return [
+            field('width', 'Width', 'px'),
+            field('height', 'Height', 'px'),
+            ...(bounds.fps.min !== bounds.fps.max ? [field('fps', 'FPS')] : []),
+            field('duration_s', 'Duration', 's')
+        ];
+    };
+
+    const frameFields = (): RangeField[] => {
+        const bounds = frameBounds.current;
+        const values = frameValues.current;
+        if (!params.getIsVideoFrames() || !bounds || !values) return [];
+        return [
+            rangeField({
+                source: 'frame',
+                key: 'frame_number',
+                title: 'Frame number',
+                unit: '',
+                bound: bounds.frame_number,
+                value: values.frame_number
             })
         ];
     };
@@ -124,6 +180,8 @@ export function useMetadataFieldList(
 
     const fields = $derived<MetadataField[]>([
         ...dimensionFields(),
+        ...videoFields(),
+        ...frameFields(),
         ...numericFields(),
         ...categoricalFields()
     ]);
@@ -145,6 +203,14 @@ export function useMetadataFieldList(
             dimensions.updateDimensionsValues(
                 dimensionUpdates.reduce(withDimensionRange, dimensionValues)
             );
+        }
+        const videoCurrent = videoValues.current;
+        if (ofSource('video').length > 0 && videoCurrent) {
+            videoStores.updateVideoBoundsValues({ ...videoCurrent, ...merge('video') });
+        }
+        const frameCurrent = frameValues.current;
+        if (ofSource('frame').length > 0 && frameCurrent) {
+            frameStores.updateVideoFramesBoundsValues({ ...frameCurrent, ...merge('frame') });
         }
         if (ofSource('numeric').length > 0) {
             metadataStores.updateMetadataValues({ ...metadataValues.current, ...merge('numeric') });

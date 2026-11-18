@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Filter videos by frame rate in the query editor with comparisons such as `fps >= 29.97`.
+- Choose the annotation source for new cuboids in the point cloud workspace, in the Annotations panel or when you create a cuboid.
 - API query expressions can filter videos by temporal events or by annotations and timestamps on the same frame.
 - Python SDK: Use `VideoFrameQuery` to match annotations and timestamps on the same frame, or `VideoEventQuery` to match events by class, source, confidence, and time boundaries.
 - Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.

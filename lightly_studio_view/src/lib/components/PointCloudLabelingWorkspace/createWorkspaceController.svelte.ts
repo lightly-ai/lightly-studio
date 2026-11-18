@@ -10,6 +10,7 @@ import { useWorkspaceSceneData } from './useWorkspaceSceneData/useWorkspaceScene
 import { useWorkspaceEditing } from './useWorkspaceEditing/useWorkspaceEditing.svelte';
 import { useWorkspaceFullscreen } from './useWorkspaceFullscreen/useWorkspaceFullscreen.svelte';
 import { useCameraPane } from './useCameraPane/useCameraPane.svelte';
+import { useCuboidTargetSource } from './useCuboidTargetSource';
 import { useSessionStorage } from '$lib/hooks/useSessionStorage/useSessionStorage';
 import { isSelectedCuboidHidden, useAnnotationVisibility } from './useAnnotationVisibility';
 
@@ -60,11 +61,17 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         () => (accumulating.current ? radius.current : 0)
     );
     const data = useWorkspaceSceneData(() => workspace, getOptions);
+    const targetSource = useCuboidTargetSource({
+        getCollectionId: () => getOptions().annotationSourceCollectionId,
+        getSourceNames: () => data.annotationSourceNames,
+        getIsError: () => data.annotationSourcesError
+    });
     const editing = useWorkspaceEditing(
         () => workspace,
         getOptions,
         () => data,
-        () => presentation.isEditingMode
+        () => presentation.isEditingMode,
+        () => targetSource
     );
     const visibility = useAnnotationVisibility(() => getOptions().sequenceId);
     // A hidden cuboid cannot be seen, so it must not stay selected. This covers every way to
@@ -86,6 +93,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         snapshotAnnotations: data.snapshotAnnotations,
         annotationClasses: data.annotationClasses,
         annotationSources: data.annotationSources,
+        cuboidTarget: targetSource,
         transforms: editing.transforms,
         isCuboidHidden: visibility.isCuboidHidden,
         isTickAnnotationHidden: visibility.isTickAnnotationHidden,
@@ -159,6 +167,7 @@ export function createWorkspaceController(getOptions: () => WorkspaceOptions) {
         cameraPane,
         playback,
         data,
+        targetSource,
         editing,
         visibility,
         accumulation,

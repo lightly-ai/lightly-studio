@@ -221,3 +221,95 @@ describe('PointCloudRightSidePanel', () => {
         });
     });
 });
+
+describe('PointCloudRightSidePanel source picker', () => {
+    const sources = [
+        { id: 'labels', name: 'labels' },
+        { id: 'preds', name: 'preds' }
+    ];
+    const cuboid = { ...createAnnotationFixture(), id: 'c-1', annotationSourceId: 'preds' };
+    const pickProps = {
+        ...defaultProps,
+        cuboids: [cuboid],
+        annotationSources: sources,
+        targetSourceName: 'labels',
+        needsPick: false,
+        pendingSourceName: null
+    };
+
+    it('shows one radio per source and checks the target', () => {
+        render(PointCloudRightSidePanel, { props: { ...pickProps, onPickSource: vi.fn() } });
+
+        expect(screen.getByTestId('annotation-target-radio-labels')).toHaveAttribute(
+            'aria-checked',
+            'true'
+        );
+        expect(screen.getByTestId('annotation-target-radio-preds')).toHaveAttribute(
+            'aria-checked',
+            'false'
+        );
+    });
+
+    it('picks the clicked source', async () => {
+        const onPickSource = vi.fn();
+        render(PointCloudRightSidePanel, { props: { ...pickProps, onPickSource } });
+
+        await fireEvent.click(screen.getByTestId('annotation-target-radio-preds'));
+
+        expect(onPickSource).toHaveBeenCalledWith('preds');
+    });
+
+    it('asks for a pick while no source is picked', () => {
+        render(PointCloudRightSidePanel, {
+            props: { ...pickProps, targetSourceName: null, needsPick: true, onPickSource: vi.fn() }
+        });
+
+        expect(screen.getByText('Pick where new annotations go.')).toBeInTheDocument();
+    });
+
+    it('lists a source without cuboids on this tick', () => {
+        render(PointCloudRightSidePanel, { props: { ...pickProps, onPickSource: vi.fn() } });
+
+        expect(screen.getByText('No cuboids on this tick')).toBeInTheDocument();
+    });
+
+    it('picks a typed new source as new and a typed existing source as existing', async () => {
+        const onPickSource = vi.fn();
+        render(PointCloudRightSidePanel, { props: { ...pickProps, onPickSource } });
+
+        await fireEvent.click(screen.getByTestId('new-annotation-source-button'));
+        const input = screen.getByTestId('new-annotation-source-input');
+        await fireEvent.input(input, { target: { value: 'review' } });
+        await fireEvent.submit(input.closest('form')!);
+        expect(onPickSource).toHaveBeenLastCalledWith('review', { isNew: true });
+
+        await fireEvent.click(screen.getByTestId('new-annotation-source-button'));
+        const again = screen.getByTestId('new-annotation-source-input');
+        await fireEvent.input(again, { target: { value: 'preds' } });
+        await fireEvent.submit(again.closest('form')!);
+        expect(onPickSource).toHaveBeenLastCalledWith('preds');
+    });
+
+    it('shows a typed source that is not created yet as the target', () => {
+        render(PointCloudRightSidePanel, {
+            props: {
+                ...pickProps,
+                targetSourceName: 'review',
+                pendingSourceName: 'review',
+                onPickSource: vi.fn()
+            }
+        });
+
+        expect(screen.getByTestId('annotation-target-radio-review')).toHaveAttribute(
+            'aria-checked',
+            'true'
+        );
+    });
+
+    it('has no radios and no new source button without onPickSource', () => {
+        render(PointCloudRightSidePanel, { props: pickProps });
+
+        expect(screen.queryByTestId('annotation-target-radio-labels')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('new-annotation-source-button')).not.toBeInTheDocument();
+    });
+});
