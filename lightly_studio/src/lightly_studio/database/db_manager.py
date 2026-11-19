@@ -17,6 +17,7 @@ import logging
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any
@@ -233,16 +234,33 @@ class DatabaseEngine:
                 persistent_session.commit()
 
 
+@dataclass
+class _ClientMode:
+    """Holds whether the Python client uses a remote transport. The client then has no database."""
+
+    remote: bool = False
+
+
 # Global database engine instance instantiated lazily.
 _engine: DatabaseEngine | None = None
+_client_mode = _ClientMode()
+
+
+def set_remote_client(remote: bool) -> None:
+    """Block access to the database while the Python client uses a remote transport."""
+    _client_mode.remote = remote
 
 
 def get_engine() -> DatabaseEngine:
     """Get the database engine.
 
     If the engine does not exist yet, it is newly created with the default settings.
+
+    Raises:
+        NotImplementedError: If the Python client uses a remote transport.
     """
     global _engine  # noqa: PLW0603
+    _check_local()
     if _engine is None:
         _engine = DatabaseEngine()
         atexit.register(close)
@@ -277,7 +295,9 @@ def connect(
 
     Raises:
         ValueError: If both db_file and db_url are provided.
+        NotImplementedError: If the Python client uses a remote transport.
     """
+    _check_local()
     if db_file is not None and db_url is not None:
         raise ValueError("Cannot specify both db_file and db_url")
 
@@ -295,12 +315,14 @@ def connect(
 @contextmanager
 def session() -> Generator[Session, None, None]:
     """Create a short-lived database session. The session is autoclosed."""
+    _check_local()
     with get_engine().session() as session:
         yield session
 
 
 def persistent_session() -> Session:
     """Create a persistent session."""
+    _check_local()
     return get_engine().get_persistent_session()
 
 
@@ -454,3 +476,8 @@ def _session_dependency() -> Generator[Session, None, None]:
 
 
 SessionDep = Annotated[Session, Depends(_session_dependency)]
+
+
+def _check_local() -> None:
+    if _client_mode.remote:
+        raise NotImplementedError("This is not supported with a remote connection yet.")

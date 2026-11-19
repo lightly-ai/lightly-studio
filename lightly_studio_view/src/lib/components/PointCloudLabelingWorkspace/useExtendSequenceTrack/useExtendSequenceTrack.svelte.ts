@@ -18,7 +18,7 @@ interface ExtendParams {
     endSeqNumber: number;
 }
 
-/** Extends an object track outward by copying its boundary cuboids onto more ticks. */
+/** Extends an object track outward. The new edge cuboids are manual. */
 export function useExtendSequenceTrack({ getDatasetId, getSequenceId, onExtended }: Params) {
     const mutation = createMutation(() => extendSequenceTrackMutation());
     const queryClient = useQueryClient();

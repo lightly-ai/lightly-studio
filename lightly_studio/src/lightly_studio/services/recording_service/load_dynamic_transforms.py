@@ -105,6 +105,39 @@ def load_dynamic_transforms_between(
     return None
 
 
+def load_dynamic_transforms_around(
+    session: Session,
+    recording_id: UUID,
+    start_ns: int,
+    end_ns: int,
+) -> list[StaticTransform] | None:
+    """Return the dynamic edges in a range of capture times and the closest edges outside it.
+
+    Each child frame gets all its edges in ``[start_ns, end_ns]``, its last edge before
+    ``start_ns`` and its first edge after ``end_ns``. A tick in the range can then use
+    the closest edge of each frame, also when that edge is far from the range.
+
+    Args:
+        session: The database session.
+        recording_id: The recording the edges belong to.
+        start_ns: The first capture time of the range, in nanoseconds.
+        end_ns: The last capture time of the range, in nanoseconds.
+
+    Returns:
+        The edges in and around the range. ``None`` means the recording has no stored
+        dynamic transforms.
+    """
+    edges_in_range = load_dynamic_transforms_between(
+        session=session, recording_id=recording_id, start_ns=start_ns, end_ns=end_ns
+    )
+    if edges_in_range is None:
+        return None
+    closest_outside = dynamic_transform_resolver.get_closest_outside(
+        session=session, recording_id=recording_id, start_ns=start_ns, end_ns=end_ns
+    )
+    return [*edges_in_range, *(_dynamic_transform(row=row) for row in closest_outside)]
+
+
 def _dynamic_transform(row: DynamicTransformTable) -> StaticTransform:
     """Build a transform edge from a stored row."""
     return StaticTransform(
