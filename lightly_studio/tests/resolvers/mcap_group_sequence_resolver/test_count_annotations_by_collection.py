@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from uuid import UUID
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.workflow import WorkflowStatus
 from lightly_studio.resolvers import mcap_group_sequence_resolver, tag_resolver
 from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
@@ -16,6 +19,7 @@ from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
     CountAnnotationsView,
 )
+from tests import helpers_workflow
 from tests.helpers_resolvers import create_annotation, create_annotation_label, create_tag
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 
@@ -152,6 +156,36 @@ def test_count_annotations_by_collection__annotation_type(db_session: Session) -
     )
 
     assert result == [CountAnnotationsView(label_name="night", total_count=1, current_count=1)]
+
+
+@pytest.fixture
+def workflow_tables(db_session: Session) -> Generator[None, None, None]:
+    with helpers_workflow.workflow_tables(session=db_session):
+        yield
+
+
+@pytest.mark.usefixtures("workflow_tables")
+def test_count_annotations_by_collection__workflow_states(db_session: Session) -> None:
+    """A workflow status filter restricts the current count to the matching sequences."""
+    sequence_a, sequence_b, _ = _create_two_annotated_sequences(session=db_session)
+    collection_id = sequence_a.sequence_collection.collection_id
+    project_id = helpers_workflow.create_project(session=db_session, dataset_id=collection_id)
+    helpers_workflow.add_batch_files(
+        session=db_session, project_id=project_id, states={sequence_b.sample_id: "in_review"}
+    )
+
+    result = mcap_group_sequence_resolver.count_annotations_by_collection(
+        session=db_session,
+        collection_id=collection_id,
+        filters=McapSequenceFilter(
+            sample_filter=SampleFilter(workflow_states=[WorkflowStatus.IN_REVIEW])
+        ),
+    )
+
+    assert result == [
+        CountAnnotationsView(label_name="car", total_count=2, current_count=1),
+        CountAnnotationsView(label_name="person", total_count=1, current_count=1),
+    ]
 
 
 def _create_two_annotated_sequences(

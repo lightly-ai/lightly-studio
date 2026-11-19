@@ -16,7 +16,7 @@ from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sequence import SampleSequenceLinkTable
-from lightly_studio.resolvers import mcap_group_sequence_resolver
+from lightly_studio.resolvers import mcap_group_sequence_resolver, workflow_resolver
 from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
     McapSequenceFilter,
 )
@@ -40,6 +40,9 @@ def count_annotations_by_collection(
     """
     mcap_group_sequence_resolver.resolve_embedding_region(
         session=session, collection_id=collection_id, sequence_filter=filters
+    )
+    workflow_resolver.resolve_sample_filter(
+        session=session, collection_id=collection_id, filters=filters
     )
     label_sequence_pairs = _build_label_sequence_pairs_subquery(
         collection_id=collection_id, annotation_type=annotation_type
