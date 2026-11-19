@@ -51,6 +51,8 @@ export function useWorkspaceEditing(
     // which updates later in an effect.
     const getPersistedAnnotations = () => getWorkspace().tickDetails.data?.annotations ?? [];
     let selectedCuboidId = $state<string | null>(null);
+    // Each tick has its own annotation IDs, so the selection follows the object track.
+    let selectedTrackId: string | null = null;
     let hoveredCuboidId = $state<string | null>(null);
     let draftCuboid = $state.raw<CuboidBox | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
@@ -138,10 +140,28 @@ export function useWorkspaceEditing(
     }): Promise<boolean> {
         const deleted = await deleteTrack(params);
         if (deleted && selectedCuboidId && params.annotationIds.includes(selectedCuboidId)) {
-            selectedCuboidId = null;
+            selectCuboid(null);
         }
         return deleted;
     }
+
+    function selectCuboid(cuboidId: string | null): void {
+        selectedCuboidId = cuboidId;
+        // A cuboid of a tick that is not loaded yet sets its track when the tick loads.
+        selectedTrackId = getData().cuboids.find(({ id }) => id === cuboidId)?.trackId ?? null;
+    }
+
+    $effect(() => {
+        const { cuboids } = getData();
+        const selectedCuboid = cuboids.find(({ id }) => id === selectedCuboidId);
+        if (selectedCuboid) {
+            selectedTrackId = selectedCuboid.trackId;
+            return;
+        }
+        if (!selectedTrackId) return;
+        const trackCuboid = cuboids.find(({ trackId }) => trackId === selectedTrackId);
+        if (trackCuboid) selectedCuboidId = trackCuboid.id;
+    });
 
     const transforms = createCuboidTransformState({
         onTransform: (payload) => handleCuboidTransform(payload)
@@ -179,7 +199,7 @@ export function useWorkspaceEditing(
         await waitForSaves(cuboidId);
         const deleted = await deleteCuboidAnnotation(cuboidId);
         if (deleted && selectedCuboidId === cuboidId) {
-            selectedCuboidId = null;
+            selectCuboid(null);
         }
     }
 
@@ -196,7 +216,7 @@ export function useWorkspaceEditing(
                 void refreshTracks();
                 invalidateOtherTicks();
                 await getWorkspace().tickDetails.refetch({ throwOnError: true });
-                selectedCuboidId = annotationId;
+                selectCuboid(annotationId);
                 activeTool = 'select';
                 addingTrack = false;
                 // A failed attach leaves a plain cuboid, never an empty track.
@@ -209,7 +229,7 @@ export function useWorkspaceEditing(
     function setActiveTool(tool: WorkspaceTool): void {
         activeTool = tool;
         // Orthographic cameras fit a selected cuboid's frame, so drawing needs a world-aligned view.
-        if (tool === 'create-cuboid') selectedCuboidId = null;
+        if (tool === 'create-cuboid') selectCuboid(null);
     }
 
     function toggleAddTrack(): void {
@@ -246,7 +266,7 @@ export function useWorkspaceEditing(
             return selectedCuboidId;
         },
         set selectedCuboidId(value) {
-            selectedCuboidId = value;
+            selectCuboid(value);
         },
         get hoveredCuboidId() {
             return hoveredCuboidId;
