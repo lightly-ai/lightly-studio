@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { QueryExpr, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
-import { createMetadataFilters } from '$lib/hooks';
+import { createMetadataFilters, EMPTY_PLOT_SELECTION } from '$lib/hooks';
 
 const queryExpr = {
     match_expr: {
@@ -154,13 +154,16 @@ describe('useImageFilters', () => {
             expect(normalFilters(filterParams)?.sample_ids).toBeUndefined();
         });
 
-        it('updateEmbeddingRegion stores and clears the region', () => {
-            const { filterParams, updateEmbeddingRegion } = useImageFilters();
+        it('updatePlotSelection stores a region or picks and clears both', () => {
+            const { filterParams, updatePlotSelection } = useImageFilters();
             setParams({});
-            updateEmbeddingRegion(embeddingRegion);
+            updatePlotSelection({ embeddingRegion, sampleIds: [] });
             expect(normalFilters(filterParams)?.embedding_region).toBe(embeddingRegion);
-            updateEmbeddingRegion(null);
+            updatePlotSelection({ embeddingRegion: null, sampleIds: ['s1'] });
             expect(normalFilters(filterParams)?.embedding_region).toBeUndefined();
+            expect(normalFilters(filterParams)?.sample_ids).toEqual(['s1']);
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
+            expect(normalFilters(filterParams)?.sample_ids).toBeUndefined();
         });
 
         it('returns null without a collection id', () => {

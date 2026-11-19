@@ -144,6 +144,10 @@ export {
     PICK_SOURCE_MESSAGE
 } from '$lib/hooks/useAnnotationTarget/messages';
 export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
+export {
+    EMPTY_PLOT_SELECTION,
+    type PlotSelection
+} from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
 export { default as useAuth } from '$lib/hooks/useAuth/useAuth';
 export { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
