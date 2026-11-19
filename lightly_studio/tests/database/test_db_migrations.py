@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
@@ -21,6 +22,10 @@ from tests.helpers_resolvers import create_collection, create_embedding_model, c
 
 _POSTGRES_URL = "postgresql://localhost/db"
 
+# The revision that creates schema_compat, and the revision before it.
+_SCHEMA_COMPAT_REVISION = "7b4e2f1b1a31"
+_BEFORE_SCHEMA_COMPAT_REVISION = "1e2ff606de9f"
+
 
 @pytest.fixture
 def engine() -> Engine:
@@ -36,11 +41,16 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=True)
-    mock_upgrade = mocker.patch.object(db_migrations, "_upgrade_to_head")
+    mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
 
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
-    mock_upgrade.assert_called_once_with(engine=engine, config=alembic_cfg)
+    mock_run_command.assert_called_once_with(
+        engine=engine,
+        config=alembic_cfg,
+        fn=command.upgrade,
+        revision="head",
+    )
 
 
 def test_run_migrations__fresh_database(
@@ -51,11 +61,16 @@ def test_run_migrations__fresh_database(
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
-    mock_upgrade = mocker.patch.object(db_migrations, "_upgrade_to_head")
+    mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
 
     db_migrations.run_migrations(engine=engine, engine_url=_POSTGRES_URL)
 
-    mock_upgrade.assert_called_once_with(engine=engine, config=alembic_cfg)
+    mock_run_command.assert_called_once_with(
+        engine=engine,
+        config=alembic_cfg,
+        fn=command.upgrade,
+        revision="head",
+    )
 
 
 def _reset_postgres_database(engine_url: str) -> None:
@@ -115,30 +130,40 @@ def test_postgres_fresh_database__upgrade_head(
         assert version == head_revision
         row = schema_compat.read_schema_compat(engine=engine._engine)
         assert row is not None
-        assert row.oss_revision == head_revision
-        assert row.min_client_version == schema_compat.MIN_SUPPORTED_CLIENT_VERSION
+        assert (row.oss_revision, row.min_client_version) == (head_revision, "1.2.1")
     finally:
         _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()
 
 
-def test_postgres_fresh_database__schema_compat_write_fails(
+def test_postgres_upgrade__failed_revision_rolls_back_alone(
     postgres_url: str | None,
     mocker: MockerFixture,
 ) -> None:
-    """A failed schema_compat write rolls the schema upgrade back."""
+    """A failed revision rolls back with its schema_compat update. Earlier ones stay."""
     if postgres_url is None:
         pytest.skip("Requires --postgres")
     _reset_postgres_database(engine_url=postgres_url)
-    mocker.patch.object(schema_compat, "write_schema_compat", side_effect=RuntimeError("fail"))
+    on_version_apply = schema_compat.on_version_apply
+
+    def _fail_at_schema_compat_revision(**kwargs: Any) -> None:
+        on_version_apply(**kwargs)
+        if kwargs["heads"] == {_SCHEMA_COMPAT_REVISION}:
+            raise RuntimeError("fail")
+
+    # A function, not a mock: Alembic reads an iterable hook as a list of hooks.
+    mocker.patch.object(schema_compat, "on_version_apply", new=_fail_at_schema_compat_revision)
     engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
     try:
         with pytest.raises(RuntimeError, match="fail"):
             db_migrations.run_migrations(engine=engine, engine_url=postgres_url)
 
         inspector = db_migrations._get_inspector(engine=engine)
-        assert not inspector.has_table(table_name="collection")
-        assert not inspector.has_table(table_name="alembic_version")
+        assert inspector.has_table(table_name="collection")
+        assert not inspector.has_table(table_name="schema_compat")
+        with engine.connect() as connection:
+            version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert version == _BEFORE_SCHEMA_COMPAT_REVISION
     finally:
         mocker.stopall()
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)

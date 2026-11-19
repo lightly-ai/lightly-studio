@@ -3,46 +3,89 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
+from pytest_mock import MockerFixture
 from sqlalchemy.engine import Engine
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 
 import lightly_studio.api.db_tables  # noqa: F401
 from lightly_studio.database import schema_compat
+from lightly_studio.models.schema_compat import SchemaCompatTable
 
 
-def _engine(tmp_path: Path) -> Engine:
+def _engine(tmp_path: Path, with_row: bool) -> Engine:
     engine = create_engine(f"duckdb:///{tmp_path / 'test.db'}")
     SQLModel.metadata.create_all(bind=engine)
+    if with_row:
+        with Session(engine) as session:
+            session.add(SchemaCompatTable(id=1, oss_revision="abc123", min_client_version="1.0"))
+            session.commit()
     return engine
 
 
-def test_write_schema_compat__inserts_row(tmp_path: Path) -> None:
-    engine = _engine(tmp_path=tmp_path)
+def test_on_version_apply__updates_oss_revision(tmp_path: Path, mocker: MockerFixture) -> None:
+    engine = _engine(tmp_path=tmp_path, with_row=True)
+    step = mocker.MagicMock(is_upgrade=True)
+    step.up_revision.module = SimpleNamespace()
 
     with engine.begin() as connection:
-        schema_compat.write_schema_compat(connection=connection, oss_revision="abc123")
+        schema_compat.on_version_apply(
+            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
+        )
 
     row = schema_compat.read_schema_compat(engine=engine)
     assert row is not None
-    assert row.oss_revision == "abc123"
-    assert row.min_client_version == schema_compat.MIN_SUPPORTED_CLIENT_VERSION
+    assert (row.oss_revision, row.min_client_version) == ("def456", "1.0")
 
 
-def test_write_schema_compat__replaces_row(tmp_path: Path) -> None:
-    engine = _engine(tmp_path=tmp_path)
+def test_on_version_apply__writes_declared_min_client_version(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    engine = _engine(tmp_path=tmp_path, with_row=True)
+    step = mocker.MagicMock(is_upgrade=True)
+    step.up_revision.module = SimpleNamespace(min_client_version="1.9")
+
     with engine.begin() as connection:
-        schema_compat.write_schema_compat(connection=connection, oss_revision="abc123")
-
-    with engine.begin() as connection:
-        schema_compat.write_schema_compat(connection=connection, oss_revision="def456")
+        schema_compat.on_version_apply(
+            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
+        )
 
     row = schema_compat.read_schema_compat(engine=engine)
     assert row is not None
-    assert row.oss_revision == "def456"
+    assert (row.oss_revision, row.min_client_version) == ("def456", "1.9")
+
+
+def test_on_version_apply__downgrade_keeps_min_client_version(
+    tmp_path: Path, mocker: MockerFixture
+) -> None:
+    engine = _engine(tmp_path=tmp_path, with_row=True)
+    step = mocker.MagicMock(is_upgrade=False)
+    step.up_revision.module = SimpleNamespace(min_client_version="1.9")
+
+    with engine.begin() as connection:
+        schema_compat.on_version_apply(
+            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
+        )
+
+    row = schema_compat.read_schema_compat(engine=engine)
+    assert row is not None
+    assert (row.oss_revision, row.min_client_version) == ("def456", "1.0")
+
+
+def test_on_version_apply__no_table(tmp_path: Path, mocker: MockerFixture) -> None:
+    engine = create_engine(f"duckdb:///{tmp_path / 'test.db'}")
+    step = mocker.MagicMock(is_upgrade=True)
+    step.up_revision.module = SimpleNamespace(min_client_version="1.9")
+
+    # Before the revision that creates the table, the hook does nothing.
+    with engine.begin() as connection:
+        schema_compat.on_version_apply(
+            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
+        )
 
 
 def test_read_schema_compat__no_row(tmp_path: Path) -> None:
-    engine = _engine(tmp_path=tmp_path)
+    engine = _engine(tmp_path=tmp_path, with_row=False)
 
     assert schema_compat.read_schema_compat(engine=engine) is None

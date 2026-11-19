@@ -15,6 +15,18 @@ The `alembic_version` table stores the current revision id, not the product vers
 
 `cleanup_existing=True` on Postgres drops all tables (including `alembic_version`), then runs `upgrade head` on the empty database.
 
+## Client compatibility (`schema_compat`)
+
+A client that connects without migrating reads the one-row table `schema_compat`, never `alembic_version`. The row has `oss_revision` (the applied head) and `min_client_version` (the lowest lightly-studio version that can use the schema). The revision that creates the table inserts the row.
+
+Each revision runs in its own transaction. After each revision, `schema_compat.on_version_apply` sets `oss_revision` in the same transaction, so the row always matches the schema. A revision that clients at the current `min_client_version` cannot use (for example a dropped or renamed column, a new enum value or a new constraint) declares the lowest client version that works with it:
+
+```python
+min_client_version = "1.9.0"
+```
+
+The upgrade writes this value to the row in the transaction of that revision. Add new columns as nullable or with a default, so that most revisions do not need it.
+
 ## Local Postgres setup
 
 Required for autogenerate and migration checks:

@@ -8,7 +8,7 @@ from sqlmodel import Field, SQLModel
 class SchemaCompatTable(SQLModel, table=True):
     """One row that tells a client whether it can use the database.
 
-    Each schema upgrade rewrites the row. A client that connects without
+    Each revision updates the row in its own transaction. A client that connects without
     migrating reads only this row, never ``alembic_version``.
 
     Attributes:

@@ -2,32 +2,52 @@
 
 from __future__ import annotations
 
-from sqlalchemy.engine import Connection, Engine
-from sqlmodel import Session, delete, insert
+from collections.abc import Collection, Mapping
+from typing import Any
+
+from alembic.runtime.migration import MigrationContext, MigrationInfo
+from sqlalchemy import inspect
+from sqlalchemy.engine import Engine
+from sqlmodel import Session, col, update
 
 from lightly_studio.models.schema_compat import SchemaCompatTable
 
-# The lowest lightly-studio version that can use the current schema. A breaking
-# migration raises this constant in the same pull request.
-MIN_SUPPORTED_CLIENT_VERSION = "1.2.1"
 
+def on_version_apply(
+    ctx: MigrationContext,
+    step: MigrationInfo,
+    heads: Collection[str],
+    run_args: Mapping[str, Any],  # noqa: ARG001
+) -> None:
+    """Update the ``schema_compat`` row after each revision, in its transaction.
 
-def write_schema_compat(connection: Connection, oss_revision: str) -> None:
-    """Write the single ``schema_compat`` row in the transaction of a schema upgrade.
-
-    The caller commits. The row and the schema upgrade are then one transaction.
+    Alembic calls this hook after it updates ``alembic_version`` for a revision. The
+    row gets the new head as ``oss_revision``. A revision that breaks older clients
+    declares the module attribute ``min_client_version``, and the upgrade writes it to
+    the row. The row and the schema are then committed together, or not at all.
 
     Args:
-        connection: The connection that runs the schema upgrade.
-        oss_revision: The Alembic revision that the upgrade applied.
+        ctx: The Alembic migration context.
+        step: The revision that was applied.
+        heads: The heads after the revision.
+        run_args: The arguments of the migration functions, not used.
     """
-    connection.execute(delete(SchemaCompatTable))
+    connection = ctx.connection
+    # Offline mode (``--sql``) has no connection. The table does not exist before the
+    # revision that creates it, or after its downgrade.
+    if (
+        connection is None
+        or len(heads) != 1
+        or not inspect(connection).has_table(table_name="schema_compat")
+    ):
+        return
+    values = {"oss_revision": next(iter(heads))}
+    module = getattr(step.up_revision, "module", None)
+    min_client_version = getattr(module, "min_client_version", None)
+    if step.is_upgrade and min_client_version is not None:
+        values["min_client_version"] = min_client_version
     connection.execute(
-        insert(SchemaCompatTable).values(
-            id=1,
-            oss_revision=oss_revision,
-            min_client_version=MIN_SUPPORTED_CLIENT_VERSION,
-        )
+        update(SchemaCompatTable).where(col(SchemaCompatTable.id) == 1).values(**values)
     )
 
 
