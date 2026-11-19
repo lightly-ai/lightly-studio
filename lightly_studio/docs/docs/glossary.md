@@ -22,7 +22,7 @@ Quick reference for the terms and abbreviations used throughout the LightlyStudi
 | Export | A copy of dataset content saved in a standard format (such as COCO or YOLO) for use outside LightlyStudio. See [Export](workflows/export.md). |
 | Frame | A still image extracted from a video. LightlyStudio retains its frame number, timestamp, and parent video. Each frame is a sample. See [Video Dataset](workflows/video_dataset.md#frame-grid-view). |
 | Image dataset | A dataset whose primary samples are images. See [Image Dataset](workflows/image_dataset.md). |
-| Lightly Query Language | SQL-like language used by the GUI query editor to filter images by fields, tags, and annotations. See [LQL reference](workflows/lightly_query_language.md). |
+| Lightly Query Language | SQL-like language used by the GUI query editor to filter images and videos by fields, tags, and annotations. See [LQL reference](workflows/lightly_query_language.md). |
 | Plugin | An installable extension that adds a workflow to LightlyStudio, such as model-assisted segmentation. See [Plugins](ecosystem/plugins.md). |
 | Python API | The classes and functions in the `lightly_studio` package for working with datasets programmatically. See [Dataset API](api/dataset.md). |
 | Query | A reusable description of a dataset subset. In Python, a query can filter, sort, and slice samples. In the GUI, it uses Lightly Query Language. See [Query in Python](workflows/search_and_filter.md#query-in-python). |
