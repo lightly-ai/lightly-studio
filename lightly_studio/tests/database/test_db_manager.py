@@ -543,7 +543,9 @@ def test_get_session_backend(tmp_path: Path) -> None:
         engine.close()
 
 
-@pytest.mark.parametrize("access", [db_manager.get_engine, db_manager.persistent_session])
+@pytest.mark.parametrize(
+    "access", [db_manager.get_engine, db_manager.persistent_session, db_manager.connect]
+)
 def test_set_remote_client__blocks_database(
     mocker: MockerFixture, access: Callable[[], object]
 ) -> None:

@@ -289,7 +289,9 @@ def connect(
 
     Raises:
         ValueError: If both db_file and db_url are provided.
+        NotImplementedError: If the Python client uses a remote transport.
     """
+    _check_local()
     if db_file is not None and db_url is not None:
         raise ValueError("Cannot specify both db_file and db_url")
 
