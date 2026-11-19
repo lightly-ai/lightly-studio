@@ -128,6 +128,17 @@ class AnnotationCollectionView(SQLModel):
     annotation_types: list[str] = Field(default_factory=list)
 
 
+class AnnotationCollectionWithCountView(AnnotationCollectionView):
+    """Annotation collection view with the number of annotations in it and its parent."""
+
+    annotation_count: int
+    parent_collection_id: UUID
+    """The collection whose samples the annotations belong to."""
+    parent_sample_type: SampleType
+    parent_group_component_name: str | None = None
+    """The component name of the parent, if the parent is a group component."""
+
+
 # Import at the bottom to:
 # 1) avoid circular imports
 # 2) satisfy mypy

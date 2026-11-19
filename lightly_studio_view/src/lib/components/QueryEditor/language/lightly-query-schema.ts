@@ -77,6 +77,18 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             }
         ]
     },
+    frame: {
+        scope: 'frame',
+        title: 'Frame',
+        description: 'A single frame of the video.',
+        fields: [
+            {
+                name: 'frame_timestamp_s',
+                type: 'float',
+                description: 'Frame presentation timestamp in seconds on the video timeline.'
+            }
+        ]
+    },
     video: {
         scope: 'video',
         title: 'Video',
@@ -101,7 +113,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     object_detection: {
         scope: 'object_detection',
         title: 'ObjectDetection',
-        description: 'Detected object inside an image. Used inside `object_detection(...)`.',
+        description: 'Object detection on a sample. Used inside `object_detection(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -127,7 +139,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
     classification: {
         scope: 'classification',
         title: 'Classification',
-        description: 'Classification annotation on an image. Used inside `classification(...)`.',
+        description: 'Classification annotation on a sample. Used inside `classification(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -150,7 +162,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
         scope: 'segmentation_mask',
         title: 'SegmentationMask',
         description:
-            'Segmentation mask annotation on an image. Used inside `segmentation_mask(...)`.',
+            'Segmentation mask annotation on a sample. Used inside `segmentation_mask(...)`.',
         fields: [
             {
                 name: 'class_name',
@@ -178,6 +190,14 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
 export const BOOLEAN_KEYWORDS: KeywordDoc[] = [
     { name: 'true', description: 'Boolean true. Use with `=` or `!=` on sample metadata.' },
     { name: 'false', description: 'Boolean false. Use with `=` or `!=` on sample metadata.' }
+];
+
+export const VIDEO_KEYWORDS: KeywordDoc[] = [
+    {
+        name: 'frame',
+        description: 'Match a video if at least one frame satisfies the expression.',
+        insertText: 'frame(object_detection(class_name = "${1:person}"))'
+    }
 ];
 
 export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
@@ -212,17 +232,17 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     },
     {
         name: 'object_detection',
-        description: 'Filter on detections inside an image.',
+        description: 'Match an object detection.',
         insertText: 'object_detection(${1:class_name = "..."})'
     },
     {
         name: 'classification',
-        description: 'Filter on the image classification annotation.',
+        description: 'Match a classification annotation.',
         insertText: 'classification(${1:class_name = "..."})'
     },
     {
         name: 'segmentation_mask',
-        description: 'Filter on segmentation mask annotations inside an image.',
+        description: 'Match a segmentation mask annotation.',
         insertText: 'segmentation_mask(${1:class_name = "..."})'
     }
 ];
@@ -232,7 +252,7 @@ export function findFieldInScope(scope: Scope, name: string): FieldDoc | undefin
 }
 
 export function findKeyword(name: string): KeywordDoc | undefined {
-    return [...TOP_LEVEL_KEYWORDS, ...BOOLEAN_KEYWORDS].find(
+    return [...TOP_LEVEL_KEYWORDS, ...VIDEO_KEYWORDS, ...BOOLEAN_KEYWORDS].find(
         (k) => k.name.toLowerCase() === name.toLowerCase()
     );
 }

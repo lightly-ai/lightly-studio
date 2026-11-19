@@ -25,7 +25,8 @@ export const useDeleteAnnotationWithUndo = (getCollectionId: () => string) => {
     /** Resolves to whether the annotation was deleted. */
     const deleteWithUndo = async (
         annotation: AnnotationView,
-        refetch: () => void
+        refetch: () => unknown,
+        onRestored?: (restored: AnnotationView) => void
     ): Promise<boolean> => {
         if (!labels.data || !sources.data || deletingIds.has(annotation.sample_id)) return false;
         // Read before the request: undo re-creates the annotation as it was.
@@ -46,7 +47,8 @@ export const useDeleteAnnotationWithUndo = (getCollectionId: () => string) => {
             sources: undoSources,
             addReversibleAction,
             createAnnotation,
-            refetch
+            refetch,
+            onRestored
         });
         toast.success('Annotation deleted successfully');
         refetch();

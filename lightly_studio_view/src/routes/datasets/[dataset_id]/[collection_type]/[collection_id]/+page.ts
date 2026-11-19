@@ -12,7 +12,7 @@ const sampleTypeRoutes: Partial<
     [SampleType.ANNOTATION]: routeHelpers.toAnnotations,
     [SampleType.CAPTION]: routeHelpers.toCaptions,
     [SampleType.GROUP]: routeHelpers.toGroups,
-    [SampleType.SEQUENCE]: routeHelpers.toPointClouds
+    [SampleType.SEQUENCE]: routeHelpers.toMcapSequences
 };
 
 export const load: PageLoad = async ({ parent, params }) => {

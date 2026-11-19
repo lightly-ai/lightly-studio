@@ -7,9 +7,11 @@
     import Pencil from '@lucide/svelte/icons/pencil';
     import Check from '@lucide/svelte/icons/check';
     import Undo2 from '@lucide/svelte/icons/undo-2';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
+    import { toast } from 'svelte-sonner';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
-    import { isImagesRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
+    import { isImagesRoute, isMcapSequencesRoute, isVideosRoute } from '$lib/routes';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -29,7 +31,7 @@
 
     const isImages = $derived(isImagesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
-    const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointClouds = $derived(isMcapSequencesRoute(page.route.id));
     const { settingsStore } = useSettings();
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId: collection.collection_id }));
@@ -57,14 +59,23 @@
         setIsEditingMode(active);
     };
 
+    // An undo stays in the history until it is complete, so a second undo must wait.
+    let isUndoing = $state(false);
+
     const executeUndoAction = async (triggeredBy: TriggeredBy) => {
         const latestAction = $reversibleActions[0];
-        if (latestAction) {
-            trackEvent('edit_undo', {
-                collection_id: collection.collection_id,
-                triggered_by: triggeredBy
-            });
+        if (!latestAction || isUndoing) return;
+        trackEvent('edit_undo', {
+            collection_id: collection.collection_id,
+            triggered_by: triggeredBy
+        });
+        isUndoing = true;
+        try {
             await executeReversibleAction(latestAction.id);
+        } catch {
+            toast.error('Failed to undo. Please try again.');
+        } finally {
+            isUndoing = false;
         }
     };
 
@@ -121,10 +132,12 @@
                 {#if hasMinimumRole(user?.role, 'labeler')}
                     {#if $isEditingMode}
                         <Button
-                            icon={Undo2}
+                            icon={isUndoing ? LoaderCircle : Undo2}
+                            iconClass={isUndoing ? 'animate-spin' : undefined}
                             buttonProps={{
                                 onclick: () => executeUndoAction('click'),
-                                disabled: $reversibleActions.length === 0,
+                                disabled: isUndoing || $reversibleActions.length === 0,
+                                'aria-busy': isUndoing,
                                 title: $reversibleActions[0]
                                     ? $reversibleActions[0].description
                                     : 'No action to undo',

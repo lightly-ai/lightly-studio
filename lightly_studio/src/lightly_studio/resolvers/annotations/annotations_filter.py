@@ -124,6 +124,12 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
             or self.region_sample_ids is not None
         )
 
+    def is_source_only(self) -> bool:
+        """Whether every field except `collection_ids` has its default value."""
+        # Compare all fields, so that a field added later keeps the filter.
+        exclude = {"collection_ids"}
+        return self.model_dump(exclude=exclude) == AnnotationsFilter().model_dump(exclude=exclude)
+
     def _has_predicates(self) -> bool:
         """Whether any filtering predicate is set."""
         return bool(self.collection_ids) or self.has_annotation_predicates()

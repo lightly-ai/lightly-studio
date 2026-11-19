@@ -20,6 +20,7 @@ from lightly_studio.resolvers import (
     evaluation_run_resolver,
     object_track_resolver,
 )
+from lightly_studio.services import object_track_service
 
 
 class AnnotationCreateParams(BaseModel):
@@ -53,7 +54,8 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
 
     When ``create_new_track`` is set, a new :class:`ObjectTrackTable` row is
     created atomically with the next available track number for the dataset,
-    and the annotation is linked to it.
+    and the annotation is linked to it. A cuboid added to a track interpolates the track
+    around it.
 
     Args:
         session: Database session for executing the operation.
@@ -92,6 +94,10 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
         session=session,
         collection_id=created_annotation.annotation_collection_id,
     )
+    if annotation.object_track_id is not None:
+        object_track_service.interpolate_around_cuboid(
+            session=session, annotation_id=created_annotation.sample_id
+        )
 
     return created_annotation
 
@@ -105,6 +111,12 @@ def _resolve_object_track_id(session: Session, annotation: AnnotationCreateParam
                 session=session,
                 object_track_id=annotation.object_track_id,
                 collection_id=annotation.collection_id,
+            )
+            _validate_track_has_no_cuboid(
+                session=session,
+                object_track_id=annotation.object_track_id,
+                annotation_type=annotation.annotation_type,
+                parent_sample_id=annotation.parent_sample_id,
             )
         return annotation.object_track_id
 
@@ -138,3 +150,21 @@ def _validate_object_track(session: Session, object_track_id: UUID, collection_i
             f"Object track {object_track_id} belongs to a different dataset"
             f" than collection {collection_id}."
         )
+
+
+def _validate_track_has_no_cuboid(
+    session: Session,
+    object_track_id: UUID,
+    annotation_type: AnnotationType,
+    parent_sample_id: UUID,
+) -> None:
+    # An object track has at most one cuboid on each group. An undone delete can
+    # recreate a cuboid in a track that has a new cuboid on the same group.
+    if annotation_type != AnnotationType.CUBOID_3D:
+        return
+    if object_track_resolver.has_cuboid_on_parent_sample(
+        session=session,
+        object_track_id=object_track_id,
+        parent_sample_id=parent_sample_id,
+    ):
+        raise ValueError("A cuboid for this object track already exists on this group.")

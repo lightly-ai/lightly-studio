@@ -43,6 +43,7 @@ from lightly_studio.resolvers import (
     image_resolver,
     tag_resolver,
 )
+from lightly_studio.services import annotation_source_service
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -339,6 +340,35 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             images_root=images_root,
             annotation_source=annotation_source,
             embed_annotations=False,
+        )
+
+    def delete_annotation_source(self, annotation_source: str) -> int:
+        """Delete an annotation source, all its annotations and their captions.
+
+        Delete the evaluation runs that use the annotation source first.
+
+        Args:
+            annotation_source: Name of the annotation source.
+
+        Returns:
+            The number of deleted annotations.
+
+        Raises:
+            ValueError: If the dataset has no annotation source with this name.
+            AnnotationSourceInUseError: If evaluation runs or export jobs use the annotation
+                source, or if it has child collections other than captions.
+        """
+        source = collection_resolver.get_annotation_source_by_name(
+            session=self.session,
+            dataset_collection_id=self.collection_id,
+            name=annotation_source,
+        )
+        if source is None:
+            raise ValueError(f"The dataset has no annotation source '{annotation_source}'.")
+        return annotation_source_service.delete_annotation_source(
+            session=self.session,
+            dataset_collection_id=self.collection_id,
+            annotation_source_id=source.collection_id,
         )
 
     def add_samples_from_labelformat(  # noqa: PLR0913

@@ -21,7 +21,7 @@ const captureOptions = (fields: string[], filter?: MetadataValueCountsFilter) =>
 };
 
 describe('useCategoricalFieldCounts', () => {
-    beforeEach(() => vi.clearAllMocks());
+    beforeEach(() => vi.resetAllMocks());
 
     it('requests only expanded fields with the given filter', () => {
         const filter: MetadataValueCountsFilter = {
@@ -75,17 +75,34 @@ describe('useCategoricalFieldCounts', () => {
     });
 
     it('keeps listing all values when the filtered request has no data', () => {
-        queryMock
-            .mockReturnValueOnce({ data: undefined, isFetching: false, error: new Error('down') })
-            .mockReturnValueOnce({ data: { split: [bucket('val', 4)] }, isFetching: false });
+        // Only the request with the width restriction fails.
+        queryMock.mockImplementation((getOptions: () => DistributionOptions) =>
+            getOptions().filter?.width
+                ? { data: undefined, isFetching: false, error: new Error('down') }
+                : { data: { split: [bucket('val', 4)] }, isFetching: false }
+        );
         const counts = useCategoricalFieldCounts(() => ({
             collectionId,
-            filter: { filter_type: 'image' },
+            filter: { filter_type: 'image', width: { min: 100 } },
             fields: ['split']
         }));
 
         expect(counts.distributions.split).toEqual([bucket('val', 0)]);
         expect(counts.error).toBe('down');
+    });
+
+    it('reports all values loaded only after the all-values request has data', () => {
+        const filter: MetadataValueCountsFilter = { filter_type: 'image', width: { min: 100 } };
+        queryMock.mockReturnValue({ data: undefined, isFetching: true });
+        const pending = useCategoricalFieldCounts(() => ({ collectionId, filter, fields: ['a'] }));
+        expect(pending.allValuesLoaded).toBe(false);
+
+        queryMock.mockReturnValue({ data: { a: [] }, isFetching: false });
+        const loaded = useCategoricalFieldCounts(() => ({ collectionId, filter, fields: ['a'] }));
+        expect(loaded.allValuesLoaded).toBe(true);
+
+        const unfiltered = useCategoricalFieldCounts(() => ({ collectionId, fields: ['a'] }));
+        expect(unfiltered.allValuesLoaded).toBe(true);
     });
 
     it('skips the all-values request without a filter', () => {
