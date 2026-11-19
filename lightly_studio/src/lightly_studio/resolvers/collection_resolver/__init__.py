@@ -17,6 +17,7 @@ from lightly_studio.resolvers.collection_resolver.export import (
     get_filtered_samples_count,
 )
 from lightly_studio.resolvers.collection_resolver.get_all import get_all
+from lightly_studio.resolvers.collection_resolver.get_all_by_parent import get_all_by_parent
 from lightly_studio.resolvers.collection_resolver.get_annotation_collections import (
     get_annotation_collections,
 )
@@ -71,6 +72,7 @@ __all__ = [
     "delete_subtree",
     "export",
     "get_all",
+    "get_all_by_parent",
     "get_annotation_collections",
     "get_annotation_collections_by_dataset_id",
     "get_annotation_counts_by_collection_ids",
