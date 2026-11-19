@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import dataclasses
 from collections.abc import AsyncGenerator, Sequence
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -13,6 +14,7 @@ from fastapi.routing import APIRoute
 from sqlmodel import Session
 
 from lightly_studio.api.middleware import RequestTimingMiddleware
+from lightly_studio.api.replaceable import Replaceable
 from lightly_studio.api.routes import (
     healthz,
     images,
@@ -66,6 +68,9 @@ from lightly_studio.plugins.operator_registry import operator_registry
 
 SessionDep = Annotated[Session, Depends(db_manager.session)]
 
+# Every replaceable dependency keeps its default.
+_NO_REPLACEMENTS = Replaceable()
+
 
 @asynccontextmanager
 async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
@@ -98,9 +103,19 @@ if LIGHTLY_STUDIO_DEBUG:
     logger.setLevel(logging.DEBUG)
 
 
-def create_app(routers: Sequence[APIRouter] = ()) -> FastAPI:
-    """Create the FastAPI app. `routers` are served under `/api`, before the webapp catch-all."""
+def create_app(
+    routers: Sequence[APIRouter] = (),
+    replace: Replaceable = _NO_REPLACEMENTS,
+) -> FastAPI:
+    """Create the FastAPI app.
+
+    Args:
+        routers: Extra routers. They are served under `/api`, before the webapp catch-all.
+        replace: The replaceable dependencies. Each field that is not its default replaces
+            the default in every route of this app.
+    """
     app = FastAPI(lifespan=lifespan)
+    _set_replacements(app=app, replace=replace)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -160,6 +175,15 @@ def use_route_names_as_operation_ids(app: FastAPI) -> None:
     for route in app.routes:
         if isinstance(route, APIRoute):
             route.operation_id = route.name  # in this case, 'read_items'
+
+
+def _set_replacements(app: FastAPI, replace: Replaceable) -> None:
+    """Make FastAPI call each replacement instead of its default."""
+    for field in dataclasses.fields(Replaceable):
+        default = getattr(_NO_REPLACEMENTS, field.name)
+        replacement = getattr(replace, field.name)
+        if replacement is not default:
+            app.dependency_overrides[default] = replacement
 
 
 def _create_api_router() -> APIRouter:
