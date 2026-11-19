@@ -16,6 +16,8 @@ export interface UseCategoricalFieldCountsReturn {
     readonly loading: boolean;
     readonly updating: boolean;
     readonly error: string | undefined;
+    /** `true` once every value of the fields is known, so a total can be shown. */
+    readonly allValuesLoaded: boolean;
     refetch: () => void;
 }
 
@@ -57,6 +59,10 @@ export function useCategoricalFieldCounts(
     const loading = $derived(query.isFetching && (query.isLoading || query.isPlaceholderData));
     const updating = $derived(query.isFetching && !query.isLoading);
     const error = $derived(query.error?.message);
+    // Without a filter, `query` already lists every value.
+    const allValuesLoaded = $derived(
+        getOptions().filter === undefined || allValuesQuery.data !== undefined
+    );
 
     return {
         get distributions() {
@@ -70,6 +76,9 @@ export function useCategoricalFieldCounts(
         },
         get error() {
             return error;
+        },
+        get allValuesLoaded() {
+            return allValuesLoaded;
         },
         refetch: () => {
             query.refetch();
