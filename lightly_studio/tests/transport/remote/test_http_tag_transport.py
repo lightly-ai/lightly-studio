@@ -46,4 +46,14 @@ class TestHttpTagTransport:
 
         assert added == {sample_id: ["cat"] for sample_id in sample_ids}
         assert removed == {}
-        assert post_spy.call_count == 4
+        a, b, c = (str(sample_id) for sample_id in sample_ids)
+        add_path = f"/api/v1/collections/{collection_id}/tags:add"
+        remove_path = f"/api/v1/collections/{collection_id}/tags:remove"
+        assert [
+            (call.args[0], call.kwargs["json"]["sample_ids"]) for call in post_spy.call_args_list
+        ] == [
+            (add_path, [a, b]),
+            (add_path, [c]),
+            (remove_path, [a, b]),
+            (remove_path, [c]),
+        ]

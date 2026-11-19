@@ -31,21 +31,26 @@ class HttpTagTransport:
         self, collection_id: UUID, tag_name: str, sample_ids: Sequence[UUID]
     ) -> None:
         """Add a tag to samples. Create the tag if it does not exist."""
-        self._send(path=f"/collections/{collection_id}/tags:add", tag_name=tag_name, ids=sample_ids)
+        path = f"/collections/{collection_id}/tags:add"
+        # One request without samples still creates the tag.
+        for batch in _batches(ids=sample_ids) or [[]]:
+            self._send(path=path, tag_name=tag_name, sample_ids=batch)
 
     def remove_from_samples(
         self, collection_id: UUID, tag_name: str, sample_ids: Sequence[UUID]
     ) -> None:
         """Remove a tag from samples. A tag that does not exist changes nothing."""
-        self._send(
-            path=f"/collections/{collection_id}/tags:remove", tag_name=tag_name, ids=sample_ids
-        )
+        path = f"/collections/{collection_id}/tags:remove"
+        for batch in _batches(ids=sample_ids):
+            self._send(path=path, tag_name=tag_name, sample_ids=batch)
 
-    def _send(self, path: str, tag_name: str, ids: Sequence[UUID]) -> None:
-        # One request without samples still creates the tag.
-        for start in range(0, max(len(ids), 1), MAX_SAMPLE_IDS_PER_REQUEST):
-            batch = [
-                str(sample_id) for sample_id in ids[start : start + MAX_SAMPLE_IDS_PER_REQUEST]
-            ]
-            body = {"tag_name": tag_name, "sample_ids": batch}
-            http_requests.post(client=self._client, path=path, body=body)
+    def _send(self, path: str, tag_name: str, sample_ids: list[str]) -> None:
+        body = {"tag_name": tag_name, "sample_ids": sample_ids}
+        http_requests.post(client=self._client, path=path, body=body)
+
+
+def _batches(ids: Sequence[UUID]) -> list[list[str]]:
+    return [
+        [str(sample_id) for sample_id in ids[start : start + MAX_SAMPLE_IDS_PER_REQUEST]]
+        for start in range(0, len(ids), MAX_SAMPLE_IDS_PER_REQUEST)
+    ]
