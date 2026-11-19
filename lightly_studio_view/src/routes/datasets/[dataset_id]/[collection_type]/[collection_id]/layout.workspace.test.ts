@@ -118,6 +118,8 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
         annotationFilterRows: [],
         toggleAnnotationFilterSelection: vi.fn(),
         setAnnotationCounts: vi.fn(),
+        setUnannotatedSampleCount: vi.fn(),
+        includeUnannotatedSamples: writable(false),
         pruneInvalidSelections: vi.fn()
     }))
 }));
@@ -201,6 +203,8 @@ vi.mock('$lib/hooks', async () => ({
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
     setAnnotationClasses: vi.fn(),
+    useUnannotatedSampleCount: vi.fn(() => ({ data: undefined })),
+    useUnannotatedSamplesFilter: vi.fn(() => ({ scopeToCollection: vi.fn() })),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
         data: undefined,
         isFetching: false,

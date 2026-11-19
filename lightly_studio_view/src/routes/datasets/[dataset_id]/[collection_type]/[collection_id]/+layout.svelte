@@ -30,7 +30,9 @@
     import {
         setAnnotationClasses,
         useMcapSequenceAnnotationCounts,
-        useMcapSequenceFilters
+        useMcapSequenceFilters,
+        useUnannotatedSampleCount,
+        useUnannotatedSamplesFilter
     } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
@@ -359,6 +361,8 @@
         toggleAnnotationFilterSelection,
         setAnnotationFilterSelection,
         setAnnotationCounts,
+        setUnannotatedSampleCount,
+        includeUnannotatedSamples,
         pruneInvalidSelections
     } = useAnnotationsFilter({
         annotationLabels: annotationLabelsStore
@@ -397,13 +401,26 @@
     // other tabs filtering against another tab's sources.
     useSeedAnnotationSourceFilter(() => collectionId);
 
+    const { scopeToCollection: scopeUnannotatedSamplesFilter } = useUnannotatedSamplesFilter();
+    $effect.pre(() => scopeUnannotatedSamplesFilter(collectionId));
+
     // Selected annotation sources (annotation collections). When a subset is
     // selected the distribution counts only annotations from those sources; the
     // backend restricts the counted annotations by their own collection id.
     const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
         useAnnotationCollectionsFilter();
+    // Only the image and video grids show the "No annotations" row.
+    const showsNoAnnotationsRow = $derived(isImages || isVideos);
+    const annotationFilterWithUnannotated = $derived<AnnotationsFilter | undefined>(
+        showsNoAnnotationsRow && $includeUnannotatedSamples
+            ? {
+                  ...($annotationFilterStore ?? { filter_type: 'annotations' }),
+                  include_unannotated_samples: true
+              }
+            : $annotationFilterStore
+    );
     const annotationFilterForCounts = $derived.by<AnnotationsFilter | undefined>(() => {
-        const base = $annotationFilterStore;
+        const base = annotationFilterWithUnannotated;
         const sourceIds =
             isAnnotations || isAnnotationDetails ? [collectionId] : $selectedAnnotationSourceIds;
         // An empty list cannot be sent: the backend skips collection_ids when it is falsy, so
@@ -458,17 +475,35 @@
             !$allSourcesHidden
     }));
 
-    const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
-        collectionId,
-        filter: buildVideoAnnotationCountsFilter({
+    const videoAnnotationCountsFilter = $derived(
+        buildVideoAnnotationCountsFilter({
             videoFilter: $videoFilterFromHook,
             metadataFilters,
-            annotationFilter: $annotationFilterStore,
+            annotationFilter: annotationFilterWithUnannotated,
             videoBoundsValues: $videoBoundsValues
-        }),
+        })
+    );
+    const videoAnnotationCountsQuery = useVideoAnnotationCounts(() => ({
+        collectionId,
+        filter: videoAnnotationCountsFilter,
         enabled: isVideos && !$allSourcesHidden
     }));
 
+    const unannotatedSampleCountQuery = useUnannotatedSampleCount(() => ({
+        ...(isVideos
+            ? { sampleType: 'video' as const, collectionId, filter: videoAnnotationCountsFilter }
+            : {
+                  sampleType: 'image' as const,
+                  collectionId: datasetId,
+                  filter: imageAnnotationCountsFilter
+              }),
+        enabled: showsNoAnnotationsRow && !$allSourcesHidden
+    }));
+    $effect(() =>
+        setUnannotatedSampleCount(
+            showsNoAnnotationsRow ? unannotatedSampleCountQuery.data : undefined
+        )
+    );
     const { filterParams: mcapSequenceFilterParams, mcapSequenceFilter } = useMcapSequenceFilters();
     // The grid page sets the filter collection after this layout reads a new route. Until then
     // the filter still belongs to the previous collection.

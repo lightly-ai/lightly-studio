@@ -1,6 +1,7 @@
 import { QueryClient, useQueryClient, type QueryKey } from '@tanstack/svelte-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+    countUnannotatedVideosQueryKey,
     countVideoFrameAnnotationsByVideoCollectionQueryKey,
     countVideoFrameAnnotationsQueryKey,
     getTickDetailsQueryKey,
@@ -49,7 +50,8 @@ describe('useInvalidateAnnotationSourceQueries', () => {
             countVideoFrameAnnotationsByVideoCollectionQueryKey({
                 ...path('videos-1'),
                 body: {}
-            })
+            }),
+            countUnannotatedVideosQueryKey({ ...path('videos-1'), body: {} })
         ];
         affected.forEach(seed);
 

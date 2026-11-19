@@ -46,6 +46,11 @@ const imageFilter = derived(
                 // resolves the polygon to sample ids server-side.
                 embedding_region: f.embedding_region,
                 annotation_label_ids: f.annotation_label_ids,
+                // Sources alone would drop the images without annotations in them.
+                annotation_collection_ids: f.include_unannotated_samples
+                    ? f.collection_ids
+                    : undefined,
+                include_unannotated_samples: f.include_unannotated_samples,
                 tag_ids: f.tag_ids,
                 confusion_cell: f.confusion_cell,
                 metadata_filters: toMetadataFilters(

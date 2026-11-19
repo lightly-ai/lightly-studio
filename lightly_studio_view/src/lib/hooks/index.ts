@@ -13,6 +13,8 @@ export {
 } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
+export { useUnannotatedSampleCount } from '$lib/hooks/useUnannotatedSampleCount/useUnannotatedSampleCount';
+export { useUnannotatedSamplesFilter } from '$lib/hooks/useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
 export { useFiltersClearedSignal } from '$lib/hooks/useFiltersClearedSignal/useFiltersClearedSignal';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export {
