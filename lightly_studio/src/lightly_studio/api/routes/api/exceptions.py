@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
@@ -133,7 +134,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
         )
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
-            content={"detail": exc.errors()},
+            content={"detail": jsonable_encoder(exc.errors())},
         )
 
     @app.exception_handler(NotFoundError)
