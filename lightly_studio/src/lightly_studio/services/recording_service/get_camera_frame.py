@@ -10,10 +10,11 @@ from uuid import UUID
 from av import VideoFrame
 from sqlmodel import Session
 
-from lightly_studio.core.mcap import compressed_video
+from lightly_studio.core.mcap import compressed_image, compressed_video, topic_kind
 from lightly_studio.core.mcap.compressed_video import JPEG_QUALITY, VideoDecoder
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader
+from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.resolvers import recording_resolver
 from lightly_studio.services.recording_service import (
@@ -54,8 +55,10 @@ def get_camera_frame(  # noqa: PLR0913
 ) -> CameraFrame | None:
     """Returns the camera frame at an exact log time on a channel.
 
-    A delta frame is decoded on top of its keyframe. Each GOP of the channel has one
-    shared decoder that only moves forward, and each decoded picture is cached. A
+    A compressed image is read on its own, because each image is its own keyframe.
+
+    A video delta frame is decoded on top of its keyframe. Each GOP of the channel has
+    one shared decoder that only moves forward, and each decoded picture is cached. A
     picture that the decoder passed and that is not in the cache is decoded again
     from the keyframe.
 
@@ -83,7 +86,7 @@ def get_camera_frame(  # noqa: PLR0913
         ValueError: If `log_time_ns` is before `keyframe_timestamp_ns`.
         ChannelNotFoundError: If `channel_id` is not in the recording's file.
         McapAccessError: If the channel's messages cannot be decoded, or the schema
-            is not `CompressedVideo`.
+            is neither `CompressedVideo` nor an image.
     """
     target_time_ns = keyframe_timestamp_ns if log_time_ns is None else log_time_ns
     if target_time_ns < keyframe_timestamp_ns:
@@ -95,43 +98,20 @@ def get_camera_frame(  # noqa: PLR0913
     if recording is None or recording.dataset_id != dataset_id:
         return None
 
-    start_ns = camera_read_start_ns(
+    jpeg_id = JpegId(
         uri=recording.uri,
         channel_id=channel_id,
-        keyframe_log_time_ns=keyframe_timestamp_ns,
-        target_time_ns=target_time_ns,
+        log_time_ns=target_time_ns,
         width=width,
         height=height,
         quality=quality,
     )
-    messages: list[DecodedMessage] = []
-    if start_ns is not None:
-        with reader_cache.borrow_reader(uri=recording.uri) as reader:
-            messages = reader.get_decoded_messages_in_range(
-                channel_ids=[channel_id], start_time_ns=start_ns, end_time_ns=target_time_ns
-            )[channel_id]
-    data = camera_jpeg(
-        uri=recording.uri,
-        channel_id=channel_id,
-        keyframe_log_time_ns=keyframe_timestamp_ns,
-        messages=messages,
-        target_time_ns=target_time_ns,
-        width=width,
-        height=height,
-        quality=quality,
-    )
-    if data is None and start_ns != keyframe_timestamp_ns:
-        with reader_cache.borrow_reader(uri=recording.uri) as reader:
-            data = camera_jpeg_from_keyframe(
-                reader=reader,
-                uri=recording.uri,
-                channel_id=channel_id,
-                keyframe_log_time_ns=keyframe_timestamp_ns,
-                target_time_ns=target_time_ns,
-                width=width,
-                height=height,
-                quality=quality,
-            )
+    with reader_cache.borrow_reader(uri=recording.uri) as reader:
+        kind = reader.get_topic(channel_id=channel_id).kind
+    if kind is TopicKind.IMAGE:
+        data = _image_jpeg(jpeg_id=jpeg_id)
+    else:
+        data = _video_jpeg(jpeg_id=jpeg_id, keyframe_log_time_ns=keyframe_timestamp_ns)
     if data is None:
         return None
     return CameraFrame(data=data, media_type="image/jpeg", log_time_ns=target_time_ns)
@@ -149,7 +129,8 @@ def camera_jpeg(  # noqa: PLR0913
 ) -> bytes | None:
     """Returns the JPEG of a frame and caches each picture decoded on the way.
 
-    Requests for one GOP run one after another on its decoder.
+    An image message is encoded on its own. Requests for one video GOP run one after
+    another on its decoder.
 
     Args:
         uri: The URI of the recording's MCAP file.
@@ -167,8 +148,8 @@ def camera_jpeg(  # noqa: PLR0913
         or a new decoder does not start with its keyframe.
 
     Raises:
-        McapAccessError: If the schema is not `CompressedVideo`, or the target
-            message exists but its picture cannot be decoded.
+        McapAccessError: If the schema is neither `CompressedVideo` nor an image, or
+            the target message exists but its picture cannot be decoded.
     """
     jpeg_id = JpegId(
         uri=uri,
@@ -181,6 +162,9 @@ def camera_jpeg(  # noqa: PLR0913
     cached = camera_jpeg_cache.get_jpeg(jpeg_id=jpeg_id)
     if cached is not None:
         return cached
+    image_message = _image_message_at(messages=messages, log_time_ns=target_time_ns)
+    if image_message is not None:
+        return _store_image_jpeg(jpeg_id=jpeg_id, message=image_message)
     with video_decoder_cache.borrow_decoder(
         uri=uri, channel_id=channel_id, keyframe_log_time_ns=keyframe_log_time_ns
     ) as lease:
@@ -296,6 +280,109 @@ def camera_jpeg_from_keyframe(  # noqa: PLR0913
         height=height,
         quality=quality,
     )
+
+
+def _image_jpeg(jpeg_id: JpegId) -> bytes | None:
+    """Returns the JPEG of the image message at the log time of `jpeg_id`.
+
+    Returns:
+        The JPEG bytes, or `None` when the channel has no message at that log time.
+
+    Raises:
+        McapAccessError: If the message exists but its picture cannot be decoded.
+    """
+    cached = camera_jpeg_cache.get_jpeg(jpeg_id=jpeg_id)
+    if cached is not None:
+        return cached
+    with reader_cache.borrow_reader(uri=jpeg_id.uri) as reader:
+        message = reader.get_decoded_message_at(
+            channel_id=jpeg_id.channel_id, timestamp_ns=jpeg_id.log_time_ns
+        )
+    if message is None:
+        return None
+    return _store_image_jpeg(jpeg_id=jpeg_id, message=message)
+
+
+def _image_message_at(
+    messages: Sequence[DecodedMessage], log_time_ns: int
+) -> DecodedMessage | None:
+    """Returns the message at an exact log time when it is an image, else `None`."""
+    message = next((message for message in messages if message.log_time_ns == log_time_ns), None)
+    if message is None or topic_kind.from_schema_name(message.schema_name) is not TopicKind.IMAGE:
+        return None
+    return message
+
+
+def _store_image_jpeg(jpeg_id: JpegId, message: DecodedMessage) -> bytes:
+    """Encodes an image message as JPEG and caches it.
+
+    Raises:
+        McapAccessError: If the picture of the message cannot be decoded.
+    """
+    data = compressed_image.to_jpeg(
+        decoded_message=message.decoded_message,
+        width=jpeg_id.width,
+        height=jpeg_id.height,
+        quality=jpeg_id.quality,
+    )
+    camera_jpeg_cache.put_jpeg(jpeg_id=jpeg_id, data=data)
+    return data
+
+
+def _video_jpeg(jpeg_id: JpegId, keyframe_log_time_ns: int) -> bytes | None:
+    """Returns the JPEG of the video frame at the log time of `jpeg_id`.
+
+    Reads from where the GOP's decoder stopped, and again from the keyframe when
+    another request moved the decoder on in between.
+
+    Returns:
+        The JPEG bytes, or `None` when the channel has no message at the keyframe or
+        at the frame.
+
+    Raises:
+        McapAccessError: If the schema is not `CompressedVideo`, or the target
+            message exists but its picture cannot be decoded.
+    """
+    start_ns = camera_read_start_ns(
+        uri=jpeg_id.uri,
+        channel_id=jpeg_id.channel_id,
+        keyframe_log_time_ns=keyframe_log_time_ns,
+        target_time_ns=jpeg_id.log_time_ns,
+        width=jpeg_id.width,
+        height=jpeg_id.height,
+        quality=jpeg_id.quality,
+    )
+    messages: list[DecodedMessage] = []
+    if start_ns is not None:
+        with reader_cache.borrow_reader(uri=jpeg_id.uri) as reader:
+            messages = reader.get_decoded_messages_in_range(
+                channel_ids=[jpeg_id.channel_id],
+                start_time_ns=start_ns,
+                end_time_ns=jpeg_id.log_time_ns,
+            )[jpeg_id.channel_id]
+    data = camera_jpeg(
+        uri=jpeg_id.uri,
+        channel_id=jpeg_id.channel_id,
+        keyframe_log_time_ns=keyframe_log_time_ns,
+        messages=messages,
+        target_time_ns=jpeg_id.log_time_ns,
+        width=jpeg_id.width,
+        height=jpeg_id.height,
+        quality=jpeg_id.quality,
+    )
+    if data is None and start_ns != keyframe_log_time_ns:
+        with reader_cache.borrow_reader(uri=jpeg_id.uri) as reader:
+            data = camera_jpeg_from_keyframe(
+                reader=reader,
+                uri=jpeg_id.uri,
+                channel_id=jpeg_id.channel_id,
+                keyframe_log_time_ns=keyframe_log_time_ns,
+                target_time_ns=jpeg_id.log_time_ns,
+                width=jpeg_id.width,
+                height=jpeg_id.height,
+                quality=jpeg_id.quality,
+            )
+    return data
 
 
 def _continuing_decoder(

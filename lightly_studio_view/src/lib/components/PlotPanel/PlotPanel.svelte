@@ -41,6 +41,7 @@
         setPlotSelectionCount,
         type PlotSelection
     } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
+    import { getPlotRequestFilter } from './getPlotRequestFilter/getPlotRequestFilter';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -55,8 +56,9 @@
     } from './plotCategories';
     import { page } from '$app/state';
     import { cn } from '$lib/utils';
-    import { isAnnotationsRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isMcapSequencesRoute, isVideosRoute } from '$lib/routes';
     import { useMcapSequenceFilters } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
+    import { buildSequencePlotFilter } from './buildSequencePlotFilter/buildSequencePlotFilter';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
@@ -83,7 +85,7 @@
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
     // The MCAP sequences grid lives on the point clouds route.
-    const isSequences = $derived(isPointCloudsRoute(page.route?.id ?? null));
+    const isSequences = $derived(isMcapSequencesRoute(page.route?.id ?? null));
     // Everything that isn't videos, annotations or sequences is the images grid.
     const isImages = $derived(!isVideos && !isAnnotations && !isSequences);
     const itemLabel = $derived(
@@ -124,31 +126,9 @@
             return $selectedAnnotationsFilter ?? { filter_type: 'annotations' as const };
         }
         if (isSequences) {
-            // The plot highlights its own selection rather than filtering by it, so only
-            // the tags of the grid filter are sent.
-            const tagIds = $sequenceFilter?.sample_filter?.tag_ids;
-            return {
-                filter_type: 'mcap_sequence' as const,
-                ...(tagIds ? { sample_filter: { tag_ids: tagIds } } : {})
-            };
+            return buildSequencePlotFilter($sequenceFilter);
         }
-        const currentFilter = isVideos ? $videoFilter : $imageFilter;
-        if (!currentFilter) return null;
-
-        if (!currentFilter.sample_filter) {
-            return currentFilter;
-        }
-
-        return {
-            ...currentFilter,
-            sample_filter: {
-                ...currentFilter.sample_filter,
-                sample_ids: [],
-                // The lasso only scopes the grid, not the plot: the plot shows every point and
-                // highlights the in-selection ones, so drop the region from this request.
-                embedding_region: undefined
-            }
-        };
+        return getPlotRequestFilter(isVideos ? $videoFilter : $imageFilter);
     });
 
     const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));

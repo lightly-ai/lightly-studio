@@ -24,7 +24,11 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
-from lightly_studio.models.collection import AnnotationCollectionView, CollectionTable
+from lightly_studio.models.collection import (
+    AnnotationCollectionView,
+    AnnotationCollectionWithCountView,
+    CollectionTable,
+)
 from lightly_studio.models.embedding_region import EmbeddingRegion
 from lightly_studio.resolvers import (
     annotation_resolver,
@@ -55,6 +59,7 @@ annotations_router.include_router(annotations_module.bulk_create_classifications
 annotations_router.include_router(annotations_module.bulk_delete_annotations_router)
 annotations_router.include_router(annotations_module.bulk_relabel_annotations_router)
 annotations_router.include_router(annotations_module.annotation_metrics_info_router)
+annotations_router.include_router(annotations_module.annotation_sources_router)
 
 
 @annotations_router.get(
@@ -90,6 +95,55 @@ def read_annotation_collections(
         )
         for c in collections
     ]
+
+
+@annotations_router.get(
+    "/annotation_collections_with_counts",
+    response_model=list[AnnotationCollectionWithCountView],
+)
+def read_annotation_collections_with_counts(
+    session: SessionDep,
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+) -> list[AnnotationCollectionWithCountView]:
+    """List the annotation collections of the collection's dataset with their annotation counts.
+
+    The list holds every annotation collection of the dataset, also those under other
+    collections than the given one, for example under the video frames of a video dataset.
+    Each entry names its parent collection, which the delete endpoint needs.
+    """
+    sources = collection_resolver.get_annotation_collections_by_dataset_id(
+        session=session, dataset_id=collection.dataset_id
+    )
+    source_ids = [s.collection_id for s in sources]
+    types_by_collection_id = collection_resolver.get_annotation_types_by_collection_ids(
+        session=session, collection_ids=source_ids
+    )
+    counts = collection_resolver.get_annotation_counts_by_collection_ids(
+        session=session, collection_ids=source_ids
+    )
+    views = []
+    for source in sources:
+        parent = source.parent
+        # An annotation collection is always the child of the collection it annotates.
+        if parent is None:
+            raise RuntimeError("Expected `parent` to be set.")
+        definition = parent.group_component_definition
+        views.append(
+            AnnotationCollectionWithCountView(
+                collection_id=source.collection_id,
+                name=source.name,
+                annotation_types=types_by_collection_id.get(source.collection_id, []),
+                annotation_count=counts.get(source.collection_id, 0),
+                parent_collection_id=parent.collection_id,
+                parent_sample_type=parent.sample_type,
+                parent_group_component_name=definition.group_component_name if definition else None,
+            )
+        )
+    return views
 
 
 class ReadAnnotationsWithPayloadRequest(BaseModel):

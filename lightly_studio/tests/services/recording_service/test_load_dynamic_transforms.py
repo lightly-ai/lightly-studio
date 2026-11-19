@@ -84,6 +84,57 @@ def test_load_dynamic_transforms_between__no_stored_edges(db_session: Session) -
     assert result is None
 
 
+def test_load_dynamic_transforms_around(db_session: Session) -> None:
+    recording_id = create_recording(session=db_session)
+    _store_edges(
+        session=db_session,
+        recording_id=recording_id,
+        timestamps_ns=[0, 1_000_000_000, 2_000_000_000, 3_000_000_000, 5_000_000_000],
+    )
+
+    result = load_dynamic_transforms.load_dynamic_transforms_around(
+        session=db_session,
+        recording_id=recording_id,
+        start_ns=1_500_000_000,
+        end_ns=2_500_000_000,
+    )
+
+    assert result is not None
+    assert sorted(edge.timestamp_ns for edge in result) == [
+        1_000_000_000,
+        2_000_000_000,
+        3_000_000_000,
+    ]
+
+
+def test_load_dynamic_transforms_around__no_edge_in_range(db_session: Session) -> None:
+    recording_id = create_recording(session=db_session)
+    _store_edges(session=db_session, recording_id=recording_id, timestamps_ns=[3_000_000_000])
+
+    result = load_dynamic_transforms.load_dynamic_transforms_around(
+        session=db_session,
+        recording_id=recording_id,
+        start_ns=1_000_000_000,
+        end_ns=2_000_000_000,
+    )
+
+    assert result is not None
+    assert [edge.timestamp_ns for edge in result] == [3_000_000_000]
+
+
+def test_load_dynamic_transforms_around__no_stored_edges(db_session: Session) -> None:
+    recording_id = create_recording(session=db_session)
+
+    result = load_dynamic_transforms.load_dynamic_transforms_around(
+        session=db_session,
+        recording_id=recording_id,
+        start_ns=1_000_000_000,
+        end_ns=2_000_000_000,
+    )
+
+    assert result is None
+
+
 def _edge(timestamp_ns: int) -> StaticTransform:
     """Builds a `map` to `base_link` edge at a capture time."""
     return StaticTransform(
