@@ -211,7 +211,7 @@ describe('useAssistedLabelingTools', () => {
         expect(context.status).toBe('cursor');
     });
 
-    it('drops the model results when the label with model tool is left', () => {
+    it('drops the model results when the auto-label tool is left', () => {
         const { context } = setup('label-with-model');
         mocks.clearLabelWithModel.mockClear();
 

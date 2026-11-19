@@ -124,7 +124,7 @@ describe('SampleDetailsToolbar', () => {
                 'Mask brush',
                 'Smart select',
                 'Find all instances',
-                'Label with model'
+                'Auto-label'
             ]) {
                 expect(getByLabelText(label)).toBeDisabled();
             }
@@ -322,13 +322,13 @@ describe('SampleDetailsToolbar', () => {
         );
     });
 
-    it('shows and activates the label with model tool when models are available', async () => {
-        expect(render(SampleDetailsToolbar).queryByLabelText('Label with model')).toBeNull();
+    it('shows and activates the auto-label tool when models are available', async () => {
+        expect(render(SampleDetailsToolbar).queryByLabelText('Auto-label')).toBeNull();
         cleanup();
         labelingModels.isAvailable = true;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
-        await fireEvent.click(getByLabelText('Label with model'));
+        await fireEvent.click(getByLabelText('Auto-label'));
 
         expect(mockSampleDetailsToolbarContext.status).toBe('label-with-model');
     });

@@ -15,7 +15,7 @@
     import Brush from '@lucide/svelte/icons/brush';
     import Bot from '@lucide/svelte/icons/bot';
     import Layers3 from '@lucide/svelte/icons/layers-3';
-    import ScanSearch from '@lucide/svelte/icons/scan-search';
+    import ScanEye from '@lucide/svelte/icons/scan-eye';
     import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
@@ -156,9 +156,9 @@
         },
         {
             id: 'label-with-model',
-            label: 'Label with model',
-            icon: ScanSearch,
-            hint: 'Labels the image with your own model.',
+            label: 'Auto-label',
+            icon: ScanEye,
+            hint: 'Suggests annotations from your own model.',
             visible: showLabelWithModelTool,
             disabledReason: createToolDisabledReason
         }

@@ -63,7 +63,7 @@
 {/snippet}
 
 <AnnotationToolPopUp
-    title="Label with model"
+    title="Auto-label"
     saveControls={predictionCount > 0 ? saveControls : undefined}
 >
     <Select
