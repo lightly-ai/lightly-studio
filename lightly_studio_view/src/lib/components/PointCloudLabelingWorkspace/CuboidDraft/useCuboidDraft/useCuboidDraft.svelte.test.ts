@@ -71,6 +71,16 @@ function createBatch(points: number[][]): PointBatch {
     };
 }
 
+/** Ground points at height z on a ring of radius 1 around the centre. */
+function createGround(z: number, [x, y]: [number, number]): PointBatch {
+    const count = 20;
+    const points = Array.from({ length: count }, (_, index) => {
+        const angle = (2 * Math.PI * index) / count;
+        return [x + Math.cos(angle), y + Math.sin(angle), z];
+    });
+    return createBatch(points);
+}
+
 function pointer(type: string, clientX: number, clientY: number, button = 0, pointerId = 7) {
     const event = new MouseEvent(type, {
         clientX,
@@ -157,8 +167,8 @@ function click(clientX: number, clientY: number, button = 0) {
  * Draws a footprint with the horizontal camera in the 3D view: the side from world (0, -8, 0) to
  * (2, -6, 0), then a width click at world (-2, -6, 0). The height step follows.
  */
-function startHeightStep() {
-    const { draft } = setup({ cameraMode: 'perspective', camera: createHorizontalCamera() });
+function startHeightStep(batch?: PointBatch) {
+    const { draft } = setup({ cameraMode: 'perspective', camera: createHorizontalCamera(), batch });
     pressAt(draft, 200, 300, [0, -8, 0]);
     canvas.dispatchEvent(pointer('pointermove', 300, 250));
     canvas.dispatchEvent(pointer('pointerup', 300, 250));
@@ -180,6 +190,74 @@ describe('useCuboidDraft', () => {
             yaw: 0
         });
         expect(draft.previewBox).toBeNull();
+    });
+
+    describe('ground anchor', () => {
+        it('draws a top-view footprint on the ground around the first point', () => {
+            const { draft } = setup({ batch: createGround(2, [0, 0]) });
+            pressAt(draft, 200, 200, [0, 0, -5]);
+            canvas.dispatchEvent(pointer('pointermove', 300, 200));
+            expect(draft.previewBox?.center).toEqual([
+                expect.closeTo(1),
+                expect.closeTo(0),
+                expect.closeTo(2)
+            ]);
+        });
+
+        it('starts the 3D draft on the front point under the pointer', () => {
+            // Pixel (200, 300) of the horizontal camera shows (0, -8, 0) in front of (0, -6, -1).
+            const batch = createBatch([
+                [0, -6, -1],
+                [0, -8, 0]
+            ]);
+            const { draft } = setup({
+                cameraMode: 'perspective',
+                camera: createHorizontalCamera(),
+                batch
+            });
+            pressAt(draft, 200, 300, [0, -4, -2]);
+            canvas.dispatchEvent(pointer('pointermove', 300, 300));
+            expect(draft.previewBox?.center).toEqual([
+                expect.closeTo(0.5),
+                expect.closeTo(-8),
+                expect.closeTo(0)
+            ]);
+        });
+
+        it('starts the 3D draft under the pointer at the height of a point beside it', () => {
+            // (0.2, -8, 0) is 20 px right of pixel (200, 300).
+            const { draft } = setup({
+                cameraMode: 'perspective',
+                camera: createHorizontalCamera(),
+                batch: createBatch([[0.2, -8, 0]])
+            });
+            pressAt(draft, 200, 300, [0, -4, -2]);
+            canvas.dispatchEvent(pointer('pointermove', 300, 300));
+            expect(draft.previewBox?.center).toEqual([
+                expect.closeTo(0.5),
+                expect.closeTo(-8),
+                expect.closeTo(0)
+            ]);
+        });
+
+        it('puts the bottom of a 3D box on the ground beside the footprint', () => {
+            const truckCorner = [0, -8, 0];
+            const ground = Array.from({ length: 12 }, () => [1.5, -5, -1]);
+            const draft = startHeightStep(createBatch([truckCorner, ...ground]));
+            canvas.dispatchEvent(pointer('pointermove', 200, 100));
+            click(200, 100);
+            const box = onCreate.mock.calls[0][0];
+            expect(box.center[2] - box.size[2] / 2).toBeCloseTo(-1);
+            expect(box.center[2] + box.size[2] / 2).toBeCloseTo(3);
+            expect(draft.previewBox).toBeNull();
+        });
+
+        it('keeps the scene hit without points around it', () => {
+            const { draft } = setup({ batch: createGround(2, [50, 50]) });
+            pressAt(draft, 200, 200, [0, 0, -5]);
+            canvas.dispatchEvent(pointer('pointermove', 300, 200));
+            expect(draft.previewBox?.center[2]).toBeCloseTo(-5);
+        });
     });
 
     describe('side and front views', () => {
@@ -249,6 +327,8 @@ describe('useCuboidDraft', () => {
         it('creates an angled box fitted to the points after the width click', () => {
             const batch = createBatch([
                 [0, 1, 0.25],
+                [0, 1, 0.75],
+                [0, 1, 1.25],
                 [0, 1, 1.75],
                 [3, 3, 9]
             ]);
@@ -262,11 +342,15 @@ describe('useCuboidDraft', () => {
             expect(onCreate).toHaveBeenCalledOnce();
             const box = onCreate.mock.calls[0][0];
             expect(box.yaw).toBeCloseTo(Math.PI / 4);
-            expect(box.center).toEqual([expect.closeTo(0), expect.closeTo(1), expect.closeTo(1)]);
+            expect(box.center).toEqual([
+                expect.closeTo(0),
+                expect.closeTo(1),
+                expect.closeTo(0.875)
+            ]);
             expect(box.size).toEqual([
                 expect.closeTo(Math.SQRT2),
                 expect.closeTo(Math.SQRT2),
-                expect.closeTo(1.5)
+                expect.closeTo(1.75)
             ]);
             expect(draft.previewBox).toBeNull();
         });
@@ -371,7 +455,10 @@ describe('useCuboidDraft', () => {
         it('fits the height to the points when the camera looks straight down', () => {
             const batch = createBatch([
                 [1, 0.5, 0.5],
-                [1, 0.5, 2]
+                [1, 0.5, 1],
+                [1, 0.5, 1.5],
+                [1, 0.5, 2],
+                ...Array.from({ length: 12 }, () => [0, 0, 0])
             ]);
             const { draft } = setup({
                 cameraMode: 'perspective',
@@ -383,12 +470,12 @@ describe('useCuboidDraft', () => {
             canvas.dispatchEvent(pointer('pointerup', 240, 200));
             canvas.dispatchEvent(pointer('pointermove', 240, 180));
             click(240, 180);
-            expect(draft.previewBox?.size[2]).toBeCloseTo(1.5);
+            expect(draft.previewBox?.size[2]).toBeCloseTo(2);
             click(240, 180);
             expect(onCreate.mock.calls[0][0].size).toEqual([
                 expect.closeTo(2),
                 expect.closeTo(1),
-                expect.closeTo(1.5)
+                expect.closeTo(2)
             ]);
         });
 
@@ -401,7 +488,10 @@ describe('useCuboidDraft', () => {
             camera.updateMatrixWorld();
             const batch = createBatch([
                 [1, -1, 0.5],
-                [1, -1, 2]
+                [1, -1, 1],
+                [1, -1, 1.5],
+                [1, -1, 2],
+                ...Array.from({ length: 12 }, () => [0, -3, 0])
             ]);
             const { draft } = setup({ cameraMode: 'perspective', camera, batch });
             pressAt(draft, 200, 260, [0, -3, 0]);
@@ -409,9 +499,9 @@ describe('useCuboidDraft', () => {
             canvas.dispatchEvent(pointer('pointerup', 240, 260));
             canvas.dispatchEvent(pointer('pointermove', 240, 180));
             click(240, 180);
-            expect(draft.previewBox?.size[2]).toBeCloseTo(1.5);
+            expect(draft.previewBox?.size[2]).toBeCloseTo(2);
             click(240, 180);
-            expect(onCreate.mock.calls[0][0].size[2]).toBeCloseTo(1.5);
+            expect(onCreate.mock.calls[0][0].size[2]).toBeCloseTo(2);
         });
 
         it('keeps the last preview when the ray misses the ground', () => {

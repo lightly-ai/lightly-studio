@@ -17,7 +17,8 @@ import {
     type DraftFootprint,
     type ScreenPoint
 } from '../cuboidDraft';
-import { fitFootprintHeight, fitMissingAxis } from '../fitCuboidToPoints';
+import { getDraftStartPoint } from '../draftStartPoint';
+import { estimateFootprintGround, fitFootprintHeight, fitMissingAxis } from '../fitCuboidToPoints';
 
 interface PlanePointerEvent {
     /** World-space hit on the plane mesh. */
@@ -69,6 +70,8 @@ interface Draft {
     width: number;
     /** True after the pointer gave a height in the height step. */
     hasPointerHeight: boolean;
+    /** Ground height below the footprint, set in the width step. */
+    groundZ: number;
 }
 
 /** Below this horizontal view length the height plane is almost parallel to the rays. */
@@ -103,12 +106,20 @@ export function useCuboidDraft({
         if (nativeEvent.button !== 0 || draft || nativeEvent === finishingClick) return;
         if (hasCameraModifier(nativeEvent)) return;
         const cameraMode = getCameraMode();
-        const startWorld: Vector3 = [point.x, point.y, point.z];
+        const batch = getBatch();
         const startScreen = { x: nativeEvent.clientX, y: nativeEvent.clientY };
+        const startWorld = getDraftStartPoint({
+            cameraMode,
+            sceneHit: [point.x, point.y, point.z],
+            batch,
+            camera: camera.current,
+            viewport: canvas.getBoundingClientRect(),
+            pointer: startScreen
+        });
         draft = {
             pointerId: nativeEvent.pointerId,
             cameraMode,
-            batch: getBatch(),
+            batch,
             tick: getTick(),
             plane: createDraftPlane(cameraMode, startWorld),
             step: !getRectangleOnly() && hasAngledFootprint(cameraMode) ? 'side' : 'rectangle',
@@ -118,7 +129,8 @@ export function useCuboidDraft({
             currentScreen: startScreen,
             currentWorld: startWorld,
             width: 0,
-            hasPointerHeight: false
+            hasPointerHeight: false,
+            groundZ: startWorld[2]
         };
         // Capture works because OrbitControls registers its listener before interactivity(),
         // as in useCuboidFaceResize.
@@ -198,13 +210,15 @@ export function useCuboidDraft({
         const hit = plane && raycastPlane(event, plane);
         if (hit) {
             active.hasPointerHeight = true;
-            show(getFootprintBox(footprint, getHeightExtent(active.startWorld[2], hit.z)));
+            show(getFootprintBox(footprint, getHeightExtent(active.groundZ, hit.z)));
             return;
         }
         // The pointer gives no height when the camera looks straight down or the ray misses
         // the plane. The last pointer height stays; without one, the points give the height.
         if (active.hasPointerHeight) return;
-        show(getFootprintBox(footprint, fitFootprintHeight(footprint, active.batch)));
+        show(
+            getFootprintBox(footprint, fitFootprintHeight(footprint, active.groundZ, active.batch))
+        );
     }
 
     function update(active: Draft, event: PointerEvent): void {
@@ -241,6 +255,10 @@ export function useCuboidDraft({
             return;
         }
         const footprint = getFootprint(active);
+        if (active.step === 'width') {
+            active.groundZ =
+                estimateFootprintGround(footprint, active.batch) ?? active.startWorld[2];
+        }
         if (active.step === 'width' && active.cameraMode === 'perspective') {
             active.step = 'height';
             // Show a height at once, so that the next click never saves the flat footprint.
@@ -248,7 +266,8 @@ export function useCuboidDraft({
             return;
         }
         if (active.step === 'width') {
-            return finish(getFootprintBox(footprint, fitFootprintHeight(footprint, active.batch)));
+            const height = fitFootprintHeight(footprint, active.groundZ, active.batch);
+            return finish(getFootprintBox(footprint, height));
         }
         finish(previewBox);
     }
