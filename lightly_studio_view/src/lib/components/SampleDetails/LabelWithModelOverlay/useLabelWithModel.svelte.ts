@@ -1,3 +1,4 @@
+import { untrack } from 'svelte';
 import { toast } from 'svelte-sonner';
 import { createMutation } from '@tanstack/svelte-query';
 import type { ModelAnnotationPreview } from '$lib/api/lightly_studio_local';
@@ -43,11 +44,12 @@ export const useLabelWithModel = (
     // Set when the last run returned no objects.
     let isEmptyResult = $state(false);
     let isSaving = $state(false);
-    // A clear during a save drops the unsaved predictions once it ends.
+    // A clear or a new model during a save drops the unsaved predictions once it ends.
     let isDropPending = false;
     // Drops responses that a newer run or clear made stale.
     let sequence = 0;
     let isDisposed = false;
+    let previousModelId = untrack(() => getParams().modelId);
 
     const mutation = createMutation(() => createModelAnnotationPreviewMutation());
     const { saveAnnotationPreviews } = useSaveAnnotationPreviews({
@@ -76,11 +78,17 @@ export const useLabelWithModel = (
     const currentSampleId = $derived(getParams().sampleId);
     const currentModelId = $derived(getParams().modelId);
 
-    // Drops the results of a previous sample or model, also while a save runs.
+    // Drops the results of a previous sample, also while a save runs.
     $effect(() => {
         void currentSampleId;
-        void currentModelId;
         return () => dropPredictions({ isSaveIgnored: true });
+    });
+
+    $effect(() => {
+        const modelId = currentModelId;
+        if (modelId === previousModelId) return;
+        previousModelId = modelId;
+        untrack(() => dropPredictions());
     });
 
     $effect(() => () => {
