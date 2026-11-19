@@ -39,7 +39,7 @@
         isFrameDetailsRoute,
         isSampleDetailsRoute,
         isImagesRoute,
-        isPointCloudsRoute,
+        isMcapSequencesRoute,
         isPointCloudLabelingRoute,
         isVideoFramesRoute,
         isVideosRoute,
@@ -162,7 +162,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
-    const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointClouds = $derived(isMcapSequencesRoute(page.route.id));
     const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);

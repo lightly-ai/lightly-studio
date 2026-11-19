@@ -470,8 +470,8 @@ describe('+layout.svelte collection-grid workspace', () => {
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
-    it('renders the filter panel on point-clouds route', async () => {
-        setPageRoute(APP_ROUTES.pointClouds);
+    it('renders the filter panel on mcap-sequences route', async () => {
+        setPageRoute(APP_ROUTES.mcapSequences);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 

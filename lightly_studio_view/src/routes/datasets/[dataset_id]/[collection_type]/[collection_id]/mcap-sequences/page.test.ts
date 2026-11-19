@@ -95,7 +95,7 @@ class MockIntersectionObserver {
     thresholds = [];
 }
 
-describe('point-clouds/+page.svelte', () => {
+describe('mcap-sequences/+page.svelte', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
