@@ -29,6 +29,22 @@ class TickListView(BaseModel):
     ticks: list[TickView]
 
 
+class TickTagView(BaseModel):
+    """A tag on the ticks of a sequence, with the positions of the tagged ticks."""
+
+    tag_id: UUID = Field(description="The ID of the tag.")
+    name: str = Field(description="The name of the tag.")
+    seq_numbers: list[int] = Field(
+        description="Zero-based positions of the tagged ticks, in ascending order."
+    )
+
+
+class TickTagListView(BaseModel):
+    """The tags on the ticks of an MCAP sequence, ordered by tag name."""
+
+    tags: list[TickTagView]
+
+
 class CameraProjectionView(BaseModel):
     """Calibration and pose needed to project scene points into a camera image."""
 
