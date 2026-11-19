@@ -11,17 +11,21 @@ from __future__ import annotations
 import http
 import logging
 
+import httpx
 import requests
 from pydantic import BaseModel, ValidationError
 
 from lightly_studio.analytics import tracking
 from lightly_studio.cloud_credentials import apply_cloud_credentials
 from lightly_studio.database import db_manager
+from lightly_studio.dataset import env
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_API_KEY,
     LIGHTLY_STUDIO_API_URL,
     LIGHTLY_STUDIO_TOKEN,
 )
+from lightly_studio.transport import active_transport
+from lightly_studio.transport.remote.http_transport import HttpTransport
 
 logger = logging.getLogger(__name__)
 
@@ -95,6 +99,10 @@ def connect(
     # Strip trailing slash.
     api_url = api_url.rstrip("/")
 
+    if env.LIGHTLY_STUDIO_HTTP_CLIENT:
+        _connect_http(api_url=api_url, credential=token or api_key)
+        return
+
     try:
         config = _fetch_connect_config(api_url=api_url, token=token, api_key=api_key)
     except (ConnectionError, PermissionError, RuntimeError):
@@ -121,6 +129,14 @@ def connect(
     )
 
     logger.info(f"Successfully connected to LightlyStudio enterprise instance at {api_url}.")
+
+
+def _connect_http(api_url: str, credential: str | None) -> None:
+    """Send all data access to the v1 REST API of the server. Open no database connection."""
+    headers = {} if credential is None else {"Authorization": f"Bearer {credential}"}
+    client = httpx.Client(base_url=api_url, headers=headers)
+    active_transport.set_transport(transport=HttpTransport(client=client))
+    logger.info(f"Connected to LightlyStudio at {api_url} over HTTP.")
 
 
 def _track_connection(

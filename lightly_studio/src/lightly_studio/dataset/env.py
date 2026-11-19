@@ -22,6 +22,8 @@ LIGHTLY_STUDIO_DATABASE_URL: str | None = env.str("LIGHTLY_STUDIO_DATABASE_URL",
 LIGHTLY_STUDIO_API_URL: str | None = env.str("LIGHTLY_STUDIO_API_URL", default=None)
 LIGHTLY_STUDIO_TOKEN: str | None = env.str("LIGHTLY_STUDIO_TOKEN", default=None)
 LIGHTLY_STUDIO_API_KEY: str | None = env.str("LIGHTLY_STUDIO_API_KEY", default=None)
+# Internal: `ls.connect` uses the HTTP transport, not a database connection.
+LIGHTLY_STUDIO_HTTP_CLIENT: bool = env.bool("LIGHTLY_STUDIO_HTTP_CLIENT", False)
 # Internal: dataset queries go through the local transport. Tests set it until all queries do.
 LIGHTLY_STUDIO_TRANSPORT_QUERIES: bool = env.bool("LIGHTLY_STUDIO_TRANSPORT_QUERIES", False)
 
