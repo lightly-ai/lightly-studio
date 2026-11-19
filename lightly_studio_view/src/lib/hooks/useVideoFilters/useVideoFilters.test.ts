@@ -200,6 +200,32 @@ describe('useVideoFilters', () => {
             const { filterParams } = useVideoFilters();
             expect(get(filterParams)?.filters?.sample_ids).toEqual(['existing']);
         });
+
+        it('combines geometry with explicit sample IDs and preserves it when IDs change', () => {
+            const { videoFilter, updateFilterParams, updateSampleIds } = useVideoFilters();
+            updateFilterParams({
+                collection_id: 'coll-1',
+                filters: { embedding_region: embeddingRegion, sample_ids: ['old-id'] }
+            });
+
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                embedding_region: embeddingRegion,
+                sample_ids: ['old-id']
+            });
+
+            updateSampleIds(['new-id']);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                embedding_region: embeddingRegion,
+                sample_ids: ['new-id']
+            });
+
+            updateSampleIds([]);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({
+                embedding_region: embeddingRegion
+            });
+        });
     });
 
     describe('updatePlotSelection', () => {
@@ -258,6 +284,15 @@ describe('useVideoFilters', () => {
             expect(get(videoFilter)?.sample_filter).toEqual({ sample_ids: ['sample-1'] });
         });
 
+        it('replaces picked sample IDs with a region', () => {
+            const { videoFilter, updateFilterParams, updatePlotSelection } = useVideoFilters();
+            updateFilterParams({ collection_id: 'coll-1', filters: { sample_ids: ['sample-1'] } });
+
+            updatePlotSelection(regionSelection);
+
+            expect(get(videoFilter)?.sample_filter).toEqual({ embedding_region: embeddingRegion });
+        });
+
         it('preserves generated metadata filters when geometry is set and cleared', () => {
             const metadataFilters = [
                 { key: 'temp', value: 10, op: '>=' as const },
@@ -285,32 +320,6 @@ describe('useVideoFilters', () => {
             updatePlotSelection(EMPTY_PLOT_SELECTION);
 
             expect(get(videoFilter)?.sample_filter).toEqual({ metadata_filters: metadataFilters });
-        });
-
-        it('combines geometry with explicit sample IDs and preserves it when IDs change', () => {
-            const { videoFilter, updateFilterParams, updateSampleIds } = useVideoFilters();
-            updateFilterParams({
-                collection_id: 'coll-1',
-                filters: { embedding_region: embeddingRegion, sample_ids: ['old-id'] }
-            });
-
-            expect(get(videoFilter)?.sample_filter).toEqual({
-                embedding_region: embeddingRegion,
-                sample_ids: ['old-id']
-            });
-
-            updateSampleIds(['new-id']);
-
-            expect(get(videoFilter)?.sample_filter).toEqual({
-                embedding_region: embeddingRegion,
-                sample_ids: ['new-id']
-            });
-
-            updateSampleIds([]);
-
-            expect(get(videoFilter)?.sample_filter).toEqual({
-                embedding_region: embeddingRegion
-            });
         });
 
         it('builds a geometry-only sample filter and removes it when cleared', () => {
