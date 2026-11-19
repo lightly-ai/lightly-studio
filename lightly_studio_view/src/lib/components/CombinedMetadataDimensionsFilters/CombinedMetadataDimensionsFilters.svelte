@@ -2,7 +2,7 @@
     import X from '@lucide/svelte/icons/x';
     import Segment from '$lib/components/Segment/Segment.svelte';
     import { FilterActionButton } from '$lib/components/FilterActionButton';
-    import { useCategoricalFieldCounts } from '$lib/components/CategoricalMetadataFilters/useCategoricalFieldCounts.svelte';
+    import { useCategoricalFieldCounts } from '$lib/components/CategoricalMetadataFilters';
     import type { MetadataValueCountsFilter } from '$lib/hooks';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { Input } from '$lib/components/ui/input';
@@ -48,7 +48,8 @@
         getShowImageDimensions: () => showDimensions && !isVideos && !isVideoFrames,
         getIsVideos: () => isVideos,
         getIsVideoFrames: () => isVideoFrames,
-        getCategoricalKeys: () => categoricalKeys,
+        // The value counts cannot use a video frame filter, so frames list no categorical fields.
+        getCategoricalKeys: () => (isVideoFrames ? [] : categoricalKeys),
         onRangeCommitted: (key, min, max) => onFilterChanged?.(key, min, max)
     });
 

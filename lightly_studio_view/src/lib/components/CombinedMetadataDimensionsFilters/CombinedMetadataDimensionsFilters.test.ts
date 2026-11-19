@@ -10,7 +10,7 @@ import { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFr
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 
 const countsOptions = vi.fn();
-vi.mock('$lib/components/CategoricalMetadataFilters/useCategoricalFieldCounts.svelte', () => ({
+vi.mock('$lib/components/CategoricalMetadataFilters', () => ({
     useCategoricalFieldCounts: (getOptions: () => unknown) => ({
         get distributions() {
             countsOptions(getOptions());
@@ -188,6 +188,16 @@ describe('CombinedMetadataDimensionsFilters', () => {
         expect(countsOptions).toHaveBeenCalledWith(
             expect.objectContaining({ filter, fields: ['split'] })
         );
+    });
+
+    it('lists no categorical fields for a video frame collection', () => {
+        const { container } = render(CombinedMetadataDimensionsFilters, {
+            ...defaultProps,
+            isVideoFrames: true
+        });
+        expect(
+            container.querySelector('[data-field-id="categorical:split"]')
+        ).not.toBeInTheDocument();
     });
 
     it('lists video fields with checkboxes and no image dimensions', () => {
