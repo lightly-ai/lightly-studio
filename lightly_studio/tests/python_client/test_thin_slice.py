@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+import pytest
+
 from lightly_studio import ImageDataset
 from lightly_studio.core.dataset_query.boolean_expression import AND
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
@@ -13,6 +15,8 @@ from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_image, create_tag
 
 
+@pytest.mark.usefixtures("patch_collection")
+@pytest.mark.parametrize("connect_transport", ["local", "remote"], indirect=True)
 def test_load_filter_iterate_tag(connect_transport: Callable[[], None]) -> None:
     session = db_manager.persistent_session()
     collection_id = ImageDataset.create(name="my_dataset").collection_id

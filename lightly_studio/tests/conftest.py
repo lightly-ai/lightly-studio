@@ -545,16 +545,15 @@ def assert_contains_properties(
             assert actual_value == expected_value
 
 
-@pytest.fixture(params=["local", "remote"])
+@pytest.fixture
 def connect_transport(
-    request: pytest.FixtureRequest,
-    patch_collection: None,  # noqa: ARG001
-    mocker: MockerFixture,
+    request: pytest.FixtureRequest, mocker: MockerFixture
 ) -> Generator[Callable[[], None], None, None]:
     """Get a function that connects the Python API through `LocalTransport` or `HttpTransport`.
 
-    A test seeds the database first and then calls the function, because remote mode blocks
-    the local database. Remote mode runs the Studio app in process with `TestClient`.
+    A test parametrizes the fixture indirectly with "local" or "remote". The test seeds the
+    database first and then calls the function, because remote mode blocks the local database.
+    Remote mode runs the Studio app in process with `TestClient`.
     """
 
     def connect() -> None:
