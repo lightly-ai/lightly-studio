@@ -36,6 +36,12 @@
                             <Icon class="h-4 w-4" />
                             <span class="max-w-[180px] truncate">{crumb.label}</span>
                         </BreadcrumbLink>
+                    {:else if index < sourcePath.length - 1}
+                        <!-- Not the current page, just a crumb the user may not follow. -->
+                        <BreadcrumbLink class="flex items-center gap-2">
+                            <Icon class="h-4 w-4" />
+                            <span class="max-w-[180px] truncate">{crumb.label}</span>
+                        </BreadcrumbLink>
                     {:else}
                         <BreadcrumbPage class="flex items-center gap-2">
                             <Icon class="h-4 w-4" />
