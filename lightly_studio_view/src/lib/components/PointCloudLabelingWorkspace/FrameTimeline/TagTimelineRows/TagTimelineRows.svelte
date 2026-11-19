@@ -22,7 +22,10 @@
 </script>
 
 {#if rows.length > 0}
-    <div class="px-1 [scrollbar-gutter:stable]" data-testid="frame-tag-rows">
+    <div
+        class="scrollbar-thin max-h-24 overflow-y-auto overflow-x-hidden overscroll-contain px-1 [scrollbar-gutter:stable]"
+        data-testid="frame-tag-rows"
+    >
         {#each rows as { tag, runs } (tag.tag_id)}
             <div class="py-1">
                 <div

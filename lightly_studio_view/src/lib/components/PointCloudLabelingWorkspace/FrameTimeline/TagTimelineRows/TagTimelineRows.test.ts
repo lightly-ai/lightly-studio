@@ -35,4 +35,12 @@ describe('TagTimelineRows', () => {
 
         expect(screen.queryByTestId('frame-tag-rows')).toBeNull();
     });
+
+    it('scrolls the rows within a bounded height and reserves the timeline scrollbar gutter', () => {
+        render(TagTimelineRows, { props: { ticks, tags, onSelectTick: vi.fn() } });
+
+        const rows = screen.getByTestId('frame-tag-rows');
+        // The ruler, playhead and track list reserve the same gutter, so the bars line up.
+        expect(rows).toHaveClass('scrollbar-thin', 'overflow-y-auto', 'max-h-24');
+    });
 });
