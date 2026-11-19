@@ -20,7 +20,7 @@
     import PanelLeftClose from '@lucide/svelte/icons/panel-left-close';
     import { onDestroy, onMount } from 'svelte';
     import { afterNavigate } from '$app/navigation';
-    import { toStore } from 'svelte/store';
+    import { get, toStore } from 'svelte/store';
     import { Header } from '$lib/components';
     import MenuDialogHost from '$lib/components/Header/MenuDialogHost.svelte';
 
@@ -94,6 +94,7 @@
     import { useSearchEmbedding } from '$lib/hooks/useSearchEmbedding/useSearchEmbedding';
     import { useEvaluationRuns } from '$lib/hooks/useEvaluationRuns/useEvaluationRuns';
     import { clearAnnotationPlotSelection } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
+    import { EMPTY_PLOT_SELECTION } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
     import { useCreateClassifiersPanel } from '$lib/hooks/useClassifiers/useCreateClassifiersPanel';
     import { useRefineClassifiersPanel } from '$lib/hooks/useClassifiers/useRefineClassifiersPanel';
     import { isPanelVisible } from './panelVisibility';
@@ -313,7 +314,7 @@
         if (lastCollectionId && lastCollectionId !== collectionId) {
             clearSelectedSamples(lastCollectionId);
             clearSelectedSampleAnnotationCrops(lastCollectionId);
-            clearAnnotationPlotSelection(lastCollectionId);
+            clearPlotSelections(lastCollectionId);
         }
 
         gridType = nextGridType;
@@ -379,15 +380,31 @@
         imageFilter: imageFilterFromHook,
         filterParams: imageFilterParams,
         imageQueryExpression,
-        updateQueryExpr: updateImageQueryExpr
+        updateQueryExpr: updateImageQueryExpr,
+        updatePlotSelection: updateImagePlotSelection
     } = useImageFilters();
 
     const {
         videoFilter: videoFilterFromHook,
         filterParams: videoFilterParams,
         videoQueryExpression,
-        updateQueryExpr: updateVideoQueryExpr
+        updateQueryExpr: updateVideoQueryExpr,
+        updatePlotSelection: updateVideoPlotSelection
     } = useVideoFilters();
+
+    // The grids keep a plot selection while the filter holds their collection, so a selection
+    // left here would come back without its chip. The filter can already hold the entered
+    // collection, whose selection must stay.
+    function clearPlotSelections(leftCollectionId: string) {
+        clearAnnotationPlotSelection(leftCollectionId);
+        if (get(imageFilterParams).collection_id === leftCollectionId) {
+            updateImagePlotSelection(EMPTY_PLOT_SELECTION);
+        }
+        if (get(videoFilterParams)?.collection_id === leftCollectionId) {
+            updateVideoPlotSelection(EMPTY_PLOT_SELECTION);
+        }
+    }
+
     const queryExpression = $derived.by(() => {
         const params = isVideos ? $videoFilterParams : $imageFilterParams;
         if (params?.collection_id !== collectionId) return null;
