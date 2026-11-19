@@ -193,6 +193,9 @@ const mockEmbeddingsQuery = (initialResult: Record<string, unknown>) => {
     return result;
 };
 
+// useEmbeddings is called once with a getter; the getter returns the current request.
+const lastEmbeddingsParams = () => vi.mocked(useEmbeddings).mock.lastCall![0]();
+
 describe('PlotPanel.svelte', () => {
     afterEach(() => {
         client.setConfig({ ...originalClientConfig, fetch: originalClientConfig.fetch });
@@ -584,23 +587,21 @@ describe('PlotPanel.svelte', () => {
 
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            null,
-            null
-        );
+        expect(lastEmbeddingsParams()).toMatchObject({
+            collectionId: 'test-collection-id',
+            colorBy: null,
+            axes: null
+        });
 
         await user.click(screen.getByTestId('plot-color-by-button'));
         await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            { type: 'metadata_field', key: 'split' },
-            null
-        );
+        expect(lastEmbeddingsParams()).toMatchObject({
+            collectionId: 'test-collection-id',
+            colorBy: { type: 'metadata_field', key: 'split' },
+            axes: null
+        });
     });
 
     it('passes tag_ids colorBy to useEmbeddings when tags type is selected', async () => {
@@ -612,12 +613,11 @@ describe('PlotPanel.svelte', () => {
         await user.click(await screen.findByRole('option', { name: 'tags' }));
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
-            null
-        );
+        expect(lastEmbeddingsParams()).toMatchObject({
+            collectionId: 'test-collection-id',
+            colorBy: { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
+            axes: null
+        });
     });
 
     it('fetches without labels when the annotation labels fail to load', async () => {
@@ -627,12 +627,10 @@ describe('PlotPanel.svelte', () => {
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        expect(useEmbeddings).toHaveBeenLastCalledWith(
-            'test-collection-id',
-            expect.anything(),
-            { type: 'annotation', annotation_label_ids: [] },
-            null
-        );
+        expect(lastEmbeddingsParams().colorBy).toEqual({
+            type: 'annotation',
+            annotation_label_ids: []
+        });
     });
 
     it('lays the plot out on the committed text axes and saves them with the lasso region', async () => {
@@ -647,12 +645,11 @@ describe('PlotPanel.svelte', () => {
             y: { negative: 'sad', positive: 'happy' }
         });
         await vi.waitFor(() =>
-            expect(useEmbeddings).toHaveBeenLastCalledWith(
-                'test-collection-id',
-                expect.anything(),
-                null,
-                TEXT_LAYOUT_AXES
-            )
+            expect(lastEmbeddingsParams()).toMatchObject({
+                collectionId: 'test-collection-id',
+                colorBy: null,
+                axes: TEXT_LAYOUT_AXES
+            })
         );
 
         selectedSampleIdsStore.set(['sample-1']);
@@ -861,10 +858,13 @@ describe('PlotPanel.svelte', () => {
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
         const loaded = { data: { columns: {}, legend: new Map() } };
-        // Only the query of the new color-by is still loading.
-        vi.mocked(useEmbeddings).mockImplementation(
-            (_collectionId, _filters, colorBy) => (colorBy ? { isLoading: true } : loaded) as never
-        );
+        // Only the query of the new color-by is still loading. The plot creates its query once,
+        // so the result follows the current request.
+        vi.mocked(useEmbeddings).mockImplementation((getParams) => {
+            const result = (): Record<string, unknown> =>
+                getParams().colorBy ? { isLoading: true } : loaded;
+            return new Proxy({}, { get: (_, key: string) => result()[key] }) as never;
+        });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         expect(await screen.findByTestId('plot-viewport')).toBeInTheDocument();
 
@@ -914,5 +914,20 @@ describe('PlotPanel.svelte', () => {
         expect(mockResetCategoryVisibility).toHaveBeenLastCalledWith([
             EXCLUDED_BY_FILTERS_CATEGORY
         ]);
+    });
+    describe('while embeddings load', () => {
+        it('creates the embeddings query once', async () => {
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            imageFilterStore.set({ sample_filter: { tag_ids: ['tag-a'] } });
+            await tick();
+            imageFilterStore.set({ sample_filter: { tag_ids: ['tag-b'] } });
+            await tick();
+
+            expect(useEmbeddings).toHaveBeenCalledTimes(1);
+            expect(lastEmbeddingsParams().filters).toEqual({
+                sample_filter: { tag_ids: ['tag-b'] }
+            });
+        });
     });
 });

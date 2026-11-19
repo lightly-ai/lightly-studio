@@ -169,17 +169,18 @@
     } = usePlotLayout(untrack(() => collectionId));
     const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
-    // No request until the color-by is known, so the plot fetches once.
-    const embeddingsData = $derived(
-        $colorBy === undefined
-            ? undefined
-            : useEmbeddings(collectionId, filter, $colorBy, $plotAxes)
-    );
-
+    const embeddingsData = useEmbeddings(() => ({
+        collectionId,
+        filters: filter,
+        colorBy: $colorBy ?? null,
+        axes: $plotAxes,
+        enabled: $colorBy !== undefined
+    }));
     // The query parses the Arrow data. A new color-by or axes is a new query with its own data,
     // so the old points never show under a new layout.
-    const arrowData = $derived(embeddingsData?.data?.columns);
-    const colorLegend = $derived(embeddingsData?.data?.legend ?? NO_LEGEND);
+    const arrowData = $derived(embeddingsData.data?.columns);
+    const colorLegend = $derived(embeddingsData.data?.legend ?? NO_LEGEND);
+    const isWaitingForFirstData = $derived(embeddingsData.isLoading || $colorBy === undefined);
     // Category 1 means "passes the filter but has no color value". Its label tracks the same
     // `color_by` signal that drives its color (see `getCategoryColors` below), so the two never disagree.
     const includedLabel = $derived(
@@ -572,7 +573,7 @@
     );
 
     const errorText = $derived.by(() => {
-        if (embeddingsData?.isError) {
+        if (embeddingsData.isError) {
             return embeddingsData.error?.message || 'Unknown error';
         }
         return null;
@@ -604,7 +605,7 @@
         </Button>
     </div>
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if !embeddingsData || embeddingsData.isLoading}
+        {#if isWaitingForFirstData}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>

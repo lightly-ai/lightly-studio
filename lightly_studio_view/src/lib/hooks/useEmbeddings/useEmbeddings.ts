@@ -1,4 +1,7 @@
-import { get2dEmbeddingsOptions } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import {
+    get2dEmbeddingsOptions,
+    get2dEmbeddingsQueryKey
+} from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
 import type { GetEmbeddings2dRequest } from '$lib/api/lightly_studio_local/types.gen';
 import {
     parseEmbeddingsArrow,
@@ -7,9 +10,17 @@ import {
 
 import { createQuery } from '@tanstack/svelte-query';
 import { isEqual } from 'lodash-es';
+import { isSamePlotLayout, type PlotLayoutKey } from './isSamePlotLayout';
 
 type EmbeddingsColorBy = GetEmbeddings2dRequest['color_by'];
 type EmbeddingsAxes = GetEmbeddings2dRequest['axes'];
+
+interface UseEmbeddingsParams extends PlotLayoutKey {
+    filters: GetEmbeddings2dRequest['filters'] | null;
+    enabled: boolean;
+}
+
+type EmbeddingsQueryKey = ReturnType<typeof get2dEmbeddingsQueryKey>;
 
 // parseAs: 'arrayBuffer' makes the response an ArrayBuffer at runtime, but its type is unknown.
 // A module-level select keeps its identity, so the query parses each response once.
@@ -25,6 +36,12 @@ const shareEqualLegend = (previous: unknown, next: unknown): unknown => {
     if (!isEqual(previous.legend, next.legend)) return next;
     return { ...next, legend: previous.legend };
 };
+
+const getLayoutKey = ([{ path, body }]: EmbeddingsQueryKey): PlotLayoutKey => ({
+    collectionId: path.collection_id,
+    colorBy: body.color_by ?? null,
+    axes: body.axes ?? null
+});
 
 /** Query options for the plot's 2D embeddings. A parse error in `select` is the query error. */
 export function getEmbeddingsQueryOptions(
@@ -45,6 +62,23 @@ export function getEmbeddingsQueryOptions(
     };
 }
 
-export function useEmbeddings(...params: Parameters<typeof getEmbeddingsQueryOptions>) {
-    return createQuery(() => getEmbeddingsQueryOptions(...params));
+/**
+ * Fetches the 2D embeddings for the plot. Call it once per plot: a filter change keeps the
+ * previous points as placeholder data, but a new collection, color-by or axes does not,
+ * because old colors or coordinates would be wrong.
+ */
+export function useEmbeddings(getParams: () => UseEmbeddingsParams) {
+    return createQuery(() => {
+        const { collectionId, filters, colorBy, axes, enabled } = getParams();
+        const layout = { collectionId, colorBy, axes };
+        return {
+            ...getEmbeddingsQueryOptions(collectionId, filters, colorBy, axes),
+            enabled,
+            // The previous data is the raw response; `select` parses it again.
+            placeholderData: (previousData, previousQuery) =>
+                previousQuery && isSamePlotLayout(getLayoutKey(previousQuery.queryKey), layout)
+                    ? previousData
+                    : undefined
+        };
+    });
 }
