@@ -41,6 +41,7 @@
         setPlotSelectionCount,
         type PlotSelection
     } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
+    import { getPlotRequestFilter } from './getPlotRequestFilter/getPlotRequestFilter';
     import { useArrowData } from './useArrowData/useArrowData';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
@@ -127,23 +128,7 @@
         if (isSequences) {
             return buildSequencePlotFilter($sequenceFilter);
         }
-        const currentFilter = isVideos ? $videoFilter : $imageFilter;
-        if (!currentFilter) return null;
-
-        if (!currentFilter.sample_filter) {
-            return currentFilter;
-        }
-
-        return {
-            ...currentFilter,
-            sample_filter: {
-                ...currentFilter.sample_filter,
-                sample_ids: [],
-                // The lasso only scopes the grid, not the plot: the plot shows every point and
-                // highlights the in-selection ones, so drop the region from this request.
-                embedding_region: undefined
-            }
-        };
+        return getPlotRequestFilter(isVideos ? $videoFilter : $imageFilter);
     });
 
     const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
