@@ -1,5 +1,10 @@
 <script lang="ts">
-    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type {
+        SequenceTrackView,
+        TickTagView,
+        TickView
+    } from '$lib/api/lightly_studio_local/types.gen';
+    import { TagTimelineRows } from '../TagTimelineRows';
     import { DeleteTrackDialog } from './DeleteTrackDialog';
     import TrackTimelineRow from './TrackTimelineRow/TrackTimelineRow.svelte';
     import { TrackRowsResizer, useTrackRowsHeight } from './TrackRowsResizer';
@@ -29,6 +34,11 @@
         onDeleteTrack?: (track: SequenceTrackView) => Promise<unknown>;
         /** Identifies the sequence, so the chosen tracks are remembered per sequence. */
         sequenceId?: string;
+        showFrameTags?: boolean;
+        /** Set when frame tags can be shown: toggles the frame tag rows. */
+        onShowFrameTagsChange?: (checked: boolean) => void;
+        /** The frame tags of the sequence, shown as rows while `showFrameTags` is set. */
+        frameTags?: TickTagView[];
     }
 
     let {
@@ -44,7 +54,10 @@
         onExtendStart,
         onExtendEnd,
         onDeleteTrack,
-        sequenceId
+        sequenceId,
+        showFrameTags = false,
+        onShowFrameTagsChange,
+        frameTags = []
     }: Props = $props();
     const rowsHeight = useTrackRowsHeight();
     let listElement = $state<HTMLElement | null>(null);
@@ -84,7 +97,7 @@
     };
 </script>
 
-{#if tracks.length > 0 || onStartTrack || onAddTrack}
+{#if tracks.length > 0 || onStartTrack || onAddTrack || onShowFrameTagsChange}
     {#if tracks.length > 0}
         <TrackRowsResizer {rowsHeight} getRenderedHeight={() => listElement?.clientHeight ?? 0} />
     {/if}
@@ -101,7 +114,13 @@
             {onAddTrack}
             {isAddingTrack}
             {onStartTrack}
+            frameTags={onShowFrameTagsChange
+                ? { checked: showFrameTags, onCheckedChange: onShowFrameTagsChange }
+                : undefined}
         />
+        {#if showFrameTags}
+            <TagTimelineRows {ticks} tags={frameTags} {onSelectTick} />
+        {/if}
         <div
             class="scrollbar-thin w-full overflow-y-auto overflow-x-hidden overscroll-contain px-1 [scrollbar-gutter:stable]"
             style:max-height={`${rowsHeight.height}px`}

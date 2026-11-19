@@ -286,4 +286,43 @@ describe('TrackTimelineRows', () => {
             expect(container.querySelectorAll('[data-track-id]')).toHaveLength(11);
         });
     });
+
+    describe('frame tags', () => {
+        it('shows the frame tags checkbox without tracks', async () => {
+            const onShowFrameTagsChange = vi.fn();
+            render(TrackTimelineRows, {
+                props: { ...defaultProps, tracks: [], onShowFrameTagsChange }
+            });
+
+            await fireEvent.click(screen.getByRole('checkbox', { name: 'Show frame tags' }));
+
+            expect(onShowFrameTagsChange).toHaveBeenCalledWith(true);
+        });
+
+        it('draws the frame tag rows while frame tags are shown', () => {
+            render(TrackTimelineRows, {
+                props: {
+                    ...defaultProps,
+                    showFrameTags: true,
+                    onShowFrameTagsChange: vi.fn(),
+                    frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
+                }
+            });
+
+            expect(screen.getByTitle('occluded · Frame 3')).toBeTruthy();
+        });
+
+        it('hides the frame tag rows while frame tags are not shown', () => {
+            render(TrackTimelineRows, {
+                props: {
+                    ...defaultProps,
+                    showFrameTags: false,
+                    onShowFrameTagsChange: vi.fn(),
+                    frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
+                }
+            });
+
+            expect(screen.queryByTitle('occluded · Frame 3')).toBeNull();
+        });
+    });
 });
