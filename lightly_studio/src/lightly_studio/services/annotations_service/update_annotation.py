@@ -12,7 +12,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.resolvers.annotation_resolver.update_bounding_box import BoundingBoxCoordinates
-from lightly_studio.services import annotations_service
+from lightly_studio.services import annotations_service, object_track_service
 
 
 class AnnotationUpdate(BaseModel):
@@ -26,10 +26,15 @@ class AnnotationUpdate(BaseModel):
     start_time_s: float | None = None
     end_time_s: float | None = None
     cuboid_3d: Cuboid3DCreate | None = None
+    object_track_id: UUID | None = None
+    create_new_track: bool = False
+    update_object_track: bool = False
 
 
 def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> AnnotationBaseTable:
     """Update an annotation.
+
+    A changed cuboid becomes manual and interpolates its track around it.
 
     Args:
         session: Database session for executing the operation.
@@ -76,6 +81,19 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             cuboid_3d=annotation_update.cuboid_3d,
         )
 
+    if annotation_update.update_object_track:
+        result = annotations_service.update_annotation_object_track(
+            session=session,
+            annotation_id=annotation_update.annotation_id,
+            collection_id=annotation_update.collection_id,
+            object_track_id=annotation_update.object_track_id,
+            create_new_track=annotation_update.create_new_track,
+        )
+
     if result is None:
         raise ValueError("No updates provided for the annotation.")
+    if annotation_update.cuboid_3d is not None or annotation_update.update_object_track:
+        object_track_service.interpolate_around_cuboid(
+            session=session, annotation_id=annotation_update.annotation_id
+        )
     return result

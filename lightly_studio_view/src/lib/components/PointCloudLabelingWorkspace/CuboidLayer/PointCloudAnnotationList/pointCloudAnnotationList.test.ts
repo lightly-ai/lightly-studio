@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
 import {
     groupAnnotationsBySource,
+    groupAnnotationsWithEmptySources,
     resolveAnnotationClassName,
     buildAnnotationForest,
     subtreeContainsId,
@@ -612,5 +613,64 @@ describe('resolveAnnotationClassName', () => {
                 annotationClassId: 'unknown-id'
             })
         ).toBe('unknown-id');
+    });
+});
+
+describe('groupAnnotationsWithEmptySources', () => {
+    const sources = [
+        { id: 'gt', name: 'Ground Truth' },
+        { id: 'pred', name: 'Predictions' }
+    ];
+
+    it('lists every source in order, also without cuboids', () => {
+        const cuboid = { ...createAnnotationFixture(), id: 'a-1', annotationSourceId: 'pred' };
+
+        const groups = groupAnnotationsWithEmptySources({
+            cuboids: [cuboid],
+            sources,
+            pendingSourceName: null
+        });
+
+        expect(groups).toEqual([
+            { sourceId: 'gt', sourceName: 'Ground Truth', cuboids: [] },
+            { sourceId: 'pred', sourceName: 'Predictions', cuboids: [cuboid] }
+        ]);
+    });
+
+    it('adds a typed source that does not exist yet as an empty group', () => {
+        const groups = groupAnnotationsWithEmptySources({
+            cuboids: [],
+            sources,
+            pendingSourceName: 'Review'
+        });
+
+        expect(groups.map((group) => group.sourceName)).toEqual([
+            'Ground Truth',
+            'Predictions',
+            'Review'
+        ]);
+        expect(groups[2].cuboids).toEqual([]);
+    });
+
+    it('does not repeat a typed name that is already a source', () => {
+        const groups = groupAnnotationsWithEmptySources({
+            cuboids: [],
+            sources,
+            pendingSourceName: 'Predictions'
+        });
+
+        expect(groups).toHaveLength(2);
+    });
+
+    it('keeps the fallback group for cuboids of an unknown source', () => {
+        const cuboid = { ...createAnnotationFixture(), id: 'a-1', annotationSourceId: 'mystery' };
+
+        const groups = groupAnnotationsWithEmptySources({
+            cuboids: [cuboid],
+            sources,
+            pendingSourceName: null
+        });
+
+        expect(groups.at(-1)?.sourceName).toBe(UNKNOWN_SOURCE_NAME);
     });
 });

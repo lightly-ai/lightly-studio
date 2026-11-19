@@ -80,6 +80,7 @@ SampleUnary<isImage> returns Expression:
     | MetadataComparison
     | TagInExpression
     | AnnotationQuery
+    | <!isImage> VideoFrameQuery
     | SampleEvaluationQuery;
 
 // The run selector scopes every metric predicate, including OR and NOT.
@@ -105,7 +106,6 @@ EvaluationMetricComparison returns EvaluationMetricComparison:
 SampleComparison<isImage> returns ComparisonExpression:
   SampleIntFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=IntLiteral
    | SampleOrdinalFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
-   | SampleEqualityFloatFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=NumericLiteral
    | SampleStringFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral
    | SampleDateTimeFieldReference<isImage> {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=StringLiteral;
 
@@ -133,9 +133,6 @@ SampleIntFieldReference<isImage> returns FieldReference:
 
 SampleOrdinalFloatFieldReference<isImage> returns FieldReference:
   (<!isImage> {FieldReference} member=VideoOrdinalFloatFieldName);
-
-SampleEqualityFloatFieldReference<isImage> returns FieldReference:
-  (<!isImage> {FieldReference} member=VideoEqualityFloatFieldName);
 
 SampleStringFieldReference<isImage> returns FieldReference:
   (<isImage> {FieldReference} member=ImageStringFieldName)
@@ -224,6 +221,27 @@ SegmentationMaskFloatFieldReference returns FieldReference:
 SegmentationMaskStringFieldReference returns FieldReference:
   {FieldReference} member=SegmentationMaskStringFieldName;
 
+VideoFrameQuery returns Expression:
+  {FunctionCall} name=FRAME_FUNCTION '(' args+=FrameOr ')';
+
+FrameOr returns Expression:
+  FrameAnd ({BooleanExpression.children+=current} operator=OR children+=FrameAnd (OR children+=FrameAnd)*)?;
+
+FrameAnd returns Expression:
+  FrameUnary ({BooleanExpression.children+=current} operator=AND children+=FrameUnary (AND children+=FrameUnary)*)?;
+
+FrameUnary returns Expression:
+  '(' FrameOr ')'
+    | {NotExpression} NOT expression=FrameUnary
+    | AnnotationQuery
+    | FrameTimeComparison;
+
+FrameTimeComparison returns ComparisonExpression:
+  FrameTimeReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral;
+
+FrameTimeReference returns FieldReference:
+  {FieldReference} member=FRAME_TIMESTAMP_FIELD;
+
 AnnotationQuery returns Expression:
   {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' args+=ObjectDetection ')'
   | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification ')'
@@ -254,9 +272,6 @@ VideoIntFieldName returns string:
 
 VideoOrdinalFloatFieldName returns string:
   ORDINAL_FLOAT_FIELD_NAME;
-
-VideoEqualityFloatFieldName returns string:
-  EQUALITY_FLOAT_FIELD_NAME;
 
 VideoStringFieldName returns string:
   STRING_FIELD_NAME;
@@ -306,12 +321,13 @@ terminal AND: /\bAND\b/i;
 terminal OR: /\bOR\b/i;
 terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
+terminal FRAME_FUNCTION returns string: /\bframe\b/;
+terminal FRAME_TIMESTAMP_FIELD returns string: /\bframe_timestamp_s\b/;
 terminal OBJECT_DETECTION_FUNCTION returns string: /\bobject_detection\b/;
 terminal CLASSIFICATION_FUNCTION returns string: /\bclassification\b/;
 terminal SEGMENTATION_MASK_FUNCTION returns string: /\bsegmentation_mask\b/;
 terminal TAGS_KEYWORD returns string: /\btags\b/;
-terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\bduration_s\b/;
-terminal EQUALITY_FLOAT_FIELD_NAME returns string: /\bfps\b/;
+terminal ORDINAL_FLOAT_FIELD_NAME returns string: /\b(duration_s|fps)\b/;
 terminal STRING_FIELD_NAME returns string: /\b(file_name|file_path_abs)\b/;
 terminal DATE_TIME_FIELD_NAME returns string: /\bcreated_at\b/;
 terminal SAMPLE_EVALUATION_FUNCTION returns string: /\bsample_evaluation\b/;

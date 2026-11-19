@@ -16,6 +16,7 @@ describe('buildSchemaCompletions', () => {
         const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
         const items = buildSchemaCompletions({ scope: 'image', range });
         const labels = items.map((i) => i.label);
+        expect(labels).not.toContain('frame');
         expect(labels).toContain('width');
         expect(labels).not.toContain('video:');
         expect(labels).toContain('object_detection');
@@ -29,6 +30,7 @@ describe('buildSchemaCompletions', () => {
         const items = buildSchemaCompletions({ scope: 'video', range });
         const labels = items.map((i) => i.label);
         expect(labels).toContain('fps');
+        expect(labels).toContain('frame');
         expect(labels).not.toContain('video:');
     });
 
@@ -83,4 +85,19 @@ it('inserts a valid evaluation query from the top-level snippet', async () => {
     expect(query).toBe('sample_evaluation(name = "run-name" AND "tp" >= 1)');
     const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
     expect(parseLightlyQuery(parser, query ?? '').status).toBe('ok');
+});
+
+it('offers timestamp, annotations and boolean operators inside frame()', async () => {
+    const { buildSchemaCompletions } = await import('./completionAdapterBuildSchemaCompletions');
+    const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
+    const items = buildSchemaCompletions({ scope: 'frame', range });
+    expect(items.map((item) => item.label)).toEqual([
+        'frame_timestamp_s',
+        'AND',
+        'OR',
+        'NOT',
+        'object_detection',
+        'classification',
+        'segmentation_mask'
+    ]);
 });

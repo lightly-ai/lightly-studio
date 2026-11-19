@@ -24,6 +24,16 @@ describe('getAnnotationsFilter', () => {
         });
     });
 
+    it('returns include_unannotated_samples when it is true', () => {
+        const result = getAnnotationsFilter({ include_unannotated_samples: true });
+        expect(result).toEqual({ include_unannotated_samples: true, filter_type: 'annotations' });
+    });
+
+    it('returns undefined when include_unannotated_samples is false', () => {
+        const result = getAnnotationsFilter({ include_unannotated_samples: false });
+        expect(result).toBeUndefined();
+    });
+
     it('returns undefined when both are empty arrays', () => {
         const result = getAnnotationsFilter({ annotation_label_ids: [], collection_ids: [] });
         expect(result).toBeUndefined();

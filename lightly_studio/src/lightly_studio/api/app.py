@@ -47,12 +47,14 @@ from lightly_studio.api.routes.api import (
     sampling,
     settings,
     text_embedding,
+    tracks,
     version,
     video,
 )
 from lightly_studio.api.routes.api.exceptions import (
     register_exception_handlers,
 )
+from lightly_studio.api.routes.api.v1.router import v1_router
 from lightly_studio.database import db_manager
 from lightly_studio.dataset.env import (
     LIGHTLY_STUDIO_DEBUG,
@@ -165,7 +167,9 @@ api_router.include_router(video.video_router)
 api_router.include_router(group.group_router)
 api_router.include_router(mcap_sequence.mcap_sequence_router)
 api_router.include_router(enterprise.enterprise_router)
+api_router.include_router(tracks.tracks_router)
 api_router.include_router(version.version_router)
+api_router.include_router(v1_router)
 
 app.include_router(api_router)
 

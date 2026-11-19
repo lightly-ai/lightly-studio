@@ -13,16 +13,22 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationType,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
-from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver
+from lightly_studio.resolvers import (
+    collection_resolver,
+    evaluation_run_resolver,
+    object_track_resolver,
+)
 from lightly_studio.services.annotations_service.create_annotation import (
     AnnotationCreateParams,
     create_annotation,
 )
 from tests.helpers_resolvers import create_annotation_label, create_collection, create_image
+from tests.services.object_track_service import helpers as track_helpers
 
 
 def test_create_annotation_object_detection(
@@ -156,6 +162,44 @@ def test_create_annotation_cuboid_3d(
     assert result.segmentation_details is None
 
 
+def test_create_annotation_cuboid_3d__with_object_track(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    (track_id,) = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )
+    annotation = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CUBOID_3D,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        object_track_id=track_id,
+        cuboid_3d=Cuboid3DCreate(
+            frame_id="odom",
+            px=1.0,
+            py=0.0,
+            pz=0.5,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            sx=2.0,
+            sy=1.0,
+            sz=1.5,
+            interpolated=True,
+        ),
+    )
+    result = create_annotation(session=db_session, annotation=annotation)
+
+    assert result.object_track_id == track_id
+    assert result.cuboid_3d_details is not None
+    assert result.cuboid_3d_details.interpolated is True
+
+
 def test_create_annotation_failure(
     db_session: Session,
     collection_id: UUID,
@@ -210,13 +254,12 @@ def test_create_annotation_with_collection_name(
     assert created_collection.parent_collection_id == collection.collection_id
 
 
-def test_create_annotation_classification_with_temporal_span(
+def test_create_annotation__rejects_temporal_span_on_image(
     db_session: Session,
     collection: CollectionTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
-    """Test to create a classification annotation carrying a temporal span."""
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
@@ -225,12 +268,8 @@ def test_create_annotation_classification_with_temporal_span(
         start_time_s=2.5,
         end_time_s=8.0,
     )
-    result = create_annotation(session=db_session, annotation=annotation)
-
-    assert isinstance(result, AnnotationBaseTable)
-    assert result.temporal_span_details is not None
-    assert result.temporal_span_details.start_time_s == 2.5
-    assert result.temporal_span_details.end_time_s == 8.0
+    with pytest.raises(ValueError, match="require a video parent"):
+        create_annotation(session=db_session, annotation=annotation)
 
 
 def test_create_annotation__marks_evaluation_run_stale(db_session: Session) -> None:
@@ -284,3 +323,221 @@ def test_create_annotation__marks_evaluation_run_stale(db_session: Session) -> N
     refreshed = evaluation_run_resolver.get_by_id(session=db_session, evaluation_id=run.id)
     assert refreshed is not None
     assert refreshed.stale_since is not None
+
+
+def test_create_annotation__create_new_track_and_object_track_id_raises(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Setting both create_new_track and object_track_id is invalid."""
+    with pytest.raises(ValueError, match="Cannot set both create_new_track and object_track_id"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=collection.collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+                object_track_id=samples[0].sample_id,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__create_new_track_collection_not_found(
+    db_session: Session,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """create_new_track raises when the collection does not exist."""
+    fake_collection_id = UUID("00000000-0000-0000-0000-000000000099")
+    with pytest.raises(ValueError, match="not found"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=fake_collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__object_track_id_not_found(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """Supplying a non-existent object_track_id raises ValueError."""
+    fake_track_id = UUID("00000000-0000-0000-0000-000000000099")
+    with pytest.raises(ValueError, match="not found"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_labels[0].annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=collection.collection_id,
+                parent_sample_id=samples[0].sample_id,
+                object_track_id=fake_track_id,
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__object_track_id_wrong_dataset(
+    db_session: Session,
+) -> None:
+    """Supplying an object_track_id from another dataset raises ValueError."""
+    collection_a = create_collection(session=db_session)
+    collection_b = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=collection_b.collection_id)
+    label = create_annotation_label(
+        session=db_session,
+        root_collection_id=collection_b.collection_id,
+        label_name="car",
+    )
+    track_ids = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection_a.dataset_id)],
+    )
+    with pytest.raises(ValueError, match="different dataset"):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=label.annotation_label_id,
+                annotation_type=AnnotationType.OBJECT_DETECTION,
+                collection_id=collection_b.collection_id,
+                parent_sample_id=image.sample_id,
+                object_track_id=track_ids[0],
+                x=0,
+                y=0,
+                width=10,
+                height=10,
+            ),
+        )
+
+
+def test_create_annotation__cuboid_3d_track_has_cuboid_on_group_raises(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """An object track has at most one cuboid on each group."""
+    (track_id,) = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )
+    cuboid = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CUBOID_3D,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        object_track_id=track_id,
+        cuboid_3d=Cuboid3DCreate(
+            frame_id="odom",
+            px=1.0,
+            py=0.0,
+            pz=0.5,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            sx=2.0,
+            sy=1.0,
+            sz=1.5,
+        ),
+    )
+    create_annotation(session=db_session, annotation=cuboid)
+
+    with pytest.raises(ValueError, match="already exists on this group"):
+        create_annotation(session=db_session, annotation=cuboid)
+
+
+@pytest.mark.parametrize(
+    ("annotation_type", "error"),
+    [
+        (AnnotationType.OBJECT_DETECTION, "Missing x or y"),
+        (AnnotationType.CUBOID_3D, "cuboid_3d is required"),
+    ],
+)
+def test_create_annotation__failed_annotation_does_not_commit_new_track(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_type: AnnotationType,
+    error: str,
+) -> None:
+    """A rejected annotation leaves no new object track, even after a later commit."""
+    annotation_label = create_annotation_label(
+        session=db_session, root_collection_id=collection.collection_id, label_name="car"
+    )
+    with pytest.raises(ValueError, match=error):
+        create_annotation(
+            session=db_session,
+            annotation=AnnotationCreateParams(
+                annotation_label_id=annotation_label.annotation_label_id,
+                annotation_type=annotation_type,
+                collection_id=collection.collection_id,
+                parent_sample_id=samples[0].sample_id,
+                create_new_track=True,
+            ),
+        )
+
+    db_session.commit()
+    tracks = object_track_resolver.get_all_by_dataset_id(
+        session=db_session, dataset_id=collection.dataset_id
+    )
+    assert tracks == []
+
+
+def test_create_annotation__cuboid_on_track_interpolates_track(db_session: Session) -> None:
+    scene = track_helpers.create_scene(session=db_session)
+    ticks = track_helpers.add_sequence(session=db_session, scene=scene, timestamps=[0, 10, 20])
+    track = track_helpers.create_track(session=db_session, scene=scene, number=1)
+    track_helpers.add_cuboid(
+        session=db_session, scene=scene, tick_id=ticks[0], track=track, px=0.0, source="gt"
+    )
+
+    create_annotation(
+        session=db_session,
+        annotation=AnnotationCreateParams(
+            annotation_label_id=scene.label_id,
+            annotation_type=AnnotationType.CUBOID_3D,
+            annotation_collection_name="gt",
+            collection_id=scene.group_collection_id,
+            parent_sample_id=ticks[2],
+            object_track_id=track.object_track_id,
+            cuboid_3d=Cuboid3DCreate(
+                frame_id="odom",
+                px=10.0,
+                py=0.0,
+                pz=0.0,
+                qx=0.0,
+                qy=0.0,
+                qz=0.0,
+                qw=1.0,
+                sx=4.0,
+                sy=2.0,
+                sz=1.5,
+            ),
+        ),
+    )
+
+    by_tick = track_helpers.cuboids_by_tick(session=db_session, track=track)
+    assert track_helpers.px_of(by_tick[ticks[1]][0]) == pytest.approx(5.0)
