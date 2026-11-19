@@ -191,6 +191,7 @@
             JSON.stringify(createMetadataFilters($metadataValues, $categoricalMetadataValues)),
             $textEmbedding?.queryText || '',
             confusionCell ? JSON.stringify(confusionCell) : '',
+            filtersUnannotatedImages ? `unannotated:${$selectedAnnotationSourceIds.join(',')}` : '',
             JSON.stringify($imageSortBy)
         ];
 

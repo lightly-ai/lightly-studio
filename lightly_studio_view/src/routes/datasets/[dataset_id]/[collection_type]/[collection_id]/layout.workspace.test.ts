@@ -200,6 +200,7 @@ vi.mock('$lib/hooks', async () => ({
     useSeedAnnotationSourceFilter: vi.fn(),
     setAnnotationClasses: vi.fn(),
     useUnannotatedSampleCount: vi.fn(() => ({ data: undefined })),
+    useUnannotatedSamplesFilter: vi.fn(() => ({ scopeToCollection: vi.fn() })),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
         data: undefined,
         isFetching: false,

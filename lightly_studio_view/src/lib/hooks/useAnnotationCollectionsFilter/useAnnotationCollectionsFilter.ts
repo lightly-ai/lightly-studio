@@ -1,5 +1,4 @@
 import { derived, get, writable, type Readable } from 'svelte/store';
-import { useUnannotatedSamplesFilter } from '$lib/hooks';
 
 const selectedCollectionIds = writable<string[]>([]);
 const collectionIdToName = writable<Record<string, string>>({});
@@ -63,8 +62,8 @@ export const useAnnotationCollectionsFilter = () => {
          * The first call for a collection selects every source. Later calls for the same
          * collection keep the user's selection and fold in sources that appeared since, because
          * an annotation can be written to a brand-new source and the filter can only hide what
-         * it knows about. Switching collection selects everything again and clears the
-         * "No annotations" filter, so a stale selection never leaks across datasets.
+         * it knows about. Switching collection selects everything again, so a stale selection
+         * never leaks across datasets.
          */
         seedSelectionIfNeeded: (
             collectionId: string,
@@ -76,7 +75,6 @@ export const useAnnotationCollectionsFilter = () => {
                 seededCollectionId = collectionId;
                 collectionIdToName.set(nextIdToName);
                 selectedCollectionIds.set(collections.map((c) => c.id));
-                useUnannotatedSamplesFilter().setIncludeUnannotatedSamples(false);
                 return;
             }
 

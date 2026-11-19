@@ -27,7 +27,11 @@
 
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { setAnnotationClasses, useUnannotatedSampleCount } from '$lib/hooks';
+    import {
+        setAnnotationClasses,
+        useUnannotatedSampleCount,
+        useUnannotatedSamplesFilter
+    } from '$lib/hooks';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import AnnotationCollectionsMenu from '$lib/components/AnnotationCollectionsMenu/AnnotationCollectionsMenu.svelte';
@@ -394,6 +398,9 @@
     // its boxes against this one selection, so seeding only from the images-grid menu left the
     // other tabs filtering against another tab's sources.
     useSeedAnnotationSourceFilter(() => collectionId);
+
+    const { scopeToCollection: scopeUnannotatedSamplesFilter } = useUnannotatedSamplesFilter();
+    $effect.pre(() => scopeUnannotatedSamplesFilter(collectionId));
 
     // Selected annotation sources (annotation collections). When a subset is
     // selected the distribution counts only annotations from those sources; the

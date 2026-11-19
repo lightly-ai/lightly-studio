@@ -17,6 +17,7 @@ const SOURCE_DEPENDENT_QUERY_KEYS = [
     [{ _id: 'readAnnotationLabelsWithCounts' }],
     [{ _id: 'countVideoFrameAnnotations' }],
     [{ _id: 'countVideoFrameAnnotationsByVideoCollection' }],
+    [{ _id: 'countUnannotatedVideos' }],
     [{ _id: 'readImage' }],
     [{ _id: 'getFrameById' }],
     [{ _id: 'getVideoById' }],
