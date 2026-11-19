@@ -33,7 +33,16 @@ const workflowMocks = vi.hoisted(() => ({
     mutateAsync: vi.fn()
 }));
 
+const authState = vi.hoisted(() => ({ role: undefined as 'labeler' | 'editor' | undefined }));
+
 vi.mock('$app/navigation', () => ({ goto: vi.fn() }));
+
+vi.mock('$lib/hooks/useAuth/useAuth', () => ({
+    default: () => ({
+        isAuthenticated: !!authState.role,
+        user: authState.role ? { role: authState.role, email: 'a@b.c' } : undefined
+    })
+}));
 
 vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
     ...(await importOriginal<typeof import('@tanstack/svelte-query')>()),
@@ -175,6 +184,7 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         pageState.state = {};
         workflowMocks.file = undefined;
         workflowMocks.isError = false;
+        authState.role = undefined;
         workflowMocks.params = [];
         workflowMocks.mutateAsync.mockResolvedValue(undefined);
     });
@@ -272,7 +282,8 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
             );
         });
 
-        it('shows the batch path instead of the dataset path in the breadcrumb', async () => {
+        it('shows a labeler the batch path instead of the dataset path in the breadcrumb', async () => {
+            authState.role = 'labeler';
             workflowMocks.file = { ...workflowFile, sample_id: 'sequence-1' };
             summaryData = { file_name: 'drive_001.mcap', lidar_channels: [], camera_channels: [] };
             render(Page, { props: { data: mockPageData } });
@@ -366,6 +377,27 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
 
         const breadcrumb = await screen.findByTestId('workspace-breadcrumb');
         expect(breadcrumb).toHaveTextContent('drive_001.mcap');
+    });
+
+    it('shows the dataset crumbs as plain text to a labeler outside a batch', async () => {
+        authState.role = 'labeler';
+        summaryData = { file_name: 'drive_001.mcap', lidar_channels: [], camera_channels: [] };
+        render(Page, { props: { data: mockPageData } });
+
+        const breadcrumb = await screen.findByTestId('workspace-breadcrumb');
+        expect(breadcrumb).toHaveTextContent('Home');
+        expect(breadcrumb).toHaveTextContent('Collection 1');
+        expect(breadcrumb).toHaveTextContent('Point clouds');
+        expect(breadcrumb).toHaveTextContent('drive_001.mcap');
+        expect(breadcrumb.querySelectorAll('a[href]')).toHaveLength(0);
+    });
+
+    it('keeps the dataset links for an editor outside a batch', async () => {
+        authState.role = 'editor';
+        render(Page, { props: { data: mockPageData } });
+
+        const breadcrumb = await screen.findByTestId('workspace-breadcrumb');
+        expect(breadcrumb.querySelectorAll('a[href]')).toHaveLength(3);
     });
 
     it('falls back to the sequence id in the breadcrumb while the summary loads', async () => {

@@ -8,6 +8,7 @@
         BreadcrumbSeparator
     } from '$lib/components/ui/breadcrumb/index.js';
     import { routeHelpers } from '$lib/routes';
+    import { useCanNavigateDataset } from '$lib/hooks/useCanNavigateDataset/useCanNavigateDataset';
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { page } from '$app/state';
@@ -32,13 +33,17 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id!);
+    // Labelers keep their bearings but cannot leave for the dataset from here.
+    const canNavigate = useCanNavigateDataset();
 </script>
 
 <Breadcrumb class="mb-2" data-testid="details-breadcrumb">
     <BreadcrumbList>
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, datasetId)}
+                href={canNavigate
+                    ? routeHelpers.toCollectionHome(datasetId, collectionType, datasetId)
+                    : undefined}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -49,7 +54,9 @@
 
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, collectionId)}
+                href={canNavigate
+                    ? routeHelpers.toCollectionHome(datasetId, collectionType, collectionId)
+                    : undefined}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
@@ -61,7 +68,10 @@
         <BreadcrumbSeparator />
 
         <BreadcrumbItem>
-            <BreadcrumbLink href={navigateTo(collectionId)} class="flex items-center gap-2">
+            <BreadcrumbLink
+                href={canNavigate ? navigateTo(collectionId) : undefined}
+                class="flex items-center gap-2"
+            >
                 <ComponentIcon class="h-4 w-4" />
                 <span class="hidden sm:inline">{section}</span>
             </BreadcrumbLink>

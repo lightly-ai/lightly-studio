@@ -5,6 +5,7 @@
     import { useMcapSequenceSummary } from '$lib/hooks';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
     import type { WorkspaceCrumb } from '$lib/components/PointCloudLabelingWorkspace/types';
+    import { useCanNavigateDataset } from '$lib/hooks/useCanNavigateDataset/useCanNavigateDataset';
     import { getTickNumberFromHash } from './getTickNumberFromHash';
     import { routeHelpers } from '$lib/routes';
     import { useSequenceNeighbours } from './useSequenceNeighbours.svelte';
@@ -52,7 +53,9 @@
             { label: fileLabel }
         ];
     });
-    const datasetPath = $derived([
+    // Labelers keep their bearings outside a batch but cannot leave for the dataset from here.
+    const canNavigate = useCanNavigateDataset();
+    const datasetLinks = $derived([
         {
             label: 'Home',
             // The dataset_id URL slot is the root collection id, so the home crumb points the
@@ -78,6 +81,9 @@
         },
         { label: fileLabel }
     ]);
+    const datasetPath = $derived(
+        canNavigate ? datasetLinks : datasetLinks.map(({ label }) => ({ label }))
+    );
     const sourcePath = $derived(workflow.active ? batchPath : datasetPath);
 
     const neighbours = useSequenceNeighbours({

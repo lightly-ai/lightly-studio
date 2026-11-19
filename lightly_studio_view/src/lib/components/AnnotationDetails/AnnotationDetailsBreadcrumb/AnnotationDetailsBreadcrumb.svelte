@@ -8,6 +8,7 @@
         BreadcrumbSeparator
     } from '$lib/components/ui/breadcrumb/index.js';
     import { routeHelpers } from '$lib/routes';
+    import { useCanNavigateDataset } from '$lib/hooks/useCanNavigateDataset/useCanNavigateDataset';
     import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
     import type { Collection } from '$lib/services/types';
     import { page } from '$app/state';
@@ -33,6 +34,8 @@
 
     const samplePosition = $derived(sampleAdjacentQuery.data?.current_sample_position ?? 0);
     const totalCount = $derived(sampleAdjacentQuery.data?.total_count ?? 0);
+    // Labelers keep their bearings but cannot leave for the dataset from here.
+    const canNavigate = useCanNavigateDataset();
 </script>
 
 <Breadcrumb class="mb-2">
@@ -40,7 +43,9 @@
         <!-- Home -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, datasetId)}
+                href={canNavigate
+                    ? routeHelpers.toCollectionHome(datasetId, collectionType, datasetId)
+                    : undefined}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />
@@ -52,7 +57,9 @@
         <!-- Collection -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toCollectionHome(datasetId, collectionType, collectionId)}
+                href={canNavigate
+                    ? routeHelpers.toCollectionHome(datasetId, collectionType, collectionId)
+                    : undefined}
                 class="flex items-center gap-2"
             >
                 <Database class="h-4 w-4" />
@@ -66,7 +73,9 @@
         <!-- Annotations -->
         <BreadcrumbItem>
             <BreadcrumbLink
-                href={routeHelpers.toAnnotations(datasetId, collectionType, collectionId)}
+                href={canNavigate
+                    ? routeHelpers.toAnnotations(datasetId, collectionType, collectionId)
+                    : undefined}
                 class="flex items-center gap-2"
             >
                 <ComponentIcon class="h-4 w-4" />

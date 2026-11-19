@@ -123,6 +123,7 @@ export { useMcapTickPrefetchScheduler } from '$lib/hooks/useMcapTickDetailsPrefe
 export { useSaveAnnotationClassColor } from '$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte';
 export { setAnnotationClasses } from '$lib/hooks/useCustomLabelColors';
 export { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
+export { useCanNavigateDataset } from '$lib/hooks/useCanNavigateDataset/useCanNavigateDataset';
 export { useRecentClasses } from '$lib/hooks/useRecentClasses/useRecentClasses';
 export { useStickyClass } from '$lib/hooks/useStickyClass/useStickyClass';
 export { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
