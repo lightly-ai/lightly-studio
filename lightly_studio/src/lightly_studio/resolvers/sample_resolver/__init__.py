@@ -6,6 +6,7 @@ from lightly_studio.resolvers.sample_resolver.count_unannotated_samples import (
 )
 from lightly_studio.resolvers.sample_resolver.create import create
 from lightly_studio.resolvers.sample_resolver.create_many import create_many
+from lightly_studio.resolvers.sample_resolver.delete_caption_samples import delete_caption_samples
 from lightly_studio.resolvers.sample_resolver.filter_new_paths import filter_new_paths
 from lightly_studio.resolvers.sample_resolver.get_by_id import get_by_id
 from lightly_studio.resolvers.sample_resolver.get_filtered_samples import get_filtered_samples
@@ -16,6 +17,7 @@ __all__ = [
     "count_unannotated_samples",
     "create",
     "create_many",
+    "delete_caption_samples",
     "filter_new_paths",
     "get_by_id",
     "get_filtered_samples",

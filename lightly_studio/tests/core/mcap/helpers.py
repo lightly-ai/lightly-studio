@@ -89,6 +89,15 @@ bool do_rectify
 """
 )
 
+_ROS_COMPRESSED_IMAGE_MSGDEF = (
+    """
+std_msgs/Header header
+string format
+uint8[] data
+"""
+    + _HEADER_MSGDEF
+)
+
 _COMPRESSED_IMAGE_MSGDEF = """
 builtin_interfaces/Time timestamp
 string frame_id
@@ -293,6 +302,38 @@ def write_mcap_with_video(path: Path, frames: Sequence[tuple[int, bytes]]) -> Pa
                 "frame_id": CAMERA_FRAME_ID,
                 "data": access_unit,
                 "format": "h264",
+            },
+            log_time=log_time_ns,
+        )
+    writer.finish()
+    return path
+
+
+def write_mcap_with_images(path: Path, frames: Sequence[tuple[int, bytes]]) -> Path:
+    """Writes an MCAP with a `sensor_msgs/msg/CompressedImage` camera topic.
+
+    The topic is `CAMERA_IMAGE_TOPIC`. Each `header.stamp` equals the log time.
+
+    Args:
+        path: The path to write the file to.
+        frames: `(log_time_ns, encoded_picture)` pairs, in log-time order, e.g. from
+            `encoded_image`.
+
+    Returns:
+        The path of the written file.
+    """
+    writer = Writer(output=str(path))
+    image_schema = writer.register_msgdef(
+        datatype="sensor_msgs/msg/CompressedImage", msgdef_text=_ROS_COMPRESSED_IMAGE_MSGDEF
+    )
+    for log_time_ns, picture in frames:
+        writer.write_message(
+            topic=CAMERA_IMAGE_TOPIC,
+            schema=image_schema,
+            message={
+                "header": {"stamp": _time(log_time_ns), "frame_id": CAMERA_FRAME_ID},
+                "format": "rgb8; jpeg compressed bgr8",
+                "data": picture,
             },
             log_time=log_time_ns,
         )
@@ -598,6 +639,27 @@ def h264_access_units(gray_levels: Sequence[int], width: int = 16, height: int =
             access_units.extend(bytes(packet) for packet in stream.encode(frame))
         access_units.extend(bytes(packet) for packet in stream.encode())
     return access_units
+
+
+def encoded_image(
+    gray_level: int, width: int = 16, height: int = 16, image_format: str = "JPEG"
+) -> bytes:
+    """Encodes one solid gray RGB picture as an image file, e.g. a JPEG or a PNG.
+
+    Args:
+        gray_level: The gray level (0-255) of every pixel.
+        width: The picture width in pixels.
+        height: The picture height in pixels.
+        image_format: The Pillow format name of the file, e.g. `"JPEG"` or `"PNG"`.
+
+    Returns:
+        The encoded file.
+    """
+    output = io.BytesIO()
+    Image.new(mode="RGB", size=(width, height), color=(gray_level,) * 3).save(
+        output, format=image_format
+    )
+    return output.getvalue()
 
 
 def jpeg_mean_gray_level(data: bytes) -> float:

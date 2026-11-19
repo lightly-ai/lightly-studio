@@ -82,6 +82,10 @@
                         <p class="mr-auto text-xs text-muted-foreground">
                             Changes to annotation classes save immediately.
                         </p>
+                    {:else if activeTab === 'annotation-sources'}
+                        <p class="mr-auto text-xs text-muted-foreground">
+                            Changes to annotation sources save immediately.
+                        </p>
                     {/if}
                     <Button
                         variant="outline"
