@@ -28,6 +28,7 @@
     const { trackEvent } = usePostHog();
 
     const canEdit = $derived(hasMinimumRole(user?.role, 'labeler'));
+    const isEditor = $derived(hasMinimumRole(user?.role, 'editor'));
 
     type TriggeredBy = 'click' | 'keyboard_shortcut';
 
@@ -113,28 +114,30 @@
             </Tooltip>
         {/if}
     {/if}
-    <Tooltip content="Plugins" position="bottom">
-        <Button
-            icon={Puzzle}
-            variant="ghost"
-            ariaLabel="Plugins"
-            buttonProps={{
-                onclick: openOperatorsDialog,
-                'data-testid': 'breadcrumb-plugins-button',
-                class: 'h-8 px-2'
-            }}
-        />
-    </Tooltip>
-    <Tooltip content="Settings" position="bottom">
-        <Button
-            icon={Settings}
-            variant="ghost"
-            ariaLabel="Settings"
-            buttonProps={{
-                onclick: openSettingsDialog,
-                'data-testid': 'breadcrumb-settings-button',
-                class: 'h-8 px-2'
-            }}
-        />
-    </Tooltip>
+    {#if isEditor}
+        <Tooltip content="Plugins" position="bottom">
+            <Button
+                icon={Puzzle}
+                variant="ghost"
+                ariaLabel="Plugins"
+                buttonProps={{
+                    onclick: openOperatorsDialog,
+                    'data-testid': 'breadcrumb-plugins-button',
+                    class: 'h-8 px-2'
+                }}
+            />
+        </Tooltip>
+        <Tooltip content="Settings" position="bottom">
+            <Button
+                icon={Settings}
+                variant="ghost"
+                ariaLabel="Settings"
+                buttonProps={{
+                    onclick: openSettingsDialog,
+                    'data-testid': 'breadcrumb-settings-button',
+                    class: 'h-8 px-2'
+                }}
+            />
+        </Tooltip>
+    {/if}
 </div>
