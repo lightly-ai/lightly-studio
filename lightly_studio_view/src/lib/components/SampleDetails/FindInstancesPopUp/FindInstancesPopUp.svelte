@@ -1,11 +1,16 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
+    import { AnnotationClassSelect } from '$lib/components/SampleDetails/AnnotationClassSelect';
+    import {
+        AnnotationToolPopUp,
+        SaveAsToggle,
+        SaveButtons
+    } from '$lib/components/SampleDetails/AnnotationToolPopUp';
     import type { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';
     import InstancePromptInput from './InstancePromptInput/InstancePromptInput.svelte';
     import MaxInstancesInput from './MaxInstancesInput/MaxInstancesInput.svelte';
 
-    type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];
+    type SaveAs = ComponentProps<typeof SaveAsToggle>['saveAs'];
 
     interface Props {
         collectionId: string;
@@ -41,18 +46,7 @@
     }: Props = $props();
 </script>
 
-<AnnotationToolPopUp
-    title="Find all instances"
-    {collectionId}
-    {annotationClass}
-    {onAnnotationClassChange}
-    {saveAs}
-    {onSaveAsChange}
-    canSave={instances.canSave}
-    isSaving={instances.isSaving}
-    onSave={() => void instances.save()}
-    {onClear}
->
+<AnnotationToolPopUp title="Find all instances">
     <p class="text-xs text-muted-foreground">
         {#if instances.predictions.length > 0}
             Instances found: {instances.predictions.length}.
@@ -68,4 +62,21 @@
     </p>
     <InstancePromptInput {prompt} {onPromptChange} {isDrawingBox} {onDrawBoxChange} {instances} />
     <MaxInstancesInput value={maxInstances} onChange={onMaxInstancesChange} />
+
+    {#snippet saveControls()}
+        <AnnotationClassSelect
+            {collectionId}
+            value={annotationClass}
+            onChange={onAnnotationClassChange}
+            label="Annotation class"
+            className="h-8"
+        />
+        <SaveAsToggle {saveAs} {onSaveAsChange} />
+        <SaveButtons
+            canSave={instances.canSave}
+            isSaving={instances.isSaving}
+            onSave={() => void instances.save()}
+            {onClear}
+        />
+    {/snippet}
 </AnnotationToolPopUp>
