@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 ### Fixed
+- Images with many annotations open faster when LightlyStudio runs on a remote server.
 
 ### Security
 
@@ -55,7 +56,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Applying an empty query or one containing only comments clears the query filter.
     - Annotation class counts load faster in the image sidebar, both with an annotation source selected and with no filters applied.
     - Grids with annotated samples load faster, and images with many annotations open faster in the detail view.
-    - Images with many annotations open faster on a remote server, because the image view no longer requests each annotation on its own.
     - You can delete annotations that have metadata.
 
 - Evaluation and export
