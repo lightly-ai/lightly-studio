@@ -1,5 +1,8 @@
 """Resolvers for MCAP group sequence database operations."""
 
+from lightly_studio.resolvers.mcap_group_sequence_resolver.count_annotations_by_collection import (
+    count_annotations_by_collection,
+)
 from lightly_studio.resolvers.mcap_group_sequence_resolver.create import create
 from lightly_studio.resolvers.mcap_group_sequence_resolver.get_adjacent_sequences import (
     get_adjacent_sequences,
@@ -22,6 +25,7 @@ from lightly_studio.resolvers.mcap_group_sequence_resolver.resolve_embedding_reg
 )
 
 __all__ = [
+    "count_annotations_by_collection",
     "create",
     "get_adjacent_sequences",
     "get_all_by_collection_id",

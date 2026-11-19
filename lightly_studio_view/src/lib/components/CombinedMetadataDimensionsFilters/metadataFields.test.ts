@@ -17,6 +17,7 @@ const range = (overrides: Partial<RangeField> = {}): RangeField => ({
     key: 'score',
     title: 'score',
     unit: '',
+    integer: false,
     bound: { min: 0, max: 1 },
     value: { min: 0, max: 1 },
     ...overrides
@@ -56,7 +57,12 @@ it('ids differ for a metadata key named width', () =>
 it('formats integer ranges with the unit', () =>
     expect(
         formatRangeSummary(
-            range({ unit: 'px', bound: { min: 0, max: 1024 }, value: { min: 200, max: 640 } })
+            range({
+                unit: 'px',
+                integer: true,
+                bound: { min: 0, max: 1024 },
+                value: { min: 200, max: 640 }
+            })
         )
     ).toBe('200px – 640px'));
 it('formats float ranges like the slider labels', () =>

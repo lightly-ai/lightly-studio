@@ -8,9 +8,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Undo cuboid edits in the point cloud workspace with Ctrl/Cmd + Z: delete, move, resize, rotate and class change. An undone delete restores the cuboid in its object track.
+- Use `frame(...)` in the video query editor to match annotations and timestamps on the same frame.
+- Filter the point cloud sequences by annotation class in the filter panel. A sequence matches when one of its frames has an annotation of that class.
 - The embedding plot shows a hint for what Shift + click does on the hovered point: pick, add, or remove.
+- Python SDK: MCAP datasets can use cameras that record JPEG or PNG `CompressedImage` messages, not only H.264 or H.265 video. The camera frames show in the viewer and are used for embeddings.
+- Filter images and videos without annotations with the "No annotations" option in the annotation class filter. Combine it with classes to also see the samples of those classes.
+- The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
+- Filter video collections by categorical metadata.
 
 ### Changed
+
+- Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
+- Each metadata field in the filter panel has a checkbox. A collapsed field shows a short summary of its filter, for example a range or "2 of 3" values. Active fields move to the top, and the metadata filter chips are removed.
 
 ### Deprecated
 

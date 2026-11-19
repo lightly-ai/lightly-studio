@@ -31,11 +31,17 @@
                 >
             </li>
         {/if}
+        {#if sampleType === 'video'}
+            <li>
+                Match annotations on one frame with <code
+                    >frame(object_detection(class_name = "person") AND frame_timestamp_s &lt; 5)</code
+                >.
+            </li>
+        {/if}
         <li>Tag membership: <code>"tag_name" IN tags</code></li>
         <li>
             {#if sampleType === 'video'}
                 Video annotations: <code>classification(…)</code> matches whole-video and temporal annotations.
-                Frame annotations are not supported yet.
             {:else}
                 Annotation conditions: <code>segmentation_mask(…)</code>,
                 <code>object_detection(…)</code>, <code>classification(…)</code>
