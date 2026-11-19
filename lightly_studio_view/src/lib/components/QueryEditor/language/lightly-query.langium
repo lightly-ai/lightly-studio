@@ -80,6 +80,7 @@ SampleUnary<isImage> returns Expression:
     | MetadataComparison
     | TagInExpression
     | AnnotationQuery
+    | <!isImage> VideoFrameQuery
     | SampleEvaluationQuery;
 
 // The run selector scopes every metric predicate, including OR and NOT.
@@ -220,6 +221,27 @@ SegmentationMaskFloatFieldReference returns FieldReference:
 SegmentationMaskStringFieldReference returns FieldReference:
   {FieldReference} member=SegmentationMaskStringFieldName;
 
+VideoFrameQuery returns Expression:
+  {FunctionCall} name=FRAME_FUNCTION '(' args+=FrameOr ')';
+
+FrameOr returns Expression:
+  FrameAnd ({BooleanExpression.children+=current} operator=OR children+=FrameAnd (OR children+=FrameAnd)*)?;
+
+FrameAnd returns Expression:
+  FrameUnary ({BooleanExpression.children+=current} operator=AND children+=FrameUnary (AND children+=FrameUnary)*)?;
+
+FrameUnary returns Expression:
+  '(' FrameOr ')'
+    | {NotExpression} NOT expression=FrameUnary
+    | AnnotationQuery
+    | FrameTimeComparison;
+
+FrameTimeComparison returns ComparisonExpression:
+  FrameTimeReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral;
+
+FrameTimeReference returns FieldReference:
+  {FieldReference} member=FRAME_TIMESTAMP_FIELD;
+
 AnnotationQuery returns Expression:
   {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' args+=ObjectDetection ')'
   | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification ')'
@@ -299,6 +321,8 @@ terminal AND: /\bAND\b/i;
 terminal OR: /\bOR\b/i;
 terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
+terminal FRAME_FUNCTION returns string: /\bframe\b/;
+terminal FRAME_TIMESTAMP_FIELD returns string: /\bframe_timestamp_s\b/;
 terminal OBJECT_DETECTION_FUNCTION returns string: /\bobject_detection\b/;
 terminal CLASSIFICATION_FUNCTION returns string: /\bclassification\b/;
 terminal SEGMENTATION_MASK_FUNCTION returns string: /\bsegmentation_mask\b/;

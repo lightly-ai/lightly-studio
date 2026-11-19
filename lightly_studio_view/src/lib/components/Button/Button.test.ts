@@ -59,6 +59,16 @@ describe('Button', () => {
         expect(svgs.length).toBe(2);
     });
 
+    it('merges iconClass with the default size class on the leading icon', () => {
+        const { container } = render(ButtonTestWrapper, {
+            props: { label: 'Undo', icon: Pencil, iconClass: 'animate-spin' }
+        });
+
+        const svg = container.querySelector('button > svg');
+        expect(svg?.getAttribute('class')).toContain('size-4');
+        expect(svg?.getAttribute('class')).toContain('animate-spin');
+    });
+
     it('merges iconAfterClass with the default size class on the trailing icon', () => {
         const { container } = render(ButtonTestWrapper, {
             props: { label: 'Open', iconAfter: ChevronDown, iconAfterClass: 'rotate-180' }

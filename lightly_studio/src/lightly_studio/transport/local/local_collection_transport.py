@@ -36,14 +36,21 @@ class LocalCollectionTransport:
         self, name: str, parent_collection_id: UUID | None
     ) -> CollectionWithoutChildrenView | None:
         """Get a collection by name under a parent, or None if it does not exist."""
-        collection = collection_resolver.get_table_by_name(
+        collections = self.get_all_by_parent(parent_collection_id=parent_collection_id, name=name)
+        return collections[0] if collections else None
+
+    def get_all_by_parent(
+        self, parent_collection_id: UUID | None, name: str | None
+    ) -> list[CollectionWithoutChildrenView]:
+        """Get the child collections of a parent, sorted by creation time."""
+        collections = collection_resolver.get_all_by_parent(
             session=db_manager.persistent_session(),
-            name=name,
             parent_collection_id=parent_collection_id,
+            name=name,
         )
-        return (
-            None if collection is None else CollectionWithoutChildrenView.model_validate(collection)
-        )
+        return [
+            CollectionWithoutChildrenView.model_validate(collection) for collection in collections
+        ]
 
     def get_or_create_child(
         self, collection_id: UUID, sample_type: SampleType, name: str | None

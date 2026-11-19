@@ -17,6 +17,8 @@ export {
 } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
+export { useUnannotatedSampleCount } from '$lib/hooks/useUnannotatedSampleCount/useUnannotatedSampleCount';
+export { useUnannotatedSamplesFilter } from '$lib/hooks/useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
 export { useFiltersClearedSignal } from '$lib/hooks/useFiltersClearedSignal/useFiltersClearedSignal';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export {
@@ -65,6 +67,7 @@ export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
 export { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 export { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
 export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+export { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
@@ -110,6 +113,7 @@ export {
 export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 export { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 export { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount';
+export { useMcapSequenceAnnotationCounts } from '$lib/hooks/useMcapSequenceAnnotationCounts/useMcapSequenceAnnotationCounts';
 export { useVideoOrderBy } from '$lib/hooks/useVideoOrderBy/useVideoOrderBy';
 export { useVideoSortFields } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
 export {
@@ -144,7 +148,12 @@ export {
     PICK_SOURCE_MESSAGE
 } from '$lib/hooks/useAnnotationTarget/messages';
 export { isAnnotationSourceBlocked } from '$lib/hooks/useAnnotationTarget/annotationSourceGuard';
+export {
+    EMPTY_PLOT_SELECTION,
+    type PlotSelection
+} from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
 export { default as useAuth } from '$lib/hooks/useAuth/useAuth';
 export { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
 export { usePendingBoxClass } from '$lib/hooks/usePendingBoxClass/usePendingBoxClass';
+export { useInvalidateAnnotationSourceQueries } from '$lib/hooks/useInvalidateAnnotationSourceQueries';
 export { useLingeringValue } from '$lib/hooks/useLingeringValue/useLingeringValue.svelte';

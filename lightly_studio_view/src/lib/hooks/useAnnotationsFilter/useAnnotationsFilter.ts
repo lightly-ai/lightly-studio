@@ -1,10 +1,10 @@
 import { derived, get, readonly, writable, type Readable } from 'svelte/store';
-import type { AnnotationsFilter } from '$lib/api/lightly_studio_local';
+import type { AnnotationsFilter, UnannotatedSampleCount } from '$lib/api/lightly_studio_local';
 import type { Annotation } from '$lib/types';
 import type { AnnotationLabel } from '$lib/services/types';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
-import { usePostHog } from '$lib/hooks';
+import { usePostHog, useUnannotatedSamplesFilter } from '$lib/hooks';
 
 /**
  * Low-level hook: manages selected annotation label IDs and produces an AnnotationsFilter.
@@ -109,6 +109,12 @@ export function useAnnotationsFilter({
         annotationCountsStore.set(counts);
     };
 
+    const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
+    const unannotatedSampleCountStore = writable<UnannotatedSampleCount | undefined>(undefined);
+    const setUnannotatedSampleCount = (count: UnannotatedSampleCount | undefined) => {
+        unannotatedSampleCountStore.set(count);
+    };
+
     // Name -> ID mapping
     const annotationFilterLabels: Readable<Record<string, string>> = derived(
         annotationLabels,
@@ -156,13 +162,27 @@ export function useAnnotationsFilter({
 
     // UI-ready rows for LabelsMenu
     const annotationFilterRows: Readable<Annotation[]> = derived(
-        [annotationCountsStore, selectedAnnotationFilterNames],
-        ([$counts, $selectedNames]) => {
+        [
+            annotationCountsStore,
+            selectedAnnotationFilterNames,
+            unannotatedSampleCountStore,
+            includeUnannotatedSamples
+        ],
+        ([$counts, $selectedNames, $unannotatedCount, $includeUnannotated]) => {
             if (!$counts) return [];
-            return $counts.map((annotation) => ({
+            const classRows = $counts.map((annotation) => ({
                 ...annotation,
                 selected: $selectedNames.includes(annotation.label_name)
             }));
+            // Without annotation classes, every sample is unannotated and the row filters nothing.
+            if (!$unannotatedCount || classRows.length === 0) return classRows;
+            const noAnnotationsRow = {
+                label_name: 'No annotations',
+                ...$unannotatedCount,
+                selected: $includeUnannotated,
+                isNoAnnotationsRow: true
+            };
+            return [noAnnotationsRow, ...classRows];
         }
     );
 
@@ -218,6 +238,8 @@ export function useAnnotationsFilter({
         annotationFilterLabels,
         selectedAnnotationFilterNames,
         setAnnotationCounts,
+        setUnannotatedSampleCount,
+        includeUnannotatedSamples,
         pruneInvalidSelections,
         toggleAnnotationFilterSelection,
         setAnnotationFilterSelection,

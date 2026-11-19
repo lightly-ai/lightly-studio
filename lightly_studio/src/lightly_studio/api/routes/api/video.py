@@ -11,6 +11,7 @@ from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models import sort
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.sort import VideoSortFieldExpr
+from lightly_studio.models.unannotated_sample_count import UnannotatedSampleCount
 from lightly_studio.models.video import VideoFieldsBoundsView, VideoView, VideoViewsWithCount
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.resolvers.video_resolver.count_video_frame_annotations_by_collection import (
@@ -79,6 +80,24 @@ def count_video_frame_annotations_by_video_collection(
         collection_id=collection_id,
         filters=body.filter,
         annotation_type=body.annotation_type,
+    )
+
+
+class ReadCountUnannotatedVideosRequest(BaseModel):
+    """Request body for counting the videos without annotations."""
+
+    filter: VideoFilter | None = None
+
+
+@video_router.post("/collections/{collection_id}/video/unannotated/count")
+def count_unannotated_videos(
+    session: SessionDep,
+    collection_id: Annotated[UUID, Path(title="collection Id")],
+    body: ReadCountUnannotatedVideosRequest,
+) -> UnannotatedSampleCount:
+    """Count the videos without annotations, in total and for the filter."""
+    return video_resolver.count_unannotated_videos(
+        session=session, collection_id=collection_id, video_filter=body.filter
     )
 
 

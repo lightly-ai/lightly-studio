@@ -15,6 +15,7 @@ export interface SampleFilterParts {
     tag_ids?: string[] | null;
     annotation_label_ids?: string[] | null;
     annotation_collection_ids?: string[] | null;
+    include_unannotated_samples?: boolean;
     embedding_region?: EmbeddingRegion | null;
     confusion_cell?: ConfusionCell | null;
     metadata_filters?: MetadataFilter[] | null;
@@ -34,7 +35,8 @@ export function buildSampleFilter(parts: SampleFilterParts): SampleFilter | unde
         tag_ids: nonEmpty(parts.tag_ids),
         annotations_filter: getAnnotationsFilter({
             annotation_label_ids: parts.annotation_label_ids,
-            collection_ids: parts.annotation_collection_ids
+            collection_ids: parts.annotation_collection_ids,
+            include_unannotated_samples: parts.include_unannotated_samples
         }),
         embedding_region: parts.embedding_region ?? undefined,
         confusion_cell: parts.confusion_cell ?? undefined,
