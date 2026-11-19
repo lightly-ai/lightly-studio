@@ -23,13 +23,22 @@ vi.mock('$app/state', () => ({
     }
 }));
 
-const { toggleSampleSelection } = vi.hoisted(() => ({ toggleSampleSelection: vi.fn() }));
+const { toggleSampleSelection, updateAnnotationLabelIds } = vi.hoisted(() => ({
+    toggleSampleSelection: vi.fn(),
+    updateAnnotationLabelIds: vi.fn()
+}));
 
 vi.mock('$lib/hooks/useTags/useTags', () => ({
     useTags: () => ({ tagsSelected: writable(new Set<string>()) })
 }));
 
 vi.mock('$lib/hooks', () => ({
+    useAnnotationLabels: () => ({
+        data: [{ annotation_label_id: 'label-1' }, { annotation_label_id: 'label-2' }]
+    }),
+    useSelectedAnnotationsFilter: () => ({
+        selectedAnnotationFilterIdsArray: writable(['label-1', 'other-dataset-label'])
+    }),
     useGlobalStorage: () => ({
         setfilteredSampleCount: vi.fn(),
         sampleSize: writable({ width: 6, height: 200 }),
@@ -40,6 +49,7 @@ vi.mock('$lib/hooks', () => ({
     useMcapSequenceFilters: () => ({
         mcapSequenceFilter: writable({ filter_type: 'mcap_sequence' }),
         setCollectionId: vi.fn(),
+        updateAnnotationLabelIds,
         updateTagIds: vi.fn()
     }),
     useMcapSequencesInfinite: () => ({
@@ -95,7 +105,7 @@ class MockIntersectionObserver {
     thresholds = [];
 }
 
-describe('point-clouds/+page.svelte', () => {
+describe('mcap-sequences/+page.svelte', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         global.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
@@ -127,5 +137,11 @@ describe('point-clouds/+page.svelte', () => {
         expect(goto).toHaveBeenCalledOnce();
         const destination = vi.mocked(goto).mock.calls[0][0] as string;
         expect(destination).toContain(ROUTE_DATASET_ID);
+    });
+
+    it('filters the sequences by the selected labels of the collection', () => {
+        render(Page, { props: { data: pageData } });
+
+        expect(updateAnnotationLabelIds).toHaveBeenCalledWith(['label-1']);
     });
 });

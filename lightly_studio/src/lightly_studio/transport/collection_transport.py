@@ -38,6 +38,16 @@ class CollectionTransport(Protocol):
             parent_collection_id: The ID of the parent. None finds a root collection.
         """
 
+    def get_all_by_parent(
+        self, parent_collection_id: UUID | None, name: str | None
+    ) -> list[CollectionWithoutChildrenView]:
+        """Get the child collections of a parent, sorted by creation time.
+
+        Args:
+            parent_collection_id: The ID of the parent. None gets the root collections.
+            name: The name of the collections to get. None gets all names.
+        """
+
     def get_or_create_child(
         self, collection_id: UUID, sample_type: SampleType, name: str | None
     ) -> UUID:

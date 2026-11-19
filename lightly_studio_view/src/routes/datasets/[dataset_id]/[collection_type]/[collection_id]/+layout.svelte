@@ -29,6 +29,8 @@
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
     import {
         setAnnotationClasses,
+        useMcapSequenceAnnotationCounts,
+        useMcapSequenceFilters,
         useUnannotatedSampleCount,
         useUnannotatedSamplesFilter
     } from '$lib/hooks';
@@ -43,7 +45,7 @@
         isFrameDetailsRoute,
         isSampleDetailsRoute,
         isImagesRoute,
-        isPointCloudsRoute,
+        isMcapSequencesRoute,
         isPointCloudLabelingRoute,
         isVideoFramesRoute,
         isVideosRoute,
@@ -166,7 +168,7 @@
     const isVideos = $derived(isVideosRoute(page.route.id));
     const isVideoFrames = $derived(isVideoFramesRoute(page.route.id));
     const isVideoDetails = $derived(isVideoDetailsRoute(page.route.id));
-    const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointClouds = $derived(isMcapSequencesRoute(page.route.id));
     const isPointCloudLabeling = $derived(isPointCloudLabelingRoute(page.route.id));
     // The distribution panel is available on the images and videos grids.
     const supportsDistribution = $derived(isImages || isVideos);
@@ -465,7 +467,12 @@
     const imageAnnotationCountsQuery = useImageAnnotationCounts(() => ({
         collectionId: datasetId,
         filter: imageAnnotationCountsFilter,
-        enabled: !isVideos && !isVideoFrames && !isVideoFrameAnnotations && !$allSourcesHidden
+        enabled:
+            !isVideos &&
+            !isVideoFrames &&
+            !isVideoFrameAnnotations &&
+            !isPointClouds &&
+            !$allSourcesHidden
     }));
 
     const videoAnnotationCountsFilter = $derived(
@@ -497,6 +504,17 @@
             showsNoAnnotationsRow ? unannotatedSampleCountQuery.data : undefined
         )
     );
+    const { filterParams: mcapSequenceFilterParams, mcapSequenceFilter } = useMcapSequenceFilters();
+    // The grid page sets the filter collection after this layout reads a new route. Until then
+    // the filter still belongs to the previous collection.
+    const isMcapSequenceFilterOfCollection = $derived(
+        $mcapSequenceFilterParams?.collection_id === collectionId
+    );
+    const mcapSequenceAnnotationCountsQuery = useMcapSequenceAnnotationCounts(() => ({
+        collectionId,
+        filter: $mcapSequenceFilter,
+        enabled: isPointClouds && isMcapSequenceFilterOfCollection && !$allSourcesHidden
+    }));
 
     const videoFrameCountsCollectionId = $derived(
         isVideoFrameAnnotations ? (parentCollection?.collectionId ?? collectionId) : collectionId
@@ -515,6 +533,9 @@
         }
         if (isVideos) {
             return videoAnnotationCountsQuery;
+        }
+        if (isPointClouds) {
+            return mcapSequenceAnnotationCountsQuery;
         }
         return imageAnnotationCountsQuery;
     });
@@ -745,8 +766,8 @@
                             {#if isImages}
                                 <AnnotationCollectionsMenu {collectionId} />
                             {/if}
-                            <!-- Captions support only the tag filter; MCAP sequences support only the tag and embedding filters. -->
-                            {#if !isCaptions && !isPointClouds}
+                            <!-- Captions support only the tag filter. -->
+                            {#if !isCaptions}
                                 <LabelsMenu
                                     {annotationFilterRows}
                                     onToggleAnnotationFilter={(label) =>

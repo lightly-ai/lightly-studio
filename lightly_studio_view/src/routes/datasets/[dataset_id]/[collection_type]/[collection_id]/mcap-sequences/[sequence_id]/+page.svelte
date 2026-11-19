@@ -46,7 +46,11 @@
         },
         {
             label: 'Point clouds',
-            href: routeHelpers.toPointClouds(page.params.dataset_id!, collectionType, collectionId)
+            href: routeHelpers.toMcapSequences(
+                page.params.dataset_id!,
+                collectionType,
+                collectionId
+            )
         },
         { label: summary.data?.file_name ?? `Point cloud ${sequenceId}` }
     ]);
