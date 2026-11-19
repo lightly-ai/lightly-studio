@@ -28,6 +28,7 @@ const pageState = vi.hoisted(() => ({
 }));
 const workflowMocks = vi.hoisted(() => ({
     file: undefined as WorkflowFile | undefined,
+    isError: false,
     params: [] as unknown[],
     mutateAsync: vi.fn()
 }));
@@ -143,7 +144,7 @@ vi.mock('$lib/hooks', async () => {
             return {
                 query: {
                     data: params ? workflowMocks.file : undefined,
-                    isError: false
+                    isError: workflowMocks.isError
                 }
             };
         },
@@ -173,6 +174,7 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         pageState.url = new URL(SEQUENCE_URL);
         pageState.state = {};
         workflowMocks.file = undefined;
+        workflowMocks.isError = false;
         workflowMocks.params = [];
         workflowMocks.mutateAsync.mockResolvedValue(undefined);
     });
@@ -268,6 +270,51 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
                 '/datasets/dataset-1/mcap/collection-1/point-clouds/grid-2',
                 { state: { nav: 'dataset' } }
             );
+        });
+
+        it('shows the batch path instead of the dataset path in the breadcrumb', async () => {
+            workflowMocks.file = { ...workflowFile, sample_id: 'sequence-1' };
+            summaryData = { file_name: 'drive_001.mcap', lidar_channels: [], camera_channels: [] };
+            render(Page, { props: { data: mockPageData } });
+
+            const breadcrumb = await screen.findByTestId('workspace-breadcrumb');
+            expect(breadcrumb).toHaveTextContent('Home');
+            expect(breadcrumb).toHaveTextContent('Roads');
+            expect(breadcrumb).toHaveTextContent('Batch 1');
+            expect(breadcrumb).toHaveTextContent('drive_001.mcap');
+            expect(breadcrumb).not.toHaveTextContent('Collection 1');
+            expect(breadcrumb).not.toHaveTextContent('Point clouds');
+
+            // The current crumb is a disabled link without an href.
+            const links = within(breadcrumb)
+                .getAllByRole('link')
+                .filter((link) => link.hasAttribute('href'));
+            expect(links.map((link) => link.getAttribute('href'))).toEqual([
+                '/workspace/projects',
+                '/workspace/projects/project-1',
+                '/workspace/projects/project-1/batches/batch-1'
+            ]);
+            for (const link of links) {
+                expect(link).toHaveAttribute('data-sveltekit-reload');
+            }
+        });
+
+        it('shows no breadcrumb while the batch file loads', async () => {
+            render(Page, { props: { data: mockPageData } });
+
+            const header = await screen.findByTestId('workspace-header');
+            expect(within(header).queryByTestId('workspace-breadcrumb')).not.toBeInTheDocument();
+            expect(within(header).queryAllByRole('link')).toHaveLength(0);
+        });
+
+        it('shows only the file name, without links, when the batch file fails to load', async () => {
+            workflowMocks.isError = true;
+            summaryData = { file_name: 'drive_001.mcap', lidar_channels: [], camera_channels: [] };
+            render(Page, { props: { data: mockPageData } });
+
+            const breadcrumb = await screen.findByTestId('workspace-breadcrumb');
+            expect(breadcrumb).toHaveTextContent(/^drive_001\.mcap$/);
+            expect(breadcrumb.querySelectorAll('a[href]')).toHaveLength(0);
         });
 
         it('locks editing when it is not the user’s turn', async () => {

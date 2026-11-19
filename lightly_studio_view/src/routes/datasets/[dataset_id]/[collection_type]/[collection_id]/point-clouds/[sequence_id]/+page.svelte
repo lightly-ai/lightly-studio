@@ -4,6 +4,7 @@
     import { page } from '$app/state';
     import { useMcapSequenceSummary } from '$lib/hooks';
     import PointCloudLabelingWorkspace from '$lib/components/PointCloudLabelingWorkspace/PointCloudLabelingWorkspace.svelte';
+    import type { WorkspaceCrumb } from '$lib/components/PointCloudLabelingWorkspace/types';
     import { getTickNumberFromHash } from './getTickNumberFromHash';
     import { routeHelpers } from '$lib/routes';
     import { useSequenceNeighbours } from './useSequenceNeighbours.svelte';
@@ -30,7 +31,28 @@
         getDatasetId: () => datasetId,
         getSequenceId: () => sequenceId
     });
-    const sourcePath = $derived([
+    const fileLabel = $derived(summary.data?.file_name ?? `Point cloud ${sequenceId}`);
+    // In a batch the crumbs lead back to the batch in the hosted workspace app (a full page
+    // load), never into the dataset.
+    const batchPath = $derived.by((): WorkspaceCrumb[] => {
+        // Without the batch file there is nothing safe to link to: show only the file name
+        // once loading failed, and nothing while it loads.
+        if (workflow.isError) return [{ label: fileLabel }];
+        const file = workflow.file;
+        if (!file) return [];
+        const projectHref = `/workspace/projects/${file.project_id}`;
+        return [
+            { label: 'Home', href: '/workspace/projects', reload: true },
+            { label: file.project_name, href: projectHref, reload: true },
+            {
+                label: file.batch_name,
+                href: `${projectHref}/batches/${file.batch_id}`,
+                reload: true
+            },
+            { label: fileLabel }
+        ];
+    });
+    const datasetPath = $derived([
         {
             label: 'Home',
             // The dataset_id URL slot is the root collection id, so the home crumb points the
@@ -54,8 +76,9 @@
             label: 'Point clouds',
             href: routeHelpers.toPointClouds(page.params.dataset_id!, collectionType, collectionId)
         },
-        { label: summary.data?.file_name ?? `Point cloud ${sequenceId}` }
+        { label: fileLabel }
     ]);
+    const sourcePath = $derived(workflow.active ? batchPath : datasetPath);
 
     const neighbours = useSequenceNeighbours({
         getSequenceId: () => sequenceId,

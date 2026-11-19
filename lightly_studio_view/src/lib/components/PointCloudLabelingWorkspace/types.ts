@@ -11,4 +11,6 @@ export interface WorkspaceCrumb {
     readonly label: string;
     /** Link target. The final (current) crumb has none. */
     readonly href?: string;
+    /** The link leaves this app (e.g. the hosted workspace), so it needs a full page load. */
+    readonly reload?: boolean;
 }

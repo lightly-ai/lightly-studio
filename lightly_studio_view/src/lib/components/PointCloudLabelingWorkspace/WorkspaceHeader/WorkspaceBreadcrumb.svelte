@@ -28,7 +28,11 @@
                 {@const Icon = iconFor(index)}
                 <BreadcrumbItem>
                     {#if crumb.href}
-                        <BreadcrumbLink href={crumb.href} class="flex items-center gap-2">
+                        <BreadcrumbLink
+                            href={crumb.href}
+                            data-sveltekit-reload={crumb.reload ? '' : undefined}
+                            class="flex items-center gap-2"
+                        >
                             <Icon class="h-4 w-4" />
                             <span class="max-w-[180px] truncate">{crumb.label}</span>
                         </BreadcrumbLink>
