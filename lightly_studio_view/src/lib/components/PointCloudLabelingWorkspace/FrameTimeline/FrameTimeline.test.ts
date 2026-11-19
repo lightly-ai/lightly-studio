@@ -342,4 +342,17 @@ describe('FrameTimeline', () => {
             expect(screen.getAllByTestId('timeline-tick-mark').length).toBeLessThan(100);
         });
     });
+
+    it('shows the frame tag rows it receives while frame tags are shown', () => {
+        render(FrameTimeline, {
+            props: {
+                ...defaultProps,
+                showFrameTags: true,
+                onShowFrameTagsChange: vi.fn(),
+                frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [0] }]
+            }
+        });
+
+        expect(screen.getByTitle('occluded · Frame 1')).toBeInTheDocument();
+    });
 });

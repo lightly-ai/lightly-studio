@@ -1,6 +1,10 @@
 <script lang="ts">
     import type { ComponentProps } from 'svelte';
-    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type {
+        SequenceTrackView,
+        TickTagView,
+        TickView
+    } from '$lib/api/lightly_studio_local/types.gen';
     import TimelineContent from './TimelineContent/TimelineContent.svelte';
     import TimelineTransportControls from './TimelineTransport/TimelineTransportControls.svelte';
     import TimelineBufferStatus from './TimelineBufferStatus/TimelineBufferStatus.svelte';
@@ -60,6 +64,10 @@
         onPreviousSequence?: () => void;
         /** Open the next sequence; the control is disabled when absent. */
         onNextSequence?: () => void;
+        showFrameTags?: boolean;
+        /** Set when frame tags can be shown: toggles the frame tag rows. */
+        onShowFrameTagsChange?: (checked: boolean) => void;
+        frameTags?: TickTagView[];
     }
 
     let {
@@ -88,7 +96,10 @@
         onSeekStart,
         onSeekEnd,
         onPreviousSequence,
-        onNextSequence
+        onNextSequence,
+        showFrameTags,
+        onShowFrameTagsChange,
+        frameTags
     }: Props = $props();
 
     const viewport = useTimelineViewport(
@@ -136,5 +147,8 @@
         {sequenceId}
         {onSeekStart}
         {onSeekEnd}
+        {showFrameTags}
+        {onShowFrameTagsChange}
+        {frameTags}
     />
 </div>

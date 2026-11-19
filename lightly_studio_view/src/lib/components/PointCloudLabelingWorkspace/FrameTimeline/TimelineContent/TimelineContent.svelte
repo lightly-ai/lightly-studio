@@ -1,5 +1,9 @@
 <script lang="ts">
-    import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
+    import type {
+        SequenceTrackView,
+        TickTagView,
+        TickView
+    } from '$lib/api/lightly_studio_local/types.gen';
     import TimelineTracks from '../TimelineTracks/TimelineTracks.svelte';
     import TrackTimelineRows from '../TrackTimelineRows/TrackTimelineRows.svelte';
     import { getTimelineViewport } from '../TimelineViewport';
@@ -25,6 +29,9 @@
         ) => void;
         onSeekStart?: () => void;
         onSeekEnd?: () => void;
+        showFrameTags?: boolean;
+        onShowFrameTagsChange?: (checked: boolean) => void;
+        frameTags?: TickTagView[];
     }
 
     let {
@@ -42,7 +49,10 @@
         onDeleteTrack,
         sequenceId,
         onSeekStart,
-        onSeekEnd
+        onSeekEnd,
+        showFrameTags,
+        onShowFrameTagsChange,
+        frameTags
     }: Props = $props();
     const viewport = getTimelineViewport();
     let container = $state<HTMLElement | null>(null);
@@ -120,6 +130,9 @@
             {sequenceId}
             onExtendStart={onSeekStart}
             onExtendEnd={onSeekEnd}
+            {showFrameTags}
+            {onShowFrameTagsChange}
+            {frameTags}
         />
         {#if activeIndex >= 0 && ticks.length > 0}
             <div
