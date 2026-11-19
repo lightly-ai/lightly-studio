@@ -7,7 +7,7 @@ from uuid import UUID
 
 from pydantic import Field
 from sqlalchemy.orm import Mapped, aliased
-from sqlmodel import col, select
+from sqlmodel import col, or_, select
 from sqlmodel.sql.expression import SelectOfScalar
 
 from lightly_studio.database import db_array
@@ -34,6 +34,13 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
     tag_ids: list[UUID] | None = Field(default=None, description="List of tag UUIDs")
     sample_ids: list[UUID] | None = Field(
         default=None, description="List of annotation sample UUIDs to restrict to"
+    )
+    include_unannotated_samples: bool = Field(
+        default=False,
+        description=(
+            "Also match parent samples without annotations in the selected annotation "
+            "sources. Applies only to parent sample queries."
+        ),
     )
 
     def apply(
@@ -72,28 +79,60 @@ class AnnotationsFilter(GridFilterBase, RegionSampleIdsFilter):
         This is used when the base query returns samples, but the filter itself
         is defined on annotations. The sample query is constrained to the parent
         sample ids of annotations matching this filter.
+
+        If `include_unannotated_samples` is set, parent samples without annotations in
+        the selected annotation sources also match. Without annotation predicates other
+        than the sources, only these parent samples match.
         """
+        is_matching = sample_id_column.in_(self.select_matching_parent_sample_ids())
+        if not self.include_unannotated_samples:
+            return query.where(is_matching)
+        is_unannotated = sample_id_column.not_in(self.select_annotated_parent_sample_ids())
+        if not self.has_annotation_predicates():
+            return query.where(is_unannotated)
+        return query.where(or_(is_matching, is_unannotated))
+
+    def select_matching_parent_sample_ids(self) -> SelectOfScalar[UUID]:
+        """Select the distinct parent sample ids of annotations that match this filter."""
         annotation_sample = aliased(SampleTable)
-        sample_ids_subquery = select(AnnotationBaseTable.parent_sample_id).join(
+        query = select(AnnotationBaseTable.parent_sample_id).join(
             annotation_sample,
             AnnotationBaseTable.sample,
         )
-        sample_ids_subquery = self._apply_annotation_filters(
-            query=sample_ids_subquery,
+        query = self._apply_annotation_filters(
+            query=query,
             annotation_sample=annotation_sample,
         )
-        return query.where(sample_id_column.in_(sample_ids_subquery.distinct()))
+        return query.distinct()
 
-    def _has_predicates(self) -> bool:
-        """Whether any filtering predicate is set."""
+    def select_annotated_parent_sample_ids(self) -> SelectOfScalar[UUID]:
+        """Select the parent sample ids of annotations in the selected annotation sources."""
+        query = select(AnnotationBaseTable.parent_sample_id)
+        if not self.collection_ids:
+            return query
+        return query.join(AnnotationBaseTable.sample).where(
+            db_array.in_array(column=col(SampleTable.collection_id), values=self.collection_ids)
+        )
+
+    def has_annotation_predicates(self) -> bool:
+        """Whether a predicate other than the annotation sources is set."""
         return bool(
-            self.collection_ids
-            or self.annotation_label_ids
+            self.annotation_label_ids
             or self.tag_ids
             or self.annotation_types
             or self.sample_ids
             or self.region_sample_ids is not None
         )
+
+    def is_source_only(self) -> bool:
+        """Whether every field except `collection_ids` has its default value."""
+        # Compare all fields, so that a field added later keeps the filter.
+        exclude = {"collection_ids"}
+        return self.model_dump(exclude=exclude) == AnnotationsFilter().model_dump(exclude=exclude)
+
+    def _has_predicates(self) -> bool:
+        """Whether any filtering predicate is set."""
+        return bool(self.collection_ids) or self.has_annotation_predicates()
 
     def _apply_annotation_filters(
         self,

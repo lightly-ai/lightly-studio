@@ -44,8 +44,9 @@ class FrameLocator:
             `timestamp`, in nanoseconds.
         topic: The topic the message was logged on.
         keyframe_log_time_ns: For video, the log time of the latest keyframe at or
-            before this frame, which is where decoding has to start. `None` for topics
-            that are not video, and for frames that no keyframe precedes.
+            before this frame, which is where decoding has to start. For an image, its
+            own log time, because each image is its own keyframe. `None` for topics
+            that are not video or images, and for frames that no keyframe precedes.
         schema_name: The name of the message schema, `None` without a schema.
     """
 

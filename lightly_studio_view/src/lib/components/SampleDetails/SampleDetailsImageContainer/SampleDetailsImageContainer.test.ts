@@ -74,28 +74,47 @@ describe('SampleDetailsImageContainer', () => {
     });
     afterEach(() => Reflect.deleteProperty(SVGElement.prototype, 'getBBox'));
 
-    it.each([false, true])(
-        'keeps colors and text when hiding annotations, class colors=%s',
-        async (byClass) => {
-            enforceColoringByClassStore.set(byClass);
-            const { rerender } = render(SampleDetailsImageContainer, {
-                props: defaultProps,
-                context: new Map<string, unknown>([
-                    ['annotation-label', {}],
-                    ['sample-details-toolbar-type', { status: 'cursor' }]
-                ])
-            });
-            const expectedColor = getColorByLabel(byClass ? 'car' : 'Reference', 1).color;
-            expect(screen.getAllByTestId('annotation_box')[0]).toHaveAttribute(
-                'stroke',
-                expectedColor
-            );
-            expect(screen.getAllByTestId('svg-annotation-text')).toHaveLength(2);
+    const renderContainer = () =>
+        render(SampleDetailsImageContainer, {
+            props: defaultProps,
+            context: new Map<string, unknown>([
+                ['annotation-label', {}],
+                ['sample-details-toolbar-type', { status: 'cursor' }]
+            ])
+        });
 
-            await rerender({ ...defaultProps, hideAnnotationsIds: new Set(['prediction']) });
-            expect(screen.getAllByTestId('annotation_box')).toHaveLength(1);
-            expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', expectedColor);
-            expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('car');
-        }
-    );
+    it('colors by class always when class colors are enforced, also with two sources shown', async () => {
+        enforceColoringByClassStore.set(true);
+        const { rerender } = renderContainer();
+        const classColor = getColorByLabel('car', 1).color;
+        expect(screen.getAllByTestId('annotation_box')[0]).toHaveAttribute('stroke', classColor);
+
+        await rerender({ ...defaultProps, hideAnnotationsIds: new Set(['prediction']) });
+        expect(screen.getByTestId('annotation_box')).toHaveAttribute('stroke', classColor);
+        // Source names on boxes follow the visible-source count too.
+        expect(screen.queryByTestId('svg-annotation-text')).not.toBeInTheDocument();
+    });
+
+    it('brings class colors back when hiding sources leaves one, and source colors when shown again', async () => {
+        enforceColoringByClassStore.set(false);
+        const { rerender } = renderContainer();
+        expect(screen.getAllByTestId('annotation_box')[0]).toHaveAttribute(
+            'stroke',
+            getColorByLabel('Reference', 1).color
+        );
+        expect(screen.getAllByTestId('svg-annotation-text')).toHaveLength(2);
+
+        await rerender({ ...defaultProps, hideAnnotationsIds: new Set(['prediction']) });
+        expect(screen.getAllByTestId('annotation_box')).toHaveLength(1);
+        expect(screen.getByTestId('annotation_box')).toHaveAttribute(
+            'stroke',
+            getColorByLabel('car', 1).color
+        );
+
+        await rerender({ ...defaultProps, hideAnnotationsIds: new Set() });
+        expect(screen.getAllByTestId('annotation_box')[0]).toHaveAttribute(
+            'stroke',
+            getColorByLabel('Reference', 1).color
+        );
+    });
 });

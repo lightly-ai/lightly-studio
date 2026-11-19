@@ -216,13 +216,12 @@ def test_create_annotation_with_collection_name(
     assert created_collection.parent_collection_id == collection.collection_id
 
 
-def test_create_annotation_classification_with_temporal_span(
+def test_create_annotation__rejects_temporal_span_on_image(
     db_session: Session,
     collection: CollectionTable,
     samples: list[ImageTable],
     annotation_labels: list[AnnotationLabelTable],
 ) -> None:
-    """Test to create a classification annotation carrying a temporal span."""
     annotation = AnnotationCreateParams(
         annotation_label_id=annotation_labels[0].annotation_label_id,
         annotation_type=AnnotationType.CLASSIFICATION,
@@ -231,12 +230,8 @@ def test_create_annotation_classification_with_temporal_span(
         start_time_s=2.5,
         end_time_s=8.0,
     )
-    result = create_annotation(session=db_session, annotation=annotation)
-
-    assert isinstance(result, AnnotationBaseTable)
-    assert result.temporal_span_details is not None
-    assert result.temporal_span_details.start_time_s == 2.5
-    assert result.temporal_span_details.end_time_s == 8.0
+    with pytest.raises(ValueError, match="require a video parent"):
+        create_annotation(session=db_session, annotation=annotation)
 
 
 def test_create_annotation__marks_evaluation_run_stale(db_session: Session) -> None:

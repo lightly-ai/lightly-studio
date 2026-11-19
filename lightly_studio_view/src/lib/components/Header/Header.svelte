@@ -9,7 +9,7 @@
     import Undo2 from '@lucide/svelte/icons/undo-2';
     import { page } from '$app/state';
     import NavigationMenu from '../NavigationMenu/NavigationMenu.svelte';
-    import { isImagesRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
+    import { isImagesRoute, isMcapSequencesRoute, isVideosRoute } from '$lib/routes';
     import { get } from 'svelte/store';
     import Menu from '$lib/components/Header/Menu.svelte';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
@@ -29,7 +29,7 @@
 
     const isImages = $derived(isImagesRoute(page.route.id));
     const isVideos = $derived(isVideosRoute(page.route.id));
-    const isPointClouds = $derived(isPointCloudsRoute(page.route.id));
+    const isPointClouds = $derived(isMcapSequencesRoute(page.route.id));
     const { settingsStore } = useSettings();
 
     const hasEmbeddingsQuery = useHasEmbeddings(() => ({ collectionId: collection.collection_id }));

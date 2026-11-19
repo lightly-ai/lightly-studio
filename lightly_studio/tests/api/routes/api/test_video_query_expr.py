@@ -15,7 +15,7 @@ from tests.helpers_resolvers import (
     create_caption,
     create_collection,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video_with_frames
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_with_frames
 
 
 @dataclass
@@ -183,3 +183,56 @@ def test_video_queries__reject_image_collection(
     )
     assert response.status_code == HTTP_STATUS_BAD_REQUEST
     assert "video collection" in response.json()["error"]
+
+
+def test_fps_comparison__float_bounds(db_session: Session, test_client: TestClient) -> None:
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+    for fps in (24, 29.97, 30):
+        create_video(
+            session=db_session,
+            collection_id=collection.collection_id,
+            video=VideoStub(path=f"/videos/{fps}.mp4", fps=fps),
+        )
+
+    all_names = ["24.mp4", "29.97.mp4", "30.mp4"]
+    for operator, bound, names in [
+        (">", 29.97, ["30.mp4"]),
+        (">=", 29.97, ["29.97.mp4", "30.mp4"]),
+        ("<", 1e100, all_names),
+        (">", -1e100, all_names),
+    ]:
+        expression = {
+            "type": "ordinal_float_expr",
+            "field": {"table": "video", "name": "fps"},
+            "operator": operator,
+            "value": bound,
+        }
+        response = test_client.post(
+            f"/api/collections/{collection.collection_id}/video/",
+            json={"filter": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+        )
+        assert response.status_code == HTTP_STATUS_OK
+        assert sorted(video["file_name"] for video in response.json()["data"]) == names
+
+
+def test_duration_comparison__bounds_near_zero(
+    test_client: TestClient, videos: VideoCollection
+) -> None:
+    for operator, bound, names in [
+        (">=", 1e-50, ["first.mp4", "narrow.mp4", "second.mp4"]),
+        ("<=", -1e-50, []),
+        ("==", 1e-50, []),
+        ("==", 0.0, ["empty.mp4"]),
+    ]:
+        expression = {
+            "type": "ordinal_float_expr",
+            "field": {"table": "video", "name": "duration_s"},
+            "operator": operator,
+            "value": bound,
+        }
+        response = test_client.post(
+            f"/api/collections/{videos.collection_id}/video/",
+            json={"filter": {"sample_filter": {"query_expr": {"match_expr": expression}}}},
+        )
+        assert response.status_code == HTTP_STATUS_OK
+        assert sorted(video["file_name"] for video in response.json()["data"]) == names
