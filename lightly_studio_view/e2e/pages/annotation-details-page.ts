@@ -147,7 +147,11 @@ export class AnnotationDetailsPage {
     }
 
     async clickEditLabelButton() {
-        await this.page.getByTestId('header-editing-mode-button').click();
+        await this.page.getByTestId('breadcrumb-edit-button').click();
+    }
+
+    async clickFinishEditingButton() {
+        await this.page.getByTestId('breadcrumb-finish-editing-button').click();
     }
 
     async setLabel(label: string) {
@@ -287,7 +291,7 @@ export class AnnotationDetailsPage {
                 response.status() === 200
         );
 
-        await this.page.getByTestId('header-reverse-action-button').click();
+        await this.page.getByTestId('breadcrumb-undo-button').click();
 
         await responsePromise;
         await this.page.waitForLoadState('networkidle');
