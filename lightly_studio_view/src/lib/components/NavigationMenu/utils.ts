@@ -2,15 +2,13 @@ import type { Component } from 'svelte';
 import type { CollectionView } from '$lib/api/lightly_studio_local';
 import { SampleType } from '$lib/api/lightly_studio_local';
 import { routeHelpers } from '$lib/routes';
-import {
-    Image,
-    WholeWord,
-    Video,
-    Frame,
-    ComponentIcon,
-    LayoutDashboard,
-    Box
-} from '@lucide/svelte';
+import Image from '@lucide/svelte/icons/image';
+import WholeWord from '@lucide/svelte/icons/whole-word';
+import Video from '@lucide/svelte/icons/video';
+import Frame from '@lucide/svelte/icons/frame';
+import ComponentIcon from '@lucide/svelte/icons/component';
+import LayoutDashboard from '@lucide/svelte/icons/layout-dashboard';
+import Box from '@lucide/svelte/icons/box';
 import type { BreadcrumbLevel, NavigationMenuItem } from './types';
 
 interface GetMenuItemParams {
@@ -63,7 +61,7 @@ const SAMPLE_TYPE_CONFIGS: Partial<Record<SampleType, SampleTypeConfig>> = {
     },
     [SampleType.SEQUENCE]: {
         icon: Box,
-        toHref: (d, t, c) => routeHelpers.toPointClouds(d, t, c),
+        toHref: (d, t, c) => routeHelpers.toMcapSequences(d, t, c),
         title: (name) => name || 'Point clouds'
     }
     // MCAP intentionally absent — no dedicated view

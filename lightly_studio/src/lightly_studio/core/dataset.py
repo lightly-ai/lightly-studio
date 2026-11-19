@@ -5,10 +5,10 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
-from typing import Any, Generic
+from typing import Any, Generic, Self, TypeVar
 from uuid import UUID
 
-from typing_extensions import Self, TypeVar
+from sqlmodel import Session
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
@@ -23,6 +23,7 @@ from lightly_studio.resolvers import (
     metadata_resolver,
     tag_resolver,
 )
+from lightly_studio.transport import active_transport
 
 logger = logging.getLogger(__name__)
 
@@ -41,9 +42,11 @@ class Dataset(Generic[T], ABC):
     def __init__(self, collection: CollectionTable) -> None:
         """Initialize a LightlyStudio Dataset."""
         self._inner = collection
-        # TODO(Michal, 09/2025): Do not store the session. Instead, use the
-        # dataset object session.
-        self.session = db_manager.persistent_session()
+
+    @property
+    def session(self) -> Session:
+        """The persistent database session. Remote mode has no database session."""
+        return db_manager.persistent_session()
 
     @staticmethod
     @abstractmethod
@@ -84,9 +87,7 @@ class Dataset(Generic[T], ABC):
         Returns:
             A DatasetQuery instance for querying samples in this dataset.
         """
-        return DatasetQuery(
-            dataset=self._inner, session=self.session, sample_class=self.sample_class()
-        )
+        return DatasetQuery(dataset=self._inner, session=None, sample_class=self.sample_class())
 
     def match(self, match_expression: MatchExpression) -> DatasetQuery[T]:
         """Create a query on the dataset and store a field condition for filtering.
@@ -291,22 +292,22 @@ def load_root_collection(
     if name is None:
         name = DEFAULT_DATASET_NAME
 
-    # Search for root collections only using parent_collection_id=None
-    collection_id = collection_resolver.get_by_name(
-        session=db_manager.persistent_session(), name=name, parent_collection_id=None
+    collection = active_transport.get_transport().collections.get_by_name(
+        name=name, parent_collection_id=None
     )
-    if collection_id is None:
+    if collection is None:
         return None
-
-    # Root collection exists, verify the sample type matches.
-    collection = collection_resolver.get_by_id(
-        session=db_manager.persistent_session(), collection_id=collection_id
-    )
-    assert collection is not None
     if collection.sample_type != sample_type:
         raise ValueError(
             f"Dataset with name '{name}' already exists with sample type "
             f"'{collection.sample_type.value}', but '{sample_type.value}' was requested."
         )
-
-    return collection
+    if active_transport.is_remote():
+        # A detached row, so that `Dataset` reads the fields of the collection.
+        return CollectionTable(**collection.model_dump(exclude={"group_component_definition"}))
+    table = collection_resolver.get_by_id(
+        session=db_manager.persistent_session(), collection_id=collection.collection_id
+    )
+    if table is None:
+        raise RuntimeError("Expected `collection` to be set.")
+    return table

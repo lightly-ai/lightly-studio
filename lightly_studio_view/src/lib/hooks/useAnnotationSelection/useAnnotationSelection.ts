@@ -20,7 +20,6 @@ export function useAnnotationSelection() {
         annotations
     }: {
         annotationId: string;
-        collectionId: string;
         annotations: AnnotationView[];
     }) {
         const annotation = annotations.find((a) => a.sample_id === annotationId);

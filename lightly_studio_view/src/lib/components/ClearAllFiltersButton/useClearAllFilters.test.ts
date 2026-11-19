@@ -4,6 +4,7 @@ import {
     useAnnotationCollectionsFilter,
     useGlobalStorage,
     useTags,
+    useUnannotatedSamplesFilter,
     useVideoFramesBounds
 } from '$lib/hooks';
 import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
@@ -26,6 +27,7 @@ describe('useClearAllFilters', () => {
     const videoBounds = useVideoBounds();
     const framesBounds = useVideoFramesBounds();
     const sources = useAnnotationCollectionsFilter();
+    const unannotatedSamples = useUnannotatedSamplesFilter();
     const fullVideoBounds = {
         width: { min: 0, max: 1920 },
         height: { min: 0, max: 1080 },
@@ -37,6 +39,7 @@ describe('useClearAllFilters', () => {
     beforeEach(() => {
         storage = useGlobalStorage();
         storage.clearSelectedAnnotationFilterIds();
+        unannotatedSamples.setIncludeUnannotatedSamples(false);
         storage.updateMetadataBounds({ score: { min: 0, max: 1 } });
         storage.updateMetadataValues({ score: { min: 0, max: 1 } });
         storage.updateCategoricalMetadataValues({});
@@ -70,6 +73,17 @@ describe('useClearAllFilters', () => {
         expect(get(hasActiveFilters)).toBe(false);
         expect(get(storage.metadataValues)).toEqual({ score: { min: 0, max: 1 } });
         expect(get(storage.getSelectedSampleIds(collectionId)).has('sample-1')).toBe(true);
+    });
+
+    it('detects and clears the no annotations filter', () => {
+        unannotatedSamples.setIncludeUnannotatedSamples(true);
+
+        const { hasActiveFilters, clearAllFilters } = useClearAllFilters(imagesGrid);
+        expect(get(hasActiveFilters)).toBe(true);
+
+        clearAllFilters();
+
+        expect(get(unannotatedSamples.includeUnannotatedSamples)).toBe(false);
     });
 
     it('clears caption tags and metadata while preserving hidden image filters', () => {

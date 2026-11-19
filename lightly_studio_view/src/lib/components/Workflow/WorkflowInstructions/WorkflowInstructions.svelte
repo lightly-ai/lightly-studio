@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Segment } from '$lib/components';
     import type { WorkflowFile } from '$lib/hooks';
-    import { FileText } from '@lucide/svelte';
+    import FileText from '@lucide/svelte/icons/file-text';
 
     interface Props {
         file: Pick<

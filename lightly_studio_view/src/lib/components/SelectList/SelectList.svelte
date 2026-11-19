@@ -1,9 +1,7 @@
 <script lang="ts">
-    import {
-        Check as CheckIcon,
-        ChevronsUpDown as ChevronsUpDownIcon,
-        LoaderCircle as Loader2Icon
-    } from '@lucide/svelte';
+    import CheckIcon from '@lucide/svelte/icons/check';
+    import ChevronsUpDownIcon from '@lucide/svelte/icons/chevrons-up-down';
+    import Loader2Icon from '@lucide/svelte/icons/loader-circle';
     import { tick, untrack, type Snippet } from 'svelte';
     import * as Command from '$lib/components/ui/command/index.js';
     import * as Popover from '$lib/components/ui/popover/index.js';
@@ -42,10 +40,12 @@
         autoFocus = false,
         disabled = false,
         isLoading = false,
+        allowCreate = true,
         onKeyboardConfirm,
         onCreate,
-        allowCreate = true,
-        labelledBy
+        labelledBy,
+        pinnedTop = [],
+        pinnedBottom = []
     }: {
         placeholder?: string;
         name?: string;
@@ -57,15 +57,16 @@
         autoFocus?: boolean;
         selectedItem?: ListItem;
         items: ListItem[];
+        pinnedTop?: ListItem[];
+        pinnedBottom?: ListItem[];
         notFound?: Snippet<[{ inputValue: string }]>;
         onSelect?: (item: ListItem) => void;
         disabled?: boolean;
         isLoading?: boolean;
+        allowCreate?: boolean;
         onKeyboardConfirm?: (item: ListItem) => void;
         // Called when the user creates an item from the typed text, before onSelect.
         onCreate?: (item: ListItem) => void;
-        // When false, users can only pick existing items.
-        allowCreate?: boolean;
     } = $props();
 
     // Part of the trigger's accessible name, so it reads as "<field label> <selected value>".
@@ -75,6 +76,7 @@
     let inputValue = $state('');
     let highlightedValue = $state('');
 
+    const allItems = $derived([...pinnedTop, ...items, ...pinnedBottom]);
     const selectedValue = $derived(selectedItem?.value);
 
     $effect(() => {
@@ -93,7 +95,7 @@
     // Returns the item that matches the text, ignoring case, or creates a new one.
     // Returns undefined when there is no match and creating is not allowed.
     const getOrCreateItem = (text: string): ListItem | undefined => {
-        const existingItem = items.find((i) => i.value.toLowerCase() === text.toLowerCase());
+        const existingItem = allItems.find((i) => i.value.toLowerCase() === text.toLowerCase());
         if (existingItem) return existingItem;
         if (!allowCreate) return undefined;
 
@@ -117,7 +119,7 @@
     // Enter on a highlighted item is left to the command list.
     const getEnterItem = (): ListItem | undefined => {
         if (onKeyboardConfirm) {
-            return items.find((item) => item.value === highlightedValue) ?? getTypedItem();
+            return allItems.find((item) => item.value === highlightedValue) ?? getTypedItem();
         }
         return highlightedValue ? undefined : getTypedItem();
     };
@@ -149,6 +151,13 @@
         inputRef.focus();
     };
 </script>
+
+{#snippet pinnedItem(item: ListItem)}
+    <Command.Item value={item.value} onSelect={() => handleOnSelect(item)} forceMount keywords={[]}>
+        <CheckIcon class={cn(selectedValue !== item.value && 'text-transparent')} />
+        <span class="min-w-0 flex-1 truncate" title={item.label}>{item.label}</span>
+    </Command.Item>
+{/snippet}
 
 <Popover.Root bind:open>
     <Popover.Trigger bind:ref={triggerRef}>
@@ -203,6 +212,9 @@
                         Item not found
                     {/if}
                 </Command.Empty>
+                {#each pinnedTop as item (item.value)}
+                    {@render pinnedItem(item)}
+                {/each}
                 <Command.Group value={name}>
                     {#each items as item (item.value)}
                         <Command.Item value={item.value} onSelect={() => handleOnSelect(item)}>
@@ -215,6 +227,9 @@
                         </Command.Item>
                     {/each}
                 </Command.Group>
+                {#each pinnedBottom as item (item.value)}
+                    {@render pinnedItem(item)}
+                {/each}
                 {#if allowCreate && inputValue.trim()}
                     <div class="border-t">
                         <Command.Item

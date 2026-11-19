@@ -33,6 +33,27 @@ describe('buildMcapSequenceFilter', () => {
             buildMcapSequenceFilter({ collection_id: 'collection-1', workflow_states: [] })
         ).toEqual({ filter_type: 'mcap_sequence' });
     });
+
+    it('puts the selected labels into the group annotation filter', () => {
+        expect(
+            buildMcapSequenceFilter({
+                collection_id: 'collection-1',
+                annotation_label_ids: ['label-1']
+            })
+        ).toEqual({
+            filter_type: 'mcap_sequence',
+            group_annotation_filter: {
+                filter_type: 'annotations',
+                annotation_label_ids: ['label-1']
+            }
+        });
+    });
+
+    it('omits the group annotation filter without selected labels', () => {
+        expect(
+            buildMcapSequenceFilter({ collection_id: 'collection-1', annotation_label_ids: [] })
+        ).toEqual({ filter_type: 'mcap_sequence' });
+    });
 });
 
 describe('useMcapSequenceFilters', () => {
@@ -70,6 +91,20 @@ describe('useMcapSequenceFilters', () => {
         expect(get(mcapSequenceFilter)?.sample_filter).toEqual({ workflow_states: ['in_review'] });
 
         updateWorkflowStates(undefined);
+        expect(get(mcapSequenceFilter)).toEqual({ filter_type: 'mcap_sequence' });
+    });
+
+    it('resets the selected labels when the collection changes', () => {
+        const { mcapSequenceFilter, setCollectionId, updateAnnotationLabelIds } =
+            useMcapSequenceFilters();
+
+        setCollectionId('collection-1');
+        updateAnnotationLabelIds(['label-1']);
+        expect(get(mcapSequenceFilter)?.group_annotation_filter?.annotation_label_ids).toEqual([
+            'label-1'
+        ]);
+
+        setCollectionId('collection-2');
         expect(get(mcapSequenceFilter)).toEqual({ filter_type: 'mcap_sequence' });
     });
 });

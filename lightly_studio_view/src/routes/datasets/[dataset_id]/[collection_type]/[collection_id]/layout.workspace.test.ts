@@ -10,6 +10,8 @@ import type { PanelType } from '$lib/hooks/useGlobalStorage';
 import {
     useImageAnnotationCounts,
     useImageAnnotationCountsBySampleTags,
+    useMcapSequenceAnnotationCounts,
+    useMcapSequenceFilters,
     useMetadataDistributionsBySampleTags
 } from '$lib/hooks';
 import { useAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
@@ -30,11 +32,13 @@ vi.mock('$lib/workers/maskRendererPool', () => ({
 vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', () => ({
     clearAnnotationPlotSelection: vi.fn()
 }));
-vi.mock('$lib/utils/buildImageFilter', () => ({
-    buildImageFilter: vi.fn(() => ({}))
+vi.mock('./imageAnnotationCountsFilter', () => ({
+    buildImageAnnotationCountsFilter: vi.fn(() => ({}))
+}));
+vi.mock('./videoAnnotationCountsFilter', () => ({
+    buildVideoAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/utils/buildAnnotationCountsFilters', () => ({
-    buildVideoAnnotationCountsFilter: vi.fn(() => ({})),
     buildVideoFrameAnnotationCountsFilter: vi.fn(() => ({}))
 }));
 vi.mock('$lib/components/GridItem', () => ({
@@ -118,6 +122,8 @@ vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
         annotationFilterRows: [],
         toggleAnnotationFilterSelection: vi.fn(),
         setAnnotationCounts: vi.fn(),
+        setUnannotatedSampleCount: vi.fn(),
+        includeUnannotatedSamples: writable(false),
         pruneInvalidSelections: vi.fn()
     }))
 }));
@@ -150,10 +156,20 @@ vi.mock('$lib/hooks/useVideosBounds/useVideosBounds.js', () => ({
     useVideoBounds: vi.fn(() => ({ videoBoundsValues: writable({}) }))
 }));
 vi.mock('$lib/hooks/useImageFilters/useImageFilters', () => ({
-    useImageFilters: vi.fn(() => ({ imageFilter: writable(null) }))
+    useImageFilters: vi.fn(() => ({
+        imageFilter: writable(null),
+        filterParams: writable(null),
+        imageQueryExpression: writable(null),
+        updateQueryExpr: vi.fn()
+    }))
 }));
 vi.mock('$lib/hooks/useVideoFilters/useVideoFilters', () => ({
-    useVideoFilters: vi.fn(() => ({ videoFilter: writable(null), filterParams: writable(null) })),
+    useVideoFilters: vi.fn(() => ({
+        videoFilter: writable(null),
+        filterParams: writable(null),
+        videoQueryExpression: writable(null),
+        updateQueryExpr: vi.fn()
+    })),
     buildVideoFilter: vi.fn(() => null)
 }));
 vi.mock('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter', () => ({
@@ -168,11 +184,13 @@ vi.mock('$lib/hooks', async () => ({
     ...(await import('$lib/hooks/useVideoFilters/useVideoFilters')),
     ...(await import('$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter')),
     ...(await import('$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount.js')),
+    ...(await import('$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters')),
     useSelectionSummary: vi.fn(() => ({
         selectedCount: writable(0),
         clearSelection: vi.fn()
     })),
     useImageAnnotationCounts: vi.fn(() => ({ data: undefined })),
+    useMcapSequenceAnnotationCounts: vi.fn(() => ({ data: undefined })),
     useImageAnnotationCountsQueryKey: ['imageAnnotationCounts'],
     useNumericMetadataDistribution: vi.fn(() => ({
         data: { score: { binEdges: [0, 1], counts: [1] } }
@@ -189,6 +207,8 @@ vi.mock('$lib/hooks', async () => ({
     useTrackSampleInspected: vi.fn(),
     useSeedAnnotationSourceFilter: vi.fn(),
     setAnnotationClasses: vi.fn(),
+    useUnannotatedSampleCount: vi.fn(() => ({ data: undefined })),
+    useUnannotatedSamplesFilter: vi.fn(() => ({ scopeToCollection: vi.fn() })),
     useImageAnnotationCountsBySampleTags: vi.fn(() => ({
         data: undefined,
         isFetching: false,
@@ -382,6 +402,37 @@ describe('annotation label pruning', () => {
     });
 });
 
+describe('mcap-sequences annotation counts', () => {
+    it('feeds the sequence counts to the label filter', async () => {
+        const sequenceCounts = [{ label_name: 'car', total_count: 2, current_count: 1 }];
+        vi.mocked(useMcapSequenceAnnotationCounts).mockReturnValue({
+            data: sequenceCounts,
+            isFetching: false
+        } as unknown as ReturnType<typeof useMcapSequenceAnnotationCounts>);
+        setPageRoute(APP_ROUTES.mcapSequences);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const { setAnnotationCounts } = vi.mocked(useAnnotationsFilter).mock.results[0].value;
+        expect(setAnnotationCounts).toHaveBeenCalledWith(sequenceCounts);
+    });
+
+    it('waits for the sequence filter of the shown collection', async () => {
+        // The grid page sets the filter collection after the layout reads the new route.
+        useMcapSequenceFilters().setCollectionId('previous-collection-id');
+        setPageRoute(APP_ROUTES.mcapSequences);
+
+        render(LayoutWorkspaceTestWrapper, { props: defaultProps });
+        await tick();
+
+        const [[getParams]] = vi.mocked(useMcapSequenceAnnotationCounts).mock.calls;
+        expect(getParams().enabled).toBe(false);
+        useMcapSequenceFilters().setCollectionId('test-collection-id');
+        expect(getParams().enabled).toBe(true);
+    });
+});
+
 const defaultProps = {
     data: {
         collection: {
@@ -462,16 +513,16 @@ describe('+layout.svelte collection-grid workspace', () => {
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
-    it('renders the filter panel on point-clouds route', async () => {
-        setPageRoute(APP_ROUTES.pointClouds);
+    it('renders the filter panel on mcap-sequences route', async () => {
+        setPageRoute(APP_ROUTES.mcapSequences);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
-    it('shows the workflow status filter on the images and point-clouds routes only', async () => {
-        for (const route of [APP_ROUTES.images, APP_ROUTES.pointClouds]) {
+    it('shows the workflow status filter on the images and mcap-sequences routes only', async () => {
+        for (const route of [APP_ROUTES.images, APP_ROUTES.mcapSequences]) {
             setPageRoute(route);
             const { unmount } = render(LayoutWorkspaceTestWrapper, { props: defaultProps });
             await tick();
@@ -576,7 +627,7 @@ describe('+layout.svelte global header', () => {
         expect(screen.queryByTestId('global-header')).not.toBeInTheDocument();
     });
 
-    it.each([APP_ROUTES.pointClouds, APP_ROUTES.videoDetails, APP_ROUTES.images])(
+    it.each([APP_ROUTES.mcapSequences, APP_ROUTES.videoDetails, APP_ROUTES.images])(
         'keeps the global header on %s',
         async (route) => {
             setPageRoute(route);
@@ -684,14 +735,14 @@ describe('right panel – main content stability', () => {
         expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
     });
 
-    it('queryEditor panel is not shown on videos route even when requested', async () => {
+    it('opens the query editor panel on the videos route', async () => {
         setPageRoute(APP_ROUTES.videos);
         mockActivePanel.set('queryEditor');
 
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 
-        expect(screen.queryByTestId('pane-group-layout')).not.toBeInTheDocument();
+        expect(screen.queryByTestId('pane-group-layout')).toBeInTheDocument();
     });
 });
 

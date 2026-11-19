@@ -8,7 +8,10 @@
         BreadcrumbSeparator
     } from '$lib/components/ui/breadcrumb/index.js';
     import type { WorkflowFile } from '$lib/hooks';
-    import { FileImage, FolderOpen, Home, Layers } from '@lucide/svelte';
+    import FileImage from '@lucide/svelte/icons/file-image';
+    import FolderOpen from '@lucide/svelte/icons/folder-open';
+    import Home from '@lucide/svelte/icons/home';
+    import Layers from '@lucide/svelte/icons/layers';
 
     interface Props {
         file: Pick<

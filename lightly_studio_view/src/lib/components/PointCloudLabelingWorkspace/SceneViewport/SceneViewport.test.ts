@@ -10,7 +10,8 @@ const transforms = {
     begin: vi.fn(),
     preview: vi.fn(),
     cancel: vi.fn(),
-    commit: vi.fn()
+    commit: vi.fn(),
+    discard: vi.fn()
 };
 
 vi.mock('@threlte/core', () => ({ Canvas: () => {} }));
@@ -20,10 +21,6 @@ vi.mock('./SceneNavigationControls.svelte', () => ({ default: () => {} }));
 vi.mock('$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidLayer.svelte', () => ({
     default: () => {}
 }));
-vi.mock(
-    '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/CuboidTooltip/CuboidTooltipOverlay.svelte',
-    () => ({ default: () => {} })
-);
 vi.mock('$lib/components/PointCloudLabelingWorkspace/GroundPlane/GroundPlane.svelte', () => ({
     default: () => {}
 }));

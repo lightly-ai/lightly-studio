@@ -27,6 +27,7 @@ from lightly_studio.resolvers import (
     sequence_resolver,
     tag_resolver,
 )
+from lightly_studio.resolvers.annotation_resolver import parent_track_lookup
 from lightly_studio.services.recording_service import (
     cuboids_in_frame,
     load_dynamic_transforms,
@@ -173,8 +174,15 @@ def _load_cuboid_views(
         annotation_types=[AnnotationType.CUBOID_3D],
         load_view_relationships=True,
     )
+    parent_track_class_names = parent_track_lookup.fetch_parent_track_class_names(
+        session=session, annotations=annotations
+    )
     views = [
-        AnnotationView.from_annotation_table(annotation=annotation) for annotation in annotations
+        AnnotationView.from_annotation_table(
+            annotation=annotation,
+            parent_track_class_names=parent_track_class_names,
+        )
+        for annotation in annotations
     ]
     _validate_cuboid_annotations(views=views)
     views_by_sample_id: dict[UUID, list[AnnotationView]] = {}
@@ -324,8 +332,12 @@ def _tick_message(
 def _to_cuboid_label(view: AnnotationView, sweep_timestamp_ns: int) -> CuboidLabel:
     """Converts one mapped cuboid annotation to a `CuboidLabel`."""
     cuboid = view.cuboid_3d_details
-    assert cuboid is not None  # Only CUBOID_3D annotations are loaded.
-    assert view.object_track_number is not None  # Checked by `_validate_cuboid_annotations`.
+    # Only CUBOID_3D annotations are loaded.
+    if cuboid is None:
+        raise RuntimeError("Expected `cuboid` to be set.")
+    # Checked by `_validate_cuboid_annotations`.
+    if view.object_track_number is None:
+        raise RuntimeError("Expected `view.object_track_number` to be set.")
     return CuboidLabel(
         timestamp_ns=sweep_timestamp_ns,
         frame_id=cuboid.frame_id,

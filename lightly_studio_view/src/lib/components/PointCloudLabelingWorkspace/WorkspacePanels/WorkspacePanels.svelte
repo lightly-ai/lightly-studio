@@ -5,9 +5,15 @@
     import WorkspaceStatusPanel from '../WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     import { useSidePanel } from '../useSidePanel/useSidePanel.svelte';
+    import { hasMinimumRole, useAuth } from '$lib/hooks';
     const controller = useWorkspaceControllerContext();
-    const { workspace, editing, data, presentation } = controller;
+    const { workspace, editing, data, presentation, targetSource } = controller;
     const sidePanel = useSidePanel(() => editing.selectedCuboidId);
+    const { user } = useAuth();
+    // The source for new cuboids is picked in edit mode only, like the other editing controls.
+    const canPickSource = $derived(
+        hasMinimumRole(user?.role, 'labeler') && presentation.isEditingMode
+    );
 </script>
 
 <div class="flex min-h-0 flex-1">
@@ -54,9 +60,18 @@
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
                     onLabelChange={editing.handleLabelChange}
+                    onTrackChange={editing.handleTrackChange}
                     onDeleteCuboid={presentation.isEditingMode
                         ? editing.handleDeleteCuboid
                         : undefined}
+                    targetSourceName={targetSource.targetSource}
+                    pendingSourceName={targetSource.typedSource}
+                    needsPick={targetSource.needsPick}
+                    onPickSource={canPickSource ? targetSource.setTarget : undefined}
+                    isCuboidHidden={controller.visibility.isCuboidHidden}
+                    isSourceHidden={controller.visibility.isSourceHidden}
+                    onToggleTrackVisibility={controller.visibility.toggleTrack}
+                    onToggleSourceVisibility={controller.visibility.toggleSource}
                 />
             </Pane>
         </PaneGroup>

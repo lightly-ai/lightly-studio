@@ -1,13 +1,13 @@
 <script lang="ts">
     import { useVideos } from '$lib/hooks/useVideos/useVideos.svelte';
-    import { page } from '$app/stores';
+    import { page } from '$app/state';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import VideoItem from '$lib/components/VideoItem/VideoItem.svelte';
     import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { useVideoBounds } from '$lib/hooks/useVideosBounds/useVideosBounds';
-    import { buildVideoFilter, useVideoFilters } from '$lib/hooks';
+    import { buildVideoFilter, useUnannotatedSamplesFilter, useVideoFilters } from '$lib/hooks';
     import { GridContainer } from '$lib/components/GridContainer';
     import { Grid } from '$lib/components/Grid';
     import { GridItem } from '$lib/components/GridItem';
@@ -19,7 +19,7 @@
     import { onMount } from 'svelte';
     import { useScrollRestoration } from '$lib/hooks/useScrollRestoration/useScrollRestoration';
 
-    const collectionId = $derived($page.params.collection_id!);
+    const collectionId = $derived(page.params.collection_id!);
     const { tagsSelected } = $derived.by(() =>
         useTags({
             collection_id: collectionId
@@ -30,6 +30,7 @@
     const { selectedAnnotationFilterIdsArray: selectedAnnotationsFilterIds } =
         useSelectedAnnotationsFilter();
     const { videoBoundsValues } = $derived.by(() => useVideoBounds(collectionId));
+    const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
 
     const { textEmbedding, getSelectedSampleIds, toggleSampleSelection, sampleSize } =
         useGlobalStorage();
@@ -41,6 +42,7 @@
             annotation_frames_label_ids: $selectedAnnotationsFilterIds?.length
                 ? $selectedAnnotationsFilterIds
                 : undefined,
+            include_unannotated_samples: $includeUnannotatedSamples || undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             metadata_values: $metadataValues,
             categorical_metadata_values: $categoricalMetadataValues
@@ -48,7 +50,8 @@
         video_bounds: $videoBoundsValues
     });
 
-    const { filterParams, videoSortBy, updateFilterParams } = useVideoFilters();
+    const { filterParams, videoQueryExpression, videoSortBy, updateFilterParams } =
+        useVideoFilters();
 
     $effect(() => {
         // Synchronize the global filter parameters with the local videos parameters
@@ -71,7 +74,9 @@
 
     const currentVideoFilter = $derived.by(() => {
         const paramsWithSelection = mergeExternalFilters(videosParams, $filterParams);
-        return buildVideoFilter(paramsWithSelection) ?? {};
+        const queryExpression =
+            $filterParams?.collection_id === collectionId ? $videoQueryExpression : null;
+        return buildVideoFilter(paramsWithSelection, queryExpression) ?? {};
     });
 
     const { data, query, loadMore, totalCount } = useVideos(() => ({
@@ -122,7 +127,13 @@
 
     // TODO(Mihnea, 09/2026): hash the effective metadata filters, not raw $filterParams.
     // Same fix as Images.svelte's filterHash.
-    const filterHash = $derived(JSON.stringify({ filters: $filterParams, sortBy: $videoSortBy }));
+    const filterHash = $derived(
+        JSON.stringify({
+            filters: $filterParams,
+            query: $videoQueryExpression?.query_expr,
+            sortBy: $videoSortBy
+        })
+    );
     const { initialize, savePosition, getRestoredPosition } = useScrollRestoration('frames_scroll');
     onMount(async () => {
         initialize();

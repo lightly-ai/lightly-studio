@@ -2,7 +2,8 @@
     import { Button } from '$lib/components';
     import { Tooltip } from '$lib/components/ui/tooltip';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
-    import { PanelRightClose, PanelRightOpen } from '@lucide/svelte';
+    import PanelRightClose from '@lucide/svelte/icons/panel-right-close';
+    import PanelRightOpen from '@lucide/svelte/icons/panel-right-open';
 
     const { isSampleDetailsSidePanelCollapsed, toggleSampleDetailsSidePanelCollapsed } =
         useGlobalStorage();

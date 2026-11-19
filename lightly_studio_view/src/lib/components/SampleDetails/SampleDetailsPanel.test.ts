@@ -51,9 +51,7 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         lastAnnotationBrushSize: writable({}),
         imageBrightness: writable(0),
         imageContrast: writable(0),
-        maskOpacity: writable(0),
-        lastAnnotationLabel: writable({}),
-        lastAnnotationSource: writable({})
+        maskOpacity: writable(0)
     })
 }));
 
@@ -100,6 +98,7 @@ vi.mock('$lib/hooks', () => ({
         reversibleActions: writable([]),
         executeReversibleAction: vi.fn()
     }),
+    useAnnotationTarget: vi.fn(),
     useOperatorsDialog: () => ({ openOperatorsDialog: vi.fn() }),
     useSettings: () => ({ settingsStore: writable({ key_toggle_edit_mode: 'e' }) }),
     useDeleteAnnotationWithUndo: () => ({ deleteWithUndo }),
@@ -120,6 +119,10 @@ vi.mock('$lib/hooks/useAuth/hasMinimumRole', () => ({
 
 vi.mock('svelte-sonner', () => ({
     toast: { success: vi.fn(), error: vi.fn() }
+}));
+
+vi.mock('$lib/hooks/useAnnotationTarget/useAnnotationTarget.svelte', () => ({
+    useAnnotationTarget: vi.fn()
 }));
 
 vi.mock('$app/navigation', () => ({ afterNavigate: vi.fn() }));

@@ -1,6 +1,6 @@
 <script lang="ts">
     import type { WorkflowFile } from '$lib/hooks';
-    import { Lock } from '@lucide/svelte';
+    import Lock from '@lucide/svelte/icons/lock';
     import { readOnlyText } from '../workflowFileTexts';
 
     interface Props {

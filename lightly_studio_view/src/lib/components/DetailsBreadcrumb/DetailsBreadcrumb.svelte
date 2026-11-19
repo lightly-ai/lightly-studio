@@ -9,7 +9,10 @@
     } from '$lib/components/ui/breadcrumb/index.js';
     import { routeHelpers } from '$lib/routes';
     import { useCanNavigateDataset } from '$lib/hooks/useCanNavigateDataset/useCanNavigateDataset';
-    import { Home, Database, ComponentIcon, SquareDashed } from '@lucide/svelte';
+    import Home from '@lucide/svelte/icons/home';
+    import Database from '@lucide/svelte/icons/database';
+    import ComponentIcon from '@lucide/svelte/icons/component';
+    import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import type { CollectionView } from '$lib/api/lightly_studio_local';
     import { page } from '$app/state';
 

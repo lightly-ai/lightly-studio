@@ -11,6 +11,8 @@ interface CuboidLayerState {
     transforms: ReturnType<typeof createCuboidTransformState>;
     /** Tool currently selected for editing. */
     activeTool: WorkspaceTool;
+    /** Whether annotation editing is enabled. */
+    isEditingMode: boolean;
     /** Camera orientation used to choose editing handles. */
     cameraMode: CameraMode;
     /** Tracks overlapping hover and selection hits. */

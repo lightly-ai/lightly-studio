@@ -21,13 +21,14 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import ImageView, ImageViewsWithCount
 from lightly_studio.models.metadata import HistogramView
 from lightly_studio.models.sort import ImageSortExpr
+from lightly_studio.models.unannotated_sample_count import UnannotatedSampleCount
 from lightly_studio.resolvers import (
     image_resolver,
 )
 from lightly_studio.resolvers.image_filter import (
     ImageFilter,
 )
-from lightly_studio.resolvers.image_resolver import ImageField
+from lightly_studio.resolvers.image_resolver import ImageField, load_options
 from lightly_studio.resolvers.image_resolver.annotation_count_types import (
     AnnotationCountMode,
 )
@@ -178,7 +179,11 @@ def read_image(
     sample_id: Annotated[UUID, Path(title="Sample Id")],
 ) -> ImageView:
     """Retrieve a single sample from the database."""
-    image = image_resolver.get_by_id(session=session, sample_id=sample_id)
+    image = image_resolver.get_by_id(
+        session=session,
+        sample_id=sample_id,
+        load_option=load_options.annotation_detail_load_options(),
+    )
     if not image:
         raise HTTPException(status_code=HTTP_STATUS_NOT_FOUND, detail="Sample not found")
 
@@ -258,3 +263,27 @@ def count_image_annotations_by_collection(
         }
         for label_name, current_count, total_count in counts
     ]
+
+
+class ReadCountUnannotatedImagesRequest(BaseModel):
+    """Request body for counting the images without annotations."""
+
+    filter: ImageFilter | None = None
+
+
+@image_router.post("/collections/{collection_id}/images/unannotated/count")
+def count_unannotated_images(
+    collection: Annotated[
+        CollectionTable,
+        Path(title="collection Id"),
+        Depends(get_and_validate_collection_id),
+    ],
+    session: SessionDep,
+    body: ReadCountUnannotatedImagesRequest,
+) -> UnannotatedSampleCount:
+    """Count the images without annotations, in total and for the filter."""
+    return image_resolver.count_unannotated_images(
+        session=session,
+        collection_id=collection.collection_id,
+        image_filter=body.filter,
+    )

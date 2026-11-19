@@ -1,5 +1,6 @@
 <script lang="ts">
-    import { Sun, RotateCcw } from '@lucide/svelte';
+    import Sun from '@lucide/svelte/icons/sun';
+    import RotateCcw from '@lucide/svelte/icons/rotate-ccw';
     import { Button } from '$lib/components/ui/button';
     import { Popover, PopoverContent, PopoverTrigger } from '$lib/components/ui/popover';
     import { Tooltip } from '$lib/components/ui/tooltip';

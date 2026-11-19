@@ -1,7 +1,9 @@
 import { render, fireEvent } from '@testing-library/svelte';
 import { describe, it, expect, vi } from 'vitest';
 import Toolbar from './Toolbar.svelte';
-import { MousePointer2, Hand, Box } from '@lucide/svelte';
+import MousePointer2 from '@lucide/svelte/icons/mouse-pointer-2';
+import Hand from '@lucide/svelte/icons/hand';
+import Box from '@lucide/svelte/icons/box';
 
 const defaultProps = {
     items: [

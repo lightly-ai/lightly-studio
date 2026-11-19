@@ -12,6 +12,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver
 from tests.helpers_resolvers import (
     AnnotationDetails,
@@ -20,6 +21,7 @@ from tests.helpers_resolvers import (
     create_collection,
     create_image,
 )
+from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 def test_update_label_by_object_track_id(db_session: Session) -> None:
@@ -160,7 +162,7 @@ def test_update_label_by_object_track_id__preserves_temporal_span(
     db_session: Session,
 ) -> None:
     """Temporal span data is not modified when the annotation label changes."""
-    collection = create_collection(session=db_session)
+    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
     root_collection_id = collection.collection_id
     old_label = create_annotation_label(
         session=db_session, root_collection_id=root_collection_id, label_name="cat"
@@ -169,9 +171,7 @@ def test_update_label_by_object_track_id__preserves_temporal_span(
         session=db_session, root_collection_id=root_collection_id, label_name="dog"
     )
 
-    img = create_image(
-        session=db_session, collection_id=root_collection_id, file_path_abs="/tmp/1.png"
-    )
+    video = create_video(session=db_session, collection_id=root_collection_id, video=VideoStub())
 
     track_id = object_track_resolver.create_many(
         session=db_session,
@@ -183,7 +183,7 @@ def test_update_label_by_object_track_id__preserves_temporal_span(
         collection_id=root_collection_id,
         annotations=[
             AnnotationDetails(
-                sample_id=img.sample_id,
+                sample_id=video.sample_id,
                 annotation_label_id=old_label.annotation_label_id,
                 annotation_type=AnnotationType.CLASSIFICATION,
                 object_track_id=track_id,

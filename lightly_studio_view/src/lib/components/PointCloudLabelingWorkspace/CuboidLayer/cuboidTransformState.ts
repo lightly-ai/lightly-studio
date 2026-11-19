@@ -26,6 +26,8 @@ interface CuboidTransformState {
     preview(transform: Transform): void;
     cancel(annotationId: string): void;
     commit(transform: Transform): Promise<void>;
+    /** Drops the edit of a cuboid, so the source geometry shows. Undo restores this geometry. */
+    discard(annotationId: string): void;
 }
 
 /** Keeps displayed transforms stable while edits and server refreshes overlap. */
@@ -121,6 +123,11 @@ export function createCuboidTransformState({ onTransform }: Params): CuboidTrans
                 entry.status = 'failed';
             }
             if (working.get(annotation.id) === entry) publish();
+        },
+
+        discard(annotationId) {
+            working.delete(annotationId);
+            publish();
         }
     };
 }

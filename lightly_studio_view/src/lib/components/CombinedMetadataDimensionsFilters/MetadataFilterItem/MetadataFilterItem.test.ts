@@ -24,7 +24,7 @@ describe('MetadataFilterItem', () => {
             })
         ).not.toThrow();
 
-        expect(screen.getByText('solar angle')).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'solar_angle' })).toBeInTheDocument();
 
         // Should not commit a filter just from mounting.
         expect(onValueCommit).not.toHaveBeenCalled();
@@ -57,4 +57,43 @@ describe('MetadataFilterItem', () => {
             ]);
         }
     );
+
+    it('hides the slider while collapsed and toggles from the field name', async () => {
+        const onToggleExpanded = vi.fn();
+        render(MetadataFilterItem, {
+            props: {
+                metadataKey: 'score',
+                bound: { min: 0, max: 1 },
+                value: { min: 0, max: 1 },
+                isInteger: false,
+                onValueCommit: vi.fn(),
+                expanded: false,
+                onToggleExpanded
+            }
+        });
+
+        expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+        await fireEvent.click(screen.getByRole('button', { name: 'score' }));
+        expect(onToggleExpanded).toHaveBeenCalledOnce();
+    });
+
+    it('shows the checkbox state and summary it is given', () => {
+        render(MetadataFilterItem, {
+            props: {
+                metadataKey: 'score',
+                bound: { min: 0, max: 10 },
+                value: { min: 2, max: 5 },
+                isInteger: false,
+                onValueCommit: vi.fn(),
+                checked: true,
+                summary: '2 – 5',
+                onClear: vi.fn(),
+                expanded: false,
+                onToggleExpanded: vi.fn()
+            }
+        });
+
+        expect(screen.getByRole('checkbox', { name: 'score filter' })).toBeChecked();
+        expect(screen.getByText('2 – 5')).toBeInTheDocument();
+    });
 });

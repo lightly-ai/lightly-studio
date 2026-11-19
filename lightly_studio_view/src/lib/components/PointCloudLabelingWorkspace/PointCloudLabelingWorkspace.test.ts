@@ -118,7 +118,9 @@ vi.mock('./useCreateCuboidAnnotation', async () => {
             showSelectClassDialog: writable(false),
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
-            labels: { data: [] }
+            getRememberedLabel: () => undefined,
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });
@@ -134,7 +136,10 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
             executeReversibleAction: vi.fn(),
             // The right side panel and its header toggle read the shared collapsed flag.
             isSampleDetailsSidePanelCollapsed: writable(false),
-            toggleSampleDetailsSidePanelCollapsed: vi.fn()
+            toggleSampleDetailsSidePanelCollapsed: vi.fn(),
+            lastAnnotationSource: writable({}),
+            updateLastAnnotationSource: vi.fn(),
+            removeLastAnnotationSource: vi.fn()
         })
     };
 });
@@ -234,7 +239,6 @@ describe('PointCloudLabelingWorkspace', () => {
         prefetchState.bufferedRanges = [{ startIndex: 0, endIndex: 1 }];
         prefetchState.errors.clear();
         sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
-        sessionStorage.removeItem('lightlyStudio_pointCloudShowAnnotationTooltips');
         sessionStorage.removeItem('lightlyStudio_pointCloudAccumulate');
         sessionStorage.removeItem('lightlyStudio_pointCloudAccumulationRadius');
     });
@@ -276,26 +280,6 @@ describe('PointCloudLabelingWorkspace', () => {
 
         await fireEvent.keyDown(window, { code: 'Space', key: ' ' });
         expect(screen.getByRole('button', { name: 'Play frames' })).toBeInTheDocument();
-    });
-
-    it('persists annotation tooltip visibility from scene settings across workspace mounts', async () => {
-        const user = userEvent.setup();
-        const view = render(PointCloudLabelingWorkspace, { props: defaultProps });
-        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
-        const checkbox = screen.getByRole('checkbox', { name: 'Show annotation tooltips' });
-        expect(checkbox).toBeChecked();
-        await user.click(checkbox);
-        expect(checkbox).not.toBeChecked();
-        expect(sessionStorage.getItem('lightlyStudio_pointCloudShowAnnotationTooltips')).toBe(
-            'false'
-        );
-
-        view.unmount();
-        render(PointCloudLabelingWorkspace, { props: defaultProps });
-        await user.click(screen.getByRole('button', { name: 'Scene settings' }));
-        expect(
-            screen.getByRole('checkbox', { name: 'Show annotation tooltips' })
-        ).not.toBeChecked();
     });
 
     it('configures and persists accumulation from the 3D scene settings', async () => {
@@ -384,13 +368,16 @@ describe('PointCloudLabelingWorkspace', () => {
                 }
             ]
         });
-        expect(updateAnnotations).toHaveBeenCalledWith([
-            expect.objectContaining({
-                annotation_id: 'annotation-1',
-                collection_id: 'group-collection-1',
-                cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
-            })
-        ]);
+        expect(updateAnnotations).toHaveBeenCalledWith(
+            [
+                expect.objectContaining({
+                    annotation_id: 'annotation-1',
+                    collection_id: 'group-collection-1',
+                    cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
+                })
+            ],
+            'group-collection-1'
+        );
     });
 
     it.each(['summary', 'tick', 'cloud'])(

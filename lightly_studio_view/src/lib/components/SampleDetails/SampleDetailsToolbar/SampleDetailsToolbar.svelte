@@ -3,13 +3,19 @@
     import { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
     import {
         isAssistedLabelingStatus,
-        useSampleDetailsToolbarContext
+        useSampleDetailsToolbarContext,
+        type ToolbarStatus
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { onMount } from 'svelte';
     import { isOverlayTarget } from '$lib/utils';
     import { useSettings } from '$lib/hooks/useSettings';
     import { Toolbar, type ToolbarItem, type ToolbarTrigger } from '$lib/components/ui/toolbar';
-    import { MousePointer, Hand, Brush, Bot, Layers3, WandSparkles } from '@lucide/svelte';
+    import MousePointer from '@lucide/svelte/icons/mouse-pointer';
+    import Hand from '@lucide/svelte/icons/hand';
+    import Brush from '@lucide/svelte/icons/brush';
+    import Bot from '@lucide/svelte/icons/bot';
+    import Layers3 from '@lucide/svelte/icons/layers-3';
+    import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
     import { isFrameDetailsRoute } from '$lib/routes';
@@ -67,6 +73,21 @@
             assistedLabelingStatus.disabledReason === null
     );
 
+    // The tools that create annotations stay off while the target source is unknown, so nothing
+    // is drawn only to be refused. The annotation details view only edits and needs no target.
+    const createToolDisabledReason = $derived(
+        annotationLabelContext.isOnAnnotationDetailsView
+            ? undefined
+            : (annotationLabelContext.annotationSourceBlockedReason ?? undefined)
+    );
+    const CREATE_TOOLS: ToolbarStatus[] = [
+        'bounding-box',
+        'brush',
+        'slic',
+        'smart-select',
+        'find-instances'
+    ];
+
     const items = $derived<ToolbarItem[]>([
         {
             id: 'cursor',
@@ -89,7 +110,8 @@
             icon: VectorSquareIcon,
             shortcut: $settingsStore.key_toolbar_bounding_box,
             action: 'draw',
-            visible: !annotationLabelContext.isOnAnnotationDetailsView
+            visible: !annotationLabelContext.isOnAnnotationDetailsView,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'brush',
@@ -97,7 +119,8 @@
             icon: Brush,
             shortcut: $settingsStore.key_toolbar_segmentation_mask,
             action: 'paint',
-            visible: showSegmentationTool
+            visible: showSegmentationTool,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'slic',
@@ -106,21 +129,24 @@
             shortcut: $settingsStore.key_toolbar_slic ?? 'a',
             action: 'activate',
             hint: 'Build a mask by selecting image regions.',
-            visible: showSegmentationTool && slicAvailable
+            visible: showSegmentationTool && slicAvailable,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'smart-select',
             label: 'Smart select',
             icon: WandSparkles,
             hint: 'Segments the object that you click or box.',
-            visible: showAssistedLabelingTools
+            visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
         },
         {
             id: 'find-instances',
             label: 'Find all instances',
             icon: Layers3,
             hint: 'Finds all objects that match a text prompt.',
-            visible: showAssistedLabelingTools
+            visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
         }
     ]);
 
@@ -173,6 +199,13 @@
             setAnnotationType(AnnotationType.OBJECT_DETECTION);
         }
     };
+
+    $effect(() => {
+        if (!createToolDisabledReason) return;
+        // A selected mask stays editable while new annotations are blocked, as the brush allows.
+        if (annotationLabelContext.annotationId) return;
+        if (CREATE_TOOLS.includes(sampleDetailsToolbarContext.status)) setStatus('cursor');
+    });
 
     $effect(() => {
         const { status } = sampleDetailsToolbarContext;

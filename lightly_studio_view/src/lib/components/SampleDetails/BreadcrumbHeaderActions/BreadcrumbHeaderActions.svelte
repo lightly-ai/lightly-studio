@@ -7,7 +7,11 @@
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
     import { isInputElement } from '$lib/utils';
     import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
-    import { Check, Pencil, Puzzle, Settings, Undo2 } from '@lucide/svelte';
+    import Check from '@lucide/svelte/icons/check';
+    import Pencil from '@lucide/svelte/icons/pencil';
+    import Puzzle from '@lucide/svelte/icons/puzzle';
+    import Settings from '@lucide/svelte/icons/settings';
+    import Undo2 from '@lucide/svelte/icons/undo-2';
     import { get } from 'svelte/store';
 
     interface Props {

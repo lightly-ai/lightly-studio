@@ -1,15 +1,15 @@
 <script lang="ts">
+    import X from '@lucide/svelte/icons/x';
     import Segment from '$lib/components/Segment/Segment.svelte';
-    import { Slider } from '$lib/components/ui/slider/index.js';
-    import CategoricalMetadataFilters from '$lib/components/CategoricalMetadataFilters/CategoricalMetadataFilters.svelte';
-    import { useDimensions } from '$lib/hooks/useDimensions/useDimensions';
-    import { useMetadataFilters } from '$lib/hooks/useMetadataFilters/useMetadataFilters';
-    import type { ImageFilter } from '$lib/api/lightly_studio_local';
-    import type { CategoricalMetadataValue, MetadataValues } from '$lib/services/types';
-    import { NumericRangeInputs } from '$lib/components/NumericRangeInputs';
-    import VideoFrameBoundsFilter from '../VideoFrameBoundsFilter/VideoFrameBoundsFilter.svelte';
-    import VideoFieldBoundsFilters from '../VideoFieldBoundsFilters/VideoFieldBoundsFilters.svelte';
-    import MetadataFilterItem from './MetadataFilterItem/MetadataFilterItem.svelte';
+    import { FilterActionButton } from '$lib/components/FilterActionButton';
+    import { useCategoricalFieldCounts } from '$lib/components/CategoricalMetadataFilters';
+    import type { MetadataValueCountsFilter } from '$lib/hooks';
+    import type { CategoricalMetadataValue } from '$lib/services/types';
+    import { Input } from '$lib/components/ui/input';
+    import MetadataFieldRow from './MetadataFieldRow.svelte';
+    import { MANY_FIELDS, matchesFieldSearch } from './metadataFieldList';
+    import { isFieldActive, orderByActive } from './metadataFields';
+    import { useMetadataFieldList } from './useMetadataFieldList.svelte';
 
     interface Props {
         /** Collection whose metadata fields are listed. */
@@ -22,10 +22,11 @@
         isVideoFrames?: boolean;
         /** Called when any filter range changes, with the field name and new min/max values. */
         onFilterChanged?: (fieldName: string, min: number, max: number) => void;
-        isImageCollection?: boolean;
-        categoricalFilter?: ImageFilter;
+        /** Filter for the categorical value counts. `undefined` counts all samples. */
+        categoricalCountsFilter?: MetadataValueCountsFilter;
         categoricalKeys?: string[];
         onCategoricalValueToggle: (field: string, value: CategoricalMetadataValue) => void;
+        onCategoricalValuesSet: (field: string, values: CategoricalMetadataValue[]) => void;
         onCategoricalValuesClear: (field: string) => void;
     }
 
@@ -35,145 +36,93 @@
         isVideos = false,
         isVideoFrames = false,
         onFilterChanged,
-        isImageCollection = false,
-        categoricalFilter,
+        categoricalCountsFilter,
         categoricalKeys = [],
         onCategoricalValueToggle,
+        onCategoricalValuesSet,
         onCategoricalValuesClear
     }: Props = $props();
 
-    // Dimension filters logic
-    const {
-        dimensionsBounds: bounds,
-        dimensionsValues: values,
-        updateDimensionsValues: onChange
-    } = useDimensions();
+    const list = useMetadataFieldList({
+        getCollectionId: () => collectionId,
+        getShowImageDimensions: () => showDimensions && !isVideos && !isVideoFrames,
+        getIsVideos: () => isVideos,
+        getIsVideoFrames: () => isVideoFrames,
+        // The value counts cannot use a video frame filter, so frames list no categorical fields.
+        getCategoricalKeys: () => (isVideoFrames ? [] : categoricalKeys),
+        onRangeCommitted: (key, min, max) => onFilterChanged?.(key, min, max)
+    });
 
-    const handleChangeWidth = (newValues: number[]) => {
-        if (!$values) return;
-        onChange({
-            min_width: newValues[0],
-            max_width: newValues[1],
-            min_height: $values.min_height,
-            max_height: $values.max_height
-        });
-        onFilterChanged?.('width', newValues[0], newValues[1]);
+    let fieldSearch = $state('');
+    // Fields start collapsed, so the section stays short.
+    let expandedFields = $state<Record<string, boolean>>({});
+    const fieldCount = $derived(list.fields.length);
+    const isExpanded = (id: string) => expandedFields[id] ?? false;
+    const toggleExpanded = (id: string) => {
+        expandedFields = { ...expandedFields, [id]: !isExpanded(id) };
     };
 
-    const handleChangeHeight = (newValues: number[]) => {
-        if (!$values) return;
-        onChange({
-            min_width: $values.min_width,
-            max_width: $values.max_width,
-            min_height: newValues[0],
-            max_height: newValues[1]
-        });
-        onFilterChanged?.('height', newValues[0], newValues[1]);
-    };
-
-    // Metadata filters logic
-    const { metadataBounds, metadataValues, metadataInfo, updateMetadataValues } = $derived.by(() =>
-        useMetadataFilters(collectionId)
+    const ordered = $derived(
+        orderByActive(list.fields.filter((field) => matchesFieldSearch(field.title, fieldSearch)))
     );
+    const hasActiveField = $derived(list.fields.some(isFieldActive));
 
-    const numericalMetadata = $derived.by(() =>
-        Object.keys($metadataBounds).filter((key) => {
-            const bound = $metadataBounds[key];
-            const value = $metadataValues[key];
-            return (
-                bound &&
-                value &&
-                typeof bound.min === 'number' &&
-                typeof bound.max === 'number' &&
-                typeof value.min === 'number' &&
-                typeof value.max === 'number'
-            );
-        })
-    );
-    const handleMetadataValueCommit = (metadataKey: string, newValues: number[]): void => {
-        const currentValues: MetadataValues = { ...$metadataValues };
-        currentValues[metadataKey] = { min: newValues[0], max: newValues[1] };
-        updateMetadataValues(currentValues);
-        onFilterChanged?.(metadataKey, newValues[0], newValues[1]);
-    };
+    // Expanded fields show their values and active fields their "N of M" summary, so only
+    // those categorical fields are requested.
+    const counts = useCategoricalFieldCounts(() => ({
+        collectionId,
+        filter: categoricalCountsFilter,
+        fields: ordered.fields
+            .filter(
+                (field) =>
+                    field.kind === 'categorical' && (isExpanded(field.id) || isFieldActive(field))
+            )
+            .map((field) => field.key)
+    }));
 </script>
 
+<!-- All metadata filters share one section: active fields first, then a line, then the other
+     fields. Ranges use a slider, categorical fields a value list. -->
 <Segment title="Metadata">
     <div class="space-y-4">
-        {#if isImageCollection && categoricalKeys.length > 0}
-            <CategoricalMetadataFilters
-                {collectionId}
-                filter={categoricalFilter}
-                {categoricalKeys}
-                onValueToggle={onCategoricalValueToggle}
-                onValuesClear={onCategoricalValuesClear}
+        {#if fieldCount > MANY_FIELDS}
+            <Input
+                value={fieldSearch}
+                oninput={(event) => (fieldSearch = event.currentTarget.value)}
+                placeholder="Search metadata fields…"
+                aria-label="Search metadata fields"
+                class="h-8"
             />
         {/if}
+        <div class="flex">
+            <FilterActionButton
+                label="Clear"
+                icon={X}
+                onclick={list.resetAll}
+                disabled={!hasActiveField}
+            />
+        </div>
 
-        {#if showDimensions && !isVideos && !isVideoFrames && $bounds && $values}
-            <!-- Dimension Filters -->
-            <div class="space-y-1">
-                <h2 class="text-md">Width</h2>
-                <NumericRangeInputs
-                    label="Width"
-                    bound={{ min: $bounds.min_width, max: $bounds.max_width }}
-                    value={{ min: $values.min_width, max: $values.max_width }}
-                    integer
-                    unit="px"
-                    onValueCommit={handleChangeWidth}
-                />
-                <div class="relative p-2">
-                    <Slider
-                        type="multiple"
-                        class="filter-width"
-                        min={$bounds.min_width}
-                        max={$bounds.max_width}
-                        value={[$values.min_width, $values.max_width]}
-                        onValueCommit={handleChangeWidth}
+        <div class="space-y-4">
+            {#each ordered.fields as field, index (field.id)}
+                {@const expanded = isExpanded(field.id)}
+                {#if index === ordered.activeCount && ordered.activeCount > 0}
+                    <hr data-testid="metadata-active-separator" class="border-border" />
+                {/if}
+                <div data-field-id={field.id}>
+                    <MetadataFieldRow
+                        {field}
+                        {expanded}
+                        onToggleExpanded={() => toggleExpanded(field.id)}
+                        {counts}
+                        onCommitRange={(range) => list.commitRange(field.id, range)}
+                        onReset={() => list.reset(field.id)}
+                        {onCategoricalValueToggle}
+                        {onCategoricalValuesSet}
+                        {onCategoricalValuesClear}
                     />
                 </div>
-            </div>
-
-            <div class="space-y-1">
-                <h2 class="text-md">Height</h2>
-                <NumericRangeInputs
-                    label="Height"
-                    bound={{ min: $bounds.min_height, max: $bounds.max_height }}
-                    value={{ min: $values.min_height, max: $values.max_height }}
-                    integer
-                    unit="px"
-                    onValueCommit={handleChangeHeight}
-                />
-                <div class="relative p-2">
-                    <Slider
-                        type="multiple"
-                        class="filter-height"
-                        min={$bounds.min_height}
-                        max={$bounds.max_height}
-                        value={[$values.min_height, $values.max_height]}
-                        onValueCommit={handleChangeHeight}
-                    />
-                </div>
-            </div>
-        {:else if isVideos}
-            <VideoFieldBoundsFilters {onFilterChanged} />
-        {/if}
-
-        {#if isVideoFrames}
-            <VideoFrameBoundsFilter {onFilterChanged} />
-        {/if}
-
-        {#if numericalMetadata.length > 0}
-            {#each numericalMetadata as metadataKey (metadataKey)}
-                <MetadataFilterItem
-                    {metadataKey}
-                    bound={$metadataBounds[metadataKey]}
-                    value={$metadataValues[metadataKey]}
-                    isInteger={$metadataInfo.find((info) => info.name === metadataKey)?.type ===
-                        'integer'}
-                    onValueCommit={handleMetadataValueCommit}
-                />
             {/each}
-        {/if}
+        </div>
     </div>
 </Segment>

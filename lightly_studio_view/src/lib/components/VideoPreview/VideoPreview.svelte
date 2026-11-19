@@ -1,6 +1,6 @@
 <script lang="ts">
     import { cn } from '$lib/utils';
-    import { Play } from '@lucide/svelte';
+    import Play from '@lucide/svelte/icons/play';
     import type { HTMLVideoAttributes } from 'svelte/elements';
 
     const {

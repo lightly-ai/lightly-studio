@@ -45,8 +45,26 @@
             labelName: string,
             annotationSourceId: string
         ) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** The source new cuboids go to. */
+        targetSourceName?: string | null;
+        /** A typed source name that is not created yet. */
+        pendingSourceName?: string | null;
+        /** Whether no source is picked among several. */
+        needsPick?: boolean;
+        /** Picks the source for new cuboids. Without it, the panel shows no source picker. */
+        onPickSource?: (name: string, options?: { isNew?: boolean }) => void;
+        /** True when the cuboid is hidden in the scene. */
+        isCuboidHidden?: (cuboid: CuboidAnnotation) => boolean;
+        /** True when every cuboid of the source is hidden in the scene. */
+        isSourceHidden?: (sourceId: string) => boolean;
+        /** Hides or shows the track of a cuboid. */
+        onToggleTrackVisibility?: (cuboid: CuboidAnnotation) => void;
+        /** Hides or shows every cuboid of a source. */
+        onToggleSourceVisibility?: (sourceId: string) => void;
     }
 
     let {
@@ -61,7 +79,16 @@
         editable = false,
         onCuboidTransform,
         onLabelChange,
-        onDeleteCuboid
+        onTrackChange,
+        onDeleteCuboid,
+        isCuboidHidden,
+        isSourceHidden,
+        onToggleTrackVisibility,
+        onToggleSourceVisibility,
+        targetSourceName,
+        pendingSourceName,
+        needsPick,
+        onPickSource
     }: Props = $props();
 </script>
 
@@ -104,7 +131,20 @@
                 {editable}
                 {onCuboidTransform}
                 {onLabelChange}
+                {onTrackChange}
                 {onDeleteCuboid}
+                sourcePicker={onPickSource
+                    ? {
+                          targetSourceName: targetSourceName ?? null,
+                          pendingSourceName: pendingSourceName ?? null,
+                          needsPick: needsPick ?? false,
+                          onPick: onPickSource
+                      }
+                    : undefined}
+                {isCuboidHidden}
+                {isSourceHidden}
+                {onToggleTrackVisibility}
+                {onToggleSourceVisibility}
             />
         </Segment>
     </div>

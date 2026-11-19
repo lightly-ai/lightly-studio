@@ -1,6 +1,7 @@
 import { embedText } from '$lib/api/lightly_studio_local';
 import type { ProjectionAxes } from '$lib/api/lightly_studio_local/types.gen';
 import type { toTextAxes } from './textAxesDraft';
+import { getErrorMessage } from '$lib/api/ApiError';
 
 type TextAxes = NonNullable<ReturnType<typeof toTextAxes>>;
 
@@ -29,10 +30,7 @@ const embed = async (collectionId: string, text: string): Promise<number[]> => {
         query: { query_text: text, embedding_model_id: null }
     });
     if (error || !data) {
-        const errorObject = error as { error?: unknown; message?: string } | undefined;
-        throw new Error(
-            String(errorObject?.error ?? errorObject?.message ?? `Failed to embed "${text}"`)
-        );
+        throw new Error(getErrorMessage(error, `Failed to embed "${text}"`));
     }
     return data;
 };

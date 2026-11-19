@@ -1,10 +1,10 @@
 <script lang="ts">
     import { untrack } from 'svelte';
-    import { BoxIcon } from '@lucide/svelte';
     import type {
         McapSequenceFrame,
         WorkflowStatus
     } from '$lib/api/lightly_studio_local/types.gen';
+    import BoxIcon from '@lucide/svelte/icons/box';
     import { getMcapSequenceFrameURL } from '$lib/utils';
     import SampleValueBadge from '$lib/components/SampleValueBadge/SampleValueBadge.svelte';
     import WorkflowStateBadge from '$lib/components/Workflow/WorkflowStateBadge/WorkflowStateBadge.svelte';

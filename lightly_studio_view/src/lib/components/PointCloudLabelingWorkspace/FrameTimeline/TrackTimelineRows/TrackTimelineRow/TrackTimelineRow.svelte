@@ -1,6 +1,7 @@
 <script lang="ts">
     import type { SequenceTrackView, TickView } from '$lib/api/lightly_studio_local/types.gen';
     import { getColorByLabel } from '$lib/utils';
+    import { TimelineLane, getTimelineViewport } from '../../TimelineViewport';
     import { buildTrackRuns } from '../buildTrackRuns';
     import { getTrackExtent } from '../trackExtension';
     import TrackExtendHandles from './TrackExtendHandles.svelte';
@@ -33,6 +34,7 @@
     let bar = $state<HTMLElement | null>(null);
 
     const runs = $derived(buildTrackRuns(ticks, track.annotations));
+    const viewport = getTimelineViewport();
     const runTitle = (run: (typeof runs)[number]) => {
         const frames =
             run.startIndex === run.endIndex
@@ -76,34 +78,44 @@
             </button>
         {/if}
     </div>
-    <div class="relative" bind:this={bar}>
-        <button
-            type="button"
-            class="relative block h-4 w-full cursor-pointer overflow-hidden rounded-sm bg-muted/40"
-            aria-label={`Select ${track.annotation_label_name} track ${track.object_track_number} position`}
-            onclick={(event) => onSelectPosition(event, track)}
-        >
-            {#each runs as run (run.startIndex)}
-                <span
-                    class="absolute inset-y-0"
-                    style:left={`${(run.startIndex / ticks.length) * 100}%`}
-                    style:width={`${((run.endIndex - run.startIndex + 1) / ticks.length) * 100}%`}
-                    style:background-color={getColorByLabel(
-                        track.annotation_label_name,
-                        (run.interpolated ? 0.3 : 0.75) + (isSelected ? 0.2 : 0)
-                    ).color}
-                    title={runTitle(run)}
-                ></span>
-            {/each}
-        </button>
-        {#if extent}
-            <TrackExtendHandles
-                {extent}
-                tickCount={ticks.length}
-                {drag}
-                label={`${track.annotation_label_name} track ${track.object_track_number}`}
-                enabled={Boolean(onExtend)}
-            />
-        {/if}
-    </div>
+    <TimelineLane>
+        <div class="relative" bind:this={bar} data-testid="track-bar">
+            <button
+                type="button"
+                class="relative block h-4 w-full cursor-pointer overflow-hidden rounded-sm bg-muted/40"
+                aria-label={`Select ${track.annotation_label_name} track ${track.object_track_number} position`}
+                onclick={(event) => onSelectPosition(event, track)}
+            >
+                {#each runs as run (run.startIndex)}
+                    <span
+                        class="absolute inset-y-0"
+                        style:left={`${(run.startIndex / ticks.length) * 100}%`}
+                        style:width={`${((run.endIndex - run.startIndex + 1) / ticks.length) * 100}%`}
+                        style:background-color={getColorByLabel(
+                            track.annotation_label_name,
+                            (run.interpolated ? 0.3 : 0.75) + (isSelected ? 0.2 : 0)
+                        ).color}
+                        title={runTitle(run)}
+                    ></span>
+                {/each}
+                {#if ticks.length > 0 && ticks.length / viewport.zoom <= 100}
+                    <span
+                        class="pointer-events-none absolute inset-0"
+                        style:background-image={'linear-gradient(to right, transparent calc(100% - 1px), hsl(var(--border)) 0)'}
+                        style:background-size={`${100 / ticks.length}% 100%`}
+                        aria-hidden="true"
+                    ></span>
+                {/if}
+            </button>
+            {#if extent}
+                <TrackExtendHandles
+                    {extent}
+                    tickCount={ticks.length}
+                    {drag}
+                    label={`${track.annotation_label_name} track ${track.object_track_number}`}
+                    enabled={Boolean(onExtend)}
+                />
+            {/if}
+        </div>
+    </TimelineLane>
 </div>

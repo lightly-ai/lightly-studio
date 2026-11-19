@@ -7,9 +7,10 @@
         label: string;
         icon: Component<IconProps>;
         onclick: () => void;
+        disabled?: boolean;
     }
 
-    let { label, icon, onclick }: Props = $props();
+    let { label, icon, onclick, disabled = false }: Props = $props();
 </script>
 
 <Button
@@ -17,6 +18,7 @@
     variant="outline"
     {onclick}
     buttonProps={{
+        disabled,
         size: 'xs',
         class: 'h-6 shrink-0 gap-1 border-border bg-muted/40 px-2 text-foreground/80 hover:bg-muted hover:text-foreground'
     }}

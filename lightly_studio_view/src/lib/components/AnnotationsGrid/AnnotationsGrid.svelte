@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { getErrorMessage } from '$lib/api/ApiError';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
@@ -62,7 +63,7 @@
 
     // The embedding plot lasso selection on the annotations route, kept as geometry and sent
     // to the backend instead of a resolved sample-id list (see LIG-9903).
-    const { annotationPlotRegion } = useAnnotationPlotSelection();
+    const { annotationPlotRegion, annotationPlotPickedSampleIds } = useAnnotationPlotSelection();
     const plotSelectedRegion = $derived($annotationPlotRegion);
 
     // The text embedding search is shared with the images tab and persists across the tab switch.
@@ -102,6 +103,8 @@
         tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
         // Embedding plot lasso selection narrows the grid to annotations inside the region.
         embedding_region: plotSelectedRegion ?? undefined,
+        sample_ids:
+            $annotationPlotPickedSampleIds.length > 0 ? $annotationPlotPickedSampleIds : undefined,
         // Embedding text search reorders the grid by similarity (shared with images tab).
         text_embedding: searchEmbedding?.embedding ?? undefined,
         // Similarity ordering keeps precedence, so the two are never sent together.
@@ -118,6 +121,7 @@
         $selectedAnnotationFilterIds.join(',') +
             Array.from($tagsSelected).join(',') +
             (plotSelectedRegion ? JSON.stringify(plotSelectedRegion) : '') +
+            $annotationPlotPickedSampleIds.join(',') +
             (searchEmbedding ? `search:${searchEmbedding.queryText}` : '') +
             (queryParams.sort_by ? `sort:${JSON.stringify(queryParams.sort_by)}` : '')
     );
@@ -195,7 +199,7 @@
             labelName: item.value
         });
         if (!data) {
-            toast.error('Failed to update annotations: ' + JSON.stringify(error));
+            toast.error('Failed to update annotations: ' + getErrorMessage(error, 'Unknown error'));
             return;
         }
 

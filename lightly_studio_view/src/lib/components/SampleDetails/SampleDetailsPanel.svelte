@@ -5,7 +5,7 @@
     import DetailsHeader from '$lib/components/DetailsHeader/DetailsHeader.svelte';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { useHideAnnotations } from '$lib/hooks/useHideAnnotations';
-    import { onMount, untrack, type Snippet } from 'svelte';
+    import { untrack, type Snippet } from 'svelte';
 
     import { getAnnotations } from '../SampleAnnotation/utils';
     import Spinner from '../Spinner/Spinner.svelte';
@@ -25,6 +25,7 @@
         useSampleDetailsToolbarContext
     } from '$lib/contexts/SampleDetailsToolbar.svelte';
     import { useAnnotationSelection } from '$lib/hooks/useAnnotationSelection/useAnnotationSelection';
+    import { useAnnotationTarget } from '$lib/hooks';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import { useDeleteAnnotationWithUndo } from '$lib/hooks';
     import useAuth from '$lib/hooks/useAuth/useAuth';
@@ -78,7 +79,7 @@
     } = useGlobalStorage();
 
     const { handleKeyEvent } = useHideAnnotations();
-    const { isEditingMode, lastAnnotationLabel, lastAnnotationSource } = useGlobalStorage();
+    const { isEditingMode } = useGlobalStorage();
 
     // Annotation details must use the first annotation from sample.annotations.
     // isOnAnnotationDetailsView is re-synced via $effect when the prop changes.
@@ -105,31 +106,13 @@
     let isPanModeEnabled = $state(false);
 
     let annotationsIdsToHide = $state<Set<string>>(new Set());
+    // Always mounted, also without the Annotations panel, so drawing is always guarded.
+    useAnnotationTarget({
+        getCollectionId: () => collectionId,
+        getAnnotations: () => sample?.annotations ?? [],
+        getHiddenIds: () => annotationsIdsToHide
+    });
     let previousAnnotationType: AnnotationType | null | undefined;
-    const handleSpaceKey = (event: KeyboardEvent) => {
-        // Let the browser handle Space on buttons (e.g. popover triggers) natively.
-        if (event.target instanceof HTMLButtonElement) return;
-
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (!$isEditingMode) {
-            if (isOnAnnotationDetailsView) {
-                toggleSampleAnnotationCropSelection(collectionId, sample.annotations![0].sample_id);
-            } else {
-                toggleSampleSelection(sampleId, collectionId);
-            }
-        } else {
-            if (!isPanModeEnabled) {
-                previousAnnotationType = annotationLabelContext.annotationType;
-                sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
-                sampleDetailsToolbarContext.status = 'drag';
-                annotationLabelContext.annotationType = null;
-            }
-            isPanModeEnabled = true;
-        }
-    };
-
     const handleDeleteKeyDown = async (event: KeyboardEvent) => {
         if (!$isEditingMode || !canEdit) return;
         if (annotationLabelContext.isOnAnnotationDetailsView) return;
@@ -171,7 +154,7 @@
                 }
                 break;
             case ' ':
-                handleSpaceKey(event);
+                handleSpaceKeyDown(event);
                 break;
             case 'Delete':
             case 'Backspace':
@@ -181,6 +164,34 @@
 
         // Always pass to the hide annotations handler
         handleKeyEvent(event);
+    };
+
+    /** Space toggles the selection, or starts pan mode while editing. */
+    const handleSpaceKeyDown = (event: KeyboardEvent) => {
+        // Let the browser handle Space on buttons (e.g. popover triggers) natively.
+        if (event.target instanceof HTMLButtonElement) return;
+
+        // Space would scroll the page.
+        event.preventDefault();
+        event.stopPropagation();
+
+        if ($isEditingMode) {
+            if (!isPanModeEnabled) {
+                previousAnnotationType = annotationLabelContext.annotationType;
+                sampleDetailsToolbarContext.panFrom = sampleDetailsToolbarContext.status;
+                sampleDetailsToolbarContext.status = 'drag';
+                annotationLabelContext.annotationType = null;
+            }
+            isPanModeEnabled = true;
+            return;
+        }
+
+        if (isOnAnnotationDetailsView) {
+            toggleSampleAnnotationCropSelection(collectionId, sample.annotations![0].sample_id);
+            return;
+        }
+
+        toggleSampleSelection(sampleId, collectionId);
     };
 
     const handleKeyUpEvent = (event: KeyboardEvent) => {
@@ -222,8 +233,7 @@
             return;
         selectAnnotation({
             annotationId,
-            annotations: sample.annotations ?? [],
-            collectionId
+            annotations: sample.annotations ?? []
         });
     };
 
@@ -265,11 +275,6 @@
             sampleDetailsToolbarContext.status = 'cursor';
             sampleDetailsToolbarContext.brush.mode = 'brush';
         }
-    });
-
-    onMount(() => {
-        annotationLabelContext.annotationLabel = $lastAnnotationLabel[collectionId];
-        annotationLabelContext.annotationSource = $lastAnnotationSource[collectionId];
     });
 
     // Auto-open the side panel when an annotation is created while collapsed.

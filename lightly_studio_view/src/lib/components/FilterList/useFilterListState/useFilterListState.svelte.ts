@@ -1,3 +1,4 @@
+import { SvelteSet } from 'svelte/reactivity';
 import { matchesSearch, type FilterListItem } from '../filterList.helpers';
 
 // Rendering thousands of rows (e.g. a metadata field with a unique value per image) blocks
@@ -18,9 +19,18 @@ export function useFilterListState({
 }: UseFilterListStateParams) {
     let search = $state('');
     let shownCount = $state(PAGE_SIZE);
+    // Rows past the page that the user toggled. They stay visible after being unticked,
+    // so a misclick can be undone.
+    const kept = new SvelteSet<string>();
+    const isPinned = (item: FilterListItem) => item.selected || kept.has(item.id);
 
     const matching = $derived(getItems().filter((item) => matchesSearch(item, search)));
-    const shown = $derived(getPaged() ? matching.slice(0, shownCount) : matching);
+    // Selected and kept rows past the page stay visible, so an active filter is never hidden.
+    const shown = $derived(
+        getPaged()
+            ? [...matching.slice(0, shownCount), ...matching.slice(shownCount).filter(isPinned)]
+            : matching
+    );
 
     return {
         get search() {
@@ -29,6 +39,10 @@ export function useFilterListState({
         setSearch(value: string) {
             search = value;
             shownCount = PAGE_SIZE;
+            kept.clear();
+        },
+        keep(id: string) {
+            kept.add(id);
         },
         /** Stays visible while a query is active, so the user can always clear it. */
         get searchVisible() {
@@ -43,8 +57,13 @@ export function useFilterListState({
         get nextPageCount() {
             return Math.min(PAGE_SIZE, matching.length - shown.length);
         },
+        /** Reveals the next page of hidden rows, skipping rows past the page that are already shown. */
         showMore() {
-            shownCount += PAGE_SIZE;
+            let revealed = 0;
+            while (shownCount < matching.length && revealed < PAGE_SIZE) {
+                if (!isPinned(matching[shownCount])) revealed++;
+                shownCount++;
+            }
         }
     };
 }

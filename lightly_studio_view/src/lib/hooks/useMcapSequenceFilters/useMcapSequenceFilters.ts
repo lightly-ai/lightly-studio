@@ -5,12 +5,14 @@ import type {
     SampleFilter,
     WorkflowStatus
 } from '$lib/api/lightly_studio_local';
+import { getAnnotationsFilter } from '$lib/utils/gridFilter';
 
 export type McapSequenceFilterParams = {
     collection_id: string;
     embedding_region?: EmbeddingRegion;
     tag_ids?: string[];
     workflow_states?: WorkflowStatus[];
+    annotation_label_ids?: string[];
 };
 
 const filterParams = writable<McapSequenceFilterParams | null>(null);
@@ -37,6 +39,12 @@ export const buildMcapSequenceFilter = (
     if (Object.keys(sampleFilter).length > 0) {
         filter.sample_filter = sampleFilter;
     }
+    const groupAnnotationFilter = getAnnotationsFilter({
+        annotation_label_ids: params.annotation_label_ids
+    });
+    if (groupAnnotationFilter) {
+        filter.group_annotation_filter = groupAnnotationFilter;
+    }
     return filter;
 };
 
@@ -45,9 +53,9 @@ const mcapSequenceFilter = derived(filterParams, ($filterParams) =>
 );
 
 /**
- * Filter state of the MCAP sequence grid. The filter panel writes the selected tags and
- * workflow states here, and the embedding plot the selected region. The grid and the plot
- * read the filter.
+ * Filter state of the MCAP sequence grid. The filter panel writes the selected tags, labels and
+ * workflow states here, and the embedding plot the selected region. The grid and the plot read
+ * the filter.
  */
 export const useMcapSequenceFilters = () => {
     // Resets the filter when the grid shows another collection.
@@ -64,6 +72,17 @@ export const useMcapSequenceFilters = () => {
             return;
         }
         filterParams.set({ ...params, tag_ids: tagIds.length > 0 ? tagIds : undefined });
+    };
+
+    const updateAnnotationLabelIds = (labelIds: string[]) => {
+        const params = get(filterParams);
+        if (!params) {
+            return;
+        }
+        filterParams.set({
+            ...params,
+            annotation_label_ids: labelIds.length > 0 ? labelIds : undefined
+        });
     };
 
     // The grid passes undefined when the dataset has no workflow project or nothing is selected.
@@ -90,6 +109,7 @@ export const useMcapSequenceFilters = () => {
         filterParams,
         mcapSequenceFilter,
         setCollectionId,
+        updateAnnotationLabelIds,
         updateEmbeddingRegion,
         updateTagIds,
         updateWorkflowStates

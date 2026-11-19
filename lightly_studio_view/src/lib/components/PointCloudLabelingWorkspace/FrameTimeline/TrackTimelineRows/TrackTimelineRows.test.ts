@@ -111,7 +111,9 @@ describe('TrackTimelineRows', () => {
         };
 
         const mockBar = (container: HTMLElement) => {
-            const bar = container.querySelector('[data-track-id] .relative') as HTMLElement;
+            const bar = container.querySelector(
+                '[data-track-id] [data-testid="track-bar"]'
+            ) as HTMLElement;
             vi.spyOn(bar, 'getBoundingClientRect').mockReturnValue({
                 left: 0,
                 width: 600

@@ -14,6 +14,7 @@ from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.caption import CaptionTable
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.models.image import ImageTable
@@ -25,6 +26,8 @@ from lightly_studio.resolvers import (
     evaluation_annotation_metric_resolver,
     evaluation_run_resolver,
     evaluation_sample_metric_resolver,
+    metadata_resolver,
+    sample_resolver,
 )
 from tests.helpers_resolvers import (
     AnnotationDetails,
@@ -48,6 +51,7 @@ from tests.resolvers.evaluation_sample_metric_resolver.helpers import (
     create_annotation_metrics,
     create_sample_metrics,
 )
+from tests.resolvers.video.helpers import VideoStub, create_video
 
 
 @pytest.mark.parametrize(
@@ -72,23 +76,27 @@ def test_delete_annotations_by_ids(
     extra_fields: dict[str, Any],
     detail_table: type[SQLModel],
 ) -> None:
-    image = _create_image_in_new_collection(session=db_session)
-    label = create_annotation_label(
-        session=db_session, root_collection_id=image.sample.collection_id
-    )
+    if detail_table is TemporalSpanTable:
+        collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+        parent = create_video(
+            session=db_session, collection_id=collection.collection_id, video=VideoStub()
+        ).sample
+    else:
+        parent = _create_image_in_new_collection(session=db_session).sample
+    parent_id = parent.sample_id
+    label = create_annotation_label(session=db_session, root_collection_id=parent.collection_id)
     annotation_details = AnnotationDetails(
-        sample_id=image.sample_id,
+        sample_id=parent_id,
         annotation_label_id=label.annotation_label_id,
         annotation_type=annotation_type,
         **extra_fields,
     )
     to_delete, to_keep = create_annotations(
         session=db_session,
-        collection_id=image.sample.collection_id,
+        collection_id=parent.collection_id,
         annotations=[annotation_details, annotation_details],
     )
     to_delete_id, to_keep_id = to_delete.sample_id, to_keep.sample_id
-    image_id = image.sample_id
     assert db_session.get(detail_table, to_delete_id) is not None
 
     deleted_count = annotation_resolver.delete_annotations_by_ids(
@@ -102,7 +110,7 @@ def test_delete_annotations_by_ids(
     assert db_session.get(detail_table, to_keep_id) is not None
     assert db_session.get(AnnotationBaseTable, to_keep_id) is not None
     assert db_session.get(SampleTable, to_keep_id) is not None
-    assert db_session.get(SampleTable, image_id) is not None
+    assert db_session.get(SampleTable, parent_id) is not None
 
 
 def test_delete_annotations_by_ids__cuboid_3d(db_session: Session) -> None:
@@ -172,6 +180,22 @@ def test_delete_annotations_by_ids__deletes_tag_links_and_embeddings(
     assert plot.is_dirty is True
     assert _get_embedding_sample_ids(session=db_session) == [to_keep_id]
     assert db_session.get(SampleTable, to_delete_id) is None
+
+
+def test_delete_annotations_by_ids__deletes_metadata(db_session: Session) -> None:
+    image = _create_image_in_new_collection(session=db_session)
+    (annotation,) = _create_object_detections(session=db_session, image=image, count=1)
+    annotation_id = annotation.sample_id
+    metadata_resolver.set_value_for_sample(
+        session=db_session, sample_id=annotation_id, key="score", value=0.9
+    )
+
+    annotation_resolver.delete_annotations_by_ids(
+        session=db_session, annotation_ids=[annotation_id]
+    )
+
+    assert sample_resolver.get_by_id(session=db_session, sample_id=annotation_id) is None
+    assert metadata_resolver.get_by_sample_id(session=db_session, sample_id=annotation_id) is None
 
 
 def test_delete_annotations_by_ids__deletes_captions(db_session: Session) -> None:
