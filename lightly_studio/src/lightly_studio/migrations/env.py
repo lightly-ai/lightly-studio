@@ -55,8 +55,8 @@ def _include_object(
 ) -> bool:
     """Compare only the default schema and keep Postgres-only indexes.
 
-    Tables in other schemas belong to other version locations. Indexes that migrations
-    create but SQLModel tables do not declare are kept.
+    Tables in other schemas belong to the migration history of another package. Indexes
+    that migrations create but SQLModel tables do not declare are kept.
     Used only by ``revision --autogenerate``; ``upgrade`` does not call this hook.
     """
     if type_ == "table" and getattr(_object, "schema", None) is not None:

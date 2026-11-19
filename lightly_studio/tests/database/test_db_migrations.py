@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 from uuid import uuid4
 
 import numpy as np
 import pytest
 from alembic import command
 from alembic.config import Config
-from alembic.script import ScriptDirectory
 from pytest_mock import MockerFixture
-from sqlalchemy import create_engine, text
+from sqlalchemy import Column, Integer, Table, create_engine, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel
 
@@ -42,7 +40,7 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
     mocker: MockerFixture,
     engine: Engine,
 ) -> None:
-    """Tracked DB runs upgrade oss@head only."""
+    """Tracked DB runs upgrade head only."""
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=True)
@@ -54,7 +52,7 @@ def test_run_migrations__upgrade_when_alembic_version_exists(
         engine=engine,
         config=alembic_cfg,
         fn=command.upgrade,
-        revision="oss@head",
+        revision="head",
     )
 
 
@@ -62,7 +60,7 @@ def test_run_migrations__fresh_database(
     mocker: MockerFixture,
     engine: Engine,
 ) -> None:
-    """Empty DB runs upgrade oss@head (Alembic revisions only)."""
+    """Empty DB runs upgrade head (Alembic revisions only)."""
     alembic_cfg = Config()
     mocker.patch.object(db_migrations, "get_alembic_config", return_value=alembic_cfg)
     mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
@@ -74,100 +72,7 @@ def test_run_migrations__fresh_database(
         engine=engine,
         config=alembic_cfg,
         fn=command.upgrade,
-        revision="oss@head",
-    )
-
-
-def test_run_migrations__extra_version_locations_upgrade_heads(
-    mocker: MockerFixture,
-    engine: Engine,
-    tmp_path: Path,
-) -> None:
-    """Extra version locations add a branch, so all heads are upgraded."""
-    alembic_cfg = Config()
-    mock_get_config = mocker.patch.object(
-        db_migrations, "get_alembic_config", return_value=alembic_cfg
-    )
-    mocker.patch.object(db_migrations, "_alembic_version_table_exists", return_value=False)
-    mock_run_command = mocker.patch.object(db_migrations, "_run_alembic_command")
-
-    db_migrations.run_migrations(
-        engine=engine, engine_url=_POSTGRES_URL, extra_version_locations=[str(tmp_path)]
-    )
-
-    mock_get_config.assert_called_once_with(
-        engine_url=_POSTGRES_URL, extra_version_locations=[str(tmp_path)]
-    )
-    mock_run_command.assert_called_once_with(
-        engine=engine,
-        config=alembic_cfg,
-        fn=command.upgrade,
-        revision="heads",
-    )
-
-
-def test_get_alembic_config__extra_revision_depends_on_oss_head(tmp_path: Path) -> None:
-    """An extra branch revision runs right after the oss head."""
-    _write_extra_revision(versions_dir=tmp_path)
-    config = db_migrations.get_alembic_config(
-        engine_url=_POSTGRES_URL, extra_version_locations=[str(tmp_path)]
-    )
-    script = ScriptDirectory.from_config(config)
-
-    oss_head = script.get_revision("oss@head").revision
-    assert set(script.get_heads()) == {oss_head, "extra0001"}
-    assert [rev.revision for rev in script.iterate_revisions("heads", "base")][:2] == [
-        "extra0001",
-        oss_head,
-    ]
-
-
-def test_postgres_fresh_database__extra_version_locations(
-    postgres_url: str | None,
-    tmp_path: Path,
-) -> None:
-    """Fresh Postgres runs the oss branch and the extra branch."""
-    if postgres_url is None:
-        pytest.skip("Requires --postgres")
-    _reset_postgres_database(engine_url=postgres_url)
-    _write_extra_revision(versions_dir=tmp_path)
-    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
-    try:
-        db_migrations.run_migrations(
-            engine=engine, engine_url=postgres_url, extra_version_locations=[str(tmp_path)]
-        )
-        inspector = db_migrations._get_inspector(engine=engine)
-        assert inspector.has_table(table_name="collection")
-        assert inspector.has_table(table_name="extra_table")
-        with engine.connect() as connection:
-            versions = (
-                connection.execute(text("SELECT version_num FROM alembic_version")).scalars().all()
-            )
-        # The extra revision depends on the oss head, so Alembic stores only the extra revision.
-        assert versions == ["extra0001"]
-    finally:
-        with engine.begin() as connection:
-            connection.execute(text("DROP TABLE IF EXISTS extra_table"))
-        # The oss script directory does not know the extra revision.
-        _reset_postgres_database(engine_url=postgres_url)
-        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
-        engine.dispose()
-
-
-def _write_extra_revision(versions_dir: Path) -> None:
-    """Write one revision of the ``extra`` branch that depends on the oss head."""
-    oss_head = db_migrations.get_head_revision()
-    (versions_dir / "extra0001_add_extra_table.py").write_text(
-        "from alembic import op\n"
-        "import sqlalchemy as sa\n"
-        'revision = "extra0001"\n'
-        "down_revision = None\n"
-        'branch_labels = ("extra",)\n'
-        f'depends_on = "{oss_head}"\n'
-        "def upgrade() -> None:\n"
-        '    op.create_table("extra_table", sa.Column("id", sa.Integer(), primary_key=True))\n'
-        "def downgrade() -> None:\n"
-        '    op.drop_table("extra_table")\n'
+        revision="head",
     )
 
 
@@ -229,6 +134,31 @@ def test_postgres_fresh_database__upgrade_head(
     finally:
         _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()
+
+
+def test_postgres_check__ignores_tables_in_other_schemas(
+    postgres_url: str | None,
+) -> None:
+    """Alembic check ignores a model table outside the default schema."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+    _reset_postgres_database(engine_url=postgres_url)
+    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
+    # The schema "other" does not exist. The table is only in the metadata.
+    table = Table(
+        "other_table", SQLModel.metadata, Column("id", Integer, primary_key=True), schema="other"
+    )
+    try:
+        db_migrations.run_migrations(engine=engine, engine_url=postgres_url)
+        config = db_migrations.get_alembic_config(engine_url=postgres_url)
+        with engine.connect() as connection:
+            config.attributes["connection"] = connection
+            # Raises AutogenerateDiffsDetected if autogenerate wants to add the table.
+            command.check(config)
+    finally:
+        SQLModel.metadata.remove(table)
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
 
 
 def test_postgres_embedding_plot__upgrade_preserves_existing_cache(
