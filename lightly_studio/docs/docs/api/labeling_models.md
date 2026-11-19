@@ -23,18 +23,18 @@ See the [Label with Your Own Model page](../workflows/labeling_models.md) for mo
 
 ## LabelingModel
 
-::: lightly_studio_serve.labeling_model
+::: lightly_studio_serve.labeling
     options:
         members: [LabelingModel]
 
 ## ModelTask
 
-::: lightly_studio_serve.labeling_model
+::: lightly_studio_serve.labeling
     options:
         members: [ModelTask]
 
 ## PredictedAnnotation
 
-::: lightly_studio_serve.types
+::: lightly_studio_serve.labeling
     options:
         members: [PredictedAnnotation]
