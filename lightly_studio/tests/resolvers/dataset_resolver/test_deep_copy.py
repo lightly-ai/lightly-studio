@@ -6,7 +6,7 @@ import pytest
 from sqlmodel import Session, col, select
 
 from lightly_studio.metadata.gps_coordinate import GPSCoordinate
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
@@ -1151,8 +1151,6 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
                 sample_id=img.sample_id,
                 annotation_label_id=label.annotation_label_id,
                 annotation_type=AnnotationType.CLASSIFICATION,
-                start_time_s=1.5,
-                end_time_s=4.0,
             ),
             AnnotationDetails(
                 sample_id=img.sample_id,
@@ -1204,16 +1202,11 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     # Build lookup by annotation type for copied annotations
     copied_by_type = {a.annotation_type: a for a in result.annotations}
 
-    # Assert - classification annotation copied (no bbox/mask detail tables) with its temporal span
+    # Assert - classification annotation copied (no bbox/mask detail tables)
     copied_cls = copied_by_type[AnnotationType.CLASSIFICATION]
     assert copied_cls.annotation_type == AnnotationType.CLASSIFICATION
     assert copied_cls.object_detection_details is None
     assert copied_cls.segmentation_details is None
-    copied_span = db_session.get(TemporalSpanTable, copied_cls.sample_id)
-    assert copied_span is not None
-    assert copied_span.start_time_s == 1.5
-    assert copied_span.end_time_s == 4.0
-
     # Assert - object detection detail table copied
     copied_od = copied_by_type[AnnotationType.OBJECT_DETECTION]
     od_detail = db_session.get(ObjectDetectionAnnotationTable, copied_od.sample_id)
@@ -1240,6 +1233,22 @@ def test_deep_copy__with_annotations(db_session: Session) -> None:
     assert is_detail.width == 6
     assert is_detail.height == 8
     assert is_detail.segmentation_mask == [1, 0, 0, 1]
+
+
+def test_deep_copy__preserves_video_event_span(
+    db_session: Session, video_event: AnnotationBaseTable
+) -> None:
+    copied = dataset_resolver.deep_copy(
+        session=db_session, dataset_id=video_event.sample.collection.dataset_id, copy_name="copied"
+    )
+    (event,) = annotation_resolver.get_all(
+        session=db_session,
+        filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
+    ).annotations
+    assert event.sample_id != video_event.sample_id
+    span = db_session.get(TemporalSpanTable, event.sample_id)
+    assert span is not None
+    assert (span.start_time_s, span.end_time_s) == (1.5, 4.0)
 
 
 @pytest.mark.skip(reason="On an M4 Pro, it takes 47s for duckdb and 38s for postgres.")

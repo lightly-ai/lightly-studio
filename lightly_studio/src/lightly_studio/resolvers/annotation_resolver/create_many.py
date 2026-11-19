@@ -40,9 +40,8 @@ def create_many(
     segmentation, or cuboid) in the annotation collection child of the provided parent
     collection.
 
-    It is responsibility of the caller to ensure that all parent samples belong to the same
-    collection with ID `parent_collection_id`. This function does not perform this check for
-    performance reasons.
+    Callers must supply parent samples from the specified collection. Annotations with a
+    temporal span are checked against their parent samples before insertion.
 
     Args:
         session: SQLAlchemy session for database operations.
@@ -54,6 +53,10 @@ def create_many(
     Returns:
         List of created annotation IDs.
     """
+    _validate_temporal_span_parents(
+        session=session, parent_collection_id=parent_collection_id, annotations=annotations
+    )
+
     # Step 1: Create all base annotations
     base_annotations = []
     object_detection_annotations = []
@@ -168,6 +171,27 @@ def _validate_bbox(annotation: AnnotationCreate, kind: str) -> tuple[int, int, i
         raise ValueError(f"Missing height property for {kind}.")
 
     return (annotation.x, annotation.y, annotation.width, annotation.height)
+
+
+def _validate_temporal_span_parents(
+    session: Session, parent_collection_id: UUID, annotations: list[AnnotationCreate]
+) -> None:
+    parent_ids = {
+        annotation.parent_sample_id
+        for annotation in annotations
+        if annotation.start_time_s is not None or annotation.end_time_s is not None
+    }
+    if not parent_ids:
+        return
+    parents = sample_resolver.get_many_by_id(session=session, sample_ids=list(parent_ids))
+    video_parent_ids_in_collection = {
+        parent.sample_id
+        for parent in parents
+        if parent.collection_id == parent_collection_id
+        and parent.collection.sample_type == SampleType.VIDEO
+    }
+    if parent_ids != video_parent_ids_in_collection:
+        raise ValueError("Temporal annotations require a video parent in the specified collection.")
 
 
 def _validate_optional_temporal_span(
