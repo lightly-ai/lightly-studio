@@ -11,12 +11,11 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.core.mcap import transforms
-from lightly_studio.core.mcap.reader import calibration
 from lightly_studio.core.mcap.transforms import TransformTree
 from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.models.mcap_group_sequence import McapGroupSequenceTable
 from lightly_studio.services.recording_service.load_dynamic_transforms import (
-    load_dynamic_transforms_between,
+    load_dynamic_transforms_around,
 )
 from lightly_studio.services.recording_service.load_static_transforms import (
     load_static_transforms,
@@ -36,9 +35,11 @@ class WorldPoses:
 
     The world frame is the root of the transform tree and does not move. For each
     moving frame, the dynamic edge closest to the capture time is used, also if it is
-    out of `DYNAMIC_TRANSFORM_WINDOW_NS`. A recording can start some time before its
-    first dynamic edge, and the cuboids of these ticks must also stand still in the
-    world frame.
+    far from the capture time. A recording can start some time before its first
+    dynamic edge, and the cuboids of these ticks must also stand still in the world
+    frame.
+
+    Edges with a zero quaternion are not used, because they have no rotation.
     """
 
     def __init__(
@@ -47,11 +48,14 @@ class WorldPoses:
         dynamic_transforms: Sequence[StaticTransform],
     ) -> None:
         """Store the static edges and the dynamic edges of the time range to map."""
-        self._static_transforms = list(static_transforms)
-        self._dynamic_transforms_by_child = _dynamic_transforms_by_child(edges=dynamic_transforms)
+        self._static_transforms = _edges_with_rotation(edges=static_transforms)
+        valid_dynamic_transforms = _edges_with_rotation(edges=dynamic_transforms)
+        self._dynamic_transforms_by_child = _dynamic_transforms_by_child(
+            edges=valid_dynamic_transforms
+        )
         self._parent_by_child = {
             edge.child_frame_id: edge.parent_frame_id
-            for edge in [*static_transforms, *dynamic_transforms]
+            for edge in [*self._static_transforms, *valid_dynamic_transforms]
         }
 
     def world_frame_of(self, frame_id: str) -> str | None:
@@ -131,16 +135,15 @@ class _EdgesOfChild:
 def load_world_poses(
     session: Session, sequence_id: UUID, start_ns: int, end_ns: int
 ) -> WorldPoses | None:
-    """Load the transforms of the sequence's recording, or None without dynamic transforms."""
+    """Load the transforms to map poses between `start_ns` and `end_ns`.
+
+    Returns None if the sequence's recording has no stored dynamic transforms.
+    """
     sequence = session.get(McapGroupSequenceTable, sequence_id)
     if sequence is None:
         return None
-    window_ns = calibration.DYNAMIC_TRANSFORM_WINDOW_NS
-    dynamic_transforms = load_dynamic_transforms_between(
-        session=session,
-        recording_id=sequence.recording_id,
-        start_ns=max(start_ns - window_ns, 0),
-        end_ns=end_ns + window_ns,
+    dynamic_transforms = load_dynamic_transforms_around(
+        session=session, recording_id=sequence.recording_id, start_ns=start_ns, end_ns=end_ns
     )
     if dynamic_transforms is None:
         return None
@@ -150,6 +153,10 @@ def load_world_poses(
         ),
         dynamic_transforms=dynamic_transforms,
     )
+
+
+def _edges_with_rotation(edges: Sequence[StaticTransform]) -> list[StaticTransform]:
+    return [edge for edge in edges if any(component != 0.0 for component in edge.rotation)]
 
 
 def _dynamic_transforms_by_child(edges: Sequence[StaticTransform]) -> dict[str, _EdgesOfChild]:

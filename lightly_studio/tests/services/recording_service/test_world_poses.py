@@ -4,6 +4,7 @@ import math
 
 import pytest
 
+from lightly_studio.core.mcap.errors import TransformNotFoundError
 from lightly_studio.core.mcap.type_definitions import StaticTransform
 from lightly_studio.services.recording_service.world_poses import Pose, WorldPoses
 
@@ -74,6 +75,59 @@ def test_map_pose__uses_the_closest_edge_out_of_the_window() -> None:
     assert _yaw_deg(mapped.rotation) == pytest.approx(90.0)
 
 
+def test_map_pose__ignores_a_zero_quaternion_on_another_frame() -> None:
+    world = WorldPoses(
+        static_transforms=[],
+        dynamic_transforms=[
+            _edge(parent="odom", child="base_link", yaw_deg=90.0),
+            _zero_rotation_edge(parent="odom", child="other_vehicle", timestamp_ns=0),
+        ],
+    )
+
+    mapped = world.map_pose(
+        pose=Pose(position=(10.0, 0.0, 0.0), rotation=_yaw(0.0)),
+        source_frame_id="base_link",
+        target_frame_id="odom",
+        timestamp_ns=0,
+    )
+
+    assert mapped.position == pytest.approx((0.0, 10.0, 0.0), abs=1e-9)
+
+
+def test_map_pose__uses_the_closest_edge_with_a_rotation() -> None:
+    world = WorldPoses(
+        static_transforms=[],
+        dynamic_transforms=[
+            _edge(parent="odom", child="base_link", yaw_deg=90.0, timestamp_ns=0),
+            _zero_rotation_edge(parent="odom", child="base_link", timestamp_ns=SECOND_NS),
+        ],
+    )
+
+    mapped = world.map_pose(
+        pose=Pose(position=(10.0, 0.0, 0.0), rotation=_yaw(0.0)),
+        source_frame_id="base_link",
+        target_frame_id="odom",
+        timestamp_ns=SECOND_NS,
+    )
+
+    assert mapped.position == pytest.approx((0.0, 10.0, 0.0), abs=1e-9)
+
+
+def test_map_pose__raises_if_the_frame_has_only_zero_quaternions() -> None:
+    world = WorldPoses(
+        static_transforms=[],
+        dynamic_transforms=[_zero_rotation_edge(parent="odom", child="base_link", timestamp_ns=0)],
+    )
+
+    with pytest.raises(TransformNotFoundError):
+        world.map_pose(
+            pose=Pose(position=(10.0, 0.0, 0.0), rotation=_yaw(0.0)),
+            source_frame_id="base_link",
+            target_frame_id="odom",
+            timestamp_ns=0,
+        )
+
+
 def test_hold_in_world__from_a_time_before_the_first_edge() -> None:
     world = WorldPoses(
         static_transforms=[],
@@ -107,6 +161,16 @@ def _edge(parent: str, child: str, yaw_deg: float, timestamp_ns: int = 0) -> Sta
         child_frame_id=child,
         translation=(0.0, 0.0, 0.0),
         rotation=_yaw(yaw_deg),
+        timestamp_ns=timestamp_ns,
+    )
+
+
+def _zero_rotation_edge(parent: str, child: str, timestamp_ns: int) -> StaticTransform:
+    return StaticTransform(
+        parent_frame_id=parent,
+        child_frame_id=child,
+        translation=(0.0, 0.0, 0.0),
+        rotation=(0.0, 0.0, 0.0, 0.0),
         timestamp_ns=timestamp_ns,
     )
 

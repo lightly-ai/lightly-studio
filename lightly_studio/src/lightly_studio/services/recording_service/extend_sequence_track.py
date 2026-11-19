@@ -270,7 +270,12 @@ def create_boundary_copies(  # noqa: PLR0913
         )
     if label_id is None:
         raise RuntimeError("Expected `label_id` to be set.")
-    timestamps = [link.timestamp_ns for link in links.values() if link.timestamp_ns is not None]
+    used_seq_numbers = {seq_number for pair in targets for seq_number in pair}
+    timestamps = [
+        timestamp_ns
+        for seq_number in used_seq_numbers
+        if (timestamp_ns := links[seq_number].timestamp_ns) is not None
+    ]
     world = (
         world_poses.load_world_poses(
             session=session,

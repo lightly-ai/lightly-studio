@@ -102,7 +102,11 @@ def interpolate_cuboids(
         cuboids=cuboids,
         ticks=ticks,
         world=_load_world(
-            session=session, sequence_sample_id=interpolation_range.sequence_id, ticks=ticks
+            session=session,
+            sequence_sample_id=interpolation_range.sequence_id,
+            ticks=_affected_ticks(
+                cuboids=cuboids, ticks=ticks, interpolation_range=interpolation_range
+            ),
         ),
         interpolation_range=interpolation_range,
     )
@@ -142,6 +146,26 @@ def _load_track_cuboids(
             _TrackCuboid(annotation=annotation, details=details, seq_number=link.seq_number)
         )
     return sorted(cuboids, key=lambda cuboid: cuboid.seq_number)
+
+
+def _affected_ticks(
+    cuboids: Sequence[_TrackCuboid],
+    ticks: Sequence[SampleSequenceLinkTable],
+    interpolation_range: CuboidInterpolationRange,
+) -> list[SampleSequenceLinkTable]:
+    """Return the ticks from the manual cuboid before the range to the one after it."""
+    anchor_seq_numbers = [
+        cuboid.seq_number for cuboid in cuboids if not cuboid.details.interpolated
+    ]
+    first = max(
+        (n for n in anchor_seq_numbers if n <= interpolation_range.start_seq_number),
+        default=interpolation_range.start_seq_number,
+    )
+    last = min(
+        (n for n in anchor_seq_numbers if n >= interpolation_range.end_seq_number),
+        default=interpolation_range.end_seq_number,
+    )
+    return [tick for tick in ticks if first <= tick.seq_number <= last]
 
 
 def _load_world(

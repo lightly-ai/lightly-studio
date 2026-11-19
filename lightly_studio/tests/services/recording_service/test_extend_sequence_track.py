@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
@@ -12,6 +13,7 @@ from lightly_studio.models.mcap_sequence_tracks import TrackAnnotationView
 from lightly_studio.models.sequence import SampleSequenceLinkTable
 from lightly_studio.resolvers import annotation_resolver, group_resolver, object_track_resolver
 from lightly_studio.services import recording_service
+from lightly_studio.services.recording_service import world_poses
 from tests.helpers_resolvers import create_annotation_label, cuboid_create
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 from tests.resolvers.mcap_group_sequence_resolver.helpers import McapSequenceFixture
@@ -75,6 +77,20 @@ def test_extend_sequence_track__interpolates_up_to_the_new_edge(db_session: Sess
     assert [cuboids[seq_number][0] for seq_number in range(4)] == pytest.approx(
         [1.0, 2.0, 3.0, 4.0]
     )
+
+
+def test_extend_sequence_track__loads_transforms_of_the_new_ticks(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    # Tick `n` has the timestamp 1_000 + n.
+    setup = _create_track(session=db_session, tick_count=8, covered=[3, 4])
+    load_world_poses = mocker.spy(world_poses, "load_world_poses")
+
+    _extend(session=db_session, setup=setup, start=1, end=4)
+
+    boundary_copy_call = load_world_poses.call_args_list[0]
+    assert boundary_copy_call.kwargs["start_ns"] == 1_001
+    assert boundary_copy_call.kwargs["end_ns"] == 1_003
 
 
 def test_extend_sequence_track__shrink_makes_new_edge_manual(db_session: Session) -> None:

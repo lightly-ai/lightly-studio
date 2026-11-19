@@ -4,6 +4,7 @@ import math
 from uuid import UUID
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.models.annotation.cuboid_interpolation import CuboidInterpolationRange
@@ -15,6 +16,7 @@ from lightly_studio.resolvers import (
     sequence_resolver,
 )
 from lightly_studio.services import object_track_service
+from lightly_studio.services.recording_service import world_poses
 from tests.helpers_resolvers import create_annotation_label
 from tests.services.object_track_service import helpers
 
@@ -293,6 +295,30 @@ def test_interpolate_cuboids__anchors_in_different_frames(db_session: Session) -
         assert details is not None
         assert details.frame_id == "odom"
         assert (details.px, details.py) == pytest.approx((10.0, 0.0), abs=1e-6)
+
+
+def test_interpolate_cuboids__loads_transforms_of_the_affected_pair(
+    db_session: Session, mocker: MockerFixture
+) -> None:
+    scene = helpers.create_scene(session=db_session)
+    ticks = helpers.add_sequence(
+        session=db_session,
+        scene=scene,
+        timestamps=[second * 1_000_000_000 for second in range(6)],
+    )
+    _add_rotating_frame(session=db_session, scene=scene)
+    track = helpers.create_track(session=db_session, scene=scene, number=1)
+    for seq_number in (0, 2, 5):
+        helpers.add_cuboid(
+            session=db_session, scene=scene, tick_id=ticks[seq_number], track=track, px=10.0
+        )
+    load_world_poses = mocker.spy(world_poses, "load_world_poses")
+
+    _interpolate(session=db_session, ticks=ticks, track=track, start=1, end=1)
+
+    load_world_poses.assert_called_once()
+    assert load_world_poses.call_args.kwargs["start_ns"] == 0
+    assert load_world_poses.call_args.kwargs["end_ns"] == 2_000_000_000
 
 
 _SECONDS: list[int | None] = [0, 1_000_000_000, 2_000_000_000, 3_000_000_000]
