@@ -22,7 +22,9 @@ def _transport_queries(mocker: MockerFixture) -> None:
     mocker.patch.object(env, "LIGHTLY_STUDIO_TRANSPORT_QUERIES", True)
 
 
-def test_build_request__flag_off() -> None:
+def test_build_request__flag_off(mocker: MockerFixture) -> None:
+    mocker.patch.object(env, "LIGHTLY_STUDIO_TRANSPORT_QUERIES", False)
+
     request = transport_query.build_request(
         sample_type=SampleType.IMAGE,
         match_expression=None,
