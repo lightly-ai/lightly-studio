@@ -72,11 +72,12 @@ duration_s > 10 AND fps = 30
 
 Use `frame(...)` to return videos with a matching frame. Inside it, combine annotation
 functions with `frame_timestamp_s`, the frame’s presentation timestamp in seconds on the video’s
-timeline. The first frame might have a nonzero timestamp.
+timeline. The first frame might have a nonzero timestamp. If the timestamp is unavailable,
+LightlyStudio stores `-1.0`, so `frame_timestamp_s < 5` also matches frames with an unknown time.
 
 ```mysql
-# A person appears on a frame with a timestamp below 5 seconds
-frame(object_detection(class_name = "person") AND frame_timestamp_s < 5)
+# A person appears on a frame with a timestamp from 0 up to (but excluding) 5 seconds
+frame(object_detection(class_name = "person") AND frame_timestamp_s >= 0 AND frame_timestamp_s < 5)
 
 # A person and a car appear on the same frame
 frame(object_detection(class_name = "person") AND object_detection(class_name = "car"))

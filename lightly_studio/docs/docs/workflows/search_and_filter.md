@@ -50,7 +50,8 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 ## Query in GUI
 
-On the Images or Videos page, select `Query` in the sidebar to open the query editor.
+On the Images or Videos page, select the `Query` tab beside the grid to open the query editor.
+After you apply a query, the filter sidebar shows a `Query Filter` control where you can toggle or reopen it.
 
 ![Query filter](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_query_v1.0.0.png){ width="100%" }
 
