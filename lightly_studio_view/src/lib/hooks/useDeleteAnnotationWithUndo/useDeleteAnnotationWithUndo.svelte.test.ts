@@ -47,6 +47,17 @@ describe('useDeleteAnnotationWithUndo', () => {
         expect(refetch).toHaveBeenCalled();
     });
 
+    it('passes onRestored to the undo', async () => {
+        const onRestored = vi.fn();
+        const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');
+
+        await deleteWithUndo(annotation, vi.fn(), onRestored);
+
+        expect(mocks.addDeleteToUndoStack).toHaveBeenCalledWith(
+            expect.objectContaining({ onRestored })
+        );
+    });
+
     it('adds no undo when the delete fails', async () => {
         mocks.deleteAnnotation.mockRejectedValueOnce(new Error('offline'));
         const { deleteWithUndo } = useDeleteAnnotationWithUndo(() => 'col-1');

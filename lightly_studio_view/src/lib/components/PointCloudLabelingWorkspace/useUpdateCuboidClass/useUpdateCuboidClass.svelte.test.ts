@@ -5,6 +5,9 @@ import {
     getTickDetailsQueryKey,
     readAnnotationLabelsOptions
 } from '$lib/api/lightly_studio_local/@tanstack/svelte-query.gen';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
+import type { ReversibleAction } from '$lib/hooks/useReversibleActions';
+import { createAnnotationIdMap } from '../cuboidUndo';
 import { useUpdateCuboidClass } from './useUpdateCuboidClass.svelte';
 
 const { updateAnnotations } = vi.hoisted(() => ({ updateAnnotations: vi.fn() }));
@@ -20,11 +23,19 @@ vi.mock('@tanstack/svelte-query', async (importOriginal) => ({
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
 const onUpdated = vi.fn();
+const addReversibleAction = vi.fn();
+const persistedAnnotation = {
+    sample_id: 'annotation-1',
+    annotation_label: { annotation_label_name: 'truck' }
+} as AnnotationView;
 const defaultParams = {
     getCollectionId: () => 'collection-1',
     getDatasetId: () => 'dataset-1',
     getSequenceId: () => 'sequence-1',
-    onUpdated
+    onUpdated,
+    getAnnotations: () => [persistedAnnotation],
+    annotationIds: createAnnotationIdMap(),
+    addReversibleAction
 };
 const path = { dataset_id: 'dataset-1', sequence_id: 'sequence-1', seq_number: 0 };
 
@@ -46,13 +57,16 @@ describe('useUpdateCuboidClass', () => {
             'annotation-collection-1'
         );
 
-        expect(updateAnnotations).toHaveBeenCalledWith([
-            {
-                annotation_id: 'annotation-1',
-                collection_id: 'collection-1',
-                label_name: 'car'
-            }
-        ]);
+        expect(updateAnnotations).toHaveBeenCalledWith(
+            [
+                {
+                    annotation_id: 'annotation-1',
+                    collection_id: 'collection-1',
+                    label_name: 'car'
+                }
+            ],
+            'collection-1'
+        );
         expect(onUpdated).not.toHaveBeenCalled();
         finishSave();
         await pending;
@@ -108,13 +122,16 @@ describe('useUpdateCuboidClass', () => {
 
         await handleLabelChange('annotation-2', 'pedestrian', 'annotation-collection-2');
 
-        expect(updateAnnotations).toHaveBeenCalledWith([
-            {
-                annotation_id: 'annotation-2',
-                collection_id: 'collection-2',
-                label_name: 'pedestrian'
-            }
-        ]);
+        expect(updateAnnotations).toHaveBeenCalledWith(
+            [
+                {
+                    annotation_id: 'annotation-2',
+                    collection_id: 'collection-2',
+                    label_name: 'pedestrian'
+                }
+            ],
+            'collection-2'
+        );
         expect(queryClient.getQueryState(key)?.isInvalidated).toBe(true);
     });
 
@@ -171,5 +188,95 @@ describe('useUpdateCuboidClass', () => {
         expect(toast.error).toHaveBeenCalledExactlyOnceWith(
             'Annotation class updated, but the workspace could not refresh. Please try again.'
         );
+    });
+
+    describe('undo', () => {
+        const changeToCar = (params = defaultParams) =>
+            useUpdateCuboidClass(params).handleLabelChange(
+                'annotation-1',
+                'car',
+                'annotation-collection-1'
+            );
+
+        it('adds an undo that saves the previous class and refreshes', async () => {
+            await changeToCar();
+            updateAnnotations.mockClear();
+            onUpdated.mockClear();
+
+            await (addReversibleAction.mock.lastCall?.[0] as ReversibleAction).execute();
+
+            expect(updateAnnotations).toHaveBeenCalledExactlyOnceWith(
+                [
+                    {
+                        annotation_id: 'annotation-1',
+                        collection_id: 'collection-1',
+                        label_name: 'truck'
+                    }
+                ],
+                'collection-1'
+            );
+            await vi.waitFor(() => expect(onUpdated).toHaveBeenCalledOnce());
+        });
+
+        it('saves the previous class for the cuboid that replaced a deleted one', async () => {
+            const annotationIds = createAnnotationIdMap();
+            await changeToCar({ ...defaultParams, annotationIds });
+            annotationIds.replace('annotation-1', 'restored-1');
+            updateAnnotations.mockClear();
+
+            await (addReversibleAction.mock.lastCall?.[0] as ReversibleAction).execute();
+
+            expect(updateAnnotations).toHaveBeenCalledWith(
+                [expect.objectContaining({ annotation_id: 'restored-1', label_name: 'truck' })],
+                'collection-1'
+            );
+        });
+
+        it('adds no undo when the save fails', async () => {
+            updateAnnotations.mockRejectedValue(new Error('save failed'));
+
+            await expect(changeToCar()).rejects.toThrow('save failed');
+
+            expect(addReversibleAction).not.toHaveBeenCalled();
+        });
+
+        it('adds no undo when the class does not change', async () => {
+            await useUpdateCuboidClass(defaultParams).handleLabelChange(
+                'annotation-1',
+                'truck',
+                'annotation-collection-1'
+            );
+
+            expect(addReversibleAction).not.toHaveBeenCalled();
+        });
+
+        it('saves the class of the last change when its refresh failed', async () => {
+            const { handleLabelChange } = useUpdateCuboidClass(defaultParams);
+            onUpdated.mockRejectedValueOnce(new Error('refresh failed'));
+            await handleLabelChange('annotation-1', 'car', 'annotation-collection-1');
+            await handleLabelChange('annotation-1', 'pedestrian', 'annotation-collection-1');
+            updateAnnotations.mockClear();
+
+            await (addReversibleAction.mock.lastCall?.[0] as ReversibleAction).execute();
+
+            expect(updateAnnotations).toHaveBeenCalledWith(
+                [expect.objectContaining({ annotation_id: 'annotation-1', label_name: 'car' })],
+                'collection-1'
+            );
+        });
+
+        it('saves the previous class in the collection of the change', async () => {
+            let collectionId = 'collection-1';
+            await changeToCar({ ...defaultParams, getCollectionId: () => collectionId });
+            collectionId = 'collection-2';
+            updateAnnotations.mockClear();
+
+            await (addReversibleAction.mock.lastCall?.[0] as ReversibleAction).execute();
+
+            expect(updateAnnotations).toHaveBeenCalledWith(
+                [expect.objectContaining({ collection_id: 'collection-1' })],
+                'collection-1'
+            );
+        });
     });
 });

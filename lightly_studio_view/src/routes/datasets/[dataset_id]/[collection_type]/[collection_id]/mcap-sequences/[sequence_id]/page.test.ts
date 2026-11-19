@@ -81,12 +81,13 @@ vi.mock('$lib/hooks', async () => {
             isEditingMode: writable(false),
             lastAnnotationSource: writable({}),
             updateLastAnnotationSource: vi.fn(),
-            removeLastAnnotationSource: vi.fn()
+            removeLastAnnotationSource: vi.fn(),
+            addReversibleAction: vi.fn()
         }),
         useAuth: () => ({ user: undefined }),
         hasMinimumRole: () => true,
         useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() }),
-        useDeleteAnnotation: () => ({ deleteAnnotation: vi.fn() }),
+        useDeleteAnnotationWithUndo: () => ({ deleteWithUndo: vi.fn() }),
         useCanCreateAnnotationClass: () => true,
         // The workspace context fetches the sequence summary and tick details; stub them so no live query runs.
         useMcapSequenceSummary: () => ({
