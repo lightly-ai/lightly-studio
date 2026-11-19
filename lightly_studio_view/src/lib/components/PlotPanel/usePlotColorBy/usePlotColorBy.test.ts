@@ -6,6 +6,7 @@ describe('usePlotColorBy', () => {
     it('returns null when no type is selected', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable(null),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -16,6 +17,7 @@ describe('usePlotColorBy', () => {
     it('returns metadata_field colorBy when metadata type is selected with a key', () => {
         const { colorBy, setSelectedColorByKey } = usePlotColorBy({
             selectedColorByType: writable('metadata'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -28,6 +30,7 @@ describe('usePlotColorBy', () => {
     it('returns null when metadata type is selected but key is null', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('metadata'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -38,6 +41,7 @@ describe('usePlotColorBy', () => {
     it('returns tag colorBy with all tag IDs when tags type is selected', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('tags'),
+            selectedColorByKey: writable(null),
             tags: writable([{ tag_id: 'tag-a' }, { tag_id: 'tag-b' }]),
             annotationLabels: writable([])
         });
@@ -48,6 +52,7 @@ describe('usePlotColorBy', () => {
     it('returns tag colorBy with empty tag_ids when no tags exist', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('tags'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -58,6 +63,7 @@ describe('usePlotColorBy', () => {
     it('returns annotation colorBy with all annotation label IDs when annotation_label type is selected', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('annotation_label'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([
                 { annotation_label_id: 'label-a' },
@@ -74,6 +80,7 @@ describe('usePlotColorBy', () => {
     it('returns annotation colorBy with empty annotation_label_ids when no annotation labels exist', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('annotation_label'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -85,6 +92,7 @@ describe('usePlotColorBy', () => {
         const selectedColorByType = writable<'metadata' | 'tags' | 'annotation_label' | null>(null);
         const { colorBy, setSelectedColorByKey } = usePlotColorBy({
             selectedColorByType,
+            selectedColorByKey: writable(null),
             tags: writable([{ tag_id: 'tag-a' }]),
             annotationLabels: writable([{ annotation_label_id: 'label-a' }])
         });
@@ -111,6 +119,7 @@ describe('usePlotColorBy', () => {
     it('reacts to selectedColorByKey changes', () => {
         const { colorBy, setSelectedColorByKey } = usePlotColorBy({
             selectedColorByType: writable('metadata'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -127,6 +136,7 @@ describe('usePlotColorBy', () => {
     it('exposes selectedColorByKey as a readable', () => {
         const { selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
             selectedColorByType: writable(null),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -141,6 +151,7 @@ describe('usePlotColorBy', () => {
         const tags = writable<{ tag_id: string }[]>([]);
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('tags'),
+            selectedColorByKey: writable(null),
             tags,
             annotationLabels: writable([])
         });
@@ -155,6 +166,7 @@ describe('usePlotColorBy', () => {
         const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('annotation_label'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels
         });
@@ -173,6 +185,7 @@ describe('usePlotColorBy', () => {
     it('is undefined while annotation labels load', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('annotation_label'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable(undefined)
         });
@@ -183,6 +196,7 @@ describe('usePlotColorBy', () => {
     it('fetches with no label ids when the collection has none', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('annotation_label'),
+            selectedColorByKey: writable(null),
             tags: writable([]),
             annotationLabels: writable([])
         });
@@ -193,6 +207,7 @@ describe('usePlotColorBy', () => {
     it('ignores loading labels for other modes', () => {
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('tags'),
+            selectedColorByKey: writable(null),
             tags: writable([{ tag_id: 'tag-a' }]),
             annotationLabels: writable(undefined)
         });
@@ -203,6 +218,7 @@ describe('usePlotColorBy', () => {
         const tags = writable([{ tag_id: 'tag-a' }]);
         const { colorBy } = usePlotColorBy({
             selectedColorByType: writable('annotation_label'),
+            selectedColorByKey: writable(null),
             tags,
             annotationLabels: writable([{ annotation_label_id: 'label-a' }])
         });
