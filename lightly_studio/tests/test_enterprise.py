@@ -67,7 +67,7 @@ def test_connect__http_client(
 ) -> None:
     mocker.patch.object(env, "LIGHTLY_STUDIO_HTTP_CLIENT", True)
     mocker.patch.object(active_transport._active, "transport", None)
-    mocker.patch.object(db_manager, "_remote_client", False)
+    mocker.patch.object(db_manager._client_mode, "remote", False)
     mock_client = mocker.patch.object(httpx, "Client")
     mock_post = mocker.patch.object(requests, "post")
     mock_get = mocker.patch.object(requests, "get")
