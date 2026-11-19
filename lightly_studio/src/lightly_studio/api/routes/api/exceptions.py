@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError, ResponseValidationError
 from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DataError, IntegrityError, OperationalError
@@ -25,6 +26,7 @@ from lightly_studio.assisted_labeling.provider import ProviderError, ProviderUna
 from lightly_studio.embed.errors import QueryEmbedderError, RemoteEmbedderUnavailableError
 from lightly_studio.embed.remote.errors import RemoteEmbedderError
 from lightly_studio.errors import (
+    AnnotationSourceInUseError,
     ExportError,
     ForbiddenError,
     NotFoundError,
@@ -132,7 +134,7 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
         )
         return JSONResponse(
             status_code=HTTP_STATUS_UNPROCESSABLE_ENTITY,
-            content={"detail": exc.errors()},
+            content={"detail": jsonable_encoder(exc.errors())},
         )
 
     @app.exception_handler(NotFoundError)
@@ -145,6 +147,20 @@ def register_exception_handlers(app: FastAPI) -> None:  # noqa: C901, PLR0915
         return JSONResponse(
             status_code=HTTP_STATUS_NOT_FOUND,
             content={"error": str(_exc) or "Resource not found."},
+        )
+
+    @app.exception_handler(AnnotationSourceInUseError)
+    async def _annotation_source_in_use_error_handler(
+        _request: Request, _exc: AnnotationSourceInUseError
+    ) -> JSONResponse:
+        """Handle the delete of an annotation source that other rows use."""
+        _report_error(
+            exc=_exc,
+            status_code=HTTP_STATUS_CONFLICT,
+        )
+        return JSONResponse(
+            status_code=HTTP_STATUS_CONFLICT,
+            content={"error": str(_exc)},
         )
 
     # An auth failure is an expected client error, so it is logged but not reported.

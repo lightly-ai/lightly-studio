@@ -394,14 +394,14 @@ describe('annotation label pruning', () => {
     });
 });
 
-describe('point-clouds annotation counts', () => {
+describe('mcap-sequences annotation counts', () => {
     it('feeds the sequence counts to the label filter', async () => {
         const sequenceCounts = [{ label_name: 'car', total_count: 2, current_count: 1 }];
         vi.mocked(useMcapSequenceAnnotationCounts).mockReturnValue({
             data: sequenceCounts,
             isFetching: false
         } as unknown as ReturnType<typeof useMcapSequenceAnnotationCounts>);
-        setPageRoute(APP_ROUTES.pointClouds);
+        setPageRoute(APP_ROUTES.mcapSequences);
 
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
@@ -413,7 +413,7 @@ describe('point-clouds annotation counts', () => {
     it('waits for the sequence filter of the shown collection', async () => {
         // The grid page sets the filter collection after the layout reads the new route.
         useMcapSequenceFilters().setCollectionId('previous-collection-id');
-        setPageRoute(APP_ROUTES.pointClouds);
+        setPageRoute(APP_ROUTES.mcapSequences);
 
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
@@ -505,8 +505,8 @@ describe('+layout.svelte collection-grid workspace', () => {
         expect(screen.getByTestId('filter-panel-body')).toBeInTheDocument();
     });
 
-    it('renders the filter panel on point-clouds route', async () => {
-        setPageRoute(APP_ROUTES.pointClouds);
+    it('renders the filter panel on mcap-sequences route', async () => {
+        setPageRoute(APP_ROUTES.mcapSequences);
         render(LayoutWorkspaceTestWrapper, { props: defaultProps });
         await tick();
 

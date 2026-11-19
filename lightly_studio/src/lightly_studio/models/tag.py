@@ -9,6 +9,8 @@ from sqlmodel import Field, Relationship, SQLModel
 
 from lightly_studio.models.sample import SampleTable, SampleTagLinkTable
 
+MAX_SAMPLE_IDS_PER_REQUEST = 1000
+
 
 class TagBase(SQLModel):
     """Base class for the Tag model."""
@@ -30,6 +32,13 @@ class TagRenameBody(SQLModel):
     """Request body for renaming a tag."""
 
     name: str
+
+
+class TagSamplesBody(SQLModel):
+    """Request body to add a tag to samples or to remove it from samples."""
+
+    tag_name: str
+    sample_ids: list[UUID] = Field(max_length=MAX_SAMPLE_IDS_PER_REQUEST)
 
 
 class TagView(TagBase):
