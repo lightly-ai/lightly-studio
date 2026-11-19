@@ -1,5 +1,4 @@
 import { tableFromIPC, type Vector } from 'apache-arrow';
-import { writable, type Writable } from 'svelte/store';
 
 const dataColumns = ['x', 'y', 'fulfils_filter', 'color_categories', 'sample_id'];
 type TableColumn = (typeof dataColumns)[number];
@@ -16,11 +15,10 @@ const readListColumn = (column: Vector): number[][] => {
 
 export type ArrowData = Record<TableColumn, unknown>;
 
-type UseArrowDataReturn = {
-    data: Writable<ArrowData>;
-    colorLegend: Writable<Map<number, string>>;
-    error: Writable<string | undefined>;
-};
+export interface EmbeddingsArrow {
+    columns: ArrowData;
+    legend: Map<number, string>;
+}
 
 const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined) => {
     const rawLegend = metadata?.get('color_legend');
@@ -44,46 +42,22 @@ const parseColorLegend = (metadata: Map<string, string | Uint8Array> | undefined
 };
 
 /**
- * Parses Apache Arrow IPC format blob data into reactive Svelte stores.
+ * Parses the Arrow IPC response of the embeddings endpoint into plot columns and a legend.
  * Extracts x/y coordinates, filter status, and sample IDs from the Arrow table
  * and validates that all required columns are present.
- *
- * @param blobData - Binary blob containing Arrow IPC formatted embeddings data
- * @returns Object containing reactive stores for the parsed data and any error messages
  */
-export function useArrowData({ blobData }: { blobData: Blob }): UseArrowDataReturn {
-    const error = writable<string | undefined>();
-
-    const data = writable<ArrowData>();
-    const colorLegend = writable<Map<number, string>>(new Map());
-
-    const readData = async () => {
-        try {
-            const buf = await (blobData as Blob).arrayBuffer();
-            const table = await tableFromIPC(new Uint8Array(buf));
-            if (!table) {
-                error.set('Failed to read Arrow table from embeddings data.');
-                return;
-            }
-            const columnData = new Map<TableColumn, unknown>();
-            for (const col of dataColumns) {
-                const child = table.getChild(col);
-                if (!child) {
-                    error.set(`Missing required column "${col}" in Arrow data.`);
-                    return;
-                }
-                columnData.set(
-                    col,
-                    col === 'color_categories' ? readListColumn(child) : child.toArray()
-                );
-            }
-            data.set(Object.fromEntries(columnData) as Record<TableColumn, unknown>);
-            colorLegend.set(parseColorLegend(table.schema?.metadata));
-        } catch (e) {
-            error.set(`Error reading Arrow data: ${String(e)}`);
+export function parseEmbeddingsArrow(buffer: ArrayBuffer): EmbeddingsArrow {
+    const table = tableFromIPC(new Uint8Array(buffer));
+    const columnData = new Map<TableColumn, unknown>();
+    for (const col of dataColumns) {
+        const child = table.getChild(col);
+        if (!child) {
+            throw new Error(`Missing required column "${col}" in Arrow data.`);
         }
+        columnData.set(col, col === 'color_categories' ? readListColumn(child) : child.toArray());
+    }
+    return {
+        columns: Object.fromEntries(columnData) as ArrowData,
+        legend: parseColorLegend(table.schema?.metadata)
     };
-
-    readData();
-    return { data, colorLegend, error };
 }

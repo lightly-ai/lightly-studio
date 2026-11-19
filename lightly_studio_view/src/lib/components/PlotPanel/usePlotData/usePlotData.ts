@@ -40,7 +40,7 @@ export function usePlotData({
     hasActiveFilter = true,
     hiddenCategories = new Set()
 }: {
-    arrowData: ArrowData;
+    arrowData: ArrowData | undefined;
     rangeSelection: Selection;
     highlightRegion?: Selection;
     highlightedSampleIds?: string[];
