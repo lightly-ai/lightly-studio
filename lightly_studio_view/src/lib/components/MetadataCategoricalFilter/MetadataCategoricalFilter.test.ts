@@ -109,6 +109,18 @@ describe('MetadataCategoricalFilter', () => {
             expect(screen.getByText('2 of 2')).toBeVisible();
         });
 
+        it('shows no summary while not all values are loaded', () => {
+            render(MetadataCategoricalFilter, {
+                props: {
+                    ...listProps,
+                    buckets: [city, rural],
+                    expanded: false,
+                    allValuesLoaded: false
+                }
+            });
+            expect(screen.queryByText(/ of /)).not.toBeInTheDocument();
+        });
+
         it('shows no summary until the values are loaded', () => {
             render(MetadataCategoricalFilter, {
                 props: { ...listProps, buckets: [], expanded: false }

@@ -52,6 +52,7 @@
         updating={expanded && counts.updating}
         error={expanded ? counts.error : undefined}
         onRetry={() => counts.refetch()}
+        allValuesLoaded={counts.allValuesLoaded}
         onToggle={(value) => onValueToggle(field, value)}
         onSetValues={(values) => onValuesSet(field, values)}
         onClear={() => onValuesClear(field)}

@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { CategoricalMetadataBucket } from '$lib/hooks/useCategoricalMetadataDistribution/types';
     import type { CategoricalMetadataValue } from '$lib/services/types';
-    import { buildOptions, getOptionLabel } from './helpers';
+    import { buildOptions, getSelectionSummary } from './helpers';
     import MetadataCategoricalFilterLayout from './MetadataCategoricalFilterLayout.svelte';
     import MetadataCategoricalFilterOptions from './MetadataCategoricalFilterOptions.svelte';
     import MetadataCategoricalFilterStatus from './MetadataCategoricalFilterStatus.svelte';
@@ -28,6 +28,8 @@
         checked?: boolean;
         /** List layout only: clears the field filter when the checkbox is unchecked. */
         onClearField?: () => void;
+        /** List layout only: `false` while `buckets` may miss values, which hides "N of M". */
+        allValuesLoaded?: boolean;
     }
 
     const {
@@ -46,25 +48,18 @@
         expanded = true,
         onToggleExpanded,
         checked,
-        onClearField
+        onClearField,
+        allValuesLoaded = true
     }: Props = $props();
 
     const options = $derived(buildOptions(buckets, selectedValues));
-    const summary = $derived(
-        selectedValues.length === 0
-            ? 'All values'
-            : selectedValues.length === 1
-              ? getOptionLabel(
-                    options.find(({ bucket }) => Object.is(bucket.value, selectedValues[0]))!,
-                    options,
-                    buckets
-                )
-              : `${selectedValues.length} selected`
-    );
+    const summary = $derived(getSelectionSummary(selectedValues, options, buckets));
     const status = $derived(updating ? 'Updating…' : undefined);
-    // No summary until the values load, so the total in "N of M" is known.
+    // No summary until every value is known, so the total in "N of M" is right.
     const headerSummary = $derived(
-        buckets.length > 0 ? `${selectedValues.length} of ${options.length}` : undefined
+        allValuesLoaded && buckets.length > 0
+            ? `${selectedValues.length} of ${options.length}`
+            : undefined
     );
     const disabled = $derived(loading && buckets.length === 0 && selectedValues.length === 0);
 </script>

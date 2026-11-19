@@ -68,7 +68,13 @@ describe('MetadataFieldHeader', () => {
 
     it('hides the summary for an inactive field', () => {
         render(MetadataFieldHeader, {
-            props: { title: 'width', checked: false, summary: 'x', onClear: vi.fn() }
+            props: {
+                title: 'width',
+                checked: false,
+                summary: 'x',
+                expanded: false,
+                onClear: vi.fn()
+            }
         });
 
         expect(screen.getByRole('checkbox', { name: 'width filter' })).not.toBeChecked();
