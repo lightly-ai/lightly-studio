@@ -196,6 +196,8 @@ def test_fps_comparison__float_bounds(db_session: Session, test_client: TestClie
 
     all_names = ["24.mp4", "29.97.mp4", "30.mp4"]
     for operator, bound, names in [
+        ("==", 29.97, ["29.97.mp4"]),
+        ("!=", 29.97, ["24.mp4", "30.mp4"]),
         (">", 29.97, ["30.mp4"]),
         (">=", 29.97, ["29.97.mp4", "30.mp4"]),
         ("<", 1e100, all_names),

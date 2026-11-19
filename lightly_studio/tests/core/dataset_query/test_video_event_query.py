@@ -64,7 +64,7 @@ class TestVideoEventQuery:
             (VideoEventQuery(), {"events.mp4"}),
             (EVENT_QUERIES[7], {"events.mp4"}),
             (EVENT_QUERIES[8], set()),
-            (ClassificationQuery(), {"events.mp4", "whole.mp4"}),
+            (ClassificationQuery(), {"whole.mp4"}),
             (VideoEventQuery(VideoEventField.start_time_s < 3), set()),
             (VideoEventQuery(VideoEventField.start_time_s <= 3), {"events.mp4"}),
             (VideoEventQuery(VideoEventField.end_time_s == 8), {"events.mp4"}),

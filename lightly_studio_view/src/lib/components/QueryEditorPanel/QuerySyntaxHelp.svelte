@@ -41,7 +41,9 @@
         <li>Tag membership: <code>"tag_name" IN tags</code></li>
         <li>
             {#if sampleType === 'video'}
-                Video annotations: <code>classification(…)</code> matches whole-video and temporal annotations.
+                Video annotations: <code>classification(…)</code> matches whole-video
+                classifications. Use <code>event(class_name = "run" AND start_time_s &lt; 5)</code> to
+                match one temporal event.
             {:else}
                 Annotation conditions: <code>segmentation_mask(…)</code>,
                 <code>object_detection(…)</code>, <code>classification(…)</code>

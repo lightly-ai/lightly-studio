@@ -8,12 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Filter videos by temporal events in the query editor, for example `event(class_name = "run" AND start_time_s < 5)`.
 - Use `frame(...)` in the video query editor to match annotations and timestamps on the same frame.
 - Filter the point cloud sequences by annotation class in the filter panel. A sequence matches when one of its frames has an annotation of that class.
 - The embedding plot shows a hint for what Shift + click does on the hovered point: pick, add, or remove.
 - Python SDK: MCAP datasets can use cameras that record JPEG or PNG `CompressedImage` messages, not only H.264 or H.265 video. The camera frames show in the viewer and are used for embeddings.
 
 ### Changed
+
+- BREAKING: In the video query editor, `classification(...)` now matches whole-video classifications. Use `event(...)` for temporal events, or combine both with `OR` to include both kinds.
+- BREAKING: Python SDK: On videos, `ClassificationQuery` now matches whole-video classifications. Use `VideoEventQuery` for temporal events, or combine both queries with `OR(...)` to preserve both kinds of matches.
 
 ### Deprecated
 
