@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-from sqlalchemy import ColumnElement, and_
-from sqlmodel import col
+from sqlalchemy import ColumnElement, and_, or_
+from sqlmodel import col, select
 
 from lightly_studio.core.dataset_query.annotation_expression import AnnotationSourceField
 from lightly_studio.core.dataset_query.boolean_expression import AND
@@ -16,6 +16,7 @@ from lightly_studio.models.annotation.annotation_base import (
 )
 from lightly_studio.models.annotation_label import AnnotationLabelTable
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.video import VideoTable
 
 
 class ClassificationField:
@@ -50,6 +51,7 @@ class ClassificationQuery(MatchExpression):
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.CLASSIFICATION,
+                ~AnnotationBaseTable.temporal_span_details.has(),
                 self.criterion.get(),
             )
         )

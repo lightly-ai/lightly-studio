@@ -352,7 +352,10 @@ sample-level examples translate to [`VideoSampleField`](../api/dataset_query.md#
 
     This matches a `run` event that starts before five seconds. Fields also include `end_time_s`,
     `source`, and `confidence`. Event times are in seconds relative to the video start.
-    `ClassificationQuery` still matches both whole-video classifications and temporal events.
+
+    To migrate a temporal event search, replace `ClassificationQuery(ClassificationField.class_name == "run")`
+    with `VideoEventQuery(VideoEventField.class_name == "run")`. Use `ClassificationQuery` for
+    whole-video classifications. To search both, combine the two queries with `OR(...)`.
 
     #### Video frame queries
 

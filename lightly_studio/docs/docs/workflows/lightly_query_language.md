@@ -143,8 +143,8 @@ For example, `frame(segmentation_mask(class_name = "cat"))` finds videos with a 
 
 ### Classification queries
 
-Use `classification(...)` to match image and video classifications, including temporal events. To filter by
-event start or end time, see [Video event queries](#video-event-queries). Example queries:
+Use `classification(...)` to match an image or whole-video classification. For classifications with
+a time span, see [Video event queries](#video-event-queries). Example queries:
 
 ```mysql
 classification(class_name = "cat")
@@ -237,8 +237,9 @@ event(class_name = "run" AND start_time_s < 5)
 event(class_name = "run") AND event(class_name = "walk")
 ```
 
-On the Videos page, `classification(class_name = "run")` matches both whole-video classifications
-and temporal events. Use `event(class_name = "run")` to find only temporal events.
+On the Videos page, `classification(class_name = "run")` matches a whole-video classification.
+To include both whole-video and temporal event annotation, use `classification(class_name = "run")
+OR event(class_name = "run")`.
 
 
 ## Sample evaluation filtering

@@ -13,7 +13,6 @@ from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import QueryExpr
 from lightly_studio.models.sample import SampleTable
-from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers import sample_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -64,7 +63,7 @@ class TestVideoEventQuery:
             (VideoEventQuery(), {"events.mp4"}),
             (EVENT_QUERIES[7], {"events.mp4"}),
             (EVENT_QUERIES[8], set()),
-            (ClassificationQuery(), {"events.mp4", "whole.mp4"}),
+            (ClassificationQuery(), {"whole.mp4"}),
             (VideoEventQuery(VideoEventField.start_time_s < 3), set()),
             (VideoEventQuery(VideoEventField.start_time_s <= 3), {"events.mp4"}),
             (VideoEventQuery(VideoEventField.end_time_s == 8), {"events.mp4"}),
@@ -186,7 +185,7 @@ class TestVideoEventQuery:
         assert {video.file_name for video in db_session.exec(query)} == expected_names
 
 
-def test_legacy_spans_on_images_and_frames_match_classification(db_session: Session) -> None:
+def test_classification_matches_images_and_frames(db_session: Session) -> None:
     images = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=images.collection_id)
     videos = create_collection(
@@ -200,7 +199,7 @@ def test_legacy_spans_on_images_and_frames_match_classification(db_session: Sess
         (video.video_frames_collection_id, video.frame_sample_ids[0]),
     ]:
         label = create_annotation_label(session=db_session, root_collection_id=collection_id)
-        (annotation,) = create_annotations(
+        create_annotations(
             session=db_session,
             collection_id=collection_id,
             annotations=[
@@ -211,10 +210,6 @@ def test_legacy_spans_on_images_and_frames_match_classification(db_session: Sess
                 )
             ],
         )
-        db_session.add(
-            TemporalSpanTable(sample_id=annotation.sample_id, start_time_s=0, end_time_s=1)
-        )
-    db_session.commit()
 
     matches = db_session.exec(
         select(SampleTable.sample_id).where(ClassificationQuery().get())
