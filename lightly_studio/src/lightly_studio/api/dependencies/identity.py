@@ -1,7 +1,8 @@
 """The user and the role that send a request.
 
-`get_identity` is a hook. The default returns the local user. A deployment with an auth proxy
-overrides it: `app.dependency_overrides[identity.get_identity] = identity.get_proxy_identity`.
+`get_identity` is a replaceable dependency, a field of `api.replaceable.Replaceable`. The
+default returns the local user. A deployment with an auth proxy replaces it with
+`get_proxy_identity`.
 """
 
 from __future__ import annotations
@@ -57,7 +58,7 @@ def get_identity(request: Request) -> Identity:
 
     Raises:
         RuntimeError: If the request carries user headers. They are only valid behind an auth
-            proxy, and that deployment overrides this dependency with `get_proxy_identity`.
+            proxy, and that deployment replaces this dependency with `get_proxy_identity`.
     """
     if request.headers.getlist(_EMAIL_HEADER) or request.headers.getlist(_ROLE_HEADER):
         raise RuntimeError("User headers are not supported in a local run.")
