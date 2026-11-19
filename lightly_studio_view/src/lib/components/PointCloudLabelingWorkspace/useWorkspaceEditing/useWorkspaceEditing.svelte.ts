@@ -35,6 +35,15 @@ export function useWorkspaceEditing(
                 sequenceId: getOptions().sequenceId
             })
         });
+    // Interpolation changes cuboids on other ticks too.
+    const invalidateOtherTicks = () =>
+        queryClient.invalidateQueries({
+            queryKey: getTickDetailsSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            }),
+            refetchType: 'none'
+        });
     const { addReversibleAction } = useGlobalStorage();
     // Undo entries of this workspace find a cuboid that an undo of its delete re-created.
     const annotationIds = createAnnotationIdMap();
@@ -82,6 +91,7 @@ export function useWorkspaceEditing(
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         onUpdated: async () => {
             void refreshTracks();
+            invalidateOtherTicks();
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
         },
         getAnnotations: getPersistedAnnotations,
@@ -183,6 +193,8 @@ export function useWorkspaceEditing(
                 const isNewSource =
                     sourceName && !getData().annotationSourceNames?.includes(sourceName);
                 if (isNewSource) void getData().refetchAnnotationSources();
+                void refreshTracks();
+                invalidateOtherTicks();
                 await getWorkspace().tickDetails.refetch({ throwOnError: true });
                 selectedCuboidId = annotationId;
                 activeTool = 'select';
@@ -207,13 +219,7 @@ export function useWorkspaceEditing(
 
     async function handleTrackChange(): Promise<void> {
         void refreshTracks();
-        void queryClient.invalidateQueries({
-            queryKey: getTickDetailsSequenceQueryKey({
-                datasetId: getOptions().datasetId,
-                sequenceId: getOptions().sequenceId
-            }),
-            refetchType: 'none'
-        });
+        invalidateOtherTicks();
         await getWorkspace().tickDetails.refetch({ throwOnError: true });
     }
 

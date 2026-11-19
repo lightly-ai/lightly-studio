@@ -2,15 +2,17 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PointCloudWorkspaceContext } from '../provider/types';
 import type { WorkspaceOptions } from '../workspaceOptions';
 import type { useWorkspaceSceneData } from '../useWorkspaceSceneData/useWorkspaceSceneData.svelte';
+import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
 import { useWorkspaceEditing } from './useWorkspaceEditing.svelte';
 
 const { invalidateQueries } = vi.hoisted(() => ({ invalidateQueries: vi.fn() }));
 vi.mock('@tanstack/svelte-query', () => ({ useQueryClient: () => ({ invalidateQueries }) }));
 vi.mock('$lib/hooks', () => ({
     useGlobalStorage: () => ({ addReversibleAction: vi.fn() }),
-    getTickDetailsSequenceQueryKey: vi.fn()
+    getTickDetailsSequenceQueryKey: (sequence: unknown) => ['tick-details', sequence]
 }));
-const { createCuboid } = vi.hoisted(() => ({
+const { captured, createCuboid } = vi.hoisted(() => ({
+    captured: { onGeometryUpdated: (): Promise<unknown> => Promise.resolve() },
     createCuboid: vi.fn(async (_box: unknown, onCreated: (id: string) => Promise<void>) =>
         onCreated('cuboid-2')
     )
@@ -32,13 +34,18 @@ const { deleteCuboid, waitForSaves, useDeleteCuboidAnnotation } = vi.hoisted(() 
 });
 vi.mock('../useDeleteCuboidAnnotation', () => ({ useDeleteCuboidAnnotation }));
 vi.mock('../useUpdateCuboidAnnotation', () => ({
-    useUpdateCuboidAnnotation: () => ({ waitForSaves })
+    useUpdateCuboidAnnotation: (params: { onUpdated: () => Promise<unknown> }) => {
+        captured.onGeometryUpdated = params.onUpdated;
+        return { waitForSaves };
+    }
 }));
 vi.mock('../useStartSequenceTrack', () => ({ useStartSequenceTrack: () => ({}) }));
 vi.mock('../useExtendSequenceTrack', () => ({ useExtendSequenceTrack: () => ({}) }));
 vi.mock('../useDeleteSequenceTrack', () => ({ useDeleteSequenceTrack: () => ({}) }));
 vi.mock('../useUpdateCuboidClass', () => ({ useUpdateCuboidClass: () => ({}) }));
 
+const sequence = { datasetId: 'dataset-1', sequenceId: 'sequence-1' };
+const refetch = vi.fn().mockResolvedValue(undefined);
 let dispose = () => {};
 afterEach(() => dispose());
 
@@ -51,13 +58,11 @@ function setup(targetSource = 'labels') {
         annotationSourceNames: ['labels'],
         refetchAnnotationSources
     } as unknown as ReturnType<typeof useWorkspaceSceneData>;
-    const workspace = {
-        tickDetails: { refetch: vi.fn().mockResolvedValue(undefined) }
-    } as unknown as PointCloudWorkspaceContext;
+    const workspace = { tickDetails: { refetch } } as unknown as PointCloudWorkspaceContext;
     dispose = $effect.root(() => {
         editing = useWorkspaceEditing(
             () => workspace,
-            () => ({}) as WorkspaceOptions,
+            () => sequence as WorkspaceOptions,
             () => data,
             () => true,
             () => ({ targetSource, blockedReason: null, needsPick: false })
@@ -101,6 +106,19 @@ describe('useWorkspaceEditing', () => {
         expect(refetchAnnotationSources).not.toHaveBeenCalled();
     });
 
+    it('refreshes the other ticks after a cuboid geometry update', async () => {
+        setup();
+        refetch.mockClear();
+
+        await captured.onGeometryUpdated();
+
+        expect(invalidateQueries).toHaveBeenCalledWith({
+            queryKey: getTickDetailsSequenceQueryKey(sequence),
+            refetchType: 'none'
+        });
+        expect(refetch).toHaveBeenCalledOnce();
+    });
+
     it('deletes a cuboid after its running saves are complete', async () => {
         let finishSaves!: () => void;
         waitForSaves.mockReturnValue(new Promise<void>((resolve) => (finishSaves = resolve)));
@@ -120,6 +138,7 @@ describe('useWorkspaceEditing', () => {
 
     it('completes the delete refresh after the tracks and ticks are refetched', async () => {
         let finishTicks!: () => void;
+        invalidateQueries.mockClear();
         invalidateQueries
             .mockResolvedValueOnce(undefined)
             .mockReturnValueOnce(new Promise<void>((resolve) => (finishTicks = resolve)));
