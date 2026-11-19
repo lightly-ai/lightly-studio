@@ -50,16 +50,15 @@ For videos, the sidebar adds `Duration`. If the videos in the current view conta
 
 ## Query in GUI
 
-!!! warning "Query in GUI is currently available for image datasets only."
-
-Your dataset can be filtered by a custom query written in an SQL-like language. Open the
-query editor by clicking the `Add query filter` button in the left sidebar.
+On the Images or Videos page, select the `Query` tab beside the grid to open the query editor.
+After you apply a query, the filter sidebar shows a `Query Filter` control where you can toggle or reopen it.
 
 ![Query filter](https://storage.googleapis.com/lightly-public/studio/docs/search_filter_query_v1.0.0.png){ width="100%" }
 
-The language supports filtering by image fields such as dimensions or file name, tags, annotations,
-as well as logical combinations of these. For a full reference, see the
-[Lightly Query Language](lightly_query_language.md) documentation.
+For both images and videos, you can combine conditions on tags, metadata, and annotations.
+For images, you can also filter by dimensions, file name, or creation date.
+For videos, you can filter by frame rate or duration, or find annotations that appear on the same frame.
+See the [Lightly Query Language reference](lightly_query_language.md) for the syntax and examples.
 
 The `History` button next to the `Apply` button lists the last 10 queries that you applied
 in the collection. Click a query to apply it again. The history is saved in your browser.
@@ -69,6 +68,9 @@ Example queries:
 ```mysql
 # Images that are at least 640 pixels wide or 400 pixels tall
 width >= 640 OR height >= 400
+
+# Videos longer than 10 seconds
+duration_s > 10
 
 # Images which do not have the tag "reviewed"
 NOT "reviewed" IN tags

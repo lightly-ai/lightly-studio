@@ -10,7 +10,8 @@ const transforms = {
     begin: vi.fn(),
     preview: vi.fn(),
     cancel: vi.fn(),
-    commit: vi.fn()
+    commit: vi.fn(),
+    discard: vi.fn()
 };
 
 vi.mock('@threlte/core', () => ({ Canvas: () => {} }));

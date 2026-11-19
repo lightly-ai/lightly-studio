@@ -23,7 +23,7 @@ from lightly_studio.models.annotation_label import (
     AnnotationLabelWithCountView,
 )
 from lightly_studio.models.collection import CollectionTable
-from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
+from lightly_studio.resolvers import annotation_label_resolver
 
 annotations_label_router = APIRouter()
 
@@ -176,7 +176,6 @@ def delete_annotation_label(
     session: SessionDep,
 ) -> dict[str, str]:
     """Delete an annotation label and all annotations that use it."""
-    annotation_resolver.delete_annotations(session=session, annotation_label_ids=[label_id])
     if not annotation_label_resolver.delete(session=session, label_id=label_id):
         raise NotFoundError("Annotation label not found")
     return {"status": "deleted"}

@@ -61,7 +61,7 @@ const SAMPLE_TYPE_CONFIGS: Partial<Record<SampleType, SampleTypeConfig>> = {
     },
     [SampleType.SEQUENCE]: {
         icon: Box,
-        toHref: (d, t, c) => routeHelpers.toPointClouds(d, t, c),
+        toHref: (d, t, c) => routeHelpers.toMcapSequences(d, t, c),
         title: (name) => name || 'Point clouds'
     }
     // MCAP intentionally absent — no dedicated view

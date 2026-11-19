@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.image_filter import ImageFilter
-
-_SOURCE_FIELD = "collection_ids"
 
 
 def strip_source_only_annotations_filter(image_filter: ImageFilter | None) -> ImageFilter | None:
@@ -36,17 +33,9 @@ def strip_source_only_annotations_filter(image_filter: ImageFilter | None) -> Im
         raise RuntimeError("Call resolve_embedding_region before stripping the filter.")
     if sample_filter.annotations_filter is None:
         return image_filter
-    if not _is_source_only(annotations_filter=sample_filter.annotations_filter):
+    if not sample_filter.annotations_filter.is_source_only():
         return image_filter
     # A shallow copy shares the sample filter. Copy it too, so that the input keeps its sources.
     return image_filter.model_copy(
         update={"sample_filter": sample_filter.model_copy(update={"annotations_filter": None})}
-    )
-
-
-def _is_source_only(annotations_filter: AnnotationsFilter) -> bool:
-    # Compare all fields, so that a field added later keeps the filter.
-    exclude = {_SOURCE_FIELD}
-    return annotations_filter.model_dump(exclude=exclude) == AnnotationsFilter().model_dump(
-        exclude=exclude
     )

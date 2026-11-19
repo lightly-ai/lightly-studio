@@ -5,23 +5,38 @@ import type { useWorkspaceSceneData } from '../useWorkspaceSceneData/useWorkspac
 import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
 import { useWorkspaceEditing } from './useWorkspaceEditing.svelte';
 
-const { invalidateQueries, captured, createCuboid } = vi.hoisted(() => ({
-    invalidateQueries: vi.fn(),
+const { invalidateQueries } = vi.hoisted(() => ({ invalidateQueries: vi.fn() }));
+vi.mock('@tanstack/svelte-query', () => ({ useQueryClient: () => ({ invalidateQueries }) }));
+vi.mock('$lib/hooks', () => ({
+    useGlobalStorage: () => ({ addReversibleAction: vi.fn() }),
+    getTickDetailsSequenceQueryKey: (sequence: unknown) => ['tick-details', sequence]
+}));
+const { captured, createCuboid } = vi.hoisted(() => ({
     captured: { onGeometryUpdated: (): Promise<unknown> => Promise.resolve() },
     createCuboid: vi.fn(async (_box: unknown, onCreated: (id: string) => Promise<void>) =>
         onCreated('cuboid-2')
     )
 }));
-
-vi.mock('@tanstack/svelte-query', () => ({ useQueryClient: () => ({ invalidateQueries }) }));
 vi.mock('../useCreateCuboidAnnotation', () => ({
     useCreateCuboidAnnotation: () => ({ handleCreateCuboid: createCuboid })
 }));
-vi.mock('../useDeleteCuboidAnnotation', () => ({ useDeleteCuboidAnnotation: () => ({}) }));
+const { deleteCuboid, waitForSaves, useDeleteCuboidAnnotation } = vi.hoisted(() => {
+    const deleteCuboid = vi.fn();
+    return {
+        deleteCuboid,
+        waitForSaves: vi.fn(),
+        useDeleteCuboidAnnotation: vi.fn<
+            (params: { refresh: () => Promise<unknown> }) => {
+                handleDeleteCuboid: typeof deleteCuboid;
+            }
+        >(() => ({ handleDeleteCuboid: deleteCuboid }))
+    };
+});
+vi.mock('../useDeleteCuboidAnnotation', () => ({ useDeleteCuboidAnnotation }));
 vi.mock('../useUpdateCuboidAnnotation', () => ({
     useUpdateCuboidAnnotation: (params: { onUpdated: () => Promise<unknown> }) => {
         captured.onGeometryUpdated = params.onUpdated;
-        return {};
+        return { waitForSaves };
     }
 }));
 vi.mock('../useStartSequenceTrack', () => ({ useStartSequenceTrack: () => ({}) }));
@@ -102,5 +117,42 @@ describe('useWorkspaceEditing', () => {
             refetchType: 'none'
         });
         expect(refetch).toHaveBeenCalledOnce();
+    });
+
+    it('deletes a cuboid after its running saves are complete', async () => {
+        let finishSaves!: () => void;
+        waitForSaves.mockReturnValue(new Promise<void>((resolve) => (finishSaves = resolve)));
+        deleteCuboid.mockResolvedValue(true);
+        const editing = setup();
+
+        const deleting = editing.handleDeleteCuboid('cuboid-1');
+        await Promise.resolve();
+        expect(waitForSaves).toHaveBeenCalledWith('cuboid-1');
+        expect(deleteCuboid).not.toHaveBeenCalled();
+        finishSaves();
+        await deleting;
+
+        expect(deleteCuboid).toHaveBeenCalledWith('cuboid-1');
+        expect(editing.selectedCuboidId).toBeNull();
+    });
+
+    it('completes the delete refresh after the tracks and ticks are refetched', async () => {
+        let finishTicks!: () => void;
+        invalidateQueries.mockClear();
+        invalidateQueries
+            .mockResolvedValueOnce(undefined)
+            .mockReturnValueOnce(new Promise<void>((resolve) => (finishTicks = resolve)));
+        setup();
+        const { refresh } = useDeleteCuboidAnnotation.mock.lastCall![0];
+        let isComplete = false;
+
+        const refreshing = refresh().then(() => (isComplete = true));
+        await Promise.resolve();
+        expect(invalidateQueries).toHaveBeenCalledTimes(2);
+        expect(isComplete).toBe(false);
+        finishTicks();
+        await refreshing;
+
+        expect(isComplete).toBe(true);
     });
 });
