@@ -34,6 +34,7 @@ let arrowDataStore: Writable<Record<string, unknown> | undefined>;
 let plotDataStore: Writable<{ x: Float32Array; y: Float32Array; category: Uint8Array } | undefined>;
 let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
+let annotationLabelsQuery: { data?: unknown[]; isSuccess: boolean; isError: boolean };
 
 const mockResetCategoryVisibility = vi.fn();
 
@@ -152,7 +153,7 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
     })
 }));
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: () => ({ data: [] })
+    useAnnotationLabels: () => annotationLabelsQuery
 }));
 vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
     useSelectedAnnotationsFilter: () => ({
@@ -231,6 +232,7 @@ describe('PlotPanel.svelte', () => {
         plotDataStore = writable(undefined);
         colorLegendStore = writable(new Map());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
+        annotationLabelsQuery = { data: [], isSuccess: true, isError: false };
         tagsStore.set([
             { tag_id: 'tag-a', name: 'alpha' },
             { tag_id: 'tag-b', name: 'beta' }
@@ -610,6 +612,21 @@ describe('PlotPanel.svelte', () => {
             'test-collection-id',
             expect.anything(),
             { type: 'tag', tag_ids: ['tag-a', 'tag-b'] },
+            null
+        );
+    });
+
+    it('fetches without labels when the annotation labels fail to load', async () => {
+        annotationLabelsQuery = { data: undefined, isSuccess: false, isError: true };
+        usePlotColorByType('test-collection-id').setSelectedColorByType('annotation_label');
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        expect(useEmbeddings).toHaveBeenLastCalledWith(
+            'test-collection-id',
+            expect.anything(),
+            { type: 'annotation', annotation_label_ids: [] },
             null
         );
     });

@@ -137,8 +137,14 @@
         collection_id: untrack(() => collectionId)
     });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
-    const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
+    const annotationLabels = writable<{ annotation_label_id: string }[] | undefined>(undefined);
     $effect(() => {
+        // Without labels the plot still loads: it colors nothing instead of waiting forever.
+        if (annotationLabelsQuery.isError) {
+            annotationLabels.set([]);
+            return;
+        }
+        if (!annotationLabelsQuery.isSuccess) return;
         annotationLabels.set(
             (annotationLabelsQuery.data ?? []).filter(
                 (l): l is { annotation_label_id: string } & typeof l =>
@@ -162,7 +168,12 @@
     } = usePlotLayout(untrack(() => collectionId));
     const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
+    // No request until the color-by is known, so the plot fetches once.
+    const embeddingsData = $derived(
+        $colorBy === undefined
+            ? undefined
+            : useEmbeddings(collectionId, filter, $colorBy, $plotAxes)
+    );
 
     const {
         data: arrowData,
@@ -170,7 +181,7 @@
         error: arrowError
     } = $derived(
         useArrowData({
-            blobData: embeddingsData.data as Blob
+            blobData: embeddingsData?.data as Blob
         })
     );
     // Category 1 means "passes the filter but has no color value". Its label tracks the same
@@ -565,7 +576,7 @@
     );
 
     const errorText = $derived.by(() => {
-        if (embeddingsData.isError) {
+        if (embeddingsData?.isError) {
             return embeddingsData.error?.message || 'Unknown error';
         }
         if ($arrowError) {
@@ -600,7 +611,7 @@
         </Button>
     </div>
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if embeddingsData.isLoading}
+        {#if !embeddingsData || embeddingsData.isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
@@ -714,7 +725,7 @@
             <PlotColorByPopover
                 {collectionId}
                 withTags={$tags.length > 0}
-                withAnnotationLabels={$annotationLabels.length > 0}
+                withAnnotationLabels={($annotationLabels ?? []).length > 0}
                 selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     setSelectedColorByKey(key);
