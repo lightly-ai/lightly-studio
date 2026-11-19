@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { cn } from "$lib/utils/shadcn.js";
 	import { Popover as PopoverPrimitive } from "bits-ui";
+	import { usePortalTarget } from "$lib/contexts/PortalTarget";
 
 	let {
 		ref = $bindable(null),
@@ -12,9 +13,11 @@
 	}: PopoverPrimitive.ContentProps & {
 		portalProps?: PopoverPrimitive.PortalProps;
 	} = $props();
+
+	const getPortalTarget = usePortalTarget();
 </script>
 
-<PopoverPrimitive.Portal {...portalProps}>
+<PopoverPrimitive.Portal to={getPortalTarget()} {...portalProps}>
 	<PopoverPrimitive.Content
 		bind:ref
 		{sideOffset}
