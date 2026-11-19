@@ -26,8 +26,8 @@
     );
 </script>
 
-<div class="flex h-full w-full space-x-4 px-4 pb-4" data-testid="annotation-details">
-    <div class="h-full w-full space-y-6 rounded-[1vw] bg-card p-4">
+<div class="flex h-full w-full bg-card px-2 pb-2 pt-4" data-testid="annotation-details">
+    <div class="h-full w-full">
         {#if annotationDetailsResponse.data && annotationId && collection}
             {#if annotationDetailsResponse.data.parent_sample_type == SampleType.VIDEO_FRAME}
                 <VideoFrameAnnotationDetails
