@@ -1,7 +1,7 @@
 """Example of labeling images in the GUI with your own model.
 
 The script wraps a LightlyTrain model in a ``LabelingModel``, registers it and starts the
-GUI. Open an image, turn on edit mode and select "Label with model" in the toolbar. The
+GUI. Open an image, turn on edit mode and select "Auto-label" in the toolbar. The
 model suggests annotations, and you keep the correct ones.
 
 Any model works: subclass ``ls.LabelingModel`` and return ``ls.PredictedAnnotation`` objects
