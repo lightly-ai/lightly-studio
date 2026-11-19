@@ -8,23 +8,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Choose the annotation source for new cuboids in the point cloud workspace, in the Annotations panel or when you create a cuboid.
-- API query expressions can filter videos by temporal events or by annotations and timestamps on the same frame.
-- Python SDK: Use `VideoFrameQuery` to match annotations and timestamps on the same frame, or `VideoEventQuery` to match events by class, source, confidence, and time boundaries.
-- Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.
-- Filter videos with query expressions in the GUI using video fields, tags, metadata, and video annotations.
-- Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
-- Every filter list in the filter panel has a search, "Select all" and "Clear".
-- The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
-- Pick single points in the embedding plot with Shift + click. The grid then shows only the picked images, annotations, or videos.
-- Hide an annotation track or a whole annotation source in the point cloud workspace with the eye buttons in the Annotations panel. Hidden annotations stay hidden on every frame of the sequence.
-- The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
 - Undo cuboid edits in the point cloud workspace with Ctrl/Cmd + Z: delete, move, resize, rotate and class change. An undone delete restores the cuboid in its object track.
 - Use `frame(...)` in the video query editor to match annotations and timestamps on the same frame.
 - Filter the point cloud sequences by annotation class in the filter panel. A sequence matches when one of its frames has an annotation of that class.
 - The embedding plot shows a hint for what Shift + click does on the hovered point: pick, add, or remove.
 - Python SDK: MCAP datasets can use cameras that record JPEG or PNG `CompressedImage` messages, not only H.264 or H.265 video. The camera frames show in the viewer and are used for embeddings.
 - Filter images and videos without annotations with the "No annotations" option in the annotation class filter. Combine it with classes to also see the samples of those classes.
+- The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
 
 ### Changed
 
