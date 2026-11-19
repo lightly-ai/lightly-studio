@@ -7,6 +7,8 @@
 
     interface Props {
         bbox: AnnotationPreview['bbox'];
+        // The button adds the preview number, e.g. "Delete instance 2".
+        label: string;
         index: number;
         // Screen pixels per image pixel, so the button keeps its size when zooming.
         scale: number;
@@ -14,7 +16,7 @@
         onDelete: () => void;
     }
 
-    let { bbox, index, scale, disabled, onDelete }: Props = $props();
+    let { bbox, label, index, scale, disabled, onDelete }: Props = $props();
 
     const x = $derived(Math.max(0, bbox.x + bbox.width - SIZE / scale));
     const y = $derived(Math.max(0, bbox.y - SIZE / scale));
@@ -31,7 +33,7 @@
     transform={`translate(${x} ${y}) scale(${1 / scale})`}
     role="button"
     tabindex={disabled ? -1 : 0}
-    aria-label={`Delete instance ${index + 1}`}
+    aria-label={`${label} ${index + 1}`}
     aria-disabled={disabled}
     opacity={disabled ? 0.5 : 1}
     pointer-events="all"
@@ -44,7 +46,7 @@
     onpointerdown={(event) => event.stopPropagation()}
     onmousedown={(event) => event.stopPropagation()}
 >
-    <title>Delete instance</title>
+    <title>{label}</title>
     <circle
         cx={SIZE / 2}
         cy={SIZE / 2}

@@ -2,7 +2,7 @@
     import type { ComponentProps } from 'svelte';
     import { isOverlayTarget, isTextInputTarget } from '$lib/utils';
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
-    import InstanceDeleteButton from '$lib/components/SampleDetails/FindInstancesOverlay/InstanceDeleteButton/InstanceDeleteButton.svelte';
+    import { PreviewDeleteButton } from '$lib/components/SampleDetails/PreviewDeleteButton';
     import PreviewClassTag from './PreviewClassTag/PreviewClassTag.svelte';
     import type { useLabelWithModel } from './useLabelWithModel.svelte';
 
@@ -31,11 +31,13 @@
 
 {#each labelWithModel.predictions as preview (preview)}
     <AnnotationPreview {preview} image={sample} {saveAs} />
-    <PreviewClassTag {preview} {scale} />
 {/each}
+<!-- After all previews, so that no mask covers a tag or a button. -->
 {#each labelWithModel.predictions as preview, index (preview)}
-    <InstanceDeleteButton
+    <PreviewClassTag {preview} {scale} />
+    <PreviewDeleteButton
         bbox={preview.bbox}
+        label="Delete suggested annotation"
         {index}
         {scale}
         disabled={labelWithModel.isSaving}

@@ -5,7 +5,7 @@
     import AnnotationPreview from '$lib/components/SampleDetails/AnnotationPreview/AnnotationPreview.svelte';
     import NormalizedBoxRect from '$lib/components/SampleDetails/NormalizedBoxRect/NormalizedBoxRect.svelte';
     import { useDragBox } from '$lib/components/SampleDetails/useDragBox/useDragBox.svelte';
-    import InstanceDeleteButton from './InstanceDeleteButton/InstanceDeleteButton.svelte';
+    import { PreviewDeleteButton } from '$lib/components/SampleDetails/PreviewDeleteButton';
     import type { useFindInstances } from './useFindInstances.svelte';
 
     type SaveAs = ComponentProps<typeof AnnotationPreview>['saveAs'];
@@ -91,8 +91,9 @@
 {/if}
 <!-- After the interaction rect, so the delete buttons stay clickable. -->
 {#each instances.predictions as preview, index (preview)}
-    <InstanceDeleteButton
+    <PreviewDeleteButton
         bbox={preview.bbox}
+        label="Delete instance"
         {index}
         {scale}
         disabled={instances.isSaving}
