@@ -94,13 +94,13 @@
         sampleId,
         refetch
     }));
-    // The local hidden set is the single source of truth for visibility on the
-    // details page; the grid's annotation source filter only seeds it.
     let previousAnnotations: AnnotationView[] = [];
     const annotations = $derived.by(() => {
         previousAnnotations = reuseUnchangedAnnotations(previousAnnotations, sample.annotations);
         return previousAnnotations;
     });
+    // The local hidden set is the single source of truth for visibility on the
+    // details page; the grid's annotation source filter only seeds it.
     const actualAnnotationsToShow = $derived.by(() => {
         return annotations
             .filter((annotation) => !hideAnnotationsIds.has(annotation.sample_id))
