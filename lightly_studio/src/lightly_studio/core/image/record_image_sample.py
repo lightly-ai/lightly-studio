@@ -9,7 +9,7 @@ from uuid import UUID
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_sample import ImageSample
-from lightly_studio.core.sample import Sample, SampleMetadata
+from lightly_studio.core.sample import SampleMetadata
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_query import ImageSampleRecord
@@ -39,7 +39,8 @@ class RecordImageSample(ImageSample):
         self._tag_transport = tag_transport
 
     @property
-    def _sample_table(self) -> SampleTable:  # type: ignore[override]
+    def sample_table(self) -> SampleTable:
+        """Not supported for samples from the transport."""
         _raise_not_supported()
 
     @property
@@ -64,7 +65,12 @@ class RecordImageSample(ImageSample):
 
     @tags.setter
     def tags(self, tags: Iterable[str]) -> None:
-        Sample.tags.fset(self, tags)  # type: ignore[attr-defined]
+        current_tags = self.tags
+        new_tags = set(tags)
+        for name in current_tags - new_tags:
+            self.remove_tag(name)
+        for name in new_tags - current_tags:
+            self.add_tag(name)
 
     def get_object_session(self) -> Session:
         """Not supported for samples from the transport. Writes need a session."""

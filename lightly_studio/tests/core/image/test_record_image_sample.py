@@ -13,30 +13,28 @@ from lightly_studio.transport.tag_transport import TagTransport
 SAMPLE_ID = UUID("00000000-0000-0000-0000-000000000001")
 COLLECTION_ID = UUID("00000000-0000-0000-0000-000000000002")
 CREATED_AT = datetime(2026, 1, 2, tzinfo=timezone.utc)
-
-
-def _record(tags: list[str] | None) -> ImageSampleRecord:
-    return ImageSampleRecord(
-        sample_id=SAMPLE_ID,
-        collection_id=COLLECTION_ID,
-        created_at=CREATED_AT,
-        updated_at=CREATED_AT,
-        file_name="a.png",
-        file_path_abs="/data/a.png",
-        width=640,
-        height=480,
-        tags=tags,
-    )
+WIDTH = 640
 
 
 class TestRecordImageSample:
     def test_init(self, mocker: MockerFixture) -> None:
-        sample = RecordImageSample(record=_record(tags=["cat"]), tag_transport=mocker.Mock())
+        record = ImageSampleRecord(
+            sample_id=SAMPLE_ID,
+            collection_id=COLLECTION_ID,
+            created_at=CREATED_AT,
+            updated_at=CREATED_AT,
+            file_name="b.png",
+            file_path_abs="/data/b.png",
+            width=320,
+            height=240,
+            tags=["cat"],
+        )
+        sample = RecordImageSample(record=record, tag_transport=mocker.Mock())
 
         assert sample.sample_id == SAMPLE_ID
         assert sample.collection_id == COLLECTION_ID
-        assert (sample.file_name, sample.file_path_abs) == ("a.png", "/data/a.png")
-        assert (sample.width, sample.height) == (640, 480)
+        assert (sample.file_name, sample.file_path_abs) == ("b.png", "/data/b.png")
+        assert (sample.width, sample.height) == (320, 240)
         assert sample.created_at == CREATED_AT
         assert sample.tags == {"cat"}
 
@@ -44,17 +42,38 @@ class TestRecordImageSample:
         with pytest.raises(ValueError, match="must include the tags"):
             RecordImageSample(record=_record(tags=None), tag_transport=mocker.Mock())
 
-    def test_add_tag__remove_tag(self, mocker: MockerFixture) -> None:
+    def test_tags__set(self, mocker: MockerFixture) -> None:
         tag_transport = mocker.create_autospec(TagTransport, instance=True)
         sample = RecordImageSample(record=_record(tags=["cat"]), tag_transport=tag_transport)
 
-        sample.add_tag("dog")
-        sample.remove_tag("cat")
+        sample.tags = ["dog"]
 
         assert sample.tags == {"dog"}
         tag_transport.add_to_samples.assert_called_once_with(
             collection_id=COLLECTION_ID, tag_name="dog", sample_ids=[SAMPLE_ID]
         )
+        tag_transport.remove_from_samples.assert_called_once_with(
+            collection_id=COLLECTION_ID, tag_name="cat", sample_ids=[SAMPLE_ID]
+        )
+
+    def test_add_tag(self, mocker: MockerFixture) -> None:
+        tag_transport = mocker.create_autospec(TagTransport, instance=True)
+        sample = RecordImageSample(record=_record(tags=["cat"]), tag_transport=tag_transport)
+
+        sample.add_tag("dog")
+
+        assert sample.tags == {"cat", "dog"}
+        tag_transport.add_to_samples.assert_called_once_with(
+            collection_id=COLLECTION_ID, tag_name="dog", sample_ids=[SAMPLE_ID]
+        )
+
+    def test_remove_tag(self, mocker: MockerFixture) -> None:
+        tag_transport = mocker.create_autospec(TagTransport, instance=True)
+        sample = RecordImageSample(record=_record(tags=["cat"]), tag_transport=tag_transport)
+
+        sample.remove_tag("cat")
+
+        assert sample.tags == set()
         tag_transport.remove_from_samples.assert_called_once_with(
             collection_id=COLLECTION_ID, tag_name="cat", sample_ids=[SAMPLE_ID]
         )
@@ -68,3 +87,18 @@ class TestRecordImageSample:
             _ = sample.annotations
         with pytest.raises(NotImplementedError):
             sample.width = 10
+        assert sample.width == WIDTH
+
+
+def _record(tags: list[str] | None) -> ImageSampleRecord:
+    return ImageSampleRecord(
+        sample_id=SAMPLE_ID,
+        collection_id=COLLECTION_ID,
+        created_at=CREATED_AT,
+        updated_at=CREATED_AT,
+        file_name="a.png",
+        file_path_abs="/data/a.png",
+        width=WIDTH,
+        height=480,
+        tags=tags,
+    )
