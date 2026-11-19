@@ -10,8 +10,8 @@ from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.metadata_transport import MetadataTransport
 from lightly_studio.transport.remote.http_collection_transport import HttpCollectionTransport
-from lightly_studio.transport.sample_transport import SampleTransport
-from lightly_studio.transport.tag_transport import TagTransport
+from lightly_studio.transport.remote.http_sample_transport import HttpSampleTransport
+from lightly_studio.transport.remote.http_tag_transport import HttpTagTransport
 
 
 class HttpTransport:
@@ -28,16 +28,8 @@ class HttpTransport:
                 authorization header.
         """
         self.collections = HttpCollectionTransport(client=client)
-
-    @property
-    def samples(self) -> SampleTransport:
-        """The transport for samples."""
-        raise AttributeError("The HTTP sample transport does not exist yet.")
-
-    @property
-    def tags(self) -> TagTransport:
-        """The transport for tags."""
-        raise AttributeError("The HTTP tag transport does not exist yet.")
+        self.samples = HttpSampleTransport(client=client)
+        self.tags = HttpTagTransport(client=client)
 
     @property
     def metadata(self) -> MetadataTransport:
