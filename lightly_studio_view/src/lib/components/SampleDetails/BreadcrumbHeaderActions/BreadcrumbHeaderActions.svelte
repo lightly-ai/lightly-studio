@@ -63,8 +63,11 @@
         }
     };
 
-    const undoTooltip = $derived(
-        $reversibleActions[0] ? `Undo: ${$reversibleActions[0].description}` : 'No action to undo'
+    const latestActionTooltip = $derived(
+        $reversibleActions[0] ? `Undo: ${$reversibleActions[0].description}` : ''
+    );
+    const undoDisabledReason = $derived(
+        $reversibleActions.length === 0 ? 'No action to undo' : undefined
     );
 </script>
 
@@ -73,20 +76,20 @@
 <div class="flex items-center gap-1">
     {#if canEdit}
         {#if $isEditingMode}
-            <Tooltip content={undoTooltip} position="bottom">
+            <Tooltip content={latestActionTooltip} position="bottom" noTriggerRole>
                 <Button
                     icon={Undo2}
                     variant="ghost"
                     ariaLabel="Undo"
+                    disabledReason={undoDisabledReason}
                     buttonProps={{
                         onclick: () => executeUndoAction('click'),
-                        disabled: $reversibleActions.length === 0,
                         'data-testid': 'breadcrumb-undo-button',
                         class: 'h-8 px-2'
                     }}
                 />
             </Tooltip>
-            <Tooltip content="Finish Editing" position="bottom">
+            <Tooltip content="Finish Editing" position="bottom" noTriggerRole>
                 <Button
                     icon={Check}
                     variant="ghost"
@@ -99,7 +102,7 @@
                 />
             </Tooltip>
         {:else}
-            <Tooltip content="Edit annotations" position="bottom">
+            <Tooltip content="Edit annotations" position="bottom" noTriggerRole>
                 <Button
                     icon={Pencil}
                     variant="ghost"
@@ -113,7 +116,7 @@
             </Tooltip>
         {/if}
     {/if}
-    <Tooltip content="Plugins" position="bottom">
+    <Tooltip content="Plugins" position="bottom" noTriggerRole>
         <Button
             icon={Puzzle}
             variant="ghost"
@@ -125,7 +128,7 @@
             }}
         />
     </Tooltip>
-    <Tooltip content="Settings" position="bottom">
+    <Tooltip content="Settings" position="bottom" noTriggerRole>
         <Button
             icon={Settings}
             variant="ghost"
