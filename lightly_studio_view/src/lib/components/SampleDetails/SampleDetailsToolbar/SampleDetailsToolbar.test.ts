@@ -50,7 +50,7 @@ vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => assistedLabelingStatus
 }));
 
-const labelingModels = { disabledReason: 'Unavailable.' as string | null };
+const labelingModels = { isAvailable: false };
 
 vi.mock('$lib/hooks/useLabelingModels', () => ({
     useLabelingModels: () => labelingModels
@@ -97,7 +97,7 @@ describe('SampleDetailsToolbar', () => {
     beforeEach(() => {
         mockSampleDetailsToolbarContext.status = 'cursor';
         mockSampleDetailsToolbarContext.brush.mode = 'brush';
-        labelingModels.disabledReason = 'Unavailable.';
+        labelingModels.isAvailable = false;
 
         mockAnnotationLabelContext.annotationType = null;
         mockAnnotationLabelContext.annotationLabel = null;
@@ -116,7 +116,7 @@ describe('SampleDetailsToolbar', () => {
         });
 
         it('disables the create tools and explains why', async () => {
-            labelingModels.disabledReason = null;
+            labelingModels.isAvailable = true;
             const { getByLabelText, getByRole } = render(SampleDetailsToolbar);
 
             for (const label of [
@@ -325,7 +325,7 @@ describe('SampleDetailsToolbar', () => {
     it('shows and activates the label with model tool when models are available', async () => {
         expect(render(SampleDetailsToolbar).queryByLabelText('Label with model')).toBeNull();
         cleanup();
-        labelingModels.disabledReason = null;
+        labelingModels.isAvailable = true;
         const { getByLabelText } = render(SampleDetailsToolbar);
 
         await fireEvent.click(getByLabelText('Label with model'));

@@ -76,9 +76,7 @@
     const showAssistedLabelingTools = $derived(
         isAssistedLabelingView && assistedLabelingStatus.disabledReason === null
     );
-    const showLabelWithModelTool = $derived(
-        isAssistedLabelingView && labelingModels.disabledReason === null
-    );
+    const showLabelWithModelTool = $derived(isAssistedLabelingView && labelingModels.isAvailable);
 
     // The tools that create annotations stay off while the target source is unknown, so nothing
     // is drawn only to be refused. The annotation details view only edits and needs no target.

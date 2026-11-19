@@ -45,7 +45,7 @@ vi.mock('$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.sve
     useFindInstances: () => ({ clear: vi.fn() })
 }));
 vi.mock('$lib/hooks/useLabelingModels', () => ({
-    useLabelingModels: () => ({ models: [], disabledReason: 'Unavailable.' })
+    useLabelingModels: () => ({ models: [], isAvailable: false })
 }));
 vi.mock('$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte', () => ({
     useLabelWithModel: () => ({ clear: vi.fn() })
