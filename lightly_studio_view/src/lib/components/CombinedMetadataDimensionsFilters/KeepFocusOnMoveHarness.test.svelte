@@ -1,11 +1,13 @@
 <script lang="ts">
     import { keepFocusOnMove } from './keepFocusOnMove.svelte';
 
-    let {
-        order,
-        blurOnChange = false,
-        resetScrollOnChange = false
-    }: { order: string[]; blurOnChange?: boolean; resetScrollOnChange?: boolean } = $props();
+    interface Props {
+        order: string[];
+        blurOnChange?: boolean;
+        resetScrollOnChange?: boolean;
+    }
+
+    let { order, blurOnChange = false, resetScrollOnChange = false }: Props = $props();
     let container = $state<HTMLElement>();
 
     keepFocusOnMove(

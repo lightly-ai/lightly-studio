@@ -21,12 +21,14 @@ const rowTops = (...tops: number[]) => {
     return rect;
 };
 
+const defaultProps = { order: ['a', 'b'] };
+
 describe('keepFocusOnMove', () => {
     afterEach(() => vi.restoreAllMocks());
 
     it('keeps focus on an input whose row moves to the top', async () => {
         const { rerender } = render(KeepFocusOnMoveHarness, {
-            order: ['a', 'b'],
+            ...defaultProps,
             blurOnChange: true
         });
         const button = screen.getByRole('button', { name: 'b' });
@@ -41,7 +43,7 @@ describe('keepFocusOnMove', () => {
     });
 
     it('scrolls the panel so the moved row stays at the same screen position', async () => {
-        const { rerender } = render(KeepFocusOnMoveHarness, { order: ['a', 'b'] });
+        const { rerender } = render(KeepFocusOnMoveHarness, defaultProps);
         const scroller = screen.getByTestId('scroller');
         storeScrollTop(scroller, 400);
         screen.getByRole('button', { name: 'b' }).focus();
@@ -55,7 +57,7 @@ describe('keepFocusOnMove', () => {
 
     it('restores the scroll position inside the moved row', async () => {
         const { rerender } = render(KeepFocusOnMoveHarness, {
-            order: ['a', 'b'],
+            ...defaultProps,
             resetScrollOnChange: true
         });
         const inner = screen.getByTestId('inner-b');
@@ -69,7 +71,7 @@ describe('keepFocusOnMove', () => {
     });
 
     it('does nothing when focus is outside the container', async () => {
-        const { rerender } = render(KeepFocusOnMoveHarness, { order: ['a', 'b'] });
+        const { rerender } = render(KeepFocusOnMoveHarness, defaultProps);
         const scroller = screen.getByTestId('scroller');
         storeScrollTop(scroller, 400);
         screen.getByRole('button', { name: 'outside' }).focus();
@@ -84,7 +86,7 @@ describe('keepFocusOnMove', () => {
     });
 
     it('does nothing when the order is unchanged', async () => {
-        const { rerender } = render(KeepFocusOnMoveHarness, { order: ['a', 'b'] });
+        const { rerender } = render(KeepFocusOnMoveHarness, defaultProps);
         screen.getByRole('button', { name: 'b' }).focus();
         const rect = rowTops(300, 50);
 
