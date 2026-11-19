@@ -108,7 +108,10 @@
                 paged={false}
             >
                 {#snippet leading(item)}
-                    {#if showClassColorLegend && item.id !== NO_ANNOTATIONS_ITEM_ID}
+                    {#if showClassColorLegend && item.id === NO_ANNOTATIONS_ITEM_ID}
+                        <!-- Takes the width of the color legend, so the names line up. -->
+                        <span class="size-3 shrink-0" aria-hidden="true"></span>
+                    {:else if showClassColorLegend}
                         <AnnotationColorLegend
                             labelName={item.label}
                             className="h-3 w-3"
@@ -118,7 +121,10 @@
                     {/if}
                 {/snippet}
                 {#snippet trailing(item)}
-                    {#if showVisibilityToggle && item.id !== NO_ANNOTATIONS_ITEM_ID}
+                    {#if showVisibilityToggle && item.id === NO_ANNOTATIONS_ITEM_ID}
+                        <!-- Takes the width of the visibility toggle, so the counts line up. -->
+                        <span class="size-4 shrink-0" aria-hidden="true"></span>
+                    {:else if showVisibilityToggle}
                         <LabelVisibilityToggle
                             isHidden={$hiddenClassNamesStore.includes(item.label)}
                             labelName={item.label}
