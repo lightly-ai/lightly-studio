@@ -89,6 +89,24 @@ frame(object_detection(class_name = "person")) AND frame(object_detection(class_
 `frame(NOT object_detection(class_name = "car"))` requires at least one frame without a car detection.
 `NOT frame(object_detection(class_name = "car"))` matches videos with no car detections on any frame, including videos with no frames.
 
+## Video event queries
+
+Use `event(...)` to return videos with at least one temporal event that satisfies the expression.
+Only classifications attached to a video can have a time span when you create them.
+You can filter by annotation class (`class_name`), annotation source (`source`), `confidence`,
+and event boundaries (`start_time_s` and `end_time_s`, in seconds from the start of the video).
+
+```mysql
+# A run event starts before five seconds
+event(class_name = "run" AND start_time_s < 5)
+
+# A run event and a walk event both occur in the video
+event(class_name = "run") AND event(class_name = "walk")
+```
+
+On the Videos page, `classification(class_name = "run")` matches both whole-video classifications
+and temporal events. Use `event(class_name = "run")` to find only temporal events.
+
 ## Metadata filtering
 
 Use `metadata["path"]` to compare sample metadata. Quote the path with double or single quotes.
@@ -149,19 +167,23 @@ NOT "rejected" IN tags
 
 ## Annotation match functions
 
-An annotation is a classification, bounding box, or segmentation mask attached to an image.
-
-The query language supports three annotation functions:
+Use these functions to match classifications, bounding boxes, and segmentation masks:
 
 - `classification(...)`
 - `object_detection(...)`
 - `segmentation_mask(...)`
 
-Each function contains another query inside the parentheses and matches an image when it has at least one annotation of that type that satisfies the nested query.
+Each function matches when at least one annotation of that type satisfies the expression inside the parentheses.
+
+Bounding boxes and segmentation masks belong to images or individual video frames.
+In an image query, use `object_detection(...)` or `segmentation_mask(...)` directly.
+In a video query, wrap either function in `frame(...)` to find videos with a matching frame.
+For example, `frame(segmentation_mask(class_name = "cat"))` finds videos with a cat mask on at least one frame.
 
 ### Classification queries
 
-Use `classification(...)` when you want to match image-level classifications. Example queries:
+Use `classification(...)` to match image and video classifications, including temporal events. To filter by
+event start or end time, see [Video event queries](#video-event-queries). Example queries:
 
 ```mysql
 classification(class_name = "cat")

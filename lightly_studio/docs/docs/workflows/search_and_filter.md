@@ -57,7 +57,7 @@ After you apply a query, the filter sidebar shows a `Query Filter` control where
 
 For both images and videos, you can combine conditions on tags, metadata, and annotations.
 For images, you can also filter by dimensions, file name, or creation date.
-For videos, you can filter by frame rate or duration, or find annotations that appear on the same frame.
+For videos, you can filter by frame rate or duration, find annotations on the same frame, or search for temporal events.
 See the [Lightly Query Language reference](lightly_query_language.md) for the syntax and examples.
 
 The `History` button next to the `Apply` button lists the last 10 queries that you applied
