@@ -138,10 +138,9 @@ def _scaled_rgb(picture: Image.Image, width: int | None, height: int | None) -> 
 def _output_size(size: tuple[int, int], width: int | None, height: int | None) -> tuple[int, int]:
     """Returns the output size, preserving aspect ratio when one side is omitted."""
     source_width, source_height = size
-    if width is None and height is None:
-        return source_width, source_height
     if width is None:
-        assert height is not None
+        if height is None:
+            return source_width, source_height
         return max(1, round(source_width * height / source_height)), height
     if height is None:
         return width, max(1, round(source_height * width / source_width))
