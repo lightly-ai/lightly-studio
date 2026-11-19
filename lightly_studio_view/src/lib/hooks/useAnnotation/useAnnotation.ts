@@ -50,6 +50,8 @@ export const useAnnotation = (
         client.invalidateQueries({
             queryKey: useImageAnnotationCountsQueryKey
         });
+        // Views draw the annotation from their parent's data, so refresh the parent too.
+        params.onUpdate?.();
     };
 
     const updateAnnotation = async (input: AnnotationUpdateInput) => {
@@ -57,7 +59,6 @@ export const useAnnotation = (
             await updateAnnotations([input]);
             refetch();
             toast.success('Annotation updated successfully');
-            getParams().onUpdate?.();
         } catch (error: unknown) {
             toast.error('Failed to update annotation:' + (error as Error).message);
         }

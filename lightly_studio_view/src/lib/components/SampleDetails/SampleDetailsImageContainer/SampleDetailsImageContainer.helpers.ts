@@ -1,3 +1,6 @@
+import { isEqual } from 'lodash-es';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
+
 interface IsPanEnabledParams {
     isDrawing?: boolean;
     isErasing?: boolean;
@@ -7,6 +10,21 @@ interface IsPanEnabledParams {
 
 export const isPanEnabled = ({ isDrawing, isErasing, blocksPan }: IsPanEnabledParams): boolean =>
     !(isDrawing || isErasing || blocksPan);
+
+/**
+ * Keeps the previous object for every annotation that did not change. TanStack cannot do
+ * this here because `created_at` is a Date, so each refetch would redraw every annotation.
+ */
+export const reuseUnchangedAnnotations = (
+    previous: AnnotationView[],
+    next: AnnotationView[]
+): AnnotationView[] => {
+    const previousById = new Map(previous.map((annotation) => [annotation.sample_id, annotation]));
+    return next.map((annotation) => {
+        const old = previousById.get(annotation.sample_id);
+        return old && isEqual(old, annotation) ? old : annotation;
+    });
+};
 
 interface GetDrawerLabelParams {
     isAnnotationSelected: boolean;

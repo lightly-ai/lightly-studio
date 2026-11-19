@@ -3,6 +3,7 @@
     import { useSettings } from '$lib/hooks/useSettings';
     import { getBoundingBox } from '../../SampleAnnotation/utils';
     import type { BoundingBox } from '$lib/types';
+    import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import SelectableSvgGroup from '../../SelectableSvgGroup/SelectableSvgGroup.svelte';
     import { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
@@ -12,7 +13,7 @@
     import { shouldShowBoundingBoxForAnnotation } from '$lib/utils/shouldShowBoundingBoxForAnnotation';
 
     const {
-        annotationId,
+        annotation,
         collectionId,
         isResizable = false,
         onAnnotationUpdated,
@@ -25,7 +26,7 @@
     }: {
         sampleId: string;
         collectionId: string;
-        annotationId: string;
+        annotation: AnnotationView;
         isResizable?: boolean;
         onAnnotationUpdated?: () => void;
         sample: {
@@ -41,9 +42,12 @@
     const { addReversibleAction, maskOpacity } = useGlobalStorage();
     const { showAnnotationTextLabelsStore, showBoundingBoxesForSegmentationStore } = useSettings();
 
-    const { annotation: annotationResp, updateAnnotation } = useAnnotation(() => ({
+    // The image already carries its annotations, so only use the hook to save edits.
+    // Fetching each annotation again costs one request per box when the view opens.
+    const { updateAnnotation } = useAnnotation(() => ({
         collectionId,
-        annotationId
+        annotationId: annotation.sample_id,
+        enabled: false
     }));
     const { setCurrentBoundingBox, setIsMovingAnnotation, setMovedAnnotation } =
         useAnnotationLabelContext();
@@ -56,31 +60,30 @@
     };
     onDestroy(() => isDragging && setIsMovingAnnotation(false));
 
-    let annotation = $derived(annotationResp.data);
-
-    let selectionBox = $derived(annotation ? getBoundingBox(annotation!) : undefined);
+    let selectionBox = $derived(getBoundingBox(annotation));
     const showBoundingBox = $derived(
         shouldShowBoundingBoxForAnnotation(annotation, $showBoundingBoxesForSegmentationStore)
     );
 
     const onBoundingBoxChanged = (bbox: BoundingBox) => {
         setCurrentBoundingBox(bbox);
-        setMovedAnnotation(annotationId, bbox);
+        const previousAnnotation = annotation;
+        setMovedAnnotation(previousAnnotation.sample_id, bbox);
         const _update = async () => {
             try {
                 await updateAnnotation({
-                    annotation_id: annotationId,
+                    annotation_id: previousAnnotation.sample_id,
                     collection_id: collectionId,
                     bounding_box: bbox
                 });
                 onAnnotationUpdated?.();
-                if (annotation)
-                    addAnnotationUpdateToUndoStack({
-                        annotation,
-                        collection_id: collectionId,
-                        addReversibleAction,
-                        updateAnnotation
-                    });
+                addAnnotationUpdateToUndoStack({
+                    annotation: previousAnnotation,
+                    collection_id: collectionId,
+                    addReversibleAction,
+                    updateAnnotation,
+                    onUndo: () => onAnnotationUpdated?.()
+                });
             } catch (error) {
                 console.error('Failed to update annotation:', (error as Error).message);
             }
@@ -89,7 +92,7 @@
     };
 </script>
 
-{#if annotation && selectionBox}
+{#if selectionBox}
     {#key selectionBox}
         <SelectableSvgGroup
             groupId={annotation.sample_id}

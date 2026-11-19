@@ -1,9 +1,10 @@
-import { render, screen } from '@testing-library/svelte';
+import { fireEvent, render, screen } from '@testing-library/svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { writable } from 'svelte/store';
 import { IMAGE_ADJUSTMENT_DEFAULTS } from '$lib/constants';
 import { useGlobalStorage } from '$lib/hooks';
 import SampleDetailsAnnotation from './SampleDetailsAnnotation.svelte';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
 
 const predictionAnnotation = {
     sample_id: 'prediction',
@@ -21,7 +22,12 @@ const maskAnnotation = {
     segmentation_details: { x: 1, y: 2, width: 10, height: 12, segmentation_mask: [0, 4] }
 };
 
-const mockAnnotation = vi.hoisted(() => ({ data: {} as Record<string, unknown> }));
+const mocks = vi.hoisted(() => ({
+    useAnnotation: vi.fn(),
+    updateAnnotation: vi.fn(),
+    addAnnotationUpdateToUndoStack: vi.fn(),
+    stubSampleAnnotation: false
+}));
 const setIsMovingAnnotation = vi.hoisted(() => vi.fn());
 
 vi.mock('$lib/hooks/useSettings', () => ({
@@ -31,11 +37,28 @@ vi.mock('$lib/hooks/useSettings', () => ({
     })
 }));
 vi.mock('$lib/contexts/SampleDetailsAnnotation.svelte', () => ({
-    useAnnotationLabelContext: () => ({ setCurrentBoundingBox: vi.fn(), setIsMovingAnnotation })
+    useAnnotationLabelContext: () => ({
+        setCurrentBoundingBox: vi.fn(),
+        setIsMovingAnnotation,
+        setMovedAnnotation: vi.fn()
+    })
 }));
 vi.mock('$lib/hooks/useAnnotation/useAnnotation', () => ({
-    useAnnotation: () => ({ annotation: mockAnnotation, updateAnnotation: vi.fn() })
+    useAnnotation: mocks.useAnnotation
 }));
+vi.mock('$lib/services/addAnnotationUpdateToUndoStack', () => ({
+    addAnnotationUpdateToUndoStack: mocks.addAnnotationUpdateToUndoStack
+}));
+vi.mock('$lib/components', async (importOriginal) => {
+    const original = await importOriginal<typeof import('$lib/components')>();
+    const { default: SampleAnnotationStub } = await import('./SampleAnnotationStub.test.svelte');
+    return {
+        ...original,
+        get SampleAnnotation() {
+            return mocks.stubSampleAnnotation ? SampleAnnotationStub : original.SampleAnnotation;
+        }
+    };
+});
 // The RLE rasterisation needs a real canvas; the mask tests only check the opacity.
 vi.mock(
     '$lib/components/SampleAnnotation/SampleAnnotationSegmentationRLE/calculateBinaryMaskFromRLE/calculateBinaryMaskFromRLE',
@@ -43,7 +66,7 @@ vi.mock(
 );
 
 const defaultProps = {
-    annotationId: 'prediction',
+    annotation: predictionAnnotation as unknown as AnnotationView,
     sampleId: 'image',
     collectionId: 'images',
     sample: { width: 100, height: 100 },
@@ -57,8 +80,13 @@ describe('SampleDetailsAnnotation', () => {
     const { maskOpacity } = useGlobalStorage();
 
     beforeEach(() => {
+        mocks.stubSampleAnnotation = false;
+        mocks.updateAnnotation.mockReset().mockResolvedValue(undefined);
+        mocks.addAnnotationUpdateToUndoStack.mockReset();
+        mocks.useAnnotation
+            .mockReset()
+            .mockReturnValue({ updateAnnotation: mocks.updateAnnotation });
         setIsMovingAnnotation.mockClear();
-        mockAnnotation.data = predictionAnnotation;
         // jsdom does not implement SVG text measurements used to size the annotation label.
         Object.defineProperty(SVGElement.prototype, 'getBBox', {
             configurable: true,
@@ -79,16 +107,43 @@ describe('SampleDetailsAnnotation', () => {
     });
 
     it('renders the mask with the stored mask opacity', () => {
-        mockAnnotation.data = maskAnnotation;
         maskOpacity.set(0.3);
 
         const { container } = render(SampleDetailsAnnotation, {
             ...defaultProps,
-            annotationId: 'mask'
+            annotation: maskAnnotation as unknown as AnnotationView
         });
 
         const opacity = Number(container.querySelector('image')?.getAttribute('opacity'));
         expect(opacity).toBeCloseTo(0.3);
+    });
+
+    it('draws the annotation it gets without fetching it again', () => {
+        render(SampleDetailsAnnotation, defaultProps);
+
+        expect(screen.getByTestId('svg-annotation-text')).toHaveTextContent('hole (0.41)');
+        const params = mocks.useAnnotation.mock.calls[0][0]();
+        expect(params).toMatchObject({ annotationId: 'prediction', enabled: false });
+    });
+
+    it('saves a resized box and refreshes the image on save and on undo', async () => {
+        mocks.stubSampleAnnotation = true;
+        const onAnnotationUpdated = vi.fn();
+        render(SampleDetailsAnnotation, { ...defaultProps, onAnnotationUpdated });
+
+        await fireEvent.click(screen.getByTestId('resize-box'));
+        await vi.waitFor(() => expect(mocks.addAnnotationUpdateToUndoStack).toHaveBeenCalled());
+
+        expect(mocks.updateAnnotation).toHaveBeenCalledWith({
+            annotation_id: 'prediction',
+            collection_id: 'images',
+            bounding_box: { x: 5, y: 6, width: 20, height: 21 }
+        });
+        expect(onAnnotationUpdated).toHaveBeenCalledTimes(1);
+        const undo = mocks.addAnnotationUpdateToUndoStack.mock.calls[0][0];
+        expect(undo.annotation).toBe(predictionAnnotation);
+        undo.onUndo();
+        expect(onAnnotationUpdated).toHaveBeenCalledTimes(2);
     });
 
     it('marks the annotation as moving during a drag and leaves the flag alone on destroy otherwise', async () => {
