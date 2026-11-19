@@ -13,7 +13,6 @@
     let { preview, scale }: Props = $props();
 
     const text = $derived(`${preview.class_name} ${Math.round(preview.score * 100)}%`);
-    const height = FONT_SIZE + 2 * PADDING;
 </script>
 
 <!-- Inside the top-left corner, as the delete button is above the top-right corner. -->
@@ -22,6 +21,16 @@
     pointer-events="none"
     data-testid="preview-class-tag"
 >
-    <rect width={text.length * FONT_SIZE * 0.6 + 2 * PADDING} {height} rx="2" fill="#16a34a" />
-    <text x={PADDING} y={FONT_SIZE} font-size={FONT_SIZE} fill="white">{text}</text>
+    <!-- An outline, not a background box, as the text width is not known before layout. -->
+    <text
+        x={PADDING}
+        y={FONT_SIZE + PADDING}
+        font-size={FONT_SIZE}
+        font-weight="600"
+        fill="white"
+        stroke="#16a34a"
+        stroke-width="4"
+        stroke-linejoin="round"
+        paint-order="stroke">{text}</text
+    >
 </g>

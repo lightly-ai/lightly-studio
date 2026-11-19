@@ -48,7 +48,6 @@
     />
 {:else if assistedLabeling.activeTool === 'label-with-model' && !assistedLabeling.isPanning}
     <LabelWithModelPopUp
-        {collectionId}
         models={assistedLabeling.labelingModels}
         model={assistedLabeling.selectedModel}
         onModelChange={(value) => (toolState.modelId = value)}

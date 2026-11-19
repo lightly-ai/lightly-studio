@@ -118,7 +118,9 @@ vi.mock('./useCreateCuboidAnnotation', async () => {
             showSelectClassDialog: writable(false),
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
-            labels: { data: [] }
+            getRememberedLabel: () => undefined,
+            labels: { data: [] },
+            tracks: { data: [] }
         })
     };
 });
@@ -127,7 +129,10 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
     const { writable } = await import('svelte/store');
     return {
         useGlobalStorage: () => ({
-            isEditingMode: writable(true)
+            isEditingMode: writable(true),
+            lastAnnotationSource: writable({}),
+            updateLastAnnotationSource: vi.fn(),
+            removeLastAnnotationSource: vi.fn()
         })
     };
 });
@@ -356,13 +361,16 @@ describe('PointCloudLabelingWorkspace', () => {
                 }
             ]
         });
-        expect(updateAnnotations).toHaveBeenCalledWith([
-            expect.objectContaining({
-                annotation_id: 'annotation-1',
-                collection_id: 'group-collection-1',
-                cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
-            })
-        ]);
+        expect(updateAnnotations).toHaveBeenCalledWith(
+            [
+                expect.objectContaining({
+                    annotation_id: 'annotation-1',
+                    collection_id: 'group-collection-1',
+                    cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
+                })
+            ],
+            'group-collection-1'
+        );
     });
 
     it.each(['summary', 'tick', 'cloud'])(

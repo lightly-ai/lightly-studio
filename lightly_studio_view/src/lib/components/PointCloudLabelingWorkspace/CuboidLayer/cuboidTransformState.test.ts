@@ -236,6 +236,22 @@ describe('createCuboidTransformState', () => {
         expect(get(state.annotations)).toEqual([ANNOTATION_A]);
     });
 
+    it('shows the source geometry again after discard, also when it matches an older edit', async () => {
+        const state = createCuboidTransformState({ onTransform: vi.fn().mockResolvedValue(true) });
+        state.reconcile([ANNOTATION_A]);
+        await state.commit({
+            annotationId: 'ann-a',
+            frameId: 'frame-1',
+            center: [1, 2, 3],
+            rotation: [0, 0, 0, 1],
+            size: [10, 20, 30]
+        });
+
+        state.discard('ann-a');
+
+        expect(get(state.annotations)).toEqual([ANNOTATION_A]);
+    });
+
     it('begin + cancel reverts to source values', () => {
         const state = createCuboidTransformState({ onTransform: () => undefined });
         state.reconcile([ANNOTATION_A]);

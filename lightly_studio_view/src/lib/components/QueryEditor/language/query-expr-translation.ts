@@ -28,7 +28,6 @@ import {
     isSegmentationMaskFloatFieldName,
     isStringLiteral,
     isTagInExpression,
-    isVideoEqualityFloatFieldName,
     isVideoIntFieldName,
     isVideoOrdinalFloatFieldName,
     isVideoStringFieldName,
@@ -51,7 +50,13 @@ export type QueryExprTranslationResult =
     | { status: 'empty' }
     | { status: 'error'; errors: QueryParseError[] };
 
-type QueryScope = 'image' | 'video' | 'object_detection' | 'classification' | 'segmentation_mask';
+type QueryScope =
+    | 'video_frame'
+    | 'image'
+    | 'video'
+    | 'object_detection'
+    | 'classification'
+    | 'segmentation_mask';
 
 interface TranslationParser {
     parse: (value: string) => {
@@ -134,6 +139,9 @@ function visit(expr: Expression, table: QueryScope): QueryExpr['match_expr'] {
         throw new Error(`Unsupported tag type: ${expr.tag_name}`);
     }
     if (isFunctionCall(expr)) {
+        if (expr.name === 'frame') {
+            return { type: 'video_frame_match_expr', subexpr: visit(expr.args[0], 'video_frame') };
+        }
         const subTable = getFunctionScope(expr.name);
         const type = toAnnotationMatchExprType(subTable);
         return {
@@ -233,21 +241,16 @@ function visitComparisonExpression(
                     };
                 }
                 break;
+            case 'video_frame':
             case 'video':
-                if (isVideoOrdinalFloatFieldName(fieldName)) {
+                if (table === 'video_frame' || isVideoOrdinalFloatFieldName(fieldName)) {
+                    if (!Number.isFinite(right.value)) {
+                        throw new Error(`${fieldName} requires a finite number`);
+                    }
                     return {
                         type: 'ordinal_float_expr',
                         field: { table, name: fieldName },
                         operator: toOrdinalComparisonOperator(expr.operator),
-                        value: right.value
-                    };
-                }
-                if (isVideoEqualityFloatFieldName(fieldName)) {
-                    return {
-                        type: 'equality_float_expr',
-                        field: { table, name: fieldName },
-                        // TODO: make Langium grammar more strict, so that `toEqualityComparisonOperator` is not needed
-                        operator: toEqualityComparisonOperator(expr.operator),
                         value: right.value
                     };
                 }

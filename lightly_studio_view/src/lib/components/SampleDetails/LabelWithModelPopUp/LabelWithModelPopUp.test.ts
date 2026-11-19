@@ -4,10 +4,6 @@ import type { ComponentProps } from 'svelte';
 import type { LabelingModelView, ModelAnnotationPreview } from '$lib/api/lightly_studio_local';
 import LabelWithModelPopUp from './LabelWithModelPopUp.svelte';
 
-vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: () => ({ data: [], isLoading: false })
-}));
-
 type LabelWithModel = ComponentProps<typeof LabelWithModelPopUp>['labelWithModel'];
 
 const DETECTION_MODEL: LabelingModelView = {
@@ -42,7 +38,6 @@ const makeLabelWithModel = (overrides: Partial<LabelWithModel> = {}): LabelWithM
 });
 
 const defaultProps = {
-    collectionId: 'collection-1',
     models: [DETECTION_MODEL, SEGMENTATION_MODEL],
     model: DETECTION_MODEL,
     onModelChange: vi.fn(),
@@ -85,6 +80,13 @@ describe('LabelWithModelPopUp', () => {
         expect(labelWithModel.save).toHaveBeenCalledOnce();
         expect(labelWithModel.generate).toHaveBeenCalledOnce();
         expect(screen.queryByRole('button', { name: 'Run model' })).not.toBeInTheDocument();
+    });
+
+    it('blocks a model change while saving', () => {
+        const labelWithModel = makeLabelWithModel({ predictions: [PREVIEW], isSaving: true });
+        render(LabelWithModelPopUp, { props: { ...defaultProps, labelWithModel } });
+
+        expect(screen.getByTestId('label-with-model-select')).toBeDisabled();
     });
 
     it('shows the save as toggle only for a segmentation model', async () => {

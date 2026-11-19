@@ -3,7 +3,9 @@ import { get } from 'svelte/store';
 import { describe, expect, it, vi } from 'vitest';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import { createAnnotationFixture } from '$lib/components/PointCloudLabelingWorkspace/domain/fixtures';
+import { createCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/domain';
 import { createCuboidTransformState } from './cuboidTransformState';
+import { createCuboidRenderItems } from './cuboidRenderItems';
 import CuboidLayer from './CuboidLayer.svelte';
 
 vi.mock('@threlte/core', () => ({
@@ -11,6 +13,10 @@ vi.mock('@threlte/core', () => ({
     useThrelte: () => ({ renderer: { domElement: document.createElement('canvas') } })
 }));
 vi.mock('@threlte/extras', () => ({ interactivity: () => {} }));
+vi.mock('./cuboidRenderItems', async (importOriginal) => {
+    const actual = await importOriginal<typeof import('./cuboidRenderItems')>();
+    return { ...actual, createCuboidRenderItems: vi.fn(actual.createCuboidRenderItems) };
+});
 const draftTarget = vi.hoisted(() => ({ props: null as Record<string, unknown> | null }));
 vi.mock('../CuboidDraft', () => ({
     CuboidDraftTarget: (_anchor: unknown, props: Record<string, unknown>) => {
@@ -96,5 +102,21 @@ describe('CuboidLayer draft target', () => {
         };
         forward(box);
         expect(onCreateCuboid).toHaveBeenCalledExactlyOnceWith(box);
+    });
+});
+
+describe('CuboidLayer render items', () => {
+    it('renders only the cuboids passed in, so hidden cuboids are not drawn', () => {
+        const hidden = createCuboidAnnotation({ ...annotation, id: 'annotation-hidden' });
+        const transforms = createCuboidTransformState({ onTransform: async () => true });
+        transforms.reconcile([annotation, hidden]);
+        vi.mocked(createCuboidRenderItems).mockClear();
+
+        render(CuboidLayer, { props: { ...defaultProps, transforms, cuboids: [annotation] } });
+
+        const renderedIds = vi
+            .mocked(createCuboidRenderItems)
+            .mock.lastCall?.[0].map(({ id }) => id);
+        expect(renderedIds).toEqual([annotation.id]);
     });
 });

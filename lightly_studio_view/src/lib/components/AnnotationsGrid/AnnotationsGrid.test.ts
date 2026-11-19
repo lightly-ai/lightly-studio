@@ -109,7 +109,8 @@ vi.mock('$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations', async 
     const { writable } = await import('svelte/store');
     return {
         useAnnotationPlotSelection: vi.fn(() => ({
-            annotationPlotRegion: writable(null)
+            annotationPlotRegion: writable(null),
+            annotationPlotPickedSampleIds: writable([])
         }))
     };
 });

@@ -125,11 +125,11 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         const status = context.status;
         if (!isAssistedLabelingStatus(status)) return;
         // The model tool uses its own server, the other tools use fal.ai.
-        const disabledReason =
+        const isToolAvailable =
             status === 'label-with-model'
-                ? labelingModels.disabledReason
-                : assistedLabelingStatus.disabledReason;
-        if (!isEditingMode.current || disabledReason !== null) setStatus('cursor');
+                ? labelingModels.isAvailable
+                : assistedLabelingStatus.disabledReason === null;
+        if (!isEditingMode.current || !isToolAvailable) setStatus('cursor');
     });
 
     // Leaving a tool, e.g. by a tool switch or Escape, ends box drawing and drops its prompts.

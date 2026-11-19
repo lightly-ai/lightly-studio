@@ -1,6 +1,9 @@
 <script lang="ts">
     import { Slider } from '$lib/components/ui/slider';
 
+    // A lower threshold can return hundreds of previews, e.g. every query of a DETR model.
+    const MIN_THRESHOLD = 0.05;
+
     interface Props {
         value: number;
         onChange: (value: number) => void;
@@ -18,7 +21,7 @@
         <Slider
             type="single"
             {value}
-            min={0}
+            min={MIN_THRESHOLD}
             max={1}
             step={0.05}
             thumbLabel="Minimum confidence"

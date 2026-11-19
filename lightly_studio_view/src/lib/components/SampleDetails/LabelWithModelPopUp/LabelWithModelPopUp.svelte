@@ -4,15 +4,18 @@
     import SquareDashed from '@lucide/svelte/icons/square-dashed';
     import type { LabelingModelView } from '$lib/api/lightly_studio_local';
     import { Select } from '$lib/components/Select';
-    import AnnotationToolPopUp from '$lib/components/SampleDetails/AnnotationToolPopUp/AnnotationToolPopUp.svelte';
+    import {
+        AnnotationToolPopUp,
+        SaveAsToggle,
+        SaveButtons
+    } from '$lib/components/SampleDetails/AnnotationToolPopUp';
     import type { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte';
     import ModelRunControls from './ModelRunControls/ModelRunControls.svelte';
     import ThresholdInput from './ThresholdInput/ThresholdInput.svelte';
 
-    type SaveAs = ComponentProps<typeof AnnotationToolPopUp>['saveAs'];
+    type SaveAs = ComponentProps<typeof SaveAsToggle>['saveAs'];
 
     interface Props {
-        collectionId: string;
         models: LabelingModelView[];
         model: LabelingModelView | null;
         onModelChange: (modelId: string) => void;
@@ -25,7 +28,6 @@
     }
 
     let {
-        collectionId,
         models,
         model,
         onModelChange,
@@ -47,18 +49,22 @@
     const predictionCount = $derived(labelWithModel.predictions.length);
 </script>
 
+{#snippet saveControls()}
+    {#if model?.task === 'instance_segmentation'}
+        <SaveAsToggle {saveAs} {onSaveAsChange} />
+    {/if}
+    <SaveButtons
+        saveLabel={`Save ${predictionCount}`}
+        canSave={labelWithModel.canSave}
+        isSaving={labelWithModel.isSaving}
+        onSave={() => void labelWithModel.save()}
+        onClear={labelWithModel.clear}
+    />
+{/snippet}
+
 <AnnotationToolPopUp
-    title="Label with model"
-    {collectionId}
-    {saveAs}
-    {onSaveAsChange}
-    showSaveControls={predictionCount > 0}
-    showSaveAs={model?.task === 'instance_segmentation'}
-    saveLabel={`Save ${predictionCount}`}
-    canSave={labelWithModel.canSave}
-    isSaving={labelWithModel.isSaving}
-    onSave={() => void labelWithModel.save()}
-    onClear={labelWithModel.clear}
+    title="Auto-label"
+    saveControls={predictionCount > 0 ? saveControls : undefined}
 >
     <Select
         {items}
@@ -66,6 +72,7 @@
         size="sm"
         placeholder="Select a model"
         testId="label-with-model-select"
+        disabled={labelWithModel.isSaving}
         onValueChange={onModelChange}
     />
     <ThresholdInput value={threshold} onChange={onThresholdChange} />

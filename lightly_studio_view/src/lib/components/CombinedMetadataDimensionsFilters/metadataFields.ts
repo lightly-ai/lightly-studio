@@ -2,7 +2,7 @@ import type { CategoricalMetadataValue, MetadataBounds } from '$lib/services/typ
 import { formatFloat } from '$lib/utils';
 
 export type Range = MetadataBounds[string];
-export type RangeSource = 'dimension' | 'numeric';
+export type RangeSource = 'dimension' | 'video' | 'frame' | 'numeric';
 
 export interface RangeField {
     kind: 'range';
@@ -11,6 +11,8 @@ export interface RangeField {
     key: string;
     title: string;
     unit: string;
+    /** Whether the field accepts only whole numbers. */
+    integer: boolean;
     bound: Range;
     value: Range;
 }

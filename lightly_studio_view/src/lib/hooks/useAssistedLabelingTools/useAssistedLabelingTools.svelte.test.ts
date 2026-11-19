@@ -6,9 +6,8 @@ import { useAssistedLabelingTools } from './useAssistedLabelingTools.svelte';
 const mocks = vi.hoisted(() => ({
     context: { status: 'smart-select' as string, panFrom: undefined as string | undefined },
     status: { disabledReason: null as string | null },
-    models: { models: [] as { id: string; task: string }[], disabledReason: null as string | null },
+    models: { models: [] as { id: string; task: string }[], isAvailable: true },
     clearLabelWithModel: vi.fn(),
-    getLabelWithModelParams: undefined as unknown as () => Record<string, unknown>,
     isEditingMode: undefined as unknown as Writable<boolean>,
     clearSmartSelect: vi.fn(),
     clearInstances: vi.fn(),
@@ -38,10 +37,7 @@ vi.mock('$lib/hooks/useLabelingModels', () => ({
     useLabelingModels: () => mocks.models
 }));
 vi.mock('$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte', () => ({
-    useLabelWithModel: (getParams: () => Record<string, unknown>) => {
-        mocks.getLabelWithModelParams = getParams;
-        return { clear: mocks.clearLabelWithModel };
-    }
+    useLabelWithModel: () => ({ clear: mocks.clearLabelWithModel })
 }));
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({ isEditingMode: mocks.isEditingMode })
@@ -71,7 +67,7 @@ const setup = (initialStatus = 'smart-select') => {
             { id: 'detector', task: 'object_detection' },
             { id: 'segmenter', task: 'instance_segmentation' }
         ],
-        disabledReason: null
+        isAvailable: true
     });
     mocks.context = context;
     mocks.status = status;
@@ -210,12 +206,12 @@ describe('useAssistedLabelingTools', () => {
         flushSync();
         expect(context.status).toBe('label-with-model');
 
-        models.disabledReason = 'No labeling model is registered.';
+        models.isAvailable = false;
         flushSync();
         expect(context.status).toBe('cursor');
     });
 
-    it('drops the model results when the label with model tool is left', () => {
+    it('drops the model results when the auto-label tool is left', () => {
         const { context } = setup('label-with-model');
         mocks.clearLabelWithModel.mockClear();
 
@@ -228,21 +224,14 @@ describe('useAssistedLabelingTools', () => {
     it('selects the first model and saves detections as boxes', () => {
         const { tools } = setup('label-with-model');
         tools.state.saveAs = 'mask';
-        tools.state.modelThreshold = 0.3;
         flushSync();
 
         expect(tools.selectedModel?.id).toBe('detector');
-        expect(mocks.getLabelWithModelParams()).toMatchObject({
-            modelId: 'detector',
-            threshold: 0.3,
-            saveAs: 'box'
-        });
+        expect(tools.modelSaveAs).toBe('box');
 
         tools.state.modelId = 'segmenter';
         flushSync();
-        expect(mocks.getLabelWithModelParams()).toMatchObject({
-            modelId: 'segmenter',
-            saveAs: 'mask'
-        });
+        expect(tools.selectedModel?.id).toBe('segmenter');
+        expect(tools.modelSaveAs).toBe('mask');
     });
 });

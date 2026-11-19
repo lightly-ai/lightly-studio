@@ -7,6 +7,22 @@ vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
     useAnnotationLabels: vi.fn(() => ({ data: [] }))
 }));
 
+vi.mock(
+    '$lib/components/PointCloudLabelingWorkspace/pointCloudWorkspaceLayoutContext.svelte',
+    () => ({
+        usePointCloudWorkspaceLayoutContext: () => () => ({ datasetId: 'dataset-1' })
+    })
+);
+vi.mock('$lib/hooks/useTracks/useTracks.svelte', () => ({
+    useTracks: () => ({ data: [], refetch: vi.fn() })
+}));
+vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
+    useUpdateAnnotationsMutation: () => ({ updateAnnotations: vi.fn() })
+}));
+vi.mock('$lib/hooks/useUpdateTrackMutation/useUpdateTrackMutation.svelte', () => ({
+    useUpdateTrackMutation: () => ({ updateParentTrack: vi.fn(), isPending: false })
+}));
+
 const cuboid = createAnnotationFixture();
 
 const defaultProps = {

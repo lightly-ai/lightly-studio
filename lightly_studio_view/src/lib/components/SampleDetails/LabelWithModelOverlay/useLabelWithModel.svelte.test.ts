@@ -126,6 +126,24 @@ describe('useLabelWithModel', () => {
         expect(labelWithModel.predictions).toEqual([]);
     });
 
+    it('keeps the predictions until the save ends when the model changes', async () => {
+        const { labelWithModel, params } = setup();
+        await generateResults(labelWithModel);
+        let endSave = () => {};
+        mocks.saveAnnotationPreviews.mockImplementationOnce(
+            () => new Promise<void>((resolve) => (endSave = resolve))
+        );
+
+        const save = labelWithModel.save();
+        params.modelId = 'ltdetrv2-seg-s-coco';
+        flushSync();
+        expect(labelWithModel.predictions).toHaveLength(2);
+
+        endSave();
+        await save;
+        expect(labelWithModel.predictions).toEqual([]);
+    });
+
     it('removes a deleted prediction', async () => {
         const { labelWithModel } = setup();
         await generateResults(labelWithModel);
