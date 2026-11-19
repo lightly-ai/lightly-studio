@@ -7,6 +7,9 @@
     import type { useUpdateCuboidAnnotation } from '$lib/components/PointCloudLabelingWorkspace/useUpdateCuboidAnnotation';
     import {
         groupAnnotationsBySource,
+        groupAnnotationsWithEmptySources,
+        isPickableSource,
+        type SourcePicker,
         resolveAnnotationClassName,
         resolveAnnotationSourceName,
         buildAnnotationForest,
@@ -17,6 +20,7 @@
     import PointCloudAnnotationListItem from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationListItem';
     import PointCloudAnnotationParentGroup from '$lib/components/PointCloudLabelingWorkspace/CuboidLayer/PointCloudAnnotationList/PointCloudAnnotationParentGroup';
     import { Typography } from '$lib/components/Typography';
+    import PointCloudSourcePicker from './PointCloudSourcePicker';
 
     type AnnotationTreeNode = ReturnType<typeof buildAnnotationForest>[number];
 
@@ -43,6 +47,8 @@
         onTrackChange?: () => Promise<void>;
         /** Deletes a cuboid annotation by ID. */
         onDeleteCuboid?: (cuboidId: string) => void;
+        /** Picks the source for new cuboids. Without it, the list shows no source picker. */
+        sourcePicker?: SourcePicker;
         /** True when the cuboid is hidden in the scene. */
         isCuboidHidden?: (cuboid: CuboidAnnotation) => boolean;
         /** True when every cuboid of the source is hidden in the scene. */
@@ -66,10 +72,19 @@
         isCuboidHidden = () => false,
         isSourceHidden = () => false,
         onToggleTrackVisibility,
-        onToggleSourceVisibility
+        onToggleSourceVisibility,
+        sourcePicker
     }: Props = $props();
 
-    const groups = $derived(groupAnnotationsBySource({ cuboids, sources: annotationSources }));
+    const groups = $derived(
+        sourcePicker
+            ? groupAnnotationsWithEmptySources({
+                  cuboids,
+                  sources: annotationSources,
+                  pendingSourceName: sourcePicker.pendingSourceName
+              })
+            : groupAnnotationsBySource({ cuboids, sources: annotationSources })
+    );
     // The group header holds the source toggle, so it shows whenever sources can be toggled,
     // also on a tick with only one source.
     const showGroups = $derived(onToggleSourceVisibility !== undefined || groups.length > 1);
@@ -157,15 +172,7 @@
     {/each}
 {/snippet}
 
-{#if cuboids.length === 0}
-    <div class="flex h-full items-center justify-center">
-        <Typography variant="body2" className="text-muted-foreground">No annotations</Typography>
-    </div>
-{:else if !showGroups}
-    <div class="space-y-1">
-        {@render annotationForest(groups[0]?.cuboids ?? [])}
-    </div>
-{:else}
+{#snippet sourceGroups()}
     <div class="space-y-2">
         {#each groups as group (group.sourceId)}
             <PointCloudAnnotationListGroup
@@ -175,15 +182,45 @@
                 group.cuboids.some((c) => c.id === selectedCuboidId)
                     ? selectedCuboidId
                     : null}
+                isTarget={group.sourceName === sourcePicker?.targetSourceName}
+                needsPick={sourcePicker?.needsPick}
+                onPick={sourcePicker && isPickableSource(group.sourceId, annotationSources)
+                    ? () => sourcePicker.onPick(group.sourceName)
+                    : undefined}
                 isHidden={isSourceHidden(group.sourceId)}
                 onToggleVisibility={onToggleSourceVisibility
                     ? () => onToggleSourceVisibility(group.sourceId)
                     : undefined}
             >
                 <div class="space-y-1">
-                    {@render annotationForest(group.cuboids)}
+                    {#if group.cuboids.length === 0}
+                        <Typography variant="body2" className="text-xs text-muted-foreground">
+                            No cuboids on this tick
+                        </Typography>
+                    {:else}
+                        {@render annotationForest(group.cuboids)}
+                    {/if}
                 </div>
             </PointCloudAnnotationListGroup>
         {/each}
     </div>
+{/snippet}
+
+{#if sourcePicker}
+    <PointCloudSourcePicker
+        picker={sourcePicker}
+        sourceNames={annotationSources.map(({ name }) => name)}
+    >
+        {@render sourceGroups()}
+    </PointCloudSourcePicker>
+{:else if cuboids.length === 0}
+    <div class="flex h-full items-center justify-center">
+        <Typography variant="body2" className="text-muted-foreground">No annotations</Typography>
+    </div>
+{:else if !showGroups}
+    <div class="space-y-1">
+        {@render annotationForest(groups[0]?.cuboids ?? [])}
+    </div>
+{:else}
+    {@render sourceGroups()}
 {/if}

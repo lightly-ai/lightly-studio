@@ -218,6 +218,30 @@ def test_from_decoded_message__missing_class() -> None:
         scene_update.from_decoded_message(SimpleNamespace(entities=[entity]))
 
 
+def test_from_decoded_message__track_key() -> None:
+    entity = _entity("16", {"class": "truck_bed", "score": "0.453", "track": "16"}, cubes=[_cube()])
+
+    labels = scene_update.from_decoded_message(SimpleNamespace(entities=[entity]))
+
+    assert labels.cuboids[0].track_id == 16
+
+
+def test_from_decoded_message__track_id_key_wins_over_track_key() -> None:
+    entity = _entity("truck_3", {"class": "truck", "track_id": "3", "track": "9"}, cubes=[_cube()])
+
+    labels = scene_update.from_decoded_message(SimpleNamespace(entities=[entity]))
+
+    assert labels.cuboids[0].track_id == 3
+
+
+def test_from_decoded_message__untracked() -> None:
+    entity = _entity("det_0", {"class": "truck_bed", "score": "0.251"}, cubes=[_cube()])
+
+    labels = scene_update.from_decoded_message(SimpleNamespace(entities=[entity]))
+
+    assert labels.cuboids[0].track_id is None
+
+
 def test_from_decoded_message__zero_quaternion() -> None:
     entity = _entity(
         "truck_3",

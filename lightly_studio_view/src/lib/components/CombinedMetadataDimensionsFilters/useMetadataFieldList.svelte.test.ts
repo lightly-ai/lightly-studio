@@ -6,7 +6,7 @@ import {
     type UseMetadataFieldListParams
 } from './useMetadataFieldList.svelte';
 import { isFieldActive } from './metadataFields';
-import { useDimensions, useGlobalStorage } from '$lib/hooks';
+import { useDimensions, useGlobalStorage, useVideoBounds, useVideoFramesBounds } from '$lib/hooks';
 import { getMetadataInfo } from '$lib/api/lightly_studio_local';
 
 const trackEvent = vi.fn();
@@ -16,7 +16,9 @@ vi.mock('$lib/hooks', async (importOriginal) => ({
 }));
 vi.mock('$lib/api/lightly_studio_local', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/api/lightly_studio_local')>()),
-    getMetadataInfo: vi.fn(() => Promise.resolve({ data: undefined }))
+    getMetadataInfo: vi.fn(() => Promise.resolve({ data: undefined })),
+    getFieldsBounds: vi.fn(() => Promise.resolve({ data: undefined })),
+    getVideoFramesFieldsBounds: vi.fn(() => Promise.resolve({ data: undefined }))
 }));
 vi.mock('$lib/services/loadDimensionBounds', () => ({
     loadDimensionBounds: vi.fn(() => Promise.resolve({ data: undefined }))
@@ -33,6 +35,8 @@ const setup = (overrides: Partial<UseMetadataFieldListParams> = {}) => {
         list = useMetadataFieldList({
             getCollectionId: () => COLLECTION_ID,
             getShowImageDimensions: () => true,
+            getIsVideos: () => false,
+            getIsVideoFrames: () => false,
             getCategoricalKeys: () => ['split'],
             ...overrides
         });
@@ -58,6 +62,17 @@ beforeEach(() => {
     storage.updateCategoricalMetadataValues({});
     useDimensions().updateDimensionsBounds(dimensionBounds);
     useDimensions().updateDimensionsValues(dimensionBounds);
+    const videoBounds = {
+        width: { min: 1, max: 5 },
+        height: { min: 2, max: 6 },
+        duration_s: { min: 0, max: 9 },
+        fps: { min: 30, max: 30 }
+    };
+    useVideoBounds().updateVideoBounds(videoBounds);
+    useVideoBounds().updateVideoBoundsValues(videoBounds);
+    const frameBounds = { frame_number: { min: 0, max: 50 } };
+    useVideoFramesBounds().updateVideoFramesBounds(frameBounds);
+    useVideoFramesBounds().updateVideoFramesBoundsValues(frameBounds);
 });
 
 afterEach(() => cleanup?.());
@@ -76,6 +91,45 @@ describe('useMetadataFieldList', () => {
     it('lists no width and height when image dimensions are hidden', () => {
         const list = setup({ getShowImageDimensions: () => false });
         expect(ids(list)).toEqual(['numeric:score', 'categorical:split']);
+    });
+
+    it('lists video fields and omits fps with equal bounds', () => {
+        const list = setup({
+            getShowImageDimensions: () => false,
+            getIsVideos: () => true,
+            getCategoricalKeys: () => []
+        });
+        expect(ids(list)).toEqual([
+            'video:width',
+            'video:height',
+            'video:duration_s',
+            'numeric:score'
+        ]);
+    });
+
+    it('lists fps when its bounds differ and the frame number for video frames', () => {
+        const videoBounds = {
+            width: { min: 1, max: 5 },
+            height: { min: 2, max: 6 },
+            duration_s: { min: 0, max: 9 },
+            fps: { min: 24, max: 30 }
+        };
+        useVideoBounds().updateVideoBounds(videoBounds);
+        useVideoBounds().updateVideoBoundsValues(videoBounds);
+        const list = setup({
+            getShowImageDimensions: () => false,
+            getIsVideos: () => true,
+            getIsVideoFrames: () => true,
+            getCategoricalKeys: () => []
+        });
+        expect(ids(list)).toEqual([
+            'video:width',
+            'video:height',
+            'video:fps',
+            'video:duration_s',
+            'frame:frame_number',
+            'numeric:score'
+        ]);
     });
 
     it('commitRange writes only the store of that field', () => {

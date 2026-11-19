@@ -12,7 +12,9 @@ from lightly_studio.api.routes.api.validators import Paginated
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import CollectionTable, SampleType
 from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
+from lightly_studio.type_definitions import QueryType
 
 
 class SamplesWithCount(BaseModel):
@@ -42,8 +44,12 @@ def get_filtered_samples(
     )
 
     if filters is not None:
-        samples_query = filters.apply(query=samples_query, sample_type=sample_type)
-        total_count_query = filters.apply(query=total_count_query, sample_type=sample_type)
+        samples_query = _apply_sample_filter(
+            filters=filters, query=samples_query, sample_type=sample_type
+        )
+        total_count_query = _apply_sample_filter(
+            filters=filters, query=total_count_query, sample_type=sample_type
+        )
 
     # Apply default ordering
     samples_query = samples_query.order_by(
@@ -85,5 +91,15 @@ def _count_captions(
         .where(col(SampleTable.collection_id) == collection_id)
     )
     if filters is not None:
-        captions_query = filters.apply(query=captions_query, sample_type=sample_type)
+        captions_query = _apply_sample_filter(
+            filters=filters, query=captions_query, sample_type=sample_type
+        )
     return session.exec(captions_query).one()
+
+
+def _apply_sample_filter(
+    query: QueryType, filters: SampleFilter, sample_type: SampleType | None
+) -> QueryType:
+    if filters.query_expr is not None:
+        query = query.outerjoin(VideoTable, col(VideoTable.sample_id) == col(SampleTable.sample_id))
+    return filters.apply(query=query, sample_type=sample_type)

@@ -6,7 +6,7 @@
     import {
         isAnnotationsRoute,
         isCaptionsRoute,
-        isPointCloudsRoute,
+        isMcapSequencesRoute,
         isVideoFramesRoute,
         isVideosRoute
     } from '$lib/routes';
@@ -34,7 +34,7 @@
             return 'videos';
         } else if (isCaptionsRoute(page.route.id)) {
             return 'captions';
-        } else if (isPointCloudsRoute(page.route.id)) {
+        } else if (isMcapSequencesRoute(page.route.id)) {
             return count === 1 ? 'MCAP sequence' : 'MCAP sequences';
         } else {
             return 'images';

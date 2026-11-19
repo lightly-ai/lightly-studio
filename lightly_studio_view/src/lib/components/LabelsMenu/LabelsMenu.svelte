@@ -7,7 +7,7 @@
     import AnnotationColorLegend from '../AnnotationColorLegend/AnnotationColorLegend.svelte';
     import { useAnnotationCollectionsFilter } from '$lib/hooks/useAnnotationCollectionsFilter/useAnnotationCollectionsFilter';
     import { useSettings } from '$lib/hooks/useSettings';
-    import { useAnnotationClassVisibility } from '$lib/hooks';
+    import { useAnnotationClassVisibility, useUnannotatedSamplesFilter } from '$lib/hooks';
     import LabelVisibilityToggle from './LabelVisibilityToggle/LabelVisibilityToggle.svelte';
 
     interface Props {
@@ -31,6 +31,28 @@
     const { multipleSourcesVisible, allSourcesHidden } = useAnnotationCollectionsFilter();
     const { enforceColoringByClassStore } = useSettings();
     const { hiddenClassNamesStore, toggleClassVisibility } = useAnnotationClassVisibility();
+    const { includeUnannotatedSamples, setIncludeUnannotatedSamples } =
+        useUnannotatedSamplesFilter();
+
+    // Class names are free text, so the item IDs need a namespace to stay apart from the row.
+    const NO_ANNOTATIONS_ITEM_ID = 'no-annotations';
+    const CLASS_ITEM_ID_PREFIX = 'class:';
+    const toClassName = (itemId: string) => itemId.slice(CLASS_ITEM_ID_PREFIX.length);
+
+    const toggleItem = (itemId: string) => {
+        if (itemId === NO_ANNOTATIONS_ITEM_ID) {
+            setIncludeUnannotatedSamples(!$includeUnannotatedSamples);
+            return;
+        }
+        onToggleAnnotationFilter(toClassName(itemId));
+    };
+
+    const changeSelection = (itemIds: string[]) => {
+        setIncludeUnannotatedSamples(itemIds.includes(NO_ANNOTATIONS_ITEM_ID));
+        onSelectionChange(
+            itemIds.filter((itemId) => itemId !== NO_ANNOTATIONS_ITEM_ID).map(toClassName)
+        );
+    };
 
     const showClassColorLegend = $derived(
         !resolveEffectiveColorBySource({
@@ -40,14 +62,16 @@
     );
 
     const classItems = $derived(
-        $annotationFilterRows.map(({ label_name, current_count, total_count, selected }) => ({
-            id: label_name,
-            label: label_name,
-            selected,
+        $annotationFilterRows.map((row) => ({
+            id: row.isNoAnnotationsRow
+                ? NO_ANNOTATIONS_ITEM_ID
+                : `${CLASS_ITEM_ID_PREFIX}${row.label_name}`,
+            label: row.label_name,
+            selected: row.selected,
             count:
-                current_count === undefined
+                row.current_count === undefined
                     ? undefined
-                    : `${formatInteger(current_count)} of ${formatInteger(total_count)}`
+                    : `${formatInteger(row.current_count)} of ${formatInteger(row.total_count)}`
         }))
     );
     const selectedById = $derived(new Map(classItems.map((item) => [item.id, item.selected])));
@@ -77,14 +101,17 @@
         {:else}
             <FilterList
                 items={classItems}
-                onToggle={onToggleAnnotationFilter}
-                {onSelectionChange}
+                onToggle={toggleItem}
+                onSelectionChange={changeSelection}
                 testId="labels-menu"
                 searchPlaceholder="Search classes…"
                 paged={false}
             >
                 {#snippet leading(item)}
-                    {#if showClassColorLegend}
+                    {#if showClassColorLegend && item.id === NO_ANNOTATIONS_ITEM_ID}
+                        <!-- Takes the width of the color legend, so the names line up. -->
+                        <span class="size-3 shrink-0" aria-hidden="true"></span>
+                    {:else if showClassColorLegend}
                         <AnnotationColorLegend
                             labelName={item.label}
                             className="h-3 w-3"
@@ -94,9 +121,12 @@
                     {/if}
                 {/snippet}
                 {#snippet trailing(item)}
-                    {#if showVisibilityToggle}
+                    {#if showVisibilityToggle && item.id === NO_ANNOTATIONS_ITEM_ID}
+                        <!-- Takes the width of the visibility toggle, so the counts line up. -->
+                        <span class="size-4 shrink-0" aria-hidden="true"></span>
+                    {:else if showVisibilityToggle}
                         <LabelVisibilityToggle
-                            isHidden={$hiddenClassNamesStore.includes(item.id)}
+                            isHidden={$hiddenClassNamesStore.includes(item.label)}
                             labelName={item.label}
                             {toggleClassVisibility}
                         />

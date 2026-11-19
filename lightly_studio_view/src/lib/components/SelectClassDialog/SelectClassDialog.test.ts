@@ -5,7 +5,7 @@ import '@testing-library/jest-dom';
 
 import SelectClassDialog from './SelectClassDialog.svelte';
 import { useCanCreateAnnotationClass } from '$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass';
-import type { ComponentProps } from 'svelte';
+import { createRawSnippet, type ComponentProps } from 'svelte';
 
 vi.mock('$lib/hooks/useCanCreateAnnotationClass/useCanCreateAnnotationClass', () => ({
     useCanCreateAnnotationClass: vi.fn(() => true)
@@ -284,5 +284,34 @@ describe('SelectClassDialog', () => {
             objectTrackId: null,
             isNewTrack: false
         });
+    });
+
+    it('does not confirm while the caller does not allow it', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ canConfirm: false });
+
+        await user.type(await screen.findByTestId('select-list-input'), 'fish{Enter}');
+
+        expect(onConfirm).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Confirm' })).toBeDisabled();
+    });
+
+    it('preselects the initial class', async () => {
+        const user = userEvent.setup();
+        const { onConfirm } = renderDialog({ initialLabel: 'dog' });
+
+        const confirmButton = screen.getByRole('button', { name: 'Confirm' });
+        await waitFor(() => expect(confirmButton).toBeEnabled());
+        await user.click(confirmButton);
+
+        expect(onConfirm).toHaveBeenCalledWith('dog');
+    });
+
+    it('renders extra content above a closed class list', () => {
+        const extra = createRawSnippet(() => ({ render: () => '<p>Extra section</p>' }));
+        renderDialog({ extra });
+
+        expect(screen.getByText('Extra section')).toBeInTheDocument();
+        expect(screen.queryByRole('option', { name: 'cat' })).not.toBeInTheDocument();
     });
 });

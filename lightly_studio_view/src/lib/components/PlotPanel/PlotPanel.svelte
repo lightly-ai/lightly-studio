@@ -4,6 +4,8 @@
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
     import PlotSelectionChip from './PlotSelectionChip/PlotSelectionChip.svelte';
+    import { getPickHint } from './PlotSelectionChip/PlotSelectionChip.helpers';
+    import { useLingeringValue } from '$lib/hooks';
     import { PlotAxesEditor } from './PlotAxesEditor';
     import { PlotAxesLabels } from './PlotAxesLabels';
     import PlotAxisLines from './PlotAxisLines/PlotAxisLines.svelte';
@@ -53,8 +55,9 @@
     } from './plotCategories';
     import { page } from '$app/state';
     import { cn } from '$lib/utils';
-    import { isAnnotationsRoute, isPointCloudsRoute, isVideosRoute } from '$lib/routes';
+    import { isAnnotationsRoute, isMcapSequencesRoute, isVideosRoute } from '$lib/routes';
     import { useMcapSequenceFilters } from '$lib/hooks/useMcapSequenceFilters/useMcapSequenceFilters';
+    import { buildSequencePlotFilter } from './buildSequencePlotFilter/buildSequencePlotFilter';
     import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
     import { useTags } from '$lib/hooks/useTags/useTags';
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
@@ -81,7 +84,7 @@
     // Detect if we're on the annotations route
     const isAnnotations = $derived(isAnnotationsRoute(page.route?.id ?? null));
     // The MCAP sequences grid lives on the point clouds route.
-    const isSequences = $derived(isPointCloudsRoute(page.route?.id ?? null));
+    const isSequences = $derived(isMcapSequencesRoute(page.route?.id ?? null));
     // Everything that isn't videos, annotations or sequences is the images grid.
     const isImages = $derived(!isVideos && !isAnnotations && !isSequences);
     const itemLabel = $derived(
@@ -122,13 +125,7 @@
             return $selectedAnnotationsFilter ?? { filter_type: 'annotations' as const };
         }
         if (isSequences) {
-            // The plot highlights its own selection rather than filtering by it, so only
-            // the tags of the grid filter are sent.
-            const tagIds = $sequenceFilter?.sample_filter?.tag_ids;
-            return {
-                filter_type: 'mcap_sequence' as const,
-                ...(tagIds ? { sample_filter: { tag_ids: tagIds } } : {})
-            };
+            return buildSequencePlotFilter($sequenceFilter);
         }
         const currentFilter = isVideos ? $videoFilter : $imageFilter;
         if (!currentFilter) return null;
@@ -505,7 +502,7 @@
     // Hover preview: a controlled tooltip showing a thumbnail of the hovered point.
     // The array-based EmbeddingView only emits hover tooltips when querySelection
     // is provided; ours returns the nearest visible point with its sample ID.
-    let tooltip: DataPoint | null = $state(null);
+    let tooltip = $state<DataPoint | null>(null);
     const onTooltip = (value: DataPoint | null) => {
         tooltip = value;
     };
@@ -521,6 +518,21 @@
             typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
         commitPickedSampleIds
     });
+    const hoveredSampleId = $derived(
+        typeof tooltip?.identifier === 'string' && $rangeSelection === null
+            ? tooltip.identifier
+            : null
+    );
+    // Picking does not work on sequences.
+    const pickHint = $derived(
+        isSequences ? null : getPickHint({ hoveredSampleId, pickedSampleIds })
+    );
+    // A drag drops the hint at once, so it cannot come back on release.
+    const isDragging = () => $rangeSelection !== null;
+    const shownPickHint = useLingeringValue(() => pickHint, 400, isDragging);
+    const selectionKind = $derived(
+        $plotSelectionCount === 0 ? null : pickedSampleIds.length > 0 ? 'picks' : 'region'
+    );
     // The card is rendered by this component (not the library's tooltip container)
     // so it always sits directly above the hovered point; the overlay proxy
     // provides the data → pixel conversion.
@@ -651,15 +663,20 @@
                         <PlotAxesLabels axes={$appliedTextAxes} />
                     {/if}
 
-                    {#if $plotSelectionCount > 0}
+                    {#if $plotSelectionCount > 0 || shownPickHint.current !== null}
                         <!-- Below the top axis label, which it would overlap on a narrow plot. -->
                         <div
-                            class={cn('absolute left-2 z-10', showAxesLabels ? 'top-11' : 'top-2')}
+                            class={cn(
+                                'pointer-events-none absolute left-2 right-2 z-10',
+                                showAxesLabels ? 'top-11' : 'top-2'
+                            )}
                         >
                             <PlotSelectionChip
+                                {selectionKind}
                                 count={$plotSelectionCount}
                                 {itemLabel}
                                 onClear={clearSelection}
+                                pickHint={shownPickHint.current}
                             />
                         </div>
                     {/if}

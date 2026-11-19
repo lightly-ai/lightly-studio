@@ -8,36 +8,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- API query expressions can filter videos by temporal events or by annotations and timestamps on the same frame.
-- Python SDK: Use `VideoFrameQuery` to match annotations and timestamps on the same frame, or `VideoEventQuery` to match events by class, source, confidence, and time boundaries.
-- Zoom and pan the point cloud track timeline with the zoom buttons, Ctrl/Cmd + mouse wheel, or horizontal scroll to inspect and edit tracks frame by frame.
-- Filter videos with query expressions in the GUI using video fields, tags, metadata, and video annotations.
-- Draw a cuboid in steps in the point cloud workspace: in the top and 3D views, drag along one side to set the heading, then click to set the width; the 3D view adds a click for the height, and the top view fits the height to the points. In the side and front views, one drag draws a rectangle and the depth is fitted to the points.
-- Every filter list in the filter panel has a search, "Select all" and "Clear".
-- The query filter panel has a history button. It lists the last 10 queries that you applied in the collection, and a click applies one again.
-- Pick single points in the embedding plot with Shift + click. The grid then shows only the picked images, annotations, or videos.
-- Hide an annotation track or a whole annotation source in the point cloud workspace with the eye buttons in the Annotations panel. Hidden annotations stay hidden on every frame of the sequence.
+- Use `frame(...)` in the video query editor to match annotations and timestamps on the same frame.
+- Filter the point cloud sequences by annotation class in the filter panel. A sequence matches when one of its frames has an annotation of that class.
+- The embedding plot shows a hint for what Shift + click does on the hovered point: pick, add, or remove.
+- Python SDK: MCAP datasets can use cameras that record JPEG or PNG `CompressedImage` messages, not only H.264 or H.265 video. The camera frames show in the viewer and are used for embeddings.
+- Filter images and videos without annotations with the "No annotations" option in the annotation class filter. Combine it with classes to also see the samples of those classes.
 
 ### Changed
-
-- Annotation class counts in the image sidebar load faster when you filter by annotation source, and when no filter is set.
 
 ### Deprecated
 
 ### Removed
 
-- BREAKING: Dropped Python 3.10 support. Upgrade to Python 3.11–3.15.
+### Fixed
+
+### Security
+
+## \[1.4.0\] - 2026-11-18
+
+### Added
+
+- Filtering
+    - Reapply any of the last 10 queries used in a collection from the query history.
+    - Search any filter list, select all its values, or clear the selection.
+    - Shift-click individual points in the embedding plot to show the selected images, annotations, or videos in the grid.
+
+- Video queries
+    - Python SDK: Use `VideoFrameQuery` to find videos where annotations and timestamps match on the same frame. Use `VideoEventQuery` to find events by annotation class, annotation source, confidence, or start and end times.
+    - Filter videos in the GUI query editor by duration, frame rate, tags, metadata, or video annotations. For example, `fps >= 29.97` finds videos at or above 29.97 frames per second.
+
+- Labeling
+    - Choose an annotation source in the Annotations panel when labeling images. Choose “New source” to create one with your first annotation.
+    - Python SDK: Register a custom labeling model with `register_labeling_model()`. Use the REST API to list available models and preview their predictions on an image.
+
+- Documentation
+    - The Enterprise guide explains how to use custom embeddings.
+
+### Changed
+
+- Filtering
+    - Find image dimensions and numeric and categorical metadata together in the Metadata section. Expand a field to filter by it, or search by name when there are more than eight fields.
+
+### Removed
+
+- BREAKING: LightlyStudio no longer supports Python 3.10. Upgrade to Python 3.11–3.15 before installing this release.
 
 ### Fixed
 
-- Fixed slow box, mask, and classification exports by loading annotations in batches.
-- Fixed slow object detection and instance segmentation evaluations by avoiding repeated annotation loads.
-- Fixed slow evaluation saves by grouping similar results into fewer database inserts.
-- Fixed slow annotation grid loading by loading annotation details in batches.
-- Applying an empty query or a query with only comments now clears the query filter instead of showing a syntax error.
-- Fixed slow grid loading by avoiding unnecessary database queries for each annotation.
+- Filtering and annotations
+    - Applying an empty query or one containing only comments clears the query filter.
+    - Annotation class counts load faster in the image sidebar, both with an annotation source selected and with no filters applied.
+    - Grids with annotated samples load faster, and images with many annotations open faster in the detail view.
+    - You can delete annotations that have metadata.
 
-### Security
+- Evaluation and export
+    - Object detection and instance segmentation evaluations run faster, and evaluation results save faster.
+    - Bounding box, segmentation mask, and classification exports finish faster.
+    - Deleting a dataset now succeeds even if an exported file cannot be removed.
 
 ## \[1.3.0\] - 2026-11-12
 

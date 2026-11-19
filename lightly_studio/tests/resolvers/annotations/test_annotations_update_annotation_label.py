@@ -8,6 +8,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_sample_metric import EvaluationSampleMetricCreate
 from lightly_studio.models.tag import TagTable
@@ -31,18 +32,16 @@ from tests.resolvers.evaluation_sample_metric_resolver import (
 
 def test_update_annotation_label_classification(
     db_session: Session,
-    annotations_test_data: AnnotationsTestData,
+    video_event: AnnotationBaseTable,
 ) -> None:
     """Test updating a classification label preserves its temporal span."""
-    annotations = annotation_resolver.get_all(
-        db_session,
-    ).annotations
-    first_annotation = annotations[0]
-    annotation_id = first_annotation.sample_id
-    current_annotation_label_id = first_annotation.annotation_label_id
-    new_label = annotations_test_data.annotation_labels[1]
-
-    assert current_annotation_label_id != new_label.annotation_label_id
+    annotation_id = video_event.sample_id
+    assert video_event.parent_sample is not None
+    new_label = create_annotation_label(
+        session=db_session,
+        root_collection_id=video_event.parent_sample.collection_id,
+        label_name="running",
+    )
 
     # Update the label of the first annotation
     annotation_resolver.update_annotation_label(

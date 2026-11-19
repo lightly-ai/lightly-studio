@@ -380,6 +380,19 @@ describe('useVideoFilters', () => {
 describe('buildVideoFilter output', () => {
     const temperatureMetadataFilter = { key: 'temp', value: 10, op: '>=' as const };
 
+    it('passes include_unannotated_samples to the frame annotation filter', () => {
+        const filter = buildVideoFilter({
+            collection_id: 'coll-1',
+            filters: { annotation_frames_label_ids: ['l'], include_unannotated_samples: true }
+        });
+
+        expect(filter?.frame_annotation_filter).toEqual({
+            filter_type: 'annotations',
+            annotation_label_ids: ['l'],
+            include_unannotated_samples: true
+        });
+    });
+
     it('pins every field', () => {
         vi.mocked(createMetadataFilters).mockReturnValueOnce([temperatureMetadataFilter]);
 

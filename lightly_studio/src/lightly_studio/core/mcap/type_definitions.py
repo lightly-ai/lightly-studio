@@ -44,8 +44,9 @@ class FrameLocator:
             `timestamp`, in nanoseconds.
         topic: The topic the message was logged on.
         keyframe_log_time_ns: For video, the log time of the latest keyframe at or
-            before this frame, which is where decoding has to start. `None` for topics
-            that are not video, and for frames that no keyframe precedes.
+            before this frame, which is where decoding has to start. For an image, its
+            own log time, because each image is its own keyframe. `None` for topics
+            that are not video or images, and for frames that no keyframe precedes.
         schema_name: The name of the message schema, `None` without a schema.
     """
 
@@ -131,7 +132,7 @@ class CuboidLabel:
         timestamp_ns: The lidar sweep time of the frame, in nanoseconds.
         frame_id: The coordinate frame the pose is expressed in, e.g. `odom`.
         class_name: The annotation class, e.g. `truck_bed`.
-        track_id: The vendor track id of this box.
+        track_id: The vendor track id of this box, or `None` for an untracked detection.
         parent_track_id: The vendor track id of the parent truck, or `None`.
         interpolated: Whether the box was interpolated between keyframes.
         position: The cuboid centre as (x, y, z) in metres.
@@ -142,7 +143,7 @@ class CuboidLabel:
     timestamp_ns: int
     frame_id: str
     class_name: str
-    track_id: int
+    track_id: int | None
     parent_track_id: int | None
     interpolated: bool
     position: tuple[float, float, float]
