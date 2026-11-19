@@ -6,11 +6,14 @@ from lightly_studio.core.dataset_query import (
     ClassificationQuery,
     VideoEventField,
     VideoEventQuery,
+    VideoFrameQuery,
 )
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.query_expr import QueryExpr
+from lightly_studio.models.sample import SampleTable
+from lightly_studio.models.temporal_span import TemporalSpanTable
 from lightly_studio.models.video import VideoTable
 from lightly_studio.resolvers import sample_resolver
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
@@ -21,8 +24,9 @@ from tests.helpers_resolvers import (
     create_annotations,
     create_caption,
     create_collection,
+    create_image,
 )
-from tests.resolvers.video.helpers import VideoStub, create_video
+from tests.resolvers.video.helpers import VideoStub, create_video, create_video_with_frames
 
 EVENT_QUERIES = {
     end_time_s: QueryExpr.model_validate(
@@ -180,3 +184,43 @@ class TestVideoEventQuery:
         else:
             query = query.where(expression.get())
         assert {video.file_name for video in db_session.exec(query)} == expected_names
+
+
+def test_legacy_spans_on_images_and_frames_match_classification(db_session: Session) -> None:
+    images = create_collection(session=db_session)
+    image = create_image(session=db_session, collection_id=images.collection_id)
+    videos = create_collection(
+        session=db_session, collection_name="videos", sample_type=SampleType.VIDEO
+    )
+    video = create_video_with_frames(
+        session=db_session, collection_id=videos.collection_id, video=VideoStub(duration_s=1, fps=1)
+    )
+    for collection_id, parent_id in [
+        (images.collection_id, image.sample_id),
+        (video.video_frames_collection_id, video.frame_sample_ids[0]),
+    ]:
+        label = create_annotation_label(session=db_session, root_collection_id=collection_id)
+        (annotation,) = create_annotations(
+            session=db_session,
+            collection_id=collection_id,
+            annotations=[
+                AnnotationDetails(
+                    sample_id=parent_id,
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                )
+            ],
+        )
+        db_session.add(
+            TemporalSpanTable(sample_id=annotation.sample_id, start_time_s=0, end_time_s=1)
+        )
+    db_session.commit()
+
+    matches = db_session.exec(
+        select(SampleTable.sample_id).where(ClassificationQuery().get())
+    ).all()
+    assert set(matches) == {image.sample_id, video.frame_sample_ids[0]}
+    frame_matches = db_session.exec(
+        select(SampleTable.sample_id).where(VideoFrameQuery(ClassificationQuery()).get())
+    ).all()
+    assert frame_matches == [video.video_sample_id]

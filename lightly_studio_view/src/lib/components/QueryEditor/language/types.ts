@@ -14,6 +14,7 @@
 export type Scope =
     | 'image'
     | 'video'
+    | 'frame'
     | 'object_detection'
     | 'classification'
     | 'segmentation_mask'

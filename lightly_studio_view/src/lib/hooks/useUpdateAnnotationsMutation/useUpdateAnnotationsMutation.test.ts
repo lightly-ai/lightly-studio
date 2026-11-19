@@ -50,6 +50,26 @@ describe('useUpdateAnnotationsMutation', () => {
         });
     });
 
+    it('sends the update to the collection that the caller passes', async () => {
+        const mutateAsync = vi.fn().mockResolvedValue(undefined);
+        vi.mocked(createMutation).mockReturnValue({
+            mutateAsync
+        } as unknown as ReturnType<typeof createMutation>);
+
+        const { updateAnnotations } = useUpdateAnnotationsMutation({
+            getCollectionId: () => 'col-current'
+        });
+        await updateAnnotations(
+            [{ annotation_id: 'ann-1', collection_id: 'col-1', label_name: 'dog' }],
+            'col-1'
+        );
+
+        expect(mutateAsync).toHaveBeenCalledWith(
+            expect.objectContaining({ path: { collection_id: 'col-1' } })
+        );
+        expect(invalidateAnnotationGridQueries).toHaveBeenCalledWith('col-1');
+    });
+
     it('fires annotation_label_updated when a single update with label_name succeeds', async () => {
         vi.mocked(createMutation).mockReturnValue({
             mutateAsync: vi.fn().mockResolvedValue(undefined)

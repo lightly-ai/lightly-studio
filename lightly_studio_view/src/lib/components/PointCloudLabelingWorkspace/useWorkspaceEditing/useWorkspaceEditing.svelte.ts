@@ -12,7 +12,8 @@ import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
-import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
+import { createAnnotationIdMap } from '../cuboidUndo';
+import { getTickDetailsSequenceQueryKey, useGlobalStorage } from '$lib/hooks';
 import type { WorkspaceTool } from '../domain';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { CuboidTarget } from '../useCuboidTargetSource';
@@ -34,7 +35,24 @@ export function useWorkspaceEditing(
                 sequenceId: getOptions().sequenceId
             })
         });
+    // Interpolation changes cuboids on other ticks too.
+    const invalidateOtherTicks = () =>
+        queryClient.invalidateQueries({
+            queryKey: getTickDetailsSequenceQueryKey({
+                datasetId: getOptions().datasetId,
+                sequenceId: getOptions().sequenceId
+            }),
+            refetchType: 'none'
+        });
+    const { addReversibleAction } = useGlobalStorage();
+    // Undo entries of this workspace find a cuboid that an undo of its delete re-created.
+    const annotationIds = createAnnotationIdMap();
+    // Undo bases the previous state on the persisted annotations, not on the scene snapshot,
+    // which updates later in an effect.
+    const getPersistedAnnotations = () => getWorkspace().tickDetails.data?.annotations ?? [];
     let selectedCuboidId = $state<string | null>(null);
+    // Each tick has its own annotation IDs, so the selection follows the object track.
+    let selectedTrackId: string | null = null;
     let hoveredCuboidId = $state<string | null>(null);
     let draftCuboid = $state.raw<CuboidBox | null>(null);
     let activeTool = $state<WorkspaceTool>('select');
@@ -71,12 +89,17 @@ export function useWorkspaceEditing(
         }
     });
 
-    const { handleCuboidTransform } = useUpdateCuboidAnnotation({
+    const { handleCuboidTransform, waitForSaves } = useUpdateCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         onUpdated: async () => {
             void refreshTracks();
+            invalidateOtherTicks();
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
-        }
+        },
+        getAnnotations: getPersistedAnnotations,
+        annotationIds,
+        addReversibleAction,
+        onRestore: (annotationId) => transforms.discard(annotationId)
     });
 
     const { handleLabelChange } = useUpdateCuboidClass({
@@ -86,7 +109,10 @@ export function useWorkspaceEditing(
         onUpdated: async () => {
             void refreshTracks();
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
-        }
+        },
+        getAnnotations: getPersistedAnnotations,
+        annotationIds,
+        addReversibleAction
     });
 
     const { handleStartTrack } = useStartSequenceTrack({
@@ -114,10 +140,28 @@ export function useWorkspaceEditing(
     }): Promise<boolean> {
         const deleted = await deleteTrack(params);
         if (deleted && selectedCuboidId && params.annotationIds.includes(selectedCuboidId)) {
-            selectedCuboidId = null;
+            selectCuboid(null);
         }
         return deleted;
     }
+
+    function selectCuboid(cuboidId: string | null): void {
+        selectedCuboidId = cuboidId;
+        // A cuboid of a tick that is not loaded yet sets its track when the tick loads.
+        selectedTrackId = getData().cuboids.find(({ id }) => id === cuboidId)?.trackId ?? null;
+    }
+
+    $effect(() => {
+        const { cuboids } = getData();
+        const selectedCuboid = cuboids.find(({ id }) => id === selectedCuboidId);
+        if (selectedCuboid) {
+            selectedTrackId = selectedCuboid.trackId;
+            return;
+        }
+        if (!selectedTrackId) return;
+        const trackCuboid = cuboids.find(({ trackId }) => trackId === selectedTrackId);
+        if (trackCuboid) selectedCuboidId = trackCuboid.id;
+    });
 
     const transforms = createCuboidTransformState({
         onTransform: (payload) => handleCuboidTransform(payload)
@@ -135,16 +179,27 @@ export function useWorkspaceEditing(
 
     const { handleDeleteCuboid: deleteCuboidAnnotation } = useDeleteCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
-        getAnnotations: () => getData().snapshot?.annotations ?? []
+        getAnnotations: getPersistedAnnotations,
+        annotationIds,
+        // The undo can restore the cuboid on a tick other than the active one.
+        refresh: () =>
+            Promise.all([
+                refreshTracks(),
+                queryClient.invalidateQueries({
+                    queryKey: getTickDetailsSequenceQueryKey({
+                        datasetId: getOptions().datasetId,
+                        sequenceId: getOptions().sequenceId
+                    })
+                })
+            ])
     });
 
     async function handleDeleteCuboid(cuboidId: string): Promise<void> {
+        // The undo of the delete restores the cuboid with the geometry of its last save.
+        await waitForSaves(cuboidId);
         const deleted = await deleteCuboidAnnotation(cuboidId);
-        if (!deleted) return;
-        void refreshTracks();
-        await getWorkspace().tickDetails.refetch();
-        if (selectedCuboidId === cuboidId) {
-            selectedCuboidId = null;
+        if (deleted && selectedCuboidId === cuboidId) {
+            selectCuboid(null);
         }
     }
 
@@ -158,8 +213,10 @@ export function useWorkspaceEditing(
                 const isNewSource =
                     sourceName && !getData().annotationSourceNames?.includes(sourceName);
                 if (isNewSource) void getData().refetchAnnotationSources();
+                void refreshTracks();
+                invalidateOtherTicks();
                 await getWorkspace().tickDetails.refetch({ throwOnError: true });
-                selectedCuboidId = annotationId;
+                selectCuboid(annotationId);
                 activeTool = 'select';
                 addingTrack = false;
                 // A failed attach leaves a plain cuboid, never an empty track.
@@ -172,7 +229,7 @@ export function useWorkspaceEditing(
     function setActiveTool(tool: WorkspaceTool): void {
         activeTool = tool;
         // Orthographic cameras fit a selected cuboid's frame, so drawing needs a world-aligned view.
-        if (tool === 'create-cuboid') selectedCuboidId = null;
+        if (tool === 'create-cuboid') selectCuboid(null);
     }
 
     function toggleAddTrack(): void {
@@ -182,13 +239,7 @@ export function useWorkspaceEditing(
 
     async function handleTrackChange(): Promise<void> {
         void refreshTracks();
-        void queryClient.invalidateQueries({
-            queryKey: getTickDetailsSequenceQueryKey({
-                datasetId: getOptions().datasetId,
-                sequenceId: getOptions().sequenceId
-            }),
-            refetchType: 'none'
-        });
+        invalidateOtherTicks();
         await getWorkspace().tickDetails.refetch({ throwOnError: true });
     }
 
@@ -215,7 +266,7 @@ export function useWorkspaceEditing(
             return selectedCuboidId;
         },
         set selectedCuboidId(value) {
-            selectedCuboidId = value;
+            selectCuboid(value);
         },
         get hoveredCuboidId() {
             return hoveredCuboidId;

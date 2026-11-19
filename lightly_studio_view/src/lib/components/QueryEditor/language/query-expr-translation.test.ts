@@ -51,6 +51,54 @@ it.each(['=', '!=', '<', '<=', '>', '>='])('translates fps %s 29.97', (operator)
     });
 });
 
+it('keeps same-frame criteria together and separate frame searches independent', () => {
+    const car = 'object_detection(class_name = "car")';
+    const person = 'object_detection(class_name = "person")';
+    const match = (value: string) =>
+        objectDetection(str('object_detection', 'class_name', '==', value));
+    expect(parseLightlyQuery(parser, `video: frame(${car} AND ${person})`)).toEqual({
+        status: 'ok',
+        queryExpr: query(frame(and(match('car'), match('person'))))
+    });
+    expect(parseLightlyQuery(parser, `frame(${car}) AND frame(${person})`, 'video')).toEqual({
+        status: 'ok',
+        queryExpr: query(and(frame(match('car')), frame(match('person'))))
+    });
+});
+
+it.each([
+    ['0', 'ok'],
+    ['9'.repeat(400), 'error']
+])('translates frame timestamp %s with status %s', (timestamp, status) => {
+    const source = `video: frame(frame_timestamp_s = ${timestamp})`;
+    expect(parseLightlyQuery(parser, source).status).toBe(status);
+});
+
+it('translates frame time with nested boolean and annotation conditions', () => {
+    const result = parseLightlyQuery(
+        parser,
+        'video: frame(frame_timestamp_s <= 1.25 AND NOT (classification(class_name = "night") OR segmentation_mask(source = "model")))'
+    );
+    const timestamp = float('video_frame', 'frame_timestamp_s', '<=', 1.25);
+    const night = classification(str('classification', 'class_name', '==', 'night'));
+    const model = segmentationMask(str('segmentation_mask', 'source', '==', 'model'));
+    expect(result).toEqual({
+        status: 'ok',
+        queryExpr: query(frame(and(timestamp, not(or(night, model)))))
+    });
+});
+
+it.each([
+    'frame(frame_timestamp_s = 0)',
+    'video: frame_timestamp_s > 1',
+    'video: frame(fps = 30)',
+    'video: frame(NOT event(start_time_s < 5))',
+    'video: frame(frame(frame_timestamp_s > 0))',
+    'video: frame(object_detection(frame_timestamp_s > 0))'
+])('rejects invalid frame syntax in %s', (source) => {
+    expect(parseLightlyQuery(parser, source).status).toBe('error');
+});
+
 describe('collection query scope', () => {
     it.each(['', ' \n\t ', '# width > 100', '# first\r\n# second\r\n'])(
         'treats a document without an expression as empty: %s',
@@ -193,6 +241,8 @@ const tagsContains = (table: string, tag: string): MatchExpr =>
         field: { table, name: 'tags' },
         tag_name: tag
     }) satisfies TagsContainsExpr & { type: 'tags_contains_expr' };
+
+const frame = (subexpr: MatchExpr): MatchExpr => ({ type: 'video_frame_match_expr', subexpr });
 
 const objectDetection = (subexpr: MatchExpr): MatchExpr =>
     ({

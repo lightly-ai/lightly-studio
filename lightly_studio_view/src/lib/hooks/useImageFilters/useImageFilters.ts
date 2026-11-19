@@ -8,12 +8,7 @@ import {
 } from '$lib/utils/gridFilter';
 import type { ImagesInfiniteParams } from '../useImagesInfinite/useImagesInfinite';
 import { SortDirection } from '$lib/api/lightly_studio_local';
-import type {
-    ConfusionCell,
-    EmbeddingRegion,
-    ImageFilter,
-    QueryExpr
-} from '$lib/api/lightly_studio_local';
+import type { ConfusionCell, ImageFilter, QueryExpr } from '$lib/api/lightly_studio_local';
 import type { ImageSortExpr } from '../useImagesInfinite/types';
 import type { PlotSelection } from '../useEmbeddingFilter/useEmbeddingPlotSelection';
 
@@ -46,6 +41,11 @@ const imageFilter = derived(
                 // resolves the polygon to sample ids server-side.
                 embedding_region: f.embedding_region,
                 annotation_label_ids: f.annotation_label_ids,
+                // Sources alone would drop the images without annotations in them.
+                annotation_collection_ids: f.include_unannotated_samples
+                    ? f.collection_ids
+                    : undefined,
+                include_unannotated_samples: f.include_unannotated_samples,
                 tag_ids: f.tag_ids,
                 confusion_cell: f.confusion_cell,
                 metadata_filters: toMetadataFilters(
@@ -107,16 +107,6 @@ export const useImageFilters = () => {
         );
     };
 
-    const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
-        const params: ImagesInfiniteParams = get(filterParams);
-
-        if (params.mode !== 'normal') {
-            return;
-        }
-
-        filterParams.set(patchFilters(params, { embedding_region: embeddingRegion ?? undefined }));
-    };
-
     // updates only the confusion-matrix cell in the existing filter params
     const updateConfusionCell = (confusionCell: ConfusionCell | null) => {
         const params: ImagesInfiniteParams = get(filterParams);
@@ -140,7 +130,6 @@ export const useImageFilters = () => {
         updateFilterParams,
         updateQueryExpr,
         updateSampleIds,
-        updateEmbeddingRegion,
         updatePlotSelection,
         updateConfusionCell,
         updateSortBy

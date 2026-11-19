@@ -640,14 +640,11 @@ def test_create_many_annotations(db_session: Session) -> None:
         )
         for i in range(3)
     ]
-    # A classification annotation additionally carrying a temporal span.
     annotations_to_create.append(
         AnnotationCreate(
             parent_sample_id=image.sample_id,
             annotation_label_id=cat_label.annotation_label_id,
             annotation_type=AnnotationType.CLASSIFICATION,
-            start_time_s=1.5,
-            end_time_s=4.0,
         )
     )
 
@@ -672,13 +669,9 @@ def test_create_many_annotations(db_session: Session) -> None:
         anno.annotation_label_id == cat_label.annotation_label_id for anno in created_annotations
     )
 
-    # The temporal span is stored and surfaced through the annotation view.
-    classification = next(
-        anno
-        for anno in created_annotations
-        if anno.annotation_type == AnnotationType.CLASSIFICATION
-    )
-    view = AnnotationView.from_annotation_table(classification)
+
+def test_annotation_view__includes_video_event_span(video_event: AnnotationBaseTable) -> None:
+    view = AnnotationView.from_annotation_table(video_event)
     assert view.temporal_span_details is not None
     assert view.temporal_span_details.start_time_s == 1.5
     assert view.temporal_span_details.end_time_s == 4.0

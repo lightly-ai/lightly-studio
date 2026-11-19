@@ -10,9 +10,11 @@ from mcap.exceptions import McapError
 from PIL.Image import Image
 from sqlmodel import Session
 
-from lightly_studio.core.mcap import compressed_video
+from lightly_studio.core.mcap import compressed_image, compressed_video, topic_kind
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.reader import McapFileReader, ReadPattern
+from lightly_studio.core.mcap.topic_kind import TopicKind
+from lightly_studio.core.mcap.type_definitions import DecodedMessage
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.mcap_group_sequence import McapSequenceKeyframe
 from lightly_studio.resolvers import mcap_group_sequence_resolver, recording_resolver
@@ -138,12 +140,7 @@ def _load_keyframes(uri: str, keyframes: Sequence[McapSequenceKeyframe]) -> list
                     )
                     if message is None:
                         continue
-                    images.append(
-                        compressed_video.to_image(
-                            decoded_message=message.decoded_message,
-                            width=EMBED_FRAME_MAX_EDGE,
-                        )
-                    )
+                    images.append(_to_image(message=message))
                 except McapAccessError as error:
                     logger.warning(
                         "Skipping the frame at %d ns of '%s': %s", keyframe.log_time_ns, uri, error
@@ -151,3 +148,18 @@ def _load_keyframes(uri: str, keyframes: Sequence[McapSequenceKeyframe]) -> list
     except (OSError, McapError, McapAccessError) as error:
         logger.warning("Cannot read frames of '%s' to embed it: %s", uri, error)
     return images
+
+
+def _to_image(message: DecodedMessage) -> Image:
+    """Decode a camera keyframe of a video or an image channel.
+
+    Raises:
+        McapAccessError: If the message cannot be decoded.
+    """
+    if topic_kind.from_schema_name(message.schema_name) is TopicKind.IMAGE:
+        return compressed_image.to_image(
+            decoded_message=message.decoded_message, width=EMBED_FRAME_MAX_EDGE
+        )
+    return compressed_video.to_image(
+        decoded_message=message.decoded_message, width=EMBED_FRAME_MAX_EDGE
+    )

@@ -100,7 +100,11 @@ describe('QueryEditorPanel', () => {
         render(QueryEditorPanel, { props: { ...defaultProps, sampleType: 'video' } });
 
         expect(screen.getByText('duration_s')).toBeInTheDocument();
-        expect(screen.getByText(/Frame annotations are not supported yet/)).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                'frame(object_detection(class_name = "person") AND frame_timestamp_s < 5)'
+            )
+        ).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
         expect(updateQueryExpr).toHaveBeenCalledWith({
             query_expr: queryExpr,

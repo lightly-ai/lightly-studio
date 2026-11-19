@@ -31,11 +31,17 @@ from lightly_studio.resolvers import (
     sample_resolver,
     sequence_resolver,
 )
+from lightly_studio.resolvers.annotations.annotations_filter import AnnotationsFilter
 from lightly_studio.resolvers.mcap_group_sequence_resolver.mcap_sequence_filter import (
     McapSequenceFilter,
 )
 from lightly_studio.resolvers.sample_resolver.sample_filter import SampleFilter
-from tests.helpers_resolvers import create_collection, create_embedding_model
+from tests.helpers_resolvers import (
+    create_annotation,
+    create_annotation_label,
+    create_collection,
+    create_embedding_model,
+)
 from tests.resolvers.mcap_group_sequence_resolver import helpers
 
 
@@ -417,6 +423,52 @@ def test_get_all_by_collection_id__filters(db_session: Session) -> None:
 
     assert result.total_count == 1
     assert [sample.sample_id for sample in result.samples] == [seq_ids[2]]
+
+
+def test_get_all_by_collection_id__filters_by_group_annotation_label(db_session: Session) -> None:
+    """A sequence matches the annotation filter when one of its groups has the label."""
+    sequence_a = helpers.create_mcap_sequence(session=db_session)
+    sequence_b = helpers.add_mcap_sequence(session=db_session, fixture=sequence_a)
+    [group_a] = helpers.add_mcap_ticks_to_sequence(
+        session=db_session, fixture=sequence_a, ticks=[(100, 100)]
+    )
+    [group_b] = helpers.add_mcap_ticks_to_sequence(
+        session=db_session, fixture=sequence_b, ticks=[(200, 200)]
+    )
+    root_collection_id = sequence_a.sequence_collection.collection_id
+    car = create_annotation_label(
+        session=db_session, root_collection_id=root_collection_id, label_name="car"
+    )
+    person = create_annotation_label(
+        session=db_session, root_collection_id=root_collection_id, label_name="person"
+    )
+    group_collection_id = sequence_a.group_collection.collection_id
+    create_annotation(
+        session=db_session,
+        collection_id=group_collection_id,
+        sample_id=group_a,
+        annotation_label_id=car.annotation_label_id,
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=group_collection_id,
+        sample_id=group_b,
+        annotation_label_id=person.annotation_label_id,
+    )
+
+    result = mcap_group_sequence_resolver.get_all_by_collection_id(
+        session=db_session,
+        collection_id=root_collection_id,
+        pagination=None,
+        filters=McapSequenceFilter(
+            group_annotation_filter=AnnotationsFilter(
+                annotation_label_ids=[car.annotation_label_id]
+            )
+        ),
+    )
+
+    assert result.total_count == 1
+    assert [sample.sample_id for sample in result.samples] == [sequence_a.sample_id]
 
 
 def test_get_all_by_collection_id__text_embedding(db_session: Session) -> None:
