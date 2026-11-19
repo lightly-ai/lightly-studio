@@ -39,8 +39,7 @@ To run static checks and unit tests, use the following commands:
 # Backend
 cd lightly_studio
 make static-checks
-make test                     # slow, the full tests + frontend rebuild
-uv run pytest -n 8            # full tests
+make test                     # full tests
 uv run pytest tests/file1.py  # only the affected tests
 
 # Frontend
@@ -54,8 +53,8 @@ make static-checks
 make test
 ```
 
-For `lightly_studio` backend, tests need a frontend build. If not built previously,
-run `make build-lightly_studio_view` (or `make test`).
+For `lightly_studio` backend, tests need only a mock frontend build. `make test` creates it. To
+run `uv run pytest` directly in a new clone, run `make mock-webapp-dist` first.
 
 ### The uv Workspace
 

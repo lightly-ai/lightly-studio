@@ -107,12 +107,12 @@ class TestDatasetExport:
             mask_values = list(mask.getdata())
         assert mask_values == [0, 2, 0, 0, 1, 0]
 
-    def test_to_pascalvoc_segmentation_mask__two_foreground_classes_on_one_image(
+    def test_to_pascalvoc_segmentation_mask__overlapping_foreground_classes(
         self,
         tmp_path: Path,
         patch_collection: None,  # noqa: ARG002
     ) -> None:
-        """Tests Pascal VOC export with two foreground classes on one image."""
+        """Later annotations determine the class of overlapping pixels."""
         dataset = ImageDataset.create(name="test_dataset")
         create_images(
             db_session=dataset.session,
@@ -125,14 +125,14 @@ class TestDatasetExport:
             CreateSegmentationMask.from_rle_mask(
                 class_name="cat",
                 sample_2d=samples[0],
-                segmentation_mask=[1, 1, 4],
+                segmentation_mask=[1, 2, 3],
             )
         )
         samples[0].add_annotation(
             CreateSegmentationMask.from_rle_mask(
                 class_name="dog",
                 sample_2d=samples[0],
-                segmentation_mask=[4, 1, 1],
+                segmentation_mask=[1, 1, 2, 1, 1],
             )
         )
 
@@ -150,7 +150,7 @@ class TestDatasetExport:
         with PILImage.open(mask_path) as mask:
             mask_values = list(mask.getdata())
 
-        assert mask_values == [0, 1, 0, 0, 2, 0]
+        assert mask_values == [0, 2, 1, 0, 2, 0]
 
     def test_to_pascalvoc_segmentation_mask__two_parts_with_same_class_on_one_image(
         self,

@@ -32,7 +32,7 @@ describe('enrichWithSchemaDocs', () => {
         const result = enrichWithSchemaDocs({ label: 'fps' } as never, 'video');
         expect(result.detail).toBe('Video.fps: float');
         expect(result.documentation).toEqual({
-            value: 'Frames per second. Equality only (`=`, `!=`).'
+            value: 'Frames per second.'
         });
     });
 

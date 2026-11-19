@@ -3,9 +3,15 @@
     import { useAnnotationDetailsEditing } from './useAnnotationDetailsEditing.svelte';
     import AnnotationGeometryGroup from './AnnotationGeometryGroup';
     import { Typography } from '$lib/components/Typography';
+    import AnnotationTrackDetails from './AnnotationTrackDetails';
 
     type AnnotationInput = Parameters<typeof createAnnotationDetails>[0]['annotation'] & {
         id: string;
+        trackId: string | null;
+        parentTrackNumber: number | null;
+        parentTrackClassName: string | null;
+        annotationSourceId: string;
+        annotationClassName?: string | null;
     };
 
     interface Props {
@@ -15,20 +21,26 @@
         annotationSourceName?: string;
         /** When true, numeric fields become editable inputs. */
         editable?: boolean;
+        /** Track IDs already assigned to other annotations on the same frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
         /** Called with the full updated annotation when a field is committed. */
         onAnnotationChange?: (annotation: AnnotationInput) => void;
+        /** Called after the annotation's track assignment changes. */
+        onTrackChange?: () => Promise<void>;
     }
 
     let {
         annotation,
         annotationSourceName,
         editable = false,
-        onAnnotationChange
+        occupiedTrackIds = new Set(),
+        onAnnotationChange,
+        onTrackChange
     }: Props = $props();
     const details = $derived(createAnnotationDetails({ annotation, annotationSourceName }));
     const editing = useAnnotationDetailsEditing(
         () => annotation,
-        (updated) => onAnnotationChange?.(updated)
+        (updated) => onAnnotationChange?.(updated as AnnotationInput)
     );
 </script>
 
@@ -73,10 +85,16 @@
         </div>
     {/if}
 
-    {#if details.trackNumber !== null}
-        <div class="grid grid-cols-[5rem_1fr] gap-x-2">
-            <Typography component="dt" variant="body2">Track number:</Typography>
-            <Typography component="dd" variant="body2">{details.trackNumber}</Typography>
-        </div>
-    {/if}
+    <AnnotationTrackDetails
+        annotationId={annotation.id}
+        annotationSourceId={annotation.annotationSourceId}
+        trackId={annotation.trackId}
+        annotationClassName={annotation.annotationClassName ?? null}
+        trackNumber={details.trackNumber}
+        parentTrackNumber={annotation.parentTrackNumber}
+        parentTrackClassName={annotation.parentTrackClassName}
+        {editable}
+        {occupiedTrackIds}
+        {onTrackChange}
+    />
 </dl>

@@ -3,9 +3,10 @@
 This document explains how to write queries in the
 [LightlyStudio query editor.](search_and_filter.md#query-in-gui)
 
-A query helps you find images that match certain rules. For example, you can search for:
+A query helps you find images or videos that match certain rules. For example, you can search for:
 
 - large images
+- videos with a specific frame rate or duration
 - images with a specific file name
 - tagged images
 - images with specific metadata values
@@ -47,6 +48,25 @@ file_path_abs != "/datasets/archive/bad.jpg"
 created_at >= "2025-01-01T00:00:00Z"
 ```
 
+## Supported video fields
+
+In a video collection, enter field names directly in the query editor.
+
+| Field | Meaning |
+| --- | --- |
+| `fps` | Frame rate in frames per second |
+| `duration_s` | Video duration in seconds |
+| `width`, `height` | Video frame dimensions in pixels |
+| `file_name` | Video file name |
+| `file_path_abs` | Absolute path to the video file |
+
+```mysql
+# Videos recorded at 29.97 frames per second or higher
+fps >= 29.97
+
+# Videos longer than 10 seconds with a frame rate of 30 FPS
+duration_s > 10 AND fps = 30
+```
 
 ## Metadata filtering
 

@@ -4,54 +4,81 @@
     import { LabelNotFound } from '$lib/components/LabelNotFound';
     import * as Dialog from '$lib/components/ui/dialog/index.js';
     import { Button } from '$lib/components';
-    import SelectList from '$lib/components/SelectList/SelectList.svelte';
-    import type { ListItem } from '$lib/components/SelectList/types';
+    import { SelectList } from '$lib/components/SelectList';
+    import type { ComponentProps, Snippet } from 'svelte';
+    import type { TrackWithClassNameView } from '$lib/api/lightly_studio_local';
+    import { TrackSelect } from '$lib/components/TrackSelect';
+    import { filterTracksByAnnotationClass } from '$lib/components/TrackSelect/filterTracksByAnnotationClass';
+    import { useClassDialogForm } from './useClassDialogForm/useClassDialogForm';
 
-    type Props = {
+    interface Props {
         open: boolean;
         labels: string[];
-        onConfirm: (label: string) => void;
+        onConfirm: (
+            label: string,
+            track?: { objectTrackId: string | null; isNewTrack: boolean }
+        ) => void;
         onCancel: () => void;
-    };
+        showTrackSelect?: boolean;
+        tracks?: TrackWithClassNameView[];
+        /** Track IDs already assigned to annotations on the current frame. */
+        occupiedTrackIds?: ReadonlySet<string>;
+        /** Content above the class list. With it, the list does not open by itself and cover it. */
+        extra?: Snippet;
+        /** Whether the caller allows to confirm, for example after its extra fields are set. */
+        canConfirm?: boolean;
+        /** The class selected when the dialog opens. */
+        initialLabel?: string;
+    }
 
-    let { open = $bindable(false), labels, onConfirm, onCancel }: Props = $props();
+    let {
+        open = $bindable(false),
+        labels,
+        onConfirm,
+        onCancel,
+        showTrackSelect = false,
+        tracks = [],
+        occupiedTrackIds = new Set(),
+        extra,
+        canConfirm = true,
+        initialLabel
+    }: Props = $props();
 
     const canCreateClass = useCanCreateAnnotationClass();
 
-    let selectedItem = $state<ListItem | undefined>(undefined);
-    // Track close origin so the onOpenChange(false) that fires when we set
-    // open = false from handleConfirm does not also invoke onCancel.
-    let closedByConfirm = false;
-
-    const items = $derived<ListItem[]>(
+    const items = $derived<ComponentProps<typeof SelectList>['items']>(
         [...new Set(labels)].sort((a, b) => a.localeCompare(b)).map((l) => ({ value: l, label: l }))
     );
-
-    const confirmItem = (item: ListItem) => {
-        closedByConfirm = true;
-        onConfirm(item.value);
-        open = false;
-        selectedItem = undefined;
-    };
-
-    const handleConfirm = () => {
-        if (selectedItem) confirmItem(selectedItem);
-    };
-
-    const handleCancel = () => {
-        onCancel();
-        open = false;
-        selectedItem = undefined;
-    };
-
-    const handleOpenChange = (isOpen: boolean) => {
-        if (isOpen) return;
-        if (closedByConfirm) {
-            closedByConfirm = false;
-            return;
+    const {
+        selectedItem,
+        trackValue,
+        handleConfirm,
+        handleCancel,
+        handleOpenChange,
+        handleClassSelect,
+        handleTrackValueChange,
+        handleKeyboardConfirm,
+        preselect
+    } = useClassDialogForm(() => ({
+        onConfirm,
+        onCancel,
+        showTrackSelect,
+        canConfirm,
+        onClose: () => {
+            open = false;
         }
-        handleCancel();
-    };
+    }));
+
+    $effect(() => {
+        if (open) preselect(initialLabel);
+    });
+
+    const availableTracks = $derived(
+        filterTracksByAnnotationClass(
+            tracks.filter((t) => !occupiedTrackIds.has(t.object_track_id)),
+            $selectedItem?.value ?? null
+        )
+    );
 </script>
 
 <Dialog.Root bind:open onOpenChange={handleOpenChange}>
@@ -65,18 +92,20 @@
             </Dialog.Description>
         </Dialog.Header>
 
+        {@render extra?.()}
         <div class="min-w-0 space-y-1 py-2">
             <SelectList
                 onCreate={trackClassCreatedInPicker}
                 allowCreate={canCreateClass}
-                bind:selectedItem
+                bind:selectedItem={$selectedItem}
                 {items}
                 label="Select a class..."
                 placeholder={canCreateClass ? 'Search or create a class...' : 'Search a class...'}
                 className="w-full"
-                autoOpen
+                autoOpen={!extra}
                 autoFocus
-                onKeyboardConfirm={confirmItem}
+                onKeyboardConfirm={handleKeyboardConfirm}
+                onSelect={handleClassSelect}
             >
                 {#snippet notFound({ inputValue })}
                     <LabelNotFound label={inputValue} allowCreate={canCreateClass} />
@@ -84,11 +113,23 @@
             </SelectList>
         </div>
 
+        {#if showTrackSelect}
+            <div class="min-w-0 space-y-1">
+                <span class="text-sm font-medium text-muted-foreground">Track</span>
+                <TrackSelect
+                    tracks={availableTracks}
+                    bind:value={$trackValue}
+                    className="w-full"
+                    onValueChange={handleTrackValueChange}
+                />
+            </div>
+        {/if}
+
         <Dialog.Footer>
             <Button variant="outline" buttonProps={{ onclick: handleCancel }}>Cancel</Button>
             <Button
                 variant="default"
-                buttonProps={{ onclick: handleConfirm, disabled: !selectedItem }}
+                buttonProps={{ onclick: handleConfirm, disabled: !$selectedItem || !canConfirm }}
             >
                 Confirm
             </Button>
