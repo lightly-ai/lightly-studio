@@ -235,15 +235,12 @@
             : (committedSampleRegion?.polygon ?? null)
     );
 
-    // Activating a lasso (or a committed region) unhides the Excluded category, otherwise
-    // out-of-selection points (which get demoted to Excluded) would vanish and blank out the
-    // canvas. The legend keeps showing the user's real toggle state.
+    // While the user draws or picks, the points outside the selection count as Excluded. A hidden
+    // Excluded would then empty the canvas under the cursor, or leave no point to pick next. So
+    // Excluded shows while the user draws or has picks. A committed region follows the legend.
     const effectiveHiddenCategories = $derived.by(() => {
-        const hasSelectionHighlight =
-            $rangeSelection !== null ||
-            committedHighlightRegion !== null ||
-            pickedSampleIds.length > 0;
-        if (!hasSelectionHighlight || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
+        const isSelecting = $rangeSelection !== null || pickedSampleIds.length > 0;
+        if (!isSelecting || !$hiddenCategories.has(EXCLUDED_BY_FILTERS_CATEGORY)) {
             return $hiddenCategories;
         }
         const next = new Set($hiddenCategories);

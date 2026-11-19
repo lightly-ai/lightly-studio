@@ -31,6 +31,7 @@ let actualVideoFilters: ReturnType<typeof useVideoFilters> | null = null;
 const originalClientConfig = client.getConfig();
 const originalAbortController = globalThis.AbortController;
 let plotDataStore: Writable<{ x: Float32Array; y: Float32Array; category: Uint8Array } | undefined>;
+let hiddenCategoriesStore: Writable<Set<number>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 let annotationLabelsQuery: { data?: unknown[]; isSuccess: boolean; isError: boolean };
 
@@ -84,7 +85,7 @@ const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
 vi.mock('./PlotTextAxesInputs/embedTextAxes', () => ({ embedTextAxes: mockEmbedTextAxes }));
 vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
     useCategoryVisibility: () => ({
-        hiddenCategories: writable(new Set<number>()),
+        hiddenCategories: hiddenCategoriesStore,
         toggleCategoryVisibility: vi.fn(),
         focusCategoryVisibility: vi.fn(),
         resetCategoryVisibility: mockResetCategoryVisibility
@@ -232,6 +233,7 @@ describe('PlotPanel.svelte', () => {
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         videoFilterStore = writable(null);
         plotDataStore = writable(undefined);
+        hiddenCategoriesStore = writable(new Set<number>());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
         annotationLabelsQuery = { data: [], isSuccess: true, isError: false };
         tagsStore.set([
@@ -1014,6 +1016,42 @@ describe('PlotPanel.svelte', () => {
             expect(lastEmbeddingsParams().filters).toEqual({
                 sample_filter: { tag_ids: ['tag-b'] }
             });
+        });
+    });
+    describe('with Excluded hidden', () => {
+        const lastPlotHiddenCategories = () =>
+            (usePlotDataSpy.mock.lastCall![0] as { hiddenCategories: Set<number> })
+                .hiddenCategories;
+
+        beforeEach(() => {
+            hiddenCategoriesStore.set(new Set([EXCLUDED_BY_FILTERS_CATEGORY]));
+        });
+
+        it('keeps Excluded hidden after the selection is committed', async () => {
+            imageFilterStore.set({
+                sample_filter: { embedding_region: { polygon: SQUARE_POLYGON } }
+            });
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            await tick();
+
+            expect(lastPlotHiddenCategories().has(EXCLUDED_BY_FILTERS_CATEGORY)).toBe(true);
+        });
+
+        it('shows Excluded while the user draws, so the canvas does not go blank', async () => {
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            rangeSelectionStore.set(SQUARE_POLYGON);
+            await tick();
+
+            expect(lastPlotHiddenCategories().has(EXCLUDED_BY_FILTERS_CATEGORY)).toBe(false);
+        });
+
+        it('shows Excluded while points are picked, so the other points stay pickable', async () => {
+            imageFilterStore.set({ sample_filter: { sample_ids: ['sample-1'] } });
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            await tick();
+
+            expect(lastPlotHiddenCategories().has(EXCLUDED_BY_FILTERS_CATEGORY)).toBe(false);
         });
     });
 });
