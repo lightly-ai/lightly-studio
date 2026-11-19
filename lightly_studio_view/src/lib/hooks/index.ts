@@ -61,6 +61,7 @@ export { useSegmentationMaskBrush } from '$lib/hooks/useSegmentationMaskBrush';
 export { useAnnotationLabelContext } from '$lib/contexts/SampleDetailsAnnotation.svelte';
 export { useAnnotation } from '$lib/hooks/useAnnotation/useAnnotation';
 export { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
+export { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
 export { useSegmentationMaskPreview } from '$lib/hooks/useSegmentationMaskPreview';
 export { useCreateSampling } from '$lib/hooks/useCreateSampling/useCreateSampling';
 export { useCreateAnnotation } from '$lib/hooks/useCreateAnnotation/useCreateAnnotation';
@@ -106,6 +107,7 @@ export {
 export { useImageFilters } from '$lib/hooks/useImageFilters/useImageFilters';
 export { buildVideoFilter, useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 export { useVideoAnnotationCounts } from '$lib/hooks/useVideoAnnotationsCount/useVideoAnnotationsCount';
+export { useMcapSequenceAnnotationCounts } from '$lib/hooks/useMcapSequenceAnnotationCounts/useMcapSequenceAnnotationCounts';
 export { useVideoOrderBy } from '$lib/hooks/useVideoOrderBy/useVideoOrderBy';
 export { useVideoSortFields } from '$lib/hooks/useVideoSortFields/useVideoSortFields';
 export {
