@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import UUID, uuid4
 
 import pytest
+from pytest_mock import MockerFixture
 from sqlmodel import Session
 
 from lightly_studio.core.image.image_dataset import ImageDataset
@@ -1068,19 +1069,35 @@ def test_metrics__object_detection_average_precision_after_label_rename(
 
 def test_metrics__object_detection_average_precision_skips_unknown_labels(
     patch_collection: None,  # noqa: ARG001
+    mocker: MockerFixture,
 ) -> None:
     """Ignores stored values whose label no longer exists."""
     dataset = ImageDataset.create(name="test_dataset")
     run_id = _create_run_with_average_precision(dataset=dataset)
+    fox_id = create_annotation_label(
+        session=dataset.session, root_collection_id=dataset.collection_id, label_name="fox"
+    ).annotation_label_id
     evaluation_class_metric_resolver.create_many(
         session=dataset.session,
         records=[
             EvaluationClassMetricCreate(
                 evaluation_run_id=run_id,
-                annotation_label_id=uuid4(),
+                annotation_label_id=fox_id,
                 metric_name=average_precision.METRIC_NAME,
                 value=0.9,
             )
+        ],
+    )
+    # The foreign key keeps a class metric of a deleted label out of the database. Databases
+    # created before the foreign key can still have one, so the read hides the fox label.
+    get_by_ids = annotation_label_resolver.get_by_ids
+    mocker.patch.object(
+        annotation_label_resolver,
+        "get_by_ids",
+        side_effect=lambda session, ids: [
+            label
+            for label in get_by_ids(session=session, ids=ids)
+            if label.annotation_label_id != fox_id
         ],
     )
 
