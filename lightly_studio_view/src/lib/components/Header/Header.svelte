@@ -15,6 +15,7 @@
     import UserAvatar from '$lib/components/UserAvatar/UserAvatar.svelte';
     import useAuth from '$lib/hooks/useAuth/useAuth';
     import { hasMinimumRole } from '$lib/hooks/useAuth/hasMinimumRole';
+    import { useCanNavigateDataset } from '$lib/hooks/useCanNavigateDataset/useCanNavigateDataset';
     import { usePostHog } from '$lib/hooks';
 
     interface Props {
@@ -82,6 +83,7 @@
     };
 
     const { user } = useAuth();
+    const canNavigateDataset = useCanNavigateDataset();
 </script>
 
 <svelte:window onkeydown={handleKeyDown} />
@@ -90,18 +92,26 @@
     <div class="p mb-3 border-b border-border-hard bg-card px-4 py-4 pl-8 text-diffuse-foreground">
         <div class="flex items-center justify-between">
             <div class="flex w-[320px]">
-                {#if datasetCollection.data}
+                {#if !canNavigateDataset}
+                    <!-- Labelers work in their batches: home is the workspace projects page,
+                         which lives in another app on this origin. -->
+                    <a
+                        href="/workspace/projects"
+                        data-sveltekit-reload
+                        data-testid="header-logo-link"><Logo /></a
+                    >
+                {:else if datasetCollection.data}
                     {@const dataset = datasetCollection.data}
                     <a
                         href="/datasets/{dataset.collection_id}/{dataset.sample_type.toLowerCase()}/{dataset.collection_id}"
-                        ><Logo /></a
+                        data-testid="header-logo-link"><Logo /></a
                     >
                 {:else}
-                    <a href="/"><Logo /></a>
+                    <a href="/" data-testid="header-logo-link"><Logo /></a>
                 {/if}
             </div>
             <div class="flex flex-1 justify-start">
-                {#if datasetCollection.data}
+                {#if canNavigateDataset && datasetCollection.data}
                     <NavigationMenu collection={datasetCollection.data} />
                 {/if}
             </div>

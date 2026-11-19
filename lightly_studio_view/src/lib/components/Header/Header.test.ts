@@ -434,4 +434,65 @@ describe('Header', () => {
             expect(userAvatar).not.toBeInTheDocument();
         });
     });
+
+    describe('Dataset navigation by role', () => {
+        // The header shows the dataset logo link and menu once the root collection loads.
+        const loadRootCollection = () =>
+            (useCollectionWithChildren as unknown as vi.Mock).mockReturnValue({
+                collection: {
+                    data: {
+                        sample_type: 'image',
+                        collection_id: 'root-collection',
+                        name: 'Root Collection',
+                        children: []
+                    }
+                }
+            });
+
+        const renderAs = (role: string | null) => {
+            const { collection } = setup({
+                isEditingMode: false,
+                user: role ? { username: role, email: `${role}@test.com`, role } : null
+            });
+            loadRootCollection();
+            render(Header, { props: { collection } });
+        };
+
+        it('sends a labeler from the logo to the workspace projects with a full page load', () => {
+            renderAs('labeler');
+
+            const logo = screen.getByTestId('header-logo-link');
+            expect(logo).toHaveAttribute('href', '/workspace/projects');
+            expect(logo).toHaveAttribute('data-sveltekit-reload');
+        });
+
+        it.each(['viewer', 'editor', 'admin', null])(
+            'keeps the logo on the dataset home for role %s',
+            (role) => {
+                renderAs(role);
+
+                const logo = screen.getByTestId('header-logo-link');
+                expect(logo).toHaveAttribute(
+                    'href',
+                    '/datasets/root-collection/image/root-collection'
+                );
+                expect(logo).not.toHaveAttribute('data-sveltekit-reload');
+            }
+        );
+
+        it('hides the dataset navigation menu from a labeler', () => {
+            renderAs('labeler');
+
+            expect(screen.queryByTestId('navigation-menu')).not.toBeInTheDocument();
+        });
+
+        it.each(['viewer', 'editor', 'admin', null])(
+            'shows the dataset navigation menu for role %s',
+            (role) => {
+                renderAs(role);
+
+                expect(screen.getByTestId('navigation-menu')).toBeInTheDocument();
+            }
+        );
+    });
 });
