@@ -12,7 +12,7 @@ from lightly_studio.api.routes.api.collection import get_and_validate_collection
 from lightly_studio.database.db_manager import SessionDep
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.workflow import WorkflowStatus
-from lightly_studio.resolvers import collection_resolver, workflow_resolver
+from lightly_studio.resolvers import annotation_resolver, collection_resolver, workflow_resolver
 
 workflow_router = APIRouter(tags=["workflow"])
 
@@ -80,5 +80,44 @@ def get_workflow_status_counts(
     return WorkflowStatusCountsView(
         counts=workflow_resolver.get_status_counts(
             session=session, dataset_id=dataset.collection_id, project_id=project_id
+        )
+    )
+
+
+class WorkflowObjectCountsRequest(BaseModel):
+    """The samples to count the objects of."""
+
+    sample_ids: list[UUID]
+    """Samples of the dataset, for example the files of a batch."""
+
+
+class WorkflowObjectCountsView(BaseModel):
+    """The object count of each requested sample."""
+
+    counts: dict[UUID, int]
+    """The count per sample. A sequence counts the annotations on all of its ticks."""
+
+
+@workflow_router.post("/collections/{collection_id}/workflow/object-counts")
+def count_workflow_objects(
+    session: SessionDep,
+    collection: Annotated[CollectionTable, Depends(get_and_validate_collection_id)],
+    body: WorkflowObjectCountsRequest,
+) -> WorkflowObjectCountsView:
+    """Count the objects of each sample, for the workflow service's batch object counts.
+
+    Args:
+        session: Database session.
+        collection: The collection the samples belong to, usually the dataset.
+        body: The samples to count.
+
+    Returns:
+        The object count of each requested sample, 0 for samples outside the collection.
+    """
+    return WorkflowObjectCountsView(
+        counts=annotation_resolver.count_objects_by_sample_ids(
+            session=session,
+            collection_id=collection.collection_id,
+            sample_ids=body.sample_ids,
         )
     )

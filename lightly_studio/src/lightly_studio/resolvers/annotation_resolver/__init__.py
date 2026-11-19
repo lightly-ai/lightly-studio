@@ -37,6 +37,9 @@ from lightly_studio.resolvers.annotation_resolver.get_all_with_payload import (
     AnnotationOrdering,
     get_all_with_payload,
 )
+from lightly_studio.resolvers.annotation_resolver.count_objects_by_sample_ids import (
+    count_objects_by_sample_ids,
+)
 from lightly_studio.resolvers.annotation_resolver.get_annotation_crops import (
     AnnotationCrop,
     get_annotation_crops_for_ids,
@@ -83,6 +86,7 @@ __all__ = [
     "BulkCreateClassificationsResult",
     "build_sample_ids_query",
     "bulk_create_classifications",
+    "count_objects_by_sample_ids",
     "create_many",
     "delete_annotation",
     "delete_annotations",
