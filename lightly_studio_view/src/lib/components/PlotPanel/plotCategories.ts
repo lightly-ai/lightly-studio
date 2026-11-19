@@ -1,6 +1,9 @@
 export const HIDDEN_CATEGORY = 0;
 export const EXCLUDED_BY_FILTERS_CATEGORY = 1;
 export const INCLUDED_BY_FILTERS_CATEGORY = 2;
+// When the values overflow, the backend puts the "Other" bucket in its last legend slot,
+// MAX_LEGEND_SLOTS - 1 in embedding_coloring/coloring_helpers.py. Otherwise a class can use it.
+export const OTHER_BUCKET_CATEGORY = 255;
 
 // Labels for the reserved categories. The backend reserves indices 0, 1 and 2 by index only;
 // the frontend owns their human-readable labels. Index 0 (Hidden) is transparent and has no
