@@ -4,11 +4,7 @@ import type { Annotation } from '$lib/types';
 import type { AnnotationLabel } from '$lib/services/types';
 import { useGlobalStorage } from '../useGlobalStorage';
 import { useTags } from '../useTags/useTags';
-import {
-    NO_ANNOTATIONS_ROW_ID,
-    useUnannotatedSamplesFilter
-} from '../useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
-import { usePostHog } from '$lib/hooks';
+import { usePostHog, useUnannotatedSamplesFilter } from '$lib/hooks';
 
 /**
  * Low-level hook: manages selected annotation label IDs and produces an AnnotationsFilter.
@@ -113,8 +109,7 @@ export function useAnnotationsFilter({
         annotationCountsStore.set(counts);
     };
 
-    const { includeUnannotatedSamples, setIncludeUnannotatedSamples } =
-        useUnannotatedSamplesFilter();
+    const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
     const unannotatedSampleCountStore = writable<UnannotatedSampleCount | undefined>(undefined);
     const setUnannotatedSampleCount = (count: UnannotatedSampleCount | undefined) => {
         unannotatedSampleCountStore.set(count);
@@ -182,9 +177,10 @@ export function useAnnotationsFilter({
             // Without annotation classes, every sample is unannotated and the row filters nothing.
             if (!$unannotatedCount || classRows.length === 0) return classRows;
             const noAnnotationsRow = {
-                label_name: NO_ANNOTATIONS_ROW_ID,
+                label_name: 'No annotations',
                 ...$unannotatedCount,
-                selected: $includeUnannotated
+                selected: $includeUnannotated,
+                isNoAnnotationsRow: true
             };
             return [noAnnotationsRow, ...classRows];
         }
@@ -192,10 +188,6 @@ export function useAnnotationsFilter({
 
     // Toggle by label name
     const toggleAnnotationFilterSelection = (labelName: string, collectionId?: string) => {
-        if (labelName === NO_ANNOTATIONS_ROW_ID) {
-            setIncludeUnannotatedSamples(!get(includeUnannotatedSamples));
-            return;
-        }
         const labelsMap = get(annotationFilterLabels);
         const labelId = labelsMap[labelName];
         if (!labelId) return;
@@ -219,7 +211,6 @@ export function useAnnotationsFilter({
     // Replace the selection with exactly these label names. Also drops IDs that are not in
     // the label map, e.g. from another dataset, so they cannot keep filtering the grid.
     const setAnnotationFilterSelection = (labelNames: string[], collectionId?: string) => {
-        setIncludeUnannotatedSamples(labelNames.includes(NO_ANNOTATIONS_ROW_ID));
         const labelsMap = get(annotationFilterLabels);
         const previous = new Set(get(selectedAnnotationFilterIds));
         const next = new Set(labelNames.map((name) => labelsMap[name]).filter(Boolean));

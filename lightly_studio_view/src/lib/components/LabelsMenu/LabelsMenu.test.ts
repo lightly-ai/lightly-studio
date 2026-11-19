@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { writable, type Writable } from 'svelte/store';
+import { get, writable, type Writable } from 'svelte/store';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import LabelsMenu from './LabelsMenu.svelte';
 import type { Annotation } from '$lib/types';
-import { NO_ANNOTATIONS_ROW_ID } from '$lib/hooks/useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
+import { useUnannotatedSamplesFilter } from '$lib/hooks';
 
 vi.mock('$lib/hooks/useSaveAnnotationClassColor/useSaveAnnotationClassColor.svelte', () => ({
     useSaveAnnotationClassColor: () => ({ saveClassColor: vi.fn().mockResolvedValue(undefined) })
@@ -79,6 +79,16 @@ vi.mock('$lib/hooks/useAnnotationClassVisibility/useAnnotationClassVisibility', 
     };
 });
 
+const { includeUnannotatedSamples, setIncludeUnannotatedSamples } = useUnannotatedSamplesFilter();
+
+const noAnnotationsRow: Annotation = {
+    label_name: 'No annotations',
+    current_count: 2,
+    total_count: 3,
+    selected: false,
+    isNoAnnotationsRow: true
+};
+
 describe('LabelsMenu', () => {
     const twoLabels = writable<Annotation[]>([
         { label_name: 'car', current_count: 1, total_count: 1, selected: true },
@@ -96,6 +106,7 @@ describe('LabelsMenu', () => {
         mocks.enforceColoringByClassStore.set(false);
         mocks.hiddenClassNamesStore.set([]);
         mocks.toggleClassVisibility.mockReset();
+        setIncludeUnannotatedSamples(false);
     });
 
     it('shows class color legends when only one source is selected', () => {
@@ -147,12 +158,7 @@ describe('LabelsMenu', () => {
             ...defaultProps,
             showVisibilityToggle: true,
             annotationFilterRows: writable<Annotation[]>([
-                {
-                    label_name: NO_ANNOTATIONS_ROW_ID,
-                    current_count: 2,
-                    total_count: 3,
-                    selected: false
-                },
+                noAnnotationsRow,
                 { label_name: 'car', current_count: 1, total_count: 1, selected: false }
             ])
         });
@@ -161,6 +167,42 @@ describe('LabelsMenu', () => {
         expect(screen.getByText('2 of 3')).toBeInTheDocument();
         expect(screen.getAllByTestId('label-color-legend')).toHaveLength(1);
         expect(screen.getAllByTestId('label-visibility-toggle')).toHaveLength(1);
+    });
+
+    it('toggles the no annotations filter, not a class named like its item', async () => {
+        const onToggleAnnotationFilter = vi.fn();
+        render(LabelsMenu, {
+            ...defaultProps,
+            onToggleAnnotationFilter,
+            annotationFilterRows: writable<Annotation[]>([
+                noAnnotationsRow,
+                { label_name: 'no-annotations', total_count: 1, selected: false }
+            ])
+        });
+
+        await userEvent.click(screen.getByRole('checkbox', { name: 'No annotations' }));
+        expect(get(includeUnannotatedSamples)).toBe(true);
+        expect(onToggleAnnotationFilter).not.toHaveBeenCalled();
+
+        await userEvent.click(screen.getByRole('checkbox', { name: 'no-annotations' }));
+        expect(onToggleAnnotationFilter).toHaveBeenCalledWith('no-annotations');
+    });
+
+    it('selects the no annotations row and the classes with "Select all"', async () => {
+        const onSelectionChange = vi.fn();
+        render(LabelsMenu, {
+            ...defaultProps,
+            onSelectionChange,
+            annotationFilterRows: writable<Annotation[]>([
+                noAnnotationsRow,
+                { label_name: 'car', current_count: 1, total_count: 1, selected: false }
+            ])
+        });
+
+        await userEvent.click(screen.getByRole('button', { name: 'Select all' }));
+
+        expect(get(includeUnannotatedSamples)).toBe(true);
+        expect(onSelectionChange).toHaveBeenCalledWith(['car']);
     });
 
     it('shows a zero count when the filter matches no annotations of a label', () => {

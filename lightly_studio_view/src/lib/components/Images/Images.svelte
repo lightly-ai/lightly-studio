@@ -57,7 +57,10 @@
 
     const { dimensionsValues: dimensions } = useDimensions();
     const { includeUnannotatedSamples } = useUnannotatedSamplesFilter();
-    const { selectedCollectionIds: selectedAnnotationSourceIds } = useAnnotationCollectionsFilter();
+    const { selectedCollectionIds: selectedAnnotationSourceIds, allSourcesHidden } =
+        useAnnotationCollectionsFilter();
+    // Without sources, every image is unannotated, so the "No annotations" filter matches all.
+    const filtersUnannotatedImages = $derived($includeUnannotatedSamples && !$allSourcesHidden);
     const { metadataValues, categoricalMetadataValues } = $derived.by(() =>
         useMetadataFilters(collection_id)
     );
@@ -79,9 +82,9 @@
             annotation_label_ids: $selectedAnnotationFilterIds?.length
                 ? $selectedAnnotationFilterIds
                 : undefined,
-            include_unannotated_samples: $includeUnannotatedSamples || undefined,
+            include_unannotated_samples: filtersUnannotatedImages || undefined,
             // An image counts as unannotated when the selected sources have no annotation on it.
-            collection_ids: $includeUnannotatedSamples ? $selectedAnnotationSourceIds : undefined,
+            collection_ids: filtersUnannotatedImages ? $selectedAnnotationSourceIds : undefined,
             tag_ids: $tagsSelected.size > 0 ? Array.from($tagsSelected) : undefined,
             dimensions: $dimensions ?? undefined
         },

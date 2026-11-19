@@ -14,10 +14,7 @@ export {
 export { useFrames } from '$lib/hooks/useFrames/useFrames.svelte';
 export { useTags } from '$lib/hooks/useTags/useTags';
 export { useUnannotatedSampleCount } from '$lib/hooks/useUnannotatedSampleCount/useUnannotatedSampleCount';
-export {
-    NO_ANNOTATIONS_ROW_ID,
-    useUnannotatedSamplesFilter
-} from '$lib/hooks/useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
+export { useUnannotatedSamplesFilter } from '$lib/hooks/useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
 export { useFiltersClearedSignal } from '$lib/hooks/useFiltersClearedSignal/useFiltersClearedSignal';
 export { useVideoFramesBounds } from '$lib/hooks/useVideoFramesBounds/useVideoFramesBounds';
 export {

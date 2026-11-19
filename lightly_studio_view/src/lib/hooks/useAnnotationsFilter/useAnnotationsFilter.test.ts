@@ -3,9 +3,11 @@ import { get, writable } from 'svelte/store';
 import type { AnnotationLabel } from '$lib/services/types';
 
 const { trackEvent } = vi.hoisted(() => ({ trackEvent: vi.fn() }));
-vi.mock('$lib/hooks', () => ({
-    usePostHog: () => ({ trackEvent })
-}));
+vi.mock('$lib/hooks', async () => {
+    const { useUnannotatedSamplesFilter } =
+        await import('../useUnannotatedSamplesFilter/useUnannotatedSamplesFilter');
+    return { usePostHog: () => ({ trackEvent }), useUnannotatedSamplesFilter };
+});
 
 const selectedAnnotationFilterIds = writable<Set<string>>(new Set());
 const setSelectedAnnotationFilterIds = vi.fn((id: string) => {
@@ -43,12 +45,9 @@ vi.mock('../useTags/useTags', () => ({
 }));
 
 import { useSelectedAnnotationsFilter, useAnnotationsFilter } from './useAnnotationsFilter';
-import {
-    NO_ANNOTATIONS_ROW_ID,
-    useUnannotatedSamplesFilter
-} from '../useUnannotatedSamplesFilter/useUnannotatedSamplesFilter';
+import { useUnannotatedSamplesFilter } from '$lib/hooks';
 
-const { includeUnannotatedSamples, setIncludeUnannotatedSamples } = useUnannotatedSamplesFilter();
+const { setIncludeUnannotatedSamples } = useUnannotatedSamplesFilter();
 
 describe('useSelectedAnnotationsFilter', () => {
     beforeEach(() => {
@@ -144,7 +143,13 @@ describe('useAnnotationsFilter', () => {
         setUnannotatedSampleCount({ current_count: 2, total_count: 3 });
 
         expect(get(annotationFilterRows)).toEqual([
-            { label_name: NO_ANNOTATIONS_ROW_ID, total_count: 3, current_count: 2, selected: true },
+            {
+                label_name: 'No annotations',
+                total_count: 3,
+                current_count: 2,
+                selected: true,
+                isNoAnnotationsRow: true
+            },
             { label_name: 'cat', total_count: 10, current_count: 5, selected: false }
         ]);
     });
@@ -157,28 +162,6 @@ describe('useAnnotationsFilter', () => {
         setUnannotatedSampleCount({ current_count: 3, total_count: 3 });
 
         expect(get(annotationFilterRows)).toEqual([]);
-    });
-
-    it('toggleAnnotationFilterSelection toggles the no annotations row', () => {
-        const { toggleAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
-
-        toggleAnnotationFilterSelection(NO_ANNOTATIONS_ROW_ID);
-        expect(get(includeUnannotatedSamples)).toBe(true);
-
-        toggleAnnotationFilterSelection(NO_ANNOTATIONS_ROW_ID);
-        expect(get(includeUnannotatedSamples)).toBe(false);
-        expect(setSelectedAnnotationFilterIds).not.toHaveBeenCalled();
-    });
-
-    it('setAnnotationFilterSelection selects the no annotations row with the labels', () => {
-        const { setAnnotationFilterSelection } = useAnnotationsFilter({ annotationLabels });
-
-        setAnnotationFilterSelection([NO_ANNOTATIONS_ROW_ID, 'cat']);
-        expect(get(includeUnannotatedSamples)).toBe(true);
-        expect(get(selectedAnnotationFilterIds)).toEqual(new Set(['id-1']));
-
-        setAnnotationFilterSelection([]);
-        expect(get(includeUnannotatedSamples)).toBe(false);
     });
 
     it('returns empty annotationFilterRows when no counts set', () => {

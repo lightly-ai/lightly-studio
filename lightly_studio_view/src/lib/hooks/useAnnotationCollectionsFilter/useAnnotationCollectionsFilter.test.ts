@@ -102,6 +102,21 @@ describe('useAnnotationCollectionsFilter', () => {
         expect(get(selectedCollectionIds)).toEqual(['a', 'b']);
     });
 
+    it('clears the no annotations filter only when the collection changes', async () => {
+        const { seedSelectionIfNeeded } = await importHook();
+        const { useUnannotatedSamplesFilter } = await import('$lib/hooks');
+        const { includeUnannotatedSamples, setIncludeUnannotatedSamples } =
+            useUnannotatedSamplesFilter();
+
+        seedSelectionIfNeeded('collection-1', sources);
+        setIncludeUnannotatedSamples(true);
+        seedSelectionIfNeeded('collection-1', sources);
+        expect(get(includeUnannotatedSamples)).toBe(true);
+
+        seedSelectionIfNeeded('collection-2', sources);
+        expect(get(includeUnannotatedSamples)).toBe(false);
+    });
+
     describe('isSourceVisible', () => {
         it('shows only the selected sources', async () => {
             const { isSourceVisible, setSelectedCollectionIds, seedSelectionIfNeeded } =

@@ -12,7 +12,7 @@ import type {
     UnannotatedSampleCount,
     VideoFilter
 } from '$lib/api/lightly_studio_local';
-import { useImageAnnotationCountsQueryKey } from '../useImageAnnotationCounts/useImageAnnotationCounts';
+import { useImageAnnotationCountsQueryKey } from '$lib/hooks';
 
 type CountRequest = { collectionId: string } & (
     | { sampleType: 'image'; filter?: ImageFilter }
