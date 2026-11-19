@@ -114,7 +114,8 @@ def connect(
         for key in config.cloud_credentials:
             logger.info(f"  {key}: configured")
 
-    db_manager.connect(db_url=config.engine_url)
+    # The server migrates the database. The client only checks that it can use it.
+    db_manager.connect(db_url=config.engine_url, migrate=False)
 
     _track_connection(
         config=config, auth_method=auth_method, event=tracking.ENTERPRISE_CONNECTION_ESTABLISHED
