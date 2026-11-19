@@ -33,6 +33,7 @@ def test_load_filter_iterate_tag(connect_transport: Callable[[], None]) -> None:
     dataset = ImageDataset.load(name="my_dataset")
     query = dataset.match(AND(ImageSampleField.width > 100, ImageSampleField.tags.contains("cat")))
     samples = query.order_by(OrderByField(ImageSampleField.file_name)).to_list()
+    assert [sample.file_name for sample in samples] == ["a.png", "c.png"]
     query.add_tag("wide_cat")
     samples[0].add_tag("checked")
     samples[1].add_tag("checked")
