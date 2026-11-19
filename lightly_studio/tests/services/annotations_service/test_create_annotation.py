@@ -161,6 +161,44 @@ def test_create_annotation_cuboid_3d(
     assert result.segmentation_details is None
 
 
+def test_create_annotation_cuboid_3d__with_object_track(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    (track_id,) = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )
+    annotation = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CUBOID_3D,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        object_track_id=track_id,
+        cuboid_3d=Cuboid3DCreate(
+            frame_id="odom",
+            px=1.0,
+            py=0.0,
+            pz=0.5,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            sx=2.0,
+            sy=1.0,
+            sz=1.5,
+            interpolated=True,
+        ),
+    )
+    result = create_annotation(session=db_session, annotation=annotation)
+
+    assert result.object_track_id == track_id
+    assert result.cuboid_3d_details is not None
+    assert result.cuboid_3d_details.interpolated is True
+
+
 def test_create_annotation_failure(
     db_session: Session,
     collection_id: UUID,
@@ -391,6 +429,43 @@ def test_create_annotation__object_track_id_wrong_dataset(
                 height=10,
             ),
         )
+
+
+def test_create_annotation__cuboid_3d_track_has_cuboid_on_group_raises(
+    db_session: Session,
+    collection: CollectionTable,
+    samples: list[ImageTable],
+    annotation_labels: list[AnnotationLabelTable],
+) -> None:
+    """An object track has at most one cuboid on each group."""
+    (track_id,) = object_track_resolver.create_many(
+        session=db_session,
+        tracks=[ObjectTrackCreate(object_track_number=1, dataset_id=collection.dataset_id)],
+    )
+    cuboid = AnnotationCreateParams(
+        annotation_label_id=annotation_labels[0].annotation_label_id,
+        annotation_type=AnnotationType.CUBOID_3D,
+        collection_id=collection.collection_id,
+        parent_sample_id=samples[0].sample_id,
+        object_track_id=track_id,
+        cuboid_3d=Cuboid3DCreate(
+            frame_id="odom",
+            px=1.0,
+            py=0.0,
+            pz=0.5,
+            qx=0.0,
+            qy=0.0,
+            qz=0.0,
+            qw=1.0,
+            sx=2.0,
+            sy=1.0,
+            sz=1.5,
+        ),
+    )
+    create_annotation(session=db_session, annotation=cuboid)
+
+    with pytest.raises(ValueError, match="already exists on this group"):
+        create_annotation(session=db_session, annotation=cuboid)
 
 
 @pytest.mark.parametrize(

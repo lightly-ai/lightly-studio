@@ -12,7 +12,8 @@ import { useDeleteSequenceTrack } from '../useDeleteSequenceTrack';
 import { useUpdateCuboidClass } from '../useUpdateCuboidClass';
 import { getSequenceTracksSequenceQueryKey } from '../FrameTimeline/sequenceTracksQueryKey';
 import { createCuboidTransformState } from '../CuboidLayer/cuboidTransformState';
-import { getTickDetailsSequenceQueryKey } from '$lib/hooks';
+import { createAnnotationIdMap } from '../cuboidUndo';
+import { getTickDetailsSequenceQueryKey, useGlobalStorage } from '$lib/hooks';
 import type { WorkspaceTool } from '../domain';
 import type { CuboidBox } from '$lib/components/PointCloudLabelingWorkspace/CuboidDraft';
 import type { CuboidTarget } from '../useCuboidTargetSource';
@@ -34,6 +35,12 @@ export function useWorkspaceEditing(
                 sequenceId: getOptions().sequenceId
             })
         });
+    const { addReversibleAction } = useGlobalStorage();
+    // Undo entries of this workspace find a cuboid that an undo of its delete re-created.
+    const annotationIds = createAnnotationIdMap();
+    // Undo bases the previous state on the persisted annotations, not on the scene snapshot,
+    // which updates later in an effect.
+    const getPersistedAnnotations = () => getWorkspace().tickDetails.data?.annotations ?? [];
     let selectedCuboidId = $state<string | null>(null);
     let hoveredCuboidId = $state<string | null>(null);
     let draftCuboid = $state.raw<CuboidBox | null>(null);
@@ -71,12 +78,16 @@ export function useWorkspaceEditing(
         }
     });
 
-    const { handleCuboidTransform } = useUpdateCuboidAnnotation({
+    const { handleCuboidTransform, waitForSaves } = useUpdateCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
         onUpdated: async () => {
             void refreshTracks();
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
-        }
+        },
+        getAnnotations: getPersistedAnnotations,
+        annotationIds,
+        addReversibleAction,
+        onRestore: (annotationId) => transforms.discard(annotationId)
     });
 
     const { handleLabelChange } = useUpdateCuboidClass({
@@ -86,7 +97,10 @@ export function useWorkspaceEditing(
         onUpdated: async () => {
             void refreshTracks();
             await getWorkspace().tickDetails.refetch({ throwOnError: true });
-        }
+        },
+        getAnnotations: getPersistedAnnotations,
+        annotationIds,
+        addReversibleAction
     });
 
     const { handleStartTrack } = useStartSequenceTrack({
@@ -135,15 +149,26 @@ export function useWorkspaceEditing(
 
     const { handleDeleteCuboid: deleteCuboidAnnotation } = useDeleteCuboidAnnotation({
         getCollectionId: () => getOptions().annotationSourceCollectionId,
-        getAnnotations: () => getData().snapshot?.annotations ?? []
+        getAnnotations: getPersistedAnnotations,
+        annotationIds,
+        // The undo can restore the cuboid on a tick other than the active one.
+        refresh: () =>
+            Promise.all([
+                refreshTracks(),
+                queryClient.invalidateQueries({
+                    queryKey: getTickDetailsSequenceQueryKey({
+                        datasetId: getOptions().datasetId,
+                        sequenceId: getOptions().sequenceId
+                    })
+                })
+            ])
     });
 
     async function handleDeleteCuboid(cuboidId: string): Promise<void> {
+        // The undo of the delete restores the cuboid with the geometry of its last save.
+        await waitForSaves(cuboidId);
         const deleted = await deleteCuboidAnnotation(cuboidId);
-        if (!deleted) return;
-        void refreshTracks();
-        await getWorkspace().tickDetails.refetch();
-        if (selectedCuboidId === cuboidId) {
+        if (deleted && selectedCuboidId === cuboidId) {
             selectedCuboidId = null;
         }
     }

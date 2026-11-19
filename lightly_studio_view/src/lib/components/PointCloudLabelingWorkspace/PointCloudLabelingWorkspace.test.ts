@@ -361,13 +361,16 @@ describe('PointCloudLabelingWorkspace', () => {
                 }
             ]
         });
-        expect(updateAnnotations).toHaveBeenCalledWith([
-            expect.objectContaining({
-                annotation_id: 'annotation-1',
-                collection_id: 'group-collection-1',
-                cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
-            })
-        ]);
+        expect(updateAnnotations).toHaveBeenCalledWith(
+            [
+                expect.objectContaining({
+                    annotation_id: 'annotation-1',
+                    collection_id: 'group-collection-1',
+                    cuboid_3d: expect.objectContaining({ px: 2, py: 3, pz: 4 })
+                })
+            ],
+            'group-collection-1'
+        );
     });
 
     it.each(['summary', 'tick', 'cloud'])(
