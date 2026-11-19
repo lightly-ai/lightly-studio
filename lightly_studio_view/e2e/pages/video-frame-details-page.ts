@@ -18,7 +18,7 @@ export class VideoFrameDetailsPage {
     }
 
     async clickEditButton() {
-        await this.page.getByTestId('header-editing-mode-button').click();
+        await this.page.getByTestId('breadcrumb-edit-button').click();
     }
 
     async getFrameNumber() {

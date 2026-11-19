@@ -147,7 +147,7 @@ test('user can change label of an annotation', async ({
     // Change label to apple.
     await annotationDetailsPage.clickEditLabelButton();
     await annotationDetailsPage.setLabel(newLabel);
-    await annotationDetailsPage.clickEditLabelButton();
+    await annotationDetailsPage.clickFinishEditingButton();
 
     // Verify changed label.
     await expect(annotationDetailsPage.getLabel()).toHaveText(newLabel);
@@ -156,7 +156,7 @@ test('user can change label of an annotation', async ({
     // Change back to original label.
     await annotationDetailsPage.clickEditLabelButton();
     await annotationDetailsPage.setLabel(originalLabel);
-    await annotationDetailsPage.clickEditLabelButton();
+    await annotationDetailsPage.clickFinishEditingButton();
 
     // Verify restored label.
     await expect(annotationDetailsPage.getLabel()).toHaveText(originalLabel);
@@ -230,7 +230,7 @@ test('user can delete annotation and navigate to next annotation', async ({
     await expect(page).not.toHaveURL(annotationUrlBeforeDelete);
     await annotationDetailsPage.waitForNavigation();
 
-    await annotationDetailsPage.clickEditLabelButton();
+    await annotationDetailsPage.clickFinishEditingButton();
 
     const metadataWidth = annotationDetailsPage.getAnnotationWidth();
     await expect(metadataWidth).toHaveText(/^\d+px$/);

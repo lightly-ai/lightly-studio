@@ -79,7 +79,9 @@ export class CaptionsPage {
     }
 
     async undoLastCaptionDelete() {
-        await this.captionUtils.undoLastCaptionDelete();
+        await this.captionUtils.undoLastCaptionDelete(
+            this.page.getByTestId('header-reverse-action-button')
+        );
     }
 
     async updateNthCaption(index: number, text: string) {
