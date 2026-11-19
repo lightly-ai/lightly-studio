@@ -167,9 +167,7 @@ class DatasetQuery(Generic[T]):
     @property
     def session(self) -> Session:
         """The database session of the SQL path."""
-        if self._session is None:
-            self._session = db_manager.persistent_session()
-        return self._session
+        return db_manager.persistent_session() if self._session is None else self._session
 
     def match(self, match_expression: MatchExpression) -> Self:
         """Store a field condition for filtering.
