@@ -15,6 +15,9 @@
         onOpenChange?: (open: boolean) => void;
         expanded: boolean;
         onToggleExpanded?: () => void;
+        checked?: boolean;
+        headerSummary?: string;
+        onClearField?: () => void;
         children: Snippet;
     }
 
@@ -30,12 +33,24 @@
         onOpenChange,
         expanded,
         onToggleExpanded,
+        checked,
+        headerSummary,
+        onClearField,
         children: content
     }: Props = $props();
 </script>
 
 {#if layout === 'list'}
-    <MetadataCategoricalFilterList {fieldLabel} {status} {expanded} {onToggleExpanded} {onRemove}>
+    <MetadataCategoricalFilterList
+        {fieldLabel}
+        {status}
+        {expanded}
+        {onToggleExpanded}
+        {onRemove}
+        {checked}
+        summary={headerSummary}
+        {onClearField}
+    >
         {#snippet children()}
             {@render content()}
         {/snippet}

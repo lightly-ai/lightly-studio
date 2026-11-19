@@ -12,7 +12,7 @@ import {
     isAnnotationDetailsRoute,
     isVideoDetailsRoute,
     isFrameDetailsRoute,
-    isPointCloudsRoute,
+    isMcapSequencesRoute,
     isPointCloudLabelingRoute
 } from './routes';
 
@@ -79,8 +79,8 @@ describe('routes', () => {
                 expect(isPointCloudLabelingRoute(APP_ROUTES.pointCloudLabeling)).toBe(true);
             });
 
-            it('point-cloud labeling route is not classified as a point-clouds grid route', () => {
-                expect(isPointCloudsRoute(APP_ROUTES.pointCloudLabeling)).toBe(false);
+            it('point-cloud labeling route is not classified as an MCAP sequences grid route', () => {
+                expect(isMcapSequencesRoute(APP_ROUTES.pointCloudLabeling)).toBe(false);
             });
         });
     });
@@ -130,11 +130,11 @@ describe('routes', () => {
             );
         });
 
-        it('should generate correct point-clouds route', () => {
+        it('should generate correct mcap-sequences route', () => {
             expect(
-                routeHelpers.toPointClouds(testDatasetId, testCollectionType, testCollectionId)
+                routeHelpers.toMcapSequences(testDatasetId, testCollectionType, testCollectionId)
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/point-clouds`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/mcap-sequences`
             );
         });
 
@@ -148,7 +148,7 @@ describe('routes', () => {
                     sequenceId: testSequenceId
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/point-clouds/${testSequenceId}`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/mcap-sequences/${testSequenceId}`
             );
         });
 
@@ -163,7 +163,7 @@ describe('routes', () => {
                     groupId: 'group-1'
                 })
             ).toBe(
-                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/point-clouds/${testSequenceId}?group_id=group-1`
+                `/datasets/${testDatasetId}/${testCollectionType}/${testCollectionId}/mcap-sequences/${testSequenceId}?group_id=group-1`
             );
         });
     });

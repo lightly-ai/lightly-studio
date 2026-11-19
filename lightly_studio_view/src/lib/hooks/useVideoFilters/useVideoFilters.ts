@@ -15,6 +15,7 @@ import type {
     VideoSortFieldExpr
 } from '$lib/api/lightly_studio_local';
 import type { CategoricalMetadataValues } from '$lib/services/types';
+import type { PlotSelection } from '../useEmbeddingFilter/useEmbeddingPlotSelection';
 import type { useImageFilters } from '$lib/hooks';
 type QueryExpression = NonNullable<
     Parameters<ReturnType<typeof useImageFilters>['updateQueryExpr']>[0]
@@ -26,6 +27,7 @@ export type VideoFilterParams = {
     filters?: {
         tag_ids?: string[];
         annotation_frames_label_ids?: string[];
+        include_unannotated_samples?: boolean;
         sample_ids?: string[];
         embedding_region?: EmbeddingRegion;
         metadata_values?: MetadataValues;
@@ -64,7 +66,8 @@ export const buildVideoFilter = (
         {
             ...videoBoundsFields($filterParams.video_bounds),
             frame_annotation_filter: getAnnotationsFilter({
-                annotation_label_ids: f.annotation_frames_label_ids
+                annotation_label_ids: f.annotation_frames_label_ids,
+                include_unannotated_samples: f.include_unannotated_samples
             })
         },
         buildSampleFilter({
@@ -114,13 +117,18 @@ export const useVideoFilters = () => {
         );
     };
 
-    const updateEmbeddingRegion = (embeddingRegion: EmbeddingRegion | null) => {
+    const updatePlotSelection = ({ embeddingRegion, sampleIds }: PlotSelection) => {
         const params = get(filterParams);
         if (!params?.collection_id) {
             return;
         }
 
-        filterParams.set(patchFilters(params, { embedding_region: embeddingRegion ?? undefined }));
+        filterParams.set(
+            patchFilters(params, {
+                embedding_region: embeddingRegion ?? undefined,
+                sample_ids: sampleIds.length > 0 ? sampleIds : undefined
+            })
+        );
     };
 
     const updateSortBy = (sort: VideoSortFieldExpr[] | null) => {
@@ -135,7 +143,7 @@ export const useVideoFilters = () => {
         videoSortBy,
         updateFilterParams,
         updateSampleIds,
-        updateEmbeddingRegion,
+        updatePlotSelection,
         updateSortBy
     };
 };

@@ -3,7 +3,7 @@ import { get } from 'svelte/store';
 import { useImageFilters } from './useImageFilters';
 import type { QueryExpr, ImageSortFieldExpr } from '$lib/api/lightly_studio_local/types.gen';
 import { SortDirection } from '$lib/api/lightly_studio_local/types.gen';
-import { createMetadataFilters } from '$lib/hooks';
+import { createMetadataFilters, EMPTY_PLOT_SELECTION } from '$lib/hooks';
 
 const queryExpr = {
     match_expr: {
@@ -154,13 +154,16 @@ describe('useImageFilters', () => {
             expect(normalFilters(filterParams)?.sample_ids).toBeUndefined();
         });
 
-        it('updateEmbeddingRegion stores and clears the region', () => {
-            const { filterParams, updateEmbeddingRegion } = useImageFilters();
+        it('updatePlotSelection stores a region or picks and clears both', () => {
+            const { filterParams, updatePlotSelection } = useImageFilters();
             setParams({});
-            updateEmbeddingRegion(embeddingRegion);
+            updatePlotSelection({ embeddingRegion, sampleIds: [] });
             expect(normalFilters(filterParams)?.embedding_region).toBe(embeddingRegion);
-            updateEmbeddingRegion(null);
+            updatePlotSelection({ embeddingRegion: null, sampleIds: ['s1'] });
             expect(normalFilters(filterParams)?.embedding_region).toBeUndefined();
+            expect(normalFilters(filterParams)?.sample_ids).toEqual(['s1']);
+            updatePlotSelection(EMPTY_PLOT_SELECTION);
+            expect(normalFilters(filterParams)?.sample_ids).toBeUndefined();
         });
 
         it('returns null without a collection id', () => {
@@ -184,7 +187,6 @@ describe('useImageFilters', () => {
         it('pins every field', () => {
             const { imageFilter, updateQueryExpr } = useImageFilters();
             vi.mocked(createMetadataFilters).mockReturnValueOnce([metadataFilter]);
-            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
             setParams({
                 filters: {
                     dimensions: { min_width: 1, max_width: 2, min_height: 3, max_height: 4 },
@@ -196,6 +198,7 @@ describe('useImageFilters', () => {
                 },
                 metadata_values: { k: { min: 0, max: 1 } }
             });
+            updateQueryExpr({ query_expr: queryExpr, query_expr_str: 'caption == cat' });
             expect(get(imageFilter)).toEqual({
                 filter_type: 'image',
                 width: { min: 1, max: 2 },
@@ -236,6 +239,18 @@ describe('useImageFilters', () => {
                         annotation_label_ids: ['l']
                     }
                 }
+            });
+        });
+
+        it('sends the sources with include_unannotated_samples', () => {
+            const { imageFilter } = useImageFilters();
+            setParams({
+                filters: { collection_ids: ['c'], include_unannotated_samples: true }
+            });
+            expect(get(imageFilter)?.sample_filter?.annotations_filter).toEqual({
+                filter_type: 'annotations',
+                collection_ids: ['c'],
+                include_unannotated_samples: true
             });
         });
 

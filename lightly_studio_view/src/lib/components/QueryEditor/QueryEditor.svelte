@@ -14,7 +14,7 @@
         sampleType?: 'image' | 'video';
         height?: string;
         readOnly?: boolean;
-        onSave?: (value: string, parsed: QueryExprTranslationResult | null) => void;
+        onSave?: (value: string, parsed: QueryExprTranslationResult) => void;
         /** Extra controls in the footer, before the apply button. Needs `onSave`. */
         footerActions?: Snippet;
     }

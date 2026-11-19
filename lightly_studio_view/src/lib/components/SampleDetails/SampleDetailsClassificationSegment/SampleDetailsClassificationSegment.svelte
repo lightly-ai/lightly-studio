@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { AnnotationTargetCaption } from '$lib/components/SampleDetails/AnnotationTargetCaption';
     import { useCanCreateAnnotationClass } from '$lib/hooks';
     import { CopyAnnotationToSource } from '$lib/components/CopyAnnotationToSource';
     // TODO (Mihnea, 06/2026): Refactor this component, as it is way past the 100-line guideline.
@@ -17,7 +18,11 @@
     import { addAnnotationCreateToUndoStack } from '$lib/services/addAnnotationCreateToUndoStack';
     import { addAnnotationDeleteToUndoStack } from '$lib/services/addAnnotationDeleteToUndoStack';
     import { addAnnotationLabelChangeToUndoStack } from '$lib/services/addAnnotationLabelChangeToUndoStack';
-    import { useAnnotationCollections, useAnnotationCollectionsFilter } from '$lib/hooks';
+    import {
+        isAnnotationSourceBlocked,
+        useAnnotationCollections,
+        useAnnotationCollectionsFilter
+    } from '$lib/hooks';
     import {
         computeSeededHiddenIds,
         groupAnnotationsBySource,
@@ -142,6 +147,7 @@
 
     const createClassificationAnnotation = async (labelName: string) => {
         if (!annotationLabels.data) return false;
+        if (isAnnotationSourceBlocked(annotationLabelContext)) return false;
 
         try {
             let label = annotationLabels.data.find(
@@ -430,6 +436,12 @@
                 >
                     +
                 </Button>
+                {#if isGrouped}
+                    <AnnotationTargetCaption
+                        targetSource={annotationLabelContext.annotationSource ?? null}
+                        blockedReason={annotationLabelContext.annotationSourceBlockedReason ?? null}
+                    />
+                {/if}
             {/if}
         </div>
     </div>

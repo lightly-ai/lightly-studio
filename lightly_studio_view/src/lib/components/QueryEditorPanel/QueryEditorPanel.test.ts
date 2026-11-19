@@ -1,6 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { toast } from 'svelte-sonner';
+import { get } from 'svelte/store';
 import { useQueryHistory } from '$lib/hooks';
 import type { QueryExprTranslationResult } from '$lib/components/QueryEditor/language/query-expr-translation';
 import QueryEditorPanel from './QueryEditorPanel.svelte';
@@ -19,10 +20,11 @@ const { updateQueryExpr, invalidateQueries, queryExpr, translateQuery } = await 
 
 vi.mock('$lib/components/QueryEditor/useQueryEditor', () => ({
     useQueryEditor: () => ({
-        mount: (el: HTMLElement, options: { value: string }) => {
+        mount: (el: HTMLElement, options: { value: string; onChange: (value: string) => void }) => {
             const input = document.createElement('textarea');
             input.setAttribute('aria-label', 'Query');
             input.value = options.value;
+            input.addEventListener('input', () => options.onChange(input.value));
             el.append(input);
             return () => input.remove();
         },
@@ -43,6 +45,38 @@ const defaultProps = {
 };
 
 describe('QueryEditorPanel', () => {
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
+
+    it.each([
+        ['image', ''],
+        ['video', ' \n\t '],
+        ['image', '# width < 500'],
+        ['video', '# width < 500\n# AND height > 10']
+    ] as const)('clears the %s query when applying blank input', async (sampleType, value) => {
+        const collectionId = `empty-${sampleType}`;
+        render(QueryEditorPanel, {
+            props: {
+                ...defaultProps,
+                collectionId,
+                sampleType,
+                queryExpression: { query_expr: queryExpr, query_expr_str: 'width < 500' }
+            }
+        });
+
+        await fireEvent.input(screen.getByRole('textbox', { name: 'Query' }), {
+            target: { value }
+        });
+        translateQuery.mockReturnValueOnce({ status: 'empty' });
+        await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
+
+        expect(updateQueryExpr).toHaveBeenCalledExactlyOnceWith(undefined);
+        expect(invalidateQueries).toHaveBeenCalledExactlyOnceWith();
+        expect(toast.error).not.toHaveBeenCalled();
+        expect(get(useQueryHistory().queryHistory)[collectionId] ?? []).toEqual([]);
+    });
+
     it('updates the query and invalidates all queries when re-applying the same query', async () => {
         render(QueryEditorPanel, {
             props: {
@@ -66,7 +100,11 @@ describe('QueryEditorPanel', () => {
         render(QueryEditorPanel, { props: { ...defaultProps, sampleType: 'video' } });
 
         expect(screen.getByText('duration_s')).toBeInTheDocument();
-        expect(screen.getByText(/Frame annotations are not supported yet/)).toBeInTheDocument();
+        expect(
+            screen.getByText(
+                'frame(object_detection(class_name = "person") AND frame_timestamp_s < 5)'
+            )
+        ).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
         expect(updateQueryExpr).toHaveBeenCalledWith({
             query_expr: queryExpr,

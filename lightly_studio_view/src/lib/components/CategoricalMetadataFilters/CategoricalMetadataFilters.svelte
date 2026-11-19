@@ -1,17 +1,18 @@
 <script lang="ts">
-    import { validate as validateUUID } from 'uuid';
-    import CategoricalMetadataFieldPicker from '$lib/components/CategoricalMetadataFieldPicker/CategoricalMetadataFieldPicker.svelte';
     import { MetadataCategoricalFilter } from '$lib/components/MetadataCategoricalFilter';
-    import { useCategoricalMetadataDistribution } from '$lib/hooks';
-    import type { ImageFilter } from '$lib/api/lightly_studio_local';
+    import type { MetadataValueCountsFilter } from '$lib/hooks';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import type { CategoricalMetadataValue } from '$lib/services/types';
-    import { withAllValues } from './withAllValues';
+    import { useCategoricalFieldCounts } from './useCategoricalFieldCounts.svelte';
 
     interface Props {
         collectionId: string;
-        filter?: ImageFilter;
-        categoricalKeys: string[];
+        /** Tagged image or video filter. `undefined` counts all samples. */
+        filter?: MetadataValueCountsFilter;
+        /** The categorical fields to show, in display order. */
+        fields: string[];
+        isExpanded: (field: string) => boolean;
+        onToggleExpanded: (field: string) => void;
         onValueToggle: (field: string, value: CategoricalMetadataValue) => void;
         onValuesSet: (field: string, values: CategoricalMetadataValue[]) => void;
         onValuesClear: (field: string) => void;
@@ -20,79 +21,40 @@
     const {
         collectionId,
         filter,
-        categoricalKeys,
+        fields,
+        isExpanded,
+        onToggleExpanded,
         onValueToggle,
         onValuesSet,
         onValuesClear
     }: Props = $props();
     const { categoricalMetadataValues } = useGlobalStorage();
 
-    let addedFields = $state<string[]>([]);
-
-    const activeFields = $derived(
-        categoricalKeys.filter((key) => $categoricalMetadataValues[key]?.length)
-    );
-    const visibleFields = $derived([
-        ...new Set([...addedFields.filter((key) => categoricalKeys.includes(key)), ...activeFields])
-    ]);
-    const availableFields = $derived(
-        categoricalKeys
-            .filter((key) => !visibleFields.includes(key))
-            .sort((a, b) => a.localeCompare(b))
-    );
-    const categoricalQuery = useCategoricalMetadataDistribution(() => ({
+    // Only expanded fields show values, so only they are requested.
+    const expandedFields = $derived(fields.filter((field) => isExpanded(field)));
+    const counts = useCategoricalFieldCounts(() => ({
         collectionId,
-        filter: { ...filter, filter_type: 'image' },
-        fields: visibleFields,
-        enabled: validateUUID(collectionId) && visibleFields.length > 0
+        filter,
+        fields: expandedFields
     }));
-    // Lists every value of each field; `categoricalQuery` only provides the counts.
-    const allValuesQuery = useCategoricalMetadataDistribution(() => ({
-        collectionId,
-        filter: { filter_type: 'image' },
-        fields: visibleFields,
-        enabled: validateUUID(collectionId) && visibleFields.length > 0
-    }));
-    const distributions = $derived(categoricalQuery.data ?? {});
-    const allValues = $derived(allValuesQuery.data ?? {});
-    const loading = $derived(
-        categoricalQuery.isFetching &&
-            (categoricalQuery.isLoading || categoricalQuery.isPlaceholderData)
-    );
-    const updating = $derived(categoricalQuery.isFetching && !categoricalQuery.isLoading);
-
-    const addField = (field: string): void => {
-        addedFields = [...addedFields, field];
-    };
-
-    let collapsedFields = $state<Record<string, boolean>>({});
-    const toggleExpanded = (field: string): void => {
-        collapsedFields = { ...collapsedFields, [field]: !collapsedFields[field] };
-    };
-
-    const removeField = (field: string): void => {
-        if ($categoricalMetadataValues[field]?.length) onValuesClear(field);
-        addedFields = addedFields.filter((candidate) => candidate !== field);
-    };
 </script>
 
-<CategoricalMetadataFieldPicker fields={availableFields} onAdd={addField} />
-
-{#each visibleFields as field (field)}
+{#each fields as field (field)}
+    {@const expanded = isExpanded(field)}
     <MetadataCategoricalFilter
         layout="list"
         fieldLabel={field}
-        buckets={withAllValues(distributions[field] ?? [], allValues[field] ?? [])}
+        buckets={counts.distributions[field] ?? []}
         selectedValues={$categoricalMetadataValues[field] ?? []}
-        {loading}
-        {updating}
-        error={categoricalQuery.error?.message}
-        onRetry={() => categoricalQuery.refetch()}
+        {expanded}
+        onToggleExpanded={() => onToggleExpanded(field)}
+        loading={counts.loading}
+        updating={expanded && counts.updating}
+        error={expanded ? counts.error : undefined}
+        onRetry={() => counts.refetch()}
+        allValuesLoaded={counts.allValuesLoaded}
         onToggle={(value) => onValueToggle(field, value)}
         onSetValues={(values) => onValuesSet(field, values)}
         onClear={() => onValuesClear(field)}
-        onRemove={() => removeField(field)}
-        expanded={!collapsedFields[field]}
-        onToggleExpanded={() => toggleExpanded(field)}
     />
 {/each}

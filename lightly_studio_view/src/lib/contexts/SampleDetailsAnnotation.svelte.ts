@@ -9,11 +9,25 @@ export type AnnotationLabelContext = {
     lockedAnnotationIds?: Set<string>;
     isAnnotationLocked?: (annotationId?: string | null) => boolean;
 
-    // Selected annotation label.
+    // The class of the selected annotation. New annotations get the sticky class instead.
     annotationLabel?: string | null;
 
-    // Selected annotation source.
+    // The source new annotations go to, or null while it is unknown or not picked. Set by
+    // useAnnotationTarget only.
     annotationSource?: string | null;
+
+    // Why new annotations must not be created right now, or null when they may: the sources
+    // load, no source is picked among several, or the picked source is hidden. Set by
+    // useAnnotationTarget only.
+    annotationSourceBlockedReason?: string | null;
+
+    // The sources whose annotations are all hidden on this sample. They can't be the target.
+    // Set by useAnnotationTarget only.
+    hiddenAnnotationSources?: string[];
+
+    // A new source name typed on this page, with its collection. It may be the target of that
+    // collection before the source exists. Set by useSetTargetSource only.
+    typedAnnotationSource?: { collectionId: string; name: string } | null;
 
     // The annotation type selected via toolbar.
     annotationType?: AnnotationType | null;
@@ -22,6 +36,10 @@ export type AnnotationLabelContext = {
     lastCreatedAnnotationId?: string | null;
 
     isDrawing?: boolean;
+    // The selected box is being moved or resized.
+    isMovingAnnotation?: boolean;
+    // The box of the last move or resize, before the saved annotation is refetched.
+    movedAnnotation?: { annotationId: string; bbox: BoundingBox } | null;
     isErasing?: boolean;
     isDragging?: boolean;
     isChangingBrushSize?: boolean;
@@ -50,10 +68,11 @@ export function useAnnotationLabelContext(): {
     setAnnotationId: (id: string | null) => void;
     setCurrentBoundingBox: (bbox: BoundingBox | null) => void;
     setAnnotationLabel: (label: string | null) => void;
-    setAnnotationSource: (source: string | null) => void;
     setAnnotationType: (type: AnnotationType | null) => void;
     setLastCreatedAnnotationId: (id: string | null) => void;
     setIsDrawing: (value: boolean) => void;
+    setIsMovingAnnotation: (value: boolean) => void;
+    setMovedAnnotation: (annotationId: string, bbox: BoundingBox) => void;
     setIsErasing: (value: boolean) => void;
     setIsDragging: (value: boolean) => void;
     setIsChangingBrushSize: (value: boolean) => void;
@@ -78,10 +97,6 @@ export function useAnnotationLabelContext(): {
         context.annotationLabel = label;
     }
 
-    function setAnnotationSource(source: string | null) {
-        context.annotationSource = source;
-    }
-
     function setAnnotationType(type: AnnotationType | null) {
         context.annotationType = type;
     }
@@ -103,6 +118,14 @@ export function useAnnotationLabelContext(): {
         context.isDrawing = value;
     }
 
+    function setIsMovingAnnotation(value: boolean) {
+        context.isMovingAnnotation = value;
+    }
+
+    function setMovedAnnotation(annotationId: string, bbox: BoundingBox) {
+        context.movedAnnotation = { annotationId, bbox };
+    }
+
     function setIsErasing(value: boolean) {
         context.isErasing = value;
     }
@@ -120,10 +143,11 @@ export function useAnnotationLabelContext(): {
         setAnnotationId,
         setCurrentBoundingBox,
         setAnnotationLabel,
-        setAnnotationSource,
         setAnnotationType,
         setLastCreatedAnnotationId,
         setIsDrawing,
+        setIsMovingAnnotation,
+        setMovedAnnotation,
         setIsErasing,
         setIsDragging,
         setLockedAnnotationIds,

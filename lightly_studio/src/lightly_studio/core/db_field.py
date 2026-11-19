@@ -41,6 +41,7 @@ class DBField(Generic[T]):
 
     def __set__(self, obj: _DBFieldOwner, value: T) -> None:
         """Set the value of the field in the database. Commits the session."""
+        session = obj.get_object_session()
         # Delegate to SQLAlchemy's descriptor.
         self._sqla_descriptor.__set__(obj.inner, value)
-        obj.get_object_session().commit()
+        session.commit()

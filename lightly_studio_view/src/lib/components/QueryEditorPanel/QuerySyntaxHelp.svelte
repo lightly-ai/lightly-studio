@@ -19,20 +19,29 @@
             {sampleType === 'video' ? 'Video' : 'Image'} fields: <code>file_name</code>,
             <code>file_path_abs</code>, <code>width</code>, <code>height</code>,
             {#if sampleType === 'video'}
-                <code>duration_s</code>, <code>fps</code> (equality only).
+                <code>duration_s</code>, <code>fps</code>.
             {:else}
                 <code>created_at</code>
             {/if}
         </li>
         <li>Metadata: <code>metadata["quality_score"] &gt;= 0.8</code></li>
-        <li>
-            Sample evaluation: <code>sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code>
-        </li>
+        {#if sampleType === 'image'}
+            <li>
+                Sample evaluation: <code>sample_evaluation(name = "run-name" AND "tp" &gt;= 1)</code
+                >
+            </li>
+        {/if}
+        {#if sampleType === 'video'}
+            <li>
+                Match annotations on one frame with <code
+                    >frame(object_detection(class_name = "person") AND frame_timestamp_s &lt; 5)</code
+                >.
+            </li>
+        {/if}
         <li>Tag membership: <code>"tag_name" IN tags</code></li>
         <li>
             {#if sampleType === 'video'}
                 Video annotations: <code>classification(…)</code> matches whole-video and temporal annotations.
-                Frame annotations are not supported yet.
             {:else}
                 Annotation conditions: <code>segmentation_mask(…)</code>,
                 <code>object_detection(…)</code>, <code>classification(…)</code>

@@ -69,3 +69,17 @@
         }
     }}
 />
+
+<!-- Zoom in with the buttons or Ctrl/Cmd + wheel to inspect individual frames. -->
+<Story
+    name="Long sequence (zoomable)"
+    args={{
+        ticks: Array.from({ length: 600 }, (_, index) => ({
+            seq_number: index,
+            timestamp_ns: 1_700_000_000_000_000_000 + index * 100_000_000
+        })),
+        currentTick: 300,
+        bufferedRanges: [{ startIndex: 0, endIndex: 400 }]
+    }}
+    template={frame}
+/>
