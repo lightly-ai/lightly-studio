@@ -1,3 +1,4 @@
+import { flushSync } from 'svelte';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PointCloudWorkspaceContext } from '../provider/types';
 import type { WorkspaceOptions } from '../workspaceOptions';
@@ -51,13 +52,21 @@ afterEach(() => dispose());
 
 const refetchAnnotationSources = vi.fn();
 
-function setup(targetSource = 'labels') {
+type SceneData = ReturnType<typeof useWorkspaceSceneData>;
+type Cuboid = SceneData['cuboids'][number];
+
+const cuboid = (id: string, trackId: string | null) => ({ id, trackId }) as Cuboid;
+
+function setup(targetSource = 'labels', cuboids: Cuboid[] = []) {
     let editing!: ReturnType<typeof useWorkspaceEditing>;
+    let tickCuboids = $state(cuboids);
     const data = {
-        cuboids: [],
+        get cuboids() {
+            return tickCuboids;
+        },
         annotationSourceNames: ['labels'],
         refetchAnnotationSources
-    } as unknown as ReturnType<typeof useWorkspaceSceneData>;
+    } as unknown as SceneData;
     const workspace = { tickDetails: { refetch } } as unknown as PointCloudWorkspaceContext;
     dispose = $effect.root(() => {
         editing = useWorkspaceEditing(
@@ -69,7 +78,12 @@ function setup(targetSource = 'labels') {
         );
     });
     editing.selectedCuboidId = 'cuboid-1';
-    return editing;
+    flushSync();
+    const showTick = (nextCuboids: Cuboid[]) => {
+        tickCuboids = nextCuboids;
+        flushSync();
+    };
+    return Object.assign(editing, { showTick });
 }
 
 describe('useWorkspaceEditing', () => {
@@ -154,5 +168,45 @@ describe('useWorkspaceEditing', () => {
         await refreshing;
 
         expect(isComplete).toBe(true);
+    });
+
+    describe('on a tick change', () => {
+        it('selects the cuboid of the same track', () => {
+            const editing = setup('labels', [cuboid('cuboid-1', 'track-1')]);
+            editing.showTick([cuboid('cuboid-9', 'track-2'), cuboid('cuboid-5', 'track-1')]);
+            expect(editing.selectedCuboidId).toBe('cuboid-5');
+        });
+
+        it('selects the track again after a tick without it', () => {
+            const editing = setup('labels', [cuboid('cuboid-1', 'track-1')]);
+            editing.showTick([]);
+            editing.showTick([cuboid('cuboid-7', 'track-1')]);
+            expect(editing.selectedCuboidId).toBe('cuboid-7');
+        });
+
+        it('does not select another cuboid for an untracked cuboid', () => {
+            const editing = setup('labels', [cuboid('cuboid-1', null)]);
+            editing.showTick([cuboid('cuboid-5', null)]);
+            expect(editing.selectedCuboidId).toBe('cuboid-1');
+        });
+
+        it('keeps a selection of the next tick that is not loaded yet', () => {
+            const editing = setup('labels', [
+                cuboid('cuboid-1', 'track-1'),
+                cuboid('cuboid-2', 'track-2')
+            ]);
+            editing.selectedCuboidId = 'cuboid-8';
+            flushSync();
+            editing.showTick([cuboid('cuboid-5', 'track-1'), cuboid('cuboid-8', 'track-2')]);
+            expect(editing.selectedCuboidId).toBe('cuboid-8');
+        });
+
+        it('does not select the track after the selection is cleared', () => {
+            const editing = setup('labels', [cuboid('cuboid-1', 'track-1')]);
+            editing.selectedCuboidId = null;
+            flushSync();
+            editing.showTick([cuboid('cuboid-5', 'track-1')]);
+            expect(editing.selectedCuboidId).toBeNull();
+        });
     });
 });
