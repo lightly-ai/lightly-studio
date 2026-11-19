@@ -72,7 +72,7 @@ duration_s > 10 AND fps = 30
 
 Use `frame(...)` to return videos with a matching frame. Inside it, combine annotation
 functions with `frame_timestamp_s`, the frame’s presentation timestamp in seconds on the video’s
-timeline. The first frame can have a nonzero timestamp.
+timeline. The first frame might have a nonzero timestamp.
 
 ```mysql
 # A person appears on a frame with a timestamp below 5 seconds
