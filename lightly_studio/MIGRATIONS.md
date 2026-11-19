@@ -17,6 +17,22 @@ The `alembic_version` table stores the current revision id, not the product vers
 
 `cleanup_existing=True` on Postgres drops all tables (including `alembic_version`), then runs `upgrade head` on the empty database.
 
+## Extension migrations
+
+A package that extends lightly_studio passes its own migrations: `run_migrations(..., extension_migrations=ExtensionMigrations(...))`. The extension has its own Alembic directory (`env.py` and `versions/`), a linear history, and a version table in its own schema. `alembic_version` holds only the revisions of this package.
+
+Each extension revision sets the module attribute `oss_revision` to the lightly_studio revision that it was written against. For each pending extension revision, `run_migrations` upgrades lightly_studio to that `oss_revision` (nothing happens if it is already there or further), then the extension to that revision. Last, it upgrades lightly_studio to head. A fresh and an upgraded database apply the same order:
+
+```text
+lightly_studio  o1 ── o2 ── o3 ── o4 ── o5
+extension             e1 ──────── e2          e1: oss_revision = o2, e2: oss_revision = o4
+applied         o1  o2  e1  o3  o4  e2  o5
+```
+
+Do not run `upgrade head` of this package alone on a database with pending extension revisions: it applies all lightly_studio revisions first, and the order breaks.
+
+The `env.py` of the extension creates its schema and commits before `context.configure`, because Alembic writes the version table before the first revision runs.
+
 ## Local Postgres setup
 
 Required for autogenerate and migration checks:
