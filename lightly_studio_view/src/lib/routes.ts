@@ -216,6 +216,8 @@ export const routes = {
 
 export const routeHelpers = {
     toHome: () => routes.home(),
+    /** The hosted workspace's Projects page. It is another app, so links need a full page load. */
+    toWorkspaceProjects: () => '/workspace/projects',
     toCollectionHome: (datasetId: string, collectionType: string, collectionId: string) =>
         routes.collection.home(datasetId, collectionType, collectionId),
     toCaptions: (datasetId: string, collectionType: string, collectionId: string) =>

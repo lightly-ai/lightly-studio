@@ -35,7 +35,7 @@ const links = () =>
 describe('AnnotationDetailsBreadcrumb', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('shows the dataset crumbs as plain text for a labeler', () => {
+    it('sends a labeler home to Projects and shows the other crumbs as plain text', () => {
         loginAs('labeler');
         render(AnnotationDetailsBreadcrumb, { props: { rootCollection } });
 
@@ -44,7 +44,11 @@ describe('AnnotationDetailsBreadcrumb', () => {
         expect(nav).toHaveTextContent('Roads');
         expect(nav).toHaveTextContent('Annotations');
         expect(nav).toHaveTextContent('Sample 4 of 9');
-        expect(links()).toHaveLength(0);
+        const home = nav.querySelectorAll('a[href]');
+        expect(home).toHaveLength(1);
+        expect(home[0]).toHaveTextContent('Home');
+        expect(home[0]).toHaveAttribute('href', '/workspace/projects');
+        expect(home[0]).toHaveAttribute('data-sveltekit-reload');
     });
 
     it.each(['admin', undefined] as const)('keeps the dataset links for role %s', (role) => {

@@ -33,7 +33,8 @@
     const datasetId = $derived(page.params.dataset_id!);
     const collectionType = $derived(page.params.collection_type!);
     const collectionId = $derived(page.params.collection_id!);
-    // Labelers keep their bearings but cannot leave for the dataset from here.
+    // Labelers keep their bearings but cannot leave for the dataset from here; their Home
+    // crumb goes back to Projects instead.
     const canNavigate = useCanNavigateDataset();
 </script>
 
@@ -43,7 +44,8 @@
             <BreadcrumbLink
                 href={canNavigate
                     ? routeHelpers.toCollectionHome(datasetId, collectionType, datasetId)
-                    : undefined}
+                    : routeHelpers.toWorkspaceProjects()}
+                data-sveltekit-reload={canNavigate ? undefined : ''}
                 class="flex items-center gap-2"
             >
                 <Home class="h-4 w-4" />

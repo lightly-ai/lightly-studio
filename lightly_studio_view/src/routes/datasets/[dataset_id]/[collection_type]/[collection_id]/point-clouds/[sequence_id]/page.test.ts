@@ -318,14 +318,18 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
             expect(within(header).queryAllByRole('link')).toHaveLength(0);
         });
 
-        it('shows only the file name, without links, when the batch file fails to load', async () => {
+        it('shows Home to Projects and the file name when the batch file fails to load', async () => {
             workflowMocks.isError = true;
             summaryData = { file_name: 'drive_001.mcap', lidar_channels: [], camera_channels: [] };
             render(Page, { props: { data: mockPageData } });
 
             const breadcrumb = await screen.findByTestId('workspace-breadcrumb');
-            expect(breadcrumb).toHaveTextContent(/^drive_001\.mcap$/);
-            expect(breadcrumb.querySelectorAll('a[href]')).toHaveLength(0);
+            expect(breadcrumb).toHaveTextContent(/^Home\s*drive_001\.mcap$/);
+            const home = breadcrumb.querySelectorAll('a[href]');
+            expect(home).toHaveLength(1);
+            expect(home[0]).toHaveTextContent('Home');
+            expect(home[0]).toHaveAttribute('href', '/workspace/projects');
+            expect(home[0]).toHaveAttribute('data-sveltekit-reload');
         });
 
         it('locks editing when it is not the user’s turn', async () => {
@@ -379,7 +383,7 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         expect(breadcrumb).toHaveTextContent('drive_001.mcap');
     });
 
-    it('shows the dataset crumbs as plain text to a labeler outside a batch', async () => {
+    it('sends a labeler home to Projects outside a batch, other crumbs as plain text', async () => {
         authState.role = 'labeler';
         summaryData = { file_name: 'drive_001.mcap', lidar_channels: [], camera_channels: [] };
         render(Page, { props: { data: mockPageData } });
@@ -389,7 +393,11 @@ describe('[collection_type]/[collection_id]/point-clouds/[sequence_id] page', ()
         expect(breadcrumb).toHaveTextContent('Collection 1');
         expect(breadcrumb).toHaveTextContent('Point clouds');
         expect(breadcrumb).toHaveTextContent('drive_001.mcap');
-        expect(breadcrumb.querySelectorAll('a[href]')).toHaveLength(0);
+        const home = breadcrumb.querySelectorAll('a[href]');
+        expect(home).toHaveLength(1);
+        expect(home[0]).toHaveTextContent('Home');
+        expect(home[0]).toHaveAttribute('href', '/workspace/projects');
+        expect(home[0]).toHaveAttribute('data-sveltekit-reload');
     });
 
     it('keeps the dataset links for an editor outside a batch', async () => {

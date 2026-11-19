@@ -32,7 +32,7 @@ const loginAs = (role: 'labeler' | 'editor' | undefined) =>
 describe('SampleDetailsBreadcrumb', () => {
     beforeEach(() => vi.clearAllMocks());
 
-    it('shows the dataset crumbs as plain text for a labeler', () => {
+    it('sends a labeler home to Projects and shows the other crumbs as plain text', () => {
         loginAs('labeler');
         render(SampleDetailsBreadcrumb, { props: { rootCollection } });
 
@@ -41,7 +41,11 @@ describe('SampleDetailsBreadcrumb', () => {
         expect(breadcrumb).toHaveTextContent('Roads');
         expect(breadcrumb).toHaveTextContent('Samples');
         expect(breadcrumb).toHaveTextContent('Sample 3 of 10');
-        expect(breadcrumb.querySelectorAll('a[href]')).toHaveLength(0);
+        const home = breadcrumb.querySelectorAll('a[href]');
+        expect(home).toHaveLength(1);
+        expect(home[0]).toHaveTextContent('Home');
+        expect(home[0]).toHaveAttribute('href', '/workspace/projects');
+        expect(home[0]).toHaveAttribute('data-sveltekit-reload');
     });
 
     it.each(['editor', undefined] as const)('keeps the dataset links for role %s', (role) => {

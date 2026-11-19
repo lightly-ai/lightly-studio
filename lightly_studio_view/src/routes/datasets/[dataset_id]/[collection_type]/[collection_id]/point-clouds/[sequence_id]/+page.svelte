@@ -33,17 +33,22 @@
         getSequenceId: () => sequenceId
     });
     const fileLabel = $derived(summary.data?.file_name ?? `Point cloud ${sequenceId}`);
+    const projectsHome: WorkspaceCrumb = {
+        label: 'Home',
+        href: routeHelpers.toWorkspaceProjects(),
+        reload: true
+    };
     // In a batch the crumbs lead back to the batch in the hosted workspace app (a full page
     // load), never into the dataset.
     const batchPath = $derived.by((): WorkspaceCrumb[] => {
-        // Without the batch file there is nothing safe to link to: show only the file name
+        // Without the batch file only Projects is safe to link to: show Home and the file name
         // once loading failed, and nothing while it loads.
-        if (workflow.isError) return [{ label: fileLabel }];
+        if (workflow.isError) return [projectsHome, { label: fileLabel }];
         const file = workflow.file;
         if (!file) return [];
         const projectHref = `/workspace/projects/${file.project_id}`;
         return [
-            { label: 'Home', href: '/workspace/projects', reload: true },
+            projectsHome,
             { label: file.project_name, href: projectHref, reload: true },
             {
                 label: file.batch_name,
@@ -53,7 +58,8 @@
             { label: fileLabel }
         ];
     });
-    // Labelers keep their bearings outside a batch but cannot leave for the dataset from here.
+    // Labelers keep their bearings outside a batch but cannot leave for the dataset from here;
+    // their Home crumb goes back to Projects instead.
     const canNavigate = useCanNavigateDataset();
     const datasetLinks = $derived([
         {
@@ -82,7 +88,9 @@
         { label: fileLabel }
     ]);
     const datasetPath = $derived(
-        canNavigate ? datasetLinks : datasetLinks.map(({ label }) => ({ label }))
+        canNavigate
+            ? datasetLinks
+            : [projectsHome, ...datasetLinks.slice(1).map(({ label }) => ({ label }))]
     );
     const sourcePath = $derived(workflow.active ? batchPath : datasetPath);
 
