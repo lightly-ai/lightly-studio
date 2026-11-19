@@ -1,72 +1,116 @@
-import { get } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { describe, expect, it } from 'vitest';
 import { useCategoryVisibility } from './useCategoryVisibility';
 
+const setup = (legend: [number, string][]) => {
+    const colorLegend = writable(new Map(legend));
+    const visibility = useCategoryVisibility({
+        getCollectionId: () => 'col_1',
+        getColorByType: () => null,
+        colorLegend,
+        hiddenKeys: writable(new Set<string>())
+    });
+    return { colorLegend, ...visibility };
+};
+
+const CLASSES: [number, string][] = [
+    [3, 'person'],
+    [4, 'car'],
+    [5, 'bus']
+];
+
 describe('useCategoryVisibility', () => {
     it('toggles hidden categories', () => {
-        const { hiddenCategories, toggleCategoryVisibility } = useCategoryVisibility({
-            getCollectionId: () => 'col_1',
-            getColorByType: () => null
-        });
+        const { hiddenCategories, toggleCategoryVisibility } = setup(CLASSES);
 
-        toggleCategoryVisibility(2);
-        expect(get(hiddenCategories)).toEqual(new Set([2]));
+        toggleCategoryVisibility(4);
+        expect(get(hiddenCategories)).toEqual(new Set([4]));
 
-        toggleCategoryVisibility(2);
+        toggleCategoryVisibility(4);
+        expect(get(hiddenCategories)).toEqual(new Set());
+    });
+
+    it('ignores a slot without a label', () => {
+        const { hiddenCategories, toggleCategoryVisibility, focusCategoryVisibility } =
+            setup(CLASSES);
+
+        toggleCategoryVisibility(9);
+        focusCategoryVisibility([3, 9], 9);
+
         expect(get(hiddenCategories)).toEqual(new Set());
     });
 
     it('focuses one category and restores all categories on a second focus', () => {
-        const { hiddenCategories, focusCategoryVisibility } = useCategoryVisibility({
-            getCollectionId: () => 'col_1',
-            getColorByType: () => null
-        });
-        const categories = [2, 3, 4];
+        const { hiddenCategories, focusCategoryVisibility } = setup(CLASSES);
 
-        focusCategoryVisibility(categories, 3);
-        expect(get(hiddenCategories)).toEqual(new Set([2, 4]));
+        focusCategoryVisibility([3, 4, 5], 4);
+        expect(get(hiddenCategories)).toEqual(new Set([3, 5]));
 
-        focusCategoryVisibility(categories, 3);
+        focusCategoryVisibility([3, 4, 5], 4);
         expect(get(hiddenCategories)).toEqual(new Set());
     });
 
     it('preserves a hidden reserved row through both isolate branches', () => {
         const { hiddenCategories, toggleCategoryVisibility, focusCategoryVisibility } =
-            useCategoryVisibility({ getCollectionId: () => 'col_1', getColorByType: () => null });
-        // Colored isolate universe; reserved row 1 lives outside it.
-        const categories = [3, 4, 5];
+            setup(CLASSES);
 
         toggleCategoryVisibility(1);
 
-        // Isolate-to-siblings branch: reserved row 1 survives alongside the hidden siblings.
-        focusCategoryVisibility(categories, 4);
+        focusCategoryVisibility([3, 4, 5], 4);
         expect(get(hiddenCategories)).toEqual(new Set([1, 3, 5]));
 
-        // Show-all branch: colored hidden state clears but reserved row 1 survives.
-        focusCategoryVisibility(categories, 4);
+        focusCategoryVisibility([3, 4, 5], 4);
         expect(get(hiddenCategories)).toEqual(new Set([1]));
     });
 
-    it('resets hidden categories', () => {
-        const { hiddenCategories, resetCategoryVisibility, toggleCategoryVisibility } =
-            useCategoryVisibility({ getCollectionId: () => 'col_1', getColorByType: () => null });
+    it('shows the classes that left the legend after a show all', () => {
+        const legend: [number, string][] = [...CLASSES, [6, 'truck']];
+        const { colorLegend, hiddenCategories, focusCategoryVisibility } = setup(legend);
+        focusCategoryVisibility([3, 4, 5, 6], 6);
+        colorLegend.set(
+            new Map([
+                [3, 'person'],
+                [6, 'truck']
+            ])
+        );
 
-        toggleCategoryVisibility(4);
-        resetCategoryVisibility();
+        focusCategoryVisibility([3, 6], 6);
+        colorLegend.set(new Map(legend));
 
         expect(get(hiddenCategories)).toEqual(new Set());
     });
 
-    it('preserves requested reserved rows on reset while clearing remapped color slots', () => {
-        const { hiddenCategories, resetCategoryVisibility, toggleCategoryVisibility } =
-            useCategoryVisibility({ getCollectionId: () => 'col_1', getColorByType: () => null });
+    it('keeps a hidden class hidden after the backend re-ranks slots', () => {
+        const { colorLegend, hiddenCategories, toggleCategoryVisibility } = setup(CLASSES);
 
-        toggleCategoryVisibility(1); // reserved row, stable by index
-        toggleCategoryVisibility(4); // color slot, remapped on refresh
+        toggleCategoryVisibility(4);
+        colorLegend.set(
+            new Map([
+                [3, 'car'],
+                [4, 'person']
+            ])
+        );
 
-        resetCategoryVisibility([1, 2]);
+        expect(get(hiddenCategories)).toEqual(new Set([3]));
+    });
 
-        // Reserved row 1 survives; color slot 4 clears; row 2 was never hidden so it is not added.
+    it('hides a class again when it comes back to the legend', () => {
+        const { colorLegend, hiddenCategories, toggleCategoryVisibility } = setup(CLASSES);
+
+        toggleCategoryVisibility(4);
+        colorLegend.set(new Map([[3, 'person']]));
+        expect(get(hiddenCategories)).toEqual(new Set());
+
+        colorLegend.set(new Map([[5, 'car']]));
+        expect(get(hiddenCategories)).toEqual(new Set([5]));
+    });
+
+    it('clears all but Excluded on a color-by mode change', () => {
+        const { hiddenCategories, toggleCategoryVisibility, clearForColorByMode } = setup(CLASSES);
+        [1, 2, 3].forEach(toggleCategoryVisibility);
+
+        clearForColorByMode();
+
         expect(get(hiddenCategories)).toEqual(new Set([1]));
     });
 });

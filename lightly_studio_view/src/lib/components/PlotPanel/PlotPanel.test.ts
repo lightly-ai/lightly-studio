@@ -15,7 +15,7 @@ import {
 } from '$lib/hooks/useEmbeddingFilter/useEmbeddingFilterForAnnotations';
 import { tick } from 'svelte';
 import { usePlotColorByType } from './PlotColorByPopover/usePlotColorByType/usePlotColorByType';
-import { EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
+import { EXCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
 import { clearPlotLayout } from './usePlotLayout/usePlotLayout';
 
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
@@ -35,7 +35,7 @@ let hiddenCategoriesStore: Writable<Set<number>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
 let annotationLabelsQuery: { data?: unknown[]; isSuccess: boolean; isError: boolean };
 
-const mockResetCategoryVisibility = vi.fn();
+const mockClearForColorByMode = vi.fn();
 
 const tagsStore = writable([
     { tag_id: 'tag-a', name: 'alpha' },
@@ -88,7 +88,7 @@ vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
         hiddenCategories: hiddenCategoriesStore,
         toggleCategoryVisibility: vi.fn(),
         focusCategoryVisibility: vi.fn(),
-        resetCategoryVisibility: mockResetCategoryVisibility
+        clearForColorByMode: mockClearForColorByMode
     })
 }));
 const usePlotDataSpy = vi.hoisted(() => vi.fn());
@@ -877,45 +877,44 @@ describe('PlotPanel.svelte', () => {
         expect(screen.queryByTestId('plot-viewport')).not.toBeInTheDocument();
     });
 
-    it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
-        const legend = new Map([[3, 'dog']]);
-        const embeddingsResult = mockEmbeddingsQuery({ data: { columns: {}, legend } });
+    it('keeps hidden classes when the legend changes', async () => {
+        const embeddingsResult = mockEmbeddingsQuery({ data: { columns: {}, legend: new Map() } });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        // Ignore the reset that fires on mount; assert the one triggered by the legend change.
-        mockResetCategoryVisibility.mockClear();
-        // The query keeps an equal legend's object, so a refetch keeps the hidden classes.
-        embeddingsResult.set({ data: { columns: {}, legend } });
-        await tick();
-        expect(mockResetCategoryVisibility).not.toHaveBeenCalled();
-
-        embeddingsResult.set({ data: { columns: {}, legend: new Map([[3, 'cat']]) } });
+        embeddingsResult.set({ data: { columns: {}, legend: new Map([[3, 'dog']]) } });
         await tick();
 
-        // Reserved rows are stable by index, so they must survive a legend refresh.
-        expect(mockResetCategoryVisibility).toHaveBeenCalledWith([
-            EXCLUDED_BY_FILTERS_CATEGORY,
-            INCLUDED_BY_FILTERS_CATEGORY
-        ]);
+        expect(mockClearForColorByMode).not.toHaveBeenCalled();
     });
 
-    it('drops the "Included by filters / No category" row when the color-by mode changes', async () => {
+    it('clears hidden classes when the color-by mode changes', async () => {
         const user = userEvent.setup();
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
-        // Ignore the resets from mount; assert the one triggered by the color-by change.
-        mockResetCategoryVisibility.mockClear();
         await user.click(screen.getByTestId('plot-color-by-button'));
         await user.click(await screen.findByRole('option', { name: 'metadata.split' }));
         await tick();
 
-        // INCLUDED is relabeled when the color-by mode flips, so its hidden state must not carry
-        // over (it would otherwise hide every point in the relabeled slot). Only EXCLUDED survives.
-        expect(mockResetCategoryVisibility).toHaveBeenLastCalledWith([
-            EXCLUDED_BY_FILTERS_CATEGORY
-        ]);
+        expect(mockClearForColorByMode).toHaveBeenCalledOnce();
+    });
+
+    it('creating a tag keeps hidden classes', async () => {
+        const user = userEvent.setup();
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'tags' }));
+        await tick();
+        mockClearForColorByMode.mockClear();
+
+        tagsStore.update((tags) => [...tags, { tag_id: 'tag-c', name: 'gamma' }]);
+        await tick();
+
+        expect(lastEmbeddingsParams().colorBy).toMatchObject({
+            tag_ids: ['tag-a', 'tag-b', 'tag-c']
+        });
+        expect(mockClearForColorByMode).not.toHaveBeenCalled();
     });
     describe('while embeddings load', () => {
         it('keeps the plot on screen while a filter change loads', async () => {

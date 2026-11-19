@@ -4,17 +4,24 @@ import {
     OTHER_BUCKET_CATEGORY
 } from '../plotCategories';
 
+export const EXCLUDED_LEGEND_KEY = 'reserved:excluded';
+const INCLUDED_LEGEND_KEY = 'reserved:included';
+
 // The backend re-ranks the label slots when the filters change, so a hidden class is stored
 // by its label. The reserved rows get a fixed key instead.
 const RESERVED_KEY_BY_CATEGORY = new Map<number, string>([
-    [EXCLUDED_BY_FILTERS_CATEGORY, 'reserved:excluded'],
-    [INCLUDED_BY_FILTERS_CATEGORY, 'reserved:included']
+    [EXCLUDED_BY_FILTERS_CATEGORY, EXCLUDED_LEGEND_KEY],
+    [INCLUDED_BY_FILTERS_CATEGORY, INCLUDED_LEGEND_KEY]
 ]);
 
 // The Other bucket label lists its members, so it changes with the filters. The prefix
 // matches _format_other_label in embedding_coloring/coloring_helpers.py.
 const OTHER_BUCKET_KEY = 'other';
 const OTHER_BUCKET_LABEL_PREFIX = 'Other (';
+
+export function isReservedLegendKey(key: string): boolean {
+    return key === EXCLUDED_LEGEND_KEY || key === INCLUDED_LEGEND_KEY;
+}
 
 /**
  * Returns the key that identifies a legend row across legend changes, or undefined for a
