@@ -11,7 +11,7 @@ from lightly_studio.transport.local.local_transport import LocalTransport
 @pytest.fixture(autouse=True)
 def restore_active_transport(mocker: MockerFixture) -> None:
     mocker.patch.object(active_transport._active, "transport", None)
-    mocker.patch.object(db_manager, "_remote_client", False)
+    mocker.patch.object(db_manager._client_mode, "remote", False)
 
 
 def test_get_transport__default_is_local() -> None:
@@ -51,4 +51,4 @@ def test_set_transport__remote_blocks_database(mocker: MockerFixture) -> None:
     active_transport.set_transport(transport=None)
 
     assert not active_transport.is_remote()
-    assert not db_manager._remote_client
+    assert not db_manager._client_mode.remote

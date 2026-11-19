@@ -17,6 +17,7 @@ import logging
 import threading
 from collections.abc import Generator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 from typing import Annotated, Any
@@ -233,16 +234,21 @@ class DatabaseEngine:
                 persistent_session.commit()
 
 
+@dataclass
+class _ClientMode:
+    """Holds whether the Python client uses a remote transport. The client then has no database."""
+
+    remote: bool = False
+
+
 # Global database engine instance instantiated lazily.
 _engine: DatabaseEngine | None = None
-# True while the Python client uses a remote transport. The client then has no database.
-_remote_client = False
+_client_mode = _ClientMode()
 
 
 def set_remote_client(remote: bool) -> None:
     """Block access to the database while the Python client uses a remote transport."""
-    global _remote_client  # noqa: PLW0603
-    _remote_client = remote
+    _client_mode.remote = remote
 
 
 def get_engine() -> DatabaseEngine:
@@ -473,5 +479,5 @@ SessionDep = Annotated[Session, Depends(_session_dependency)]
 
 
 def _check_local() -> None:
-    if _remote_client:
+    if _client_mode.remote:
         raise NotImplementedError("This is not supported with a remote connection yet.")

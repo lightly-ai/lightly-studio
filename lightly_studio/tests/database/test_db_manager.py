@@ -549,7 +549,7 @@ def test_get_session_backend(tmp_path: Path) -> None:
 def test_set_remote_client__blocks_database(
     mocker: MockerFixture, access: Callable[[], object]
 ) -> None:
-    mocker.patch.object(db_manager, "_remote_client", False)
+    mocker.patch.object(db_manager._client_mode, "remote", False)
     db_manager.set_remote_client(remote=True)
 
     with pytest.raises(NotImplementedError, match="remote connection"):
