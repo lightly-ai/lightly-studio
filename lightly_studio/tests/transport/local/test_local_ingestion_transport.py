@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 from PIL import Image
@@ -48,9 +49,7 @@ class TestLocalIngestionTransport:
 
         with pytest.raises(ValueError, match="tag_depth must be non-negative"):
             transport.add_images_from_path(
-                collection_id=create_collection(
-                    session=db_manager.persistent_session()
-                ).collection_id,
+                collection_id=uuid4(),
                 path=str(tmp_path),
                 allowed_extensions=None,
                 embed=False,

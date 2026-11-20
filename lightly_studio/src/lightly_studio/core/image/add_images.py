@@ -248,13 +248,17 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
     """
     images_root_abs = path_utils.normalize_path_root(images_path)
 
-    # Some formats open images to read the dimensions during the get_labels() scan.
+    # Some formats open images to read the dimensions during the get_images() and get_labels() scans
     # Collector is used to record BROKEN images and skip, preventing abort of the ingest. Pascal VOC
     # scans at construction and passes its collector in, so its report is reused here.
     if broken_image_collector is None:
         broken_image_collector = BrokenImageCollector()
     report = broken_image_collector.report
     input_labels.on_error = broken_image_collector  # type: ignore[union-attr]
+
+    # Scan all images, also those after `limit`, so that the report counts every broken image.
+    for _ in input_labels.get_images():
+        pass
 
     # Phase 1: Sample creation
     labels: Iterable[object] = input_labels.get_labels()
