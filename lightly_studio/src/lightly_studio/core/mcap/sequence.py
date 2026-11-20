@@ -10,6 +10,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.resolvers import sequence_resolver
+from lightly_studio.transport import active_transport
 
 
 @dataclass(frozen=True)
@@ -87,8 +88,7 @@ class McapSequence:
             sqlalchemy.exc.IntegrityError: If a group is already in a sequence, or if a
                 slot is taken.
         """
-        sequence_resolver.add_samples(
-            session=self._session,
+        active_transport.get_transport().ingestion.add_sequence_samples(
             sequence_sample_id=self._sample_id,
             links=[
                 SampleSequenceLinkCreate(

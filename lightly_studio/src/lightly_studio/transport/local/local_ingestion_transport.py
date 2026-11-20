@@ -16,6 +16,7 @@ from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
@@ -24,6 +25,7 @@ from lightly_studio.resolvers import (
     group_resolver,
     image_resolver,
     sensor_calibration_resolver,
+    sequence_resolver,
     static_transform_resolver,
 )
 
@@ -213,6 +215,16 @@ class LocalIngestionTransport:
         """Add dynamic transforms between the coordinate frames of MCAP recordings."""
         return dynamic_transform_resolver.create_many(
             session=db_manager.persistent_session(), rows=rows
+        )
+
+    def add_sequence_samples(
+        self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]
+    ) -> None:
+        """Put groups in the slots of an MCAP sequence, in a single commit."""
+        sequence_resolver.add_samples(
+            session=db_manager.persistent_session(),
+            sequence_sample_id=sequence_sample_id,
+            links=links,
         )
 
 
