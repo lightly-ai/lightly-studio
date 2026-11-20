@@ -28,7 +28,7 @@ from labelformat.model.video import Video
 from pytest_mock import MockerFixture
 from sqlmodel import Session
 
-from lightly_studio.core.video import add_videos, video_dataset
+from lightly_studio.core.video import add_videos
 from lightly_studio.core.video.add_videos import FrameExtractionContext
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
@@ -601,7 +601,9 @@ def test_load_video_annotations_from_labelformat(
         video_annotations=[video_annotation],
     )
 
-    video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
+    video_paths = add_videos.collect_video_file_paths(
+        path=str(tmp_path), allowed_extensions=None, limit=None
+    )
 
     # Act
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
@@ -672,7 +674,9 @@ def test_load_video_annotations_from_labelformat__multiple_videos(
         video_annotations=[video_annotation_1, video_annotation_2],
     )
 
-    video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
+    video_paths = add_videos.collect_video_file_paths(
+        path=str(tmp_path), allowed_extensions=None, limit=None
+    )
 
     # Act
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
@@ -737,7 +741,9 @@ def test_load_video_annotations_from_labelformat__same_name_in_different_folders
         categories=categories,
         video_annotations=[video_annotation_1, video_annotation_2],
     )
-    video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
+    video_paths = add_videos.collect_video_file_paths(
+        path=str(tmp_path), allowed_extensions=None, limit=None
+    )
 
     # Act
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
@@ -879,7 +885,9 @@ def test_load_video_annotations_from_labelformat__raises_on_frame_mismatch(
         video_annotations=[video_annotation],
     )
 
-    video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
+    video_paths = add_videos.collect_video_file_paths(
+        path=str(tmp_path), allowed_extensions=None, limit=None
+    )
 
     # Act / Assert
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
@@ -918,7 +926,9 @@ def test_load_video_annotations_from_labelformat__raises_on_missing_video(
         video_annotations=[video_annotation],
     )
 
-    video_paths = video_dataset._collect_video_file_paths(path=tmp_path)
+    video_paths = add_videos.collect_video_file_paths(
+        path=str(tmp_path), allowed_extensions=None, limit=None
+    )
 
     # Act / Assert
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
