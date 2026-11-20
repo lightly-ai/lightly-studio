@@ -30,9 +30,9 @@ class LocalAnnotationTransport:
     def get_or_create_labels(
         self, dataset_id: UUID, label_names: Sequence[str]
     ) -> list[AnnotationLabelView]:
-        """Get annotation labels by name. Create the labels that do not exist.
+        """Get annotation classes by name. Create the classes that do not exist.
 
-        Returns one label for each distinct name, in the order of `label_names`.
+        Returns one class for each distinct name, in the order of `label_names`.
         """
         session = db_manager.persistent_session()
         return [
@@ -93,14 +93,19 @@ class LocalAnnotationTransport:
         )
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
-        """Delete annotations by ID.
+        """Delete annotations by ID. Delete nothing if an annotation does not exist.
 
         Raises:
             ValueError: If an annotation does not exist.
         """
         session = db_manager.persistent_session()
-        for annotation_id in annotation_ids:
-            annotations_service.delete_annotation(session=session, annotation_id=annotation_id)
+        found = annotation_resolver.get_by_ids(session=session, annotation_ids=annotation_ids)
+        missing_ids = set(annotation_ids) - {annotation.sample_id for annotation in found}
+        if missing_ids:
+            raise ValueError(f"Annotations not found: {sorted(str(id_) for id_ in missing_ids)}")
+        annotation_resolver.delete_annotations_by_ids(
+            session=session, annotation_ids=annotation_ids
+        )
 
     def delete_existing(self, annotation_ids: Sequence[UUID]) -> int:
         """Delete annotations by ID. IDs that do not exist are ignored."""
