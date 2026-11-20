@@ -246,7 +246,7 @@ def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
     assert annotation_state is not None
     assert "annotation_label" not in annotation_state.unloaded
     assert "object_detection_details" not in annotation_state.unloaded
-    image_sample = ImageSample(result[0])
+    image_sample = ImageSample(inner=result[0])
     annotations = image_sample.annotations
     assert len(annotations) == 1
     assert annotations[0].class_name == "cat"
