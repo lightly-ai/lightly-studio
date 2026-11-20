@@ -8,7 +8,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionWithoutChildrenView,

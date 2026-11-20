@@ -9,7 +9,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import add_mcaps, compressed_image, compressed_video
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.database import db_manager
 from lightly_studio.embed import embed_mcap_sequences
