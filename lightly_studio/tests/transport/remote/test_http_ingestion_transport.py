@@ -85,3 +85,13 @@ class TestHttpIngestionTransport:
 
             with pytest.raises(NotImplementedError):
                 transport.add_group_samples(collection_id=uuid4(), groups=[])
+
+    @pytest.mark.parametrize(
+        "method", ["add_sensor_calibrations", "add_static_transforms", "add_dynamic_transforms"]
+    )
+    def test_add_recording_rows(self, method: str) -> None:
+        with httpx.Client() as client:
+            transport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                getattr(transport, method)(rows=[])
