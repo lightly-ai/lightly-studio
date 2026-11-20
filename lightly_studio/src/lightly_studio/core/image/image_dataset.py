@@ -38,12 +38,12 @@ from lightly_studio.export.image_dataset_export import ImageDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
-    collection_embedding_model_resolver,
     collection_resolver,
     image_resolver,
     tag_resolver,
 )
 from lightly_studio.services import annotation_source_service
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -197,10 +197,8 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
             )
 
         if embed:
-            _generate_embeddings_image(
-                session=self.session,
-                collection_id=self.collection_id,
-                sample_ids=created_sample_ids,
+            active_transport.get_transport().ingestion.embed_images(
+                collection_id=self.collection_id, sample_ids=created_sample_ids
             )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.IMAGE, ingest_format=IngestFormat.FOLDER
@@ -865,10 +863,8 @@ def _postprocess_created_images(
         )
 
     if embed:
-        _generate_embeddings_image(
-            session=session,
-            collection_id=collection_id,
-            sample_ids=sample_ids,
+        active_transport.get_transport().ingestion.embed_images(
+            collection_id=collection_id, sample_ids=sample_ids
         )
 
 
@@ -878,38 +874,6 @@ def _normalize_input_path(path: PathLike) -> PathLike:
     if isinstance(fs, LocalFileSystem):
         return Path(path).absolute()
     return str(path)
-
-
-def _generate_embeddings_image(
-    session: Session,
-    collection_id: UUID,
-    sample_ids: list[UUID],
-) -> None:
-    """Generate and store embeddings for samples.
-
-    Existing samples that have no embedding of the collection's default model are embedded
-    too, so a rerun completes an embedding that failed before.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The ID of the collection to associate with the embedding model.
-        sample_ids: List of sample IDs to generate embeddings for.
-    """
-    default_model_id = collection_embedding_model_resolver.get_default_by_collection_id(
-        session=session, collection_id=collection_id
-    )
-    if default_model_id is not None:
-        unembedded_sample_ids = image_resolver.get_unembedded_sample_ids(
-            session=session, collection_id=collection_id, embedding_model_id=default_model_id
-        )
-        sample_ids = list(dict.fromkeys([*sample_ids, *unembedded_sample_ids]))
-
-    if not sample_ids:
-        return
-
-    embed_samples.embed_image_samples(
-        session=session, collection_id=collection_id, sample_ids=sample_ids
-    )
 
 
 def _generate_embeddings_annotations(
