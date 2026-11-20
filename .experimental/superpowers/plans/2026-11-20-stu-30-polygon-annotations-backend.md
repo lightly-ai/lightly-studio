@@ -50,19 +50,19 @@ Inputs most likely to break for users. Each one has a test in the task named.
 
 Target: at most ~200 added lines of non-test code per PR. Estimates are non-test lines. Resolver changes touch many files with imports and load options, so their estimates are generous. PRs are stacked in this order, and tasks run in PR order. Each PR adds its own changelog entry (see the list in Task 15).
 
-| PR | Tasks | Content | Est. non-test LOC |
-|---|---|---|---|
-| labelformat | 10 | YOLO segmentation reader fix, release 0.1.18 (other repo) | ~10 |
-| 1 | 1 | Type, table, validation, migration | ~135 |
-| 2 | 2, 4 | Create, read and delete polygons: resolvers, API, `PolygonAnnotation`, `CreatePolygon` | ~165 |
-| 3 | 3 | Copy, class change, crops | ~85 |
-| 4 | 5 | Edit polygons, reject box edits | ~105 |
-| 5 | 6 | Query by box | ~90 + generated types |
-| 6 | 8, 9 | Export to COCO and YOLO | ~150 + generated types |
-| 7 | 14 | Export dialog entries (frontend) | ~40 |
-| 8 | 10 (bump), 12, 7 | COCO ingestion keeps polygons; evaluation rejects polygon sources | ~85 + `uv.lock` |
-| 9 | 11, 13 | `AnnotationFileTask`, `annotation_task`, YOLO segmentation, deprecation | ~100 |
-| 10 | 15 | Docs, examples, glossary | docs only |
+| PR | Branch | Tasks | Content | Est. non-test LOC |
+|---|---|---|---|---|
+| labelformat | (labelformat repo) | 10 | YOLO segmentation reader fix, release 0.1.18 (other repo) | ~10 |
+| 1 | `michal-stu-165-01-polygon-type-table` | 1 | Type, table, validation, migration | ~135 |
+| 2 | `michal-stu-165-02-create-read-delete` | 2, 4 | Create, read and delete polygons: resolvers, API, `PolygonAnnotation`, `CreatePolygon` | ~165 |
+| 3 | `michal-stu-165-03-copy-relabel-crops` | 3 | Copy, class change, crops | ~85 |
+| 4 | `michal-stu-165-04-edit-polygons` | 5 | Edit polygons, reject box edits | ~105 |
+| 5 | `michal-stu-165-05-query-by-box` | 6 | Query by box | ~90 + generated types |
+| 6 | `michal-stu-165-06-export-coco-yolo` | 8, 9 | Export to COCO and YOLO | ~150 + generated types |
+| 7 | `michal-stu-165-07-export-dialog` | 14 | Export dialog entries (frontend) | ~40 |
+| 8 | `michal-stu-165-08-coco-ingestion` | 10 (bump), 12, 7 | COCO ingestion keeps polygons; evaluation rejects polygon sources | ~85 + `uv.lock` |
+| 9 | `michal-stu-165-09-annotation-task` | 11, 13 | `AnnotationFileTask`, `annotation_task`, YOLO segmentation, deprecation | ~100 |
+| 10 | `michal-stu-165-10-docs` | 15 | Docs, examples, glossary | docs only |
 
 - **PR 8 carries the evaluation error.** From PR 8 on, existing COCO segmentation calls store polygons, so that is when evaluation starts to see them.
 - **PR 6 is the riskiest size.** If the export loader grows past the estimate, split it: COCO (Task 8), then YOLO (Task 9).
