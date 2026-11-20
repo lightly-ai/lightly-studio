@@ -163,6 +163,7 @@
                     style:left={`${((mark.index + 0.5) / ticks.length) * 100}%`}
                     title={formatTickTime(mark.tick.timestamp_ns)}
                     data-testid="timeline-tick-mark"
+                    data-labeled={mark.isLabeled || undefined}
                 ></span>
             {/each}
             <input

@@ -347,7 +347,7 @@ describe('FrameTimeline', () => {
 
             const longMarks = screen
                 .getAllByTestId('timeline-tick-mark')
-                .filter((mark) => mark.classList.contains('h-4'));
+                .filter((mark) => mark.hasAttribute('data-labeled'));
             const labels = ['100', '200', '300', '400', '500', '600', '700', '800', '900', '1000'];
             expect(longMarks.map((mark) => mark.style.left)).toEqual(
                 labels.map((label) => screen.getByText(label).style.left)
