@@ -647,6 +647,7 @@ class TestImageSample:
                 )
             ],
             collection_name="gt",
+            covered_sample_ids=[],
         )
 
     @pytest.mark.usefixtures("patch_collection")
