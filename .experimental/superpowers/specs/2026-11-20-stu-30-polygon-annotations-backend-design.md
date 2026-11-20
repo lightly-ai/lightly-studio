@@ -7,7 +7,7 @@ Users need outlines for irregular objects. Boxes are too coarse, and pixel masks
 ## Scope
 
 - A polygon annotation: one or more parts (closed loops), no holes, on images and video frames.
-- Add polygons from COCO and YOLO, and export them to COCO and YOLO.
+- Add polygons from COCO, YOLO and YouTube-VIS, and export them to the same formats.
 - Polygons can be queried by their bounding box, and cropped for embeddings on images. Crops on video frames aren't supported, the same as for masks today.
 - The dropped-vertices bug is fixed.
 - Backend only. It ships before the frontend, and until then the GUI can't show polygons. That gap is accepted.
@@ -42,23 +42,19 @@ Users need outlines for irregular objects. Boxes are too coarse, and pixel masks
 
 ## Ingestion
 
-A new public enum chooses what to read:
+Today the COCO and YouTube-VIS methods take `annotation_type` (`OBJECT_DETECTION` or `SEGMENTATION_MASK`) to choose what to read from the file. With polygons, one segmentation file gives two annotation types: polygons and masks. So an annotation type can no longer name the choice. A new public enum names what to read instead:
 
 ```python
-class AnnotationTask(str, Enum):
+class AnnotationFileTask(str, Enum):
     OBJECT_DETECTION = "object_detection"
     INSTANCE_SEGMENTATION = "instance_segmentation"
 ```
 
 - **COCO** (`add_samples_from_coco`, `add_annotations_from_coco`): `annotation_task` defaults to `OBJECT_DETECTION`. With `INSTANCE_SEGMENTATION`, `iscrowd=0` entries become polygons and `iscrowd=1` entries become masks, so a mixed file like COCO 2017 comes in completely in one call.
 - **YOLO** (`add_samples_from_yolo`, `add_annotations_from_yolo`): with `INSTANCE_SEGMENTATION`, each segmentation line becomes a single-part polygon.
-- **Deprecation:** the old `annotation_type` on the COCO methods still works and raises a `DeprecationWarning`. `SEGMENTATION_MASK` maps to `INSTANCE_SEGMENTATION`. Passing both parameters raises `ValueError`. It is removed in a later minor release. Both the deprecation and the removal get changelog entries.
-  - *Alternatives considered:* the three below. A new parameter fits better, because it chooses what to read from the file (a task), not the type that gets stored.
-    - Keeping only `SEGMENTATION_MASK`: it would also create polygons, which a caller doesn't expect.
-    - Accepting both `SEGMENTATION_MASK` and `POLYGON` with the same behavior: two names for one thing.
-    - Making each value strict (polygons only, or masks only): a mixed file would lose entries.
+- **Deprecation:** the old `annotation_type` on the COCO and YouTube-VIS methods still works and raises a `DeprecationWarning`. `SEGMENTATION_MASK` maps to `INSTANCE_SEGMENTATION`. Passing both parameters raises `ValueError`. It is removed in a later minor release. Both the deprecation and the removal get changelog entries.
 - **Invalid polygons:** parts with fewer than 3 vertices are dropped. An annotation with no valid parts is skipped, with one warning that gives the count. COCO 2017 has a few *(my call)*.
-- **YouTube-VIS** keeps today's behavior until its follow-up. The shared ingestion helper is split so only image ingestion changes *(my call)*.
+- **YouTube-VIS** shares the ingestion helper with COCO, so it gets the same fix: polygon frames become polygon annotations with their tracks, not box-only masks. It also takes `annotation_task` (`add_samples_from_youtube_vis`). Official YouTube-VIS data uses RLE masks, so this only affects polygon-based files.
 
 ## Export
 
@@ -66,6 +62,7 @@ class AnnotationTask(str, Enum):
   - *Alternative considered:* a separate polygons-only COCO export. A mixed dataset like COCO 2017 would lose its crowd masks on the way out.
 - **New "Instance segmentation (YOLO)":** polygons only. YOLO has no mask encoding, so masks are skipped with a warning that gives the count. YOLO allows one polygon per object, so labelformat joins the parts with zero-width bridges, and a multi-part polygon comes back as one part.
 - **Pascal VOC stays masks-only.** It shares the COCO export's annotation input, and labelformat's Pascal VOC writer already rasterizes polygons, so including polygons would quietly convert them to masks. That conversion is out of scope; the follow-up can reuse this labelformat code.
+- **YouTube-VIS** includes polygon tracks, written as `MultiPolygon` per frame, which labelformat's writer supports. Today the export reads only masks, so polygon tracks would be left out.
 - **Python:** `to_coco_instance_segmentation` and `to_yolo_instance_segmentation`. `to_coco_segmentation_masks` is deprecated like `annotation_type` *(my call)*.
 
 ## Other changes
@@ -78,11 +75,10 @@ class AnnotationTask(str, Enum):
 
 ## Follow-ups
 
-- YouTube-VIS ingestion and export of polygons, with the same `annotation_task` deprecation. Labelformat already supports both.
 - Rasterizing polygons, for evaluation in memory against polygons or masks (as COCOeval does), and optionally for polygon-to-mask export, including Pascal VOC. Labelformat's Pascal VOC writer already has a polygon rasterizer that could be reused.
 - Remove the deprecated `annotation_type` and `to_coco_segmentation_masks`.
 - Optional, in labelformat: its COCO reader decides the type by `iscrowd`, while pycocotools and Detectron2 check the data type. A file with RLE and `iscrowd=0` therefore fails in labelformat.
 
 ## Left to the builder
 
-File, table and class names, except the public `AnnotationType.POLYGON`, `AnnotationTask`, `annotation_task` and the Python API names above. Also left: the `ExportFormat` values, the PR split, and test names.
+File, table and class names, except the public `AnnotationType.POLYGON`, `AnnotationFileTask`, `annotation_task` and the Python API names above. Also left: the `ExportFormat` values, the PR split, and test names.
