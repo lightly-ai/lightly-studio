@@ -26,6 +26,7 @@
 - Names: table `polygon_annotation`, relationship `AnnotationBaseTable.polygon_details`, model file `models/annotation/polygon.py`.
 - `annotation_type` stays at its position, and `annotation_task` is the last parameter. Its default is `None`, which means `OBJECT_DETECTION`. This keeps positional calls working, and it lets the code detect when both are passed.
 - `ExportFormat.SEGMENTATION_MASK_COCO` keeps its value, so the API doesn't break. The new value is `INSTANCE_SEGMENTATION_YOLO = "instance_segmentation_yolo"`.
+- Errors: new resolvers and services raise `ValueError`, like the nearby `update_bounding_box` and `update_segmentation_mask`, not domain errors from `errors.py`. This is a deliberate exception from `backend-guide`; the existing `ValueError` handler maps them to HTTP responses.
 - `to_coco_segmentation_masks` becomes a deprecated alias of `to_coco_instance_segmentation`, so it also exports polygons.
 
 ## How to work
@@ -120,10 +121,10 @@ def test_validate_polygons__invalid(polygons, message) -> None:
 ```
 
 - [ ] **Step 2: Run** `uv run pytest tests/models/annotation/test_polygon.py -v` — FAIL (module missing).
-- [ ] **Step 3: Implement** `polygon.py` and the `annotation_base.py` changes. Round with `round(v, 3)`; box `x = floor(min_x)`, `width = ceil(max_x) - x` (same for y). Error messages name "polygon" and "part", e.g. `"A polygon needs at least 1 part."`, `"Each polygon part needs at least 3 vertices."`, `"Polygon vertices must be finite numbers."`.
+- [ ] **Step 3: Implement** `polygon.py` and the `annotation_base.py` changes. Name the numbers as separate constants, `COORDINATE_DECIMALS = 3` and `MIN_VERTICES_PER_PART = 3` (clean-code: no unnamed literals). Round with `round(v, COORDINATE_DECIMALS)`; box `x = floor(min_x)`, `width = ceil(max_x) - x` (same for y). Error messages name "polygon" and "part", e.g. `"A polygon needs at least 1 part."`, `"Each polygon part needs at least 3 vertices."`, `"Polygon vertices must be finite numbers."`.
 - [ ] **Step 4: Write the migration**, mirroring `1789700000_e1f2a3b4c5d6_add_cuboid_3d_annotation.py`: `sync_enum_values` adding `"POLYGON"`, `create_table("polygon_annotation", sample_id Uuid PK+FK, x/y/width/height Integer not null, polygons JSON not null)`. Downgrade deletes rows (`polygon_annotation`, then `annotation_base WHERE annotation_type = 'POLYGON'`), drops the table, syncs the enum back.
 - [ ] **Step 5: Add migration test** `test_postgres_polygon_annotation__upgrade_and_downgrade` in `test_db_migrations.py`, following `test_postgres_unused_embedding_cache__upgrade_and_downgrade`: after upgrade, insert a polygon row and read back `polygons` equal to the inserted nested list; after downgrade, the table is gone.
-- [ ] **Step 6: Run** `uv run pytest tests/models/annotation/test_polygon.py tests/database/test_db_migrations.py -v` — PASS (Postgres tests need `make start-postgres`).
+- [ ] **Step 6: Run** `uv run pytest tests/models/annotation/test_polygon.py tests/database/test_db_migrations.py -v` — PASS. Then run the migration test on Postgres: `uv run pytest tests/database/test_db_migrations.py --postgres -k polygon -v` — PASS. Without `--postgres`, `postgres_only` tests are skipped and the migration is not tested; the flag starts its own Testcontainers database.
 - [ ] **Step 7: Commit** `feat: add polygon annotation type and table`
 
 ---
@@ -207,7 +208,9 @@ API test `test_create_annotation__polygon`: POST with `annotation_type="polygon"
 
 **Interfaces:**
 - Produces:
-  - `class PolygonAnnotation(Annotation)`: `DBField`s `x, y, width, height, polygons` on `PolygonAnnotationTable`; `__init__(self, inner: PolygonAnnotationTable)` raises `ValueError("Expected annotation type: polygon")` for other types.
+  - `class PolygonAnnotation(Annotation)`: `__init__(self, inner: PolygonAnnotationTable)` raises `ValueError("Expected annotation type: polygon")` for other types. No writable `DBField`s: `DBField.__set__` commits the raw value, which would skip validation and leave the box stale. Instead:
+    - `x, y, width, height`: read-only properties (no setter), because the box is derived from the vertices.
+    - `polygons`: property whose setter calls the Task 5 service `update_annotation_polygons`, so it validates and recomputes the box. Task 4 lands before Task 5 (PR 2 vs PR 4), so add the setter in Task 5 and make `polygons` read-only until then.
   - `class CreatePolygon(CreateAnnotationBase)`: `polygons: Polygons` (docstring: "Parts of the polygon, each a list of (x, y) vertices in pixels."); `to_annotation_create(...)` returns `AnnotationCreate(annotation_type=POLYGON, polygons=self.polygons, ...)`.
 
 - [ ] **Step 1: Write failing tests**
@@ -224,6 +227,10 @@ def test_image_sample__add_polygon_annotation(...) -> None:
     (annotation,) = sample.annotations
     assert isinstance(annotation, PolygonAnnotation)
     assert annotation.width == 4
+
+def test_polygon_annotation__box_is_read_only(...) -> None:
+    with pytest.raises(AttributeError):
+        annotation.width = 10
 ```
 
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS.
@@ -235,8 +242,8 @@ def test_image_sample__add_polygon_annotation(...) -> None:
 
 **Files:**
 - Create: `resolvers/annotation_resolver/update_polygons.py`, `services/annotations_service/update_annotation_polygons.py`
-- Modify: `resolvers/annotation_resolver/__init__.py`, `services/annotations_service/__init__.py`, `services/annotations_service/update_annotation.py` (`AnnotationUpdate.polygons: Polygons | None = None`), `api/routes/api/annotation.py` (`AnnotationUpdateInput.polygons`, passed through), `resolvers/annotation_resolver/update_bounding_box.py`
-- Test: `tests/resolvers/annotations/test_update_polygons.py`, `tests/services/annotations_service/test_update_annotation.py`, `tests/resolvers/annotations/test_annotations_update_bounding_box.py`
+- Modify: `resolvers/annotation_resolver/__init__.py`, `services/annotations_service/__init__.py`, `services/annotations_service/update_annotation.py` (`AnnotationUpdate.polygons: Polygons | None = None`), `api/routes/api/annotation.py` (`AnnotationUpdateInput.polygons`, passed through), `resolvers/annotation_resolver/update_bounding_box.py`, `core/annotation/polygon.py` (`PolygonAnnotation.polygons` setter, see Task 4)
+- Test: `tests/resolvers/annotations/test_update_polygons.py`, `tests/services/annotations_service/test_update_annotation.py`, `tests/resolvers/annotations/test_annotations_update_bounding_box.py`, `tests/core/image/test_image_sample.py`
 
 **Interfaces:**
 - Consumes: Task 1 `validate_polygons`.
@@ -248,6 +255,7 @@ def test_image_sample__add_polygon_annotation(...) -> None:
   - `test_update_polygons__not_a_polygon`: on an object detection → `ValueError("Annotation type does not support polygons.")`.
   - `test_update_bounding_box__polygon_rejected`: `ValueError` whose message says to edit the vertices; box unchanged.
   - API `test_update_annotation__polygons`: PUT with `polygons` → 200, new box in response.
+  - SDK `test_polygon_annotation__set_polygons`: `annotation.polygons = [[(0,0),(9,0),(9,7)]]` → `annotation.width == 9`; a 2-vertex part → `ValueError`, stored polygon unchanged.
 - [ ] **Step 2: Run** — FAIL.
 - [ ] **Step 3: Implement.** In `update_bounding_box`, add a branch before the `else`: `elif annotation.polygon_details: raise ValueError("The box of a polygon annotation can't be edited. Edit its vertices instead.")`.
 - [ ] **Step 4: Run** — PASS. **Step 5: Commit** `feat: update polygon annotations`
@@ -262,7 +270,7 @@ def test_image_sample__add_polygon_annotation(...) -> None:
 - Test: `tests/core/dataset_query/test_polygon_query.py`, `tests/core/dataset_query/test_query_translation__database.py`, `tests/core/dataset_query/test_video_frame_query.py`
 
 **Interfaces:**
-- Produces: `PolygonMatchExpr(type: Literal["polygon_match_expr"], subexpr: MatchExpr)`; `PolygonField.{x,y,width,height,class_name,source,confidence}`; `PolygonQuery(*criteria: MatchExpr)` matching samples with an annotation of type `POLYGON` meeting the criteria.
+- Produces: `PolygonMatchExpr(type: Literal["polygon_match_expr"], subexpr: MatchExpr)`; `PolygonField.{x,y,width,height,class_name,source,confidence}`; `PolygonQuery(*criteria: MatchExpression)` (like `SegmentationMaskQuery`; `MatchExpr` is the request-model union, not the query type) matching samples with an annotation of type `POLYGON` meeting the criteria.
 
 - [ ] **Step 1: Write failing tests**
   - `test_polygon_query__width`: two images, polygons with box widths 10 and 50; `PolygonQuery(PolygonField.width > 20)` returns only the second.
@@ -270,7 +278,7 @@ def test_image_sample__add_polygon_annotation(...) -> None:
   - `test_query_translation__polygon_match_expr` (database): `QueryExpr` JSON `{"type": "polygon_match_expr", "subexpr": {"type": "integer_expr", "field": {"table": "polygon", "name": "x"}, ...}}` translates and returns the expected sample.
   - `test_video_frame_query__polygon`: `frame(polygon(width > 20))` scope validates on a video collection.
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS.
-- [ ] **Step 5: Regenerate the frontend API types** (`cd lightly_studio_view && npm run generate-api-client`) so `types.gen.ts` / `schemas.gen.ts` include the new models; commit them.
+- [ ] **Step 5: Regenerate the frontend API types**: first export the schema (`cd lightly_studio && uv run src/lightly_studio/export_schema.py`, which writes `lightly_studio/openapi.json`), then `cd lightly_studio_view && npm run generate-api-client`. The client reads `openapi.json` and does not export it itself. This makes `types.gen.ts` / `schemas.gen.ts` include the new models; commit them.
 - [ ] **Step 6: Commit** `feat: query polygon annotations by box`
 
 ---
@@ -351,7 +359,7 @@ def test_to_pascalvoc_segmentation_mask__ignores_polygons(...) -> None:
   - `test_youtube_vis_export__polygon_track`: a 2-frame track of polygons → the exported `segmentations[i]` are COCO polygon lists, not `None`.
   - API: `test_export__instance_segmentation_yolo` returns a zip/dir with `labels/`.
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS.
-- [ ] **Step 5: Regenerate API client types** (new `ExportFormat` value) and commit them.
+- [ ] **Step 5: Regenerate API client types** (new `ExportFormat` value) as in Task 6 step 5: `export_schema.py` first, then `npm run generate-api-client`. Commit them.
 - [ ] **Step 6: Commit** `feat: export polygons to YOLO and YouTube-VIS`
 
 ---
@@ -396,7 +404,10 @@ def test_to_pascalvoc_segmentation_mask__ignores_polygons(...) -> None:
 
 **Files:**
 - Modify: `core/labelformat_helpers.py`, `core/image/add_annotations.py`, `core/video/add_videos.py`
-- Test: `tests/core/test_labelformat_helpers.py` (create if missing), `tests/core/image/test_add_annotations.py`
+- Test: `tests/core/test_labelformat_helpers.py`, `tests/core/image/test_add_annotations.py`, `tests/core/video/test_video_dataset.py`
+- Update existing tests that assert the old behavior (they fail once this task works):
+  - `test_labelformat_helpers.py::test_get_segmentation_annotation_create__with_multipolygon` expects `SEGMENTATION_MASK` → expect `POLYGON` (or merge into the new test below).
+  - `test_video_dataset.py::test_add_videos_from_youtube_vis__segmentation_mask` loads polygon frames (`[[0, 0, 1, 1, 2, 1]]`) and expects masks → expect `POLYGON`. Keep the `annotation_type=` argument; Task 14 deprecates it.
 
 **Interfaces:**
 - Produces:
@@ -474,15 +485,15 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) 
 ### Task 15: Export dialog entries (frontend)
 
 **Files:**
-- Modify: `lightly_studio_view/src/lib/components/ExportSamples/ExportSamples.svelte`
-- Test: the existing ExportSamples test file next to the component (add cases there)
+- Modify: `lightly_studio_view/src/lib/components/ExportSamples/exportOptions.ts` (`ExportType` union, the format list and its labels), `lightly_studio_view/src/lib/components/ExportSamples/ExportSamples.svelte` (tab content for the new type)
+- Test: `lightly_studio_view/src/lib/components/ExportSamples/exportOptions.test.ts` (there is no `ExportSamples.svelte` test)
 
 **Interfaces:**
 - Consumes: Task 9 `ExportFormat.INSTANCE_SEGMENTATION_YOLO` in the generated client.
-- Produces: the "segmentation" tab title becomes "Instance segmentation (COCO)" with description "Polygons and segmentation masks will be exported in COCO format."; a new tab "Instance segmentation (YOLO)" with description "Polygons will be exported in YOLO format. Segmentation masks are skipped." and `testId="submit-button-instance-segmentations-yolo"`.
+- Produces: in `exportOptions.ts`, the `segmentation` option label "Image Segmentation Mask (COCO)" becomes "Instance segmentation (COCO)", and a new `ExportType` value with label "Instance segmentation (YOLO)" is listed for image collections. In `ExportSamples.svelte`, the COCO tab description is "Polygons and segmentation masks will be exported in COCO format."; the YOLO tab has description "Polygons will be exported in YOLO format. Segmentation masks are skipped.", `testId="submit-button-instance-segmentations-yolo"`, and submits `instance_segmentation_yolo`.
 
-- [ ] **Step 1: Write the failing test**: rendering the dialog for an image collection shows both tab titles; clicking the YOLO submit calls export with `instance_segmentation_yolo`.
-- [ ] **Step 2: Run** `npx vitest run <that test file>` — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS; `make static-checks` in `lightly_studio_view`.
+- [ ] **Step 1: Write the failing tests** in `exportOptions.test.ts`: the options for an image collection include both labels; the COCO option no longer says "Segmentation Mask".
+- [ ] **Step 2: Run** `npx vitest run src/lib/components/ExportSamples/exportOptions.test.ts` — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS; `make static-checks` in `lightly_studio_view`.
 - [ ] **Step 5: Commit** `feat: add instance segmentation export entries`
 
 ---
@@ -493,7 +504,7 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) 
 - Modify: `lightly_studio/docs/docs/workflows/export.md` (new COCO/YOLO entries; note that COCOeval treats `iscrowd=1` as ignore regions), `lightly_studio/docs/docs/workflows/image_dataset.md` and any page using `annotation_type=` (switch to `annotation_task=`), examples `examples/example_coco.py`, `examples/example_coco_s3.py`, `examples/coco_plugins_demo/example_coco_plugins.py`, `examples/example_video_annotations.py`
 - Modify: `.agents/skills/glossary/SKILL.md` (rows for **polygon** and **part**; avoid "multipolygon"; add polygon to the annotation row)
 
-- [ ] **Step 1:** `grep -rn "annotation_type=\|to_coco_segmentation_masks" lightly_studio/docs lightly_studio/src/lightly_studio/examples README.md` — replace every hit.
+- [ ] **Step 1:** `grep -rn "annotation_type=\|to_coco_segmentation_masks" lightly_studio/docs lightly_studio/src/lightly_studio/examples README.md`. Replace only calls to the deprecated APIs: `add_annotations_from_coco`, `add_samples_from_coco`, `add_annotations_from_yolo`, `add_samples_from_yolo`, `add_videos_from_youtube_vis`, and `to_coco_segmentation_masks`. Leave other `annotation_type=` uses alone, e.g. `AnnotationCreate(annotation_type=...)` in `examples/coco_plugins_demo/lightly_train_inference_operator.py` and its docs snippet; `AnnotationCreate` still requires it.
 - [ ] **Step 2: Changelog entries** (load the `changelog` skill), one per change. Each entry goes into the PR that makes the change, not into this PR. This step lists them and checks that they are all there:
   - Added: `Python SDK: Load polygon annotations from COCO, YOLO and YouTube-VIS with annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION, and export them to the same formats.`
   - Added: `Export polygons to YOLO with the new "Instance segmentation (YOLO)" export.`
