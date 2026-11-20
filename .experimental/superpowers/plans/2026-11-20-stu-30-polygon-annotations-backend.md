@@ -11,7 +11,7 @@
 - **Storage:** a `polygon_annotation` details table, one-to-one with `annotation_base`, like the other types. It has a JSON `polygons` column and an integer box.
 - **One validation function** rounds the vertices and computes the box on every write, because the database doesn't check the shape.
 - **Mirror masks:** each place that handles `SegmentationAnnotationTable` today gets a polygon branch. Most of Tasks 2–3 is this.
-- **One ingestion fix:** labelformat already returns `MultiPolygon` for polygons and `BinaryMaskSegmentation` for masks. Choosing the type from that in the shared helper fixes the dropped vertices for COCO and YouTube-VIS at once.
+- **One ingestion fix:** labelformat already returns `MultiPolygon` for polygons and `BinaryMaskSegmentation` for masks. A new helper that chooses the type from that fixes the dropped vertices for COCO. YouTube-VIS is out of scope and keeps the current helper.
 - **Ingestion ships last**, so every reader, export and check handles polygons before the first real polygon is stored.
 
 ## Exact values
@@ -31,7 +31,7 @@
 
 ## How to work
 
-- Before editing, load the skills from `AGENTS.md`: `python-guide`, `backend-guide`, `clean-code` for Python; `frontend-guide` for Task 15; `changelog` and `glossary` for Task 16.
+- Before editing, load the skills from `AGENTS.md`: `python-guide`, `backend-guide`, `clean-code` for Python; `frontend-guide` for Task 14; `changelog` and `glossary` for Task 15.
 - Validate each task: `cd lightly_studio && make static-checks && uv run pytest <affected tests>`.
 
 ## Review Focus
@@ -48,24 +48,24 @@ Inputs most likely to break for users. Each one has a test in the task named.
 
 ## PR split
 
-Target: at most ~200 added lines of non-test code per PR. Estimates are non-test lines. Resolver changes touch many files with imports and load options, so their estimates are generous. PRs are stacked in this order, and tasks run in PR order. Each PR adds its own changelog entry (see the list in Task 16).
+Target: at most ~200 added lines of non-test code per PR. Estimates are non-test lines. Resolver changes touch many files with imports and load options, so their estimates are generous. PRs are stacked in this order, and tasks run in PR order. Each PR adds its own changelog entry (see the list in Task 15).
 
 | PR | Tasks | Content | Est. non-test LOC |
 |---|---|---|---|
 | labelformat | 10 | YOLO segmentation reader fix, release 0.1.18 (other repo) | ~10 |
 | 1 | 1 | Type, table, validation, migration | ~135 |
-| 2 | 2, 4 | Create and read polygons: resolvers, API, `PolygonAnnotation`, `CreatePolygon` | ~150 |
-| 3 | 3 | Delete, copy, class change, crops | ~100 |
+| 2 | 2, 4 | Create, read and delete polygons: resolvers, API, `PolygonAnnotation`, `CreatePolygon` | ~165 |
+| 3 | 3 | Copy, class change, crops | ~85 |
 | 4 | 5 | Edit polygons, reject box edits | ~105 |
 | 5 | 6 | Query by box | ~90 + generated types |
-| 6 | 8, 9 | Export to COCO, YOLO and YouTube-VIS | ~180 + generated types |
-| 7 | 15 | Export dialog entries (frontend) | ~40 |
-| 8 | 10 (bump), 12, 7 | Ingestion keeps polygons; evaluation rejects polygon sources | ~95 + `uv.lock` |
-| 9 | 11, 13, 14 | `AnnotationFileTask`, `annotation_task`, YOLO segmentation, deprecation | ~120 |
-| 10 | 16 | Docs, examples, glossary | docs only |
+| 6 | 8, 9 | Export to COCO and YOLO | ~150 + generated types |
+| 7 | 14 | Export dialog entries (frontend) | ~40 |
+| 8 | 10 (bump), 12, 7 | COCO ingestion keeps polygons; evaluation rejects polygon sources | ~85 + `uv.lock` |
+| 9 | 11, 13 | `AnnotationFileTask`, `annotation_task`, YOLO segmentation, deprecation | ~100 |
+| 10 | 15 | Docs, examples, glossary | docs only |
 
 - **PR 8 carries the evaluation error.** From PR 8 on, existing COCO segmentation calls store polygons, so that is when evaluation starts to see them.
-- **PR 6 is the riskiest size.** If the export loader grows past the estimate, split it: COCO (Task 8), then YOLO and YouTube-VIS (Task 9).
+- **PR 6 is the riskiest size.** If the export loader grows past the estimate, split it: COCO (Task 8), then YOLO (Task 9).
 - PRs 3, 4 and 5 depend only on PR 2, and PR 7 only on PR 6, so they can be reviewed in parallel.
 
 ---
@@ -136,7 +136,8 @@ def test_validate_polygons__invalid(polygons, message) -> None:
 - Modify (add `selectinload`/`joinedload(AnnotationBaseTable.polygon_details)` next to every `segmentation_details` load): `resolvers/image_resolver/load_options.py`, `resolvers/image_resolver/get_all_by_collection_id.py`, `resolvers/image_resolver/get_for_export.py`, `resolvers/annotation_resolver/get_all_with_payload.py` (2 places), `resolvers/annotation_resolver/get_all_by_parent_sample_ids_and_annotation_collection_id.py`, `resolvers/annotation_resolver/get_all_by_collection_id_and_parent_sample_ids.py` (new `POLYGON` branch), `resolvers/video_frame_resolver/get_all_by_collection_id.py`, `resolvers/video_resolver/get_all_by_collection_id.py`
 - Modify: `services/annotations_service/create_annotation.py` (`AnnotationCreateParams.polygons`), `api/routes/api/annotations/create_annotation.py` (`AnnotationCreateInput.polygons`, passed through)
 - Modify: `lightly_studio/tests/helpers_resolvers.py` (`create_annotation(..., polygons: Polygons | None = None)`, same in `create_annotations`)
-- Test: `tests/resolvers/annotations/test_create_many_polygon.py`, `tests/api/routes/api/annotations/test_create_annotation.py`
+- Modify (deletion ships with creation, so a polygon can always be deleted; without it the foreign key blocks the `annotation_base` delete after the first phase has committed): `resolvers/annotation_resolver/delete_annotations_by_ids.py` (add table to the tuple), `resolvers/dataset_resolver/delete_dataset.py` (`_delete_polygon_annotations`, same shape as `_delete_segmentation_annotations`)
+- Test: `tests/resolvers/annotations/test_create_many_polygon.py`, `tests/api/routes/api/annotations/test_create_annotation.py`, the matching delete test files in `tests/resolvers/annotations/` and `tests/resolvers/dataset_resolver/`
 
 **Interfaces:**
 - Consumes: Task 1 `validate_polygons`, `PolygonAnnotationTable`, `AnnotationCreate.polygons`.
@@ -168,16 +169,17 @@ API test `test_create_annotation__polygon`: POST with `annotation_type="polygon"
 
 - [ ] **Step 2: Run** — FAIL.
 - [ ] **Step 3: Implement.** In `create_many`, add `elif annotation_type == AnnotationType.POLYGON:` that raises `ValueError("Missing polygons for polygon.")` when `polygons is None`, else builds `PolygonAnnotationTable` from `validate_polygons`; bulk-save the list; set `db_base_annotation.polygon_details = None` next to the others. Check how the API maps `ValueError` for the segmentation case and match it.
+- [ ] **Step 3b: Delete tests**: `test_delete_annotations_by_ids__polygon` (after delete, `select(PolygonAnnotationTable)` is empty) and `test_delete_dataset__polygon` (same after deleting the dataset). Implement both deletions.
 - [ ] **Step 4: Add a read test** to `tests/resolvers/annotations/test_get_all_with_payload.py`: `test_get_all_with_payload__polygon_details` asserts `polygon_details.polygons` in the payload view.
 - [ ] **Step 5: Run** the new tests plus `tests/resolvers/annotations tests/resolvers/image_resolver tests/resolvers/video_frame_resolver tests/api/routes/api/annotations` — PASS.
 - [ ] **Step 6: Commit** `feat: create and read polygon annotations`
 
 ---
 
-### Task 3: Delete, copy, label change and crops
+### Task 3: Copy, label change and crops
 
 **Files:**
-- Modify: `resolvers/annotation_resolver/delete_annotations_by_ids.py` (add table to the tuple), `resolvers/dataset_resolver/delete_dataset.py` (`_delete_polygon_annotations`, same shape as `_delete_segmentation_annotations`), `resolvers/dataset_resolver/deep_copy.py` (`_copy_annotation_details(detail_table=PolygonAnnotationTable)`), `resolvers/annotation_resolver/annotation_helper.py` (reinsert a `PolygonAnnotationTable` copy), `resolvers/annotation_resolver/update_label_by_object_track_id.py` (`_capture_polygons`, delete, reinsert), `resolvers/annotation_resolver/get_annotation_crops.py` (outer join; `box_source = object_detection or segmentation or polygon`)
+- Modify: `resolvers/dataset_resolver/deep_copy.py` (`_copy_annotation_details(detail_table=PolygonAnnotationTable)`), `resolvers/annotation_resolver/annotation_helper.py` (reinsert a `PolygonAnnotationTable` copy), `resolvers/annotation_resolver/update_label_by_object_track_id.py` (`_capture_polygons`, delete, reinsert), `resolvers/annotation_resolver/get_annotation_crops.py` (outer join; `box_source = object_detection or segmentation or polygon`)
 - Test: the matching files in `tests/resolvers/annotations/` and `tests/resolvers/dataset_resolver/`
 
 **Interfaces:**
@@ -185,8 +187,6 @@ API test `test_create_annotation__polygon`: POST with `annotation_type="polygon"
 - Produces: no new names.
 
 - [ ] **Step 1: Write failing tests**
-  - `test_delete_annotations_by_ids__polygon`: after delete, `select(PolygonAnnotationTable)` is empty.
-  - `test_delete_dataset__polygon`: same after deleting the dataset.
   - `test_deep_copy__polygon`: copy has equal `polygons` and box, new `sample_id`.
   - `test_update_annotation_label__polygon` (path through `annotation_helper`): label changes; `polygons` unchanged.
   - `test_update_label_by_object_track_id__keeps_polygons`: two polygon frames in one track; after relabel, both keep their `polygons`.
@@ -195,7 +195,7 @@ API test `test_create_annotation__polygon`: POST with `annotation_type="polygon"
 - [ ] **Step 2: Run** — FAIL.
 - [ ] **Step 3: Implement** each file by copying its segmentation branch for polygons.
 - [ ] **Step 4: Run** `uv run pytest tests/resolvers/annotations tests/resolvers/dataset_resolver -v` — PASS.
-- [ ] **Step 5: Commit** `feat: delete, copy, relabel and crop polygon annotations`
+- [ ] **Step 5: Commit** `feat: copy, relabel and crop polygon annotations`
 
 ---
 
@@ -339,28 +339,27 @@ def test_to_pascalvoc_segmentation_mask__ignores_polygons(...) -> None:
 
 ---
 
-### Task 9: YOLO instance segmentation and YouTube-VIS export
+### Task 9: YOLO instance segmentation export
 
 **Files:**
-- Modify: `export/lightly_studio_label_input.py` (`LightlyStudioYOLOInstanceSegmentationInput`), `export/dataset_export.py` (`to_yolo_instance_segmentation`), `models/export_format.py` (`INSTANCE_SEGMENTATION_YOLO`), `api/routes/api/export.py` (branch, output dir `temp_dir / "yolo_instance_segmentation"`), `export/youtube_vis_label_input.py`
-- Test: `tests/export/test_dataset_export__yolo_instance_segmentation.py`, `tests/export/test_youtube_vis_label_input.py`, `tests/api/routes/api/test_export.py`
+- Modify: `export/lightly_studio_label_input.py` (`LightlyStudioYOLOInstanceSegmentationInput`), `export/dataset_export.py` (`to_yolo_instance_segmentation`), `models/export_format.py` (`INSTANCE_SEGMENTATION_YOLO`), `api/routes/api/export.py` (branch, output dir `temp_dir / "yolo_instance_segmentation"`)
+- Test: `tests/export/test_dataset_export__yolo_instance_segmentation.py`, `tests/api/routes/api/test_export.py`
+- Not changed: `export/youtube_vis_label_input.py` stays masks-only (YouTube-VIS is out of scope).
 
 **Interfaces:**
 - Consumes: Task 8 `ANNOTATION_TYPES`, `iter_sample_annotations`.
 - Produces:
   - `LightlyStudioYOLOInstanceSegmentationInput(LightlyStudioInstanceSegmentationInput)`: `USE_RELATIVE_FILENAME = True`, `ANNOTATION_TYPES = (POLYGON,)`.
   - `DatasetExport.to_yolo_instance_segmentation(output_folder: PathLike, annotation_collection_id: UUID | None = None) -> None` — writes with `YOLOv8InstanceSegmentationOutput`; when the selection has masks, logs one warning: `"Skipped {n} segmentation mask annotations: YOLO instance segmentation supports only polygons."`.
-  - YouTube-VIS export loads `[SEGMENTATION_MASK, POLYGON]` and `_extract_segmentation_from_annotation` returns `MultiPolygon` for polygons. Load `polygon_details` for those annotations (add an options argument or eager load in `get_all_by_object_track_id`).
 
 - [ ] **Step 1: Write failing tests**
   - `test_to_yolo_instance_segmentation__polygon`: 100×50 image, polygon `[[(10,5),(50,5),(50,25)]]` → label line `"<cls> 0.1 0.1 0.5 0.1 0.5 0.5 0.1 0.1"` (labelformat repeats the first vertex to close the loop); `data.yaml` exists.
   - `test_to_yolo_instance_segmentation__skips_masks_with_warning`: image with a mask and a polygon → one line; `caplog` has `"Skipped 1 segmentation mask annotations"`.
   - `test_to_yolo_instance_segmentation__multi_part_becomes_one_line`: 2-part polygon → one line.
-  - `test_youtube_vis_export__polygon_track`: a 2-frame track of polygons → the exported `segmentations[i]` are COCO polygon lists, not `None`.
   - API: `test_export__instance_segmentation_yolo` returns a zip/dir with `labels/`.
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS.
 - [ ] **Step 5: Regenerate API client types** (new `ExportFormat` value) as in Task 6 step 5: `export_schema.py` first, then `npm run generate-api-client`. Commit them.
-- [ ] **Step 6: Commit** `feat: export polygons to YOLO and YouTube-VIS`
+- [ ] **Step 6: Commit** `feat: export polygons to YOLO`
 
 ---
 
@@ -400,35 +399,33 @@ def test_to_pascalvoc_segmentation_mask__ignores_polygons(...) -> None:
 
 ---
 
-### Task 12: Ingestion creates polygons; invalid parts dropped
+### Task 12: Image ingestion creates polygons; invalid parts dropped
 
 **Files:**
-- Modify: `core/labelformat_helpers.py`, `core/image/add_annotations.py`, `core/video/add_videos.py`
-- Test: `tests/core/test_labelformat_helpers.py`, `tests/core/image/test_add_annotations.py`, `tests/core/video/test_video_dataset.py`
-- Update existing tests that assert the old behavior (they fail once this task works):
-  - `test_labelformat_helpers.py::test_get_segmentation_annotation_create__with_multipolygon` expects `SEGMENTATION_MASK` → expect `POLYGON` (or merge into the new test below).
-  - `test_video_dataset.py::test_add_videos_from_youtube_vis__segmentation_mask` loads polygon frames (`[[0, 0, 1, 1, 2, 1]]`) and expects masks → expect `POLYGON`. Keep the `annotation_type=` argument; Task 14 deprecates it.
+- Modify: `core/labelformat_helpers.py`, `core/image/add_annotations.py`
+- Test: `tests/core/test_labelformat_helpers.py`, `tests/core/image/test_add_annotations.py`
+- Not changed: `core/video/add_videos.py` keeps calling `get_segmentation_annotation_create` (YouTube-VIS is out of scope), so its existing tests stay as they are.
 
 **Interfaces:**
 - Produces:
-  - `get_segmentation_annotation_create(...) -> AnnotationCreate | None`: `MultiPolygon` → `AnnotationType.POLYGON` with `polygons` = the valid parts, or `None` if no part is valid; `BinaryMaskSegmentation` → `SEGMENTATION_MASK` as today.
+  - `get_instance_segmentation_annotation_create(...) -> AnnotationCreate | None` (new; called by `add_annotations.add_annotations_from_labelformat` instead of `get_segmentation_annotation_create`): `MultiPolygon` → `AnnotationType.POLYGON` with `polygons` = the valid parts, or `None` if no part is valid; `BinaryMaskSegmentation` → `SEGMENTATION_MASK` via `get_segmentation_annotation_create`. `get_segmentation_annotation_create` is unchanged.
   - `valid_polygon_parts(multipolygon: MultiPolygon) -> Polygons` — keeps parts with ≥3 vertices and only finite coordinates.
   - `warn_skipped_polygons(count: int) -> None` — no-op for 0, else one `logger.warning(f"Skipped {count} polygon annotations without a valid part. A valid part has at least 3 vertices.")`.
-  - `add_annotations.add_annotations_from_labelformat` and `add_videos.load_video_annotations_from_labelformat` sum the `None`s over all batches/videos and call `warn_skipped_polygons` once at the end.
+  - `add_annotations.add_annotations_from_labelformat` sums the `None`s over all batches and calls `warn_skipped_polygons` once at the end.
 
 - [ ] **Step 1: Write failing tests**
 
 ```python
-def test_get_segmentation_annotation_create__multipolygon_is_polygon() -> None:
-    result = labelformat_helpers.get_segmentation_annotation_create(
+def test_get_instance_segmentation_annotation_create__multipolygon_is_polygon() -> None:
+    result = labelformat_helpers.get_instance_segmentation_annotation_create(
         parent_sample_id=uuid4(), annotation_label_id=uuid4(),
         segmentation=MultiPolygon(polygons=[[(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)], [(0.0, 0.0), (1.0, 1.0)]]),
     )
     assert result.annotation_type == AnnotationType.POLYGON
     assert result.polygons == [[(1.0, 1.0), (5.0, 1.0), (5.0, 5.0)]]
 
-def test_get_segmentation_annotation_create__no_valid_part() -> None:
-    assert labelformat_helpers.get_segmentation_annotation_create(
+def test_get_instance_segmentation_annotation_create__no_valid_part() -> None:
+    assert labelformat_helpers.get_instance_segmentation_annotation_create(
         ..., segmentation=MultiPolygon(polygons=[[(0.0, 0.0), (1.0, 1.0)]])) is None
 
 def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) -> None:
@@ -436,8 +433,8 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) 
     assert caplog.text.count("Skipped 3 polygon annotations") == 1
 ```
 
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** `uv run pytest tests/core -v -k "labelformat or add_annotations or add_videos"` — PASS.
-- [ ] **Step 5: Commit** `fix: keep COCO and YouTube-VIS polygon vertices as polygon annotations`
+- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** `uv run pytest tests/core -v -k "labelformat or add_annotations or add_videos"` — PASS (`add_videos` confirms YouTube-VIS is unchanged).
+- [ ] **Step 5: Commit** `fix: keep COCO polygon vertices as polygon annotations`
 
 ---
 
@@ -457,32 +454,14 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) 
   - `test_add_samples_from_coco__both_parameters`: `ValueError`.
   - `test_add_annotations_from_coco__instance_segmentation`: same result via the attach path.
   - `test_add_samples_from_yolo__instance_segmentation`: one line `0 0.1 0.1 0.5 0.1 0.5 0.5` on a 100×50 image → polygon `[[(10.0, 5.0), (50.0, 5.0), (50.0, 25.0)]]`.
-  - `test_add_samples_from_yolo__instance_segmentation_missing_label_file`: an image without a label file loads with no annotations (needs Task 10).
+  - `test_add_samples_from_yolo__instance_segmentation_missing_label_file`: an image without a label file is skipped with labelformat's warning and no crash; the other images load (needs Task 10). Studio creates samples from `get_labels()`, so a skipped image gets no sample, same as with `OBJECT_DETECTION` today.
   - `test_add_annotations_from_yolo__instance_segmentation`.
 - [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** the three test files — PASS.
 - [ ] **Step 5: Commit** `feat: load COCO and YOLO polygons with annotation_task`
 
 ---
 
-### Task 14: YouTube-VIS ingestion takes `annotation_task`
-
-**Files:**
-- Modify: `core/video/video_dataset.py` (`add_videos_from_youtube_vis`)
-- Test: `tests/core/video/test_video_dataset.py`
-
-**Interfaces:**
-- Consumes: Task 11, Task 12.
-- Produces: `annotation_type: AnnotationType | None = None` (deprecated, same position), `annotation_task: AnnotationFileTask | None = None` (last).
-
-- [ ] **Step 1: Write failing tests**
-  - `test_add_videos_from_youtube_vis__polygon_frames`: a YouTube-VIS JSON whose `segmentations` are polygon lists → `POLYGON` annotations on the frames, sharing one `object_track_id`.
-  - `test_add_videos_from_youtube_vis__deprecated_annotation_type`: `DeprecationWarning`.
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** — PASS.
-- [ ] **Step 5: Commit** `feat: load YouTube-VIS polygons with annotation_task`
-
----
-
-### Task 15: Export dialog entries (frontend)
+### Task 14: Export dialog entries (frontend)
 
 **Files:**
 - Modify: `lightly_studio_view/src/lib/components/ExportSamples/exportOptions.ts` (`ExportType` union, the format list and its labels), `lightly_studio_view/src/lib/components/ExportSamples/ExportSamples.svelte` (tab content for the new type)
@@ -498,19 +477,19 @@ def test_add_annotations_from_labelformat__one_warning_for_skipped(caplog, ...) 
 
 ---
 
-### Task 16: Docs, examples, glossary
+### Task 15: Docs, examples, glossary
 
 **Files:**
-- Modify: `lightly_studio/docs/docs/workflows/export.md` (new COCO/YOLO entries; note that COCOeval treats `iscrowd=1` as ignore regions), `lightly_studio/docs/docs/workflows/image_dataset.md` and any page using `annotation_type=` (switch to `annotation_task=`), examples `examples/example_coco.py`, `examples/example_coco_s3.py`, `examples/coco_plugins_demo/example_coco_plugins.py`, `examples/example_video_annotations.py`
+- Modify: `lightly_studio/docs/docs/workflows/export.md` (new COCO/YOLO entries; note that COCOeval treats `iscrowd=1` as ignore regions), `lightly_studio/docs/docs/workflows/image_dataset.md` and any page using `annotation_type=` (switch to `annotation_task=`), examples `examples/example_coco.py`, `examples/example_coco_s3.py`, `examples/coco_plugins_demo/example_coco_plugins.py`
 - Modify: `.agents/skills/glossary/SKILL.md` (rows for **polygon** and **part**; avoid "multipolygon"; add polygon to the annotation row)
 
-- [ ] **Step 1:** `grep -rn "annotation_type=\|to_coco_segmentation_masks" lightly_studio/docs lightly_studio/src/lightly_studio/examples README.md`. Replace only calls to the deprecated APIs: `add_annotations_from_coco`, `add_samples_from_coco`, `add_annotations_from_yolo`, `add_samples_from_yolo`, `add_videos_from_youtube_vis`, and `to_coco_segmentation_masks`. Leave other `annotation_type=` uses alone, e.g. `AnnotationCreate(annotation_type=...)` in `examples/coco_plugins_demo/lightly_train_inference_operator.py` and its docs snippet; `AnnotationCreate` still requires it.
+- [ ] **Step 1:** `grep -rn "annotation_type=\|to_coco_segmentation_masks" lightly_studio/docs lightly_studio/src/lightly_studio/examples README.md`. Replace only calls to the deprecated APIs: `add_annotations_from_coco`, `add_samples_from_coco`, `add_annotations_from_yolo`, `add_samples_from_yolo`, and `to_coco_segmentation_masks`. Leave `add_videos_from_youtube_vis(annotation_type=...)` alone (YouTube-VIS is out of scope, not deprecated). Leave other `annotation_type=` uses alone, e.g. `AnnotationCreate(annotation_type=...)` in `examples/coco_plugins_demo/lightly_train_inference_operator.py` and its docs snippet; `AnnotationCreate` still requires it.
 - [ ] **Step 2: Changelog entries** (load the `changelog` skill), one per change. Each entry goes into the PR that makes the change, not into this PR. This step lists them and checks that they are all there:
-  - Added: `Python SDK: Load polygon annotations from COCO, YOLO and YouTube-VIS with annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION, and export them to the same formats.`
+  - Added: `Python SDK: Load polygon annotations from COCO and YOLO with annotation_task=AnnotationFileTask.INSTANCE_SEGMENTATION, and export them to the same formats.`
   - Added: `Export polygons to YOLO with the new "Instance segmentation (YOLO)" export.`
   - Changed: `The "Segmentation masks (COCO)" export is now "Instance segmentation (COCO)" and includes polygons.`
-  - Deprecated: `Python SDK: annotation_type in the COCO and YouTube-VIS methods. Use annotation_task instead.` and `Python SDK: to_coco_segmentation_masks. Use to_coco_instance_segmentation instead.`
-  - Fixed: `Python SDK: COCO and YouTube-VIS polygons are loaded with their vertices, not only their box.`
+  - Deprecated: `Python SDK: annotation_type in the COCO methods. Use annotation_task instead.` and `Python SDK: to_coco_segmentation_masks. Use to_coco_instance_segmentation instead.`
+  - Fixed: `Python SDK: COCO polygons are loaded with their vertices, not only their box.`
   - Changed: `Instance and semantic segmentation evaluation reports an error for annotation sources with polygons. Before, such sources ran and skipped the polygons.`
 - [ ] **Step 3: Run** `cd lightly_studio && make static-checks` and `uv run python -W error::DeprecationWarning -c "import lightly_studio"` — no warnings at import.
 - [ ] **Step 4: Commit** `docs: polygon annotations and annotation_task`
