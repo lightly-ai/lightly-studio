@@ -23,6 +23,25 @@ class TestLocalTagTransport:
         assert tag.name == "cat"
         assert transport.get_by_name(collection_id=collection_id, tag_name="dog") is None
 
+    def test_get_names_by_sample_ids(self) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        image = create_image(session=session, collection_id=collection_id)
+        untagged_image = create_image(
+            session=session, collection_id=collection_id, file_path_abs="/untagged.png"
+        )
+        transport: TagTransport = LocalTagTransport()
+        for tag_name in ["dog", "cat"]:
+            transport.add_to_samples(
+                collection_id=collection_id, tag_name=tag_name, sample_ids=[image.sample_id]
+            )
+
+        tag_names = transport.get_names_by_sample_ids(
+            sample_ids=[image.sample_id, untagged_image.sample_id]
+        )
+
+        assert tag_names == {image.sample_id: ["cat", "dog"]}
+
     def test_add_to_samples(self) -> None:
         session = db_manager.persistent_session()
         collection_id = create_collection(session=session).collection_id

@@ -22,6 +22,12 @@ class LocalTagTransport:
         )
         return None if tag is None else TagView.model_validate(tag)
 
+    def get_names_by_sample_ids(self, sample_ids: Sequence[UUID]) -> dict[UUID, list[str]]:
+        """Get the sorted tag names of each sample. A sample without tags is not in the result."""
+        return tag_resolver.get_names_by_sample_ids(
+            session=db_manager.persistent_session(), sample_ids=sample_ids
+        )
+
     def add_to_samples(
         self, collection_id: UUID, tag_name: str, sample_ids: Sequence[UUID]
     ) -> None:
