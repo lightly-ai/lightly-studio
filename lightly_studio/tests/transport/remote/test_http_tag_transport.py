@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from uuid import uuid4
+
 import pytest
 from fastapi.testclient import TestClient
 from pytest_mock import MockerFixture
@@ -64,3 +66,11 @@ class TestHttpTagTransport:
             (remove_path, [a, b]),
             (remove_path, [c]),
         ]
+
+    def test_split_samples(self, test_client: TestClient) -> None:
+        transport: TagTransport = HttpTagTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.split_samples(
+                collection_id=uuid4(), sample_ids=[], tag_sizes={"train": 1}, seed=None
+            )

@@ -82,3 +82,23 @@ class TestLocalTagTransport:
         transport.remove_from_samples(collection_id=collection_id, tag_name="cat", sample_ids=[])
 
         assert transport.get_by_name(collection_id=collection_id, tag_name="cat") is None
+
+    def test_split_samples(self) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        sample_ids = [
+            create_image(session=session, collection_id=collection_id, file_path_abs=path).sample_id
+            for path in ["/a.png", "/b.png", "/c.png"]
+        ]
+        transport: TagTransport = LocalTagTransport()
+
+        counts = transport.split_samples(
+            collection_id=collection_id,
+            sample_ids=sample_ids,
+            tag_sizes={"train": 2, "test": 1},
+            seed=0,
+        )
+
+        tag_names = transport.get_names_by_sample_ids(sample_ids=sample_ids)
+        assert counts == {"train": 2, "test": 1}
+        assert sorted(tag_names.values()) == [["test"], ["train"], ["train"]]
