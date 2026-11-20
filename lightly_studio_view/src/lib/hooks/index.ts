@@ -5,6 +5,10 @@ export { useVideoFrameAnnotations } from '$lib/hooks/useVideoFrameAnnotations/us
 export { useSamplesInfinite } from '$lib/hooks/useSamplesInfinite/useSamplesInfinite.svelte';
 export { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
 export { useHasEmbeddings } from '$lib/hooks/useHasEmbeddings/useHasEmbeddings';
+export {
+    useEmbeddingPlotStatus,
+    useRefetchEmbeddingPlotStatus
+} from '$lib/hooks/useEmbeddingPlotStatus/useEmbeddingPlotStatus';
 export { useGroupsInfinite } from '$lib/hooks/useGroupsInfinite/useGroupsInfinite.svelte';
 export { useMcapSequencesInfinite } from '$lib/hooks/useMcapSequencesInfinite';
 export {
