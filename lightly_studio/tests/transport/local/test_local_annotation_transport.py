@@ -196,7 +196,9 @@ class TestLocalAnnotationTransport:
         )
         transport: AnnotationTransport = LocalAnnotationTransport()
 
-        deleted_count = transport.delete_existing(annotation_ids=[annotation.sample_id, uuid4()])
+        deleted_count = transport.delete_existing(
+            annotation_ids=[annotation.sample_id, uuid.uuid4()]
+        )
 
         assert deleted_count == 1
         assert transport.get_by_sample_ids(sample_ids=[image.sample_id]) == []
@@ -211,7 +213,7 @@ class TestLocalAnnotationTransport:
         transport: AnnotationTransport = LocalAnnotationTransport()
 
         deleted_count = transport.delete_empty_object_tracks(
-            object_track_ids=[track_ids[0], uuid4()]
+            object_track_ids=[track_ids[0], uuid.uuid4()]
         )
 
         assert deleted_count == 1
