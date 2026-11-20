@@ -62,7 +62,8 @@ def test_index_recording(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -85,7 +86,8 @@ def test_index_recording__sequence_uses_capture_timestamp(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -109,7 +111,8 @@ def test_index_recording__falls_back_to_log_time_when_capture_clocks_differ(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -128,7 +131,8 @@ def test_index_recording__pairs_the_closest_frame(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -159,7 +163,8 @@ def test_index_recording__keeps_ticks_without_a_paired_component(
 
     # No camera frame is within 1 ms of a sweep, so the camera is left off every tick.
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -186,7 +191,8 @@ def test_index_recording__fills_the_component_definitions(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -210,7 +216,8 @@ def test_index_recording__stores_the_camera_calibration(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -239,7 +246,8 @@ def test_index_recording__stores_the_static_transforms(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -269,7 +277,8 @@ def test_index_recording__accepts_a_reference_frame_from_tf(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -301,7 +310,8 @@ def test_index_recording__stores_configured_reference_frames(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -327,7 +337,8 @@ def test_index_recording__unknown_reference_frame(
 
     with pytest.raises(McapAccessError, match="map"):
         add_mcaps.index_recording(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_path=str(mcap_path),
             sync_component=POINT_CLOUD_COMPONENT,
             components=COMPONENTS,
@@ -371,7 +382,8 @@ def test_index_recording__skips_static_transforms_without_frame_id(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -396,7 +408,8 @@ def test_index_recording__unknown_sync_component(
 
     with pytest.raises(ValueError, match="sync_component 'rear' is not a component"):
         add_mcaps.index_recording(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_path=str(mcap_path),
             sync_component="rear",
             components=COMPONENTS,
@@ -411,7 +424,8 @@ def test_index_recording__after_load(
     loaded = McapDataset.load(name="perception")
 
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=loaded,
+        session=db_manager.persistent_session(),
+        collection_id=loaded.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -429,7 +443,8 @@ def test_index_recording__components_do_not_match(
 
     with pytest.raises(ValueError, match="already exists with the components"):
         add_mcaps.index_recording(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_path=str(mcap_path),
             sync_component=POINT_CLOUD_COMPONENT,
             components=[COMPONENTS[0]],
@@ -446,7 +461,8 @@ def test_index_recordings__continues_after_a_broken_recording(
     other_path = helpers.write_unchunked_mcap(tmp_path / "unchunked.mcap")
 
     sequence_sample_ids = add_mcaps.index_recordings(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_paths=[str(other_path), str(mcap_path)],
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -479,7 +495,8 @@ def test_index_recording__missing_topics_are_all_named(
 
     with pytest.raises(TopicNotFoundError) as exc_info:
         add_mcaps.index_recording(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_path=str(mcap_path),
             sync_component=POINT_CLOUD_COMPONENT,
             components=components,
@@ -499,7 +516,8 @@ def test_index_recording__warns_when_no_component_pairs_to_sync(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -523,7 +541,8 @@ def test_index_recordings__logs_reason_of_not_an_mcap_file(
 
     with pytest.raises(AllInputFilesFailedError):
         add_mcaps.index_recordings(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_paths=[str(not_mcap)],
             sync_component=POINT_CLOUD_COMPONENT,
             components=COMPONENTS,
@@ -542,7 +561,8 @@ def test_index_recordings__missing_file_is_reported(
     missing = tmp_path / "missing.mcap"
 
     sequence_sample_ids = add_mcaps.index_recordings(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_paths=[str(missing), str(mcap_path)],
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -563,7 +583,8 @@ def test_index_recordings__logs_missing_topics_of_broken_recording(
 
     with pytest.raises(AllInputFilesFailedError):
         add_mcaps.index_recordings(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_paths=[str(other_path)],
             sync_component=POINT_CLOUD_COMPONENT,
             components=COMPONENTS,
@@ -580,7 +601,8 @@ def test_index_recordings__repeated_reference_frame(
 
     with pytest.raises(ValueError, match="map"):
         add_mcaps.index_recordings(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_paths=[str(mcap_path)],
             sync_component=POINT_CLOUD_COMPONENT,
             components=COMPONENTS,
@@ -605,7 +627,8 @@ def test_index_recordings__all_broken(
 
     with pytest.raises(AllInputFilesFailedError):
         add_mcaps.index_recordings(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_paths=[str(other_path)],
             sync_component=POINT_CLOUD_COMPONENT,
             components=COMPONENTS,
@@ -619,7 +642,8 @@ def test_index_recordings__empty(
 
     assert (
         add_mcaps.index_recordings(
-            dataset=dataset,
+            session=db_manager.persistent_session(),
+            collection_id=dataset.collection_id,
             mcap_paths=[],
             sync_component=POINT_CLOUD_COMPONENT,
             components=COMPONENTS,
@@ -634,7 +658,8 @@ def test_index_recordings__skips_already_present(
 ) -> None:
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
     first_ids = add_mcaps.index_recordings(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_paths=[str(mcap_path)],
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -642,7 +667,8 @@ def test_index_recordings__skips_already_present(
     )
 
     second_ids = add_mcaps.index_recordings(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_paths=[str(mcap_path)],
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,
@@ -664,7 +690,8 @@ def test_index_recordings__skips_duplicate_paths_in_the_same_call(
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
 
     sequence_sample_ids = add_mcaps.index_recordings(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_paths=[str(mcap_path), str(mcap_path)],
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,

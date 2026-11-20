@@ -334,7 +334,8 @@ def test_build_sequence_messages__log_time_falls_back_to_sweep_timestamp(
     mcap_path = helpers.write_mcap(tmp_path / "recording.mcap", lidar_stamp_offset_ns=-20_000_000)
     dataset = McapDataset.create(components=COMPONENTS, name="perception")
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component="front",
         components=COMPONENTS,

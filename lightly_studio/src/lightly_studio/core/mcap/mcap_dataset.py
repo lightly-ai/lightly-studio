@@ -284,7 +284,8 @@ class McapDataset:
         logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
 
         sequence_sample_ids = add_mcaps.index_recordings(
-            dataset=self,
+            session=self._session,
+            collection_id=self.collection_id,
             mcap_paths=mcap_paths,
             sync_component=sync_component,
             components=components,
