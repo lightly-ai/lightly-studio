@@ -98,6 +98,19 @@ class StubLabelingModel(LabelingModel):
         return self._predictions
 
 
+class ReadyOnSecondReadModel(StubLabelingModel):
+    """A labeling model that finishes loading right after the first read of `ready`."""
+
+    def __init__(self, model_id: str) -> None:
+        super().__init__(model_id=model_id)
+        self.ready_reads = 0
+
+    @property
+    def ready(self) -> bool:
+        self.ready_reads += 1
+        return self.ready_reads > 1
+
+
 def png_bytes(width: int, height: int) -> bytes:
     """Return the content of a black PNG file of the size."""
     buffer = io.BytesIO()
