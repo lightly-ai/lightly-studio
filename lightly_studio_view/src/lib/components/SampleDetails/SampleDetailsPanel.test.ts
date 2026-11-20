@@ -7,6 +7,7 @@ const mockToolbarContext = { status: 'cursor', brush: { mode: 'brush', size: 50 
 
 const mockAnnotationLabelContext: Record<string, unknown> = {};
 const isEditingMode = writable(false);
+const isSampleDetailsSidePanelCollapsed = writable(false);
 const toggleSampleSelection = vi.fn();
 const handleEscape = vi.fn();
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
@@ -35,7 +36,9 @@ vi.mock('$lib/hooks/useGlobalStorage', () => ({
         lastAnnotationBrushSize: writable({}),
         imageBrightness: writable(0),
         imageContrast: writable(0),
-        maskOpacity: writable(0)
+        maskOpacity: writable(0),
+        isSampleDetailsSidePanelCollapsed,
+        openSampleDetailsSidePanel: vi.fn()
     })
 }));
 
@@ -56,7 +59,12 @@ vi.mock('$app/state', () => ({ page: { data: {} } }));
 
 vi.mock('$lib/components', async () => {
     const stub = (await import('./SampleDetailsPanel.stub.svelte')).default;
-    return { Card: stub, CardContent: stub, SampleDetailsSidePanel: stub };
+    return {
+        Card: stub,
+        CardContent: stub,
+        SampleDetailsSidePanel: stub,
+        SidePanelToggleButton: stub
+    };
 });
 vi.mock('$lib/components/ImageAdjustments', async () => ({
     ImageAdjustments: (await import('./SampleDetailsPanel.stub.svelte')).default
