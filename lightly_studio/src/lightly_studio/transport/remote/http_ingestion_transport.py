@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 import httpx
 
+from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.models.image import AddImagesResult, ImageCreate
 
 
@@ -70,3 +71,9 @@ class HttpIngestionTransport:
     def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for videos. Not supported over HTTP yet."""
         raise NotImplementedError("Embedding videos over HTTP is not supported yet.")
+
+    def add_group_samples(
+        self, collection_id: UUID, groups: Sequence[Mapping[str, CreateSample]]
+    ) -> list[UUID]:
+        """Add group samples to a group collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding group samples over HTTP is not supported yet.")

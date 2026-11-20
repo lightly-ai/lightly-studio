@@ -16,6 +16,7 @@ from lightly_studio.resolvers import collection_resolver, group_resolver
 from lightly_studio.resolvers.collection_resolver.create_group_components import (
     GroupComponentDefinition,
 )
+from lightly_studio.transport import active_transport
 
 
 class GroupDataset(Dataset[GroupSample]):
@@ -171,34 +172,8 @@ class GroupDataset(Dataset[GroupSample]):
         Returns:
             The created GroupSample.
         """
-        comp_collections = collection_resolver.get_group_components(
-            session=self.session,
-            parent_collection_id=self.collection_id,
-        )
-        # Validate components
-        for comp_name, create_sample in components.items():
-            if comp_name not in comp_collections:
-                raise ValueError(
-                    f"Component name '{comp_name}' not found in group dataset components."
-                )
-            if create_sample.sample_type() != comp_collections[comp_name].sample_type:
-                raise ValueError(
-                    f"Component '{comp_name}' expects samples of type "
-                    f"'{comp_collections[comp_name].sample_type.name}', "
-                    f"but got samples of type '{create_sample.sample_type().name}'."
-                )
-        # Create component samples after validation
-        component_sample_ids = {
-            create_sample.create_in_collection(
-                session=self.session, collection_id=comp_collections[comp_name].collection_id
-            )
-            for comp_name, create_sample in components.items()
-        }
-        # Create group sample
-        group_sample_id = group_resolver.create_many(
-            session=self.session,
-            collection_id=self.collection_id,
-            groups=[component_sample_ids],
+        group_sample_id = active_transport.get_transport().ingestion.add_group_samples(
+            collection_id=self.collection_id, groups=[components]
         )[0]
 
         # Return as GroupSample
