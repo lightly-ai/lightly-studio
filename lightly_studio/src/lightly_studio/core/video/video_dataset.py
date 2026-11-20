@@ -269,7 +269,6 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             Video IDs from the JSON that had no matching video in the dataset.
         """
         return add_annotations.add_annotations_from_activitynet(
-            session=self.session,
             root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             collection_name=annotation_source,
