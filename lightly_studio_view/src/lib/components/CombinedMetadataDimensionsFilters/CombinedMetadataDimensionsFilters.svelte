@@ -6,7 +6,7 @@
     import type { MetadataValueCountsFilter } from '$lib/hooks';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { Input } from '$lib/components/ui/input';
-    import { setFieldSearchContext } from '$lib/components/MetadataFieldHeader/fieldSearchContext';
+    import { setFieldSearchContext } from '$lib/components/MetadataFieldHeader';
     import MetadataFieldRow from './MetadataFieldRow.svelte';
     import { MANY_FIELDS, matchesFieldSearch } from './metadataFieldList';
     import { isFieldActive, orderByActive } from './metadataFields';

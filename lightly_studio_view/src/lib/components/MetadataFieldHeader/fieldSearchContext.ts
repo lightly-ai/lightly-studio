@@ -2,7 +2,6 @@ import { getContext, setContext } from 'svelte';
 
 const KEY = Symbol('metadata-field-search');
 
-/** Lets every field header below highlight the current field search. */
 export const setFieldSearchContext = (getSearch: () => string): void => {
     setContext(KEY, getSearch);
 };
