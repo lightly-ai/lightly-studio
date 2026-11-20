@@ -19,7 +19,7 @@ class LocalMetadataTransport:
         rows = metadata_resolver.get_by_sample_ids(
             session=db_manager.persistent_session(), sample_ids=sample_ids
         )
-        return {row.sample_id: {key: row.get_value(key) for key in row.data} for row in rows}
+        return {row.sample_id: {key: row.get_value(key=key) for key in row.data} for row in rows}
 
     def update(self, sample_metadata: Sequence[tuple[UUID, Mapping[str, Any]]]) -> None:
         """Merge new metadata into the metadata of samples."""
