@@ -24,6 +24,13 @@ class TestHttpIngestionTransport:
                     limit=None,
                 )
 
+    def test_add_images(self) -> None:
+        with httpx.Client() as client:
+            transport: IngestionTransport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                transport.add_images(collection_id=uuid4(), images=[])
+
     def test_embed_images(self) -> None:
         with httpx.Client() as client:
             transport: IngestionTransport = HttpIngestionTransport(client=client)

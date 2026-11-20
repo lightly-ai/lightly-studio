@@ -7,6 +7,8 @@ from uuid import UUID
 
 import httpx
 
+from lightly_studio.models.image import AddImagesResult, ImageCreate
+
 
 class HttpIngestionTransport:
     """Implements `IngestionTransport` over HTTP. The v1 API has no ingestion routes yet."""
@@ -25,6 +27,10 @@ class HttpIngestionTransport:
         limit: int | None,
     ) -> None:
         """Add the raw images from a path to a collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding images over HTTP is not supported yet.")
+
+    def add_images(self, collection_id: UUID, images: Sequence[ImageCreate]) -> AddImagesResult:
+        """Add images with known dimensions to a collection. Not supported over HTTP yet."""
         raise NotImplementedError("Adding images over HTTP is not supported yet.")
 
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:

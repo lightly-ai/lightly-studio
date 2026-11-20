@@ -10,6 +10,7 @@ from lightly_studio.core.image import add_images
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_samples
+from lightly_studio.models.image import AddImagesResult, ImageCreate
 from lightly_studio.resolvers import collection_embedding_model_resolver, image_resolver
 
 logger = logging.getLogger(__name__)
@@ -58,6 +59,12 @@ class LocalIngestionTransport:
             )
         if embed:
             self.embed_images(collection_id=collection_id, sample_ids=created_sample_ids)
+
+    def add_images(self, collection_id: UUID, images: Sequence[ImageCreate]) -> AddImagesResult:
+        """Add images with known dimensions to a collection."""
+        return add_images.create_images(
+            session=db_manager.persistent_session(), collection_id=collection_id, images=images
+        )
 
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for images with the default embedding model of the collection.
