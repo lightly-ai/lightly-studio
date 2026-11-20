@@ -59,6 +59,21 @@ class IngestionTransport(Protocol):
             image whose file does not exist is missing.
         """
 
+    def add_directory_tags(
+        self, collection_id: UUID, path: str, sample_ids: Sequence[UUID], tag_depth: int
+    ) -> None:
+        """Tag images with the names of the folders between `path` and the image file.
+
+        Args:
+            collection_id: The ID of the collection.
+            path: The folder that the images were added from.
+            sample_ids: The images to tag.
+            tag_depth: The number of folder levels that give tags. 0 adds no tags.
+
+        Raises:
+            ValueError: If `tag_depth` is negative.
+        """
+
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for images with the default embedding model of the collection.
 

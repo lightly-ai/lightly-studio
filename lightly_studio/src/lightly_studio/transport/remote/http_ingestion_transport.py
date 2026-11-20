@@ -33,6 +33,12 @@ class HttpIngestionTransport:
         """Add images with known dimensions to a collection. Not supported over HTTP yet."""
         raise NotImplementedError("Adding images over HTTP is not supported yet.")
 
+    def add_directory_tags(
+        self, collection_id: UUID, path: str, sample_ids: Sequence[UUID], tag_depth: int
+    ) -> None:
+        """Tag images with the names of their folders. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding directory tags over HTTP is not supported yet.")
+
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for images. Not supported over HTTP yet."""
         raise NotImplementedError("Embedding images over HTTP is not supported yet.")

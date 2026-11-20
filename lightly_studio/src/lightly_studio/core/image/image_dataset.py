@@ -40,7 +40,6 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     collection_resolver,
     image_resolver,
-    tag_resolver,
 )
 from lightly_studio.services import annotation_source_service
 from lightly_studio.transport import active_transport
@@ -381,7 +380,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -470,17 +468,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
             # Tag samples with split name
             _postprocess_created_images(
-                session=self.session,
                 collection_id=self.collection_id,
                 sample_ids=created_sample_ids,
                 tag=split,
                 embed=False,
             )
             # Tag samples by their directory levels below the split's images directory.
-            add_images.tag_samples_by_directory(
-                session=self.session,
+            active_transport.get_transport().ingestion.add_directory_tags(
                 collection_id=self.collection_id,
-                input_path=images_path,
+                path=str(images_path),
                 sample_ids=created_sample_ids,
                 tag_depth=tag_depth,
             )
@@ -491,7 +487,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         # Generate embeddings for all samples at once
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=all_created_sample_ids,
             tag=None,
@@ -577,17 +572,15 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
             embed=embed,
         )
         # Tag samples by their directory levels below the images directory.
-        add_images.tag_samples_by_directory(
-            session=self.session,
+        active_transport.get_transport().ingestion.add_directory_tags(
             collection_id=self.collection_id,
-            input_path=images_path,
+            path=str(images_path),
             sample_ids=created_sample_ids,
             tag_depth=tag_depth,
         )
@@ -663,7 +656,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -722,7 +714,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -778,7 +769,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
         )
 
         _postprocess_created_images(
-            session=self.session,
             collection_id=self.collection_id,
             sample_ids=created_sample_ids,
             tag=split,
@@ -810,7 +800,6 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
 
 def _postprocess_created_images(
-    session: Session,
     collection_id: UUID,
     sample_ids: list[UUID],
     tag: str | None,
@@ -819,28 +808,19 @@ def _postprocess_created_images(
     """Post-process newly created images by generating embeddings and tagging.
 
     Args:
-        session: Database session for resolver operations.
         collection_id: The ID of the collection to associate with the embedding model.
         sample_ids: List of sample IDs to process.
         embed: If True, generate embeddings for the samples.
         tag: Optional tag name to assign to the samples.
     """
+    transport = active_transport.get_transport()
     if tag is not None and sample_ids:
-        db_tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session,
-            collection_id=collection_id,
-            tag_name=tag,
-        )
-        tag_resolver.add_sample_ids_to_tag_id(
-            session=session,
-            tag_id=db_tag.tag_id,
-            sample_ids=sample_ids,
+        transport.tags.add_to_samples(
+            collection_id=collection_id, tag_name=tag, sample_ids=sample_ids
         )
 
     if embed:
-        active_transport.get_transport().ingestion.embed_images(
-            collection_id=collection_id, sample_ids=sample_ids
-        )
+        transport.ingestion.embed_images(collection_id=collection_id, sample_ids=sample_ids)
 
 
 def _normalize_input_path(path: PathLike) -> PathLike:

@@ -85,3 +85,23 @@ class TestLocalIngestionTransport:
         assert new_image is not None
         assert (new_image.width, new_image.height) == (4, 3)
         assert len(result.sample_ids) == 1
+
+    def test_add_directory_tags(self, tmp_path: Path) -> None:
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        image = create_image(
+            session=session, collection_id=collection_id, file_path_abs=f"{tmp_path}/a/b/c.png"
+        )
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transport.add_directory_tags(
+            collection_id=collection_id,
+            path=str(tmp_path),
+            sample_ids=[image.sample_id],
+            tag_depth=1,
+        )
+
+        tag_names = tag_resolver.get_names_by_sample_ids(
+            session=session, sample_ids=[image.sample_id]
+        )
+        assert tag_names == {image.sample_id: ["a"]}
