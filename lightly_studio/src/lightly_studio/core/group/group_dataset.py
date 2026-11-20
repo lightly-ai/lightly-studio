@@ -16,6 +16,7 @@ from lightly_studio.resolvers import collection_resolver, group_resolver
 from lightly_studio.resolvers.collection_resolver.create_group_components import (
     GroupComponentDefinition,
 )
+from lightly_studio.transport import active_transport
 
 
 class GroupDataset(Dataset[GroupSample]):
@@ -97,8 +98,7 @@ class GroupDataset(Dataset[GroupSample]):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        collection = collection_resolver.create(
-            session=db_manager.persistent_session(),
+        collection = active_transport.get_transport().collections.create(
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
         collection_resolver.create_group_components(
