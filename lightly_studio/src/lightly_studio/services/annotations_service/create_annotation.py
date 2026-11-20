@@ -17,10 +17,9 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
-    evaluation_run_resolver,
     object_track_resolver,
 )
-from lightly_studio.services import object_track_service
+from lightly_studio.services import annotations_service, object_track_service
 
 
 class AnnotationCreateParams(BaseModel):
@@ -69,7 +68,7 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
         annotation_data["object_track_id"] = _resolve_object_track_id(
             session=session, annotation=annotation
         )
-        new_annotation_ids = annotation_resolver.create_many(
+        new_annotation_ids = annotations_service.create_annotations(
             session=session,
             parent_collection_id=annotation.collection_id,
             annotations=[AnnotationCreate(**annotation_data)],
@@ -90,10 +89,6 @@ def create_annotation(session: Session, annotation: AnnotationCreateParams) -> A
     if created_annotation is None:
         raise ValueError(f"Failed to create annotation: {annotation}")
 
-    evaluation_run_resolver.mark_stale_by_collection_id(
-        session=session,
-        collection_id=created_annotation.annotation_collection_id,
-    )
     if annotation.object_track_id is not None:
         object_track_service.interpolate_around_cuboid(
             session=session, annotation_id=created_annotation.sample_id
