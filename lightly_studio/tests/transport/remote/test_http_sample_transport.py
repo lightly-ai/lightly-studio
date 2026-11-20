@@ -25,6 +25,12 @@ class TestHttpSampleTransport:
         with pytest.raises(NotImplementedError):
             transport.get_image_ids_by_paths(collection_id=uuid4(), file_paths=["/a.png"])
 
+    def test_get_video_ids_by_stems(self, test_client: TestClient) -> None:
+        transport: SampleTransport = HttpSampleTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.get_video_ids_by_stems(collection_id=uuid4())
+
     def test_query(self, test_client: TestClient, db_session: Session) -> None:
         collection_id = create_collection(session=db_session).collection_id
         for path in ["/a.png", "/b.png"]:
