@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import logging
 from collections.abc import Iterable
 from pathlib import Path
 from uuid import UUID
@@ -26,8 +25,6 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import video_resolver
 from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
-
-logger = logging.getLogger(__name__)
 
 
 class VideoDataset(BaseSampleDataset[VideoSample]):
