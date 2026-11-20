@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -540,3 +541,18 @@ def test_get_session_backend(tmp_path: Path) -> None:
             assert db_manager.get_session_backend(session=session) == DatabaseBackend.DUCKDB
     finally:
         engine.close()
+
+
+@pytest.mark.parametrize(
+    "access", [db_manager.get_engine, db_manager.persistent_session, db_manager.connect]
+)
+def test_set_remote_client__blocks_database(
+    mocker: MockerFixture, access: Callable[[], object]
+) -> None:
+    mocker.patch.object(db_manager._client_mode, "remote", False)
+    db_manager.set_remote_client(remote=True)
+
+    with pytest.raises(NotImplementedError, match="remote connection"):
+        access()
+    with pytest.raises(NotImplementedError, match="remote connection"), db_manager.session():
+        pass

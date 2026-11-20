@@ -10,12 +10,9 @@ from lightly_studio.core import dataset
 from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset
 from lightly_studio.core.group.group_sample import GroupSample
-from lightly_studio.database import db_manager
-from lightly_studio.models.collection import CollectionCreate, SampleType
+from lightly_studio.models.collection import CollectionCreate, GroupComponentDefinition, SampleType
 from lightly_studio.resolvers import collection_resolver, group_resolver
-from lightly_studio.resolvers.collection_resolver.create_group_components import (
-    GroupComponentDefinition,
-)
+from lightly_studio.transport import active_transport
 
 
 class GroupDataset(Dataset[GroupSample]):
@@ -97,14 +94,12 @@ class GroupDataset(Dataset[GroupSample]):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        collection = collection_resolver.create(
-            session=db_manager.persistent_session(),
+        collections = active_transport.get_transport().collections
+        collection = collections.create(
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
-        collection_resolver.create_group_components(
-            session=db_manager.persistent_session(),
-            parent_collection_id=collection.collection_id,
-            components=components,
+        collections.create_group_components(
+            parent_collection_id=collection.collection_id, components=components
         )
         return cls(collection=collection)
 
@@ -135,9 +130,8 @@ class GroupDataset(Dataset[GroupSample]):
             return cls.create(components=components, name=name)
 
         # Validate that the existing collection has the same component schema.
-        existing_components = collection_resolver.get_group_components(
-            session=db_manager.persistent_session(),
-            parent_collection_id=collection.collection_id,
+        existing_components = active_transport.get_transport().collections.get_group_components(
+            parent_collection_id=collection.collection_id
         )
         if len(existing_components) != len(components):
             raise ValueError(

@@ -11,6 +11,8 @@ export interface RangeField {
     key: string;
     title: string;
     unit: string;
+    /** Whether the field accepts only whole numbers. */
+    integer: boolean;
     bound: Range;
     value: Range;
 }
