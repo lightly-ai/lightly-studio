@@ -175,6 +175,32 @@ def test_get_by_id(db_session: Session) -> None:
     assert caption_retrieved[1].sample_id == created_caption_ids[1]
 
 
+def test_get_by_parent_sample_ids(db_session: Session) -> None:
+    collection_id = create_collection(session=db_session).collection_id
+    image_a = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.jpg")
+    image_b = create_image(session=db_session, collection_id=collection_id, file_path_abs="/b.jpg")
+    image_c = create_image(session=db_session, collection_id=collection_id, file_path_abs="/c.jpg")
+    caption_resolver.create_many(
+        session=db_session,
+        parent_collection_id=collection_id,
+        captions=[
+            CaptionCreate(parent_sample_id=image_a.sample_id, text="a"),
+            CaptionCreate(parent_sample_id=image_b.sample_id, text="b"),
+            CaptionCreate(parent_sample_id=image_c.sample_id, text="c"),
+        ],
+    )
+
+    captions = caption_resolver.get_by_parent_sample_ids(
+        session=db_session, parent_sample_ids=[image_a.sample_id, image_b.sample_id]
+    )
+
+    assert {(c.parent_sample_id, c.text) for c in captions} == {
+        (image_a.sample_id, "a"),
+        (image_b.sample_id, "b"),
+    }
+    assert caption_resolver.get_by_parent_sample_ids(session=db_session, parent_sample_ids=[]) == []
+
+
 def test_update__text(db_session: Session) -> None:
     collection = create_collection(session=db_session)
 

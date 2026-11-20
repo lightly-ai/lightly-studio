@@ -8,6 +8,7 @@ from uuid import UUID
 
 from sqlmodel import Session, col, delete, select
 
+from lightly_studio.database import db_array
 from lightly_studio.models.caption import CaptionCreate, CaptionTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleCreate
@@ -99,6 +100,23 @@ def get_by_ids(session: Session, sample_ids: Sequence[UUID]) -> list[CaptionTabl
     # Return samples in the same order as the input IDs
     caption_map = {caption.sample_id: caption for caption in results}
     return [caption_map[id_] for id_ in sample_ids if id_ in caption_map]
+
+
+def get_by_parent_sample_ids(
+    session: Session, parent_sample_ids: Sequence[UUID]
+) -> list[CaptionTable]:
+    """Get the captions of samples."""
+    if not parent_sample_ids:
+        return []
+    return list(
+        session.exec(
+            select(CaptionTable).where(
+                db_array.in_array(
+                    column=col(CaptionTable.parent_sample_id), values=parent_sample_ids
+                )
+            )
+        ).all()
+    )
 
 
 def update(
