@@ -13,6 +13,7 @@ from labelformat.utils import ImageDimensionError
 from sqlmodel import Session
 
 from lightly_studio.core.image import add_annotations
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import (
@@ -23,6 +24,12 @@ from lightly_studio.resolvers import (
 )
 from tests import helpers_resolvers
 from tests.helpers_resolvers import ImageStub
+
+
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the transport writes through."""
+    return db_manager.persistent_session()
 
 
 def test_skip_and_warn_unreadable_image__warns_on_image_dimension_error(
@@ -63,7 +70,6 @@ def test_add_annotations_from_labelformat__resolved_path_and_collection_name(
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_root="images",
@@ -86,7 +92,6 @@ def test_add_annotations_from_labelformat__missing_images(db_session: Session) -
     label_input = _get_labelformat_input_obj_det(filename="nonexistent.jpg")
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_root="/images",
@@ -141,7 +146,6 @@ def test_add_annotations_from_labelformat__marks_evaluation_run_stale(
     assert run.stale_since is None
 
     add_annotations.add_annotations_from_labelformat(
-        session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=_get_labelformat_input_obj_det(filename="image.jpg"),
         images_root="images",

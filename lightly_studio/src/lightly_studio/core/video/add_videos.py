@@ -409,7 +409,6 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     }
 
     label_map = labelformat_helpers.create_label_map(
-        session=session,
         root_collection_id=collection_id,
         input_labels=input_labels,
     )

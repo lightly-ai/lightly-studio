@@ -296,7 +296,6 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     # Act
     with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
         sample_ids = add_images.load_into_dataset_from_labelformat(
-            session=db_session,
             ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             input_labels=label_input,
@@ -327,7 +326,6 @@ def test_load_into_dataset_from_labelformat__reraises_non_image_dimension_error(
     # Act / Assert: a non-file-outcome error must propagate rather than be recorded as broken.
     with pytest.raises(ValueError, match="boom"):
         add_images.load_into_dataset_from_labelformat(
-            session=db_session,
             ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             input_labels=label_input,
@@ -345,7 +343,6 @@ def test_load_into_dataset_from_labelformat__calls_get_labels_once(
     mocker.patch.object(add_images, "_file_exists", return_value=True)
 
     add_images.load_into_dataset_from_labelformat(
-        session=db_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -379,7 +376,6 @@ def test_load_into_collection_from_labelformat__obj_det(
     mocker.patch.object(add_images, "_file_exists", return_value=True)
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -464,7 +460,6 @@ def test_load_into_collection_from_labelformat__ins_seg(
 
     collection = helpers_resolvers.create_collection(session=db_session)
     sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=TestLabelInput(),
@@ -510,7 +505,6 @@ def test_load_into_dataset_from_labelformat__does_not_annotate_existing_images(
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
-        session=db_session,
         ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
@@ -677,7 +671,6 @@ def test_create_label_map(db_session: Session) -> None:
     )
 
     label_map_1 = labelformat_helpers.create_label_map(
-        session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input,
     )
@@ -687,7 +680,6 @@ def test_create_label_map(db_session: Session) -> None:
     )
 
     label_map_2 = labelformat_helpers.create_label_map(
-        session=db_session,
         root_collection_id=collection_id,
         input_labels=label_input_2,
     )
@@ -998,7 +990,6 @@ def test_load_into_dataset_from_paths__file_url_normalization(
     label_input = _get_labelformat_input_obj_det(filename="image.jpg")
 
     missing_paths = add_annotations.add_annotations_from_labelformat(
-        session=db_session,
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_root=file_url,  # Using file:// URL
