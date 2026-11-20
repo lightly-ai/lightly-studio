@@ -40,7 +40,7 @@ export function usePlotData({
     hasActiveFilter = true,
     hiddenCategories = new Set()
 }: {
-    arrowData: ArrowData;
+    arrowData: ArrowData | undefined;
     rangeSelection: Selection;
     highlightRegion?: Selection;
     highlightedSampleIds?: string[];
@@ -57,25 +57,7 @@ export function usePlotData({
         return { data: plotData, error, selectedSampleIds };
     }
 
-    const pointCount = (data.x as Float32Array).length;
-    const colorCategories = data.color_categories as number[][];
-    const fulfilsFilter = data.fulfils_filter as ArrayLike<number>;
-
-    // Each point is displayed as its first visible category, so it falls back to the next
-    // one when a category is toggled off. Without an active filter every point starts as
-    // INCLUDED_BY_FILTERS_CATEGORY so range selection still works.
-    let category = new Uint8Array(pointCount);
-    if (hasActiveFilter) {
-        for (let index = 0; index < pointCount; index++) {
-            category[index] = resolveVisibleCategory(
-                colorCategories[index],
-                fulfilsFilter[index],
-                hiddenCategories
-            );
-        }
-    } else {
-        category.fill(INCLUDED_BY_FILTERS_CATEGORY);
-    }
+    let category = getVisibleCategories(data, hasActiveFilter, hiddenCategories);
     const sampleIds = data.sample_id as string[];
 
     if (rangeSelection) {
@@ -109,18 +91,10 @@ export function usePlotData({
         });
     }
 
-    // Hide on each point's final category, after demotion: a demoted point is hidden as Excluded,
-    // not its pre-demotion bucket.
-    if (hiddenCategories.size > 0) {
-        category = category.map((pointCategory) =>
-            hiddenCategories.has(pointCategory) ? HIDDEN_CATEGORY : pointCategory
-        );
-    }
-
     plotData.set({
         x: data.x,
         y: data.y,
-        category
+        category: hideCategories(category, hiddenCategories)
     });
 
     return {
@@ -128,4 +102,40 @@ export function usePlotData({
         error,
         selectedSampleIds
     };
+}
+
+// Each point is displayed as its first visible category, so it falls back to the next
+// one when a category is toggled off. Without an active filter every point starts as
+// INCLUDED_BY_FILTERS_CATEGORY so range selection still works.
+function getVisibleCategories(
+    data: ArrowData,
+    hasActiveFilter: boolean,
+    hiddenCategories: ReadonlySet<number>
+): Uint8Array {
+    const pointCount = (data.x as Float32Array).length;
+    const category = new Uint8Array(pointCount);
+    if (!hasActiveFilter) {
+        return category.fill(INCLUDED_BY_FILTERS_CATEGORY);
+    }
+    const colorCategories = data.color_categories as number[][];
+    const fulfilsFilter = data.fulfils_filter as ArrayLike<number>;
+    for (let index = 0; index < pointCount; index++) {
+        category[index] = resolveVisibleCategory(
+            colorCategories[index],
+            fulfilsFilter[index],
+            hiddenCategories
+        );
+    }
+    return category;
+}
+
+// Hide on each point's final category, after demotion: a demoted point is hidden as Excluded,
+// not its pre-demotion bucket.
+function hideCategories(category: Uint8Array, hiddenCategories: ReadonlySet<number>): Uint8Array {
+    if (hiddenCategories.size === 0) {
+        return category;
+    }
+    return category.map((pointCategory) =>
+        hiddenCategories.has(pointCategory) ? HIDDEN_CATEGORY : pointCategory
+    );
 }

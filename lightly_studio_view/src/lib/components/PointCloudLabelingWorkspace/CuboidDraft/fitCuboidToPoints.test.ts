@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { PointBatch } from '$lib/components/PointCloudViewer';
 import { getDraftRectangle } from './cuboidDraft';
-import { fitFootprintHeight, fitMissingAxis } from './fitCuboidToPoints';
+import {
+    estimateFootprintGround,
+    estimateGroundHeight,
+    fitFootprintHeight,
+    fitMissingAxis
+} from './fitCuboidToPoints';
 
 const batch = (points: number[], count = points.length / 3): PointBatch => ({
     positions: new Float32Array(points),
@@ -49,29 +54,78 @@ describe('fitFootprintHeight', () => {
     // Side along the diagonal from (0, 0) to (2, 2), widened by √2 to the left: corners (-1, 1), (1, 3).
     const footprint = { start: [0, 0, -1], end: [2, 2, -1], width: Math.SQRT2 } as const;
 
-    it('fits Z to the points inside the turned footprint', () => {
+    it('fits Z to the points inside the turned footprint and rests on the ground', () => {
         // (0, 2) is inside. (2, 0) is inside the axis-aligned bounds only.
-        const points = [0, 2, 0.25, 1, 2, 1.75, 2, 0, 50];
-        expect(fitFootprintHeight(footprint, batch(points))).toEqual({ min: 0.25, max: 1.75 });
+        const points = [0, 2, -0.75, 1, 2, -0.5, 1, 2, -0.25, 2, 0, 50];
+        expect(fitFootprintHeight(footprint, -1, batch(points))).toEqual({ min: -1, max: -0.25 });
     });
     it('fits a footprint widened to the right', () => {
         const right = { ...footprint, width: -Math.SQRT2 };
-        expect(fitFootprintHeight(right, batch([2, 0, 0.5, 0, 2, 50]))).toEqual({
-            min: 0.5,
-            max: 0.5
+        expect(fitFootprintHeight(right, -1, batch([2, 0, -0.5, 0, 2, 50]))).toEqual({
+            min: -1,
+            max: -0.5
+        });
+    });
+    it('ignores the ground returns and the points below the ground', () => {
+        const points = [0, 2, -1.05, 0, 2, -0.9, 0, 2, -3, 1, 2, -0.6, 1, 2, -0.25];
+        expect(fitFootprintHeight(footprint, -1, batch(points))).toEqual({ min: -1, max: -0.25 });
+    });
+    it('ignores the clutter above a vertical gap', () => {
+        const points = [0, 2, -0.5, 1, 2, 0, 1, 2, 0.5, 1, 2, 3];
+        expect(fitFootprintHeight(footprint, -1, batch(points))).toEqual({ min: -1, max: 0.5 });
+    });
+    it('starts at the lowest point of an object high above the ground', () => {
+        expect(fitFootprintHeight(footprint, -1, batch([0, 2, 1, 1, 2, 1.25]))).toEqual({
+            min: 1,
+            max: 1.25
         });
     });
     it('rests on the ground with the shorter side as height when no point is inside', () => {
-        const extent = fitFootprintHeight(footprint, batch([9, 9, 9]));
+        const extent = fitFootprintHeight(footprint, -1, batch([9, 9, 9]));
         expect(extent.min).toBe(-1);
         expect(extent.max).toBeCloseTo(-1 + Math.SQRT2);
     });
     it('keeps a thin footprint without points on the ground at the minimum height', () => {
         const thin = { ...footprint, width: 0.02 };
-        expect(fitFootprintHeight(thin, undefined)).toEqual({ min: -1, max: -0.9 });
+        expect(fitFootprintHeight(thin, -1, undefined)).toEqual({ min: -1, max: -0.9 });
     });
     it('reads every segment of a segmented batch', () => {
-        const segmented = { ...batch([]), segments: [batch([0, 2, 0.5]), batch([1, 2, 1.5])] };
-        expect(fitFootprintHeight(footprint, segmented)).toEqual({ min: 0.5, max: 1.5 });
+        const segmented = { ...batch([]), segments: [batch([0, 2, -0.5]), batch([1, 2, -0.25])] };
+        expect(fitFootprintHeight(footprint, -1, segmented)).toEqual({ min: -1, max: -0.25 });
+    });
+});
+
+describe('estimateGroundHeight', () => {
+    /** Ground points at height z on a ring of radius 1 around (0, 0). */
+    const ground = (z: number, count = 20) =>
+        Array.from({ length: count }, (_, index) => {
+            const angle = (2 * Math.PI * index) / count;
+            return [Math.cos(angle), Math.sin(angle), z];
+        }).flat();
+    const truck = Array.from({ length: 40 }, (_, index) => [0, 0, 2.5 + index / 20]).flat();
+
+    it('gives the lowest dense layer around the position', () => {
+        expect(estimateGroundHeight(batch([...ground(2), ...truck]), 0, 0, 1.5)).toBe(2);
+    });
+    it('ignores a few noise points below the ground', () => {
+        const noise = [0, 0, -5, 0, 0, -4, 0, 0, -3];
+        expect(estimateGroundHeight(batch([...ground(2), ...noise]), 0, 0, 1.5)).toBe(2);
+    });
+    it('ignores the points outside the radius', () => {
+        const far = Array.from({ length: 20 }, () => [9, 9, -5]).flat();
+        expect(estimateGroundHeight(batch([...ground(2), ...far]), 0, 0, 1.5)).toBe(2);
+    });
+    it('gives null without a dense layer', () => {
+        expect(estimateGroundHeight(batch(ground(2, 5)), 0, 0, 1.5)).toBeNull();
+        expect(estimateGroundHeight(undefined, 0, 0, 1.5)).toBeNull();
+    });
+});
+
+describe('estimateFootprintGround', () => {
+    it('finds the ground beside a footprint that covers no ground', () => {
+        const footprint = { start: [0, 0, 1.5], end: [4, 0, 1.5], width: 2 } as const;
+        const truck = Array.from({ length: 40 }, (_, index) => [2, 1, 0.5 + index / 40]).flat();
+        const ground = Array.from({ length: 12 }, (_, index) => [index / 3, -0.5, -0.2]).flat();
+        expect(estimateFootprintGround(footprint, batch([...truck, ...ground]))).toBeCloseTo(-0.2);
     });
 });

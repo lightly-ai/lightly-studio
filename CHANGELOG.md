@@ -16,16 +16,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filter images and videos without annotations with the "No annotations" option in the annotation class filter. Combine it with classes to also see the samples of those classes.
 - The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
 - Show frame tags on the point cloud timeline with the "Show frame tags" checkbox. Each tag gets a row with bars over the frames that have the tag.
+- Filter video collections by categorical metadata.
+
 
 ### Changed
 
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
+- Each metadata field in the filter panel has a checkbox. A collapsed field shows a short summary of its filter, for example a range or "2 of 3" values. Active fields move to the top, and the metadata filter chips are removed.
 
 ### Deprecated
 
 ### Removed
 
 ### Fixed
+- Images with many annotations open faster when LightlyStudio runs on a remote server.
 
 ### Security
 

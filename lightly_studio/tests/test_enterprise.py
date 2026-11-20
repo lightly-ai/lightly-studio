@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 import fsspec
+import httpx
 import pytest
 import requests
 from adlfs import AzureBlobFileSystem  # type: ignore[import-untyped]
@@ -17,6 +18,9 @@ from pytest_mock import MockerFixture, MockType
 from lightly_studio import ca_bundle, enterprise
 from lightly_studio.analytics import tracking
 from lightly_studio.database import db_manager
+from lightly_studio.dataset import env
+from lightly_studio.transport import active_transport
+from lightly_studio.transport.remote.http_transport import HttpTransport
 from tests import helpers_tls
 
 
@@ -53,6 +57,30 @@ def test_connect__success(mocker: MockerFixture, patch_db_connect: MockType) -> 
     patch_db_connect.assert_called_once_with(
         db_url="postgresql://lightly:secret@10.0.0.5:5433/lightly_studio"
     )
+
+
+@pytest.mark.parametrize(
+    ("credentials", "bearer"), [({"api_key": "ls_key"}, "ls_key"), ({"token": "jwt"}, "jwt")]
+)
+def test_connect__http_client(
+    mocker: MockerFixture, patch_db_connect: MockType, credentials: dict[str, str], bearer: str
+) -> None:
+    mocker.patch.object(env, "LIGHTLY_STUDIO_HTTP_CLIENT", True)
+    mocker.patch.object(active_transport._active, "transport", None)
+    mocker.patch.object(db_manager._client_mode, "remote", False)
+    mock_client = mocker.patch.object(httpx, "Client")
+    mock_post = mocker.patch.object(requests, "post")
+    mock_get = mocker.patch.object(requests, "get")
+
+    enterprise.connect(api_url="http://10.0.0.5:8100/", **credentials)
+
+    assert isinstance(active_transport.get_transport(), HttpTransport)
+    mock_client.assert_called_once_with(
+        base_url="http://10.0.0.5:8100", headers={"Authorization": f"Bearer {bearer}"}
+    )
+    mock_post.assert_not_called()
+    mock_get.assert_not_called()
+    patch_db_connect.assert_not_called()
 
 
 def test_connect__success_api_key(mocker: MockerFixture, patch_db_connect: MockType) -> None:

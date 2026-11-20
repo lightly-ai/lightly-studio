@@ -165,6 +165,8 @@ today. *(My call.)*
 
 Jonas tested the branch and changed these points. They replace the matching parts above.
 
+- No ✕ per field. Unchecking the checkbox resets the field.
+- Every field starts collapsed, also with 8 fields or fewer. (2026-11-16)
 - The field name is left-aligned, and the field content is indented under the chevron.
 - The short value shows only while the field is collapsed. Categorical fields always use
   "N of M"; the value counts are also requested for collapsed active fields.
