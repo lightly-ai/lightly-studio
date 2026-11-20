@@ -7,7 +7,7 @@ from uuid import UUID
 import pytest
 
 from lightly_studio.core.mcap import add_labels, add_mcaps
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels

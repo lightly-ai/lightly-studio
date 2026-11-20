@@ -8,7 +8,7 @@ from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import add_labels
 from lightly_studio.core.mcap.annotation_mcap import DEFAULT_SCENE_UPDATE_TOPIC
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.type_definitions import SceneUpdateLabels

@@ -25,7 +25,7 @@ from lightly_studio.core.file_outcome_report import (
     MissingInputFileError,
 )
 from lightly_studio.core.mcap import dataset_schema, matching, reference_frames
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
