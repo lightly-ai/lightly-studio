@@ -29,6 +29,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Images with many annotations open faster when LightlyStudio runs on a remote server.
 
+- The embedding plot selection is cleared when you switch to another tab, so the grid no longer stays narrowed after the Plot filter chip is gone.
+
 ### Security
 
 ## \[1.4.0\] - 2026-11-18
