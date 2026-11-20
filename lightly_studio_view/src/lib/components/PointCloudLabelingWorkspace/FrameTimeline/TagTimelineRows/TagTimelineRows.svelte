@@ -22,14 +22,11 @@
 </script>
 
 {#if rows.length > 0}
-    <div
-        class="scrollbar-thin max-h-24 overflow-y-auto overflow-x-hidden overscroll-contain px-1 [scrollbar-gutter:stable]"
-        data-testid="frame-tag-rows"
-    >
+    <div class="px-1" data-testid="frame-tag-rows" data-timeline-body>
         {#each rows as { tag, runs } (tag.tag_id)}
             <div class="py-1">
                 <div
-                    class="truncate pb-0.5 text-[10px] text-muted-foreground"
+                    class="sticky left-3 w-fit max-w-xs truncate pb-0.5 text-[10px] text-muted-foreground"
                     title={tag.name}
                     data-testid="tag-row-label"
                 >

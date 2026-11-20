@@ -341,6 +341,35 @@ describe('FrameTimeline', () => {
             await zoomInDeeply();
             expect(screen.getAllByTestId('timeline-tick-mark').length).toBeLessThan(100);
         });
+
+        it('puts each ruler label on a long mark at a round frame number', () => {
+            render(FrameTimeline, { props: manyTicks });
+
+            const longMarks = screen
+                .getAllByTestId('timeline-tick-mark')
+                .filter((mark) => mark.classList.contains('h-4'));
+            const labels = ['100', '200', '300', '400', '500', '600', '700', '800', '900', '1000'];
+            expect(longMarks.map((mark) => mark.style.left)).toEqual(
+                labels.map((label) => screen.getByText(label).style.left)
+            );
+        });
+
+        it('scrolls the timeline in one area with a sticky ruler, toolbar and row labels', () => {
+            render(FrameTimeline, {
+                props: {
+                    ...longProps,
+                    showFrameTags: true,
+                    onShowFrameTagsChange: vi.fn(),
+                    frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [0] }]
+                }
+            });
+
+            expect(screen.getByTestId('timeline-scroll-container')).toHaveClass('overflow-auto');
+            const ruler = screen.getByLabelText('Frame position').closest('.sticky');
+            expect(ruler).toHaveClass('top-0');
+            expect(screen.getByText('Show frame tags').closest('.sticky')).toHaveClass('right-2');
+            expect(screen.getByTestId('tag-row-label')).toHaveClass('sticky', 'left-3');
+        });
     });
 
     it('shows the frame tag rows it receives while frame tags are shown', () => {
