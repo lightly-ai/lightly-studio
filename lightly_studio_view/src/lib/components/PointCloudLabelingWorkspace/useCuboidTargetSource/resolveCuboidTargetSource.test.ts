@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
     CUBOID_SOURCE_MESSAGES,
-    DEFAULT_CUBOID_SOURCE_NAME,
     isCuboidPickRemoved,
     resolveCuboidTargetSource
 } from './resolveCuboidTargetSource';
@@ -44,11 +43,12 @@ describe('resolveCuboidTargetSource', () => {
         });
     });
 
-    it('uses the default source when there are no sources', () => {
-        expect(resolveCuboidTargetSource({ ...base, sourceNames: [] }).targetSource).toBe(
-            DEFAULT_CUBOID_SOURCE_NAME
-        );
-        expect(DEFAULT_CUBOID_SOURCE_NAME).toBe('annotation');
+    it('asks for a pick when there are no sources', () => {
+        expect(resolveCuboidTargetSource({ ...base, sourceNames: [] })).toEqual({
+            targetSource: null,
+            blockedReason: null,
+            needsPick: true
+        });
     });
 
     it('asks for a pick among several sources', () => {
