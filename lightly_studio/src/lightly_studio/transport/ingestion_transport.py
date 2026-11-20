@@ -15,7 +15,7 @@ class IngestionTransport(Protocol):
     A path is a local path or a cloud URI. A remote transport reads it on the server.
     """
 
-    # TODO(Iunir, 11/2026): Add the ingestion of images and videos.
+    # TODO(Iunir, 11/2026): Add the ingestion of videos.
     # TODO(Iunir, 11/2026): Add MCAP ingestion when `McapComponentSpec` has no DB imports.
 
     def add_images_from_path(  # noqa: PLR0913
