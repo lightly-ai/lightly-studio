@@ -30,13 +30,18 @@ from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_mcap_sequences
 from lightly_studio.errors import ExportError
 from lightly_studio.export import mcap_scene_update_export
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.collection import (
+    CollectionTable,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import (
     collection_resolver,
     mcap_group_sequence_resolver,
     recording_resolver,
 )
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
 logger = logging.getLogger(__name__)
@@ -80,7 +85,7 @@ class McapDataset:
     `create_sequence`.
     """
 
-    def __init__(self, collection: CollectionTable) -> None:
+    def __init__(self, collection: CollectionWithoutChildrenView) -> None:
         """Initialize the dataset.
 
         Args:
@@ -124,16 +129,12 @@ class McapDataset:
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        session = db_manager.persistent_session()
-        root_collection, group_collection = dataset_schema.create_collections(
-            session=session, name=name
-        )
+        root_collection, group_collection = dataset_schema.create_collections(name=name)
         dataset_schema.create_components(
-            session=session,
+            session=db_manager.persistent_session(),
             group_collection_id=group_collection.collection_id,
             components=components,
         )
-        session.refresh(root_collection)
         return cls(collection=root_collection)
 
     @classmethod
@@ -474,13 +475,16 @@ class McapDataset:
         )
         return McapSequence(session=self._session, sample_id=sample_id, recording_id=recording_id)
 
-    def _group_collection(self) -> CollectionTable:
+    def _group_collection(self) -> CollectionWithoutChildrenView:
         """Return the GROUP child collection holding the groups of the dataset.
 
         Raises:
             RuntimeError: If the dataset has no GROUP child collection.
         """
-        for child in self._inner.children:
+        children = active_transport.get_transport().collections.get_all_by_parent(
+            parent_collection_id=self.collection_id, name=None
+        )
+        for child in children:
             if child.sample_type == SampleType.GROUP:
                 return child
         raise RuntimeError(
