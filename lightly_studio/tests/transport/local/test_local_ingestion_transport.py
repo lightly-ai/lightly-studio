@@ -115,10 +115,17 @@ class TestLocalIngestionTransport:
         transport: IngestionTransport = LocalIngestionTransport()
 
         transport.embed_videos(collection_id=collection_id, sample_ids=sample_ids)
-        transport.embed_videos(collection_id=collection_id, sample_ids=[])
 
         embed_video_samples.assert_called_once_with(
             session=db_manager.persistent_session(),
             collection_id=collection_id,
             sample_ids=sample_ids,
         )
+
+    def test_embed_videos__empty_sample_ids(self, mocker: MockerFixture) -> None:
+        embed_video_samples = mocker.patch.object(embed_samples, "embed_video_samples")
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transport.embed_videos(collection_id=uuid4(), sample_ids=[])
+
+        embed_video_samples.assert_not_called()
