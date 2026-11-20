@@ -34,7 +34,7 @@ class TestHttpAnnotationTransport:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
         with pytest.raises(NotImplementedError):
-            transport.get_covered_sequence_ids(annotation_collection_id=uuid4())
+            transport.get_covered_sequence_ids(annotation_collection_id=uuid.uuid4())
 
     def test_create(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
