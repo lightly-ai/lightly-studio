@@ -6,9 +6,11 @@
     import type { MetadataValueCountsFilter } from '$lib/hooks';
     import type { CategoricalMetadataValue } from '$lib/services/types';
     import { Input } from '$lib/components/ui/input';
+    import { setFieldSearchContext } from '$lib/components/MetadataFieldHeader';
     import MetadataFieldRow from './MetadataFieldRow.svelte';
     import { MANY_FIELDS, matchesFieldSearch } from './metadataFieldList';
     import { isFieldActive, orderByActive } from './metadataFields';
+    import { keepFocusOnMove } from './keepFocusOnMove.svelte';
     import { useMetadataFieldList } from './useMetadataFieldList.svelte';
 
     interface Props {
@@ -54,6 +56,15 @@
     });
 
     let fieldSearch = $state('');
+    setFieldSearchContext(() => fieldSearch);
+    let rowsElement = $state<HTMLElement>();
+    let rowsMinHeight = $state<number>();
+    // While searching, the rows keep their height so the search box does not move.
+    const setFieldSearch = (value: string) => {
+        if (!fieldSearch && value) rowsMinHeight = rowsElement?.offsetHeight;
+        if (!value) rowsMinHeight = undefined;
+        fieldSearch = value;
+    };
     // Fields start collapsed, so the section stays short.
     let expandedFields = $state<Record<string, boolean>>({});
     const fieldCount = $derived(list.fields.length);
@@ -64,6 +75,11 @@
 
     const ordered = $derived(
         orderByActive(list.fields.filter((field) => matchesFieldSearch(field.title, fieldSearch)))
+    );
+    let listElement = $state<HTMLElement>();
+    keepFocusOnMove(
+        () => listElement,
+        () => ordered.fields.map((field) => field.id)
     );
     const hasActiveField = $derived(list.fields.some(isFieldActive));
 
@@ -84,11 +100,11 @@
 <!-- All metadata filters share one section: active fields first, then a line, then the other
      fields. Ranges use a slider, categorical fields a value list. -->
 <Segment title="Metadata">
-    <div class="space-y-4">
+    <div class="space-y-4" bind:this={listElement}>
         {#if fieldCount > MANY_FIELDS}
             <Input
                 value={fieldSearch}
-                oninput={(event) => (fieldSearch = event.currentTarget.value)}
+                oninput={(event) => setFieldSearch(event.currentTarget.value)}
                 placeholder="Search metadata fields…"
                 aria-label="Search metadata fields"
                 class="h-8"
@@ -103,7 +119,11 @@
             />
         </div>
 
-        <div class="space-y-4">
+        <div
+            class="space-y-4"
+            bind:this={rowsElement}
+            style:min-height={rowsMinHeight ? `${rowsMinHeight}px` : undefined}
+        >
             {#each ordered.fields as field, index (field.id)}
                 {@const expanded = isExpanded(field.id)}
                 {#if index === ordered.activeCount && ordered.activeCount > 0}
