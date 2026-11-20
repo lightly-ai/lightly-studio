@@ -18,6 +18,7 @@ from sqlalchemy.sql.schema import SchemaItem
 from sqlmodel import SQLModel
 
 import lightly_studio.api.db_tables  # noqa: F401
+from lightly_studio.database import schema_compat
 from lightly_studio.database.db_vector import VectorType
 from lightly_studio.dataset.env import LIGHTLY_STUDIO_DATABASE_URL
 from lightly_studio.migrations.config_utils import (
@@ -72,6 +73,9 @@ def _run_migrations_on(connection: Connection) -> None:
         compare_type=True,
         render_item=_render_item,
         include_object=_include_object,
+        # Each revision commits alone, together with the update of the schema_compat row.
+        transaction_per_migration=True,
+        on_version_apply=schema_compat.on_version_apply,
     )
 
     with context.begin_transaction():

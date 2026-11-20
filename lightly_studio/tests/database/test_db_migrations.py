@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 from uuid import uuid4
 
 import numpy as np
@@ -14,12 +15,16 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlmodel import Session, SQLModel
 
-from lightly_studio.database import db_migrations, db_url
+from lightly_studio.database import db_migrations, db_url, schema_compat
 from lightly_studio.database.db_manager import DatabaseEngine
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
 from tests.helpers_resolvers import create_collection, create_embedding_model, create_image
 
 _POSTGRES_URL = "postgresql://localhost/db"
+
+# The revision that creates schema_compat, and the revision before it.
+_SCHEMA_COMPAT_REVISION = "7b4e2f1b1a31"
+_BEFORE_SCHEMA_COMPAT_REVISION = "1e2ff606de9f"
 
 
 @pytest.fixture
@@ -123,9 +128,46 @@ def test_postgres_fresh_database__upgrade_head(
                 statement=text("SELECT version_num FROM alembic_version"),
             ).scalar_one()
         assert version == head_revision
+        row = schema_compat.read_schema_compat(engine=engine._engine)
+        assert row is not None
+        assert (row.oss_revision, row.min_client_version) == (head_revision, "1.2.1")
     finally:
         _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()
+
+
+def test_postgres_upgrade__failed_revision_rolls_back_alone(
+    postgres_url: str | None,
+    mocker: MockerFixture,
+) -> None:
+    """A failed revision rolls back with its schema_compat update. Earlier ones stay."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+    _reset_postgres_database(engine_url=postgres_url)
+    on_version_apply = schema_compat.on_version_apply
+
+    def _fail_at_schema_compat_revision(**kwargs: Any) -> None:
+        on_version_apply(**kwargs)
+        if kwargs["heads"] == {_SCHEMA_COMPAT_REVISION}:
+            raise RuntimeError("fail")
+
+    # A function, not a mock: Alembic reads an iterable hook as a list of hooks.
+    mocker.patch.object(schema_compat, "on_version_apply", new=_fail_at_schema_compat_revision)
+    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
+    try:
+        with pytest.raises(RuntimeError, match="fail"):
+            db_migrations.run_migrations(engine=engine, engine_url=postgres_url)
+
+        inspector = db_migrations._get_inspector(engine=engine)
+        assert inspector.has_table(table_name="collection")
+        assert not inspector.has_table(table_name="schema_compat")
+        with engine.connect() as connection:
+            version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar()
+        assert version == _BEFORE_SCHEMA_COMPAT_REVISION
+    finally:
+        mocker.stopall()
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
 
 
 def test_postgres_embedding_plot__upgrade_preserves_existing_cache(
