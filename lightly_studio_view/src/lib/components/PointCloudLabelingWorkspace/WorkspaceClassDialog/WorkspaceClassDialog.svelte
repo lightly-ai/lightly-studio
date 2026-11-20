@@ -23,13 +23,10 @@
         });
     });
 
-    // Another tab can delete the drafted source while the dialog is open. Without sources, the
-    // default source is not listed but stays valid.
+    // Another tab can delete the drafted source while the dialog is open.
     const validDraftSource = $derived.by(() => {
         const names = data.annotationSourceNames ?? [];
-        const isValid =
-            draftSource &&
-            (draftSource.isNew || names.length === 0 || names.includes(draftSource.name));
+        const isValid = draftSource && (draftSource.isNew || names.includes(draftSource.name));
         return isValid ? draftSource : null;
     });
 
