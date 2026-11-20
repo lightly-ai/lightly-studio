@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 from lightly_studio.transport.remote.http_collection_transport import HttpCollectionTransport
+from lightly_studio.transport.remote.http_ingestion_transport import HttpIngestionTransport
 from lightly_studio.transport.remote.http_sample_transport import HttpSampleTransport
 from lightly_studio.transport.remote.http_tag_transport import HttpTagTransport
 from lightly_studio.transport.remote.http_transport import HttpTransport
@@ -18,8 +19,9 @@ class TestHttpTransport:
             assert isinstance(transport.collections, HttpCollectionTransport)
             assert isinstance(transport.samples, HttpSampleTransport)
             assert isinstance(transport.tags, HttpTagTransport)
+            assert isinstance(transport.ingestion, HttpIngestionTransport)
 
-    @pytest.mark.parametrize("area", ["metadata", "annotations", "ingestion", "compute", "export"])
+    @pytest.mark.parametrize("area", ["metadata", "annotations", "compute", "export"])
     def test_area__not_implemented(self, area: str) -> None:
         with httpx.Client() as client, pytest.raises(AttributeError, match=r"does not exist yet"):
             getattr(HttpTransport(client=client), area)
