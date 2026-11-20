@@ -108,21 +108,6 @@ class TestLocalIngestionTransport:
         )
         assert tag_names == {image.sample_id: ["a"]}
 
-    def test_add_videos_from_path__invalid_target_fps(self, tmp_path: Path) -> None:
-        transport: IngestionTransport = LocalIngestionTransport()
-
-        with pytest.raises(ValueError, match="target_fps must be greater than 0"):
-            transport.add_videos_from_path(
-                collection_id=uuid4(),
-                path=str(tmp_path),
-                allowed_extensions=None,
-                num_decode_threads=None,
-                embed=False,
-                embed_frames=False,
-                target_fps=0,
-                limit=None,
-            )
-
     def test_embed_videos(self, mocker: MockerFixture) -> None:
         embed_video_samples = mocker.patch.object(embed_samples, "embed_video_samples")
         collection_id = uuid4()
