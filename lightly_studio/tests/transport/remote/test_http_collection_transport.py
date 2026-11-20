@@ -50,3 +50,20 @@ class TestHttpCollectionTransport:
         children = transport.get_all_by_parent(parent_collection_id=root.collection_id, name=None)
 
         assert [c.name for c in children] == ["child"]
+
+    def test_create_group_components(self, test_client: TestClient) -> None:
+        transport: CollectionTransport = HttpCollectionTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.create_group_components(
+                parent_collection_id=UUID("00000000-0000-0000-0000-000000000001"),
+                components=[("front", SampleType.IMAGE)],
+            )
+
+    def test_get_group_components(self, test_client: TestClient) -> None:
+        transport: CollectionTransport = HttpCollectionTransport(client=test_client)
+
+        with pytest.raises(NotImplementedError):
+            transport.get_group_components(
+                parent_collection_id=UUID("00000000-0000-0000-0000-000000000001")
+            )

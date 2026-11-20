@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.mcap.component import McapComponent
-from lightly_studio.resolvers import collection_resolver
+from lightly_studio.transport import active_transport
 
 
 class McapGroupDataset(GroupDataset):
@@ -36,8 +36,8 @@ class McapGroupDataset(GroupDataset):
         Raises:
             KeyError: If the dataset has no component of that name.
         """
-        components = collection_resolver.get_group_components(
-            session=self.session, parent_collection_id=self.collection_id
+        components = active_transport.get_transport().collections.get_group_components(
+            parent_collection_id=self.collection_id
         )
         if name not in components:
             known_names = ", ".join(sorted(components)) or "none"
