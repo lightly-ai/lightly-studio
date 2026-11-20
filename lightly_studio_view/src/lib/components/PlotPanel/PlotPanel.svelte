@@ -44,6 +44,8 @@
     import { getPlotRequestFilter } from './getPlotRequestFilter/getPlotRequestFilter';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
+    import PlotComputePrompt from './PlotComputePrompt/PlotComputePrompt.svelte';
+    import { usePlotComputeGate } from './usePlotComputeGate/usePlotComputeGate.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
     import { useCategoryVisibility } from './useCategoryVisibility/useCategoryVisibility';
     import { getCategoryColors, getCategoryCount, getLegendEntries } from './plotColorUtils';
@@ -169,11 +171,22 @@
     } = usePlotLayout(untrack(() => collectionId));
     const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
+    const plotComputeGate = usePlotComputeGate({
+        getCollectionId: () => collectionId,
+        getIsAxesLayout: () => $plotAxes !== null,
+        getPlotRequestKey: () => JSON.stringify([filter, $colorBy, $plotAxes])
+    });
+    // A separate derived, so a view change that keeps the request on does not create a new query.
+    const isPlotRequestEnabled = $derived(plotComputeGate.isPlotRequestEnabled);
     // No request until the color-by is known, so the plot fetches once.
     const embeddingsData = $derived(
         $colorBy === undefined
             ? undefined
-            : useEmbeddings(collectionId, filter, $colorBy, $plotAxes)
+            : useEmbeddings(collectionId, filter, $colorBy, $plotAxes, {
+                  enabled: isPlotRequestEnabled,
+                  getIsComputing: () => plotComputeGate.view === 'computing',
+                  onCompute: plotComputeGate.trackCompute
+              })
     );
 
     // The query parses the Arrow data. A new color-by or axes is a new query with its own data,
@@ -572,6 +585,10 @@
     );
 
     const errorText = $derived.by(() => {
+        // A text axes plot does not use the status, so a failed status request must not hide it.
+        if (plotComputeGate.view === 'error') {
+            return plotComputeGate.statusError;
+        }
         if (embeddingsData?.isError) {
             return embeddingsData.error?.message || 'Unknown error';
         }
@@ -604,7 +621,23 @@
         </Button>
     </div>
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if !embeddingsData || embeddingsData.isLoading}
+        {#if plotComputeGate.view === 'prompt'}
+            <PlotComputePrompt
+                view="prompt"
+                embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+        {:else if plotComputeGate.view === 'computing' && embeddingsData?.isFetching}
+            <PlotComputePrompt
+                view="computing"
+                embeddingCount={plotComputeGate.embeddingCount}
+                {itemLabel}
+                startedAt={plotComputeGate.startedAt}
+                onCompute={plotComputeGate.startCompute}
+            />
+        {:else if plotComputeGate.view === 'checking' || !embeddingsData || embeddingsData.isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
