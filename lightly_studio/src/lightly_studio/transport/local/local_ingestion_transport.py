@@ -18,6 +18,9 @@ from lightly_studio.embed import embed_mcap_sequences, embed_samples
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionCreate,
+)
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
@@ -27,6 +30,7 @@ from lightly_studio.resolvers import (
     dynamic_transform_resolver,
     group_resolver,
     image_resolver,
+    mcap_group_component_definition_resolver,
     sensor_calibration_resolver,
     sequence_resolver,
     static_transform_resolver,
@@ -219,6 +223,20 @@ class LocalIngestionTransport:
         return dynamic_transform_resolver.create_many(
             session=db_manager.persistent_session(), rows=rows
         )
+
+    def add_mcap_component_definitions(
+        self, rows: Sequence[McapGroupComponentDefinitionCreate]
+    ) -> None:
+        """Add the MCAP definitions of the component collections of an MCAP dataset."""
+        session = db_manager.persistent_session()
+        for row in rows:
+            mcap_group_component_definition_resolver.create(
+                session=session,
+                collection_id=row.collection_id,
+                mcap_data_type=row.mcap_data_type,
+                channel_id=row.channel_id,
+                frame_id=row.frame_id,
+            )
 
     def add_mcaps_from_path(  # noqa: PLR0913
         self,
