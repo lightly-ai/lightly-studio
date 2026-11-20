@@ -1,4 +1,4 @@
-from uuid import uuid4
+import uuid
 
 import pytest
 from pytest_mock import MockerFixture
@@ -623,14 +623,16 @@ class TestImageSample:
         label = AnnotationLabelView(
             dataset_id=collection.dataset_id,
             annotation_label_name="cat",
-            annotation_label_id=uuid4(),
+            annotation_label_id=uuid.uuid4(),
         )
         transport = mocker.Mock()
         transport.collections.get_by_id.return_value = collection
         transport.annotations.get_or_create_labels.return_value = [label]
         mocker.patch.object(active_transport._active, "transport", transport)
 
-        image.add_annotations([CreateClassification(class_name="cat")], annotation_source="gt")
+        image.add_annotations(
+            annotations=[CreateClassification(class_name="cat")], annotation_source="gt"
+        )
 
         transport.annotations.get_or_create_labels.assert_called_once_with(
             dataset_id=collection.dataset_id, label_names=["cat"]
