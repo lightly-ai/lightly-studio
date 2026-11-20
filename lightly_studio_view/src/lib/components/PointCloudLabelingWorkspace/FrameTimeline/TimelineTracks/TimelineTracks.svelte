@@ -139,7 +139,7 @@
     class="sticky top-0 z-20 flex h-8 w-full flex-none select-none flex-col overflow-hidden bg-background px-2 py-0.5"
 >
     <div class="overflow-hidden px-1">
-        <TimelineLane class="relative h-6 shrink-0">
+        <TimelineLane class="relative h-7 shrink-0">
             {#if ticks.length > 0 && ticks.length / viewport.zoom <= 100}
                 <span
                     class="pointer-events-none absolute inset-0"
@@ -150,7 +150,7 @@
             {/if}
             {#each visibleMarks.filter((mark) => mark.isLabeled) as mark (mark.tick.seq_number)}
                 <span
-                    class="top-0.2 absolute -translate-x-1/2 text-[10px] leading-none text-muted-foreground"
+                    class="absolute top-1 -translate-x-1/2 text-[10px] leading-none text-muted-foreground"
                     style:left={`${((mark.index + 0.5) / ticks.length) * 100}%`}
                     >{mark.index + 1}</span
                 >
