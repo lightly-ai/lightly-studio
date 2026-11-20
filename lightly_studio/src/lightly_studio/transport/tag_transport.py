@@ -15,6 +15,9 @@ class TagTransport(Protocol):
     def get_by_name(self, collection_id: UUID, tag_name: str) -> TagView | None:
         """Get a tag of a collection by name, or None if it does not exist."""
 
+    def get_names_by_sample_ids(self, sample_ids: Sequence[UUID]) -> dict[UUID, list[str]]:
+        """Get the sorted tag names of each sample. A sample without tags is not in the result."""
+
     def add_to_samples(
         self, collection_id: UUID, tag_name: str, sample_ids: Sequence[UUID]
     ) -> None:
