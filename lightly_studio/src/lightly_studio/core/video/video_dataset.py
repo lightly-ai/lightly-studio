@@ -24,7 +24,7 @@ from lightly_studio.dataset import fsspec_lister
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
-from lightly_studio.resolvers import collection_resolver, video_resolver
+from lightly_studio.resolvers import video_resolver
 from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
@@ -88,14 +88,11 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         Returns:
             A VideoFrameDataset exposing the video frames as queryable samples.
         """
-        frame_collection_id = collection_resolver.get_or_create_child_collection(
-            session=self.session,
-            collection_id=self.collection_id,
-            sample_type=SampleType.VIDEO_FRAME,
+        collections = active_transport.get_transport().collections
+        frame_collection_id = collections.get_or_create_child(
+            collection_id=self.collection_id, sample_type=SampleType.VIDEO_FRAME, name=None
         )
-        frame_collection = collection_resolver.get_by_id(
-            session=self.session, collection_id=frame_collection_id
-        )
+        frame_collection = collections.get_by_id(collection_id=frame_collection_id)
         if frame_collection is None:
             raise RuntimeError("Expected `frame_collection` to be set.")
         return VideoFrameDataset(collection=frame_collection)
