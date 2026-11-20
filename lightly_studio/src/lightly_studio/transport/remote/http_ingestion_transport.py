@@ -8,7 +8,10 @@ from uuid import UUID
 import httpx
 
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.static_transform import StaticTransformCreate
 
 
 class HttpIngestionTransport:
@@ -77,3 +80,15 @@ class HttpIngestionTransport:
     ) -> list[UUID]:
         """Add group samples to a group collection. Not supported over HTTP yet."""
         raise NotImplementedError("Adding group samples over HTTP is not supported yet.")
+
+    def add_sensor_calibrations(self, rows: Sequence[SensorCalibrationCreate]) -> list[UUID]:
+        """Add camera calibrations. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding sensor calibrations over HTTP is not supported yet.")
+
+    def add_static_transforms(self, rows: Sequence[StaticTransformCreate]) -> list[UUID]:
+        """Add static transforms. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding transforms over HTTP is not supported yet.")
+
+    def add_dynamic_transforms(self, rows: Sequence[DynamicTransformCreate]) -> list[UUID]:
+        """Add dynamic transforms. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding transforms over HTTP is not supported yet.")

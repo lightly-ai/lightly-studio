@@ -7,7 +7,10 @@ from typing import Protocol
 from uuid import UUID
 
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.static_transform import StaticTransformCreate
 
 
 class IngestionTransport(Protocol):
@@ -162,4 +165,34 @@ class IngestionTransport(Protocol):
         Raises:
             ValueError: If a component name is not in the collection, or if the sample type
                 of a component does not match.
+        """
+
+    def add_sensor_calibrations(self, rows: Sequence[SensorCalibrationCreate]) -> list[UUID]:
+        """Add camera calibrations to MCAP recordings.
+
+        Returns:
+            The IDs of the new calibrations, in the order of `rows`.
+
+        Raises:
+            ValueError: If `rows` is empty, or if a component does not carry video frames.
+        """
+
+    def add_static_transforms(self, rows: Sequence[StaticTransformCreate]) -> list[UUID]:
+        """Add static transforms between the coordinate frames of MCAP recordings.
+
+        Returns:
+            The IDs of the new transforms, in the order of `rows`.
+
+        Raises:
+            ValueError: If `rows` is empty, or if a frame ID is empty.
+        """
+
+    def add_dynamic_transforms(self, rows: Sequence[DynamicTransformCreate]) -> list[UUID]:
+        """Add dynamic transforms between the coordinate frames of MCAP recordings.
+
+        Returns:
+            The IDs of the new transforms, in the order of `rows`.
+
+        Raises:
+            ValueError: If `rows` is empty, or if a frame ID is empty.
         """

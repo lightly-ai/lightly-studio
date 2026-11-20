@@ -9,6 +9,7 @@ from sqlmodel import Session
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.type_definitions import StaticTransform
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.recording import RecordingFormat
@@ -20,6 +21,13 @@ from lightly_studio.resolvers import (
     static_transform_resolver,
 )
 from tests.helpers_resolvers import create_collection
+
+
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the ingestion transport writes through."""
+    return db_manager.persistent_session()
+
 
 CAMERA_MATRIX = [600.0, 0.0, 320.0, 0.0, 600.0, 240.0, 0.0, 0.0, 1.0]
 
