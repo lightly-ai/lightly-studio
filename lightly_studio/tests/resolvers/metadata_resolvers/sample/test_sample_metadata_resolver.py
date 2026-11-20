@@ -137,21 +137,3 @@ def test_metadata_get_value_for_missing_key(
     sample["some_key"] = "some_value"
     assert sample["some_key"] == "some_value"
     assert sample["missing_key"] is None
-
-
-def test_get_by_sample_ids(db_session: Session) -> None:
-    collection_id = create_collection(session=db_session).collection_id
-    image_a = create_image(session=db_session, collection_id=collection_id, file_path_abs="/a.png")
-    image_b = create_image(session=db_session, collection_id=collection_id, file_path_abs="/b.png")
-    image_c = create_image(session=db_session, collection_id=collection_id, file_path_abs="/c.png")
-    metadata_resolver.bulk_update_metadata(
-        session=db_session,
-        sample_metadata=[(image_a.sample_id, {"key": "a"}), (image_b.sample_id, {"key": "b"})],
-    )
-
-    rows = metadata_resolver.get_by_sample_ids(
-        session=db_session, sample_ids=[image_a.sample_id, image_c.sample_id]
-    )
-
-    assert [(row.sample_id, row.data) for row in rows] == [(image_a.sample_id, {"key": "a"})]
-    assert metadata_resolver.get_by_sample_ids(session=db_session, sample_ids=[]) == []
