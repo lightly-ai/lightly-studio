@@ -8,11 +8,14 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.file_outcome_report import FileOutcome
+from lightly_studio.core.group.group_dataset import GroupDataset
+from lightly_studio.core.group.group_sample import GroupSample
+from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.database import db_manager
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
+from lightly_studio.resolvers import group_resolver, image_resolver, tag_resolver, video_resolver
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests.helpers_resolvers import create_collection, create_image
@@ -151,3 +154,28 @@ class TestLocalIngestionTransport:
         transport.embed_videos(collection_id=uuid4(), sample_ids=[])
 
         embed_video_samples.assert_not_called()
+
+    def test_add_group_samples(self, tmp_path: Path) -> None:
+        Image.new("RGB", (4, 3)).save(tmp_path / "a.png")
+        group_ds = GroupDataset.create(components=[("img", SampleType.IMAGE)])
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        group_ids = transport.add_group_samples(
+            collection_id=group_ds.collection_id,
+            groups=[{"img": CreateImage(path=str(tmp_path / "a.png"))}, {}],
+        )
+
+        session = db_manager.persistent_session()
+        groups = [group_resolver.get_by_id(session=session, sample_id=i) for i in group_ids]
+        images = [GroupSample(inner=group)["img"] for group in groups if group is not None]
+        assert [image is not None for image in images] == [True, False]
+
+    def test_add_group_samples__wrong_sample_type(self) -> None:
+        group_ds = GroupDataset.create(components=[("vid", SampleType.VIDEO)])
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        with pytest.raises(ValueError, match="Component 'vid' expects samples of type 'VIDEO'"):
+            transport.add_group_samples(
+                collection_id=group_ds.collection_id,
+                groups=[{"vid": CreateImage(path="/a.png")}],
+            )

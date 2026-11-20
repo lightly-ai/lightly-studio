@@ -3,16 +3,23 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from uuid import UUID
 
+from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.core.image import add_images
 from lightly_studio.core.video import add_videos
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_samples
+from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.image import AddImagesResult, ImageCreate
-from lightly_studio.resolvers import collection_embedding_model_resolver, image_resolver
+from lightly_studio.resolvers import (
+    collection_embedding_model_resolver,
+    collection_resolver,
+    group_resolver,
+    image_resolver,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -160,3 +167,40 @@ class LocalIngestionTransport:
             collection_id=collection_id,
             sample_ids=list(sample_ids),
         )
+
+    def add_group_samples(
+        self, collection_id: UUID, groups: Sequence[Mapping[str, CreateSample]]
+    ) -> list[UUID]:
+        """Add group samples and their component samples to a group collection."""
+        session = db_manager.persistent_session()
+        comp_collections = collection_resolver.get_group_components(
+            session=session, parent_collection_id=collection_id
+        )
+        for components in groups:
+            _validate_components(components=components, comp_collections=comp_collections)
+        component_sample_ids = [
+            {
+                create_sample.create_in_collection(
+                    session=session, collection_id=comp_collections[comp_name].collection_id
+                )
+                for comp_name, create_sample in components.items()
+            }
+            for components in groups
+        ]
+        return group_resolver.create_many(
+            session=session, collection_id=collection_id, groups=component_sample_ids
+        )
+
+
+def _validate_components(
+    components: Mapping[str, CreateSample], comp_collections: Mapping[str, CollectionTable]
+) -> None:
+    for comp_name, create_sample in components.items():
+        if comp_name not in comp_collections:
+            raise ValueError(f"Component name '{comp_name}' not found in group dataset components.")
+        if create_sample.sample_type() != comp_collections[comp_name].sample_type:
+            raise ValueError(
+                f"Component '{comp_name}' expects samples of type "
+                f"'{comp_collections[comp_name].sample_type.name}', "
+                f"but got samples of type '{create_sample.sample_type().name}'."
+            )
