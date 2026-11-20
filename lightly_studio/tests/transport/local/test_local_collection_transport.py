@@ -143,3 +143,40 @@ class TestLocalCollectionTransport:
         assert child is not None
         assert child.name == "labels"
         assert child.parent_collection_id == root.collection_id
+
+    def test_create_group_components(self) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        group = transport.create(
+            collection=CollectionCreate(name="group", sample_type=SampleType.GROUP)
+        )
+
+        components = transport.create_group_components(
+            parent_collection_id=group.collection_id,
+            components=[("front", SampleType.IMAGE), ("clip", SampleType.VIDEO)],
+        )
+
+        assert list(components) == ["front", "clip"]
+        assert components["clip"].sample_type == SampleType.VIDEO
+        assert components["clip"].parent_collection_id == group.collection_id
+
+    def test_get_group_components(self) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        group = transport.create(
+            collection=CollectionCreate(name="group", sample_type=SampleType.GROUP)
+        )
+        created = transport.create_group_components(
+            parent_collection_id=group.collection_id, components=[("front", SampleType.IMAGE)]
+        )
+
+        components = transport.get_group_components(parent_collection_id=group.collection_id)
+
+        assert components == created
+
+    def test_get_group_components__not_a_group(self) -> None:
+        transport: CollectionTransport = LocalCollectionTransport()
+        root = transport.create(
+            collection=CollectionCreate(name="root", sample_type=SampleType.IMAGE)
+        )
+
+        with pytest.raises(ValueError, match=r"collections of type GROUP"):
+            transport.get_group_components(parent_collection_id=root.collection_id)

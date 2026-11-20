@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionWithoutChildrenView,
+    GroupComponentDefinition,
     SampleType,
 )
 
@@ -60,4 +62,30 @@ class CollectionTransport(Protocol):
 
         Returns:
             The ID of the child collection.
+        """
+
+    def create_group_components(
+        self, parent_collection_id: UUID, components: Sequence[GroupComponentDefinition]
+    ) -> dict[str, CollectionWithoutChildrenView]:
+        """Create the component collections of a group collection.
+
+        Args:
+            parent_collection_id: The ID of the group collection.
+            components: The name and the sample type of each component, in order.
+
+        Returns:
+            The component collections by component name.
+
+        Raises:
+            ValueError: If the parent is not a group collection, if it has components, or if
+                two components have the same name.
+        """
+
+    def get_group_components(
+        self, parent_collection_id: UUID
+    ) -> dict[str, CollectionWithoutChildrenView]:
+        """Get the component collections of a group collection by component name.
+
+        Raises:
+            ValueError: If the parent does not exist or is not a group collection.
         """
