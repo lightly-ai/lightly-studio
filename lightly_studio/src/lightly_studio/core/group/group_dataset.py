@@ -98,8 +98,7 @@ class GroupDataset(Dataset[GroupSample]):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        collection = collection_resolver.create(
-            session=db_manager.persistent_session(),
+        collection = active_transport.get_transport().collections.create(
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
         collection_resolver.create_group_components(
