@@ -41,6 +41,15 @@ def get_runner(model_id: str) -> LabelingModelRunner:
     return LocalLabelingModelRunner(model=model)
 
 
+def has_loading_models() -> bool:
+    """Return True if a registered labeling model is still loading.
+
+    A model with a `ready` property that raises an error is not loading.
+    """
+    models = labeling_model_registry.get_registry().list_models()
+    return any(_is_loading(model=model) for model in models)
+
+
 def _create_runner_if_ready(model: LabelingModel) -> LabelingModelRunner | None:
     """Return a runner for the model, or None if the model is loading or fails.
 
@@ -54,3 +63,16 @@ def _create_runner_if_ready(model: LabelingModel) -> LabelingModelRunner | None:
         # The class name, because `model_id` is user code and can raise too
         logger.exception("Leaving out the labeling model of type %s.", type(model).__name__)
         return None
+
+
+def _is_loading(model: LabelingModel) -> bool:
+    """Return True if the model is registered but not ready yet.
+
+    The `ready` property is user code and can raise any error.
+    """
+    try:
+        return not model.ready
+    except Exception:
+        # A failed model does not recover by itself, so the GUI must not poll for it.
+        # `list_runners` logs the error.
+        return False

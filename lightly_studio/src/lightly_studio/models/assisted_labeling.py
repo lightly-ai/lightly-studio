@@ -172,9 +172,12 @@ class LabelingModelsView(BaseModel):
     Attributes:
         models: The registered labeling models that are ready. Empty if no model is
             registered. Excludes models that are still loading.
+        has_loading_models: True if a registered model is still loading. The GUI requests
+            the models again while this is True.
     """
 
     models: list[LabelingModelView]
+    has_loading_models: bool
 
 
 class ModelAnnotationRequest(BaseModel):

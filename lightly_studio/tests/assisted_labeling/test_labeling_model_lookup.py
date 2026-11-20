@@ -69,3 +69,29 @@ def test_list_runners__class_names_raises(
 
     assert [runner.model_id for runner in runners] == ["working"]
     assert "_ClassNamesRaisesModel" in caplog.text
+
+
+def test_has_loading_models(model_registry: LabelingModelRegistry) -> None:
+    loading_model = StubLabelingModel(model_id="loading")
+    loading_model.is_ready = False
+    model_registry.register(model=StubLabelingModel(model_id="loaded"))
+    model_registry.register(model=loading_model)
+
+    assert labeling_model_lookup.has_loading_models()
+
+
+def test_has_loading_models__all_ready(model_registry: LabelingModelRegistry) -> None:
+    model_registry.register(model=StubLabelingModel(model_id="loaded"))
+
+    assert not labeling_model_lookup.has_loading_models()
+
+
+def test_has_loading_models__ready_raises(model_registry: LabelingModelRegistry) -> None:
+    model_registry.register(model=_ReadyRaisesModel(model_id="faulty"))
+
+    assert not labeling_model_lookup.has_loading_models()
+
+
+@pytest.mark.usefixtures("model_registry")
+def test_has_loading_models__none_registered() -> None:
+    assert not labeling_model_lookup.has_loading_models()
