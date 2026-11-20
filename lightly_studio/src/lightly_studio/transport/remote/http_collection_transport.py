@@ -10,6 +10,7 @@ import httpx
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionWithoutChildrenView,
+    GroupComponentDefinition,
     SampleType,
 )
 from lightly_studio.transport.remote import http_requests
@@ -53,7 +54,7 @@ class HttpCollectionTransport:
         raise NotImplementedError("Creating a collection over HTTP is not supported yet.")
 
     def create_group_components(
-        self, parent_collection_id: UUID, components: Sequence[tuple[str, SampleType]]
+        self, parent_collection_id: UUID, components: Sequence[GroupComponentDefinition]
     ) -> dict[str, CollectionWithoutChildrenView]:
         """Create group components. Not supported over HTTP yet."""
         raise NotImplementedError("Creating group components over HTTP is not supported yet.")

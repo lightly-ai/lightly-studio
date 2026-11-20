@@ -9,6 +9,7 @@ from uuid import UUID
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionWithoutChildrenView,
+    GroupComponentDefinition,
     SampleType,
 )
 
@@ -64,7 +65,7 @@ class CollectionTransport(Protocol):
         """
 
     def create_group_components(
-        self, parent_collection_id: UUID, components: Sequence[tuple[str, SampleType]]
+        self, parent_collection_id: UUID, components: Sequence[GroupComponentDefinition]
     ) -> dict[str, CollectionWithoutChildrenView]:
         """Create the component collections of a group collection.
 
