@@ -8,7 +8,7 @@ import UseVideosHarness from '$lib/hooks/useVideos/UseVideosHarness.svelte';
 import type { useVideoFilters } from '$lib/hooks/useVideoFilters/useVideoFilters';
 import PlotPanel from './PlotPanel.svelte';
 import { useEmbeddings } from '$lib/hooks/useEmbeddings/useEmbeddings';
-import { get, writable, type Writable } from 'svelte/store';
+import { fromStore, get, writable, type Writable } from 'svelte/store';
 import {
     clearAnnotationPlotSelection,
     useAnnotationPlotSelection
@@ -30,10 +30,9 @@ let videoFilterStore: Writable<{
 let actualVideoFilters: ReturnType<typeof useVideoFilters> | null = null;
 const originalClientConfig = client.getConfig();
 const originalAbortController = globalThis.AbortController;
-let arrowDataStore: Writable<Record<string, unknown> | undefined>;
 let plotDataStore: Writable<{ x: Float32Array; y: Float32Array; category: Uint8Array } | undefined>;
-let colorLegendStore: Writable<Map<number, string>>;
 let metadataInfoStore: Writable<Array<{ name: string; type: string }>>;
+let annotationLabelsQuery: { data?: unknown[]; isSuccess: boolean; isError: boolean };
 
 const mockResetCategoryVisibility = vi.fn();
 
@@ -138,13 +137,6 @@ const setGate = (state: Partial<GateMockState>) => {
 };
 const mockEmbedTextAxes = vi.hoisted(() => vi.fn());
 vi.mock('./PlotTextAxesInputs/embedTextAxes', () => ({ embedTextAxes: mockEmbedTextAxes }));
-vi.mock('./useArrowData/useArrowData', () => ({
-    useArrowData: () => ({
-        data: arrowDataStore,
-        colorLegend: colorLegendStore,
-        error: writable(null)
-    })
-}));
 vi.mock('./useCategoryVisibility/useCategoryVisibility', () => ({
     useCategoryVisibility: () => ({
         hiddenCategories: writable(new Set<number>()),
@@ -207,7 +199,7 @@ vi.mock('$lib/hooks/useTags/useTags', () => ({
     })
 }));
 vi.mock('$lib/hooks/useAnnotationLabels/useAnnotationLabels', () => ({
-    useAnnotationLabels: () => ({ data: [] })
+    useAnnotationLabels: () => annotationLabelsQuery
 }));
 vi.mock('$lib/hooks/useAnnotationsFilter/useAnnotationsFilter', () => ({
     useSelectedAnnotationsFilter: () => ({
@@ -247,6 +239,15 @@ const commitTextAxes = async (user: ReturnType<typeof userEvent.setup>) => {
     await user.click(screen.getByRole('button', { name: 'Apply axes' }));
 };
 
+// The plot reads the embeddings query result reactively, so a test can change it after render.
+const mockEmbeddingsQuery = (initialResult: Record<string, unknown>) => {
+    const result = writable(initialResult);
+    const currentResult = fromStore(result);
+    const query = new Proxy({}, { get: (_, key: string) => currentResult.current[key] });
+    vi.mocked(useEmbeddings).mockReturnValue(query as ReturnType<typeof useEmbeddings>);
+    return result;
+};
+
 describe('PlotPanel.svelte', () => {
     afterEach(() => {
         client.setConfig({ ...originalClientConfig, fetch: originalClientConfig.fetch });
@@ -283,10 +284,9 @@ describe('PlotPanel.svelte', () => {
         plotSelectionCountStore = writable(0);
         imageFilterStore = writable({ sample_filter: { sample_ids: [] } });
         videoFilterStore = writable(null);
-        arrowDataStore = writable(undefined);
         plotDataStore = writable(undefined);
-        colorLegendStore = writable(new Map());
         metadataInfoStore = writable([{ name: 'split', type: 'string' }]);
+        annotationLabelsQuery = { data: [], isSuccess: true, isError: false };
         tagsStore.set([
             { tag_id: 'tag-a', name: 'alpha' },
             { tag_id: 'tag-b', name: 'beta' }
@@ -510,7 +510,9 @@ describe('PlotPanel.svelte', () => {
             { x: 0, y: 1 }
         ]);
         selectedSampleIdsStore = writable(selection.selectedSampleIds);
-        arrowDataStore = writable({ fulfils_filter: new Uint8Array(selection.fulfillsFilter) });
+        mockEmbeddingsQuery({
+            data: { columns: { fulfils_filter: new Uint8Array(selection.fulfillsFilter) } }
+        });
 
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await fireEvent.mouseUp(window);
@@ -559,12 +561,16 @@ describe('PlotPanel.svelte', () => {
         ]);
         selectedSampleIdsStore = writable(['sample-1', 'sample-2']);
         imageFilterStore = writable({ sample_filter: { sample_ids: ['stale-id'] } });
-        arrowDataStore = writable({
-            x: new Float32Array([1, 2, 3]),
-            y: new Float32Array([1, 2, 3]),
-            fulfils_filter: new Uint8Array([1, 1, 0]),
-            color_categories: [[3], [3], []],
-            sample_id: ['sample-1', 'sample-2', 'sample-3']
+        mockEmbeddingsQuery({
+            data: {
+                columns: {
+                    x: new Float32Array([1, 2, 3]),
+                    y: new Float32Array([1, 2, 3]),
+                    fulfils_filter: new Uint8Array([1, 1, 0]),
+                    color_categories: [[3], [3], []],
+                    sample_id: ['sample-1', 'sample-2', 'sample-3']
+                }
+            }
         });
 
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
@@ -695,6 +701,22 @@ describe('PlotPanel.svelte', () => {
         await tick();
 
         expect(gateMock.getPlotRequestKey()).not.toBe(initialKey);
+    });
+
+    it('fetches without labels when the annotation labels fail to load', async () => {
+        annotationLabelsQuery = { data: undefined, isSuccess: false, isError: true };
+        usePlotColorByType('test-collection-id').setSelectedColorByType('annotation_label');
+
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        await tick();
+
+        expect(useEmbeddings).toHaveBeenLastCalledWith(
+            'test-collection-id',
+            expect.anything(),
+            { type: 'annotation', annotation_label_ids: [] },
+            null,
+            expect.anything()
+        );
     });
 
     it('lays the plot out on the committed text axes and saves them with the lasso region', async () => {
@@ -920,13 +942,42 @@ describe('PlotPanel.svelte', () => {
         expect(screen.queryByText('young')).not.toBeInTheDocument();
     });
 
+    it('unmounts the plot and shows the loader while a new color-by loads', async () => {
+        const user = userEvent.setup();
+        vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+            () => new DOMRect(0, 0, 400, 400)
+        );
+        const point = new Float32Array([0]);
+        plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+        const loaded = { data: { columns: {}, legend: new Map() } };
+        // Only the query of the new color-by is still loading.
+        vi.mocked(useEmbeddings).mockImplementation(
+            (_collectionId, _filters, colorBy) => (colorBy ? { isLoading: true } : loaded) as never
+        );
+        render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+        expect(await screen.findByTestId('plot-viewport')).toBeInTheDocument();
+
+        await user.click(screen.getByTestId('plot-color-by-button'));
+        await user.click(await screen.findByRole('option', { name: 'tags' }));
+
+        expect(screen.getByText('Loading embeddings data...')).toBeInTheDocument();
+        expect(screen.queryByTestId('plot-viewport')).not.toBeInTheDocument();
+    });
+
     it('resets remapped categories when the legend changes but preserves the reserved rows', async () => {
+        const legend = new Map([[3, 'dog']]);
+        const embeddingsResult = mockEmbeddingsQuery({ data: { columns: {}, legend } });
         render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
         await tick();
 
         // Ignore the reset that fires on mount; assert the one triggered by the legend change.
         mockResetCategoryVisibility.mockClear();
-        colorLegendStore.set(new Map([[3, 'dog']]));
+        // The query keeps an equal legend's object, so a refetch keeps the hidden classes.
+        embeddingsResult.set({ data: { columns: {}, legend } });
+        await tick();
+        expect(mockResetCategoryVisibility).not.toHaveBeenCalled();
+
+        embeddingsResult.set({ data: { columns: {}, legend: new Map([[3, 'cat']]) } });
         await tick();
 
         // Reserved rows are stable by index, so they must survive a legend refresh.

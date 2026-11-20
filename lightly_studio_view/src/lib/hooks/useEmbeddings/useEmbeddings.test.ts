@@ -1,74 +1,113 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import * as tanstackQuery from '@tanstack/svelte-query';
-import { QueryClient, QueryObserver, type QueryFunctionContext } from '@tanstack/svelte-query';
-import { useEmbeddings } from './useEmbeddings';
+import { QueryClient, QueryObserver } from '@tanstack/svelte-query';
+import { tableFromIPC, type Table } from 'apache-arrow';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { get2dEmbeddings } from '$lib/api/lightly_studio_local/sdk.gen';
+import { getEmbeddingsQueryOptions } from './useEmbeddings';
 
-const mocks = vi.hoisted(() => ({
+vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
+    ...(await importOriginal<object>()),
+    get2dEmbeddings: vi.fn()
+}));
+vi.mock('apache-arrow', () => ({ tableFromIPC: vi.fn() }));
+
+const requests = {
+    count: 0,
     failuresBeforeSuccess: 0,
-    requestCount: 0,
     isPending: false,
-    resolveRequest: () => {}
-}));
+    resolve: () => {}
+};
 
-vi.mock('$lib/api/lightly_studio_local/@tanstack/svelte-query.gen', () => ({
-    get2dEmbeddingsOptions: () => ({
-        queryKey: ['embeddings2d'],
-        queryFn: async ({ signal }: QueryFunctionContext) => {
-            mocks.requestCount += 1;
-            if (mocks.failuresBeforeSuccess > 0) {
-                mocks.failuresBeforeSuccess -= 1;
-                throw new Error('Server error');
-            }
-            if (!mocks.isPending) return new Blob();
-            return new Promise<Blob>((resolve, reject) => {
-                mocks.resolveRequest = () => resolve(new Blob());
-                signal.addEventListener('abort', () => reject(signal.reason));
-            });
-        }
-    })
-}));
+// Each response is a new ArrayBuffer, as for a real refetch.
+const respond = async ({ signal }: { signal?: AbortSignal }) => {
+    requests.count += 1;
+    if (requests.failuresBeforeSuccess > 0) {
+        requests.failuresBeforeSuccess -= 1;
+        throw new Error('Server error');
+    }
+    const response = { data: new ArrayBuffer(8) };
+    if (!requests.isPending) return response;
+    return new Promise((resolve, reject) => {
+        requests.resolve = () => resolve(response);
+        signal?.addEventListener('abort', () => reject(signal.reason));
+    });
+};
 
-interface EmbeddingsQueryOptions {
-    enabled?: boolean;
-    refetchOnWindowFocus?: boolean;
-    queryFn: (context: QueryFunctionContext) => Promise<Blob>;
-}
+// A table with empty columns and the given legend.
+const tableWithLegend = (legend: string) =>
+    ({
+        schema: { metadata: new Map([['color_legend', legend]]) },
+        getChild: () => ({ length: 0, toArray: () => [] })
+    }) as unknown as Table;
 
-function getQueryOptions(
-    enabled?: boolean,
-    getIsComputing?: () => boolean,
+const newQueryClient = () => new QueryClient({ defaultOptions: { queries: { retry: false } } });
+
+const observeEmbeddings = () =>
+    new QueryObserver(newQueryClient(), getEmbeddingsQueryOptions('collection-1', null));
+
+const getComputeOptions = (
+    getIsComputing: () => boolean,
     onCompute?: (compute: Promise<unknown>) => void
-): EmbeddingsQueryOptions {
-    const createQuerySpy = vi
-        .spyOn(tanstackQuery, 'createQuery')
-        .mockReturnValue({} as ReturnType<typeof tanstackQuery.createQuery>);
-    useEmbeddings('collection-1', null, null, null, { enabled, getIsComputing, onCompute });
-    const getOptions = createQuerySpy.mock.lastCall?.[0] as () => EmbeddingsQueryOptions;
-    return getOptions();
-}
+) => getEmbeddingsQueryOptions('collection-1', null, null, null, { getIsComputing, onCompute });
 
 // Closes the panel while its plot request runs, reopens it, and counts the plot requests.
 async function closeAndReopenPanel(getIsComputing: () => boolean): Promise<number> {
-    mocks.isPending = true;
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    const options = { ...getQueryOptions(true, getIsComputing), queryKey: ['embeddings2d'] };
+    requests.isPending = true;
+    const client = newQueryClient();
+    const options = getComputeOptions(getIsComputing);
     const closePanel = new QueryObserver(client, options).subscribe(() => {});
-    await vi.waitFor(() => expect(mocks.requestCount).toBe(1));
+    await vi.waitFor(() => expect(requests.count).toBe(1));
     closePanel();
 
     const reopenedPanel = new QueryObserver(client, options);
     reopenedPanel.subscribe(() => {});
-    mocks.resolveRequest();
+    requests.resolve();
     await vi.waitFor(() => expect(reopenedPanel.getCurrentResult().isSuccess).toBe(true));
-    return mocks.requestCount;
+    return requests.count;
 }
 
-describe('useEmbeddings', () => {
+describe('getEmbeddingsQueryOptions', () => {
+    beforeEach(() => {
+        vi.mocked(get2dEmbeddings)
+            .mockReset()
+            .mockImplementation(respond as never);
+        vi.mocked(tableFromIPC).mockReset().mockReturnValue(tableWithLegend('{"3":"car"}'));
+    });
+
     afterEach(() => {
-        vi.restoreAllMocks();
-        mocks.failuresBeforeSuccess = 0;
-        mocks.requestCount = 0;
-        mocks.isPending = false;
+        requests.count = 0;
+        requests.failuresBeforeSuccess = 0;
+        requests.isPending = false;
+    });
+
+    it('fetches an ArrayBuffer and keeps the legend object while the legend is equal', async () => {
+        const observer = observeEmbeddings();
+
+        const first = await observer.refetch();
+        const equalLegend = await observer.refetch();
+        vi.mocked(tableFromIPC).mockReturnValue(tableWithLegend('{"3":"bus"}'));
+        const newLegend = await observer.refetch();
+
+        expect(get2dEmbeddings).toHaveBeenCalledWith(
+            expect.objectContaining({ parseAs: 'arrayBuffer' })
+        );
+        expect(equalLegend.data).not.toBe(first.data);
+        expect(equalLegend.data?.legend).toBe(first.data?.legend);
+        expect(newLegend.data?.legend).toEqual(new Map([[3, 'bus']]));
+
+        // New options keep the module-level select, so the data is not parsed again.
+        observer.setOptions(getEmbeddingsQueryOptions('collection-1', null));
+        expect(tableFromIPC).toHaveBeenCalledTimes(3);
+    });
+
+    it('reports a parse error as the query error', async () => {
+        vi.mocked(tableFromIPC).mockImplementation(() => {
+            throw new Error('bad table');
+        });
+
+        const result = await observeEmbeddings().refetch();
+
+        expect(result.isError).toBe(true);
+        expect(result.error?.message).toBe('bad table');
     });
 
     it.each([
@@ -76,11 +115,13 @@ describe('useEmbeddings', () => {
         [true, true],
         [false, false]
     ])('passes enabled %s to the query as %s', (enabled, expected) => {
-        expect(getQueryOptions(enabled).enabled).toBe(expected);
+        expect(
+            getEmbeddingsQueryOptions('collection-1', null, null, null, { enabled }).enabled
+        ).toBe(expected);
     });
 
     it('does not refetch the plot on window focus', () => {
-        expect(getQueryOptions().refetchOnWindowFocus).toBe(false);
+        expect(getEmbeddingsQueryOptions('collection-1', null).refetchOnWindowFocus).toBe(false);
     });
 
     it('joins a running compute when the panel closes and opens again', async () => {
@@ -92,12 +133,12 @@ describe('useEmbeddings', () => {
     });
 
     it('gives onCompute one promise for a compute that settles after the last retry', async () => {
-        mocks.failuresBeforeSuccess = 1;
+        requests.failuresBeforeSuccess = 1;
         const onCompute = vi.fn();
-        const options = getQueryOptions(true, () => true, onCompute);
+        const options = getComputeOptions(() => true, onCompute);
 
         const plot = await new QueryClient().fetchQuery({
-            queryKey: ['embeddings2d'],
+            queryKey: options.queryKey,
             queryFn: options.queryFn,
             retry: 1,
             retryDelay: 0
@@ -111,10 +152,10 @@ describe('useEmbeddings', () => {
 
     it('does not call onCompute for a saved plot download', async () => {
         const onCompute = vi.fn();
-        const options = getQueryOptions(true, () => false, onCompute);
+        const options = getComputeOptions(() => false, onCompute);
 
         await new QueryClient().fetchQuery({
-            queryKey: ['embeddings2d'],
+            queryKey: options.queryKey,
             queryFn: options.queryFn
         });
 

@@ -1,13 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { get } from 'svelte/store';
-import { useArrowData } from './useArrowData';
+import { parseEmbeddingsArrow } from './useArrowData';
 import { Table, tableFromIPC } from 'apache-arrow';
 
 vi.mock('apache-arrow', () => ({
     tableFromIPC: vi.fn()
 }));
 
-describe('useArrowData', () => {
+describe('parseEmbeddingsArrow', () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
@@ -26,7 +25,7 @@ describe('useArrowData', () => {
             return { toArray: () => columns[col] };
         });
 
-    it('successfully reads Arrow data with all required columns', async () => {
+    it('successfully reads Arrow data with all required columns', () => {
         const mockData = {
             x: [1, 2, 3],
             y: [4, 5, 6],
@@ -42,40 +41,20 @@ describe('useArrowData', () => {
             getChild: createGetChild(mockData)
         };
 
-        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+        vi.mocked(tableFromIPC).mockReturnValue(mockTable as unknown as Table);
 
-        const mockBlob = {
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
-        } as Blob;
-        const { data, colorLegend, error } = useArrowData({ blobData: mockBlob });
+        const { columns, legend } = parseEmbeddingsArrow(new ArrayBuffer(8));
 
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(get(data)).toEqual(mockData);
-        expect(get(colorLegend)).toEqual(
+        expect(columns).toEqual(mockData);
+        expect(legend).toEqual(
             new Map([
                 [2, 'Train'],
                 [3, 'Validation']
             ])
         );
-        expect(get(error)).toBeUndefined();
     });
 
-    it('sets error when table is null', async () => {
-        vi.mocked(tableFromIPC).mockResolvedValue(null as unknown as Table);
-
-        const mockBlob = {
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
-        } as Blob;
-        const { data, error } = useArrowData({ blobData: mockBlob });
-
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(get(data)).toBeUndefined();
-        expect(get(error)).toBe('Failed to read Arrow table from embeddings data.');
-    });
-
-    it('sets error when required column is missing', async () => {
+    it('throws when a required column is missing', () => {
         const mockTable = {
             getChild: vi.fn((_col: string) => {
                 if (_col === 'x') return null;
@@ -85,46 +64,24 @@ describe('useArrowData', () => {
             })
         };
 
-        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+        vi.mocked(tableFromIPC).mockReturnValue(mockTable as unknown as Table);
 
-        const mockBlob = {
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
-        } as Blob;
-        const { error } = useArrowData({ blobData: mockBlob });
+        const parse = () => parseEmbeddingsArrow(new ArrayBuffer(8));
 
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(get(error)).toBe('Missing required column "x" in Arrow data.');
+        expect(parse).toThrow('Missing required column "x" in Arrow data.');
     });
 
-    it('sets error when arrayBuffer conversion fails', async () => {
-        const mockBlob = {
-            arrayBuffer: vi.fn().mockRejectedValue(new Error('Failed to read blob'))
-        } as Blob;
+    it('throws when tableFromIPC throws', () => {
+        vi.mocked(tableFromIPC).mockImplementation(() => {
+            throw new Error('Invalid Arrow format');
+        });
 
-        const { data, error } = useArrowData({ blobData: mockBlob });
+        const parse = () => parseEmbeddingsArrow(new ArrayBuffer(8));
 
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(get(data)).toBeUndefined();
-        expect(get(error)).toBe('Error reading Arrow data: Error: Failed to read blob');
+        expect(parse).toThrow('Invalid Arrow format');
     });
 
-    it('sets error when tableFromIPC throws', async () => {
-        vi.mocked(tableFromIPC).mockRejectedValue(new Error('Invalid Arrow format'));
-
-        const mockBlob = {
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
-        } as Blob;
-        const { data, error } = useArrowData({ blobData: mockBlob });
-
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(get(data)).toBeUndefined();
-        expect(get(error)).toBe('Error reading Arrow data: Error: Invalid Arrow format');
-    });
-
-    it('handles empty blob', async () => {
+    it('handles empty blob', () => {
         const mockTable = {
             schema: {
                 metadata: undefined
@@ -134,27 +91,21 @@ describe('useArrowData', () => {
             }))
         };
 
-        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+        vi.mocked(tableFromIPC).mockReturnValue(mockTable as unknown as Table);
 
-        const mockBlob = {
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(0))
-        } as Blob;
-        const { data, colorLegend, error } = useArrowData({ blobData: mockBlob });
+        const { columns, legend } = parseEmbeddingsArrow(new ArrayBuffer(0));
 
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(get(data)).toEqual({
+        expect(columns).toEqual({
             x: [],
             y: [],
             fulfils_filter: [],
             color_categories: [],
             sample_id: []
         });
-        expect(get(colorLegend)).toEqual(new Map());
-        expect(get(error)).toBeUndefined();
+        expect(legend).toEqual(new Map());
     });
 
-    it('falls back to an empty color legend when metadata is malformed', async () => {
+    it('falls back to an empty color legend when metadata is malformed', () => {
         const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const mockData = {
             x: [1, 2, 3],
@@ -170,29 +121,15 @@ describe('useArrowData', () => {
             getChild: createGetChild(mockData)
         };
 
-        vi.mocked(tableFromIPC).mockResolvedValue(mockTable as unknown as Table);
+        vi.mocked(tableFromIPC).mockReturnValue(mockTable as unknown as Table);
 
-        const mockBlob = {
-            arrayBuffer: vi.fn().mockResolvedValue(new ArrayBuffer(8))
-        } as Blob;
-        const { data, colorLegend, error } = useArrowData({ blobData: mockBlob });
+        const { columns, legend } = parseEmbeddingsArrow(new ArrayBuffer(8));
 
-        await new Promise((resolve) => setTimeout(resolve, 0));
-
-        expect(get(data)).toEqual(mockData);
-        expect(get(colorLegend)).toEqual(new Map());
-        expect(get(error)).toBeUndefined();
+        expect(columns).toEqual(mockData);
+        expect(legend).toEqual(new Map());
         expect(warnSpy).toHaveBeenCalledWith(
             'Invalid color_legend metadata in Arrow data.',
             expect.any(SyntaxError)
         );
-    });
-
-    it('returns writable stores that can be subscribed to', () => {
-        const mockBlob = new Blob([new ArrayBuffer(8)]);
-        const { data, error } = useArrowData({ blobData: mockBlob });
-
-        expect(typeof data.subscribe).toBe('function');
-        expect(typeof error.subscribe).toBe('function');
     });
 });
