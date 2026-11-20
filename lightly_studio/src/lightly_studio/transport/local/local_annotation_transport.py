@@ -52,7 +52,7 @@ class LocalAnnotationTransport:
         annotations: Sequence[AnnotationCreate],
         collection_name: str | None,
     ) -> list[UUID]:
-        """Add annotations to samples. Mark the evaluation runs of the annotation collection stale."""
+        """Add annotations to samples. Mark the evaluation runs of their source stale."""
         return annotations_service.create_annotations(
             session=db_manager.persistent_session(),
             parent_collection_id=parent_collection_id,
