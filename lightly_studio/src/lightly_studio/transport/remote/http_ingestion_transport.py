@@ -8,6 +8,7 @@ from uuid import UUID
 import httpx
 
 from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
@@ -93,6 +94,20 @@ class HttpIngestionTransport:
     def add_dynamic_transforms(self, rows: Sequence[DynamicTransformCreate]) -> list[UUID]:
         """Add dynamic transforms. Not supported over HTTP yet."""
         raise NotImplementedError("Adding transforms over HTTP is not supported yet.")
+
+    def add_mcaps_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        sync_component: str,
+        components: Sequence[McapComponentSpec],
+        max_pairing_diff_ns: int,
+        limit: int | None,
+        reference_frame_ids: Sequence[str] | None,
+        embed: bool,
+    ) -> None:
+        """Index every `.mcap` recording under a path. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding MCAP recordings over HTTP is not supported yet.")
 
     def add_sequence_samples(
         self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]

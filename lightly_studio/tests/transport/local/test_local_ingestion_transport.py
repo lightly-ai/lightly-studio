@@ -11,6 +11,7 @@ from lightly_studio.core.file_outcome_report import FileOutcome
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.group.group_sample import GroupSample
 from lightly_studio.core.image.create_image import CreateImage
+from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.database import db_manager
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.collection import SampleType
@@ -27,6 +28,8 @@ from lightly_studio.resolvers import (
 )
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
+from tests.core.mcap import helpers as mcap_helpers
+from tests.core.mcap.test_add_mcaps import COMPONENTS, MAX_PAIRING_DIFF_NS, POINT_CLOUD_COMPONENT
 from tests.helpers_resolvers import create_collection, create_image
 from tests.resolvers.video.helpers import create_video_file
 
@@ -196,6 +199,28 @@ class TestLocalIngestionTransport:
                 collection_id=group_ds.collection_id,
                 groups=[{"vid": CreateImage(path="/a.png")}],
             )
+
+    def test_add_mcaps_from_path(self, tmp_path: Path) -> None:
+        mcap_helpers.write_mcap(tmp_path / "a.mcap")
+        mcap_helpers.write_mcap(tmp_path / "a_labeled.mcap")
+        dataset = McapDataset.create(components=COMPONENTS, name="perception")
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transport.add_mcaps_from_path(
+            collection_id=dataset.collection_id,
+            path=str(tmp_path),
+            sync_component=POINT_CLOUD_COMPONENT,
+            components=COMPONENTS,
+            max_pairing_diff_ns=MAX_PAIRING_DIFF_NS,
+            limit=None,
+            reference_frame_ids=None,
+            embed=False,
+        )
+
+        recordings = recording_resolver.get_all_by_dataset_id(
+            session=db_manager.persistent_session(), dataset_id=dataset.dataset_id
+        )
+        assert [Path(recording.uri).name for recording in recordings] == ["a.mcap"]
 
     def test_add_static_transforms(self) -> None:
         session = db_manager.persistent_session()

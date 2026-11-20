@@ -9,7 +9,7 @@ from pytest_mock import MockerFixture
 
 from lightly_studio.analytics import tracking
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
-from lightly_studio.core.mcap import add_mcaps, mcap_dataset
+from lightly_studio.core.mcap import add_mcaps
 from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
@@ -26,6 +26,7 @@ from lightly_studio.resolvers import (
     sequence_resolver,
     static_transform_resolver,
 )
+from lightly_studio.transport.local import local_ingestion_transport
 from tests.core.mcap import helpers
 
 VIDEO_COMPONENT = "front"
@@ -859,7 +860,7 @@ class TestMcapDatasetAddMcapsFromPath:
             yield "b.mcap"
             raise AssertionError("Discovery continued past the recording limit.")
 
-        assert mcap_dataset._recording_paths(
+        assert local_ingestion_transport._recording_paths(
             discovered_paths=discovered_paths(),
             limit=1,
         ) == ["b.mcap"]
