@@ -372,6 +372,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=input_labels,
             images_path=images_path,
@@ -459,6 +460,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
             created_sample_ids = add_images.load_into_dataset_from_labelformat(
                 session=self.session,
+                ingestion=active_transport.get_transport().ingestion,
                 root_collection_id=self.collection_id,
                 input_labels=label_input,
                 images_path=images_path,
@@ -566,6 +568,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -650,6 +653,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -709,6 +713,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_labelformat(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             input_labels=label_input,
             images_path=images_path,
@@ -765,6 +770,7 @@ class ImageDataset(BaseSampleDataset[ImageSample]):
 
         created_sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=self.session,
+            ingestion=active_transport.get_transport().ingestion,
             root_collection_id=self.collection_id,
             annotations_json=annotations_json,
             images_path=images_path,

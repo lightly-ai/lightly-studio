@@ -29,12 +29,20 @@ from sqlmodel import Session
 
 from lightly_studio.core import labelformat_helpers
 from lightly_studio.core.image import add_annotations, add_images
+from lightly_studio.database import db_manager
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver
+from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests import helpers_resolvers
 from tests.helpers_resolvers import (
     ImageStub,
 )
+
+
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the ingestion transport writes through."""
+    return db_manager.persistent_session()
 
 
 class CountingLabelInput(LabelformatObjectDetectionInput):
@@ -289,6 +297,7 @@ def test_load_into_dataset_from_labelformat__records_missing_already_present_add
     with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
         sample_ids = add_images.load_into_dataset_from_labelformat(
             session=db_session,
+            ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             input_labels=label_input,
             images_path=tmp_path,
@@ -319,6 +328,7 @@ def test_load_into_dataset_from_labelformat__reraises_non_image_dimension_error(
     with pytest.raises(ValueError, match="boom"):
         add_images.load_into_dataset_from_labelformat(
             session=db_session,
+            ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             input_labels=label_input,
             images_path=tmp_path,
@@ -336,6 +346,7 @@ def test_load_into_dataset_from_labelformat__calls_get_labels_once(
 
     add_images.load_into_dataset_from_labelformat(
         session=db_session,
+        ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_path=tmp_path,
@@ -369,6 +380,7 @@ def test_load_into_collection_from_labelformat__obj_det(
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
+        ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_path=images_path,
@@ -453,6 +465,7 @@ def test_load_into_collection_from_labelformat__ins_seg(
     collection = helpers_resolvers.create_collection(session=db_session)
     sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
+        ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=TestLabelInput(),
         images_path=images_path,
@@ -498,6 +511,7 @@ def test_load_into_dataset_from_labelformat__does_not_annotate_existing_images(
 
     sample_ids = add_images.load_into_dataset_from_labelformat(
         session=db_session,
+        ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         input_labels=label_input,
         images_path="/images",
@@ -525,6 +539,7 @@ def test_load_into_collection_from_coco_captions(db_session: Session, tmp_path: 
 
     _ = add_images.load_into_dataset_from_coco_captions(
         session=db_session,
+        ingestion=LocalIngestionTransport(),
         root_collection_id=collection.collection_id,
         annotations_json=annotations_path,
         images_path=tmp_path,
@@ -596,6 +611,7 @@ def test_load_into_dataset_from_coco_captions__records_missing_already_present_a
     with caplog.at_level("INFO", logger="lightly_studio.core.file_outcome_report"):
         sample_ids = add_images.load_into_dataset_from_coco_captions(
             session=db_session,
+            ingestion=LocalIngestionTransport(),
             root_collection_id=collection.collection_id,
             annotations_json=annotations_path,
             images_path=tmp_path,
