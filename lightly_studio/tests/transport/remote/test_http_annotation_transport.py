@@ -38,3 +38,15 @@ class TestHttpAnnotationTransport:
 
         with pytest.raises(NotImplementedError):
             transport.delete(annotation_ids=[uuid4()])
+
+    def test_get_free_object_track_numbers(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.get_free_object_track_numbers(dataset_id=uuid4(), count=1)
+
+    def test_create_object_tracks(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.create_object_tracks(tracks=[])

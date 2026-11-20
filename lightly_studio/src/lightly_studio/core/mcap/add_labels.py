@@ -14,7 +14,7 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session, col, select
+from sqlmodel import Session
 
 from lightly_studio.core.mcap import scene_update
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
@@ -24,7 +24,7 @@ from lightly_studio.core.mcap.topic_kind import TopicKind
 from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, SceneUpdateLabels
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
-from lightly_studio.models.annotation.object_track import ObjectTrackCreate, ObjectTrackTable
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.resolvers import (
     annotation_resolver,
     collection_resolver,
@@ -196,7 +196,6 @@ def write_sequence_labels(  # noqa: PLR0913
             group_ids=[entry.sample_id for entry in entries],
         )
     track_ids = _allocate_tracks(
-        session=session,
         dataset_id=dataset.dataset_id,
         parent_by_source=parent_by_source,
         untracked_ids=untracked_ids,
@@ -347,7 +346,6 @@ def _assign_untracked_track_ids(matched: MatchResult) -> set[int]:
 
 
 def _allocate_tracks(
-    session: Session,
     dataset_id: UUID,
     parent_by_source: Mapping[int, int | None],
     untracked_ids: set[int],
@@ -366,11 +364,10 @@ def _allocate_tracks(
         for source_id, parent_id in parent_by_source.items()
         if parent_id is not None
     ]
-    numbers = _free_track_numbers(
-        session=session, dataset_id=dataset_id, count=len(parent_by_source)
+    numbers = active_transport.get_transport().annotations.get_free_object_track_numbers(
+        dataset_id=dataset_id, count=len(parent_by_source)
     )
     track_ids = _create_source_tracks(
-        session=session,
         dataset_id=dataset_id,
         numbers=numbers[: len(roots)],
         links=[(source_id, None) for source_id in roots],
@@ -379,7 +376,6 @@ def _allocate_tracks(
     if children:
         track_ids.update(
             _create_source_tracks(
-                session=session,
                 dataset_id=dataset_id,
                 numbers=numbers[len(roots) :],
                 links=[(source_id, track_ids[parent_id]) for source_id, parent_id in children],
@@ -420,7 +416,6 @@ def _require_track_id(cuboid: CuboidLabel) -> int:
 
 
 def _create_source_tracks(
-    session: Session,
     dataset_id: UUID,
     numbers: Sequence[int],
     links: Sequence[tuple[int, UUID | None]],
@@ -431,8 +426,7 @@ def _create_source_tracks(
     The tracks get the object_track_numbers in `numbers`, in the order of `links`. The
     tracks of `untracked_ids` are stored without a source_track_id.
     """
-    created_ids = object_track_resolver.create_many(
-        session=session,
+    created_ids = active_transport.get_transport().annotations.create_object_tracks(
         tracks=[
             ObjectTrackCreate(
                 object_track_number=number,
@@ -446,22 +440,6 @@ def _create_source_tracks(
     return {
         source_id: object_track_id for (source_id, _), object_track_id in zip(links, created_ids)
     }
-
-
-def _free_track_numbers(session: Session, dataset_id: UUID, count: int) -> list[int]:
-    """Return the `count` lowest positive object_track_numbers that the dataset does not use.
-
-    Numbers of deleted tracks are used again, so the numbers have no gaps.
-    """
-    used_numbers = set(
-        session.exec(
-            select(ObjectTrackTable.object_track_number).where(
-                col(ObjectTrackTable.dataset_id) == dataset_id
-            )
-        ).all()
-    )
-    free_numbers = (number for number in itertools.count(start=1) if number not in used_numbers)
-    return list(itertools.islice(free_numbers, count))
 
 
 def _annotation_creates(

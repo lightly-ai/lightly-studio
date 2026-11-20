@@ -9,12 +9,17 @@ from sqlmodel import Session
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationView
+from lightly_studio.models.annotation.object_track import ObjectTrackCreate
 from lightly_studio.models.annotation_label import (
     AnnotationLabelCreate,
     AnnotationLabelTable,
     AnnotationLabelView,
 )
-from lightly_studio.resolvers import annotation_label_resolver, annotation_resolver
+from lightly_studio.resolvers import (
+    annotation_label_resolver,
+    annotation_resolver,
+    object_track_resolver,
+)
 from lightly_studio.services import annotations_service
 
 
@@ -71,6 +76,18 @@ class LocalAnnotationTransport:
         session = db_manager.persistent_session()
         for annotation_id in annotation_ids:
             annotations_service.delete_annotation(session=session, annotation_id=annotation_id)
+
+    def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
+        """Get the `count` lowest positive object track numbers that the dataset does not use."""
+        return object_track_resolver.get_free_numbers(
+            session=db_manager.persistent_session(), dataset_id=dataset_id, count=count
+        )
+
+    def create_object_tracks(self, tracks: Sequence[ObjectTrackCreate]) -> list[UUID]:
+        """Add object tracks."""
+        return object_track_resolver.create_many(
+            session=db_manager.persistent_session(), tracks=list(tracks)
+        )
 
 
 def _get_or_create_label(
