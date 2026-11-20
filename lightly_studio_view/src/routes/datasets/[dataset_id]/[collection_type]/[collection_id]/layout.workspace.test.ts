@@ -59,7 +59,6 @@ vi.mock('$lib/components', async () => {
         DatasetGridHeader: Stub,
         Footer,
         LabelsMenu: Stub,
-        MetadataFilterChips: Stub,
         Onboarding: Stub,
         SelectionPill: Stub,
         ShowFiltersButton: Stub,

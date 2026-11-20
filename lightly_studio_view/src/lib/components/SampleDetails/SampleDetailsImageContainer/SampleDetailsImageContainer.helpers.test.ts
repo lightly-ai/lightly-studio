@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { getDrawerLabel, isPanEnabled } from './SampleDetailsImageContainer.helpers';
+import {
+    getDrawerLabel,
+    isPanEnabled,
+    reuseUnchangedAnnotations
+} from './SampleDetailsImageContainer.helpers';
+import type { AnnotationView } from '$lib/api/lightly_studio_local';
 
 const params = {
     isDrawing: false,
@@ -19,6 +24,20 @@ describe('isPanEnabled', () => {
 
     it('disables panning for an assisted labeling tool that blocks it', () => {
         expect(isPanEnabled({ ...params, blocksPan: true })).toBe(false);
+    });
+});
+
+describe('reuseUnchangedAnnotations', () => {
+    const box = (sample_id: string, x: number) =>
+        ({ sample_id, created_at: new Date(0), object_detection_details: { x } }) as AnnotationView;
+
+    it('keeps unchanged annotations and takes changed or new ones', () => {
+        const previous = [box('a', 1), box('b', 1)];
+        const next = reuseUnchangedAnnotations(previous, [box('a', 1), box('b', 2), box('c', 1)]);
+
+        expect(next[0]).toBe(previous[0]);
+        expect(next[1]).not.toBe(previous[1]);
+        expect(next.map((annotation) => annotation.sample_id)).toEqual(['a', 'b', 'c']);
     });
 });
 

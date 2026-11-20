@@ -41,7 +41,7 @@
         setPlotSelectionCount,
         type PlotSelection
     } from '$lib/hooks/useEmbeddingFilter/useEmbeddingPlotSelection';
-    import { useArrowData } from './useArrowData/useArrowData';
+    import { getPlotRequestFilter } from './getPlotRequestFilter/getPlotRequestFilter';
     import { usePlotData } from './usePlotData/usePlotData';
     import PlotPanelLegend from './PlotPanelLegend.svelte';
     import PlotColorByPopover from './PlotColorByPopover/PlotColorByPopover.svelte';
@@ -65,6 +65,8 @@
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
     import { writable, get, readable } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
+
+    const NO_LEGEND = new Map<number, string>();
 
     let { collectionId }: { collectionId: string } = $props();
     const { trackEvent } = usePostHog();
@@ -127,23 +129,7 @@
         if (isSequences) {
             return buildSequencePlotFilter($sequenceFilter);
         }
-        const currentFilter = isVideos ? $videoFilter : $imageFilter;
-        if (!currentFilter) return null;
-
-        if (!currentFilter.sample_filter) {
-            return currentFilter;
-        }
-
-        return {
-            ...currentFilter,
-            sample_filter: {
-                ...currentFilter.sample_filter,
-                sample_ids: [],
-                // The lasso only scopes the grid, not the plot: the plot shows every point and
-                // highlights the in-selection ones, so drop the region from this request.
-                embedding_region: undefined
-            }
-        };
+        return getPlotRequestFilter(isVideos ? $videoFilter : $imageFilter);
     });
 
     const { selectedColorByType } = usePlotColorByType(untrack(() => collectionId));
@@ -152,8 +138,14 @@
         collection_id: untrack(() => collectionId)
     });
     const annotationLabelsQuery = useAnnotationLabels(() => ({ collectionId }));
-    const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
+    const annotationLabels = writable<{ annotation_label_id: string }[] | undefined>(undefined);
     $effect(() => {
+        // Without labels the plot still loads: it colors nothing instead of waiting forever.
+        if (annotationLabelsQuery.isError) {
+            annotationLabels.set([]);
+            return;
+        }
+        if (!annotationLabelsQuery.isSuccess) return;
         annotationLabels.set(
             (annotationLabelsQuery.data ?? []).filter(
                 (l): l is { annotation_label_id: string } & typeof l =>
@@ -177,17 +169,17 @@
     } = usePlotLayout(untrack(() => collectionId));
     const showAxesLabels = $derived($plotLayout === 'text' && $appliedTextAxes !== null);
 
-    const embeddingsData = $derived(useEmbeddings(collectionId, filter, $colorBy, $plotAxes));
-
-    const {
-        data: arrowData,
-        colorLegend,
-        error: arrowError
-    } = $derived(
-        useArrowData({
-            blobData: embeddingsData.data as Blob
-        })
+    // No request until the color-by is known, so the plot fetches once.
+    const embeddingsData = $derived(
+        $colorBy === undefined
+            ? undefined
+            : useEmbeddings(collectionId, filter, $colorBy, $plotAxes)
     );
+
+    // The query parses the Arrow data. A new color-by or axes is a new query with its own data,
+    // so the old points never show under a new layout.
+    const arrowData = $derived(embeddingsData?.data?.columns);
+    const colorLegend = $derived(embeddingsData?.data?.legend ?? NO_LEGEND);
     // Category 1 means "passes the filter but has no color value". Its label tracks the same
     // `color_by` signal that drives its color (see `getCategoryColors` below), so the two never disagree.
     const includedLabel = $derived(
@@ -209,7 +201,7 @@
     // change — else a hidden "No category" would empty the plot once all points collapse into it.
     let previousColorByKey: string | undefined = undefined;
     $effect(() => {
-        void $colorLegend;
+        void colorLegend;
         const colorByKey = JSON.stringify($colorBy);
         const colorByChanged = colorByKey !== previousColorByKey;
         previousColorByKey = colorByKey;
@@ -259,7 +251,7 @@
 
     let { data: plotData, selectedSampleIds } = $derived(
         usePlotData({
-            arrowData: $arrowData,
+            arrowData: arrowData,
             rangeSelection: $rangeSelection,
             highlightRegion: committedHighlightRegion,
             highlightedSampleIds: pickedSampleIds,
@@ -267,13 +259,13 @@
             hiddenCategories: effectiveHiddenCategories
         })
     );
-    const categoryCount = $derived.by(() => getCategoryCount($colorLegend));
+    const categoryCount = $derived.by(() => getCategoryCount(colorLegend));
     const useLabelColors = $derived($selectedColorByType === 'annotation_label');
     const categoryColors = $derived.by(() =>
-        getCategoryColors($colorLegend, useLabelColors, $colorBy !== null)
+        getCategoryColors(colorLegend, useLabelColors, $colorBy !== null)
     );
     const legendEntries = $derived.by(() =>
-        getLegendEntries($colorLegend, $hiddenCategories, useLabelColors)
+        getLegendEntries(colorLegend, $hiddenCategories, useLabelColors)
     );
     // Videos, images and annotations send the lasso as region geometry rather than a resolved
     // sample-id list. The sidebar chip reads the count from the plot-propagated store, and
@@ -329,7 +321,7 @@
         const polygon = $rangeSelection;
 
         const selectableCount =
-            ($arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
+            (arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
                 return fulfils !== 0 ? count + 1 : count;
             }, 0) ?? null;
         const selectedCount = $selectedSampleIds.length;
@@ -552,15 +544,15 @@
     );
     const querySelection = $derived.by(() =>
         createQuerySelection({
-            x: $arrowData?.x as Float32Array | undefined,
-            y: $arrowData?.y as Float32Array | undefined,
-            sampleIds: $arrowData?.sample_id as string[] | undefined,
+            x: arrowData?.x as Float32Array | undefined,
+            y: arrowData?.y as Float32Array | undefined,
+            sampleIds: arrowData?.sample_id as string[] | undefined,
             category: $plotData?.category as Uint8Array | undefined,
             isSelectable: createSelectablePointCheck({
                 category: $plotData?.category as Uint8Array | undefined,
-                sampleIds: $arrowData?.sample_id as string[] | undefined,
+                sampleIds: arrowData?.sample_id as string[] | undefined,
                 fulfilsFilter: hasActiveFilter
-                    ? ($arrowData?.fulfils_filter as Uint8Array | undefined)
+                    ? (arrowData?.fulfils_filter as Uint8Array | undefined)
                     : undefined,
                 pickedSampleIds
             })
@@ -580,11 +572,8 @@
     );
 
     const errorText = $derived.by(() => {
-        if (embeddingsData.isError) {
+        if (embeddingsData?.isError) {
             return embeddingsData.error?.message || 'Unknown error';
-        }
-        if ($arrowError) {
-            return $arrowError;
         }
         return null;
     });
@@ -615,7 +604,7 @@
         </Button>
     </div>
     <div class="relative flex min-h-0 flex-1 flex-col">
-        {#if embeddingsData.isLoading}
+        {#if !embeddingsData || embeddingsData.isLoading}
             <div class="flex flex-1 items-center justify-center p-8">
                 <div class="text-lg">Loading embeddings data...</div>
             </div>
@@ -729,7 +718,7 @@
             <PlotColorByPopover
                 {collectionId}
                 withTags={$tags.length > 0}
-                withAnnotationLabels={$annotationLabels.length > 0}
+                withAnnotationLabels={($annotationLabels ?? []).length > 0}
                 selectedKey={$selectedColorByKey}
                 onSelectedKeyChange={(key) => {
                     setSelectedColorByKey(key);
