@@ -99,6 +99,35 @@ describe('CombinedMetadataDimensionsFilters', () => {
         expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled();
     });
 
+    it('moves a field only when the pointer leaves the rows', async () => {
+        const { container } = render(CombinedMetadataDimensionsFilters, defaultProps);
+        const rows = screen.getByTestId('metadata-field-rows');
+        const initialOrder = rowOrder(container);
+
+        await fireEvent.pointerEnter(rows);
+        narrowScore();
+        await tick();
+        expect(rowOrder(container)).toEqual(initialOrder);
+        expect(screen.getByRole('checkbox', { name: 'score filter' })).toBeChecked();
+
+        await fireEvent.pointerLeave(rows);
+        expect(rowOrder(container).slice(0, 2)).toEqual(['numeric:score', '---']);
+    });
+
+    it('after keyboard input, moves a field only when the focus leaves the rows', async () => {
+        const { container } = render(CombinedMetadataDimensionsFilters, defaultProps);
+        const rows = screen.getByTestId('metadata-field-rows');
+        const initialOrder = rowOrder(container);
+
+        await fireEvent.keyDown(rows, { key: ' ' });
+        narrowScore();
+        await tick();
+        expect(rowOrder(container)).toEqual(initialOrder);
+
+        await fireEvent.focusOut(rows, { relatedTarget: document.body });
+        expect(rowOrder(container)[0]).toBe('numeric:score');
+    });
+
     it('hides the separator when every field is active', () => {
         narrowScore();
         useDimensions().updateDimensionsValues({
