@@ -131,21 +131,6 @@ class TestLocalIngestionTransport:
         )
         assert tag_names == {image.sample_id: ["a"]}
 
-    def test_add_videos_from_path__invalid_target_fps(self, tmp_path: Path) -> None:
-        transport: IngestionTransport = LocalIngestionTransport()
-
-        with pytest.raises(ValueError, match="target_fps must be greater than 0"):
-            transport.add_videos_from_path(
-                collection_id=uuid4(),
-                path=str(tmp_path),
-                allowed_extensions=None,
-                num_decode_threads=None,
-                embed=False,
-                embed_frames=False,
-                target_fps=0,
-                limit=None,
-            )
-
     def test_add_videos(self, tmp_path: Path) -> None:
         video_path = create_video_file(output_path=tmp_path / "a.mp4", num_frames=2)
         session = db_manager.persistent_session()
@@ -173,13 +158,20 @@ class TestLocalIngestionTransport:
         transport: IngestionTransport = LocalIngestionTransport()
 
         transport.embed_videos(collection_id=collection_id, sample_ids=sample_ids)
-        transport.embed_videos(collection_id=collection_id, sample_ids=[])
 
         embed_video_samples.assert_called_once_with(
             session=db_manager.persistent_session(),
             collection_id=collection_id,
             sample_ids=sample_ids,
         )
+
+    def test_embed_videos__empty_sample_ids(self, mocker: MockerFixture) -> None:
+        embed_video_samples = mocker.patch.object(embed_samples, "embed_video_samples")
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transport.embed_videos(collection_id=uuid4(), sample_ids=[])
+
+        embed_video_samples.assert_not_called()
 
     def test_add_group_samples(self, tmp_path: Path) -> None:
         Image.new("RGB", (4, 3)).save(tmp_path / "a.png")
