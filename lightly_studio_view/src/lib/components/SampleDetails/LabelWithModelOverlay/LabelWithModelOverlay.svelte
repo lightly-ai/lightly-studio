@@ -19,9 +19,11 @@
     let { sample, scale, saveAs, labelWithModel }: Props = $props();
 
     // Captured before the panel's handler, so Escape clears the results before it closes the tool.
+    // During a save, Escape closes the tool; the save ends and the unsaved results go.
     const onKeyDown = (event: KeyboardEvent) => {
         if (isTextInputTarget(event.target) || isOverlayTarget(event.target)) return;
-        if (event.key !== 'Escape' || labelWithModel.predictions.length === 0) return;
+        const canClear = labelWithModel.predictions.length > 0 && !labelWithModel.isSaving;
+        if (event.key !== 'Escape' || !canClear) return;
         labelWithModel.clear();
         event.stopPropagation();
     };

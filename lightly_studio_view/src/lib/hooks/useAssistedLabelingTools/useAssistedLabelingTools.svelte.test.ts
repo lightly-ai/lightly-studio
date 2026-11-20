@@ -33,7 +33,8 @@ vi.mock('$lib/hooks/useStickyClass/useStickyClassName.svelte', () => ({
 vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => mocks.status
 }));
-vi.mock('$lib/hooks/useLabelingModels', () => ({
+vi.mock('$lib/hooks/useLabelingModels', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useLabelingModels')>()),
     useLabelingModels: () => mocks.models
 }));
 vi.mock('$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte', () => ({

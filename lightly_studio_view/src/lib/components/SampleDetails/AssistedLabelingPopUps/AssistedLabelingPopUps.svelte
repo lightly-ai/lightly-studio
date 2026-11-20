@@ -1,7 +1,7 @@
 <script lang="ts">
     import SmartSelectPopUp from '$lib/components/SampleDetails/SmartSelectPopUp/SmartSelectPopUp.svelte';
     import FindInstancesPopUp from '$lib/components/SampleDetails/FindInstancesPopUp/FindInstancesPopUp.svelte';
-    import LabelWithModelPopUp from '$lib/components/SampleDetails/LabelWithModelPopUp/LabelWithModelPopUp.svelte';
+    import { LabelWithModelPopUp } from '$lib/components/SampleDetails/LabelWithModelPopUp';
     import type { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
 
     interface Props {

@@ -19,8 +19,7 @@
     import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-    import { useLabelingModels } from '$lib/hooks/useLabelingModels';
-    import { isFrameDetailsRoute } from '$lib/routes';
+    import { isAssistedLabelingView, useLabelingModels } from '$lib/hooks';
     import { page } from '$app/state';
 
     import { getSlicEngine } from '@lightly-ai/slic';
@@ -68,15 +67,17 @@
     } = useSampleDetailsToolbarContext();
 
     const assistedLabelingStatus = useAssistedLabelingStatus();
-    const labelingModels = useLabelingModels();
-    // Assisted labeling supports images only, not video frames.
-    const isAssistedLabelingView = $derived(
-        !annotationLabelContext.isOnAnnotationDetailsView && !isFrameDetailsRoute(page.route.id)
+    const isOnAssistedLabelingView = $derived(
+        isAssistedLabelingView({
+            isOnAnnotationDetailsView: annotationLabelContext.isOnAnnotationDetailsView,
+            routeId: page.route.id
+        })
     );
+    const labelingModels = useLabelingModels(() => isOnAssistedLabelingView);
     const showAssistedLabelingTools = $derived(
-        isAssistedLabelingView && assistedLabelingStatus.disabledReason === null
+        isOnAssistedLabelingView && assistedLabelingStatus.disabledReason === null
     );
-    const showLabelWithModelTool = $derived(isAssistedLabelingView && labelingModels.isAvailable);
+    const showLabelWithModelTool = $derived(isOnAssistedLabelingView && labelingModels.isAvailable);
 
     // The tools that create annotations stay off while the target source is unknown, so nothing
     // is drawn only to be refused. The annotation details view only edits and needs no target.

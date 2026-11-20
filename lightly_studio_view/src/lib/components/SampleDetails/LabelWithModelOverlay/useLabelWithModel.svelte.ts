@@ -44,12 +44,14 @@ export const useLabelWithModel = (
     // Set when the last run returned no objects.
     let isEmptyResult = $state(false);
     let isSaving = $state(false);
-    // A clear or a new model during a save drops the unsaved predictions once it ends.
+    // A clear, a new model or a new threshold during a save drops the unsaved predictions once
+    // it ends.
     let isDropPending = false;
     // Drops responses that a newer run or clear made stale.
     let sequence = 0;
     let isDisposed = false;
     let previousModelId = untrack(() => getParams().modelId);
+    let previousThreshold = untrack(() => getParams().threshold);
 
     const mutation = createMutation(() => createModelAnnotationPreviewMutation());
     const { saveAnnotationPreviews } = useSaveAnnotationPreviews({
@@ -77,6 +79,7 @@ export const useLabelWithModel = (
 
     const currentSampleId = $derived(getParams().sampleId);
     const currentModelId = $derived(getParams().modelId);
+    const currentThreshold = $derived(getParams().threshold);
 
     // Drops the results of a previous sample, also while a save runs.
     $effect(() => {
@@ -84,10 +87,13 @@ export const useLabelWithModel = (
         return () => dropPredictions({ isSaveIgnored: true });
     });
 
+    // The previews of another model or threshold do not match the controls.
     $effect(() => {
         const modelId = currentModelId;
-        if (modelId === previousModelId) return;
+        const threshold = currentThreshold;
+        if (modelId === previousModelId && threshold === previousThreshold) return;
         previousModelId = modelId;
+        previousThreshold = threshold;
         untrack(() => dropPredictions());
     });
 

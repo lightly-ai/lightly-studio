@@ -52,7 +52,8 @@ vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
 
 const labelingModels = { isAvailable: false };
 
-vi.mock('$lib/hooks/useLabelingModels', () => ({
+vi.mock('$lib/hooks/useLabelingModels', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useLabelingModels')>()),
     useLabelingModels: () => labelingModels
 }));
 

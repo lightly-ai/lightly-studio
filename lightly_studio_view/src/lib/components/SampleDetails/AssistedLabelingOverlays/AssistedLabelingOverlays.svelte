@@ -2,7 +2,7 @@
     import type { AnnotationView } from '$lib/api/lightly_studio_local';
     import SmartSelectOverlay from '$lib/components/SampleDetails/SmartSelectOverlay/SmartSelectOverlay.svelte';
     import FindInstancesOverlay from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.svelte';
-    import LabelWithModelOverlay from '$lib/components/SampleDetails/LabelWithModelOverlay/LabelWithModelOverlay.svelte';
+    import { LabelWithModelOverlay } from '$lib/components/SampleDetails/LabelWithModelOverlay';
     import type { useAssistedLabelingTools } from '$lib/hooks/useAssistedLabelingTools';
 
     interface Props {
