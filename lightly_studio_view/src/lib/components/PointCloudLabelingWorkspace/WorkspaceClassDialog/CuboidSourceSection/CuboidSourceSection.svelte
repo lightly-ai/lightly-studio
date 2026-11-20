@@ -34,6 +34,10 @@
 
 <div class="space-y-1" data-testid="cuboid-source-section">
     <p class="text-sm font-medium">Annotation source</p>
+    <p class="text-xs text-muted-foreground" data-testid="cuboid-source-hint">
+        A group of annotations, for example manual annotations or the predictions of a model. This
+        is not the annotation class.
+    </p>
     {#each shownNames as name (name)}
         <div class="flex items-center gap-2 py-0.5 text-sm">
             <AnnotationTargetRadio
@@ -47,7 +51,7 @@
     {/each}
     <Input
         class="h-8 px-2 text-sm"
-        placeholder="New source name"
+        placeholder="New source, for example manual annotations"
         aria-label="New annotation source name"
         oninput={(event) => selectTyped(event.currentTarget.value)}
         onkeydown={(event) => event.key === 'Enter' && event.preventDefault()}
