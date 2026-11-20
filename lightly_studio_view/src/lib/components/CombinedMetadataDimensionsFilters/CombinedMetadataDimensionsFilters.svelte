@@ -11,6 +11,7 @@
     import { MANY_FIELDS, matchesFieldSearch } from './metadataFieldList';
     import { isFieldActive, orderByActive } from './metadataFields';
     import { keepFocusOnMove } from './keepFocusOnMove.svelte';
+    import { useHeldActiveFields } from './useHeldActiveFields.svelte';
     import { useMetadataFieldList } from './useMetadataFieldList.svelte';
 
     interface Props {
@@ -73,8 +74,12 @@
         expandedFields = { ...expandedFields, [id]: !isExpanded(id) };
     };
 
+    const held = useHeldActiveFields(() => list.fields.filter(isFieldActive).map(({ id }) => id));
     const ordered = $derived(
-        orderByActive(list.fields.filter((field) => matchesFieldSearch(field.title, fieldSearch)))
+        orderByActive(
+            list.fields.filter((field) => matchesFieldSearch(field.title, fieldSearch)),
+            (field) => held.isActive(field.id, isFieldActive(field))
+        )
     );
     let listElement = $state<HTMLElement>();
     keepFocusOnMove(
@@ -98,7 +103,8 @@
 </script>
 
 <!-- All metadata filters share one section: active fields first, then a line, then the other
-     fields. Ranges use a slider, categorical fields a value list. -->
+     fields. The order holds while the user works in the rows. Ranges use a slider, categorical
+     fields a value list. -->
 <Segment title="Metadata">
     <div class="space-y-4" bind:this={listElement}>
         {#if fieldCount > MANY_FIELDS}
@@ -119,10 +125,17 @@
             />
         </div>
 
+        <!-- The handlers only watch where the user works. The controls in the rows are interactive. -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div
             class="space-y-4"
             bind:this={rowsElement}
             style:min-height={rowsMinHeight ? `${rowsMinHeight}px` : undefined}
+            data-testid="metadata-field-rows"
+            onpointerenter={held.onpointerenter}
+            onpointerleave={held.onpointerleave}
+            onkeydown={held.onkeydown}
+            onfocusout={held.onfocusout}
         >
             {#each ordered.fields as field, index (field.id)}
                 {@const expanded = isExpanded(field.id)}

@@ -87,12 +87,16 @@ describe('keepFocusOnMove', () => {
 
     it('does nothing when the order is unchanged', async () => {
         const { rerender } = render(KeepFocusOnMoveHarness, defaultProps);
-        screen.getByRole('button', { name: 'b' }).focus();
-        const rect = rowTops(300, 50);
+        const scroller = screen.getByTestId('scroller');
+        storeScrollTop(scroller, 400);
+        const button = screen.getByRole('button', { name: 'b' });
+        button.focus();
+        rowTops(300, 50);
 
         await rerender({ order: ['a', 'b'] });
         await tick();
 
-        expect(rect).not.toHaveBeenCalled();
+        expect(document.activeElement).toBe(button);
+        expect(scroller.scrollTop).toBe(400);
     });
 });

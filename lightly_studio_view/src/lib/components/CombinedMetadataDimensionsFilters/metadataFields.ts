@@ -41,9 +41,12 @@ export interface OrderedFields {
     activeCount: number;
 }
 
-export const orderByActive = (fields: MetadataField[]): OrderedFields => {
-    const active = fields.filter(isFieldActive);
-    const inactive = fields.filter((field) => !isFieldActive(field));
+export const orderByActive = (
+    fields: MetadataField[],
+    isActive: (field: MetadataField) => boolean = isFieldActive
+): OrderedFields => {
+    const active = fields.filter(isActive);
+    const inactive = fields.filter((field) => !isActive(field));
     return { fields: [...active, ...inactive], activeCount: active.length };
 };
 
