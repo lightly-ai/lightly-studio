@@ -16,10 +16,13 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression
 from lightly_studio.core.sample import Sample
 from lightly_studio.database import db_manager
 from lightly_studio.metadata import compute_similarity, compute_typicality
-from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
-    collection_resolver,
     tag_resolver,
 )
 from lightly_studio.transport import active_transport
@@ -38,7 +41,7 @@ T = TypeVar("T", bound=Sample)
 class Dataset(Generic[T], ABC):
     """A LightlyStudio Dataset, a generic base for all dataset classes."""
 
-    def __init__(self, collection: CollectionTable) -> None:
+    def __init__(self, collection: CollectionWithoutChildrenView) -> None:
         """Initialize a LightlyStudio Dataset."""
         self._inner = collection
 
@@ -246,8 +249,7 @@ class BaseSampleDataset(Dataset[T], ABC):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        collection = collection_resolver.create(
-            session=db_manager.persistent_session(),
+        collection = active_transport.get_transport().collections.create(
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
         return cls(collection=collection)
@@ -275,7 +277,7 @@ class BaseSampleDataset(Dataset[T], ABC):
 
 def load_root_collection(
     sample_type: SampleType, name: str | None = None
-) -> CollectionTable | None:
+) -> CollectionWithoutChildrenView | None:
     """Load an existing root collection.
 
     Args:
@@ -298,12 +300,4 @@ def load_root_collection(
             f"Dataset with name '{name}' already exists with sample type "
             f"'{collection.sample_type.value}', but '{sample_type.value}' was requested."
         )
-    if active_transport.is_remote():
-        # A detached row, so that `Dataset` reads the fields of the collection.
-        return CollectionTable(**collection.model_dump(exclude={"group_component_definition"}))
-    table = collection_resolver.get_by_id(
-        session=db_manager.persistent_session(), collection_id=collection.collection_id
-    )
-    if table is None:
-        raise RuntimeError("Expected `collection` to be set.")
-    return table
+    return collection
