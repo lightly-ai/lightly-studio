@@ -2,16 +2,62 @@
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Sequence
 from uuid import UUID
 
+from lightly_studio.core.image import add_images
 from lightly_studio.database import db_manager
+from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_samples
 from lightly_studio.resolvers import collection_embedding_model_resolver, image_resolver
+
+logger = logging.getLogger(__name__)
 
 
 class LocalIngestionTransport:
     """Implements `IngestionTransport` with the persistent database session."""
+
+    def add_images_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        allowed_extensions: Sequence[str] | None,
+        embed: bool,
+        tag_depth: int,
+        limit: int | None,
+    ) -> None:
+        """Add the raw images from a path to a collection."""
+        fsspec_lister.validate_limit(limit)
+        if tag_depth < 0:
+            raise ValueError(f"tag_depth must be non-negative, got {tag_depth}.")
+        allowed_extensions_set = (
+            {ext.lower() for ext in allowed_extensions} if allowed_extensions else None
+        )
+        # Configure clients before discovery creates and caches a filesystem.
+        remote_storage.configure_connections(paths=[path])
+        image_paths = list(
+            fsspec_lister.iter_files_from_path(
+                path=path, allowed_extensions=allowed_extensions_set, limit=limit
+            )
+        )
+        logger.info(f"Found {len(image_paths)} images in {path}.")
+
+        session = db_manager.persistent_session()
+        path_to_sample_id = add_images.load_into_dataset_from_paths(
+            session=session, root_collection_id=collection_id, image_paths=image_paths
+        )
+        created_sample_ids = list(path_to_sample_id.values())
+        if created_sample_ids:
+            add_images.tag_samples_by_directory(
+                session=session,
+                collection_id=collection_id,
+                input_path=path,
+                sample_ids=created_sample_ids,
+                tag_depth=tag_depth,
+            )
+        if embed:
+            self.embed_images(collection_id=collection_id, sample_ids=created_sample_ids)
 
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for images with the default embedding model of the collection.

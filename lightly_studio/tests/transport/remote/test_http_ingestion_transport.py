@@ -10,6 +10,20 @@ from lightly_studio.transport.remote.http_ingestion_transport import HttpIngesti
 
 
 class TestHttpIngestionTransport:
+    def test_add_images_from_path(self) -> None:
+        with httpx.Client() as client:
+            transport: IngestionTransport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                transport.add_images_from_path(
+                    collection_id=uuid4(),
+                    path="/images",
+                    allowed_extensions=None,
+                    embed=False,
+                    tag_depth=0,
+                    limit=None,
+                )
+
     def test_embed_images(self) -> None:
         with httpx.Client() as client:
             transport: IngestionTransport = HttpIngestionTransport(client=client)
