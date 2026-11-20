@@ -29,7 +29,6 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcomeReport,
 )
 from lightly_studio.core.image import add_annotations
-from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.dataset import remote_storage
 from lightly_studio.models.caption import CaptionCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
@@ -407,12 +406,11 @@ def tag_samples_by_directory(
         session=session,
         sample_ids=sample_ids,
     )
-    newly_created_samples = [ImageSample(inner=image) for image in newly_created_images]
 
     logger.info(f"Adding directory tags to {len(sample_ids)} new samples.")
     tag_name_to_sample_ids: defaultdict[str, list[UUID]] = defaultdict(list)
-    for sample in newly_created_samples:
-        sample_path_abs = Path(sample.file_path_abs)
+    for image in newly_created_images:
+        sample_path_abs = Path(image.file_path_abs)
         relative_path = sample_path_abs.relative_to(input_path_abs)
 
         # relative_path.parts holds the directory levels followed by the file name,
@@ -420,7 +418,7 @@ def tag_samples_by_directory(
         num_directory_levels = len(relative_path.parts) - 1
         for tag_name in relative_path.parts[: min(tag_depth, num_directory_levels)]:
             if tag_name:
-                tag_name_to_sample_ids[tag_name].append(sample.sample_id)
+                tag_name_to_sample_ids[tag_name].append(image.sample_id)
 
     for tag_name, s_ids in tag_name_to_sample_ids.items():
         tag = tag_resolver.get_or_create_sample_tag_by_name(
