@@ -10,7 +10,7 @@ Users need outlines for irregular objects. Boxes are too coarse, and pixel masks
 - Add polygons from COCO, YOLO and YouTube-VIS, and export them to the same formats.
 - Polygons can be queried by their bounding box, and cropped for embeddings on images. Crops on video frames aren't supported, the same as for masks today.
 - The dropped-vertices bug is fixed.
-- Backend only. It ships before the frontend, and until then the GUI can't show polygons. That gap is accepted.
+- Backend only. It ships before the frontend, and until then the GUI can't show polygons. That gap is accepted. The one GUI change is the two export entries in the export dialog (see Export), so the new exports can be reached.
 - One labelformat fix. 0.1.17 already reads and writes `MultiPolygon` for COCO and YOLO. But its YOLO segmentation reader crashes on images without a label file and on blank lines, both common in real datasets; its detection reader handles them. Fixing labelformat was chosen over a workaround in Studio, so other users get the fix too.
 
 **Out of scope:** conversion between polygons and masks, holes, migrating existing masks (including the box-only ones), AI-assisted polygons, and polygon evaluation.
@@ -53,8 +53,8 @@ class AnnotationFileTask(str, Enum):
 - **COCO** (`add_samples_from_coco`, `add_annotations_from_coco`): `annotation_task` defaults to `OBJECT_DETECTION`. With `INSTANCE_SEGMENTATION`, `iscrowd=0` entries become polygons and `iscrowd=1` entries become masks, so a mixed file like COCO 2017 comes in completely in one call.
 - **YOLO** (`add_samples_from_yolo`, `add_annotations_from_yolo`): with `INSTANCE_SEGMENTATION`, each segmentation line becomes a single-part polygon.
 - **Deprecation:** the old `annotation_type` on the COCO and YouTube-VIS methods still works and raises a `DeprecationWarning`. `SEGMENTATION_MASK` maps to `INSTANCE_SEGMENTATION`. Passing both parameters raises `ValueError`. It is removed in a later minor release. Both the deprecation and the removal get changelog entries.
-- **Invalid polygons:** parts with fewer than 3 vertices are dropped. An annotation with no valid parts is skipped, with one warning that gives the count. COCO 2017 has a few *(my call)*.
-- **YouTube-VIS** shares the ingestion helper with COCO, so it gets the same fix: polygon frames become polygon annotations with their tracks, not box-only masks. It also takes `annotation_task` (`add_samples_from_youtube_vis`). Official YouTube-VIS data uses RLE masks, so this only affects polygon-based files.
+- **Invalid polygons:** parts with fewer than 3 vertices or with non-finite coordinates are dropped. An annotation with no valid parts is skipped, with one warning that gives the count. COCO 2017 has a few *(my call)*.
+- **YouTube-VIS** shares the ingestion helper with COCO, so it gets the same fix: polygon frames become polygon annotations with their tracks, not box-only masks. It also takes `annotation_task` (`add_videos_from_youtube_vis`). Official YouTube-VIS data uses RLE masks, so this only affects polygon-based files.
 
 ## Export
 
@@ -67,7 +67,7 @@ class AnnotationFileTask(str, Enum):
 
 ## Other changes
 
-- The query language and the Python query API get polygon `x`, `y`, `width` and `height`, as masks have.
+- The query language and the Python query API get polygon `x`, `y`, `width` and `height`, as masks have. The query editor's `polygon(...)` keyword is part of the frontend work.
 - Polygons load everywhere other annotation details load, including video frames and export. They take `object_track_id`, as masks do.
 - A migration adds the table and the enum value.
 - **Evaluation** stays masks-only. Polygon sources get a clear error, for example "Polygon annotations are not yet supported for instance segmentation evaluation.", plus a changelog entry. COCO segmentation sources now fail with this error. Before, they "ran" with box-only masks that were silently skipped.
