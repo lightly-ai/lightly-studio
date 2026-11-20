@@ -274,10 +274,9 @@ def load_into_dataset_from_labelformat(  # noqa: PLR0913
                 height=image.height,
             )
         )
-    created_path_to_id = _add_images_and_record(
-        ingestion=ingestion, collection_id=root_collection_id, images=images, report=report
-    )
-    created_sample_ids = list(created_path_to_id.values())
+    result = ingestion.add_images(collection_id=root_collection_id, images=images)
+    _record_outcomes(report=report, images=images, outcomes=result.outcomes)
+    created_sample_ids = list(result.sample_ids.values())
 
     # Phase 2: Annotation creation (only if samples were created)
     if created_sample_ids:
@@ -354,9 +353,9 @@ def load_into_dataset_from_coco_captions(  # noqa: PLR0913
         # A later duplicate of a path is skipped, so the first one gives the captions.
         path_to_captions.setdefault(image.file_path_abs, captions_by_image_id.get(image_id, []))
 
-    created_path_to_id = _add_images_and_record(
-        ingestion=ingestion, collection_id=root_collection_id, images=images_to_add, report=report
-    )
+    result = ingestion.add_images(collection_id=root_collection_id, images=images_to_add)
+    _record_outcomes(report=report, images=images_to_add, outcomes=result.outcomes)
+    created_path_to_id = result.sample_ids
     _process_batch_captions(
         session=session,
         collection_id=root_collection_id,
@@ -507,17 +506,12 @@ def _probe_image(
     return path, dimensions
 
 
-def _add_images_and_record(
-    ingestion: IngestionTransport,
-    collection_id: UUID,
-    images: Sequence[ImageCreate],
-    report: FileOutcomeReport,
-) -> dict[str, UUID]:
-    """Add the images through the transport and record their outcomes in the report."""
-    result = ingestion.add_images(collection_id=collection_id, images=images)
-    for image, outcome in zip(images, result.outcomes, strict=True):
+def _record_outcomes(
+    report: FileOutcomeReport, images: Sequence[ImageCreate], outcomes: Sequence[FileOutcome]
+) -> None:
+    """Record the outcome of each image in the report."""
+    for image, outcome in zip(images, outcomes, strict=True):
         report.record(path=image.file_path_abs, outcome=outcome)
-    return result.sample_ids
 
 
 def _classify_new_image(path: str, seen_paths: set[str]) -> FileOutcome:
