@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from uuid import UUID
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import (
     CollectionCreate,
-    CollectionTable,
     CollectionWithoutChildrenView,
+    GroupComponentDefinition,
     SampleType,
 )
 from lightly_studio.resolvers import collection_resolver
@@ -66,7 +66,7 @@ class LocalCollectionTransport:
         )
 
     def create_group_components(
-        self, parent_collection_id: UUID, components: Sequence[tuple[str, SampleType]]
+        self, parent_collection_id: UUID, components: Sequence[GroupComponentDefinition]
     ) -> dict[str, CollectionWithoutChildrenView]:
         """Create the component collections of a group collection."""
         created = collection_resolver.create_group_components(
@@ -74,7 +74,10 @@ class LocalCollectionTransport:
             parent_collection_id=parent_collection_id,
             components=components,
         )
-        return _to_views(collections=created)
+        return {
+            name: CollectionWithoutChildrenView.model_validate(collection)
+            for name, collection in created.items()
+        }
 
     def get_group_components(
         self, parent_collection_id: UUID
@@ -83,13 +86,7 @@ class LocalCollectionTransport:
         components = collection_resolver.get_group_components(
             session=db_manager.persistent_session(), parent_collection_id=parent_collection_id
         )
-        return _to_views(collections=components)
-
-
-def _to_views(
-    collections: Mapping[str, CollectionTable],
-) -> dict[str, CollectionWithoutChildrenView]:
-    return {
-        name: CollectionWithoutChildrenView.model_validate(collection)
-        for name, collection in collections.items()
-    }
+        return {
+            name: CollectionWithoutChildrenView.model_validate(collection)
+            for name, collection in components.items()
+        }
