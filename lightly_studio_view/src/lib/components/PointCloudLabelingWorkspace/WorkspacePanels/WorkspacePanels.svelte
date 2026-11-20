@@ -22,7 +22,7 @@
         />
     {:else}
         <PaneGroup direction="horizontal" class="min-h-0 flex-1">
-            <Pane defaultSize={78} minSize={50} class="flex min-h-0 flex-col">
+            <Pane defaultSize={72} minSize={50} class="flex min-h-0 flex-col">
                 <PointCloudWorkspaceMainColumn />
             </Pane>
             <PaneResizer
@@ -36,7 +36,7 @@
                     <span class="size-1 rounded-full bg-muted-foreground"></span>
                 </div>
             </PaneResizer>
-            <Pane defaultSize={22} minSize={16} maxSize={40}>
+            <Pane defaultSize={28} minSize={20} maxSize={45}>
                 <PointCloudRightSidePanel
                     cuboids={editing.annotations}
                     annotationClasses={data.annotationClasses}

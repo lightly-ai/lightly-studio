@@ -11,14 +11,16 @@
         onResizeStart,
         onResizeCancel,
         onResizePreview,
-        onResizeEnd
+        onResizeEnd,
+        isGizmoHovered
     }: Props = $props();
     const resize = useCuboidFaceResize({
         getAnnotation: () => getAnnotation(),
         onResizeStart: () => onResizeStart?.(),
         onResizeCancel: () => onResizeCancel?.(),
         onResizePreview: (payload) => onResizePreview(payload),
-        onResizeEnd: (payload) => onResizeEnd?.(payload)
+        onResizeEnd: (payload) => onResizeEnd?.(payload),
+        isGizmoHovered: () => isGizmoHovered?.() ?? false
     });
     onMount(() => onReady(resize));
 </script>
