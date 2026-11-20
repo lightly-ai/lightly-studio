@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 from lightly_studio.database import db_manager
 from lightly_studio.models.collection import (
     CollectionCreate,
     CollectionWithoutChildrenView,
+    GroupComponentDefinition,
     SampleType,
 )
 from lightly_studio.resolvers import collection_resolver
@@ -62,3 +64,29 @@ class LocalCollectionTransport:
             sample_type=sample_type,
             name=name,
         )
+
+    def create_group_components(
+        self, parent_collection_id: UUID, components: Sequence[GroupComponentDefinition]
+    ) -> dict[str, CollectionWithoutChildrenView]:
+        """Create the component collections of a group collection."""
+        created = collection_resolver.create_group_components(
+            session=db_manager.persistent_session(),
+            parent_collection_id=parent_collection_id,
+            components=components,
+        )
+        return {
+            name: CollectionWithoutChildrenView.model_validate(collection)
+            for name, collection in created.items()
+        }
+
+    def get_group_components(
+        self, parent_collection_id: UUID
+    ) -> dict[str, CollectionWithoutChildrenView]:
+        """Get the component collections of a group collection by component name."""
+        components = collection_resolver.get_group_components(
+            session=db_manager.persistent_session(), parent_collection_id=parent_collection_id
+        )
+        return {
+            name: CollectionWithoutChildrenView.model_validate(collection)
+            for name, collection in components.items()
+        }
