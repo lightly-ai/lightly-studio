@@ -4,6 +4,7 @@
     import X from '@lucide/svelte/icons/x';
     import { Button as IconButton } from '$lib/components/ui/button';
     import { Checkbox } from '$lib/components/ui/checkbox';
+    import SearchHighlightedTitle from './SearchHighlightedTitle.svelte';
 
     interface Props {
         /** Field name as stored, e.g. `split` or `Width`. */
@@ -65,7 +66,7 @@
                 {:else}
                     <ChevronRight class="size-4 shrink-0" />
                 {/if}
-                <span class="truncate">{title}</span>
+                <SearchHighlightedTitle {title} />
             </button>
         {:else}
             {title}

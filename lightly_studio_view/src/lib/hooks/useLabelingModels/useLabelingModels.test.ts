@@ -8,7 +8,7 @@ import { useLabelingModels } from './useLabelingModels.svelte';
 describe('useLabelingModels', () => {
     const model = { id: 'ltdetrv2-s-coco', task: 'object_detection', class_names: ['cat'] };
     const queryResult = {
-        data: { models: [model] }
+        data: { models: [model], has_loading_models: false }
     } as unknown as CreateQueryResult<LabelingModelsView, Error>;
 
     beforeEach(() => {
@@ -38,7 +38,7 @@ describe('useLabelingModels', () => {
 
     it('is not available without a ready model', () => {
         vi.spyOn(tanstackQuery, 'createQuery').mockReturnValue({
-            data: { models: [] }
+            data: { models: [], has_loading_models: false }
         } as unknown as CreateQueryResult<LabelingModelsView, Error>);
 
         expect(useLabelingModels(() => true).isAvailable).toBe(false);

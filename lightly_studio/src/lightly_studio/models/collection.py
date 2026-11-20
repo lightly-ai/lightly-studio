@@ -2,7 +2,7 @@
 
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Optional
+from typing import Optional, TypeAlias
 from uuid import UUID, uuid4
 
 from sqlalchemy import UniqueConstraint
@@ -20,6 +20,10 @@ class SampleType(str, Enum):
     GROUP = "group"
     MCAP = "mcap"
     SEQUENCE = "sequence"
+
+
+GroupComponentDefinition: TypeAlias = tuple[str, SampleType]
+"""The name and the sample type of one component of a group collection."""
 
 
 class CollectionBase(SQLModel):

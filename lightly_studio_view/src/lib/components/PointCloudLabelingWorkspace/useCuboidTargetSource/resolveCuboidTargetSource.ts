@@ -1,6 +1,3 @@
-/** The source the backend creates new cuboids in when no source exists yet. */
-export const DEFAULT_CUBOID_SOURCE_NAME = 'annotation';
-
 /** What to tell the user when the source of a new cuboid is not known. */
 export const CUBOID_SOURCE_MESSAGES = {
     pick: 'Pick where new annotations go.',
@@ -13,7 +10,7 @@ export interface CuboidTarget {
     targetSource: string | null;
     /** Why a new cuboid must not be created now: the sources load or did not load. */
     blockedReason: string | null;
-    /** There are several sources and none is picked, so the user must pick one. */
+    /** No source is picked and there is not exactly one source, so the user must pick one. */
     needsPick: boolean;
 }
 
@@ -51,7 +48,6 @@ export function resolveCuboidTargetSource({
     if (!sourceNames) return blocked(CUBOID_SOURCE_MESSAGES.loading);
     if (pick && (pick === typedSource || sourceNames.includes(pick))) return target(pick);
     if (sourceNames.length === 1) return target(sourceNames[0]);
-    if (sourceNames.length === 0) return target(DEFAULT_CUBOID_SOURCE_NAME);
     return { targetSource: null, blockedReason: null, needsPick: true };
 }
 

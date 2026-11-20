@@ -1,17 +1,20 @@
 from __future__ import annotations
 
-from sqlmodel import Session
+import pytest
 
 from lightly_studio.core.dataset_query.dataset_query import DatasetQuery
 from lightly_studio.core.dataset_query.image_sample_field import ImageSampleField
 from lightly_studio.core.dataset_query.order_by import OrderByField
+from lightly_studio.database import db_manager
 from lightly_studio.resolvers import tag_resolver
 from tests.helpers_resolvers import create_collection, create_image, create_tag
 
 
+@pytest.mark.usefixtures("patch_collection")
 class TestDatasetQueryAddTag:
-    def test_add_tag__with_expressions(self, db_session: Session) -> None:
+    def test_add_tag__with_expressions(self) -> None:
         """Test add_tag with a filter only tags matching samples."""
+        db_session = db_manager.persistent_session()
         # Arrange
         dataset = create_collection(session=db_session)
 
@@ -67,8 +70,9 @@ class TestDatasetQueryAddTag:
         assert tag in image30.sample.tags
         assert tag not in image40.sample.tags
 
-    def test_add_tag__no_expressions(self, db_session: Session) -> None:
+    def test_add_tag__no_expressions(self) -> None:
         """Test add_tag without any filter tags all samples."""
+        db_session = db_manager.persistent_session()
         # Arrange
         dataset = create_collection(session=db_session)
         image1 = create_image(
@@ -98,8 +102,9 @@ class TestDatasetQueryAddTag:
         assert tag in image1.sample.tags
         assert tag in image2.sample.tags
 
-    def test_add_tag__double_tag(self, db_session: Session) -> None:
+    def test_add_tag__double_tag(self) -> None:
         """Test add_tag does not double-tag samples."""
+        db_session = db_manager.persistent_session()
         # Arrange
         dataset = create_collection(session=db_session)
         image = create_image(
@@ -119,8 +124,9 @@ class TestDatasetQueryAddTag:
         db_session.refresh(image)
         assert len(image.sample.tags) == 1
 
-    def test_add_tag__empty_query(self, db_session: Session) -> None:
+    def test_add_tag__empty_query(self) -> None:
         """Test add_tag on an empty query does not create a tag."""
+        db_session = db_manager.persistent_session()
         # Arrange
         dataset = create_collection(session=db_session)
         image = create_image(
@@ -144,8 +150,9 @@ class TestDatasetQueryAddTag:
         db_session.refresh(image)
         assert image.sample.tags == []
 
-    def test_add_tag__some_already_tagged(self, db_session: Session) -> None:
+    def test_add_tag__some_already_tagged(self) -> None:
         """Test add_tag on a query where some samples are already tagged."""
+        db_session = db_manager.persistent_session()
         # Arrange
         dataset = create_collection(session=db_session)
         image1 = create_image(
