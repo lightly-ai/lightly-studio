@@ -15,7 +15,7 @@ class IngestionTransport(Protocol):
     A path is a local path or a cloud URI. A remote transport reads it on the server.
     """
 
-    # TODO(Iunir, 11/2026): Add the ingestion of images and videos.
+    # TODO(Iunir, 11/2026): Add the ingestion of videos.
     # TODO(Iunir, 11/2026): Add MCAP ingestion when `McapComponentSpec` has no DB imports.
 
     def add_images_from_path(  # noqa: PLR0913
@@ -82,4 +82,12 @@ class IngestionTransport(Protocol):
         Args:
             collection_id: The ID of the collection.
             sample_ids: The images to embed.
+        """
+
+    def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for videos with the default video embedding model.
+
+        Args:
+            collection_id: The ID of the collection.
+            sample_ids: The videos to embed.
         """

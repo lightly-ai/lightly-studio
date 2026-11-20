@@ -46,3 +46,10 @@ class TestHttpIngestionTransport:
 
             with pytest.raises(NotImplementedError):
                 transport.embed_images(collection_id=uuid4(), sample_ids=[])
+
+    def test_embed_videos(self) -> None:
+        with httpx.Client() as client:
+            transport: IngestionTransport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                transport.embed_videos(collection_id=uuid4(), sample_ids=[])

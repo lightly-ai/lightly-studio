@@ -42,3 +42,7 @@ class HttpIngestionTransport:
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for images. Not supported over HTTP yet."""
         raise NotImplementedError("Embedding images over HTTP is not supported yet.")
+
+    def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for videos. Not supported over HTTP yet."""
+        raise NotImplementedError("Embedding videos over HTTP is not supported yet.")

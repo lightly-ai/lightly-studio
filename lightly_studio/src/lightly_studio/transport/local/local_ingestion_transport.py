@@ -99,3 +99,13 @@ class LocalIngestionTransport:
         embed_samples.embed_image_samples(
             session=session, collection_id=collection_id, sample_ids=ids_to_embed
         )
+
+    def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for videos with the default video embedding model."""
+        if not sample_ids:
+            return
+        embed_samples.embed_video_samples(
+            session=db_manager.persistent_session(),
+            collection_id=collection_id,
+            sample_ids=list(sample_ids),
+        )
