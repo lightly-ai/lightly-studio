@@ -355,6 +355,42 @@ describe('usePlotComputeGate', () => {
         await vi.waitFor(() => expect(gate.view).toBe('prompt'));
     });
 
+    it('waits for the latest status when the plot request changes back', async () => {
+        const query = createStatusQuery(COMPUTED);
+        const finishRefetches: (() => void)[] = [];
+        query.refetch = vi.fn(
+            () =>
+                new Promise<void>((resolve) => {
+                    finishRefetches.push(() => {
+                        query.data = NOT_COMPUTED_LARGE;
+                        resolve();
+                    });
+                })
+        );
+        mocks.statusQueries['changed-back'] = query;
+        let plotRequestKey = $state('all');
+        const { gate } = mountGate({
+            collectionId: 'changed-back',
+            plotRequestKey: () => plotRequestKey
+        });
+
+        plotRequestKey = 'filtered';
+        flushSync();
+        plotRequestKey = 'all';
+        flushSync();
+
+        expect(query.refetch).toHaveBeenCalledTimes(2);
+        expect(gate.isPlotRequestEnabled).toBe(false);
+
+        const [finishFilteredRefetch, finishAllRefetch] = finishRefetches;
+        finishFilteredRefetch();
+        await Promise.resolve();
+        expect(gate.view).toBe('checking');
+
+        finishAllRefetch();
+        await vi.waitFor(() => expect(gate.view).toBe('prompt'));
+    });
+
     it('ignores a status error from before the mount until the new request finishes', () => {
         const query = createStatusQuery(COMPUTED);
         query.isFetchedAfterMount = false;
