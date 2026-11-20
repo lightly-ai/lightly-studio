@@ -241,7 +241,9 @@ def index_recording(  # noqa: PLR0913
     _add_dynamic_transforms(
         session=session, recording_id=recording_id, dynamic_transforms=loaded.dynamic_transforms
     )
-    _set_reference_frame_ids(session=session, recording_id=recording_id, frame_ids=frame_ids)
+    recording_resolver.set_reference_frame_ids(
+        session=session, recording_id=recording_id, frame_ids=frame_ids
+    )
     _fill_mcap_definitions(components=components, mcap_components=mcap_components, loaded=loaded)
 
     sequence_sample_id = mcap_group_sequence_resolver.create(
@@ -520,18 +522,6 @@ def _add_dynamic_transforms(
                 for edge in dynamic_transforms
             ],
         )
-
-
-def _set_reference_frame_ids(
-    session: Session, recording_id: UUID, frame_ids: Sequence[str]
-) -> None:
-    """Store the frames the scene of the recording can be shown in, in menu order."""
-    recording = recording_resolver.get_by_id(session=session, recording_id=recording_id)
-    if recording is None:
-        raise RuntimeError("Failed to retrieve the created recording.")
-    recording.reference_frame_ids = list(frame_ids)
-    session.add(recording)
-    session.commit()
 
 
 def _dynamic_edges(
