@@ -5,14 +5,22 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.video import add_annotations
+from lightly_studio.database import db_manager
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver, video_resolver
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video
+
+
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the transport writes through."""
+    return db_manager.persistent_session()
 
 
 def test_add_annotations_from_activitynet__adds_events(db_session: Session, tmp_path: Path) -> None:

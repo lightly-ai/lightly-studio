@@ -30,6 +30,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.video import add_videos, video_dataset
 from lightly_studio.core.video.add_videos import FrameExtractionContext
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.video import VideoCreate, VideoFrameCreate
 from lightly_studio.resolvers import (
@@ -42,6 +43,12 @@ from lightly_studio.resolvers import (
 )
 from tests.helpers_resolvers import create_collection, create_embedding_model
 from tests.resolvers.video.helpers import VideoStub, create_video_file, create_videos
+
+
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the ingestion transport writes through."""
+    return db_manager.persistent_session()
 
 
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:

@@ -53,7 +53,6 @@ def add_annotations_from_activitynet(
         collection_id=root_collection_id,
     )
     label_map = labelformat_helpers.create_label_map(
-        session=session,
         root_collection_id=root_collection_id,
         input_labels=input_labels,
     )
