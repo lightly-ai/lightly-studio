@@ -22,6 +22,14 @@ class TestHttpAnnotationTransport:
         with pytest.raises(NotImplementedError):
             transport.get_by_sample_ids(sample_ids=[uuid4()])
 
+    def test_get_by_sample_ids_and_collection(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.get_by_sample_ids_and_collection(
+                sample_ids=[uuid4()], annotation_collection_id=uuid4()
+            )
+
     def test_create(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
@@ -50,3 +58,15 @@ class TestHttpAnnotationTransport:
 
         with pytest.raises(NotImplementedError):
             transport.create_object_tracks(tracks=[])
+
+    def test_delete_existing(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.delete_existing(annotation_ids=[uuid4()])
+
+    def test_delete_empty_object_tracks(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.delete_empty_object_tracks(object_track_ids=[uuid4()])

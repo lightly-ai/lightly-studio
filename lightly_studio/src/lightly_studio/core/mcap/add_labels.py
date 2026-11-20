@@ -14,8 +14,6 @@ from dataclasses import dataclass, field, replace
 from typing import TYPE_CHECKING
 from uuid import UUID
 
-from sqlmodel import Session
-
 from lightly_studio.core.mcap import scene_update
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.reader import McapFileReader
@@ -25,11 +23,6 @@ from lightly_studio.core.mcap.type_definitions import CuboidLabel, FrameTags, Sc
 from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
-from lightly_studio.resolvers import (
-    annotation_resolver,
-    collection_resolver,
-    object_track_resolver,
-)
 from lightly_studio.transport import active_transport
 
 if TYPE_CHECKING:
@@ -173,7 +166,6 @@ def write_sequence_labels(  # noqa: PLR0913
         ValueError: If `overwrite` is set and no label matches a tick of the sequence.
             The existing annotations are kept.
     """
-    session = dataset.group_dataset.session
     entries = sequence.get_samples()
     ticks = ticks_by_timestamp(entries=entries)
     matched = match_labels(messages=messages, ticks=ticks)
@@ -190,7 +182,6 @@ def write_sequence_labels(  # noqa: PLR0913
     if overwrite:
         # The delete comes before the track allocation, so new tracks reuse freed numbers.
         _delete_sequence_annotations(
-            session=session,
             group_collection_id=dataset.group_dataset.collection_id,
             annotation_source=annotation_source,
             group_ids=[entry.sample_id for entry in entries],
@@ -210,7 +201,6 @@ def write_sequence_labels(  # noqa: PLR0913
             collection_name=annotation_source,
             covered_sample_ids=[],
         )
-    session.commit()
     _add_frame_tags(
         collection_id=dataset.group_dataset.collection_id,
         tags_by_group=matched.tags_by_group,
@@ -218,7 +208,6 @@ def write_sequence_labels(  # noqa: PLR0913
 
 
 def _delete_sequence_annotations(
-    session: Session,
     group_collection_id: UUID,
     annotation_source: str,
     group_ids: Sequence[UUID],
@@ -227,26 +216,25 @@ def _delete_sequence_annotations(
 
     Also deletes the object tracks of the deleted annotations that have no annotations left.
     """
-    annotation_collection_id = collection_resolver.get_by_name(
-        session=session, name=annotation_source, parent_collection_id=group_collection_id
+    transport = active_transport.get_transport()
+    annotation_collection = transport.collections.get_by_name(
+        name=annotation_source, parent_collection_id=group_collection_id
     )
-    if annotation_collection_id is None:
+    if annotation_collection is None:
         return
-    annotations = annotation_resolver.get_all_by_parent_sample_ids_and_annotation_collection_id(
-        session=session,
-        parent_sample_ids=group_ids,
-        annotation_collection_id=annotation_collection_id,
+    annotations = transport.annotations.get_by_sample_ids_and_collection(
+        sample_ids=group_ids, annotation_collection_id=annotation_collection.collection_id
     )
     object_track_ids = {
         annotation.object_track_id
         for annotation in annotations
         if annotation.object_track_id is not None
     }
-    deleted_count = annotation_resolver.delete_annotations_by_ids(
-        session=session, annotation_ids=[annotation.sample_id for annotation in annotations]
+    deleted_count = transport.annotations.delete_existing(
+        annotation_ids=[annotation.sample_id for annotation in annotations]
     )
-    deleted_track_count = object_track_resolver.delete_empty_by_ids(
-        session=session, object_track_ids=list(object_track_ids)
+    deleted_track_count = transport.annotations.delete_empty_object_tracks(
+        object_track_ids=list(object_track_ids)
     )
     logger.info(
         "Deleted %d annotations and %d object tracks of annotation source '%s' to overwrite them.",

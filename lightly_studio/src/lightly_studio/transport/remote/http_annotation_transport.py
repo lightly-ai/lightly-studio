@@ -29,6 +29,12 @@ class HttpAnnotationTransport:
         """Get the annotations of samples. Not supported over HTTP yet."""
         raise NotImplementedError("Getting annotations over HTTP is not supported yet.")
 
+    def get_by_sample_ids_and_collection(
+        self, sample_ids: Sequence[UUID], annotation_collection_id: UUID
+    ) -> list[AnnotationView]:
+        """Get the annotations of samples in a collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Getting annotations over HTTP is not supported yet.")
+
     def create(
         self,
         parent_collection_id: UUID,
@@ -42,6 +48,14 @@ class HttpAnnotationTransport:
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID. Not supported over HTTP yet."""
         raise NotImplementedError("Deleting annotations over HTTP is not supported yet.")
+
+    def delete_existing(self, annotation_ids: Sequence[UUID]) -> int:
+        """Delete annotations by ID. Not supported over HTTP yet."""
+        raise NotImplementedError("Deleting annotations over HTTP is not supported yet.")
+
+    def delete_empty_object_tracks(self, object_track_ids: Sequence[UUID]) -> int:
+        """Delete empty object tracks. Not supported over HTTP yet."""
+        raise NotImplementedError("Object tracks over HTTP are not supported yet.")
 
     def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
         """Get free object track numbers. Not supported over HTTP yet."""
