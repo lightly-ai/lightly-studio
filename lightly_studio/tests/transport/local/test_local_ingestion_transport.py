@@ -16,11 +16,17 @@ from lightly_studio.database import db_manager
 from lightly_studio.embed import embed_samples
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.mcap_group_component_definition import (
+    McapDataType,
+    McapGroupComponentDefinitionCreate,
+)
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.models.static_transform import StaticTransformCreate
 from lightly_studio.resolvers import (
+    collection_resolver,
     group_resolver,
     image_resolver,
+    mcap_group_component_definition_resolver,
     recording_resolver,
     static_transform_resolver,
     tag_resolver,
@@ -191,6 +197,29 @@ class TestLocalIngestionTransport:
                 collection_id=group_ds.collection_id,
                 groups=[{"vid": CreateImage(path="/a.png")}],
             )
+
+    def test_add_mcap_component_definitions(self) -> None:
+        session = db_manager.persistent_session()
+        group_collection = create_collection(session=session, sample_type=SampleType.GROUP)
+        components = collection_resolver.create_group_components(
+            session=session,
+            parent_collection_id=group_collection.collection_id,
+            components=[("front", SampleType.MCAP)],
+        )
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transport.add_mcap_component_definitions(
+            rows=[
+                McapGroupComponentDefinitionCreate(
+                    collection_id=components["front"].collection_id,
+                    mcap_data_type=McapDataType.VIDEO_FRAME,
+                )
+            ]
+        )
+
+        assert mcap_group_component_definition_resolver.get_named_data_types_by_group_collection_id(
+            session=session, group_collection_id=group_collection.collection_id
+        ) == [("front", McapDataType.VIDEO_FRAME)]
 
     def test_add_mcaps_from_path(self, tmp_path: Path) -> None:
         mcap_helpers.write_mcap(tmp_path / "a.mcap")

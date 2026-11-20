@@ -96,6 +96,13 @@ class TestHttpIngestionTransport:
             with pytest.raises(NotImplementedError):
                 getattr(transport, method)(rows=[])
 
+    def test_add_mcap_component_definitions(self) -> None:
+        with httpx.Client() as client:
+            transport: IngestionTransport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                transport.add_mcap_component_definitions(rows=[])
+
     def test_add_mcaps_from_path(self) -> None:
         with httpx.Client() as client:
             transport: IngestionTransport = HttpIngestionTransport(client=client)
