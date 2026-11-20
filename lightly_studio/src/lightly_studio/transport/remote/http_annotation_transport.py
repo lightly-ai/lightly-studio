@@ -33,6 +33,7 @@ class HttpAnnotationTransport:
         parent_collection_id: UUID,
         annotations: Sequence[AnnotationCreate],
         collection_name: str | None,
+        covered_sample_ids: Sequence[UUID],
     ) -> list[UUID]:
         """Add annotations to samples. Not supported over HTTP yet."""
         raise NotImplementedError("Adding annotations over HTTP is not supported yet.")

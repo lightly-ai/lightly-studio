@@ -26,7 +26,12 @@ class TestHttpAnnotationTransport:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
         with pytest.raises(NotImplementedError):
-            transport.create(parent_collection_id=uuid4(), annotations=[], collection_name=None)
+            transport.create(
+                parent_collection_id=uuid4(),
+                annotations=[],
+                collection_name=None,
+                covered_sample_ids=[],
+            )
 
     def test_delete(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())

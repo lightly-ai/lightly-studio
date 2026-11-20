@@ -26,6 +26,7 @@ class AnnotationTransport(Protocol):
         parent_collection_id: UUID,
         annotations: Sequence[AnnotationCreate],
         collection_name: str | None,
+        covered_sample_ids: Sequence[UUID],
     ) -> list[UUID]:
         """Add annotations to samples.
 
@@ -33,6 +34,8 @@ class AnnotationTransport(Protocol):
             parent_collection_id: The ID of the collection of the annotated samples.
             annotations: The annotations to add.
             collection_name: The name of the annotation collection. None uses the default.
+            covered_sample_ids: Parent samples that the annotation collection covers, also
+                samples without annotations.
 
         Returns:
             The IDs of the new annotations, in the order of `annotations`.
