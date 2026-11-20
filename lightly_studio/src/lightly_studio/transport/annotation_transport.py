@@ -22,6 +22,11 @@ class AnnotationTransport(Protocol):
     def get_by_sample_ids(self, sample_ids: Sequence[UUID]) -> list[AnnotationView]:
         """Get the annotations of samples."""
 
+    def get_by_sample_ids_and_collection(
+        self, sample_ids: Sequence[UUID], annotation_collection_id: UUID
+    ) -> list[AnnotationView]:
+        """Get the annotations of samples that are in one annotation collection."""
+
     def create(
         self,
         parent_collection_id: UUID,
@@ -44,6 +49,22 @@ class AnnotationTransport(Protocol):
 
     def delete(self, annotation_ids: Sequence[UUID]) -> None:
         """Delete annotations by ID."""
+
+    def delete_existing(self, annotation_ids: Sequence[UUID]) -> int:
+        """Delete annotations by ID. IDs that do not exist are ignored.
+
+        Returns:
+            The number of deleted annotations.
+        """
+
+    def delete_empty_object_tracks(self, object_track_ids: Sequence[UUID]) -> int:
+        """Delete the object tracks that have no annotations and no child tracks.
+
+        A parent track that becomes empty is also deleted. IDs that do not exist are ignored.
+
+        Returns:
+            The number of deleted object tracks.
+        """
 
     def get_free_object_track_numbers(self, dataset_id: UUID, count: int) -> list[int]:
         """Get the `count` lowest positive object track numbers that the dataset does not use."""
