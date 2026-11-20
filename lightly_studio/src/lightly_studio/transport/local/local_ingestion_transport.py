@@ -7,6 +7,7 @@ from collections.abc import Sequence
 from uuid import UUID
 
 from lightly_studio.core.image import add_images
+from lightly_studio.core.video import add_videos
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import fsspec_lister, remote_storage
 from lightly_studio.embed import embed_samples
@@ -99,6 +100,39 @@ class LocalIngestionTransport:
         embed_samples.embed_image_samples(
             session=session, collection_id=collection_id, sample_ids=ids_to_embed
         )
+
+    def add_videos_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        allowed_extensions: Sequence[str] | None,
+        num_decode_threads: int | None,
+        embed: bool,
+        embed_frames: bool,
+        target_fps: float | None,
+        limit: int | None,
+    ) -> None:
+        """Add the raw videos from a path to a collection."""
+        if target_fps is not None and target_fps <= 0:
+            raise ValueError(f"target_fps must be greater than 0, got {target_fps}.")
+        fsspec_lister.validate_limit(limit)
+        video_paths = add_videos.collect_video_file_paths(
+            path=path, allowed_extensions=allowed_extensions, limit=limit
+        )
+        logger.info(f"Found {len(video_paths)} videos in {path}.")
+
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
+            session=db_manager.persistent_session(),
+            collection_id=collection_id,
+            video_paths=video_paths,
+            num_decode_threads=num_decode_threads,
+            target_fps=target_fps,
+            embed_frames=embed_frames,
+        )
+        if embed:
+            self.embed_videos(
+                collection_id=collection_id, sample_ids=list(video_path_to_id.values())
+            )
 
     def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for videos with the default video embedding model."""
