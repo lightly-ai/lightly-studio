@@ -11,6 +11,7 @@ from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
 
 
@@ -92,3 +93,9 @@ class HttpIngestionTransport:
     def add_dynamic_transforms(self, rows: Sequence[DynamicTransformCreate]) -> list[UUID]:
         """Add dynamic transforms. Not supported over HTTP yet."""
         raise NotImplementedError("Adding transforms over HTTP is not supported yet.")
+
+    def add_sequence_samples(
+        self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]
+    ) -> None:
+        """Put groups in the slots of an MCAP sequence. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding sequence samples over HTTP is not supported yet.")
