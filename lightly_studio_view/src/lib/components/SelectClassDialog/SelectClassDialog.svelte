@@ -23,7 +23,7 @@
         tracks?: TrackWithClassNameView[];
         /** Track IDs already assigned to annotations on the current frame. */
         occupiedTrackIds?: ReadonlySet<string>;
-        /** Content above the class list. With it, the list does not open by itself and cover it. */
+        /** Content below the class list. With it, the list does not open by itself and cover it. */
         extra?: Snippet;
         /** Whether the caller allows to confirm, for example after its extra fields are set. */
         canConfirm?: boolean;
@@ -92,7 +92,6 @@
             </Dialog.Description>
         </Dialog.Header>
 
-        {@render extra?.()}
         <div class="min-w-0 space-y-1 py-2">
             <SelectList
                 onCreate={trackClassCreatedInPicker}
@@ -112,6 +111,8 @@
                 {/snippet}
             </SelectList>
         </div>
+
+        {@render extra?.()}
 
         {#if showTrackSelect}
             <div class="min-w-0 space-y-1">
