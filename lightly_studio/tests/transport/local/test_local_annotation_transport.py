@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from uuid import uuid4
+import uuid
 
 import pytest
 
@@ -92,15 +92,13 @@ class TestLocalAnnotationTransport:
         )
         transport: AnnotationTransport = LocalAnnotationTransport()
 
-        transport.delete(annotation_ids=[annotation.sample_id])
-
-        assert transport.get_by_sample_ids(sample_ids=[image.sample_id]) == []
-
-    def test_delete__not_found(self) -> None:
-        transport: AnnotationTransport = LocalAnnotationTransport()
-
+        # An unknown ID stops the delete before it deletes the known annotation.
         with pytest.raises(ValueError, match=r"not found"):
-            transport.delete(annotation_ids=[uuid4()])
+            transport.delete(annotation_ids=[annotation.sample_id, uuid.uuid4()])
+        assert len(transport.get_by_sample_ids(sample_ids=[image.sample_id])) == 1
+
+        transport.delete(annotation_ids=[annotation.sample_id])
+        assert transport.get_by_sample_ids(sample_ids=[image.sample_id]) == []
 
     def test_get_free_object_track_numbers(self) -> None:
         session = db_manager.persistent_session()
