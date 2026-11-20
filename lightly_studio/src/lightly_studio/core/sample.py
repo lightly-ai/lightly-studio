@@ -17,7 +17,6 @@ from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     caption_resolver,
     metadata_resolver,
-    tag_resolver,
 )
 from lightly_studio.transport import active_transport
 
@@ -98,18 +97,9 @@ class Sample(ABC):
         Args:
             name: The name of the tag to add.
         """
-        session = self.get_object_session()
-
-        # Get or create the tag for this dataset.
-        tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, collection_id=self.collection_id, tag_name=name
+        active_transport.get_transport().tags.add_to_samples(
+            collection_id=self.collection_id, tag_name=name, sample_ids=[self.sample_id]
         )
-
-        # Add the tag to the sample if not already associated.
-        if tag not in self.sample_table.tags:
-            tag_resolver.add_tag_to_sample(
-                session=session, tag_id=tag.tag_id, sample=self.sample_table
-            )
 
     def remove_tag(self, name: str) -> None:
         """Remove a tag from this sample.
@@ -117,18 +107,9 @@ class Sample(ABC):
         Args:
             name: The name of the tag to remove.
         """
-        session = self.get_object_session()
-
-        # Find the tag by name for this dataset.
-        existing_tag = tag_resolver.get_by_name(
-            session=session, tag_name=name, collection_id=self.collection_id
+        active_transport.get_transport().tags.remove_from_samples(
+            collection_id=self.collection_id, tag_name=name, sample_ids=[self.sample_id]
         )
-
-        # Remove the tag from the sample if it exists and is associated
-        if existing_tag is not None and existing_tag in self.sample_table.tags:
-            tag_resolver.remove_tag_from_sample(
-                session=session, tag_id=existing_tag.tag_id, sample=self.sample_table
-            )
 
     @property
     def tags(self) -> set[str]:
@@ -137,7 +118,10 @@ class Sample(ABC):
         Returns:
             A set of tag names as strings.
         """
-        return {tag.name for tag in self.sample_table.tags}
+        tag_names = active_transport.get_transport().tags.get_names_by_sample_ids(
+            sample_ids=[self.sample_id]
+        )
+        return set(tag_names.get(self.sample_id, []))
 
     @tags.setter
     def tags(self, tags: Iterable[str]) -> None:
