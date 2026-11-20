@@ -31,9 +31,10 @@ const dog = { ...cat, class_name: 'dog', bbox: { x: 5, y: 0, width: 2, height: 2
 let cleanup = () => {};
 
 const setup = (blockedReason: string | null = null) => {
-    const params = $state<{ sampleId: string; modelId: string | null }>({
+    const params = $state<{ sampleId: string; modelId: string | null; threshold: number }>({
         sampleId: 'sample-1',
-        modelId: 'ltdetrv2-s-coco'
+        modelId: 'ltdetrv2-s-coco',
+        threshold: 0.4
     });
     const onSaved = vi.fn();
     let labelWithModel!: ReturnType<typeof useLabelWithModel>;
@@ -42,7 +43,7 @@ const setup = (blockedReason: string | null = null) => {
             collectionId: 'collection-1',
             sampleId: params.sampleId,
             modelId: params.modelId,
-            threshold: 0.4,
+            threshold: params.threshold,
             saveAs: 'box',
             annotationSource: 'source',
             annotationSourceBlockedReason: blockedReason,
@@ -112,7 +113,7 @@ describe('useLabelWithModel', () => {
         expect(labelWithModel.predictions).toEqual([]);
     });
 
-    it('drops the results when the sample or the model changes', async () => {
+    it('drops the results when the sample, the model or the threshold changes', async () => {
         const { labelWithModel, params } = setup();
         await generateResults(labelWithModel);
 
@@ -122,6 +123,11 @@ describe('useLabelWithModel', () => {
 
         await generateResults(labelWithModel);
         params.modelId = 'ltdetrv2-seg-s-coco';
+        flushSync();
+        expect(labelWithModel.predictions).toEqual([]);
+
+        await generateResults(labelWithModel);
+        params.threshold = 0.8;
         flushSync();
         expect(labelWithModel.predictions).toEqual([]);
     });

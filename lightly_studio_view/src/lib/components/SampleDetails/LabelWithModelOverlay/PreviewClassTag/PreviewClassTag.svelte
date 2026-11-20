@@ -3,6 +3,7 @@
 
     const FONT_SIZE = 12;
     const PADDING = 3;
+    const SCORE_TO_PERCENT = 100;
 
     interface Props {
         preview: Pick<ModelAnnotationPreview, 'bbox' | 'class_name' | 'score'>;
@@ -12,7 +13,7 @@
 
     let { preview, scale }: Props = $props();
 
-    const text = $derived(`${preview.class_name} ${Math.round(preview.score * 100)}%`);
+    const text = $derived(`${preview.class_name} ${Math.round(preview.score * SCORE_TO_PERCENT)}%`);
 </script>
 
 <!-- Inside the top-left corner, as the delete button is above the top-right corner. -->

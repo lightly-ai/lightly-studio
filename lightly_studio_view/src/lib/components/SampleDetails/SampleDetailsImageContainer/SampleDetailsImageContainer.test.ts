@@ -44,7 +44,8 @@ vi.mock('$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte'
 vi.mock('$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte', () => ({
     useFindInstances: () => ({ clear: vi.fn() })
 }));
-vi.mock('$lib/hooks/useLabelingModels', () => ({
+vi.mock('$lib/hooks/useLabelingModels', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useLabelingModels')>()),
     useLabelingModels: () => ({ models: [], isAvailable: false })
 }));
 vi.mock('$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte', () => ({

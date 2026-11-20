@@ -3,6 +3,9 @@
 
     // A lower threshold can return hundreds of previews, e.g. every query of a DETR model.
     const MIN_THRESHOLD = 0.05;
+    const THRESHOLD_STEP = 0.05;
+    // Removes float noise of the slider, e.g. 0.15000000000000002.
+    const THRESHOLD_DECIMALS = 2;
 
     interface Props {
         value: number;
@@ -15,7 +18,7 @@
 <div class="grid gap-1.5 py-0.5">
     <div class="flex items-center justify-between text-xs text-muted-foreground">
         <span>Confidence</span>
-        <span class="tabular-nums text-foreground">{value.toFixed(2)}</span>
+        <span class="tabular-nums text-foreground">{value.toFixed(THRESHOLD_DECIMALS)}</span>
     </div>
     <div class="slider-small">
         <Slider
@@ -23,9 +26,9 @@
             {value}
             min={MIN_THRESHOLD}
             max={1}
-            step={0.05}
+            step={THRESHOLD_STEP}
             thumbLabel="Minimum confidence"
-            onValueChange={(next) => onChange(Math.round(next * 100) / 100)}
+            onValueChange={(next) => onChange(Number(next.toFixed(THRESHOLD_DECIMALS)))}
         />
     </div>
 </div>

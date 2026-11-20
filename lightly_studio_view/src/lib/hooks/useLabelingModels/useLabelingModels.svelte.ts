@@ -8,9 +8,11 @@ interface UseLabelingModelsReturn {
     readonly isAvailable: boolean;
 }
 
-export const useLabelingModels = (): UseLabelingModelsReturn => {
+// Each caller is a query observer that polls on its own, so each caller passes getEnabled.
+export const useLabelingModels = (getEnabled: () => boolean): UseLabelingModelsReturn => {
     const query = createQuery(() => ({
         ...getLabelingModelsOptions(),
+        enabled: getEnabled(),
         refetchInterval: ({ state }) => getLabelingModelsRefetchInterval(state.data)
     }));
     const models = $derived(query.data?.models ?? []);

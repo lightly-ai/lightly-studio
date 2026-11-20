@@ -6,13 +6,14 @@ import {
     useSampleDetailsToolbarContext
 } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-import { useLabelingModels } from '$lib/hooks/useLabelingModels';
+import { isAssistedLabelingView, useLabelingModels } from '$lib/hooks';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { page } from '$app/state';
 import { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
 import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte';
 import { DEFAULT_MAX_INSTANCES } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
 import { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';
-import { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte';
+import { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay';
 
 const DEFAULT_MODEL_THRESHOLD = 0.5;
 
@@ -39,9 +40,14 @@ class AssistedLabelingToolState {
 // tool when edit mode ends or assisted labeling becomes unusable.
 export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToolsParams) => {
     const assistedLabelingStatus = useAssistedLabelingStatus();
-    const labelingModels = useLabelingModels();
     const { context, setStatus } = useSampleDetailsToolbarContext();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
+    const labelingModels = useLabelingModels(() =>
+        isAssistedLabelingView({
+            isOnAnnotationDetailsView: annotationLabelContext.isOnAnnotationDetailsView,
+            routeId: page.route.id
+        })
+    );
     const isEditingMode = fromStore(useGlobalStorage().isEditingMode);
     const state = new AssistedLabelingToolState();
     const stickyClass = useStickyClassName(() => getParams().collectionId);
