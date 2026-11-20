@@ -21,11 +21,8 @@ from lightly_studio.core.mcap import add_labels, add_mcaps, annotation_mcap
 from lightly_studio.core.mcap.errors import McapAccessError
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.dataset import fsspec_lister
-from lightly_studio.resolvers import (
-    annotation_collection_coverage_resolver,
-    collection_resolver,
-    mcap_group_sequence_resolver,
-)
+from lightly_studio.resolvers import mcap_group_sequence_resolver
+from lightly_studio.transport import active_transport
 from lightly_studio.type_definitions import PathLike
 
 if TYPE_CHECKING:
@@ -173,16 +170,16 @@ def add_labels_from_folder(  # noqa: PLR0913
 
 def _labeled_sequence_ids(dataset: McapDataset, annotation_source: str) -> set[UUID]:
     """Return sequences that already store this annotation source."""
-    session = dataset.group_dataset.session
-    collection_id = collection_resolver.get_by_name(
-        session=session,
-        name=annotation_source,
-        parent_collection_id=dataset.group_dataset.collection_id,
+    transport = active_transport.get_transport()
+    annotation_collection = transport.collections.get_by_name(
+        name=annotation_source, parent_collection_id=dataset.group_dataset.collection_id
     )
-    if collection_id is None:
+    if annotation_collection is None:
         return set()
-    return annotation_collection_coverage_resolver.sequence_sample_ids(
-        session=session, annotation_collection_id=collection_id
+    return set(
+        transport.annotations.get_covered_sequence_ids(
+            annotation_collection_id=annotation_collection.collection_id
+        )
     )
 
 

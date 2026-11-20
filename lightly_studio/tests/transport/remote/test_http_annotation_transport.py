@@ -30,6 +30,12 @@ class TestHttpAnnotationTransport:
                 sample_ids=[uuid4()], annotation_collection_id=uuid4()
             )
 
+    def test_get_covered_sequence_ids(self) -> None:
+        transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
+
+        with pytest.raises(NotImplementedError):
+            transport.get_covered_sequence_ids(annotation_collection_id=uuid4())
+
     def test_create(self) -> None:
         transport: AnnotationTransport = HttpAnnotationTransport(client=httpx.Client())
 
