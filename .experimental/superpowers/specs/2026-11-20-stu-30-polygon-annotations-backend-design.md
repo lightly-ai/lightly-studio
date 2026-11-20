@@ -16,19 +16,22 @@ Users need outlines for irregular objects. Boxes are too coarse, and pixel masks
 **Out of scope:** conversion between polygons and masks, holes, migrating existing masks (including the box-only ones), AI-assisted polygons, and polygon evaluation.
 
 **Changes to the issue's requirements:**
+- Multipolygons from the start, not just simple polygons.
 - No polygon-to-mask conversion on export.
 - Two new export entries become one extended COCO export and one new YOLO export (see Export).
 
 ## Data model
 
-**A new type.** `AnnotationType.POLYGON` (`"polygon"`) gets its own details table, linked one-to-one like the other types. Users see "polygon" and "part", never "multipolygon". The glossary gets both terms.
-*Not taken:* a polygon field on the segmentation annotation. One type would have two shapes, every mask reader would have to branch, and a row could hold both or neither.
+**A new type.**
+- `AnnotationType.POLYGON` (`"polygon"`) gets its own details table, linked one-to-one like the other types. Users see "polygon" and "part", never "multipolygon". The glossary gets both terms.
+  - *Alternative considered:* a polygon field on the segmentation annotation. One type would have two shapes, every mask reader would have to branch, and a row could hold both or neither.
 
 **Storage.**
 - `polygons` is a plain `JSON` column: `[[[x, y], ...], ...]` (parts, then vertices). It has the same shape as the API and labelformat's `MultiPolygon.polygons`, so no conversion code is needed.
+  - *Alternative considered:* flat `float8[]` plus part offsets. On PostgreSQL (1M polygons) it was only about 20% smaller and 15% faster to load. That doesn't pay for two columns that must stay in sync. `JSONB` was nearly twice as large. Nested arrays don't work because PostgreSQL arrays must be rectangular.
 - Vertices are float pixels in the original image, with the origin at the top-left corner, rounded to 0.001 px. Floats, unlike the integer boxes, keep coordinates lossless through COCO and YOLO round trips; that is also labelformat's model. Rounding about halves the size and transfer of UI-drawn vertices, and the precision lost can't be seen.
-- Integer `x`, `y`, `width` and `height` are computed from the vertices on every write, rounded outward. Crops, sorting, filters and the query language read them, as they do for masks. *Not taken:* computing the box when it's read. That needs nested JSON unnesting written separately for DuckDB and PostgreSQL, and it can't be indexed.
-- *Not taken:* flat `float8[]` plus part offsets. On PostgreSQL (1M polygons) it was only about 20% smaller and 15% faster to load. That doesn't pay for two columns that must stay in sync. `JSONB` was nearly twice as large. Nested arrays don't work because PostgreSQL arrays must be rectangular.
+- Integer `x`, `y`, `width` and `height` are computed from the vertices on every write, rounded outward. Crops, sorting, filters and the query language read them, as they do for masks.
+  - *Alternative considered:* computing the box when it's read. That needs nested JSON unnesting written separately for DuckDB and PostgreSQL, and it can't be indexed.
 - Transfer to the frontend is bounded by page size: about 1.3 MB per grid page even with 200 polygons per image.
 
 **Validation.** Every write goes through one function, because the database doesn't check the shape. It requires at least 1 part, at least 3 vertices per part and finite numbers, then rounds and computes the box.
@@ -50,17 +53,17 @@ class AnnotationTask(str, Enum):
 - **COCO** (`add_samples_from_coco`, `add_annotations_from_coco`): `annotation_task` defaults to `OBJECT_DETECTION`. With `INSTANCE_SEGMENTATION`, `iscrowd=0` entries become polygons and `iscrowd=1` entries become masks, so a mixed file like COCO 2017 comes in completely in one call.
 - **YOLO** (`add_samples_from_yolo`, `add_annotations_from_yolo`): with `INSTANCE_SEGMENTATION`, each segmentation line becomes a single-part polygon.
 - **Deprecation:** the old `annotation_type` on the COCO methods still works and raises a `DeprecationWarning`. `SEGMENTATION_MASK` maps to `INSTANCE_SEGMENTATION`. Passing both parameters raises `ValueError`. It is removed in a later minor release. Both the deprecation and the removal get changelog entries.
-- *Not taken:*
-  - Keeping only `SEGMENTATION_MASK`: it would also create polygons, which a caller doesn't expect.
-  - Accepting both `SEGMENTATION_MASK` and `POLYGON` with the same behavior: two names for one thing.
-  - Making each value strict (polygons only, or masks only): a mixed file would lose entries.
-  The parameter chooses what to read from the file, which is a task, not the type that gets stored.
+  - *Alternatives considered:* the three below. A new parameter fits better, because it chooses what to read from the file (a task), not the type that gets stored.
+    - Keeping only `SEGMENTATION_MASK`: it would also create polygons, which a caller doesn't expect.
+    - Accepting both `SEGMENTATION_MASK` and `POLYGON` with the same behavior: two names for one thing.
+    - Making each value strict (polygons only, or masks only): a mixed file would lose entries.
 - **Invalid polygons:** parts with fewer than 3 vertices are dropped. An annotation with no valid parts is skipped, with one warning that gives the count. COCO 2017 has a few *(my call)*.
 - **YouTube-VIS** keeps today's behavior until its follow-up. The shared ingestion helper is split so only image ingestion changes *(my call)*.
 
 ## Export
 
-- **"Segmentation masks (COCO)" becomes "Instance segmentation (COCO)".** It writes polygons as `iscrowd=0` and masks as RLE with `iscrowd=1` in one file, as the COCO spec pairs them. *Not taken:* a separate polygons-only COCO export. A mixed dataset like COCO 2017 would lose its crowd masks on the way out. The docs note that COCOeval treats `iscrowd=1` as ignore regions; that is already true today.
+- **"Segmentation masks (COCO)" becomes "Instance segmentation (COCO)".** It writes polygons as `iscrowd=0` and masks as RLE with `iscrowd=1` in one file, as the COCO spec pairs them. The docs note that COCOeval treats `iscrowd=1` as ignore regions; that is already true today.
+  - *Alternative considered:* a separate polygons-only COCO export. A mixed dataset like COCO 2017 would lose its crowd masks on the way out.
 - **New "Instance segmentation (YOLO)":** polygons only. YOLO has no mask encoding, so masks are skipped with a warning that gives the count. YOLO allows one polygon per object, so labelformat joins the parts with zero-width bridges, and a multi-part polygon comes back as one part.
 - **Pascal VOC stays masks-only.** It shares the COCO export's annotation input, and labelformat's Pascal VOC writer already rasterizes polygons, so including polygons would quietly convert them to masks. That conversion is out of scope; the follow-up can reuse this labelformat code.
 - **Python:** `to_coco_instance_segmentation` and `to_yolo_instance_segmentation`. `to_coco_segmentation_masks` is deprecated like `annotation_type` *(my call)*.
@@ -70,7 +73,8 @@ class AnnotationTask(str, Enum):
 - The query language and the Python query API get polygon `x`, `y`, `width` and `height`, as masks have.
 - Polygons load everywhere other annotation details load, including video frames and export. They take `object_track_id`, as masks do.
 - A migration adds the table and the enum value.
-- **Evaluation** stays masks-only. Polygon sources get a clear error, for example "Polygon annotations are not yet supported for instance segmentation evaluation.", plus a changelog entry. COCO segmentation sources now fail with this error. Before, they "ran" with box-only masks that were silently skipped. *Not taken:* comparing polygons only with polygons. It still needs rasterizing or polygon geometry, and it can't handle the common case of polygon ground truth with mask predictions, or COCO's mixed ground truth.
+- **Evaluation** stays masks-only. Polygon sources get a clear error, for example "Polygon annotations are not yet supported for instance segmentation evaluation.", plus a changelog entry. COCO segmentation sources now fail with this error. Before, they "ran" with box-only masks that were silently skipped.
+  - *Alternative considered:* comparing polygons only with polygons. It still needs rasterizing or polygon geometry, and it can't handle the common case of polygon ground truth with mask predictions, or COCO's mixed ground truth.
 
 ## Follow-ups
 
