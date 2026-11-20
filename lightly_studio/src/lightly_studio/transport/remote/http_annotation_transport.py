@@ -21,7 +21,7 @@ class HttpAnnotationTransport:
     def get_or_create_labels(
         self, dataset_id: UUID, label_names: Sequence[str]
     ) -> list[AnnotationLabelView]:
-        """Get annotation labels by name. Not supported over HTTP yet."""
+        """Get annotation classes by name. Not supported over HTTP yet."""
         raise NotImplementedError("Annotation classes over HTTP are not supported yet.")
 
     def get_by_sample_ids(self, sample_ids: Sequence[UUID]) -> list[AnnotationView]:
