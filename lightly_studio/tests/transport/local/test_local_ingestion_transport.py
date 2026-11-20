@@ -10,11 +10,13 @@ from pytest_mock import MockerFixture
 from lightly_studio.core.file_outcome_report import FileOutcome
 from lightly_studio.database import db_manager
 from lightly_studio.embed import embed_samples
+from lightly_studio.models.collection import SampleType
 from lightly_studio.models.image import ImageCreate
-from lightly_studio.resolvers import image_resolver, tag_resolver
+from lightly_studio.resolvers import image_resolver, tag_resolver, video_resolver
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
 from tests.helpers_resolvers import create_collection, create_image
+from tests.resolvers.video.helpers import create_video_file
 
 
 @pytest.mark.usefixtures("patch_collection")
@@ -107,6 +109,26 @@ class TestLocalIngestionTransport:
             session=session, sample_ids=[image.sample_id]
         )
         assert tag_names == {image.sample_id: ["a"]}
+
+    def test_add_videos(self, tmp_path: Path) -> None:
+        video_path = create_video_file(output_path=tmp_path / "a.mp4", num_frames=2)
+        session = db_manager.persistent_session()
+        collection_id = create_collection(
+            session=session, sample_type=SampleType.VIDEO
+        ).collection_id
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        path_to_id = transport.add_videos(
+            collection_id=collection_id,
+            paths=[str(video_path), str(video_path)],
+            embed_frames=False,
+            target_fps=None,
+        )
+
+        video = video_resolver.get_by_id(session=session, sample_id=path_to_id[str(video_path)])
+        assert video is not None
+        assert len(video.frames) == 2
+        assert len(path_to_id) == 1
 
     def test_embed_videos(self, mocker: MockerFixture) -> None:
         embed_video_samples = mocker.patch.object(embed_samples, "embed_video_samples")
