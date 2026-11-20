@@ -18,7 +18,11 @@ from lightly_studio.core.dataset_query.order_by import OrderByExpression, OrderB
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.core.sample import Sample
 from lightly_studio.database import db_manager
-from lightly_studio.models.collection import CollectionTable, SampleType
+from lightly_studio.models.collection import (
+    CollectionTable,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.models.group import GroupTable
 from lightly_studio.models.image import ImageTable
 from lightly_studio.models.sample import SampleTable
@@ -137,7 +141,7 @@ class DatasetQuery(Generic[T]):
 
     def __init__(
         self,
-        dataset: CollectionTable,
+        dataset: CollectionTable | CollectionWithoutChildrenView,
         session: Session | None = None,
         sample_class: type[T] | None = None,
     ) -> None:

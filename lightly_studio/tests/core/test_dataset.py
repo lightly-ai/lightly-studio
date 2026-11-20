@@ -12,7 +12,11 @@ from lightly_studio.core.dataset_query.order_by import OrderByField
 from lightly_studio.core.video.video_dataset import VideoDataset
 from lightly_studio.database import db_manager
 from lightly_studio.embed.embedder_registry import EmbedderRegistry, NoEmbedderReason
-from lightly_studio.models.collection import CollectionWithoutChildrenView, SampleType
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.transport import active_transport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
@@ -56,6 +60,23 @@ class TestDataset:
 
         with pytest.raises(ValueError, match="already exists"):
             ImageDataset.create(name="test_dataset")
+
+    def test_create__transport(
+        self,
+        patch_collection: None,  # noqa: ARG002
+        mocker: MockerFixture,
+    ) -> None:
+        view = ImageDataset.create(name="dataset1")._inner
+        transport = mocker.Mock()
+        transport.collections.create.return_value = view
+        mocker.patch.object(active_transport._active, "transport", transport)
+
+        dataset = ImageDataset.create(name="dataset1")
+
+        assert dataset.collection_id == view.collection_id
+        transport.collections.create.assert_called_once_with(
+            collection=CollectionCreate(name="dataset1", sample_type=SampleType.IMAGE)
+        )
 
     def test_create__sample_type(
         self,

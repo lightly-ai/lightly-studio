@@ -15,7 +15,7 @@ from lightly_studio.core.mcap.type_definitions import SceneUpdateLabels
 from lightly_studio.database import db_manager
 from lightly_studio.errors import ExportError
 from lightly_studio.export import mcap_scene_update_export
-from lightly_studio.models.collection import SampleType
+from lightly_studio.models.collection import CollectionWithoutChildrenView, SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.models.recording import RecordingFormat
 from lightly_studio.resolvers import (
@@ -213,7 +213,7 @@ class TestMcapDataset:
             sample_type=SampleType.SEQUENCE,
             collection_name="perception",
         )
-        mcap_ds = McapDataset(collection=collection)
+        mcap_ds = McapDataset(collection=CollectionWithoutChildrenView.model_validate(collection))
 
         with pytest.raises(RuntimeError, match="has no group collection"):
             mcap_ds.group_dataset  # noqa: B018

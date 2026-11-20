@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from uuid import UUID
 
 import httpx
@@ -50,3 +51,15 @@ class HttpCollectionTransport:
     ) -> UUID:
         """Get or create a child collection. Not supported over HTTP yet."""
         raise NotImplementedError("Creating a collection over HTTP is not supported yet.")
+
+    def create_group_components(
+        self, parent_collection_id: UUID, components: Sequence[tuple[str, SampleType]]
+    ) -> dict[str, CollectionWithoutChildrenView]:
+        """Create group components. Not supported over HTTP yet."""
+        raise NotImplementedError("Creating group components over HTTP is not supported yet.")
+
+    def get_group_components(
+        self, parent_collection_id: UUID
+    ) -> dict[str, CollectionWithoutChildrenView]:
+        """Get group components. Not supported over HTTP yet."""
+        raise NotImplementedError("Getting group components over HTTP is not supported yet.")
