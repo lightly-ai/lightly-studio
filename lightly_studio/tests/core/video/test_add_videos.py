@@ -52,6 +52,17 @@ def db_session(patch_collection: None) -> Session:  # noqa: ARG001
     return db_manager.persistent_session()
 
 
+def test_collect_video_file_paths__allowed_extensions(tmp_path: Path) -> None:
+    for name in ["a.mp4", "b.MOV", "c.avi"]:
+        (tmp_path / name).touch()
+
+    paths = add_videos.collect_video_file_paths(
+        path=str(tmp_path), allowed_extensions=[".MOV", ".avi"], limit=None
+    )
+
+    assert sorted(Path(path).name for path in paths) == ["b.MOV", "c.avi"]
+
+
 def test_load_into_collection_from_paths(db_session: Session, tmp_path: Path) -> None:
     collection = create_collection(db_session, sample_type=SampleType.VIDEO)
     # Create two temporary video files.
