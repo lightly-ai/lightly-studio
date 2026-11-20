@@ -134,6 +134,23 @@ class LocalIngestionTransport:
                 collection_id=collection_id, sample_ids=list(video_path_to_id.values())
             )
 
+    def add_videos(
+        self,
+        collection_id: UUID,
+        paths: Sequence[str],
+        embed_frames: bool,
+        target_fps: float | None,
+    ) -> dict[str, UUID]:
+        """Add videos from a list of file paths to a collection."""
+        video_path_to_id, _ = add_videos.load_into_collection_from_paths(
+            session=db_manager.persistent_session(),
+            collection_id=collection_id,
+            video_paths=paths,
+            target_fps=target_fps,
+            embed_frames=embed_frames,
+        )
+        return video_path_to_id
+
     def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for videos with the default video embedding model."""
         if not sample_ids:

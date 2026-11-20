@@ -57,6 +57,16 @@ class HttpIngestionTransport:
         """Add the raw videos from a path to a collection. Not supported over HTTP yet."""
         raise NotImplementedError("Adding videos over HTTP is not supported yet.")
 
+    def add_videos(
+        self,
+        collection_id: UUID,
+        paths: Sequence[str],
+        embed_frames: bool,
+        target_fps: float | None,
+    ) -> dict[str, UUID]:
+        """Add videos from a list of file paths to a collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding videos over HTTP is not supported yet.")
+
     def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for videos. Not supported over HTTP yet."""
         raise NotImplementedError("Embedding videos over HTTP is not supported yet.")

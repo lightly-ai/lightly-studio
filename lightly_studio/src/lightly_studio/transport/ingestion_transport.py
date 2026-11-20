@@ -112,6 +112,32 @@ class IngestionTransport(Protocol):
             AllInputFilesFailedError: If all videos are missing or broken.
         """
 
+    def add_videos(
+        self,
+        collection_id: UUID,
+        paths: Sequence[str],
+        embed_frames: bool,
+        target_fps: float | None,
+    ) -> dict[str, UUID]:
+        """Add videos from a list of file paths to a collection.
+
+        The ingestion of annotated data uses it, for example YouTube-VIS, and then adds the
+        annotations.
+
+        Args:
+            collection_id: The ID of the collection.
+            paths: The video files.
+            embed_frames: If True, compute embeddings for the frames of the new videos.
+            target_fps: The frame rate of the added frames. None adds all frames.
+
+        Returns:
+            The sample ID of each new video, by its absolute path. Skipped files have no entry.
+
+        Raises:
+            ValueError: If `target_fps` is not greater than 0.
+            AllInputFilesFailedError: If all videos are missing or broken.
+        """
+
     def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for videos with the default video embedding model.
 

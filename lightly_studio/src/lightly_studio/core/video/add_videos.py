@@ -59,6 +59,7 @@ from lightly_studio.resolvers import (
     video_frame_resolver,
     video_resolver,
 )
+from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.utils import parallelize
 
 logger = logging.getLogger(__name__)
@@ -363,6 +364,7 @@ def _load_single_video(
 
 def load_video_annotations_from_labelformat(  # noqa: PLR0913
     session: Session,
+    ingestion: IngestionTransport,
     collection_id: UUID,
     dataset_id: UUID,
     video_paths: Iterable[str],
@@ -370,7 +372,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
     input_labels_paths_root: Path | str,
     limit: int | None = None,
     embed_frames: bool = False,
-) -> tuple[list[UUID], list[UUID]]:
+) -> list[UUID]:
     """Load video frame annotations from a labelformat input into the dataset.
 
     Important: due to the missing file extension for the video file names in YouTube-VIS,
@@ -381,7 +383,8 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         A file with matching "path w/o suffix" is used
 
     Args:
-        session: The database session.
+        session: The database session for the annotations.
+        ingestion: The transport that adds the videos.
         collection_id: The ID of the video collection to load annotations into.
         dataset_id: The ID of the dataset this collection belongs to.
         video_paths: An iterable of file paths to the videos to load.
@@ -394,9 +397,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
             decoding. Requires an image-compatible embedding model.
 
     Returns:
-        A tuple containing:
-            - List of UUIDs of the created video samples
-            - List of UUIDs of the created video frame samples
+        The UUIDs of the created video samples.
     """
     # TODO (Jonas, 2/2026): Add support for cloud paths.
     root_path = Path(input_labels_paths_root).absolute()
@@ -404,11 +405,11 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
         input_labels=input_labels, root_path=root_path, video_paths=video_paths, limit=limit
     )
 
-    created_video_path_to_id, created_video_frame_sample_ids = load_into_collection_from_paths(
-        session=session,
+    created_video_path_to_id = ingestion.add_videos(
         collection_id=collection_id,
-        video_paths=video_paths_labelformat,
+        paths=video_paths_labelformat,
         embed_frames=embed_frames,
+        target_fps=None,
     )
     created_sample_ids = list(created_video_path_to_id.values())
 
@@ -495,7 +496,7 @@ def load_video_annotations_from_labelformat(  # noqa: PLR0913
             annotations=annotations_to_create,
         )
 
-    return created_sample_ids, created_video_frame_sample_ids
+    return created_sample_ids
 
 
 def _should_keep_frame(decoded_index: int, target_fps: float | None, original_fps: float) -> bool:
