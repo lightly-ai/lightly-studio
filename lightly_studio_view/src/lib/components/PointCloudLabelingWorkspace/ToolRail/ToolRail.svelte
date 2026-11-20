@@ -16,7 +16,13 @@
 
     const items: ToolbarItem[] = [
         { id: 'select', label: 'Select cuboid', icon: MousePointer2 },
-        { id: 'create-cuboid', label: 'Create cuboid', icon: Box },
+        {
+            id: 'create-cuboid',
+            label: 'Create cuboid',
+            icon: Box,
+            shortcut: 'c',
+            action: 'create'
+        },
         { id: 'translate', label: 'Move cuboid', icon: Move },
         { id: 'rotate', label: 'Rotate cuboid', icon: RotateCw },
         { id: 'resize', label: 'Resize cuboid', icon: Scan }
