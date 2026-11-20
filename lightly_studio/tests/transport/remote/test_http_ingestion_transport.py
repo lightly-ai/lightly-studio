@@ -31,6 +31,15 @@ class TestHttpIngestionTransport:
             with pytest.raises(NotImplementedError):
                 transport.add_images(collection_id=uuid4(), images=[])
 
+    def test_add_directory_tags(self) -> None:
+        with httpx.Client() as client:
+            transport: IngestionTransport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                transport.add_directory_tags(
+                    collection_id=uuid4(), path="/images", sample_ids=[], tag_depth=1
+                )
+
     def test_embed_images(self) -> None:
         with httpx.Client() as client:
             transport: IngestionTransport = HttpIngestionTransport(client=client)
