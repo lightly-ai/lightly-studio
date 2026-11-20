@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.ingestion_transport import IngestionTransport
+from lightly_studio.transport.local.local_annotation_transport import LocalAnnotationTransport
 from lightly_studio.transport.local.local_collection_transport import LocalCollectionTransport
 from lightly_studio.transport.local.local_sample_transport import LocalSampleTransport
 from lightly_studio.transport.local.local_tag_transport import LocalTagTransport
@@ -20,6 +20,7 @@ class LocalTransport:
 
     def __init__(self) -> None:
         """Create the transports for each area."""
+        self.annotations = LocalAnnotationTransport()
         self.collections = LocalCollectionTransport()
         self.samples = LocalSampleTransport()
         self.tags = LocalTagTransport()
@@ -28,11 +29,6 @@ class LocalTransport:
     def metadata(self) -> MetadataTransport:
         """The transport for metadata and captions."""
         raise AttributeError("The local metadata transport does not exist yet.")
-
-    @property
-    def annotations(self) -> AnnotationTransport:
-        """The transport for annotations."""
-        raise AttributeError("The local annotation transport does not exist yet.")
 
     @property
     def ingestion(self) -> IngestionTransport:
