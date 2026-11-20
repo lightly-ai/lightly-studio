@@ -33,7 +33,9 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
     const startedAt = $derived(startTimes.current[getCollectionId()] ?? null);
     const plotRequestKey = $derived(getPlotRequestKey());
     // Embeddings can change while the panel is open, so a new plot request waits for a new status.
-    let checkedPlotRequestKey = $state(untrack(getPlotRequestKey));
+    let checkedPlotRequestKey = $state<string | null>(untrack(getPlotRequestKey));
+    // Counts status checks, so a slow check for an older plot request approves nothing.
+    let latestStatusCheck = 0;
     // A cached status can be outdated after embeddings were added, so only a fresh one decides.
     // A compute started in this tab is the exception: the server answers no request while it runs.
     const isStatusTrusted = $derived(
@@ -87,9 +89,12 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
 
     $effect(() => {
         const key = plotRequestKey;
+        // The first run has the mounted key, which the status request on mount checks.
         if (key === untrack(() => checkedPlotRequestKey)) return;
+        checkedPlotRequestKey = null;
+        const statusCheck = ++latestStatusCheck;
         void untrack(() => statusQuery.refetch()).then(() => {
-            checkedPlotRequestKey = key;
+            if (statusCheck === latestStatusCheck) checkedPlotRequestKey = key;
         });
     });
 
