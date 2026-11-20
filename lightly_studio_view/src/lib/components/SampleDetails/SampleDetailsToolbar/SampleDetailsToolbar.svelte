@@ -15,10 +15,11 @@
     import Brush from '@lucide/svelte/icons/brush';
     import Bot from '@lucide/svelte/icons/bot';
     import Layers3 from '@lucide/svelte/icons/layers-3';
+    import ScanEye from '@lucide/svelte/icons/scan-eye';
     import WandSparkles from '@lucide/svelte/icons/wand-sparkles';
     import { VectorSquareIcon } from '$lib/components/VectorSquareIcon';
     import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
-    import { isFrameDetailsRoute } from '$lib/routes';
+    import { isAssistedLabelingView, useLabelingModels } from '$lib/hooks';
     import { page } from '$app/state';
 
     import { getSlicEngine } from '@lightly-ai/slic';
@@ -66,12 +67,17 @@
     } = useSampleDetailsToolbarContext();
 
     const assistedLabelingStatus = useAssistedLabelingStatus();
-    // Assisted labeling supports images only, not video frames.
-    const showAssistedLabelingTools = $derived(
-        !annotationLabelContext.isOnAnnotationDetailsView &&
-            !isFrameDetailsRoute(page.route.id) &&
-            assistedLabelingStatus.disabledReason === null
+    const isOnAssistedLabelingView = $derived(
+        isAssistedLabelingView({
+            isOnAnnotationDetailsView: annotationLabelContext.isOnAnnotationDetailsView,
+            routeId: page.route.id
+        })
     );
+    const labelingModels = useLabelingModels(() => isOnAssistedLabelingView);
+    const showAssistedLabelingTools = $derived(
+        isOnAssistedLabelingView && assistedLabelingStatus.disabledReason === null
+    );
+    const showLabelWithModelTool = $derived(isOnAssistedLabelingView && labelingModels.isAvailable);
 
     // The tools that create annotations stay off while the target source is unknown, so nothing
     // is drawn only to be refused. The annotation details view only edits and needs no target.
@@ -85,7 +91,8 @@
         'brush',
         'slic',
         'smart-select',
-        'find-instances'
+        'find-instances',
+        'label-with-model'
     ];
 
     const items = $derived<ToolbarItem[]>([
@@ -146,6 +153,14 @@
             icon: Layers3,
             hint: 'Finds all objects that match a text prompt.',
             visible: showAssistedLabelingTools,
+            disabledReason: createToolDisabledReason
+        },
+        {
+            id: 'label-with-model',
+            label: 'Auto-label',
+            icon: ScanEye,
+            hint: 'Suggests annotations from your own model.',
+            visible: showLabelWithModelTool,
             disabledReason: createToolDisabledReason
         }
     ]);
@@ -284,6 +299,7 @@
                 break;
             case 'smart-select':
             case 'find-instances':
+            case 'label-with-model':
                 setStatus(tool);
                 break;
         }

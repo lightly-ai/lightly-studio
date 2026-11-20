@@ -6,6 +6,8 @@ import { useAssistedLabelingTools } from './useAssistedLabelingTools.svelte';
 const mocks = vi.hoisted(() => ({
     context: { status: 'smart-select' as string, panFrom: undefined as string | undefined },
     status: { disabledReason: null as string | null },
+    models: { models: [] as { id: string; task: string }[], isAvailable: true },
+    clearLabelWithModel: vi.fn(),
     isEditingMode: undefined as unknown as Writable<boolean>,
     clearSmartSelect: vi.fn(),
     clearInstances: vi.fn(),
@@ -31,6 +33,13 @@ vi.mock('$lib/hooks/useStickyClass/useStickyClassName.svelte', () => ({
 vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => mocks.status
 }));
+vi.mock('$lib/hooks/useLabelingModels', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useLabelingModels')>()),
+    useLabelingModels: () => mocks.models
+}));
+vi.mock('$lib/components/SampleDetails/LabelWithModelOverlay/useLabelWithModel.svelte', () => ({
+    useLabelWithModel: () => ({ clear: mocks.clearLabelWithModel })
+}));
 vi.mock('$lib/hooks/useGlobalStorage', () => ({
     useGlobalStorage: () => ({ isEditingMode: mocks.isEditingMode })
 }));
@@ -54,8 +63,16 @@ const setup = (initialStatus = 'smart-select') => {
     const status = $state<typeof mocks.status>({ disabledReason: null });
     const stickyClass = $state<typeof mocks.stickyClass>({ current: 'person' });
     mocks.stickyClass = stickyClass;
+    const models = $state<typeof mocks.models>({
+        models: [
+            { id: 'detector', task: 'object_detection' },
+            { id: 'segmenter', task: 'instance_segmentation' }
+        ],
+        isAvailable: true
+    });
     mocks.context = context;
     mocks.status = status;
+    mocks.models = models;
     mocks.isEditingMode = writable(true);
     let tools!: ReturnType<typeof useAssistedLabelingTools>;
     cleanup = $effect.root(() => {
@@ -66,7 +83,7 @@ const setup = (initialStatus = 'smart-select') => {
         }));
     });
     flushSync();
-    return { context, status, tools };
+    return { context, status, models, tools };
 };
 
 describe('useAssistedLabelingTools', () => {
@@ -182,5 +199,40 @@ describe('useAssistedLabelingTools', () => {
         tools.state.isDrawingInstancesBox = true;
         flushSync();
         expect(tools.blocksPan).toBe(true);
+    });
+
+    it('falls back to the cursor tool when the labeling models are unavailable', () => {
+        const { context, status, models } = setup('label-with-model');
+        status.disabledReason = 'Set the FAL_KEY environment variable.';
+        flushSync();
+        expect(context.status).toBe('label-with-model');
+
+        models.isAvailable = false;
+        flushSync();
+        expect(context.status).toBe('cursor');
+    });
+
+    it('drops the model results when the auto-label tool is left', () => {
+        const { context } = setup('label-with-model');
+        mocks.clearLabelWithModel.mockClear();
+
+        context.status = 'cursor';
+        flushSync();
+
+        expect(mocks.clearLabelWithModel).toHaveBeenCalled();
+    });
+
+    it('selects the first model and saves detections as boxes', () => {
+        const { tools } = setup('label-with-model');
+        tools.state.saveAs = 'mask';
+        flushSync();
+
+        expect(tools.selectedModel?.id).toBe('detector');
+        expect(tools.modelSaveAs).toBe('box');
+
+        tools.state.modelId = 'segmenter';
+        flushSync();
+        expect(tools.selectedModel?.id).toBe('segmenter');
+        expect(tools.modelSaveAs).toBe('mask');
     });
 });
