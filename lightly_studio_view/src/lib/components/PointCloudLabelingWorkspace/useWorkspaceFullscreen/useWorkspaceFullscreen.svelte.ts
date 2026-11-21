@@ -1,3 +1,5 @@
+import type { PortalTarget } from '$lib/contexts/PortalTarget';
+
 /** Tracks browser fullscreen for the workspace's root element. */
 export function useWorkspaceFullscreen() {
     let containerEl = $state<HTMLDivElement>();
@@ -26,6 +28,10 @@ export function useWorkspaceFullscreen() {
         },
         get isFullscreen() {
             return isFullscreen;
+        },
+        /** Where dialogs and popovers render, so that they stay visible in fullscreen. */
+        get portalTarget(): PortalTarget {
+            return isFullscreen && containerEl ? containerEl : 'body';
         },
         toggleFullscreen
     };
