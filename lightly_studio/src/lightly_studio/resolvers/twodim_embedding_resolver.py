@@ -10,6 +10,7 @@ import numpy as np
 from lightly_mundig import TwoDimEmbedding  # type: ignore[import-untyped]
 from numpy.typing import NDArray
 from pyarrow import ipc
+from sklearn.decomposition import PCA
 from sqlmodel import Session
 
 from lightly_studio.database import db_insert
@@ -17,6 +18,9 @@ from lightly_studio.database.db_vector import Embedding
 from lightly_studio.models.embedding_model import EmbeddingModelTable
 from lightly_studio.models.embedding_plot import EmbeddingPlotTable
 from lightly_studio.resolvers import embedding_plot_resolver, sample_embedding_resolver
+
+_PCA_DIMENSIONS = 64
+"""Number of dimensions that PCA keeps before PaCMAP. PaCMAP is faster on fewer dimensions."""
 
 
 def get_twodim_embeddings(
@@ -149,6 +153,17 @@ def get_twodim_embeddings_from_axes(
 def _calculate_2d_embeddings(
     embedding_values: list[Embedding],
 ) -> list[tuple[float, float]]:
+    """Compute the PaCMAP layout of the embeddings.
+
+    N is the number of embeddings and D is the embedding dimension. PCA first reduces the
+    embeddings to at most ``_PCA_DIMENSIONS`` dimensions, because this makes PaCMAP faster.
+
+    Args:
+        embedding_values: N embeddings of shape (D,).
+
+    Returns:
+        N (x, y) coordinates, in the order of ``embedding_values``.
+    """
     n_samples = len(embedding_values)
     # For 0, 1 or 2 samples we hard-code deterministic coordinates.
     if n_samples == 0:
@@ -158,5 +173,29 @@ def _calculate_2d_embeddings(
     if n_samples == 2:  # noqa: PLR2004
         return [(0.0, 0.0), (1.0, 1.0)]
 
-    embedding_calculator = TwoDimEmbedding(embedding_values)
+    reduced = _reduce_with_pca(embeddings=np.stack(embedding_values))
+    embedding_calculator = TwoDimEmbedding(list(reduced))
     return embedding_calculator.calculate_2d_embedding()  # type: ignore[no-any-return]
+
+
+def _reduce_with_pca(embeddings: NDArray[np.float32]) -> NDArray[np.float32]:
+    """Reduce the embeddings to ``_PCA_DIMENSIONS`` dimensions with PCA.
+
+    N is the number of embeddings, D is the embedding dimension and K is the output dimension.
+    K is ``_PCA_DIMENSIONS`` if PCA runs, else D.
+
+    Args:
+        embeddings: Embeddings of shape (N, D).
+
+    Returns:
+        Embeddings of shape (N, K).
+    """
+    n_samples, n_dimensions = embeddings.shape
+    # PCA cannot keep more components than there are samples or dimensions.
+    can_reduce = n_samples > _PCA_DIMENSIONS and n_dimensions > _PCA_DIMENSIONS
+    if not can_reduce:
+        return embeddings
+
+    # A fixed seed keeps the layout the same, because sklearn can use a randomized SVD.
+    pca = PCA(n_components=_PCA_DIMENSIONS, random_state=0)
+    return np.asarray(pca.fit_transform(embeddings), dtype=np.float32)

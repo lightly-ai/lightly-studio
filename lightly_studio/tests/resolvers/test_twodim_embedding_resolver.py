@@ -31,6 +31,22 @@ def test__calculate_2d_embeddings__2_samples() -> None:
     assert projected == [(0.0, 0.0), (1.0, 1.0)]
 
 
+def test__calculate_2d_embeddings__reduces_dimensions_before_pacmap(
+    mocker: MockerFixture,
+) -> None:
+    rng = np.random.default_rng(0)
+    embedding_values = list(rng.standard_normal(size=(100, 128), dtype=np.float32))
+    two_dim_embedding = mocker.patch.object(twodim_embedding_resolver, "TwoDimEmbedding")
+    two_dim_embedding.return_value.calculate_2d_embedding.return_value = [(0.0, 0.0)] * 100
+
+    projected = twodim_embedding_resolver._calculate_2d_embeddings(embedding_values)
+
+    pacmap_input = two_dim_embedding.call_args.args[0]
+    assert len(pacmap_input) == 100
+    assert all(row.shape == (64,) for row in pacmap_input)
+    assert len(projected) == 100
+
+
 @pytest.mark.parametrize("existing", [False, True])
 def test_get_twodim_embeddings__write_during_rebuild(
     db_session: Session, existing: bool, mocker: MockerFixture
@@ -282,3 +298,31 @@ def test_get_twodim_embeddings_from_axes(db_session: Session) -> None:
         image_a.sample_id: (1.0, 2.0),
         image_b.sample_id: (4.0, 5.0),
     }
+
+
+def test__reduce_with_pca() -> None:
+    rng = np.random.default_rng(0)
+    embeddings = rng.standard_normal(size=(100, 128), dtype=np.float32)
+
+    reduced = twodim_embedding_resolver._reduce_with_pca(embeddings=embeddings)
+
+    assert reduced.shape == (100, 64)
+    assert reduced.dtype == np.float32
+
+
+def test__reduce_with_pca__few_dimensions() -> None:
+    rng = np.random.default_rng(0)
+    embeddings = rng.standard_normal(size=(100, 64), dtype=np.float32)
+
+    reduced = twodim_embedding_resolver._reduce_with_pca(embeddings=embeddings)
+
+    assert reduced is embeddings
+
+
+def test__reduce_with_pca__few_samples() -> None:
+    rng = np.random.default_rng(0)
+    embeddings = rng.standard_normal(size=(64, 128), dtype=np.float32)
+
+    reduced = twodim_embedding_resolver._reduce_with_pca(embeddings=embeddings)
+
+    assert reduced is embeddings
