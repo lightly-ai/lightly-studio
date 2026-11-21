@@ -501,6 +501,16 @@ describe('SampleDetailsClassificationSegment', () => {
         expect(screen.getByRole('button', { name: 'Add classification' })).toBeInTheDocument();
     });
 
+    it('renders the add classification button at full width', () => {
+        mocks.isEditingMode.set(true);
+        mocks.collections = [groundTruthSource];
+
+        render(SampleDetailsClassificationSegment, { props: defaultProps });
+
+        expect(screen.getByTestId('add-classification-button')).toHaveClass('w-full');
+        expect(screen.getByTestId('add-classification-button').parentElement).toHaveClass('w-full');
+    });
+
     describe('deleting a classification', () => {
         it('deletes once and stacks one undo action when clicked twice mid-flight', async () => {
             let resolveDelete = () => {};

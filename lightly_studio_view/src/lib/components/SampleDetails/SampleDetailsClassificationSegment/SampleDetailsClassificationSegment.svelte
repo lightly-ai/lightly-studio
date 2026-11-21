@@ -429,7 +429,7 @@
                     ariaLabel="Add classification"
                     buttonProps={{
                         type: 'button',
-                        class: 'mb-2 h-8 justify-center rounded-sm bg-card px-2 py-0 text-base font-normal text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
+                        class: 'mb-2 h-8 w-full justify-center rounded-sm bg-card px-2 py-0 text-base font-normal text-diffuse-foreground hover:bg-primary hover:text-primary-foreground',
                         onclick: addDraftClassification,
                         'data-testid': 'add-classification-button'
                     }}
