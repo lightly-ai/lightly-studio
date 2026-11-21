@@ -5,9 +5,16 @@
     import WorkspaceStatusPanel from '../WorkspaceStatusPanel/WorkspaceStatusPanel.svelte';
     import { useWorkspaceControllerContext } from '../pointCloudWorkspaceLayoutContext.svelte';
     import { hasMinimumRole, useAuth } from '$lib/hooks';
+    import { useQueryClient } from '@tanstack/svelte-query';
+    import { TICK_TAGS_QUERY_KEY } from '../FrameTimeline/tickTagsQueryKey';
     const controller = useWorkspaceControllerContext();
     const { workspace, editing, data, presentation, targetSource } = controller;
     const { user } = useAuth();
+    const queryClient = useQueryClient();
+    const refetchTickTags = () => {
+        void workspace.tickDetails.refetch();
+        void queryClient.invalidateQueries({ queryKey: TICK_TAGS_QUERY_KEY });
+    };
     // The source for new cuboids is picked in edit mode only, like the other editing controls.
     const canPickSource = $derived(
         hasMinimumRole(user?.role, 'labeler') && presentation.isEditingMode
@@ -45,7 +52,7 @@
                     sequence={workspace.sequenceSample}
                     onSequenceTagsChange={workspace.refetchSequenceSample}
                     tick={data.tick}
-                    onTagsChange={() => void workspace.tickDetails.refetch()}
+                    onTagsChange={refetchTickTags}
                     editable={presentation.isEditingMode}
                     onCuboidTransform={editing.panelCuboidTransform}
                     onLabelChange={editing.handleLabelChange}
