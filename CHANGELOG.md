@@ -73,6 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Bounding box, segmentation mask, and classification exports finish faster.
     - Deleting a dataset now succeeds even if an exported file cannot be removed.
 
+- The GUI server no longer has an endpoint that sets cloud storage credentials without authentication.
+
 ## \[1.3.0\] - 2026-11-12
 
 ### Added
