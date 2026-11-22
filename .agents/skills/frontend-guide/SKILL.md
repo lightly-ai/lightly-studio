@@ -208,6 +208,10 @@ Ref: `lightly_studio_view/src/lib/hooks/useTags/useTags.ts`, `lightly_studio_vie
 
 Generic hooks go in `src/lib/hooks`; component-specific hooks go in the component's folder.
 
+Track the collection, sample, or timeline tick that a filter or draft belongs to. When the active
+item changes, stop applying filters from the previous item and discard drafts that cannot carry
+over. Use the active item's identity even while the UI still displays the previous data.
+
 For data fetching and API work:
 
 - Use [TanStack Query](https://tanstack.com/query/latest/docs/framework/svelte/overview) for all data fetching.
