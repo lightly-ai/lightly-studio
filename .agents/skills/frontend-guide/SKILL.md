@@ -162,6 +162,10 @@ Use Svelte 5 patterns in all new code:
 
 **Event handlers** - use `onclick`, `onchange`, etc. (not `on:click`, `on:change`).
 
+**Text input shortcuts** - In a custom `keydown` handler that commits or cancels text input, return
+while `event.isComposing` is true. Check before calling `preventDefault()` or changing app state so
+the input method can finish composing text.
+
 **Reactive declarations** - use `$derived` or `derived()` stores, not `$:`. Do not mix the two approaches - pick one per file/module.
 
 **Page state** - use `$app/state`, not `$app/stores`:
