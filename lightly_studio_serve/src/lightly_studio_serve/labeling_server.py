@@ -6,8 +6,8 @@ on the router of the application that ``create_app`` builds.
 
 from __future__ import annotations
 
-import io
 import logging
+from collections.abc import Set
 from typing import Annotated
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -64,9 +64,13 @@ def mount_labeling_routes(
     def predict(image: _ImageFile, threshold: _Threshold) -> PredictionsResponse:
         pil_image = _decode(file=image)
         predictions = _predict(labeling_model=labeling_model, image=pil_image, threshold=threshold)
+        class_names = frozenset(labeling_model.class_names)
         return PredictionsResponse(
             model_id=labeling_model.model_id,
-            predictions=[_to_wire(prediction=prediction) for prediction in predictions],
+            predictions=[
+                _to_wire(prediction=prediction, class_names=class_names, image=pil_image)
+                for prediction in predictions
+            ],
         )
 
     return frozenset({labeling_protocol.LABELING_PREDICT_PATH})
@@ -74,16 +78,17 @@ def mount_labeling_routes(
 
 def _decode(file: UploadFile) -> Image:
     """Read the uploaded file as an RGB image, or answer 422 if it is not an image."""
-    image_bytes = file.file.read()
-    file.file.close()
     try:
-        with PILImage.open(io.BytesIO(image_bytes)) as image_file:
+        # Pillow reads the pixels lazily, so convert inside the context.
+        with PILImage.open(file.file) as image_file:
             return image_file.convert("RGB")
     except (UnidentifiedImageError, PILImage.DecompressionBombError, OSError, ValueError) as error:
         raise HTTPException(
             status_code=labeling_protocol.STATUS_UNUSABLE_INPUT,
             detail="The image cannot be decoded.",
         ) from error
+    finally:
+        file.file.close()
 
 
 def _predict(
@@ -103,10 +108,16 @@ def _predict(
         ) from error
 
 
-def _to_wire(prediction: PredictedAnnotation) -> WirePrediction:
-    """Convert one prediction, and name the rule that a broken one breaks."""
+def _to_wire(
+    prediction: PredictedAnnotation, class_names: Set[str], image: Image
+) -> WirePrediction:
+    """Convert one prediction, and name the rule that a broken one breaks.
+
+    A client cannot use a prediction of a class that the model does not declare, or a mask
+    with a size that is not the size of the image.
+    """
     try:
-        return labeling_protocol.to_wire_prediction(prediction=prediction)
+        wire_prediction = labeling_protocol.to_wire_prediction(prediction=prediction)
     except ValidationError as error:
         raise LabelingModelError(
             "The labeling model returned a prediction that is not valid: "
@@ -116,3 +127,17 @@ def _to_wire(prediction: PredictedAnnotation) -> WirePrediction:
         raise LabelingModelError(
             f"The labeling model returned a prediction that is not valid: {error}"
         ) from error
+    if prediction.class_name not in class_names:
+        raise LabelingModelError(
+            "The labeling model returned a prediction that is not valid: "
+            f"The class name '{prediction.class_name}' is not one of class_names."
+        )
+    width, height = image.size
+    if prediction.mask is not None and prediction.mask.shape != (height, width):
+        mask_height, mask_width = prediction.mask.shape
+        raise LabelingModelError(
+            "The labeling model returned a prediction that is not valid: "
+            f"The mask has the size {mask_width} x {mask_height} pixels, "
+            f"but the image has the size {width} x {height} pixels."
+        )
+    return wire_prediction

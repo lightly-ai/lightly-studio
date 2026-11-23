@@ -10,11 +10,10 @@ from httpx import Response
 from PIL import Image as PILImage
 from PIL.Image import Image
 
-from lightly_studio_serve import labeling_protocol
+from lightly_studio_serve import labeling_protocol, server
 from lightly_studio_serve.embedder import TextEmbedder
 from lightly_studio_serve.labeling import LabelingModel, ModelTask, PredictedAnnotation
 from lightly_studio_serve.labeling_protocol import PredictionsResponse
-from lightly_studio_serve.server import create_app
 from lightly_studio_serve.types import EmbeddingResult, EmbeddingSpaceSpec
 
 WIDTH = 3
@@ -71,11 +70,11 @@ class FakeTextEmbedder(TextEmbedder):
 
 def test_create_app__no_model() -> None:
     with pytest.raises(ValueError, match="Got neither"):
-        create_app()
+        server.create_app()
 
 
 def test_describe_labeling() -> None:
-    client = TestClient(create_app(labeling_model=FakeLabelingModel()))
+    client = TestClient(server.create_app(labeling_model=FakeLabelingModel()))
 
     response = client.get("/v1/labeling/describe")
 
@@ -91,13 +90,15 @@ def test_describe_labeling() -> None:
 
 
 def test_describe__labeling_model_only() -> None:
-    client = TestClient(create_app(labeling_model=FakeLabelingModel()))
+    client = TestClient(server.create_app(labeling_model=FakeLabelingModel()))
 
     assert client.get("/v1/describe").status_code == status.HTTP_404_NOT_FOUND
 
 
 def test_describe__embedder_and_labeling_model() -> None:
-    client = TestClient(create_app(embedder=FakeTextEmbedder(), labeling_model=FakeLabelingModel()))
+    client = TestClient(
+        server.create_app(embedder=FakeTextEmbedder(), labeling_model=FakeLabelingModel())
+    )
 
     assert client.get("/v1/describe").json()["space_key"] == "acme/model@v1"
     assert client.get("/v1/labeling/describe").json()["model_id"] == "car-detector"
@@ -111,7 +112,7 @@ def test_predict() -> None:
             PredictedAnnotation(class_name="car", box=(1.0, 0.0, 2.0, 1.0), score=0.6),
         ]
     )
-    client = TestClient(create_app(labeling_model=model))
+    client = TestClient(server.create_app(labeling_model=model))
 
     response = _post_predict(client=client, threshold="0.25")
 
@@ -131,7 +132,7 @@ def test_predict() -> None:
 
 def test_predict__wrong_token() -> None:
     model = FakeLabelingModel()
-    client = TestClient(create_app(labeling_model=model, api_key="secret"))
+    client = TestClient(server.create_app(labeling_model=model, api_key="secret"))
 
     response = _post_predict(client=client, threshold="0.5", token="wrong")
 
@@ -144,7 +145,7 @@ def test_predict__wrong_token() -> None:
 
 def test_predict__not_ready() -> None:
     model = FakeLabelingModel(ready=False)
-    client = TestClient(create_app(labeling_model=model))
+    client = TestClient(server.create_app(labeling_model=model))
 
     response = _post_predict(client=client, threshold="0.5")
 
@@ -157,7 +158,7 @@ def test_predict__not_ready() -> None:
 
 def test_predict__not_an_image() -> None:
     model = FakeLabelingModel()
-    client = TestClient(create_app(labeling_model=model))
+    client = TestClient(server.create_app(labeling_model=model))
 
     response = _post_predict(client=client, threshold="0.5", image=b"not an image")
 
@@ -168,7 +169,7 @@ def test_predict__not_an_image() -> None:
 
 def test_predict__truncated_header() -> None:
     model = FakeLabelingModel()
-    client = TestClient(create_app(labeling_model=model))
+    client = TestClient(server.create_app(labeling_model=model))
     # A header chunk of 12 bytes, one byte too short. Pillow stops before the checksum.
     truncated_png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0cIHDR" + bytes(12) + bytes(4)
 
@@ -181,7 +182,7 @@ def test_predict__truncated_header() -> None:
 
 def test_predict__too_many_pixels(monkeypatch: pytest.MonkeyPatch) -> None:
     model = FakeLabelingModel()
-    client = TestClient(create_app(labeling_model=model))
+    client = TestClient(server.create_app(labeling_model=model))
     # Pillow refuses an image with more than twice this number of pixels. The image has 3 x 2.
     monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 2)
 
@@ -195,7 +196,7 @@ def test_predict__too_many_pixels(monkeypatch: pytest.MonkeyPatch) -> None:
 @pytest.mark.parametrize("threshold", ["1.5", "-0.1", "nan", "high"])
 def test_predict__invalid_threshold(threshold: str) -> None:
     model = FakeLabelingModel()
-    client = TestClient(create_app(labeling_model=model))
+    client = TestClient(server.create_app(labeling_model=model))
 
     response = _post_predict(client=client, threshold=threshold)
 
@@ -205,7 +206,7 @@ def test_predict__invalid_threshold(threshold: str) -> None:
 
 def test_predict__model_error() -> None:
     model = FakeLabelingModel(error=RuntimeError("The model names its input."))
-    client = TestClient(create_app(labeling_model=model), raise_server_exceptions=False)
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
 
     response = _post_predict(client=client, threshold="0.5")
 
@@ -226,7 +227,7 @@ def test_predict__invalid_prediction() -> None:
             )
         ]
     )
-    client = TestClient(create_app(labeling_model=model), raise_server_exceptions=False)
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
 
     response = _post_predict(client=client, threshold="0.5")
 
@@ -234,6 +235,44 @@ def test_predict__invalid_prediction() -> None:
     assert response.json() == {
         "detail": "The labeling model returned a prediction that is not valid: "
         "The mask is not a boolean array with two dimensions."
+    }
+
+
+def test_predict__undeclared_class() -> None:
+    # The model declares the class "car" alone.
+    model = FakeLabelingModel(
+        predictions=[PredictedAnnotation(class_name="truck", box=(0.0, 0.0, 3.0, 2.0), score=0.9)]
+    )
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
+
+    response = _post_predict(client=client, threshold="0.5")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {
+        "detail": "The labeling model returned a prediction that is not valid: "
+        "The class name 'truck' is not one of class_names."
+    }
+
+
+def test_predict__mask_size_mismatch() -> None:
+    model = FakeLabelingModel(
+        predictions=[
+            PredictedAnnotation(
+                class_name="car",
+                box=(0.0, 0.0, 1.0, 1.0),
+                score=0.9,
+                mask=np.ones((1, 1), dtype=np.bool_),
+            )
+        ]
+    )
+    client = TestClient(server.create_app(labeling_model=model), raise_server_exceptions=False)
+
+    response = _post_predict(client=client, threshold="0.5")
+
+    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.json() == {
+        "detail": "The labeling model returned a prediction that is not valid: "
+        "The mask has the size 1 x 1 pixels, but the image has the size 3 x 2 pixels."
     }
 
 
