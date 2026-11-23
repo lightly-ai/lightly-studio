@@ -2,6 +2,7 @@
     import { SidePanelToggleButton } from '$lib/components';
     import WorkflowFileStatus from '$lib/components/Workflow/WorkflowFileStatus/WorkflowFileStatus.svelte';
     import WorkflowFileActions from '$lib/components/Workflow/WorkflowFileActions/WorkflowFileActions.svelte';
+    import { legacyAllowedTransitions } from '$lib/components/Workflow/WorkflowFileActions/legacyAllowedTransitions';
     import WorkflowReadOnlyBanner from '$lib/components/Workflow/WorkflowReadOnlyBanner/WorkflowReadOnlyBanner.svelte';
     import Separator from '$lib/components/ui/separator/separator.svelte';
     import { useWorkflowFileContext } from '$lib/contexts/WorkflowFile.svelte';
@@ -47,7 +48,8 @@
     <div class="flex items-center gap-1">
         {#if workflow?.file}
             <WorkflowFileActions
-                file={workflow.file}
+                fileState={workflow.file.state}
+                allowedTransitions={legacyAllowedTransitions(workflow.file)}
                 transitioning={workflow.transitioning}
                 onTransition={workflow.transition}
             />

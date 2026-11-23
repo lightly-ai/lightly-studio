@@ -1,35 +1,45 @@
 <script lang="ts">
-    import type { WorkflowFile } from '$lib/hooks';
-    import { Button } from '$lib/components/ui/button';
+    import { Button, buttonVariants } from '$lib/components/ui/button';
+    import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+    import Ellipsis from '@lucide/svelte/icons/ellipsis';
     import { toast } from 'svelte-sonner';
-
-    type WorkflowFileState = WorkflowFile['state'];
+    import WorkflowOverrideDialog from './WorkflowOverrideDialog.svelte';
+    import {
+        placeWorkflowActions,
+        type WorkflowAction,
+        type WorkflowFileState,
+        type WorkflowMenuAction
+    } from './workflowActions';
 
     interface Props {
-        file: Pick<WorkflowFile, 'state' | 'your_role' | 'can_edit'>;
+        /** The file’s current state. */
+        fileState: WorkflowFileState;
+        /** Target states the current user may move the file to right now. */
+        allowedTransitions: WorkflowFileState[];
         /** A move is waiting for the workflow service. */
         transitioning: boolean;
         /** Moves the file; resolves once the service confirmed it. */
         onTransition: (state: WorkflowFileState) => Promise<void>;
     }
 
-    const { file, transitioning, onTransition }: Props = $props();
+    const { fileState, allowedTransitions, transitioning, onTransition }: Props = $props();
 
-    const canSubmit = $derived(
-        file.your_role === 'labeler' &&
-            file.can_edit &&
-            (file.state === 'in_progress' || file.state === 'rework')
-    );
-    const canReview = $derived(
-        file.your_role === 'reviewer' && file.can_edit && file.state === 'in_review'
-    );
+    const actions = $derived(placeWorkflowActions(fileState, allowedTransitions));
+    const hasActions = $derived(actions.inline.length > 0 || actions.menu.length > 0);
 
     let requested = $state<WorkflowFileState | null>(null);
+    /** The admin menu action waiting for confirmation, if any. */
+    let confirming = $state<WorkflowMenuAction | null>(null);
 
-    const move = async (state: WorkflowFileState) => {
-        requested = state;
+    /** A move is in flight, started here or reported by the parent. */
+    const busy = $derived(transitioning || requested !== null);
+    /** A confirmed menu move in flight: shown in place of the ⋯ button. */
+    const pendingMenuAction = $derived(actions.menu.find((a) => a.target === requested));
+
+    const move = async (target: WorkflowFileState) => {
+        requested = target;
         try {
-            await onTransition(state);
+            await onTransition(target);
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Could not change the file state');
         } finally {
@@ -37,22 +47,53 @@
         }
     };
 
-    const pending = (state: WorkflowFileState) => transitioning && requested === state;
+    const confirmOverride = (action: WorkflowMenuAction) => {
+        confirming = null;
+        void move(action.target);
+    };
+
+    const buttonLabel = (action: WorkflowAction) =>
+        requested === action.target ? action.pendingLabel : action.label;
 </script>
 
-{#if canSubmit}
+{#if hasActions}
     <div class="flex items-center gap-3" data-testid="workflow-file-actions">
-        <Button size="sm" disabled={transitioning} onclick={() => move('in_review')}
-            >{transitioning ? 'Submitting…' : 'Submit for review'}</Button
-        >
-    </div>
-{:else if canReview}
-    <div class="flex items-center gap-3" data-testid="workflow-file-actions">
-        <Button size="sm" variant="outline" disabled={transitioning} onclick={() => move('rework')}
-            >{pending('rework') ? 'Sending back…' : 'Send back to Rework'}</Button
-        >
-        <Button size="sm" disabled={transitioning} onclick={() => move('accepted')}
-            >{pending('accepted') ? 'Accepting…' : 'Accept'}</Button
-        >
+        {#each actions.inline as action (action.target)}
+            <Button
+                size="sm"
+                variant={action.variant}
+                disabled={busy}
+                onclick={() => move(action.target)}>{buttonLabel(action)}</Button
+            >
+        {/each}
+        {#if pendingMenuAction}
+            <Button size="sm" variant="ghost" disabled>{pendingMenuAction.pendingLabel}</Button>
+        {:else if actions.menu.length > 0}
+            <DropdownMenu.Root>
+                <DropdownMenu.Trigger
+                    class={buttonVariants({ variant: 'ghost', size: 'icon' })}
+                    aria-label="Admin actions"
+                    disabled={busy}
+                >
+                    <Ellipsis class="size-4" />
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Content align="end">
+                    <DropdownMenu.Group>
+                        <DropdownMenu.GroupHeading>Admin actions</DropdownMenu.GroupHeading>
+                        {#each actions.menu as action (action.target)}
+                            <DropdownMenu.Item onSelect={() => (confirming = action)}
+                                >{action.label}</DropdownMenu.Item
+                            >
+                        {/each}
+                    </DropdownMenu.Group>
+                </DropdownMenu.Content>
+            </DropdownMenu.Root>
+        {/if}
     </div>
 {/if}
+
+<WorkflowOverrideDialog
+    action={confirming}
+    onConfirm={confirmOverride}
+    onCancel={() => (confirming = null)}
+/>
