@@ -42,8 +42,8 @@
         <li>
             {#if sampleType === 'video'}
                 Video annotations: <code>classification(…)</code> matches whole-video
-                classifications and temporal events. Use
-                <code>event(class_name = "run" AND start_time_s &lt; 5)</code> to match one temporal event.
+                classifications. Use <code>event(class_name = "run" AND start_time_s &lt; 5)</code> to
+                match one temporal event.
             {:else}
                 Annotation conditions: <code>segmentation_mask(…)</code>,
                 <code>object_detection(…)</code>, <code>classification(…)</code>

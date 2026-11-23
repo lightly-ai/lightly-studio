@@ -262,7 +262,8 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     },
     {
         name: 'classification',
-        description: 'Match a classification annotation.',
+        description:
+            'Match an image, frame, or whole-video classification. Use event(...) for temporal events.',
         insertText: 'classification(${1:class_name = "..."})'
     },
     {
