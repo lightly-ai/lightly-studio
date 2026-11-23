@@ -27,8 +27,7 @@ type FetchPlot = Exclude<
 >;
 type OnCompute = (compute: Promise<unknown>) => void;
 
-interface UseEmbeddingsOptions {
-    enabled?: boolean;
+interface PlotComputeOptions {
     getIsComputing?: () => boolean;
     /**
      * Called once when a compute request starts. The promise settles when the request ends, and
@@ -37,14 +36,19 @@ interface UseEmbeddingsOptions {
     onCompute?: OnCompute;
 }
 
-// The server keeps computing after an abort, and a second request conflicts with it.
-// So every request for a plot joins the compute that runs for its query key.
-const runningComputes = new WeakMap<QueryClient, Map<string, Promise<unknown>>>();
-
-interface UseEmbeddingsParams extends PlotLayoutKey {
+interface UseEmbeddingsParams extends PlotLayoutKey, PlotComputeOptions {
     filters: GetEmbeddings2dRequest['filters'] | null;
     enabled: boolean;
 }
+
+interface RunningCompute {
+    collectionId: string;
+    promise: Promise<unknown>;
+}
+
+// The server keeps computing after an abort, and a second request conflicts with it.
+// So every request for a plot joins the compute that runs for its query key.
+const runningComputes = new WeakMap<QueryClient, Map<string, RunningCompute>>();
 
 type EmbeddingsQueryKey = ReturnType<typeof get2dEmbeddingsQueryKey>;
 
@@ -75,11 +79,7 @@ export function getEmbeddingsQueryOptions(
     filters: GetEmbeddings2dRequest['filters'] | null,
     colorBy: EmbeddingsColorBy = null,
     axes: EmbeddingsAxes = null,
-    {
-        enabled = true,
-        getIsComputing = () => false,
-        onCompute = () => {}
-    }: UseEmbeddingsOptions = {}
+    { getIsComputing = () => false, onCompute = () => {} }: PlotComputeOptions = {}
 ) {
     const options = get2dEmbeddingsOptions({
         path: { collection_id: collectionId },
@@ -99,7 +99,6 @@ export function getEmbeddingsQueryOptions(
     return queryOptions({
         ...options,
         queryFn,
-        enabled,
         retry: (failureCount, error) => !isComputeRequest && shouldRetryQuery(failureCount, error),
         // The status query refetches on focus and decides whether a compute may start.
         refetchOnWindowFocus: false,
@@ -116,19 +115,26 @@ function joinRunningCompute(
     onCompute: OnCompute
 ): Promise<unknown> {
     const { client, queryKey, meta } = context;
-    const computes = runningComputes.get(client) ?? new Map<string, Promise<unknown>>();
+    const computes = runningComputes.get(client) ?? new Map<string, RunningCompute>();
     runningComputes.set(client, computes);
     const computeKey = hashKey(queryKey);
     const runningCompute = computes.get(computeKey);
-    if (runningCompute) return runningCompute;
+    if (runningCompute) return runningCompute.promise;
 
+    // The server saves one plot per collection, so a request with another filter, color-by or
+    // axes waits for the running compute and then reads the saved plot. If it fails, so does this.
+    const collectionId = queryKey[0].path.collection_id;
+    const earlierComputes = [...computes.values()]
+        .filter((compute) => compute.collectionId === collectionId)
+        .map((compute) => compute.promise);
     const signal = new AbortController().signal;
-    const compute = Promise.resolve(fetchPlot({ client, queryKey, meta, signal }));
-    computes.set(computeKey, compute);
+    const fetchCompute = () => fetchPlot({ client, queryKey, meta, signal });
+    const promise = Promise.all(earlierComputes).then(fetchCompute);
+    computes.set(computeKey, { collectionId, promise });
     const endCompute = () => computes.delete(computeKey);
-    void compute.then(endCompute, endCompute);
-    onCompute(compute);
-    return compute;
+    void promise.then(endCompute, endCompute);
+    onCompute(promise);
+    return promise;
 }
 
 /**
@@ -138,10 +144,14 @@ function joinRunningCompute(
  */
 export function useEmbeddings(getParams: () => UseEmbeddingsParams) {
     return createQuery(() => {
-        const { collectionId, filters, colorBy, axes, enabled } = getParams();
+        const { collectionId, filters, colorBy, axes, enabled, getIsComputing, onCompute } =
+            getParams();
         const layout = { collectionId, colorBy, axes };
         return {
-            ...getEmbeddingsQueryOptions(collectionId, filters, colorBy, axes),
+            ...getEmbeddingsQueryOptions(collectionId, filters, colorBy, axes, {
+                getIsComputing,
+                onCompute
+            }),
             enabled,
             // The previous data is the raw response; `select` parses it again.
             placeholderData: (previousData, previousQuery) =>

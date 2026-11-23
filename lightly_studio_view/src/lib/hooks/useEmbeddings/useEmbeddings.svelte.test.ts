@@ -36,7 +36,8 @@ const renderEmbeddings = (enabled: boolean) => {
     let query!: ReturnType<typeof useEmbeddings>;
     const onQuery = (created: typeof query) => (query = created);
     render(UseEmbeddingsTest, {
-        queryClient: new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+        // The plot query has its own retry rule, so the test only drops the delay.
+        queryClient: new QueryClient({ defaultOptions: { queries: { retryDelay: 0 } } }),
         getParams: () => params,
         onQuery
     });
@@ -78,7 +79,7 @@ describe('useEmbeddings', () => {
 
     it('drops the previous points when a filter change fails', async () => {
         const { params, query } = await renderLoaded();
-        vi.mocked(get2dEmbeddings).mockRejectedValueOnce(new Error('failed'));
+        vi.mocked(get2dEmbeddings).mockRejectedValue(new Error('failed'));
         params.filters = { filter_type: 'image', sample_filter: { tag_ids: ['tag-a'] } };
 
         await waitFor(() => expect(query.isError).toBe(true));
