@@ -4,7 +4,7 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.mcap import dataset_schema
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import mcap_group_component_definition_resolver

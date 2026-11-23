@@ -21,7 +21,7 @@ from lightly_studio.core.mcap import (
     dataset_schema,
     folder_labels,
 )
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.group_dataset import McapGroupDataset
 from lightly_studio.core.mcap.recording import Recording
 from lightly_studio.core.mcap.sequence import McapSequence
