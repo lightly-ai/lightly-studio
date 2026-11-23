@@ -312,15 +312,7 @@ class AnnotationView(BaseModel):
             )
             if annotation.segmentation_details
             else None,
-            polygon_details=PolygonAnnotationView(
-                x=annotation.polygon_details.x,
-                y=annotation.polygon_details.y,
-                width=annotation.polygon_details.width,
-                height=annotation.polygon_details.height,
-                polygons=annotation.polygon_details.polygons,
-            )
-            if annotation.polygon_details
-            else None,
+            polygon_details=_polygon_view(annotation=annotation),
             tags=[
                 cls.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in annotation.sample.tags
             ],
@@ -474,3 +466,19 @@ class AnnotationDetailsWithPayloadView(BaseModel):
     parent_sample_type: SampleType
     annotation: AnnotationView
     parent_sample_data: ImageAnnotationDetailsView | VideoFrameAnnotationDetailsView
+
+
+def _polygon_view(annotation: AnnotationBaseTable) -> PolygonAnnotationView | None:
+    # Only polygons read the details, so other types do not run a lazy SELECT.
+    if annotation.annotation_type != AnnotationType.POLYGON:
+        return None
+    details = annotation.polygon_details
+    if details is None:
+        return None
+    return PolygonAnnotationView(
+        x=details.x,
+        y=details.y,
+        width=details.width,
+        height=details.height,
+        polygons=details.polygons,
+    )
