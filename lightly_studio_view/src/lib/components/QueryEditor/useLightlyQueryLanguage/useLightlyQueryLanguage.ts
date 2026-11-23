@@ -81,6 +81,8 @@ export function useLightlyQueryLanguage(): UseLightlyQueryLanguageReturn {
             );
         }
         // Tag warnings come after the scope check so that they do not hide a scope error.
+        // TODO(Nauryzbay, 11/2026): Also warn about other names that may not exist, such as
+        // annotation `class_name` values and sample evaluation names.
         const tagMarkers = tagNames
             ? findUnknownTagMarkers({ query: result.value, tagNames }).map((marker) =>
                   shiftMarkerLines(marker, lineOffset)

@@ -14,8 +14,7 @@
         sampleType?: 'image' | 'video';
         height?: string;
         readOnly?: boolean;
-        /** Names of the tags that exist. Unknown tags in the query get a warning.
-         * Leave undefined to skip the check. */
+        /** Names of the existing tags. Unknown tags get a warning. Undefined skips the check. */
         tagNames?: string[];
         onSave?: (value: string, parsed: QueryExprTranslationResult) => void;
         /** Extra controls in the footer, before the apply button. Needs `onSave`. */

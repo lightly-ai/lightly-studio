@@ -12,6 +12,8 @@ interface FindUnknownTagMarkersParams {
     tagNames: ReadonlySet<string>;
 }
 
+// TODO(Nauryzbay, 11/2026): Add similar checks for annotation `class_name` values and sample
+// evaluation names. See the TODO in useLightlyQueryLanguage.ts.
 /** Returns a warning marker for each `"name" IN tags` whose tag does not exist. */
 export function findUnknownTagMarkers({
     query,
