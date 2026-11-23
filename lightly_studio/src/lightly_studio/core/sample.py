@@ -17,12 +17,10 @@ from lightly_studio.models.collection import SampleType
 from lightly_studio.models.sample import SampleTable
 from lightly_studio.resolvers import (
     annotation_resolver,
-    caption_resolver,
     collection_resolver,
     evaluation_run_resolver,
-    metadata_resolver,
-    tag_resolver,
 )
+from lightly_studio.transport import active_transport
 
 from .annotation import Annotation
 from .annotation.classification import ClassificationAnnotation
@@ -101,18 +99,9 @@ class Sample(ABC):
         Args:
             name: The name of the tag to add.
         """
-        session = self.get_object_session()
-
-        # Get or create the tag for this dataset.
-        tag = tag_resolver.get_or_create_sample_tag_by_name(
-            session=session, collection_id=self.collection_id, tag_name=name
+        active_transport.get_transport().tags.add_to_samples(
+            collection_id=self.collection_id, tag_name=name, sample_ids=[self.sample_id]
         )
-
-        # Add the tag to the sample if not already associated.
-        if tag not in self.sample_table.tags:
-            tag_resolver.add_tag_to_sample(
-                session=session, tag_id=tag.tag_id, sample=self.sample_table
-            )
 
     def remove_tag(self, name: str) -> None:
         """Remove a tag from this sample.
@@ -120,18 +109,9 @@ class Sample(ABC):
         Args:
             name: The name of the tag to remove.
         """
-        session = self.get_object_session()
-
-        # Find the tag by name for this dataset.
-        existing_tag = tag_resolver.get_by_name(
-            session=session, tag_name=name, collection_id=self.collection_id
+        active_transport.get_transport().tags.remove_from_samples(
+            collection_id=self.collection_id, tag_name=name, sample_ids=[self.sample_id]
         )
-
-        # Remove the tag from the sample if it exists and is associated
-        if existing_tag is not None and existing_tag in self.sample_table.tags:
-            tag_resolver.remove_tag_from_sample(
-                session=session, tag_id=existing_tag.tag_id, sample=self.sample_table
-            )
 
     @property
     def tags(self) -> set[str]:
@@ -140,7 +120,10 @@ class Sample(ABC):
         Returns:
             A set of tag names as strings.
         """
-        return {tag.name for tag in self.sample_table.tags}
+        tag_names = active_transport.get_transport().tags.get_names_by_sample_ids(
+            sample_ids=[self.sample_id]
+        )
+        return set(tag_names.get(self.sample_id, []))
 
     @tags.setter
     def tags(self, tags: Iterable[str]) -> None:
@@ -195,9 +178,7 @@ class Sample(ABC):
         Args:
             captions: The texts of the captions to add.
         """
-        session = self.get_object_session()
-        caption_resolver.create_many(
-            session=session,
+        active_transport.get_transport().metadata.add_captions(
             parent_collection_id=self.collection_id,
             captions=[
                 CaptionCreate(
@@ -211,7 +192,10 @@ class Sample(ABC):
     @property
     def captions(self) -> list[str]:
         """Returns the text of all captions."""
-        return [caption.text for caption in self.sample_table.captions]
+        captions = active_transport.get_transport().metadata.get_captions(
+            parent_sample_ids=[self.sample_id]
+        )
+        return [caption.text for caption in captions]
 
     @captions.setter
     def captions(self, captions: Iterable[str]) -> None:
@@ -220,17 +204,15 @@ class Sample(ABC):
         Args:
             captions: Iterable of caption texts to associate with this sample.
         """
-        session = self.get_object_session()
+        metadata_transport = active_transport.get_transport().metadata
 
         # Delete all existing captions for this sample
-        caption_sample_ids = [c.sample_id for c in self.sample_table.captions]
-        for caption_sample_id in caption_sample_ids:
-            caption_resolver.delete_caption(session=session, sample_id=caption_sample_id)
+        existing_captions = metadata_transport.get_captions(parent_sample_ids=[self.sample_id])
+        metadata_transport.delete_captions(caption_ids=[c.sample_id for c in existing_captions])
 
         # Create new captions from the provided texts
         if captions:
-            caption_resolver.create_many(
-                session=session,
+            metadata_transport.add_captions(
                 parent_collection_id=self.collection_id,
                 captions=[
                     CaptionCreate(parent_sample_id=self.sample_id, text=text) for text in captions
@@ -351,9 +333,9 @@ class SampleMetadata:
         Returns:
             The metadata value for the given key, or None if the key doesn't exist.
         """
-        if self._sample.sample_table.metadata_dict is None:
-            return None
-        return self._sample.sample_table.metadata_dict.get_value(key)
+        sample_id = self._sample.sample_id
+        metadata = active_transport.get_transport().metadata.get(sample_ids=[sample_id])
+        return metadata.get(sample_id, {}).get(key)
 
     def __setitem__(self, key: str, value: Any) -> None:
         """Set a metadata key-value pair.
@@ -362,12 +344,8 @@ class SampleMetadata:
             key: The metadata key.
             value: The metadata value.
         """
-        session = self._sample.get_object_session()
-        metadata_resolver.set_value_for_sample(
-            session=session,
-            sample_id=self._sample.sample_id,
-            key=key,
-            value=value,
+        active_transport.get_transport().metadata.update(
+            sample_metadata=[(self._sample.sample_id, {key: value})]
         )
 
     def update(
@@ -392,8 +370,6 @@ class SampleMetadata:
         if not new_metadata:
             return
 
-        session = self._sample.get_object_session()
-        metadata_resolver.bulk_update_metadata(
-            session=session,
-            sample_metadata=[(self._sample.sample_id, new_metadata)],
+        active_transport.get_transport().metadata.update(
+            sample_metadata=[(self._sample.sample_id, new_metadata)]
         )

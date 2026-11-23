@@ -12,6 +12,7 @@ from lightly_studio.core.mcap import add_labels, add_mcaps
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.sequence import McapSequence
 from lightly_studio.core.mcap.type_definitions import CuboidLabel
+from lightly_studio.database import db_manager
 from lightly_studio.models.annotation_label import AnnotationLabelCreate
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.recording import RecordingTable
@@ -42,7 +43,8 @@ def index_recording(
     )
     dataset = McapDataset.create(components=COMPONENTS, name=dataset_name)
     add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=POINT_CLOUD_COMPONENT,
         components=COMPONENTS,

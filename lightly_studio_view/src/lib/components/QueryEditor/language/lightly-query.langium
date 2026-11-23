@@ -81,6 +81,7 @@ SampleUnary<isImage> returns Expression:
     | TagInExpression
     | AnnotationQuery
     | <!isImage> VideoFrameQuery
+    | <!isImage> VideoEventQuery
     | SampleEvaluationQuery;
 
 // The run selector scopes every metric predicate, including OR and NOT.
@@ -169,23 +170,27 @@ ObjectDetectionFloatFieldReference returns FieldReference:
 ObjectDetectionStringFieldReference returns FieldReference:
   {FieldReference} member=ObjectDetectionStringFieldName;
 
-Classification returns Expression:
-  ClassificationOr;
+Classification<isEvent> returns Expression:
+  ClassificationOr<isEvent>;
 
-ClassificationOr returns Expression:
-  ClassificationAnd ({BooleanExpression.children+=current} operator=OR children+=ClassificationAnd (OR children+=ClassificationAnd)*)?;
+ClassificationOr<isEvent> returns Expression:
+  ClassificationAnd<isEvent> ({BooleanExpression.children+=current} operator=OR children+=ClassificationAnd<isEvent> (OR children+=ClassificationAnd<isEvent>)*)?;
 
-ClassificationAnd returns Expression:
-  ClassificationUnary ({BooleanExpression.children+=current} operator=AND children+=ClassificationUnary (AND children+=ClassificationUnary)*)?;
+ClassificationAnd<isEvent> returns Expression:
+  ClassificationUnary<isEvent> ({BooleanExpression.children+=current} operator=AND children+=ClassificationUnary<isEvent> (AND children+=ClassificationUnary<isEvent>)*)?;
 
-ClassificationUnary returns Expression:
-  '(' Classification ')'
-    | {NotExpression} NOT expression=ClassificationUnary
-    | ClassificationComparison;
+ClassificationUnary<isEvent> returns Expression:
+  '(' Classification<isEvent> ')'
+    | {NotExpression} NOT expression=ClassificationUnary<isEvent>
+    | ClassificationComparison<isEvent>;
 
-ClassificationComparison returns ComparisonExpression:
+ClassificationComparison<isEvent> returns ComparisonExpression:
   ClassificationStringFieldReference {ComparisonExpression.left=current} operator=('=' | '!=') right=StringLiteral
-   | ClassificationFloatFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral;
+   | ClassificationFloatFieldReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral
+   | <isEvent> EventTimeReference {ComparisonExpression.left=current} operator=('=' | '!=' | '<' | '>' | '<=' | '>=') right=NumericLiteral;
+
+EventTimeReference returns FieldReference:
+  {FieldReference} member=EVENT_TIME_FIELD;
 
 ClassificationStringFieldReference returns FieldReference:
   {FieldReference} member=ClassificationStringFieldName;
@@ -242,9 +247,12 @@ FrameTimeComparison returns ComparisonExpression:
 FrameTimeReference returns FieldReference:
   {FieldReference} member=FRAME_TIMESTAMP_FIELD;
 
+VideoEventQuery returns Expression:
+  {FunctionCall} name=EVENT_FUNCTION '(' args+=Classification<true> ')';
+
 AnnotationQuery returns Expression:
   {FunctionCall} name=OBJECT_DETECTION_FUNCTION '(' args+=ObjectDetection ')'
-  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification ')'
+  | {FunctionCall} name=CLASSIFICATION_FUNCTION '(' args+=Classification<false> ')'
   | {FunctionCall} name=SEGMENTATION_MASK_FUNCTION '(' args+=SegmentationMask ')';
 
 TagInExpression returns Expression:
@@ -323,6 +331,8 @@ terminal NOT: /\bNOT\b/i;
 terminal IN returns string: /\bIN\b/i;
 terminal FRAME_FUNCTION returns string: /\bframe\b/;
 terminal FRAME_TIMESTAMP_FIELD returns string: /\bframe_timestamp_s\b/;
+terminal EVENT_FUNCTION returns string: /\bevent\b/;
+terminal EVENT_TIME_FIELD returns string: /\b(start_time_s|end_time_s)\b/;
 terminal OBJECT_DETECTION_FUNCTION returns string: /\bobject_detection\b/;
 terminal CLASSIFICATION_FUNCTION returns string: /\bclassification\b/;
 terminal SEGMENTATION_MASK_FUNCTION returns string: /\bsegmentation_mask\b/;

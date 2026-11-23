@@ -3,6 +3,7 @@ from __future__ import annotations
 from sqlalchemy import inspect
 from sqlmodel import Session
 
+from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.models.embedding_region import EmbeddingRegion, Point2D
 from lightly_studio.resolvers import (
     image_resolver,
@@ -194,7 +195,7 @@ def test_get_for_export__without_preload_relationships_are_unloaded(db_session: 
     )
 
     assert len(result) == 1
-    sample_state = inspect(result[0].sample_table)
+    sample_state = inspect(result[0].sample)
     assert sample_state is not None
     assert "annotations" in sample_state.unloaded
     assert "captions" in sample_state.unloaded
@@ -237,15 +238,16 @@ def test_get_for_export__preloaded_data_accessible(db_session: Session) -> None:
     )
 
     assert len(result) == 1
-    sample_state = inspect(result[0].sample_table)
+    sample_state = inspect(result[0].sample)
     assert sample_state is not None
     assert "annotations" not in sample_state.unloaded
     assert "captions" not in sample_state.unloaded
-    annotation_state = inspect(result[0].sample_table.annotations[0])
+    annotation_state = inspect(result[0].sample.annotations[0])
     assert annotation_state is not None
     assert "annotation_label" not in annotation_state.unloaded
     assert "object_detection_details" not in annotation_state.unloaded
-    annotations = result[0].annotations
+    image_sample = ImageSample(inner=result[0])
+    annotations = image_sample.annotations
     assert len(annotations) == 1
     assert annotations[0].class_name == "cat"
-    assert result[0].captions == ["a cat sitting on a mat"]
+    assert [caption.text for caption in result[0].sample.captions] == ["a cat sitting on a mat"]

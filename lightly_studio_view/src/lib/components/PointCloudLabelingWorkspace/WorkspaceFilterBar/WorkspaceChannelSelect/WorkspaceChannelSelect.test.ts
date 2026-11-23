@@ -82,6 +82,21 @@ describe('WorkspaceChannelSelect', () => {
         expect(onToggleChannel).toHaveBeenCalledExactlyOnceWith(2);
     });
 
+    it('keeps channels of other lanes when a channel is toggled', async () => {
+        const user = userEvent.setup();
+        const onToggleChannel = vi.fn();
+        const onSetChannels = vi.fn();
+        render(WorkspaceChannelSelect, {
+            props: { ...defaultProps, selectedChannels: [9], onToggleChannel, onSetChannels }
+        });
+
+        await user.click(screen.getByTestId('workspace-camera-select'));
+        await user.click(screen.getByText('rear'));
+
+        expect(onToggleChannel).toHaveBeenCalledExactlyOnceWith(3);
+        expect(onSetChannels).not.toHaveBeenCalled();
+    });
+
     it('disables the trigger when there are no channels', () => {
         render(WorkspaceChannelSelect, { props: { ...defaultProps, channels: [] } });
 

@@ -1,19 +1,20 @@
 import { fireEvent, render, screen } from '@testing-library/svelte';
 import { describe, expect, it, vi } from 'vitest';
-import InstanceDeleteButton from './InstanceDeleteButton.svelte';
+import PreviewDeleteButton from './PreviewDeleteButton.svelte';
 
 const defaultProps = {
     bbox: { x: 10, y: 10, width: 90, height: 50 },
+    label: 'Delete instance',
     index: 0,
     scale: 1,
     disabled: false,
     onDelete: vi.fn()
 };
 
-describe('InstanceDeleteButton', () => {
+describe('PreviewDeleteButton', () => {
     it('deletes the instance on click', async () => {
         const onDelete = vi.fn();
-        render(InstanceDeleteButton, { props: { ...defaultProps, onDelete } });
+        render(PreviewDeleteButton, { props: { ...defaultProps, onDelete } });
 
         await fireEvent.click(screen.getByRole('button', { name: 'Delete instance 1' }));
 
@@ -22,7 +23,7 @@ describe('InstanceDeleteButton', () => {
 
     it('deletes the instance on Enter', async () => {
         const onDelete = vi.fn();
-        render(InstanceDeleteButton, { props: { ...defaultProps, onDelete } });
+        render(PreviewDeleteButton, { props: { ...defaultProps, onDelete } });
 
         await fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
 
@@ -31,7 +32,7 @@ describe('InstanceDeleteButton', () => {
 
     it('does not delete while the instances are saved', async () => {
         const onDelete = vi.fn();
-        render(InstanceDeleteButton, { props: { ...defaultProps, disabled: true, onDelete } });
+        render(PreviewDeleteButton, { props: { ...defaultProps, disabled: true, onDelete } });
         const button = screen.getByRole('button');
 
         await fireEvent.click(button);
@@ -42,7 +43,7 @@ describe('InstanceDeleteButton', () => {
     });
 
     it('keeps its screen size at the top right of the box when zoomed out', () => {
-        const { container } = render(InstanceDeleteButton, {
+        const { container } = render(PreviewDeleteButton, {
             props: { ...defaultProps, scale: 0.5 }
         });
         expect(container.querySelector('g')).toHaveAttribute(

@@ -9,7 +9,7 @@ from PIL import Image
 from pytest_mock import MockerFixture
 
 from lightly_studio.core.mcap import add_mcaps, compressed_image, compressed_video
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.database import db_manager
 from lightly_studio.embed import embed_mcap_sequences
@@ -53,7 +53,8 @@ def test_embed_mcap_sequences(
     dataset = McapDataset.create(components=components, name="perception")
     # Every video frame is a tick, so the sequence holds both keyframes of the recording.
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(helpers.write_mcap(tmp_path / "recording.mcap")),
         sync_component=VIDEO_COMPONENT,
         components=components,
@@ -102,7 +103,8 @@ def test_embed_mcap_sequences__compressed_image_camera(
         ],
     )
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(mcap_path),
         sync_component=IMAGE_COMPONENT,
         components=components,
@@ -136,7 +138,8 @@ def test_embed_mcap_sequences__samples_frames_per_sequence(
     components = [VIDEO_SPEC, POINT_CLOUD_SPEC]
     dataset = McapDataset.create(components=components, name="perception")
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(helpers.write_mcap(tmp_path / "recording.mcap")),
         sync_component=VIDEO_COMPONENT,
         components=components,
@@ -165,7 +168,8 @@ def test_embed_mcap_sequences__no_camera_component(
     components = [POINT_CLOUD_SPEC]
     dataset = McapDataset.create(components=components, name="perception")
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(helpers.write_mcap(tmp_path / "recording.mcap")),
         sync_component=POINT_CLOUD_COMPONENT,
         components=components,
@@ -196,7 +200,8 @@ def test_embed_mcap_sequences__undecodable_frames_store_no_embedding(
     dataset = McapDataset.create(components=components, name="perception")
     # The test recording holds no decodable video.
     sequence_sample_id = add_mcaps.index_recording(
-        dataset=dataset,
+        session=db_manager.persistent_session(),
+        collection_id=dataset.collection_id,
         mcap_path=str(helpers.write_mcap(tmp_path / "recording.mcap")),
         sync_component=VIDEO_COMPONENT,
         components=components,

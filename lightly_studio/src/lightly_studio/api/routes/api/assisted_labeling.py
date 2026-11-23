@@ -86,11 +86,13 @@ async def create_instances_annotation_preview(
 @assisted_labeling_router.get("/models")
 def get_labeling_models() -> LabelingModelsView:
     """Returns the labeling models that the GUI can run."""
+    snapshot = labeling_model_lookup.get_runner_snapshot()
     return LabelingModelsView(
         models=[
             LabelingModelView(id=runner.model_id, task=runner.task, class_names=runner.class_names)
-            for runner in labeling_model_lookup.list_runners()
-        ]
+            for runner in snapshot.runners
+        ],
+        has_loading_models=snapshot.has_loading_models,
     )
 
 

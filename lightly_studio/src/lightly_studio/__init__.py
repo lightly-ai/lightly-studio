@@ -18,7 +18,7 @@ from lightly_studio.core.video.video_frame_sample import VideoFrameSample
 from lightly_studio.core.group.group_dataset import GroupDataset
 from lightly_studio.core.image.create_image import CreateImage
 from lightly_studio.core.mcap.create_mcap import CreateMcap
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.core.video.create_video import CreateVideo

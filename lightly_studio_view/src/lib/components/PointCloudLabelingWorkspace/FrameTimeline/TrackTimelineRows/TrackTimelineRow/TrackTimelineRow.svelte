@@ -57,9 +57,10 @@
 </script>
 
 <div class="py-1" data-track-id={track.object_track_id}>
+    <!-- The label and the delete button stick to the window edges while the timeline scrolls. -->
     <div class="flex items-center justify-between gap-2 pb-0.5">
         <div
-            class="truncate text-[10px] {isSelected
+            class="sticky left-3 max-w-xs truncate text-[10px] {isSelected
                 ? 'font-semibold text-primary'
                 : 'text-muted-foreground'}"
             title={label}
@@ -69,7 +70,7 @@
         {#if onRequestDelete}
             <button
                 type="button"
-                class="shrink-0 rounded-sm px-1 text-xs leading-none text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
+                class="sticky right-3 shrink-0 rounded-sm px-1 text-xs leading-none text-muted-foreground hover:bg-destructive/20 hover:text-destructive"
                 aria-label={`Delete ${track.annotation_label_name} track ${track.object_track_number}`}
                 title="Delete track"
                 onclick={() => onRequestDelete(track)}

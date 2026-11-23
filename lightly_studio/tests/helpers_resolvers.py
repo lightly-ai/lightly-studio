@@ -48,6 +48,7 @@ from lightly_studio.resolvers import (
     group_resolver,
     image_resolver,
     mcap_resolver,
+    metadata_resolver,
     sample_embedding_resolver,
     tag_resolver,
 )
@@ -175,17 +176,17 @@ def create_image_with_metadata(  # noqa: PLR0913
     height: int = 1080,
 ) -> ImageSample:
     """Create an image sample and set its metadata."""
-    sample = ImageSample(
-        inner=create_image(
-            session=session,
-            collection_id=collection_id,
-            file_path_abs=file_path_abs,
-            width=width,
-            height=height,
-        )
+    image = create_image(
+        session=session,
+        collection_id=collection_id,
+        file_path_abs=file_path_abs,
+        width=width,
+        height=height,
     )
-    sample.metadata.update(metadata)
-    return sample
+    metadata_resolver.bulk_update_metadata(
+        session=session, sample_metadata=[(image.sample_id, metadata)]
+    )
+    return ImageSample(inner=image)
 
 
 def create_mcap(  # noqa: PLR0913
