@@ -83,6 +83,9 @@ if tag is None:
 - FastAPI dependencies provide short-lived sessions for request handling. A route gets its session from the `SessionDep` argument type by default. The media routes (`api/routes/images.py`, `video_media.py`, `video_frames_media.py`) do not use `SessionDep`: they open and close a session before the file I/O, because the dependency holds a thread pool slot for the full request.
 - The app lifespan also initializes and shuts down plugins, then closes the database engine cleanly.
 - Python API classes in `core/` use a long-lived `db_manager.persistent_session()`. Currently this is a design limitation, causing issues with DuckDB's single-writer model.
+- When a batch mutation must fail as a unit, validate every item before the first write and
+  commit once after all changes. A best-effort import can keep successful items only when its API
+  or report explicitly promises partial results.
 
 ### DuckDB
 
