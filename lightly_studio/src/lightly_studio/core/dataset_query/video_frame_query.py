@@ -7,6 +7,7 @@ from lightly_studio.core.dataset_query.boolean_expression import AND, NOT, OR
 from lightly_studio.core.dataset_query.classification_query import ClassificationQuery
 from lightly_studio.core.dataset_query.match_expression import MatchExpression
 from lightly_studio.core.dataset_query.object_detection_query import ObjectDetectionQuery
+from lightly_studio.core.dataset_query.polygon_query import PolygonQuery
 from lightly_studio.core.dataset_query.sample_evaluation_query import SampleEvaluationQuery
 from lightly_studio.core.dataset_query.segmentation_mask_query import SegmentationMaskQuery
 from lightly_studio.core.dataset_query.video_event_query import VideoEventQuery
@@ -55,7 +56,10 @@ def _validate_frame_criterion(criterion: MatchExpression) -> None:
             _validate_frame_criterion(criterion=term)
     elif isinstance(criterion, NOT):
         _validate_frame_criterion(criterion=criterion.term)
-    elif isinstance(criterion, (ClassificationQuery, ObjectDetectionQuery, SegmentationMaskQuery)):
+    elif isinstance(
+        criterion,
+        (ClassificationQuery, ObjectDetectionQuery, SegmentationMaskQuery, PolygonQuery),
+    ):
         _validate_frame_criterion(criterion=criterion.criterion)
     elif isinstance(criterion, SampleEvaluationQuery):
         for term in criterion.criteria:

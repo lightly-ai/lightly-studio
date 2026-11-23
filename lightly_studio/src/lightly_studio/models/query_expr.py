@@ -253,6 +253,13 @@ class SegmentationMaskMatchExpr(BaseModel):
     subexpr: MatchExpr
 
 
+class PolygonMatchExpr(BaseModel):
+    """Leaf node checking if a sample has a matching polygon annotation."""
+
+    type: Literal["polygon_match_expr"] = "polygon_match_expr"
+    subexpr: MatchExpr
+
+
 class AndExpr(BaseModel):
     """Boolean AND of multiple query nodes."""
 
@@ -291,6 +298,7 @@ MatchExpr: TypeAlias = Annotated[
     | VideoFrameMatchExpr
     | ObjectDetectionMatchExpr
     | SegmentationMaskMatchExpr
+    | PolygonMatchExpr
     | AndExpr
     | OrExpr
     | NotExpr,
@@ -308,6 +316,7 @@ VideoEventMatchExpr.model_rebuild()
 VideoFrameMatchExpr.model_rebuild()
 ObjectDetectionMatchExpr.model_rebuild()
 SegmentationMaskMatchExpr.model_rebuild()
+PolygonMatchExpr.model_rebuild()
 AndExpr.model_rebuild()
 OrExpr.model_rebuild()
 NotExpr.model_rebuild()
@@ -343,6 +352,7 @@ def _validate_evaluation_scope(expr: MatchExpr, in_annotation: bool) -> None:
             ClassificationMatchExpr,
             ObjectDetectionMatchExpr,
             SegmentationMaskMatchExpr,
+            PolygonMatchExpr,
             VideoEventMatchExpr,
         ),
     ):

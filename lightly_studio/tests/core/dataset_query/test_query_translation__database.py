@@ -27,6 +27,7 @@ from lightly_studio.models.query_expr import (
     OrdinalComparisonOperator,
     OrdinalFloatExpr,
     OrExpr,
+    QueryExpr,
     SegmentationMaskMatchExpr,
     StringExpr,
     TagsContainsExpr,
@@ -597,3 +598,39 @@ def test_to_match_expression__not(db_session: Session) -> None:
     results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
 
     assert [r.sample_id for r in results] == [big.sample_id]
+
+
+def test_query_translation__polygon_match_expr(db_session: Session) -> None:
+    dataset = create_collection(session=db_session)
+    cid = dataset.collection_id
+    image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")
+    image2 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/2.jpg")
+
+    label = create_annotation_label(session=db_session, root_collection_id=cid, label_name="person")
+    for image, x in [(image1, 5.0), (image2, 80.0)]:
+        create_annotation(
+            session=db_session,
+            collection_id=cid,
+            sample_id=image.sample_id,
+            annotation_label_id=label.annotation_label_id,
+            annotation_type=AnnotationType.POLYGON,
+            polygons=[[(x, 0.0), (x + 10.0, 0.0), (x + 10.0, 10.0)]],
+        )
+
+    query_expr = QueryExpr.model_validate(
+        {
+            "match_expr": {
+                "type": "polygon_match_expr",
+                "subexpr": {
+                    "type": "integer_expr",
+                    "field": {"table": "polygon", "name": "x"},
+                    "operator": ">",
+                    "value": 50,
+                },
+            }
+        }
+    )
+    match = query_translation.to_match_expression(query_expr.match_expr)
+    results = DatasetQuery(dataset=dataset, session=db_session).match(match).to_list()
+
+    assert [r.sample_id for r in results] == [image2.sample_id]

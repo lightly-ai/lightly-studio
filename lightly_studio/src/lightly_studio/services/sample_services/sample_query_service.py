@@ -20,6 +20,7 @@ from lightly_studio.models.query_expr import (
     ClassificationMatchExpr,
     FieldRef,
     ObjectDetectionMatchExpr,
+    PolygonMatchExpr,
     SegmentationMaskMatchExpr,
 )
 from lightly_studio.models.sample import SampleTable
@@ -39,6 +40,7 @@ _ANNOTATION_SCOPES: dict[type[BaseModel], str] = {
     ClassificationMatchExpr: "classification",
     ObjectDetectionMatchExpr: "object_detection",
     SegmentationMaskMatchExpr: "segmentation_mask",
+    PolygonMatchExpr: "polygon",
 }
 _SORT_FIELDS = {"file_name", "file_path_abs", "created_at", "width", "height"}
 _SUPPORTED_INCLUDES = {SampleInclude.TAGS}
