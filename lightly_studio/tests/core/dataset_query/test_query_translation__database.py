@@ -600,7 +600,7 @@ def test_to_match_expression__not(db_session: Session) -> None:
     assert [r.sample_id for r in results] == [big.sample_id]
 
 
-def test_query_translation__polygon_match_expr(db_session: Session) -> None:
+def test_to_match_expression__polygon_match_expr(db_session: Session) -> None:
     dataset = create_collection(session=db_session)
     cid = dataset.collection_id
     image1 = create_image(session=db_session, collection_id=cid, file_path_abs="/path/to/1.jpg")

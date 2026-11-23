@@ -19,7 +19,7 @@ WIDE_POLYGON: Polygons = [[(0.0, 0.0), (50.0, 0.0), (50.0, 10.0), (0.0, 10.0)]]
 
 
 class TestPolygonQuery:
-    def test_polygon_width__sql(self) -> None:
+    def test_get__width_sql(self) -> None:
         query = select(ImageTable).where(PolygonQuery(PolygonField.width <= 100).get())
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "EXISTS (SELECT 1" in sql
@@ -27,7 +27,7 @@ class TestPolygonQuery:
         assert "FROM polygon_annotation" in sql
         assert "polygon_annotation.width <= 100" in sql
 
-    def test_polygon_query__width(self, db_session: Session) -> None:
+    def test_get__width(self, db_session: Session) -> None:
         collection_id = create_collection(session=db_session).collection_id
         image1 = create_image(
             session=db_session, collection_id=collection_id, file_path_abs="/path/to/1.jpg"
@@ -66,7 +66,7 @@ class TestPolygonQuery:
         results = db_session.exec(query).all()
         assert [image.sample_id for image in results] == [image2.sample_id]
 
-    def test_polygon_query__ignores_masks(self, db_session: Session) -> None:
+    def test_get__ignores_masks(self, db_session: Session) -> None:
         collection_id = create_collection(session=db_session).collection_id
         image = create_image(
             session=db_session, collection_id=collection_id, file_path_abs="/path/to/1.jpg"
