@@ -5,9 +5,11 @@ from uuid import uuid4
 
 import pytest
 from PIL import Image
+from pytest_mock import MockerFixture
 
 from lightly_studio.core.file_outcome_report import FileOutcome
 from lightly_studio.database import db_manager
+from lightly_studio.embed import embed_samples
 from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.transport.ingestion_transport import IngestionTransport
@@ -105,3 +107,25 @@ class TestLocalIngestionTransport:
             session=session, sample_ids=[image.sample_id]
         )
         assert tag_names == {image.sample_id: ["a"]}
+
+    def test_embed_videos(self, mocker: MockerFixture) -> None:
+        embed_video_samples = mocker.patch.object(embed_samples, "embed_video_samples")
+        collection_id = uuid4()
+        sample_ids = [uuid4()]
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transport.embed_videos(collection_id=collection_id, sample_ids=sample_ids)
+
+        embed_video_samples.assert_called_once_with(
+            session=db_manager.persistent_session(),
+            collection_id=collection_id,
+            sample_ids=sample_ids,
+        )
+
+    def test_embed_videos__empty_sample_ids(self, mocker: MockerFixture) -> None:
+        embed_video_samples = mocker.patch.object(embed_samples, "embed_video_samples")
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        transport.embed_videos(collection_id=uuid4(), sample_ids=[])
+
+        embed_video_samples.assert_not_called()
