@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Iterable, Mapping, Sequence
-from typing import TYPE_CHECKING, NamedTuple
+from typing import NamedTuple
 from uuid import UUID
 
 from mcap.exceptions import McapError
@@ -39,7 +39,6 @@ from lightly_studio.core.mcap.type_definitions import (
     FrameLocator,
     StaticTransform,
 )
-from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap import McapCreate
 from lightly_studio.models.recording import RecordingFormat
@@ -57,9 +56,6 @@ from lightly_studio.resolvers import (
     static_transform_resolver,
 )
 
-if TYPE_CHECKING:
-    from lightly_studio.core.mcap.mcap_dataset import McapDataset
-
 logger = logging.getLogger(__name__)
 
 MCAP_EXTENSION = ".mcap"
@@ -71,7 +67,8 @@ DEFAULT_MAX_PAIRING_DIFF_NS = 50_000_000
 
 
 def index_recordings(  # noqa: PLR0913
-    dataset: McapDataset,
+    session: Session,
+    collection_id: UUID,
     mcap_paths: Iterable[str],
     sync_component: str,
     components: Sequence[McapComponentSpec],
@@ -86,7 +83,8 @@ def index_recordings(  # noqa: PLR0913
     the reason and the others are still indexed.
 
     Args:
-        dataset: The dataset to index into.
+        session: The database session.
+        collection_id: The ID of the root collection of the dataset.
         mcap_paths: The paths or URIs of the `.mcap` files.
         sync_component: The name of the component whose messages are the ticks.
         components: The specs the recordings are read through. They must be the
@@ -112,8 +110,7 @@ def index_recordings(  # noqa: PLR0913
         AllInputFilesFailedError: If at least one recording was attempted and every
             attempted recording failed.
     """
-    session = db_manager.persistent_session()
-    target = _get_target(session=session, collection_id=dataset.collection_id)
+    target = _get_target(session=session, collection_id=collection_id)
     dataset_schema.check_components_match(
         session=session,
         group_collection_id=target.group_collection_id,
@@ -133,7 +130,8 @@ def index_recordings(  # noqa: PLR0913
             try:
                 sequence_sample_ids.append(
                     index_recording(
-                        dataset=dataset,
+                        session=session,
+                        collection_id=collection_id,
                         mcap_path=mcap_path,
                         sync_component=sync_component,
                         components=components,
@@ -154,7 +152,8 @@ def index_recordings(  # noqa: PLR0913
 
 
 def index_recording(  # noqa: PLR0913
-    dataset: McapDataset,
+    session: Session,
+    collection_id: UUID,
     mcap_path: str,
     sync_component: str,
     components: Sequence[McapComponentSpec],
@@ -166,7 +165,8 @@ def index_recording(  # noqa: PLR0913
     Sequence timestamps are the capture time of the sync component.
 
     Args:
-        dataset: The dataset to index into.
+        session: The database session.
+        collection_id: The ID of the root collection of the dataset.
         mcap_path: The path or URI of the `.mcap` file.
         sync_component: The name of the component whose messages are the ticks.
         components: The specs the recording is read through. They must be the components
@@ -194,8 +194,7 @@ def index_recording(  # noqa: PLR0913
         FileNotFoundError: If the file does not exist.
     """
     reference_frames.check_reference_frame_ids(frame_ids=reference_frame_ids)
-    session = db_manager.persistent_session()
-    target = _get_target(session=session, collection_id=dataset.collection_id)
+    target = _get_target(session=session, collection_id=collection_id)
     dataset_schema.check_components_match(
         session=session,
         group_collection_id=target.group_collection_id,
@@ -259,7 +258,7 @@ def index_recording(  # noqa: PLR0913
     )
 
     sequence_sample_id = mcap_group_sequence_resolver.create(
-        session=session, collection_id=dataset.collection_id, recording_id=recording_id
+        session=session, collection_id=collection_id, recording_id=recording_id
     )
     group_sample_ids = _write_groups(
         session=session,
