@@ -6,6 +6,8 @@ from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 
+from lightly_studio.models.image import AddImagesResult, ImageCreate
+
 
 class IngestionTransport(Protocol):
     """Adds samples to a collection.
@@ -13,7 +15,7 @@ class IngestionTransport(Protocol):
     A path is a local path or a cloud URI. A remote transport reads it on the server.
     """
 
-    # TODO(Iunir, 11/2026): Add the ingestion of images and videos.
+    # TODO(Iunir, 11/2026): Add the ingestion of videos.
     # TODO(Iunir, 11/2026): Add MCAP ingestion when `McapComponentSpec` has no DB imports.
 
     def add_images_from_path(  # noqa: PLR0913
@@ -39,6 +41,22 @@ class IngestionTransport(Protocol):
         Raises:
             ValueError: If `tag_depth` is negative or `limit` is not greater than 0.
             AllInputFilesFailedError: If all images are missing or broken.
+        """
+
+    def add_images(self, collection_id: UUID, images: Sequence[ImageCreate]) -> AddImagesResult:
+        """Add images with known dimensions to a collection.
+
+        The ingestion of annotated data uses it, for example COCO or YOLO, and then adds the
+        annotations. The label files give the dimensions, so the image files are not opened.
+
+        Args:
+            collection_id: The ID of the collection.
+            images: The images to add.
+
+        Returns:
+            The sample ID of each new image by its path, and the outcome of each input image.
+            An image that is in the collection or earlier in `images` is already present. An
+            image whose file does not exist is missing.
         """
 
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:

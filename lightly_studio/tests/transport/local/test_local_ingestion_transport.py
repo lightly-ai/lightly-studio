@@ -6,11 +6,13 @@ from uuid import uuid4
 import pytest
 from PIL import Image
 
+from lightly_studio.core.file_outcome_report import FileOutcome
 from lightly_studio.database import db_manager
+from lightly_studio.models.image import ImageCreate
 from lightly_studio.resolvers import image_resolver, tag_resolver
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.local.local_ingestion_transport import LocalIngestionTransport
-from tests.helpers_resolvers import create_collection
+from tests.helpers_resolvers import create_collection, create_image
 
 
 @pytest.mark.usefixtures("patch_collection")
@@ -54,3 +56,32 @@ class TestLocalIngestionTransport:
                 tag_depth=-1,
                 limit=None,
             )
+
+    def test_add_images(self, tmp_path: Path) -> None:
+        for name in ["new.png", "present.png"]:
+            (tmp_path / name).touch()
+        session = db_manager.persistent_session()
+        collection_id = create_collection(session=session).collection_id
+        create_image(
+            session=session, collection_id=collection_id, file_path_abs=f"{tmp_path}/present.png"
+        )
+        images = [
+            ImageCreate(file_name=name, file_path_abs=f"{tmp_path}/{name}", width=4, height=3)
+            for name in ["new.png", "present.png", "new.png", "missing.png"]
+        ]
+        transport: IngestionTransport = LocalIngestionTransport()
+
+        result = transport.add_images(collection_id=collection_id, images=images)
+
+        assert result.outcomes == [
+            FileOutcome.ADDED,
+            FileOutcome.ALREADY_PRESENT,
+            FileOutcome.ALREADY_PRESENT,
+            FileOutcome.MISSING,
+        ]
+        new_image = image_resolver.get_by_id(
+            session=session, sample_id=result.sample_ids[f"{tmp_path}/new.png"]
+        )
+        assert new_image is not None
+        assert (new_image.width, new_image.height) == (4, 3)
+        assert len(result.sample_ids) == 1

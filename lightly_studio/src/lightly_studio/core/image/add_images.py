@@ -33,7 +33,7 @@ from lightly_studio.core.file_outcome_report import (
 from lightly_studio.core.image import add_annotations
 from lightly_studio.dataset import remote_storage
 from lightly_studio.models.caption import CaptionCreate
-from lightly_studio.models.image import ImageCreate
+from lightly_studio.models.image import AddImagesResult, ImageCreate
 from lightly_studio.resolvers import (
     caption_resolver,
     image_resolver,
@@ -170,6 +170,49 @@ def load_into_dataset_from_paths(
     report.log_summary()
     report.raise_if_all_failed()
     return created_path_to_id
+
+
+def create_images(
+    session: Session, collection_id: UUID, images: Sequence[ImageCreate]
+) -> AddImagesResult:
+    """Create the images whose files exist and that are not in the collection yet.
+
+    The caller gives the dimensions, so the files are not opened. An image that is in the
+    collection or earlier in `images` is skipped as already present.
+
+    Args:
+        session: The database session.
+        collection_id: The ID of the collection to create the images in.
+        images: The images to create.
+
+    Returns:
+        The sample ID of each new image by its path, and the outcome of each input image.
+    """
+    seen_or_existing_paths = _get_existing_paths_set(
+        session=session,
+        collection_id=collection_id,
+        file_paths_abs=[image.file_path_abs for image in images],
+    )
+    outcomes: list[FileOutcome] = []
+    batch: list[ImageCreate] = []
+    created_path_to_id: dict[str, UUID] = {}
+    for image in images:
+        outcome = _classify_new_image(path=image.file_path_abs, seen_paths=seen_or_existing_paths)
+        outcomes.append(outcome)
+        if outcome != FileOutcome.ADDED:
+            continue
+        seen_or_existing_paths.add(image.file_path_abs)
+        batch.append(image)
+        if len(batch) >= SAMPLE_BATCH_SIZE:
+            created_path_to_id.update(
+                _create_batch_samples(session=session, collection_id=collection_id, samples=batch)
+            )
+            batch = []
+    if batch:
+        created_path_to_id.update(
+            _create_batch_samples(session=session, collection_id=collection_id, samples=batch)
+        )
+    return AddImagesResult(sample_ids=created_path_to_id, outcomes=outcomes)
 
 
 def load_into_dataset_from_labelformat(  # noqa: PLR0913
@@ -536,6 +579,15 @@ def _probe_image(
     except BROKEN_IMAGE_ERRORS:
         return path, FileOutcome.BROKEN
     return path, dimensions
+
+
+def _classify_new_image(path: str, seen_paths: set[str]) -> FileOutcome:
+    """Return ALREADY_PRESENT, MISSING, or ADDED for an image that has known dimensions."""
+    if path in seen_paths:
+        return FileOutcome.ALREADY_PRESENT
+    if not _file_exists(path):
+        return FileOutcome.MISSING
+    return FileOutcome.ADDED
 
 
 def _file_exists(path: str) -> bool:
