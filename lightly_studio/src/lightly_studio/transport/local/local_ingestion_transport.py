@@ -3,15 +3,18 @@
 from __future__ import annotations
 
 import logging
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
+from itertools import islice
 from uuid import UUID
 
 from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.core.image import add_images
+from lightly_studio.core.mcap import add_mcaps, annotation_mcap
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.video import add_videos
 from lightly_studio.database import db_manager
 from lightly_studio.dataset import fsspec_lister, remote_storage
-from lightly_studio.embed import embed_samples
+from lightly_studio.embed import embed_mcap_sequences, embed_samples
 from lightly_studio.models.collection import CollectionTable
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
@@ -217,6 +220,44 @@ class LocalIngestionTransport:
             session=db_manager.persistent_session(), rows=rows
         )
 
+    def add_mcaps_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        sync_component: str,
+        components: Sequence[McapComponentSpec],
+        max_pairing_diff_ns: int,
+        limit: int | None,
+        reference_frame_ids: Sequence[str] | None,
+        embed: bool,
+    ) -> None:
+        """Index every `.mcap` recording under a path into an MCAP dataset."""
+        fsspec_lister.validate_limit(limit)
+        # Configure clients before discovery creates and caches a filesystem.
+        remote_storage.configure_connections(paths=[path])
+        discovered_paths = fsspec_lister.iter_files_from_path(
+            path=path, allowed_extensions=add_mcaps.MCAP_EXTENSIONS, limit=None
+        )
+        mcap_paths = _recording_paths(discovered_paths=discovered_paths, limit=limit)
+        logger.info("Found %d MCAP recordings to index in %s.", len(mcap_paths), path)
+
+        session = db_manager.persistent_session()
+        sequence_sample_ids = add_mcaps.index_recordings(
+            session=session,
+            collection_id=collection_id,
+            mcap_paths=mcap_paths,
+            sync_component=sync_component,
+            components=components,
+            max_pairing_diff_ns=max_pairing_diff_ns,
+            reference_frame_ids=reference_frame_ids,
+        )
+        if embed:
+            embed_mcap_sequences.embed_mcap_sequences(
+                session=session,
+                collection_id=collection_id,
+                sequence_sample_ids=sequence_sample_ids,
+            )
+
     def add_sequence_samples(
         self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]
     ) -> None:
@@ -240,3 +281,11 @@ def _validate_components(
                 f"'{comp_collections[comp_name].sample_type.name}', "
                 f"but got samples of type '{create_sample.sample_type().name}'."
             )
+
+
+def _recording_paths(discovered_paths: Iterable[str], limit: int | None) -> list[str]:
+    """Filter annotation MCAPs before lazily applying the recording limit."""
+    recordings = (
+        path for path in discovered_paths if not annotation_mcap.is_annotation_mcap(uri=path)
+    )
+    return list(recordings if limit is None else islice(recordings, limit))

@@ -96,6 +96,22 @@ class TestHttpIngestionTransport:
             with pytest.raises(NotImplementedError):
                 getattr(transport, method)(rows=[])
 
+    def test_add_mcaps_from_path(self) -> None:
+        with httpx.Client() as client:
+            transport: IngestionTransport = HttpIngestionTransport(client=client)
+
+            with pytest.raises(NotImplementedError):
+                transport.add_mcaps_from_path(
+                    collection_id=uuid4(),
+                    path="/recordings",
+                    sync_component="lidar",
+                    components=[],
+                    max_pairing_diff_ns=1,
+                    limit=None,
+                    reference_frame_ids=None,
+                    embed=False,
+                )
+
     def test_add_sequence_samples(self) -> None:
         with httpx.Client() as client:
             transport: IngestionTransport = HttpIngestionTransport(client=client)
