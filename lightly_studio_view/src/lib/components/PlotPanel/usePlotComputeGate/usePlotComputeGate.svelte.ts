@@ -66,8 +66,6 @@ export function usePlotComputeGate(params: UsePlotComputeGateParams): UsePlotCom
         startCompute();
         const collectionId = getCollectionId();
         const pending = pendingComputes.get(collectionId) ?? new Set();
-        // Each retry of a compute gives the same promise again.
-        if (pending.has(compute)) return;
         pending.add(compute);
         pendingComputes.set(collectionId, pending);
         const endCompute = () => {

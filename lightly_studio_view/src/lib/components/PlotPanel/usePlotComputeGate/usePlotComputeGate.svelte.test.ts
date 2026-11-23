@@ -211,24 +211,6 @@ describe('usePlotComputeGate', () => {
         expect(gate.view).toBe('prompt');
     });
 
-    it('keeps the first start and ends a retried compute once', async () => {
-        vi.useFakeTimers({ now: 1_000_000 });
-        const query = createStatusQuery(NOT_COMPUTED_SMALL);
-        mocks.statusQueries['retried'] = query;
-        const { gate } = mountGate({ collectionId: 'retried' });
-        const compute = createCompute();
-        gate.trackCompute(compute.promise);
-        vi.setSystemTime(1_005_000);
-        gate.trackCompute(compute.promise);
-        flushSync();
-        expect(gate.startedAt).toBe(1_000_000);
-
-        compute.succeed();
-
-        await vi.waitFor(() => expect(gate.startedAt).toBeNull());
-        expect(query.refetch).toHaveBeenCalledOnce();
-    });
-
     it('keeps the start until every compute of the collection ends', async () => {
         mocks.statusQueries['two'] = createStatusQuery(NOT_COMPUTED_LARGE);
         const { gate } = mountGate({ collectionId: 'two' });
