@@ -51,7 +51,12 @@ def update_annotation_object(
 
     annotation_type = annotation_copy.annotation_type
 
-    seg_details = annotation_copy.segmentation_details
+    # Read only the details of the annotation type, so other types do not run a lazy SELECT.
+    seg_details = (
+        annotation_copy.segmentation_details
+        if annotation_type == AnnotationType.SEGMENTATION_MASK
+        else None
+    )
     segmentation = (
         SegmentationAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -61,11 +66,10 @@ def update_annotation_object(
             width=seg_details.width,
             height=seg_details.height,
         )
-        if annotation_type == AnnotationType.SEGMENTATION_MASK and seg_details
+        if seg_details
         else None
     )
 
-    # Only polygons read the details, so other types do not run a lazy SELECT.
     polygon_details = (
         annotation_copy.polygon_details if annotation_type == AnnotationType.POLYGON else None
     )
@@ -82,7 +86,11 @@ def update_annotation_object(
         else None
     )
 
-    od_details = annotation_copy.object_detection_details
+    od_details = (
+        annotation_copy.object_detection_details
+        if annotation_type == AnnotationType.OBJECT_DETECTION
+        else None
+    )
     object_detection = (
         ObjectDetectionAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -91,12 +99,14 @@ def update_annotation_object(
             width=od_details.width,
             height=od_details.height,
         )
-        if annotation_type == AnnotationType.OBJECT_DETECTION and od_details
+        if od_details
         else None
     )
 
-    cuboid_details = annotation_copy.cuboid_3d_details
-    if annotation_type == AnnotationType.CUBOID_3D and cuboid_details:
+    cuboid_details = (
+        annotation_copy.cuboid_3d_details if annotation_type == AnnotationType.CUBOID_3D else None
+    )
+    if cuboid_details:
         source = cuboid_3d if cuboid_3d is not None else cuboid_details
         cuboid = Cuboid3DAnnotationTable(
             sample_id=annotation_copy.sample_id,
