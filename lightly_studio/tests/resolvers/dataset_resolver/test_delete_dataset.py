@@ -9,6 +9,7 @@ from sqlmodel import Session, col, select
 
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.evaluation_annotation_metric import EvaluationAnnotationMetricCreate
 from lightly_studio.models.evaluation_class_metric import EvaluationClassMetricCreate
@@ -167,6 +168,29 @@ def test_delete_dataset__with_images_and_annotations(db_session: Session) -> Non
         collection_resolver.get_by_id(session=db_session, collection_id=child_collection_id) is None
     )
     assert annotation_label_resolver.get_by_id(session=db_session, label_id=label_id) is None
+
+
+def test_delete_dataset__with_polygon_annotations(db_session: Session) -> None:
+    dataset = create_collection(session=db_session, collection_name="to_delete")
+    image = create_image(
+        session=db_session, collection_id=dataset.collection_id, file_path_abs="/a.png"
+    )
+    label = create_annotation_label(
+        session=db_session, root_collection_id=dataset.collection_id, label_name="cat"
+    )
+    create_annotation(
+        session=db_session,
+        collection_id=dataset.collection_id,
+        sample_id=image.sample_id,
+        annotation_label_id=label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]],
+    )
+    assert db_session.exec(select(PolygonAnnotationTable)).all()
+
+    dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset.dataset_id)
+
+    assert not db_session.exec(select(PolygonAnnotationTable)).all()
 
 
 def test_delete_dataset__with_video_and_frames(db_session: Session) -> None:

@@ -12,6 +12,7 @@ from sqlmodel import Session, SQLModel, col, select
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import ObjectDetectionAnnotationTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.caption import CaptionTable
 from lightly_studio.models.collection import SampleType
@@ -62,6 +63,11 @@ from tests.resolvers.video.helpers import VideoStub, create_video
             AnnotationType.SEGMENTATION_MASK,
             {"segmentation_mask": [1, 2, 3, 4]},
             SegmentationAnnotationTable,
+        ),
+        (
+            AnnotationType.POLYGON,
+            {"polygons": [[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]]},
+            PolygonAnnotationTable,
         ),
         (
             AnnotationType.CLASSIFICATION,

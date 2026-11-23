@@ -28,6 +28,7 @@ from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
 from lightly_studio.models.annotation.object_track import ObjectTrackTable
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import SegmentationAnnotationTable
 from lightly_studio.models.annotation_collection_coverage import (
     AnnotationCollectionCoverageTable,
@@ -105,6 +106,7 @@ def delete_dataset(
     # 1. Tables that reference annotation_base.
     _delete_object_detection_annotations(session=session, dataset_id=dataset_id)
     _delete_segmentation_annotations(session=session, dataset_id=dataset_id)
+    _delete_polygon_annotations(session=session, dataset_id=dataset_id)
     _delete_cuboid_3d_annotations(session=session, dataset_id=dataset_id)
     _delete_temporal_spans(session=session, dataset_id=dataset_id)
     _delete_evaluation_sample_metrics(session=session, dataset_id=dataset_id)
@@ -257,6 +259,16 @@ def _delete_segmentation_annotations(session: Session, dataset_id: UUID) -> None
     session.exec(
         delete(SegmentationAnnotationTable).where(
             col(SegmentationAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
+        ),
+        execution_options=_DELETE_EXECUTION_OPTIONS,
+    )
+
+
+def _delete_polygon_annotations(session: Session, dataset_id: UUID) -> None:
+    """Delete polygon annotation details for the dataset's samples."""
+    session.exec(
+        delete(PolygonAnnotationTable).where(
+            col(PolygonAnnotationTable.sample_id).in_(_sample_ids_subquery(dataset_id))
         ),
         execution_options=_DELETE_EXECUTION_OPTIONS,
     )

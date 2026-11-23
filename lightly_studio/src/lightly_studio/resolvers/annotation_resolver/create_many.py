@@ -6,6 +6,7 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.annotation import polygon
 from lightly_studio.models.annotation.annotation_base import (
     AnnotationBaseTable,
     AnnotationCreate,
@@ -15,6 +16,7 @@ from lightly_studio.models.annotation.cuboid_3d import Cuboid3DAnnotationTable
 from lightly_studio.models.annotation.object_detection import (
     ObjectDetectionAnnotationTable,
 )
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
 from lightly_studio.models.annotation.segmentation import (
     SegmentationAnnotationTable,
 )
@@ -37,7 +39,7 @@ def create_many(
     """Create multiple annotations in bulk with their respective type-specific details.
 
     Creates base annotations and their associated type-specific details (object detection,
-    segmentation, or cuboid) in the annotation collection child of the provided parent
+    segmentation, polygon, or cuboid) in the annotation collection child of the provided parent
     collection.
 
     Callers must supply parent samples from the specified collection. Annotations with a
@@ -61,6 +63,7 @@ def create_many(
     base_annotations = []
     object_detection_annotations = []
     segmentation_annotations = []
+    polygon_annotations = []
     cuboid_annotations = []
     temporal_spans = []
     annotation_collection_id = collection_resolver.get_or_create_child_collection(
@@ -87,6 +90,7 @@ def create_many(
 
         # Set other relationship details to None
         db_base_annotation.segmentation_details = None
+        db_base_annotation.polygon_details = None
         db_base_annotation.object_detection_details = None
         db_base_annotation.cuboid_3d_details = None
 
@@ -125,6 +129,11 @@ def create_many(
             )
             segmentation_annotations.append(db_segmentation_mask)
 
+        elif annotation_type == AnnotationType.POLYGON:
+            db_polygon = _polygon_details(annotation=annotation_create)
+            db_polygon.sample_id = base_annotations[i].sample_id
+            polygon_annotations.append(db_polygon)
+
         elif annotation_type == AnnotationType.CUBOID_3D:
             cuboid = _cuboid_details(annotation=annotation_create)
             cuboid.sample_id = base_annotations[i].sample_id
@@ -146,6 +155,7 @@ def create_many(
     # Bulk save object detection annotations
     session.bulk_save_objects(object_detection_annotations)
     session.bulk_save_objects(segmentation_annotations)
+    session.bulk_save_objects(polygon_annotations)
     session.bulk_save_objects(cuboid_annotations)
     session.bulk_save_objects(temporal_spans)
 
@@ -235,4 +245,17 @@ def _cuboid_details(annotation: AnnotationCreate) -> Cuboid3DAnnotationTable:
         sy=cuboid.sy,
         sz=cuboid.sz,
         interpolated=cuboid.interpolated,
+    )
+
+
+def _polygon_details(annotation: AnnotationCreate) -> PolygonAnnotationTable:
+    if annotation.polygons is None:
+        raise ValueError("Missing polygons for polygon.")
+    validated = polygon.validate_polygons(polygons=annotation.polygons)
+    return PolygonAnnotationTable(
+        x=validated.x,
+        y=validated.y,
+        width=validated.width,
+        height=validated.height,
+        polygons=validated.polygons,
     )

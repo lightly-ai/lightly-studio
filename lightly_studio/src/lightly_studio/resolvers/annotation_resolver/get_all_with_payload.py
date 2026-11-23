@@ -214,6 +214,7 @@ def _build_base_query(
                 selectinload(AnnotationBaseTable.object_detection_details),
                 selectinload(AnnotationBaseTable.cuboid_3d_details),
                 selectinload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.polygon_details),
                 load_only(
                     ImageTable.file_path_abs,  # type: ignore[arg-type]
                     ImageTable.sample_id,  # type: ignore[arg-type]
@@ -239,6 +240,7 @@ def _build_base_query(
                 selectinload(AnnotationBaseTable.object_detection_details),
                 selectinload(AnnotationBaseTable.cuboid_3d_details),
                 selectinload(AnnotationBaseTable.segmentation_details),
+                selectinload(AnnotationBaseTable.polygon_details),
                 load_only(VideoFrameTable.sample_id),  # type: ignore[arg-type]
                 joinedload(VideoFrameTable.video).load_only(
                     VideoTable.height,  # type: ignore[arg-type]
