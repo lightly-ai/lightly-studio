@@ -1,8 +1,5 @@
 <script lang="ts">
-    import ChevronDown from '@lucide/svelte/icons/chevron-down';
-    import { Button } from '$lib/components/ui/button';
-    import * as Popover from '$lib/components/ui/popover';
-    import { MultiSelectList } from '$lib/components/MultiSelectList';
+    import { MultiSelectPopover } from '$lib/components/MultiSelectPopover';
     import type { ChannelSummaryView } from '$lib/api/lightly_studio_local/types.gen';
 
     interface Props {
@@ -23,8 +20,6 @@
     let { label, channels, selectedChannels, onToggleChannel, onSetChannels, testId }: Props =
         $props();
 
-    let open = $state(false);
-
     const items = $derived(
         channels.map((channel) => ({
             value: String(channel.channel_id),
@@ -43,7 +38,7 @@
         return `${label}: ${selectedChannels.length} selected`;
     });
 
-    // MultiSelectList reports the full new selection; a single click only ever flips one id, so
+    // MultiSelectPopover reports the full new selection; a single click only ever flips one id, so
     // relay it back through the toggle contract.
     const handleChange = (ids: string[]) => {
         const before = new Set(selectedIds);
@@ -56,32 +51,16 @@
     };
 </script>
 
-<Popover.Root bind:open>
-    <Popover.Trigger>
-        {#snippet child({ props })}
-            <Button
-                {...props}
-                variant="outline"
-                size="sm"
-                class="m-0 h-8 w-56 min-w-0 justify-start gap-2 rounded-md px-3 text-xs font-normal"
-                role="combobox"
-                aria-expanded={open}
-                disabled={channels.length === 0}
-                data-testid={testId}
-            >
-                <span class="truncate">{triggerLabel}</span>
-                <ChevronDown class="ml-auto size-4 shrink-0 opacity-50" />
-            </Button>
-        {/snippet}
-    </Popover.Trigger>
-    <Popover.Content class="w-56 p-0 pt-2">
-        <MultiSelectList
-            {items}
-            {selectedIds}
-            onChange={handleChange}
-            showSelectAll
-            itemNoun="channel"
-            itemNounPlural="channels"
-        />
-    </Popover.Content>
-</Popover.Root>
+<MultiSelectPopover
+    {items}
+    {selectedIds}
+    onChange={handleChange}
+    label={triggerLabel}
+    itemNoun="channel"
+    itemNounPlural="channels"
+    showSelectAll
+    disabled={channels.length === 0}
+    triggerClass="m-0 w-56 rounded-md"
+    align="start"
+    {testId}
+/>

@@ -4,12 +4,13 @@
         TickTagView,
         TickView
     } from '$lib/api/lightly_studio_local/types.gen';
-    import { TagTimelineRows } from '../TagTimelineRows';
+    import { TagTimelineRows, useVisibleTags } from '../TagTimelineRows';
     import { DeleteTrackDialog } from './DeleteTrackDialog';
     import TrackTimelineRow from './TrackTimelineRow/TrackTimelineRow.svelte';
     import { TrackRowsResizer, useTrackRowsHeight, type TrackRowsHeight } from './TrackRowsResizer';
     import { TrackTimelineToolbar } from './TrackTimelineToolbar';
     import { useVisibleTracks } from './useVisibleTracks.svelte';
+    import { getTrackKey } from './visibleTracks';
 
     interface Props {
         ticks: TickView[];
@@ -37,7 +38,7 @@
         showFrameTags?: boolean;
         /** Set when frame tags can be shown: toggles the frame tag rows. */
         onShowFrameTagsChange?: (checked: boolean) => void;
-        /** The frame tags of the sequence, shown as rows while `showFrameTags` is set. */
+        /** The frame tags of the sequence; the chosen ones show as rows while `showFrameTags` is set. */
         frameTags?: TickTagView[];
         /** The height limit of the rows; the timeline scroll area applies it. */
         rowsHeight?: TrackRowsHeight;
@@ -71,6 +72,18 @@
         getStorageKey: () =>
             sequenceId ? `lightlyStudio_trackTimelineVisibleTracks_${sequenceId}` : undefined
     });
+    const visibleTags = useVisibleTags({
+        getTags: () => frameTags,
+        getStorageKey: () =>
+            sequenceId ? `lightlyStudio_frameTimelineVisibleTags_${sequenceId}` : undefined
+    });
+    const trackItems = $derived(
+        tracks.map((track) => ({
+            value: getTrackKey(track),
+            label: `${track.annotation_label_name} · Track ${track.object_track_number}`
+        }))
+    );
+    const tagItems = $derived(frameTags.map((tag) => ({ value: tag.tag_id, label: tag.name })));
     let trackToDelete = $state<SequenceTrackView | null>(null);
     let isDeleteDialogOpen = $state(false);
     const requestDelete = (track: SequenceTrackView) => {
@@ -109,11 +122,11 @@
         <!-- Sticks under the ruler (`h-8`) and the resize handle (`h-2`) when it is shown. -->
         <div class="sticky z-20 bg-background py-1 {tracks.length > 0 ? 'top-10' : 'top-8'}">
             <TrackTimelineToolbar
-                visibility={tracks.length > 0
+                trackVisibility={tracks.length > 0
                     ? {
-                          tracks,
+                          items: trackItems,
                           visibleCount: visible.visibleTracks.length,
-                          selectedKeys: visible.selectedKeys,
+                          selectedIds: visible.selectedKeys,
                           onChange: visible.setSelection
                       }
                     : null}
@@ -123,10 +136,18 @@
                 frameTags={onShowFrameTagsChange
                     ? { checked: showFrameTags, onCheckedChange: onShowFrameTagsChange }
                     : undefined}
+                tagVisibility={showFrameTags && frameTags.length > 0
+                    ? {
+                          items: tagItems,
+                          visibleCount: visibleTags.visibleTags.length,
+                          selectedIds: visibleTags.selectedIds,
+                          onChange: visibleTags.setSelection
+                      }
+                    : undefined}
             />
         </div>
         {#if showFrameTags}
-            <TagTimelineRows {ticks} tags={frameTags} {onSelectTick} />
+            <TagTimelineRows {ticks} tags={visibleTags.visibleTags} {onSelectTick} />
         {/if}
         <div class="w-full px-1" data-testid="object-track-list" data-timeline-body>
             {#each visible.visibleTracks as track (`${track.object_track_id}-${track.annotation_source_id}`)}
