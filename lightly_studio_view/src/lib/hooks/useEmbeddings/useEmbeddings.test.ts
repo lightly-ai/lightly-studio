@@ -2,6 +2,7 @@ import { QueryClient, QueryObserver } from '@tanstack/svelte-query';
 import { tableFromIPC, type Table } from 'apache-arrow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { get2dEmbeddings } from '$lib/api/lightly_studio_local/sdk.gen';
+import type { GetEmbeddings2dRequest } from '$lib/api/lightly_studio_local/types.gen';
 import { getEmbeddingsQueryOptions } from './useEmbeddings';
 
 vi.mock('$lib/api/lightly_studio_local/sdk.gen', async (importOriginal) => ({
@@ -14,7 +15,8 @@ const requests = {
     count: 0,
     failuresBeforeSuccess: 0,
     isPending: false,
-    resolve: () => {}
+    resolve: () => {},
+    reject: () => {}
 };
 
 // Each response is a new ArrayBuffer, as for a real refetch.
@@ -28,6 +30,7 @@ const respond = async ({ signal }: { signal?: AbortSignal }) => {
     if (!requests.isPending) return response;
     return new Promise((resolve, reject) => {
         requests.resolve = () => resolve(response);
+        requests.reject = () => reject(new Error('Server error'));
         signal?.addEventListener('abort', () => reject(signal.reason));
     });
 };
@@ -47,10 +50,36 @@ const newRetryingQueryClient = () =>
 const observeEmbeddings = () =>
     new QueryObserver(newQueryClient(), getEmbeddingsQueryOptions('collection-1', null));
 
+const TAG_FILTER: GetEmbeddings2dRequest['filters'] = {
+    filter_type: 'image',
+    sample_filter: { tag_ids: ['tag-a'] }
+};
+
 const getComputeOptions = (
     getIsComputing: () => boolean,
-    onCompute?: (compute: Promise<unknown>) => void
-) => getEmbeddingsQueryOptions('collection-1', null, null, null, { getIsComputing, onCompute });
+    onCompute?: (compute: Promise<unknown>) => void,
+    filters: GetEmbeddings2dRequest['filters'] | null = null
+) => getEmbeddingsQueryOptions('collection-1', filters, null, null, { getIsComputing, onCompute });
+
+// Starts a compute, then a compute request with a filter while the first one runs.
+async function requestFilteredPlotDuringCompute() {
+    requests.isPending = true;
+    const client = newQueryClient();
+    new QueryObserver(
+        client,
+        getComputeOptions(() => true)
+    ).subscribe(() => {});
+    await vi.waitFor(() => expect(requests.count).toBe(1));
+    const filteredPanel = new QueryObserver(
+        client,
+        getComputeOptions(() => true, undefined, TAG_FILTER)
+    );
+    filteredPanel.subscribe(() => {});
+    await new Promise((resolve) => setTimeout(resolve));
+    const requestsWhileComputing = requests.count;
+    requests.isPending = false;
+    return { filteredPanel, requestsWhileComputing };
+}
 
 // Closes the panel while its plot request runs, reopens it, and counts the plot requests.
 async function closeAndReopenPanel(getIsComputing: () => boolean): Promise<number> {
@@ -113,16 +142,6 @@ describe('getEmbeddingsQueryOptions', () => {
         expect(result.error?.message).toBe('bad table');
     });
 
-    it.each([
-        [undefined, true],
-        [true, true],
-        [false, false]
-    ])('passes enabled %s to the query as %s', (enabled, expected) => {
-        expect(
-            getEmbeddingsQueryOptions('collection-1', null, null, null, { enabled }).enabled
-        ).toBe(expected);
-    });
-
     it('does not refetch the plot on window focus', () => {
         expect(getEmbeddingsQueryOptions('collection-1', null).refetchOnWindowFocus).toBe(false);
     });
@@ -157,6 +176,23 @@ describe('getEmbeddingsQueryOptions', () => {
         expect(requests.count).toBe(2);
         expect(onCompute).toHaveBeenCalledOnce();
         await expect(onCompute.mock.calls[0][0]).resolves.toBeInstanceOf(ArrayBuffer);
+    });
+
+    it('waits for a running compute before a compute request with another filter', async () => {
+        const { filteredPanel, requestsWhileComputing } = await requestFilteredPlotDuringCompute();
+        requests.resolve();
+        await vi.waitFor(() => expect(filteredPanel.getCurrentResult().isSuccess).toBe(true));
+
+        expect(requestsWhileComputing).toBe(1);
+        expect(requests.count).toBe(2);
+    });
+
+    it('fails a waiting compute request without a request when the running compute fails', async () => {
+        const { filteredPanel } = await requestFilteredPlotDuringCompute();
+        requests.reject();
+        await vi.waitFor(() => expect(filteredPanel.getCurrentResult().isError).toBe(true));
+
+        expect(requests.count).toBe(1);
     });
 
     it('does not retry a failed compute', async () => {

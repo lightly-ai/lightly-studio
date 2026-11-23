@@ -50,6 +50,7 @@ class ClassificationQuery(MatchExpression):
         return SampleTable.annotations.any(
             and_(
                 col(AnnotationBaseTable.annotation_type) == AnnotationType.CLASSIFICATION,
+                ~AnnotationBaseTable.temporal_span_details.has(),
                 self.criterion.get(),
             )
         )

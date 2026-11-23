@@ -10,7 +10,7 @@ export function detectScopeAt(text: string, offset: number): Scope {
     const rootScope = /^\s*video:/i.test(upTo) ? 'video' : 'image';
     const stack: Scope[] = [];
     const re =
-        /\b(object_detection|classification|segmentation_mask|frame|sample_evaluation)\s*\(|\(|\)/g;
+        /\b(object_detection|classification|segmentation_mask|frame|event|sample_evaluation)\s*\(|\(|\)/g;
     let match: RegExpExecArray | null;
     while ((match = re.exec(upTo))) {
         const scope = stack.at(-1) ?? rootScope;
@@ -21,8 +21,8 @@ export function detectScopeAt(text: string, offset: number): Scope {
             match[1] === 'sample_evaluation'
         ) {
             stack.push(match[1]);
-        } else if (match[1] === 'frame') {
-            stack.push(scope === 'video' ? 'frame' : scope);
+        } else if (match[1] === 'frame' || match[1] === 'event') {
+            stack.push(scope === 'video' ? match[1] : scope);
         } else if (match[0] === '(') {
             stack.push(scope);
         } else {

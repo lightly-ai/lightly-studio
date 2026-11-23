@@ -6,11 +6,16 @@ import {
     useSampleDetailsToolbarContext
 } from '$lib/contexts/SampleDetailsToolbar.svelte';
 import { useAssistedLabelingStatus } from '$lib/hooks/useAssistedLabelingStatus';
+import { isAssistedLabelingView, useLabelingModels } from '$lib/hooks';
 import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
+import { page } from '$app/state';
 import { useStickyClassName } from '$lib/hooks/useStickyClass/useStickyClassName.svelte';
 import { useSmartSelect } from '$lib/components/SampleDetails/SmartSelectOverlay/useSmartSelect.svelte';
 import { DEFAULT_MAX_INSTANCES } from '$lib/components/SampleDetails/FindInstancesOverlay/FindInstancesOverlay.helpers';
 import { useFindInstances } from '$lib/components/SampleDetails/FindInstancesOverlay/useFindInstances.svelte';
+import { useLabelWithModel } from '$lib/components/SampleDetails/LabelWithModelOverlay';
+
+const DEFAULT_MODEL_THRESHOLD = 0.5;
 
 interface UseAssistedLabelingToolsParams {
     collectionId: string;
@@ -26,6 +31,9 @@ class AssistedLabelingToolState {
     instancesPrompt = $state('');
     maxInstances = $state(DEFAULT_MAX_INSTANCES);
     isDrawingInstancesBox = $state(false);
+    // Null selects the first model of the server.
+    modelId = $state<string | null>(null);
+    modelThreshold = $state(DEFAULT_MODEL_THRESHOLD);
 }
 
 // Shares the tool state between the pop-ups and the overlays, and falls back to the cursor
@@ -34,6 +42,12 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     const assistedLabelingStatus = useAssistedLabelingStatus();
     const { context, setStatus } = useSampleDetailsToolbarContext();
     const { context: annotationLabelContext } = useAnnotationLabelContext();
+    const labelingModels = useLabelingModels(() =>
+        isAssistedLabelingView({
+            isOnAnnotationDetailsView: annotationLabelContext.isOnAnnotationDetailsView,
+            routeId: page.route.id
+        })
+    );
     const isEditingMode = fromStore(useGlobalStorage().isEditingMode);
     const state = new AssistedLabelingToolState();
     const stickyClass = useStickyClassName(() => getParams().collectionId);
@@ -50,6 +64,15 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     // A class picked in the tool's pop-up wins, else new annotations get the sticky class.
     const smartSelectClass = $derived(state.smartSelectClass ?? stickyClass.current ?? null);
     const instancesClass = $derived(state.instancesClass ?? stickyClass.current ?? null);
+    const selectedModel = $derived(
+        labelingModels.models.find((model) => model.id === state.modelId) ??
+            labelingModels.models[0] ??
+            null
+    );
+    // Object detection models return no masks.
+    const modelSaveAs = $derived(
+        selectedModel?.task === 'instance_segmentation' ? state.saveAs : 'box'
+    );
     const smartSelect = useSmartSelect(() => {
         const { collectionId, sampleId, refetch } = getParams();
         return {
@@ -80,6 +103,20 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         };
     });
 
+    const labelWithModel = useLabelWithModel(() => {
+        const { collectionId, sampleId, refetch } = getParams();
+        return {
+            collectionId,
+            sampleId,
+            modelId: selectedModel?.id ?? null,
+            threshold: state.modelThreshold,
+            saveAs: modelSaveAs,
+            annotationSource: annotationLabelContext.annotationSource,
+            annotationSourceBlockedReason: annotationLabelContext.annotationSourceBlockedReason,
+            onSaved: refetch
+        };
+    });
+
     const endInstancesBoxDrawing = () => {
         state.isDrawingInstancesBox = false;
     };
@@ -91,11 +128,14 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
     };
 
     $effect(() => {
-        if (
-            isAssistedLabelingStatus(context.status) &&
-            (!isEditingMode.current || assistedLabelingStatus.disabledReason !== null)
-        )
-            setStatus('cursor');
+        const status = context.status;
+        if (!isAssistedLabelingStatus(status)) return;
+        // The model tool uses its own server, the other tools use fal.ai.
+        const isToolAvailable =
+            status === 'label-with-model'
+                ? labelingModels.isAvailable
+                : assistedLabelingStatus.disabledReason === null;
+        if (!isEditingMode.current || !isToolAvailable) setStatus('cursor');
     });
 
     // Leaving a tool, e.g. by a tool switch or Escape, ends box drawing and drops its prompts.
@@ -105,6 +145,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         untrack(() => {
             if (tool !== 'smart-select') smartSelect.clear();
             if (tool !== 'find-instances') clearInstances();
+            if (tool !== 'label-with-model') labelWithModel.clear();
         });
     });
 
@@ -112,6 +153,7 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         state,
         smartSelect,
         instances,
+        labelWithModel,
         clearInstances,
         endInstancesBoxDrawing,
         get activeTool() {
@@ -128,6 +170,15 @@ export const useAssistedLabelingTools = (getParams: () => UseAssistedLabelingToo
         },
         get instancesClass() {
             return instancesClass;
+        },
+        get labelingModels() {
+            return labelingModels.models;
+        },
+        get selectedModel() {
+            return selectedModel;
+        },
+        get modelSaveAs() {
+            return modelSaveAs;
         }
     };
 };

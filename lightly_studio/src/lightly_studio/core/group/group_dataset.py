@@ -10,12 +10,9 @@ from lightly_studio.core import dataset
 from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.core.dataset import DEFAULT_DATASET_NAME, Dataset
 from lightly_studio.core.group.group_sample import GroupSample
-from lightly_studio.database import db_manager
-from lightly_studio.models.collection import CollectionCreate, SampleType
-from lightly_studio.resolvers import collection_resolver, group_resolver
-from lightly_studio.resolvers.collection_resolver.create_group_components import (
-    GroupComponentDefinition,
-)
+from lightly_studio.models.collection import CollectionCreate, GroupComponentDefinition, SampleType
+from lightly_studio.resolvers import group_resolver
+from lightly_studio.transport import active_transport
 
 
 class GroupDataset(Dataset[GroupSample]):
@@ -97,14 +94,12 @@ class GroupDataset(Dataset[GroupSample]):
         if name is None:
             name = DEFAULT_DATASET_NAME
 
-        collection = collection_resolver.create(
-            session=db_manager.persistent_session(),
+        collections = active_transport.get_transport().collections
+        collection = collections.create(
             collection=CollectionCreate(name=name, sample_type=cls.sample_type()),
         )
-        collection_resolver.create_group_components(
-            session=db_manager.persistent_session(),
-            parent_collection_id=collection.collection_id,
-            components=components,
+        collections.create_group_components(
+            parent_collection_id=collection.collection_id, components=components
         )
         return cls(collection=collection)
 
@@ -135,9 +130,8 @@ class GroupDataset(Dataset[GroupSample]):
             return cls.create(components=components, name=name)
 
         # Validate that the existing collection has the same component schema.
-        existing_components = collection_resolver.get_group_components(
-            session=db_manager.persistent_session(),
-            parent_collection_id=collection.collection_id,
+        existing_components = active_transport.get_transport().collections.get_group_components(
+            parent_collection_id=collection.collection_id
         )
         if len(existing_components) != len(components):
             raise ValueError(
@@ -171,34 +165,8 @@ class GroupDataset(Dataset[GroupSample]):
         Returns:
             The created GroupSample.
         """
-        comp_collections = collection_resolver.get_group_components(
-            session=self.session,
-            parent_collection_id=self.collection_id,
-        )
-        # Validate components
-        for comp_name, create_sample in components.items():
-            if comp_name not in comp_collections:
-                raise ValueError(
-                    f"Component name '{comp_name}' not found in group dataset components."
-                )
-            if create_sample.sample_type() != comp_collections[comp_name].sample_type:
-                raise ValueError(
-                    f"Component '{comp_name}' expects samples of type "
-                    f"'{comp_collections[comp_name].sample_type.name}', "
-                    f"but got samples of type '{create_sample.sample_type().name}'."
-                )
-        # Create component samples after validation
-        component_sample_ids = {
-            create_sample.create_in_collection(
-                session=self.session, collection_id=comp_collections[comp_name].collection_id
-            )
-            for comp_name, create_sample in components.items()
-        }
-        # Create group sample
-        group_sample_id = group_resolver.create_many(
-            session=self.session,
-            collection_id=self.collection_id,
-            groups=[component_sample_ids],
+        group_sample_id = active_transport.get_transport().ingestion.add_group_samples(
+            collection_id=self.collection_id, groups=[components]
         )[0]
 
         # Return as GroupSample

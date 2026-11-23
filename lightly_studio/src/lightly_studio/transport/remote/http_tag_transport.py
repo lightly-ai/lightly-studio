@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from uuid import UUID
 
 import httpx
@@ -27,6 +27,10 @@ class HttpTagTransport:
         )
         return None if body is None else TagView.model_validate(body)
 
+    def get_names_by_sample_ids(self, sample_ids: Sequence[UUID]) -> dict[UUID, list[str]]:
+        """Get the tag names of samples. Not supported over HTTP yet."""
+        raise NotImplementedError("Getting the tags of samples over HTTP is not supported yet.")
+
     def add_to_samples(
         self, collection_id: UUID, tag_name: str, sample_ids: Sequence[UUID]
     ) -> None:
@@ -43,6 +47,16 @@ class HttpTagTransport:
         path = f"/collections/{collection_id}/tags:remove"
         for batch in _batches(ids=sample_ids):
             self._send(path=path, tag_name=tag_name, sample_ids=batch)
+
+    def split_samples(
+        self,
+        collection_id: UUID,
+        sample_ids: Sequence[UUID],
+        tag_sizes: Mapping[str, int],
+        seed: int | None,
+    ) -> dict[str, int]:
+        """Split samples into new tags. Not supported over HTTP yet."""
+        raise NotImplementedError("Splitting samples over HTTP is not supported yet.")
 
     def _send(self, path: str, tag_name: str, sample_ids: list[str]) -> None:
         body = {"tag_name": tag_name, "sample_ids": sample_ids}
