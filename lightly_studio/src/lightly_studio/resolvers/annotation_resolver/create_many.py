@@ -250,7 +250,7 @@ def _cuboid_details(annotation: AnnotationCreate) -> Cuboid3DAnnotationTable:
 
 def _polygon_details(annotation: AnnotationCreate) -> PolygonAnnotationTable:
     if annotation.polygons is None:
-        raise ValueError("Missing polygons for polygon.")
+        raise ValueError("Polygon annotations require polygons.")
     validated = polygon.validate_polygons(polygons=annotation.polygons)
     return PolygonAnnotationTable(
         x=validated.x,

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
-
 import pytest
 from sqlmodel import Session
 
@@ -47,9 +45,7 @@ def test_create_many__polygon(db_session: Session) -> None:
     assert annotation is not None
     assert annotation.annotation_type == AnnotationType.POLYGON
     assert annotation.polygon_details is not None
-    assert _as_tuples(polygons=annotation.polygon_details.polygons) == [
-        [(1.5, 1.5), (4.0, 1.5), (4.0, 3.2)]
-    ]
+    assert annotation.polygon_details.polygons == [[[1.5, 1.5], [4.0, 1.5], [4.0, 3.2]]]
     assert (
         annotation.polygon_details.x,
         annotation.polygon_details.y,
@@ -100,7 +96,7 @@ def test_create_many__polygon_missing_polygons(db_session: Session) -> None:
         session=db_session, root_collection_id=collection.collection_id, label_name="cat"
     )
 
-    with pytest.raises(ValueError, match="Missing polygons for polygon"):
+    with pytest.raises(ValueError, match="Polygon annotations require polygons"):
         annotation_resolver.create_many(
             session=db_session,
             parent_collection_id=collection.collection_id,
@@ -172,12 +168,5 @@ def test_create_many__polygon_on_video_frame_with_track(db_session: Session) -> 
     frame_annotations = frames[0].sample.annotations
     assert len(frame_annotations) == 1
     assert frame_annotations[0].polygon_details is not None
-    assert _as_tuples(polygons=frame_annotations[0].polygon_details.polygons) == [
-        [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]
-    ]
+    assert frame_annotations[0].polygon_details.polygons == [[[0.0, 0.0], [2.0, 0.0], [2.0, 2.0]]]
     assert frame_annotations[0].object_track_id == track_id
-
-
-def _as_tuples(polygons: Sequence[Sequence[Sequence[float]]]) -> list[list[tuple[float, ...]]]:
-    # The database returns the JSON vertices as lists.
-    return [[tuple(vertex) for vertex in part] for part in polygons]
