@@ -3,6 +3,7 @@ from sqlmodel import Session
 
 from lightly_studio.core.annotation import ClassificationAnnotation, CreateClassification
 from lightly_studio.core.video.video_sample import VideoSample
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from tests.helpers_resolvers import create_collection
 from tests.resolvers.video.helpers import VideoStub, create_video
@@ -28,10 +29,12 @@ class TestImageSample:
         assert sample.sample_id == video_table.sample_id
 
 
-def test_add_annotation_classification(db_session: Session) -> None:
-    collection = create_collection(session=db_session, sample_type=SampleType.VIDEO)
+@pytest.mark.usefixtures("patch_collection")
+def test_add_annotation_classification() -> None:
+    session = db_manager.persistent_session()
+    collection = create_collection(session=session, sample_type=SampleType.VIDEO)
     video_table = create_video(
-        session=db_session,
+        session=session,
         collection_id=collection.collection_id,
         video=VideoStub(path="/path/to/sample.mp4"),
     )
