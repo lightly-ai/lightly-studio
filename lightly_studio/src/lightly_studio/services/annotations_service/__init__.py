@@ -24,6 +24,9 @@ from lightly_studio.services.annotations_service.update_annotation_label import 
 from lightly_studio.services.annotations_service.update_annotation_object_track import (
     update_annotation_object_track,
 )
+from lightly_studio.services.annotations_service.update_annotation_polygons import (
+    update_annotation_polygons,
+)
 from lightly_studio.services.annotations_service.update_annotations import (
     update_annotations,
 )
@@ -43,6 +46,7 @@ __all__ = [
     "update_annotation_cuboid_3d",
     "update_annotation_label",
     "update_annotation_object_track",
+    "update_annotation_polygons",
     "update_annotations",
     "update_segmentation_mask",
     "update_temporal_span",

@@ -57,6 +57,10 @@ def update_bounding_box(
             annotation.segmentation_details.width = coordinates.width
             annotation.segmentation_details.height = coordinates.height
             session.add(annotation.segmentation_details)
+        elif annotation.polygon_details:
+            raise ValueError(
+                "The box of a polygon annotation can't be edited. Edit its vertices instead."
+            )
         else:
             raise ValueError("Annotation type does not support bounding boxes.")
 

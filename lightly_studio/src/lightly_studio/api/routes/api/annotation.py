@@ -23,6 +23,7 @@ from lightly_studio.models.annotation.annotation_base import (
     AnnotationWithPayloadAndCountView,
 )
 from lightly_studio.models.annotation.cuboid_3d import Cuboid3DCreate
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.annotation_sort import AnnotationEvaluationMetricSortExpr
 from lightly_studio.models.collection import (
     AnnotationCollectionView,
@@ -298,6 +299,7 @@ class AnnotationUpdateInput(BaseModel):
     label_name: str | None = None
     bounding_box: BoundingBoxCoordinates | None = None
     segmentation_mask: list[int] | None = None
+    polygons: Polygons | None = None
     start_time_s: float | None = None
     end_time_s: float | None = None
     cuboid_3d: Cuboid3DCreate | None = None
@@ -326,6 +328,7 @@ def update_annotations(
                 label_name=annotation_update_input.label_name,
                 bounding_box=annotation_update_input.bounding_box,
                 segmentation_mask=annotation_update_input.segmentation_mask,
+                polygons=annotation_update_input.polygons,
                 start_time_s=annotation_update_input.start_time_s,
                 end_time_s=annotation_update_input.end_time_s,
                 cuboid_3d=annotation_update_input.cuboid_3d,
