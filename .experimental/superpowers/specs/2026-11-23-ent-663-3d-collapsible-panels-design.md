@@ -12,7 +12,8 @@ whole workspace, and bring each back with one click.
 ## Goals
 
 - Every panel around the 3D scene can be collapsed to a slim bar and expanded again.
-- Collapse/expand controls look the same and sit in the same place on every panel.
+- Every panel uses one template: title on the left, settings and the collapse toggle on the
+  right. Collapse controls look the same and sit in the same place everywhere.
 - Collapsed state is remembered per panel across frames, sequences and reloads.
 - The 3D scene resizes smoothly when panels change: no distortion, camera pose kept.
 - Focus mode: one toggle that collapses all panels and restores the previous layout.
@@ -52,10 +53,25 @@ whole workspace, and bring each back with one click.
   pattern, `useSessionStorage` for the collapsed flag, `$effect` syncing the flag to the
   `PaneAPI`, `toggle`, `setCollapsed`, bound `pane`). `useCameraPane` is replaced by it; keep
   the camera strip's existing storage key so users keep their setting.
-- **`PanelCollapseButton`**: one ghost icon button (chevron, `size: 'xs'`, `h-7 w-7 p-0`, like
-  the camera strip's) with the aria labels "Collapse <panel>" / "Expand <panel>". The chevron
-  points in the direction the panel will move. Every panel uses it, at the right end of its
-  header row (top end of its bar for the right panel).
+- **`WorkspacePanel`: one panel template for every panel in the 3D workspace** (decided by
+  Kondrat). It grows out of `WorkspacePanelHeader` and replaces it.
+  - Header: the title on the left; on the right, an optional `actions` snippet (settings and
+    other controls) and then, at the far right, the collapse toggle. The toggle is shown only
+    when the panel is collapsible.
+  - Style: the compact `WorkspacePanelHeader` style (`text-xs`, muted title, about 28px high),
+    decided by Kondrat.
+  - Toggle: a ghost chevron icon button (`size: 'xs'`, `h-7 w-7 p-0`, like the camera strip's)
+    with aria labels "Collapse <panel>" / "Expand <panel>". The chevron points in the direction
+    the panel will move.
+  - Collapsed: only the title and the toggle stay; actions and body are hidden (body
+    unmounted). For the camera strip this hides its projection settings while collapsed, which
+    is a small change from today (my call, for one consistent collapsed look).
+  - Orientation: `vertical` panels collapse to their header row; the `horizontal` panel (the
+    right column) collapses to a slim vertical bar, one button wide, with the toggle at the top
+    and the title written vertically below it.
+  - The panel only renders header and body and calls `onToggle`; who owns the collapsed state
+    (a paneforge pane through `useCollapsiblePane`, or a plain stored flag) is up to the caller.
+  - Non-collapsible use: the "3D scene" header uses the same template without a toggle.
 - **Pixel collapsed sizes**: paneforge 1.0.2 sizes are percentages. A collapsed bar should be
   exactly one header high (or one bar wide), so collapsed and minimum sizes are computed from
   the measured `PaneGroup` size (ResizeObserver) and passed as percentages. If paneforge does
@@ -67,7 +83,7 @@ whole workspace, and bring each back with one click.
 1. **Orthographic views strip** (`PointCloudWorkspaceScene.svelte`): the `flex-[3]` /
    `flex-[2]` divs become a vertical `PaneGroup`: perspective pane (about 60%) and a
    collapsible orthographic pane (about 40%), with a `PaneResizer` styled like the existing
-   ones. The orthographic pane gets a header "Orthographic views" with the collapse button.
+   ones. The orthographic pane is a `WorkspacePanel` titled "Orthographic views".
    Collapsed, it shows only that header and **unmounts** the three viewports.
    - This replaces the "show orthographic views" checkbox in `SceneViewSettings`: remove the
      checkbox; `showOrthographicViews` becomes "orthographic pane is expanded". Default stays
@@ -76,23 +92,33 @@ whole workspace, and bring each back with one click.
    - The per-view expand buttons (`scene.expandedProjection`) keep working. When one view is
      expanded, the other views stay mounted and hidden, as today, so cameras keep their pose
      (builder's call from the review).
-2. **Right side panel** (`WorkspacePanels.svelte`): the 22% pane becomes `collapsible`.
-   Collapsed, it is a slim vertical bar (one button wide) with the expand button at the top
-   and the tooltip "Show side panel". The collapse button sits at the top right of the
-   expanded panel.
-3. **Camera strip**: unchanged behavior, moved onto `useCollapsiblePane` and
-   `PanelCollapseButton`.
+2. **Right side panel** (`WorkspacePanels.svelte`): the 22% pane becomes `collapsible` and
+   is a horizontal `WorkspacePanel` with a title (builder picks the name with the glossary
+   skill, e.g. "Details"). Collapsed, it is the slim vertical bar described above.
+   - Its sections (Sequence tags, Frame tags, Annotations) also become `WorkspacePanel`s
+     instead of `Segment`, decided by Kondrat. They collapse in place (content height, no
+     paneforge), and each one's collapsed state is remembered like the panels' (my call;
+     `Segment` does not remember it today). The frame tags section keeps its `inert` stale
+     wrapper.
+   - Only the 3D workspace changes. `Segment` and `SegmentTags` stay as they are for the 2D
+     views; the builder extracts or reuses the tag list body of `SegmentTags` so the 3D side
+     panel can wrap it in a `WorkspacePanel`.
+3. **Camera strip**: same behavior, moved onto `useCollapsiblePane` and `WorkspacePanel`
+   (projection settings hidden while collapsed, see above).
 4. **Frame timeline** (`PointCloudWorkspaceMainColumn.svelte`, `FrameTimeline`): becomes the
    third pane of the main column's vertical `PaneGroup` (scene / camera strip / timeline),
    collapsible, with a resizer above it.
-   - Collapsed: a slim bar with the title "Timeline" and the expand button, nothing else.
-   - Expanded: the transport row, then the tracks and frame tags filling the rest of the pane
-     with scrolling. The collapse button sits at the right end of the transport row.
+   - It is a `WorkspacePanel` titled "Timeline". Its header's `actions` hold the transport
+     controls, so expanding adds no extra row (my call).
+   - Collapsed: the title "Timeline" and the expand button, nothing else (decided by Kondrat).
+   - Expanded: the header with the transport controls, then the ruler and the object tracks
+     section filling the rest of the pane with scrolling.
    - The pane divider replaces `TrackRowsResizer` and `useTrackRowsHeight`; remove both.
 5. **Object tracks section** (inside the expanded timeline): everything below the frame ruler
-   (track toolbar, object track rows, frame tag rows) collapses on its own, with its own
-   collapse button. Collapsed, it leaves a slim bar titled "Object tracks" with the expand
-   button; the transport row and the ruler stay, so frame navigation keeps working.
+   (track toolbar, object track rows, frame tag rows) is a `WorkspacePanel` titled "Object
+   tracks" and collapses on its own (decided by Kondrat). The track toolbar moves into its
+   header's `actions` (my call; it already sticks to the view edges). Collapsed, it leaves only
+   its header; the transport controls and the ruler stay, so frame navigation keeps working.
    - The timeline then has three states: collapsed (title bar only), compact (transport row,
      ruler and the "Object tracks" bar), and full.
    - Collapsing the section shrinks the timeline pane to the compact height; expanding it
