@@ -286,4 +286,124 @@ describe('TrackTimelineRows', () => {
             expect(container.querySelectorAll('[data-track-id]')).toHaveLength(11);
         });
     });
+
+    describe('frame tags', () => {
+        it('shows the frame tags checkbox without tracks', async () => {
+            const onShowFrameTagsChange = vi.fn();
+            render(TrackTimelineRows, {
+                props: { ...defaultProps, tracks: [], onShowFrameTagsChange }
+            });
+
+            await fireEvent.click(screen.getByRole('checkbox', { name: 'Show frame tags' }));
+
+            expect(onShowFrameTagsChange).toHaveBeenCalledWith(true);
+        });
+
+        it('draws the frame tag rows while frame tags are shown', () => {
+            render(TrackTimelineRows, {
+                props: {
+                    ...defaultProps,
+                    showFrameTags: true,
+                    onShowFrameTagsChange: vi.fn(),
+                    frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
+                }
+            });
+
+            expect(screen.getByTitle('occluded · Frame 3')).toBeTruthy();
+        });
+
+        it('can resize the frame tag rows without tracks', () => {
+            render(TrackTimelineRows, {
+                props: {
+                    ...defaultProps,
+                    tracks: [],
+                    showFrameTags: true,
+                    frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
+                }
+            });
+
+            expect(screen.getByTitle('occluded · Frame 3')).toBeTruthy();
+            expect(screen.getByTestId('track-rows-resizer')).toBeTruthy();
+        });
+
+        it('hides the frame tag rows while frame tags are not shown', () => {
+            render(TrackTimelineRows, {
+                props: {
+                    ...defaultProps,
+                    showFrameTags: false,
+                    onShowFrameTagsChange: vi.fn(),
+                    frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
+                }
+            });
+
+            expect(screen.queryByTitle('occluded · Frame 3')).toBeNull();
+        });
+
+        describe('with many frame tags', () => {
+            const frameTags = Array.from({ length: 5 }, (_, index) => ({
+                tag_id: `tag-${index + 1}`,
+                name: `tag ${index + 1}`,
+                seq_numbers: [index % 4]
+            }));
+            const props = {
+                ...defaultProps,
+                sequenceId: 'sequence-1',
+                showFrameTags: true,
+                onShowFrameTagsChange: vi.fn(),
+                frameTags
+            };
+            const newTag = { tag_id: 'tag-6', name: 'tag 6', seq_numbers: [0] };
+            const tagRowNames = () =>
+                screen.getAllByTestId('tag-row-label').map((label) => label.textContent?.trim());
+
+            it('lists the first three tags and says how many are shown', () => {
+                localStorage.clear();
+                render(TrackTimelineRows, { props });
+
+                expect(tagRowNames()).toEqual(['tag 1', 'tag 2', 'tag 3']);
+                expect(screen.getByText(/Showing 3 of 5 tags/)).toBeTruthy();
+            });
+
+            it('shows only the stored tags for this sequence', () => {
+                localStorage.setItem(
+                    'lightlyStudio_frameTimelineVisibleTags_sequence-1',
+                    JSON.stringify(['tag-5'])
+                );
+                render(TrackTimelineRows, { props });
+
+                expect(tagRowNames()).toEqual(['tag 5']);
+                expect(screen.getByText(/Showing 1 of 5 tags/)).toBeTruthy();
+                localStorage.clear();
+            });
+
+            it('keeps the first three tags listed when a tag is created', async () => {
+                localStorage.clear();
+                const { rerender } = render(TrackTimelineRows, { props });
+
+                await rerender({ ...props, frameTags: [...frameTags, newTag] });
+
+                expect(tagRowNames()).toEqual(['tag 1', 'tag 2', 'tag 3']);
+                expect(screen.getByText(/Showing 3 of 6 tags/)).toBeTruthy();
+            });
+
+            it('adds a newly created tag to a stored choice', async () => {
+                localStorage.setItem(
+                    'lightlyStudio_frameTimelineVisibleTags_sequence-1',
+                    JSON.stringify(['tag-5'])
+                );
+                const { rerender } = render(TrackTimelineRows, { props });
+
+                await rerender({ ...props, frameTags: [...frameTags, newTag] });
+
+                expect(tagRowNames()).toEqual(['tag 5', 'tag 6']);
+                localStorage.clear();
+            });
+
+            it('hides the tag picker while frame tags are not shown', () => {
+                render(TrackTimelineRows, { props: { ...props, showFrameTags: false } });
+
+                expect(screen.queryByTestId('tag-visibility-select')).toBeNull();
+            });
+        });
+    });
 });

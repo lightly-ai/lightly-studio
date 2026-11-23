@@ -10,6 +10,7 @@
     import { useTickDetails, useTickCameraFrames } from '$lib/hooks';
     import { useCameraRgbColors, provideCameraRgbColors } from './useCameraRgbColors';
     import { useSequenceTracks } from './FrameTimeline/useSequenceTracks.svelte';
+    import { useSequenceTickTags } from './FrameTimeline/useSequenceTickTags.svelte';
 
     const { cameraPane } = useWorkspaceControllerContext();
     const getLayout = usePointCloudWorkspaceLayoutContext();
@@ -18,6 +19,12 @@
         datasetId: layout.datasetId,
         sequenceId: layout.sequenceId,
         displayFrameId: layout.workspace.referenceFrameId || undefined
+    }));
+    let showFrameTags = $state(false);
+    const tickTagsQuery = useSequenceTickTags(() => ({
+        datasetId: layout.datasetId,
+        sequenceId: layout.sequenceId,
+        enabled: showFrameTags
     }));
 
     // Only an untracked cuboid of the loaded tick can start a track, and only while editing.
@@ -155,5 +162,8 @@
         onSeekEnd={layout.onSeekEnd}
         onPreviousSequence={layout.onPreviousSequence}
         onNextSequence={layout.onNextSequence}
+        {showFrameTags}
+        onShowFrameTagsChange={(checked) => (showFrameTags = checked)}
+        frameTags={tickTagsQuery.query.data?.tags ?? []}
     />
 </div>
