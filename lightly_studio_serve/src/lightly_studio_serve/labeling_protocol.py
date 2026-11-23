@@ -114,23 +114,31 @@ def to_wire_prediction(prediction: PredictedAnnotation) -> WirePrediction:
     )
 
 
-def from_wire_prediction(prediction: WirePrediction) -> PredictedAnnotation:
+def from_wire_prediction(
+    prediction: WirePrediction, width: int, height: int
+) -> PredictedAnnotation:
     """Convert a wire model back into a predicted annotation.
 
     Args:
         prediction: One prediction of a response body.
+        width: Width in pixels of the image that the server labeled.
+        height: Height in pixels of the image that the server labeled.
 
     Returns:
-        The predicted annotation, with the mask as a boolean array.
+        The predicted annotation, with the mask as a boolean array of shape
+        ``(height, width)``.
 
     Raises:
-        ValueError: If ``mask_png`` is not a base64 PNG file with one bit for each pixel.
+        ValueError: If ``mask_png`` is not a base64 PNG file with one bit for each pixel,
+            or if its size is not the size of the image.
     """
     return PredictedAnnotation(
         class_name=prediction.class_name,
         box=prediction.box,
         score=prediction.score,
-        mask=None if prediction.mask_png is None else _decode_mask(mask_png=prediction.mask_png),
+        mask=None
+        if prediction.mask_png is None
+        else _decode_mask(mask_png=prediction.mask_png, width=width, height=height),
     )
 
 
@@ -144,14 +152,22 @@ def _encode_mask(mask: NDArray[np.bool_]) -> str:
     return base64.b64encode(buffer.getvalue()).decode("ascii")
 
 
-def _decode_mask(mask_png: str) -> NDArray[np.bool_]:
-    """Read a base64 PNG file as a boolean mask of shape (H, W)."""
+def _decode_mask(mask_png: str, width: int, height: int) -> NDArray[np.bool_]:
+    """Read a base64 PNG file as a boolean mask of shape (height, width)."""
     try:
         data = base64.b64decode(mask_png, validate=True)
         with PILImage.open(io.BytesIO(data), formats=["PNG"]) as image:
             # Do not convert, because Pillow dithers a gray image into a wrong mask.
             if image.mode != "1":
                 raise ValueError("mask_png is not a PNG file with one bit for each pixel.")
+            if image.size != (width, height):
+                mask_width, mask_height = image.size
+                raise ValueError(
+                    f"mask_png has the size {mask_width} x {mask_height} pixels, "
+                    f"but the image has the size {width} x {height} pixels."
+                )
             return np.asarray(image, dtype=np.bool_)
+    except PILImage.DecompressionBombError as error:
+        raise ValueError("mask_png has more pixels than Pillow allows.") from error
     except (binascii.Error, UnidentifiedImageError, OSError) as error:
         raise ValueError("mask_png is not a base64 PNG file.") from error

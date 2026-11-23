@@ -18,46 +18,48 @@ from lightly_studio_serve.labeling_protocol import (
 from lightly_studio_serve.protocol import ServerLimits
 
 
-def test_labeling_describe_response() -> None:
-    response = LabelingDescribeResponse(
-        model_id="car-detector",
-        task=ModelTask.OBJECT_DETECTION,
-        class_names=["car"],
-        ready=True,
-        limits=ServerLimits(),
-    )
-
-    assert response.protocol_version == "1.0"
-    assert response.model_dump(mode="json")["task"] == "object_detection"
-
-
-def test_labeling_describe_response__empty_model_id() -> None:
-    with pytest.raises(ValidationError, match="model_id"):
-        LabelingDescribeResponse(
-            model_id="",
+class TestLabelingDescribeResponse:
+    def test_init(self) -> None:
+        response = LabelingDescribeResponse(
+            model_id="car-detector",
             task=ModelTask.OBJECT_DETECTION,
             class_names=["car"],
             ready=True,
             limits=ServerLimits(),
         )
 
+        assert response.protocol_version == "1.0"
+        assert response.model_dump(mode="json")["task"] == "object_detection"
 
-@pytest.mark.parametrize("score", [-0.1, 1.1])
-def test_wire_prediction__score_out_of_range(score: float) -> None:
-    with pytest.raises(ValidationError, match="score"):
-        WirePrediction(class_name="car", box=(0.0, 0.0, 3.0, 2.0), score=score)
+    def test_init__empty_model_id(self) -> None:
+        with pytest.raises(ValidationError, match="model_id"):
+            LabelingDescribeResponse(
+                model_id="",
+                task=ModelTask.OBJECT_DETECTION,
+                class_names=["car"],
+                ready=True,
+                limits=ServerLimits(),
+            )
 
 
-def test_predictions_response__json_round_trip() -> None:
-    response = PredictionsResponse(
-        model_id="car-detector",
-        predictions=[WirePrediction(class_name="car", box=(1.0, 2.0, 3.0, 4.0), score=0.9)],
-    )
+class TestWirePrediction:
+    @pytest.mark.parametrize("score", [-0.1, 1.1])
+    def test_init__score_out_of_range(self, score: float) -> None:
+        with pytest.raises(ValidationError, match="score"):
+            WirePrediction(class_name="car", box=(0.0, 0.0, 3.0, 2.0), score=score)
 
-    restored = PredictionsResponse.model_validate_json(response.model_dump_json())
 
-    assert restored == response
-    assert restored.predictions[0].mask_png is None
+class TestPredictionsResponse:
+    def test_init__json_round_trip(self) -> None:
+        response = PredictionsResponse(
+            model_id="car-detector",
+            predictions=[WirePrediction(class_name="car", box=(1.0, 2.0, 3.0, 4.0), score=0.9)],
+        )
+
+        restored = PredictionsResponse.model_validate_json(response.model_dump_json())
+
+        assert restored == response
+        assert restored.predictions[0].mask_png is None
 
 
 def test_to_wire_prediction__box() -> None:
@@ -68,7 +70,7 @@ def test_to_wire_prediction__box() -> None:
     assert wire == WirePrediction(
         class_name="car", box=(1.0, 2.0, 3.0, 4.0), score=0.9, mask_png=None
     )
-    assert labeling_protocol.from_wire_prediction(prediction=wire) == prediction
+    assert labeling_protocol.from_wire_prediction(prediction=wire, width=3, height=2) == prediction
 
 
 def test_to_wire_prediction__mask_round_trip() -> None:
@@ -79,7 +81,7 @@ def test_to_wire_prediction__mask_round_trip() -> None:
     )
 
     wire = labeling_protocol.to_wire_prediction(prediction=prediction)
-    restored = labeling_protocol.from_wire_prediction(prediction=wire)
+    restored = labeling_protocol.from_wire_prediction(prediction=wire, width=3, height=2)
 
     assert wire.mask_png is not None
     assert restored.mask is not None
@@ -116,7 +118,7 @@ def test_from_wire_prediction__invalid_mask(mask_png: str) -> None:
     wire = WirePrediction(class_name="car", box=(0.0, 0.0, 3.0, 2.0), score=0.9, mask_png=mask_png)
 
     with pytest.raises(ValueError, match="not a base64 PNG file"):
-        labeling_protocol.from_wire_prediction(prediction=wire)
+        labeling_protocol.from_wire_prediction(prediction=wire, width=3, height=2)
 
 
 @pytest.mark.parametrize(
@@ -133,14 +135,40 @@ def test_from_wire_prediction__mask_not_one_bit_png(
         class_name="car",
         box=(0.0, 0.0, 3.0, 2.0),
         score=0.9,
-        mask_png=_encode_image(mode=mode, image_format=image_format),
+        mask_png=_encode_image(mode=mode, image_format=image_format, width=3, height=2),
     )
 
     with pytest.raises(ValueError, match=message):
-        labeling_protocol.from_wire_prediction(prediction=wire)
+        labeling_protocol.from_wire_prediction(prediction=wire, width=3, height=2)
 
 
-def _encode_image(mode: str, image_format: str) -> str:
+def test_from_wire_prediction__mask_size_not_image_size() -> None:
+    wire = WirePrediction(
+        class_name="car",
+        box=(0.0, 0.0, 3.0, 2.0),
+        score=0.9,
+        mask_png=_encode_image(mode="1", image_format="PNG", width=3, height=2),
+    )
+
+    with pytest.raises(ValueError, match="size"):
+        labeling_protocol.from_wire_prediction(prediction=wire, width=2, height=3)
+
+
+def test_from_wire_prediction__decompression_bomb(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Pillow refuses more than 2 * MAX_IMAGE_PIXELS pixels, and the mask has 3 * 2 = 6.
+    monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 2)
+    wire = WirePrediction(
+        class_name="car",
+        box=(0.0, 0.0, 3.0, 2.0),
+        score=0.9,
+        mask_png=_encode_image(mode="1", image_format="PNG", width=3, height=2),
+    )
+
+    with pytest.raises(ValueError, match="more pixels than Pillow allows"):
+        labeling_protocol.from_wire_prediction(prediction=wire, width=3, height=2)
+
+
+def _encode_image(mode: str, image_format: str, width: int, height: int) -> str:
     buffer = io.BytesIO()
-    PILImage.new(mode=mode, size=(3, 2)).save(buffer, format=image_format)
+    PILImage.new(mode=mode, size=(width, height)).save(buffer, format=image_format)
     return base64.b64encode(buffer.getvalue()).decode("ascii")
