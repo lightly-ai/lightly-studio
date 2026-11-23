@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -14,25 +15,11 @@ from lightly_studio.database import schema_compat
 from lightly_studio.models.schema_compat import SchemaCompatTable
 
 
-def _engine(tmp_path: Path, with_row: bool) -> Engine:
-    engine = create_engine(f"duckdb:///{tmp_path / 'test.db'}")
-    SQLModel.metadata.create_all(bind=engine)
-    if with_row:
-        with Session(engine) as session:
-            session.add(SchemaCompatTable(id=1, oss_revision="abc123", min_client_version="1.0"))
-            session.commit()
-    return engine
-
-
 def test_on_version_apply__updates_oss_revision(tmp_path: Path, mocker: MockerFixture) -> None:
-    engine = _engine(tmp_path=tmp_path, with_row=True)
-    step = mocker.MagicMock(is_upgrade=True)
-    step.up_revision.module = SimpleNamespace()
+    engine = _create_engine_with_tables(tmp_path=tmp_path)
+    _insert_row(engine=engine, oss_revision="abc123", min_client_version="1.0")
 
-    with engine.begin() as connection:
-        schema_compat.on_version_apply(
-            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
-        )
+    _apply(engine=engine, mocker=mocker, is_upgrade=True, module_attributes={}, heads={"def456"})
 
     row = schema_compat.read_schema_compat(engine=engine)
     assert row is not None
@@ -42,14 +29,16 @@ def test_on_version_apply__updates_oss_revision(tmp_path: Path, mocker: MockerFi
 def test_on_version_apply__writes_declared_min_client_version(
     tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    engine = _engine(tmp_path=tmp_path, with_row=True)
-    step = mocker.MagicMock(is_upgrade=True)
-    step.up_revision.module = SimpleNamespace(min_client_version="1.9")
+    engine = _create_engine_with_tables(tmp_path=tmp_path)
+    _insert_row(engine=engine, oss_revision="abc123", min_client_version="1.0")
 
-    with engine.begin() as connection:
-        schema_compat.on_version_apply(
-            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
-        )
+    _apply(
+        engine=engine,
+        mocker=mocker,
+        is_upgrade=True,
+        module_attributes={"min_client_version": "1.9"},
+        heads={"def456"},
+    )
 
     row = schema_compat.read_schema_compat(engine=engine)
     assert row is not None
@@ -59,14 +48,16 @@ def test_on_version_apply__writes_declared_min_client_version(
 def test_on_version_apply__downgrade_keeps_min_client_version(
     tmp_path: Path, mocker: MockerFixture
 ) -> None:
-    engine = _engine(tmp_path=tmp_path, with_row=True)
-    step = mocker.MagicMock(is_upgrade=False)
-    step.up_revision.module = SimpleNamespace(min_client_version="1.9")
+    engine = _create_engine_with_tables(tmp_path=tmp_path)
+    _insert_row(engine=engine, oss_revision="abc123", min_client_version="1.0")
 
-    with engine.begin() as connection:
-        schema_compat.on_version_apply(
-            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
-        )
+    _apply(
+        engine=engine,
+        mocker=mocker,
+        is_upgrade=False,
+        module_attributes={"min_client_version": "1.9"},
+        heads={"def456"},
+    )
 
     row = schema_compat.read_schema_compat(engine=engine)
     assert row is not None
@@ -74,18 +65,70 @@ def test_on_version_apply__downgrade_keeps_min_client_version(
 
 
 def test_on_version_apply__no_table(tmp_path: Path, mocker: MockerFixture) -> None:
-    engine = create_engine(f"duckdb:///{tmp_path / 'test.db'}")
-    step = mocker.MagicMock(is_upgrade=True)
-    step.up_revision.module = SimpleNamespace(min_client_version="1.9")
-
     # Before the revision that creates the table, the hook does nothing.
-    with engine.begin() as connection:
-        schema_compat.on_version_apply(
-            ctx=mocker.MagicMock(connection=connection), step=step, heads={"def456"}, run_args={}
-        )
+    engine = create_engine(f"duckdb:///{tmp_path / 'test.db'}")
+
+    _apply(
+        engine=engine,
+        mocker=mocker,
+        is_upgrade=True,
+        module_attributes={"min_client_version": "1.9"},
+        heads={"def456"},
+    )
+
+    assert schema_compat.read_schema_compat(engine=engine) is None
+
+
+def test_on_version_apply__offline_mode(mocker: MockerFixture) -> None:
+    # Offline mode has a mock connection that cannot be inspected.
+    ctx = mocker.MagicMock(as_sql=True)
+
+    schema_compat.on_version_apply(ctx=ctx, step=mocker.MagicMock(), heads={"def456"}, run_args={})
+
+    ctx.connection.execute.assert_not_called()
 
 
 def test_read_schema_compat__no_row(tmp_path: Path) -> None:
-    engine = _engine(tmp_path=tmp_path, with_row=False)
+    engine = _create_engine_with_tables(tmp_path=tmp_path)
 
     assert schema_compat.read_schema_compat(engine=engine) is None
+
+
+def test_read_schema_compat__no_table(tmp_path: Path) -> None:
+    engine = create_engine(f"duckdb:///{tmp_path / 'test.db'}")
+
+    assert schema_compat.read_schema_compat(engine=engine) is None
+
+
+def _create_engine_with_tables(tmp_path: Path) -> Engine:
+    engine = create_engine(f"duckdb:///{tmp_path / 'test.db'}")
+    SQLModel.metadata.create_all(bind=engine)
+    return engine
+
+
+def _insert_row(engine: Engine, oss_revision: str, min_client_version: str) -> None:
+    with Session(engine) as session:
+        session.add(
+            SchemaCompatTable(
+                id=1, oss_revision=oss_revision, min_client_version=min_client_version
+            )
+        )
+        session.commit()
+
+
+def _apply(
+    engine: Engine,
+    mocker: MockerFixture,
+    is_upgrade: bool,
+    module_attributes: Mapping[str, str],
+    heads: set[str],
+) -> None:
+    step = mocker.MagicMock(is_upgrade=is_upgrade)
+    step.up_revision.module = SimpleNamespace(**module_attributes)
+    with engine.begin() as connection:
+        schema_compat.on_version_apply(
+            ctx=mocker.MagicMock(as_sql=False, connection=connection),
+            step=step,
+            heads=heads,
+            run_args={},
+        )

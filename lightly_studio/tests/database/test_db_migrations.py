@@ -130,7 +130,7 @@ def test_postgres_fresh_database__upgrade_head(
         assert version == head_revision
         row = schema_compat.read_schema_compat(engine=engine._engine)
         assert row is not None
-        assert (row.oss_revision, row.min_client_version) == (head_revision, "1.2.1")
+        assert (row.oss_revision, row.min_client_version) == (head_revision, "1.5.0")
     finally:
         _restore_shared_database_to_head(engine=engine._engine, engine_url=postgres_url)
         engine.close()

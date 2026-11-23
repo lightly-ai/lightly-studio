@@ -24,7 +24,8 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 # The lowest lightly-studio version that can use the schema of this revision.
-min_client_version = "1.2.1"
+# Clients up to 1.4.0 fail on the foreign key of 1e2ff606de9f when they delete a label.
+min_client_version = "1.5.0"
 
 
 def upgrade() -> None:

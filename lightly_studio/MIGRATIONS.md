@@ -27,6 +27,11 @@ min_client_version = "1.9.0"
 
 The upgrade writes this value to the row in the transaction of that revision. Add new columns as nullable or with a default, so that most revisions do not need it.
 
+- The value must never go down. Do not declare a value that is lower than the value of an earlier revision.
+- A downgrade keeps `min_client_version`.
+- The row records only one head, so keep the history linear: rebase a new revision on the current head, do not merge two branches.
+- Offline mode (`--sql`) does not update the row.
+
 ## Local Postgres setup
 
 Required for autogenerate and migration checks:
