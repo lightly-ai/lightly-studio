@@ -21,13 +21,10 @@ fix: keep the selected tag when the grid reloads
 
 ## Size
 
-- The Fast Track guardrail fails a PR that adds more than 215 lines. Deleted lines do not count.
-- Aim for less than 100 added lines of core logic.
-- The guardrail does not count `uv.lock`, the `package-lock.json` files,
-  `lightly_studio/tests/benchmarks/`, and `lightly_studio/src/lightly_studio/vendor/`.
-- Measure the committed changes before each push:
-  `git diff --numstat $(git merge-base origin/main HEAD) HEAD`. For a stacked PR, use the parent
-  branch in place of `origin/main`.
+- Add less than 200 lines of core logic. Tests, deleted lines, and generated files do not count.
+- The Fast Track guardrail measures this approximately. Run it on the committed changes before
+  each push: `cd fast_track && GUARDRAILS=diff-size make run-guardrails`. For a stacked PR, add
+  `BASE_REF=<parent branch>`.
 - The limit is a target, not a hard rule. Split a larger change into stacked PRs if each part is
   reviewable alone. Do not split one coherent change only to fit; a larger PR gets a human review.
 
