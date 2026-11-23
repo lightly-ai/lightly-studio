@@ -24,7 +24,7 @@ from lightly_studio.core.file_outcome_report import (
     FileOutcomeReport,
     MissingInputFileError,
 )
-from lightly_studio.core.mcap import dataset_schema, matching, reference_frames
+from lightly_studio.core.mcap import dataset_schema, matching, recording_rows, reference_frames
 from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.create_mcap import CreateMcap
 from lightly_studio.core.mcap.create_sensor_calibration import CreateSensorCalibration
@@ -34,8 +34,6 @@ from lightly_studio.core.mcap.reader import (
     STATIC_TRANSFORM_TOPIC,
     McapFileReader,
 )
-from lightly_studio.core.mcap.recording import Recording
-from lightly_studio.core.mcap.sequence import McapSequenceEntry
 from lightly_studio.core.mcap.type_definitions import (
     CameraIntrinsics,
     FrameLocator,
@@ -43,7 +41,18 @@ from lightly_studio.core.mcap.type_definitions import (
 )
 from lightly_studio.database import db_manager
 from lightly_studio.models.mcap import McapCreate
-from lightly_studio.resolvers import group_resolver, mcap_resolver, recording_resolver
+from lightly_studio.models.recording import RecordingFormat
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
+from lightly_studio.resolvers import (
+    dynamic_transform_resolver,
+    group_resolver,
+    mcap_group_sequence_resolver,
+    mcap_resolver,
+    recording_resolver,
+    sensor_calibration_resolver,
+    sequence_resolver,
+    static_transform_resolver,
+)
 
 if TYPE_CHECKING:
     from lightly_studio.core.mcap.component import McapComponent
@@ -215,33 +224,47 @@ def index_recording(  # noqa: PLR0913
     )
     logger.info("Indexing %d ticks of '%s'.", len(rows), mcap_path)
 
-    recording = dataset.create_recording(uri=mcap_path)
+    session = dataset.group_dataset.session
+    recording_id = recording_resolver.create(
+        session=session, dataset_id=dataset.dataset_id, uri=mcap_path, format_=RecordingFormat.MCAP
+    )
     _add_calibrations(
-        recording=recording,
+        session=session,
+        recording_id=recording_id,
         components=components,
         mcap_components=mcap_components,
         loaded=loaded,
     )
-    _add_static_transforms(recording=recording, static_transforms=loaded.static_transforms)
-    _add_dynamic_transforms(recording=recording, dynamic_transforms=loaded.dynamic_transforms)
-    recording.set_reference_frame_ids(frame_ids=frame_ids)
+    _add_static_transforms(
+        session=session, recording_id=recording_id, static_transforms=loaded.static_transforms
+    )
+    _add_dynamic_transforms(
+        session=session, recording_id=recording_id, dynamic_transforms=loaded.dynamic_transforms
+    )
+    recording_resolver.set_reference_frame_ids(
+        session=session, recording_id=recording_id, frame_ids=frame_ids
+    )
     _fill_mcap_definitions(components=components, mcap_components=mcap_components, loaded=loaded)
 
-    sequence = dataset.create_sequence(recording_id=recording.recording_id)
+    sequence_sample_id = mcap_group_sequence_resolver.create(
+        session=session, collection_id=dataset.collection_id, recording_id=recording_id
+    )
     group_sample_ids = _write_groups(
         dataset=dataset, components=components, mcap_components=mcap_components, rows=rows
     )
-    sequence.add_samples(
-        entries=[
-            McapSequenceEntry(
+    sequence_resolver.add_samples(
+        session=session,
+        sequence_sample_id=sequence_sample_id,
+        links=[
+            SampleSequenceLinkCreate(
                 sample_id=group_sample_id,
                 seq_number=seq_number,
                 timestamp_ns=row[sync_object.name].capture_timestamp_ns,
             )
             for seq_number, (group_sample_id, row) in enumerate(zip(group_sample_ids, rows))
-        ]
+        ],
     )
-    return sequence.sample_id
+    return sequence_sample_id
 
 
 class _LoadedRecording(NamedTuple):
@@ -442,26 +465,30 @@ def _tick_rows(
 
 
 def _add_calibrations(
-    recording: Recording,
+    session: Session,
+    recording_id: UUID,
     components: Sequence[McapComponentSpec],
     mcap_components: Mapping[str, McapComponent],
     loaded: _LoadedRecording,
 ) -> None:
     """Store the intrinsics of the cameras of the recording, if it has any."""
     calibrations = [
-        CreateSensorCalibration.from_camera_intrinsics(
-            collection_id=mcap_components[component.name].collection_id,
-            intrinsics=loaded.intrinsics[component.name],
+        recording_rows.sensor_calibration_create(
+            recording_id=recording_id,
+            calibration=CreateSensorCalibration.from_camera_intrinsics(
+                collection_id=mcap_components[component.name].collection_id,
+                intrinsics=loaded.intrinsics[component.name],
+            ),
         )
         for component in components
         if component.is_camera
     ]
     if calibrations:
-        recording.add_sensor_calibrations(calibrations=calibrations)
+        sensor_calibration_resolver.create_many(session=session, rows=calibrations)
 
 
 def _add_static_transforms(
-    recording: Recording, static_transforms: Sequence[StaticTransform]
+    session: Session, recording_id: UUID, static_transforms: Sequence[StaticTransform]
 ) -> None:
     """Store the static transforms of the recording, if it has any.
 
@@ -470,11 +497,17 @@ def _add_static_transforms(
     """
     edges = _latest_static_transform_per_child(static_transforms)
     if edges:
-        recording.add_static_transforms(transforms=edges)
+        static_transform_resolver.create_many(
+            session=session,
+            rows=[
+                recording_rows.static_transform_create(recording_id=recording_id, transform=edge)
+                for edge in edges
+            ],
+        )
 
 
 def _add_dynamic_transforms(
-    recording: Recording, dynamic_transforms: Sequence[StaticTransform]
+    session: Session, recording_id: UUID, dynamic_transforms: Sequence[StaticTransform]
 ) -> None:
     """Store every dynamic transform of the recording, if it has any.
 
@@ -482,7 +515,13 @@ def _add_dynamic_transforms(
     a timestamp.
     """
     if dynamic_transforms:
-        recording.add_dynamic_transforms(transforms=dynamic_transforms)
+        dynamic_transform_resolver.create_many(
+            session=session,
+            rows=[
+                recording_rows.dynamic_transform_create(recording_id=recording_id, transform=edge)
+                for edge in dynamic_transforms
+            ],
+        )
 
 
 def _dynamic_edges(
