@@ -19,6 +19,9 @@ import { EXCLUDED_BY_FILTERS_CATEGORY } from './plotCategories';
 import { clearPlotLayout } from './usePlotLayout/usePlotLayout';
 import { clearPlotViewState, usePlotViewState } from './usePlotViewState/usePlotViewState';
 
+// Every test lays the plot out as a square of this size.
+const PLOT_SIZE_PX = 400;
+
 let rangeSelectionStore: Writable<Array<{ x: number; y: number }> | null>;
 let selectedSampleIdsStore: Writable<string[]>;
 let imageFilterStore: Writable<Record<string, unknown>>;
@@ -661,7 +664,7 @@ describe('PlotPanel.svelte', () => {
     it('shows a plot filter chip on the plot while a region is selected', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -683,7 +686,7 @@ describe('PlotPanel.svelte', () => {
 
     it('treats a short shift-drag as a click and keeps the picks', async () => {
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -709,7 +712,7 @@ describe('PlotPanel.svelte', () => {
         const viewport = () => screen.getByTestId('plot-viewport');
         const defaultViewport = JSON.stringify({ x: 0, y: 0, scale: 5 });
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -769,7 +772,7 @@ describe('PlotPanel.svelte', () => {
     it('restores the default layout and keeps descriptions', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -807,7 +810,7 @@ describe('PlotPanel.svelte', () => {
     it('disables reset while applying edited axes', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -848,7 +851,7 @@ describe('PlotPanel.svelte', () => {
     it('unmounts the plot and shows the loader while a new color-by loads', async () => {
         const user = userEvent.setup();
         vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-            () => new DOMRect(0, 0, 400, 400)
+            () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
         );
         const point = new Float32Array([0]);
         plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -923,7 +926,7 @@ describe('PlotPanel.svelte', () => {
 
         beforeEach(() => {
             vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-                () => new DOMRect(0, 0, 400, 400)
+                () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
             );
             const point = new Float32Array([0]);
             plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -1000,7 +1003,7 @@ describe('PlotPanel.svelte', () => {
 
         it('ignores a lasso and a pick on the old points', async () => {
             vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-                () => new DOMRect(0, 0, 400, 400)
+                () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
             );
             const point = new Float32Array([0]);
             plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
@@ -1028,7 +1031,7 @@ describe('PlotPanel.svelte', () => {
 
         it('ignores a lasso and a pick that start on the old points and end on the new ones', async () => {
             vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
-                () => new DOMRect(0, 0, 400, 400)
+                () => new DOMRect(0, 0, PLOT_SIZE_PX, PLOT_SIZE_PX)
             );
             const point = new Float32Array([0]);
             plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });

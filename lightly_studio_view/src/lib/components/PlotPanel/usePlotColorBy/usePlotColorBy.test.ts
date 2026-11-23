@@ -2,25 +2,29 @@ import { get, writable } from 'svelte/store';
 import { describe, expect, it, vi } from 'vitest';
 import { usePlotColorBy } from './usePlotColorBy';
 
+type UsePlotColorByParams = Parameters<typeof usePlotColorBy>[0];
+
+const createParams = (overrides: Partial<UsePlotColorByParams> = {}): UsePlotColorByParams => ({
+    selectedColorByType: writable(null),
+    selectedColorByKey: writable(null),
+    tags: writable([]),
+    annotationLabels: writable([]),
+    ...overrides
+});
+
 describe('usePlotColorBy', () => {
     it('returns null when no type is selected', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable(null),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { colorBy } = usePlotColorBy(createParams());
 
         expect(get(colorBy)).toBeNull();
     });
 
     it('returns metadata_field colorBy when metadata type is selected with a key', () => {
-        const { colorBy, setSelectedColorByKey } = usePlotColorBy({
-            selectedColorByType: writable('metadata'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { colorBy, setSelectedColorByKey } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('metadata')
+            })
+        );
 
         setSelectedColorByKey('split');
 
@@ -28,48 +32,46 @@ describe('usePlotColorBy', () => {
     });
 
     it('returns null when metadata type is selected but key is null', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('metadata'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('metadata')
+            })
+        );
 
         expect(get(colorBy)).toBeNull();
     });
 
     it('returns tag colorBy with all tag IDs when tags type is selected', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('tags'),
-            selectedColorByKey: writable(null),
-            tags: writable([{ tag_id: 'tag-a' }, { tag_id: 'tag-b' }]),
-            annotationLabels: writable([])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('tags'),
+                tags: writable([{ tag_id: 'tag-a' }, { tag_id: 'tag-b' }])
+            })
+        );
 
         expect(get(colorBy)).toEqual({ type: 'tag', tag_ids: ['tag-a', 'tag-b'] });
     });
 
     it('returns tag colorBy with empty tag_ids when no tags exist', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('tags'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('tags')
+            })
+        );
 
         expect(get(colorBy)).toEqual({ type: 'tag', tag_ids: [] });
     });
 
     it('returns annotation colorBy with all annotation label IDs when annotation_label type is selected', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('annotation_label'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([
-                { annotation_label_id: 'label-a' },
-                { annotation_label_id: 'label-b' }
-            ])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('annotation_label'),
+                annotationLabels: writable([
+                    { annotation_label_id: 'label-a' },
+                    { annotation_label_id: 'label-b' }
+                ])
+            })
+        );
 
         expect(get(colorBy)).toEqual({
             type: 'annotation',
@@ -78,24 +80,24 @@ describe('usePlotColorBy', () => {
     });
 
     it('returns annotation colorBy with empty annotation_label_ids when no annotation labels exist', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('annotation_label'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('annotation_label')
+            })
+        );
 
         expect(get(colorBy)).toEqual({ type: 'annotation', annotation_label_ids: [] });
     });
 
     it('reacts to selectedColorByType changes', () => {
         const selectedColorByType = writable<'metadata' | 'tags' | 'annotation_label' | null>(null);
-        const { colorBy, setSelectedColorByKey } = usePlotColorBy({
-            selectedColorByType,
-            selectedColorByKey: writable(null),
-            tags: writable([{ tag_id: 'tag-a' }]),
-            annotationLabels: writable([{ annotation_label_id: 'label-a' }])
-        });
+        const { colorBy, setSelectedColorByKey } = usePlotColorBy(
+            createParams({
+                selectedColorByType,
+                tags: writable([{ tag_id: 'tag-a' }]),
+                annotationLabels: writable([{ annotation_label_id: 'label-a' }])
+            })
+        );
 
         setSelectedColorByKey('split');
         expect(get(colorBy)).toBeNull();
@@ -117,12 +119,11 @@ describe('usePlotColorBy', () => {
     });
 
     it('reacts to selectedColorByKey changes', () => {
-        const { colorBy, setSelectedColorByKey } = usePlotColorBy({
-            selectedColorByType: writable('metadata'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { colorBy, setSelectedColorByKey } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('metadata')
+            })
+        );
 
         expect(get(colorBy)).toBeNull();
 
@@ -134,12 +135,7 @@ describe('usePlotColorBy', () => {
     });
 
     it('exposes selectedColorByKey as a readable', () => {
-        const { selectedColorByKey, setSelectedColorByKey } = usePlotColorBy({
-            selectedColorByType: writable(null),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { selectedColorByKey, setSelectedColorByKey } = usePlotColorBy(createParams());
 
         expect(get(selectedColorByKey)).toBeNull();
 
@@ -149,12 +145,12 @@ describe('usePlotColorBy', () => {
 
     it('reacts to tags changes', () => {
         const tags = writable<{ tag_id: string }[]>([]);
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('tags'),
-            selectedColorByKey: writable(null),
-            tags,
-            annotationLabels: writable([])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('tags'),
+                tags
+            })
+        );
 
         expect(get(colorBy)).toEqual({ type: 'tag', tag_ids: [] });
 
@@ -164,12 +160,12 @@ describe('usePlotColorBy', () => {
 
     it('reacts to annotationLabels changes', () => {
         const annotationLabels = writable<{ annotation_label_id: string }[]>([]);
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('annotation_label'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('annotation_label'),
+                annotationLabels
+            })
+        );
 
         expect(get(colorBy)).toEqual({ type: 'annotation', annotation_label_ids: [] });
 
@@ -183,45 +179,46 @@ describe('usePlotColorBy', () => {
         });
     });
     it('is undefined while annotation labels load', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('annotation_label'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable(undefined)
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('annotation_label'),
+                annotationLabels: writable(undefined)
+            })
+        );
 
         expect(get(colorBy)).toBeUndefined();
     });
 
     it('fetches with no label ids when the collection has none', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('annotation_label'),
-            selectedColorByKey: writable(null),
-            tags: writable([]),
-            annotationLabels: writable([])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('annotation_label')
+            })
+        );
 
         expect(get(colorBy)).toEqual({ type: 'annotation', annotation_label_ids: [] });
     });
 
     it('ignores loading labels for other modes', () => {
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('tags'),
-            selectedColorByKey: writable(null),
-            tags: writable([{ tag_id: 'tag-a' }]),
-            annotationLabels: writable(undefined)
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('tags'),
+                tags: writable([{ tag_id: 'tag-a' }]),
+                annotationLabels: writable(undefined)
+            })
+        );
 
         expect(get(colorBy)).toEqual({ type: 'tag', tag_ids: ['tag-a'] });
     });
     it('does not emit again when the tags change in annotation mode', () => {
         const tags = writable([{ tag_id: 'tag-a' }]);
-        const { colorBy } = usePlotColorBy({
-            selectedColorByType: writable('annotation_label'),
-            selectedColorByKey: writable(null),
-            tags,
-            annotationLabels: writable([{ annotation_label_id: 'label-a' }])
-        });
+        const { colorBy } = usePlotColorBy(
+            createParams({
+                selectedColorByType: writable('annotation_label'),
+                tags,
+                annotationLabels: writable([{ annotation_label_id: 'label-a' }])
+            })
+        );
         const colorByUpdates = vi.fn();
         colorBy.subscribe(colorByUpdates);
 
