@@ -22,7 +22,7 @@ const classificationFields: FieldDoc[] = [
     {
         name: 'source',
         type: 'string',
-        description: 'Annotation source collection name.'
+        description: 'Annotation source.'
     },
     {
         name: 'confidence',
@@ -159,7 +159,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'source',
                 type: 'string',
-                description: 'Annotation source collection name.'
+                description: 'Annotation source.'
             },
             {
                 name: 'confidence',
@@ -192,7 +192,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'source',
                 type: 'string',
-                description: 'Annotation source collection name.'
+                description: 'Annotation source.'
             },
             {
                 name: 'confidence',
