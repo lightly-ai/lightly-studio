@@ -64,7 +64,7 @@
     import { usePlotColorBy } from './usePlotColorBy/usePlotColorBy';
     import { useAnnotationLabels } from '$lib/hooks/useAnnotationLabels/useAnnotationLabels';
     import { useSelectedAnnotationsFilter } from '$lib/hooks/useAnnotationsFilter/useAnnotationsFilter';
-    import { writable, get, readable } from 'svelte/store';
+    import { writable, get, readable, toStore } from 'svelte/store';
     import { usePostHog } from '$lib/hooks';
 
     const NO_LEGEND = new Map<number, string>();
@@ -191,27 +191,23 @@
         hiddenCategories,
         toggleCategoryVisibility,
         focusCategoryVisibility,
-        resetCategoryVisibility
+        clearForColorByMode
     } = useCategoryVisibility({
         getCollectionId: () => collectionId,
-        getColorByType: () => get(selectedColorByType)
+        getColorByType: () => get(selectedColorByType),
+        colorLegend: toStore(() => colorLegend),
+        hiddenKeys: writable(new Set<string>())
     });
 
-    // The backend re-ranks color slots per request, so a stale toggle would hide the wrong slot;
-    // reset hidden categories on every legend change. EXCLUDED keeps its meaning, so it always
-    // survives. INCLUDED is relabeled with the color-by mode, so it survives only a filter-only
-    // change — else a hidden "No category" would empty the plot once all points collapse into it.
-    let previousColorByKey: string | undefined = undefined;
+    // Other color-by modes have other labels. The tag and label IDs in the color-by change when
+    // the user creates a tag or a label, so only the type and the metadata key count as the mode.
+    let previousColorByMode: string | undefined = undefined;
     $effect(() => {
-        void colorLegend;
-        const colorByKey = JSON.stringify($colorBy);
-        const colorByChanged = colorByKey !== previousColorByKey;
-        previousColorByKey = colorByKey;
-        resetCategoryVisibility(
-            colorByChanged
-                ? [EXCLUDED_BY_FILTERS_CATEGORY]
-                : [EXCLUDED_BY_FILTERS_CATEGORY, INCLUDED_BY_FILTERS_CATEGORY]
-        );
+        const colorByMode = JSON.stringify([$selectedColorByType, $selectedColorByKey]);
+        const isModeChange =
+            previousColorByMode !== undefined && colorByMode !== previousColorByMode;
+        previousColorByMode = colorByMode;
+        if (isModeChange) untrack(clearForColorByMode);
     });
 
     const hasActiveFilter = $derived(filter !== null || pickedSampleIds.length > 0);
