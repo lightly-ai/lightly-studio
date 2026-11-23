@@ -10,6 +10,9 @@ from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.mcap_group_component_definition import (
+    McapGroupComponentDefinitionCreate,
+)
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
 from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
@@ -195,6 +198,16 @@ class IngestionTransport(Protocol):
 
         Raises:
             ValueError: If `rows` is empty, or if a frame ID is empty.
+        """
+
+    def add_mcap_component_definitions(
+        self, rows: Sequence[McapGroupComponentDefinitionCreate]
+    ) -> None:
+        """Add the MCAP definitions of the component collections of an MCAP dataset.
+
+        Raises:
+            ValueError: If a collection is not a group component, or if its sample type is
+                not MCAP.
         """
 
     def add_mcaps_from_path(  # noqa: PLR0913

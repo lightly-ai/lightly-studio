@@ -126,7 +126,6 @@ class McapDataset:
 
         root_collection, group_collection = dataset_schema.create_collections(name=name)
         dataset_schema.create_components(
-            session=db_manager.persistent_session(),
             group_collection_id=group_collection.collection_id,
             components=components,
         )
