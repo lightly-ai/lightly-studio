@@ -15,7 +15,7 @@ def test_verify_table_coverage() -> None:
 
 
 def test_verify_table_coverage__ignores_table_in_other_schema() -> None:
-    with _extra_table(schema="enterprise"):
+    with _extra_table(schema="extension"):
         table_coverage_utils.verify_table_coverage()
 
 
