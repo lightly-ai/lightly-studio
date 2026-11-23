@@ -212,7 +212,15 @@ For data fetching and API work:
 
 - Use [TanStack Query](https://tanstack.com/query/latest/docs/framework/svelte/overview) for all data fetching.
 - The query result is a **reactive proxy** (not a Svelte store). Access properties like `query.isSuccess`, `query.data` directly — no `$` prefix needed.
-- Parse or reshape a response in the query's `select`, not in an effect or async reader that tracks its own request ids or "same input" guards: the query already drops stale responses and memoizes `select`. Combining `query.data` with local state in `$derived` is fine.
+- Parse or reshape a response in the query's `select`, not in an effect or a separate async reader
+  with its own request ids. The query already ignores stale responses. Combining `query.data`
+  with local state in `$derived` is fine.
+  - Define `select` at module level. An inline `select` is a new function on each options run, so
+    it runs again every time.
+  - `select` is sync. Do async work, like reading a `Blob`, in `queryFn`.
+  - For a non-JSON response, such as an `ArrayBuffer`, an equal refetch still runs `select` again
+    and returns new objects. To keep the result stable, pass a custom `structuralSharing`. It runs
+    on both the raw response and the `select` result.
 - Implement proper request handling and response formatting in API routes.
 
 **Store-based hook example** ([playground](https://svelte.dev/playground/hello-world?version=5.32.1#H4sIAAAAAAAAE3WRwW6DMBBEf2W1qhSioqS9koBU9TNKD8TZVFZhjex1kwr53yvjhkCVXjisZ2aHtwNy0xEW6B29Gs9CFujSdH1LmONJt-SweBtQvvuoigPMr56Xvt-4L2olzg6No3tzZViIxWGBe6es7gXahj_KGsXVWNUMAKC73liBAWY1Apys6WC12d6GG3GrXc3JpAy76FHxLQfNylJHLBCgnAVl613N-23aXUXz_uBFDINh1Wr1WQ7ZGsrqFpAtw2-vMaKA4WHcEWJO8lY1Y45CF8FCrKeQ_8No0X2J6e_TjNTE42y1NIeWJhqJ69aJsZRQJAxjQSgnw559dyBbZU_rUUWXMfHkWYk2vOADQ_rb9J0kMx5XRcLuWTa-PzZCWaZGdAoe4TkuioJwPdCUZMmRjOvuRTmS1HJhtiTe8p3z5rM4CLuaw_IS7zlKo9uz5iMWp6Z1FH4Aaa7hNOYCAAA=)):
