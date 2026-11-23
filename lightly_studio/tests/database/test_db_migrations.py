@@ -16,8 +16,16 @@ from sqlmodel import Session, SQLModel
 
 from lightly_studio.database import db_migrations, db_url
 from lightly_studio.database.db_manager import DatabaseEngine
+from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
+from lightly_studio.models.sample import SampleTable
 from lightly_studio.models.sample_embedding import SampleEmbeddingTable
-from tests.helpers_resolvers import create_collection, create_embedding_model, create_image
+from tests.helpers_resolvers import (
+    create_annotation_label,
+    create_collection,
+    create_embedding_model,
+    create_image,
+)
 
 _POSTGRES_URL = "postgresql://localhost/db"
 
@@ -226,6 +234,76 @@ def test_postgres_unused_embedding_cache__upgrade_and_downgrade(
             )
             assert (
                 connection.execute(text("SELECT data FROM embedding_plot")).scalar_one() == b"saved"
+            )
+    finally:
+        _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
+        engine.dispose()
+
+
+def test_postgres_polygon_annotation__upgrade_and_downgrade(
+    postgres_url: str | None,
+) -> None:
+    """Store polygon parts as JSON and remove the polygon table on downgrade."""
+    if postgres_url is None:
+        pytest.skip("Requires --postgres")
+    _reset_postgres_database(engine_url=postgres_url)
+    engine = create_engine(db_url.ensure_psycopg3_driver(engine_url=postgres_url))
+    config = db_migrations.get_alembic_config(engine_url=postgres_url)
+    polygons = [
+        [(10.5, 20.0), (30.0, 20.0), (30.0, 40.25)],
+        [(50.0, 50.0), (60.0, 50.0), (60.0, 60.0)],
+    ]
+    try:
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.upgrade, revision="head"
+        )
+        with Session(engine) as session:
+            collection = create_collection(session=session)
+            image = create_image(session=session, collection_id=collection.collection_id)
+            label = create_annotation_label(
+                session=session, root_collection_id=collection.collection_id
+            )
+            annotation_sample = SampleTable(collection_id=collection.collection_id)
+            session.add(annotation_sample)
+            session.flush()
+            session.add(
+                AnnotationBaseTable(
+                    sample_id=annotation_sample.sample_id,
+                    annotation_type=AnnotationType.POLYGON,
+                    annotation_label_id=label.annotation_label_id,
+                    parent_sample_id=image.sample_id,
+                )
+            )
+            session.flush()
+            session.add(
+                PolygonAnnotationTable(
+                    sample_id=annotation_sample.sample_id,
+                    x=10,
+                    y=20,
+                    width=50,
+                    height=40,
+                    polygons=polygons,
+                )
+            )
+            session.commit()
+        with engine.connect() as connection:
+            assert connection.execute(
+                text("SELECT polygons FROM polygon_annotation")
+            ).scalar_one() == [
+                [[10.5, 20.0], [30.0, 20.0], [30.0, 40.25]],
+                [[50.0, 50.0], [60.0, 50.0], [60.0, 60.0]],
+            ]
+        config.attributes.pop("connection", None)
+        command.check(config)
+        db_migrations._run_alembic_command(
+            engine=engine, config=config, fn=command.downgrade, revision="1e2ff606de9f"
+        )
+        assert not db_migrations._get_inspector(engine=engine).has_table(
+            table_name="polygon_annotation"
+        )
+        with engine.connect() as connection:
+            assert (
+                connection.execute(text("SELECT count(*) FROM annotation_base")).scalar_one() == 0
             )
     finally:
         _restore_shared_database_to_head(engine=engine, engine_url=postgres_url)
