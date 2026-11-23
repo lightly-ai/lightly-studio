@@ -42,6 +42,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - A hidden "Excluded by filters" class in the embedding plot stays hidden after you draw a selection.
 
+- Hidden classes in the embedding plot legend stay hidden after a filter change, also when the legend order changes.
+
 ### Security
 
 ## \[1.4.0\] - 2026-11-18
