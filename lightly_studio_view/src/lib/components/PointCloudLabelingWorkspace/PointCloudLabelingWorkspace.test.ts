@@ -2,6 +2,8 @@ import { beforeAll, describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/svelte';
 import { flushSync } from 'svelte';
 import userEvent from '@testing-library/user-event';
+import { toast } from 'svelte-sonner';
+import type { Writable } from 'svelte/store';
 import PointCloudLabelingWorkspace from './PointCloudLabelingWorkspace.svelte';
 
 const {
@@ -11,7 +13,10 @@ const {
     schedulerParams,
     prefetchState,
     updateAnnotations,
-    invalidateQueries
+    invalidateQueries,
+    classDialog,
+    setIsEditingMode,
+    executeReversibleAction
 } = vi.hoisted(() => ({
     cloudQuery: {
         data: undefined as unknown,
@@ -37,7 +42,10 @@ const {
         retryFailed: vi.fn().mockResolvedValue(undefined),
         cancel: vi.fn()
     },
-    invalidateQueries: vi.fn()
+    invalidateQueries: vi.fn(),
+    classDialog: { isOpen: undefined as Writable<boolean> | undefined },
+    setIsEditingMode: vi.fn(),
+    executeReversibleAction: vi.fn()
 }));
 
 vi.mock('$lib/hooks/useUpdateAnnotationsMutation/useUpdateAnnotationsMutation', () => ({
@@ -112,10 +120,11 @@ vi.mock('$lib/hooks/useMcapTickDetailsPrefetch/useMcapTickPrefetchScheduler.svel
 
 vi.mock('./useCreateCuboidAnnotation', async () => {
     const { writable } = await import('svelte/store');
+    classDialog.isOpen = writable(false);
     return {
         useCreateCuboidAnnotation: () => ({
             handleCreateCuboid: vi.fn(),
-            showSelectClassDialog: writable(false),
+            showSelectClassDialog: classDialog.isOpen,
             handleClassSelected: vi.fn(),
             handleClassDialogCancel: vi.fn(),
             getRememberedLabel: () => undefined,
@@ -132,7 +141,12 @@ vi.mock('$lib/hooks/useGlobalStorage', async () => {
             isEditingMode: writable(true),
             lastAnnotationSource: writable({}),
             updateLastAnnotationSource: vi.fn(),
-            removeLastAnnotationSource: vi.fn()
+            removeLastAnnotationSource: vi.fn(),
+            setIsEditingMode,
+            reversibleActions: writable([
+                { id: 'move-cuboid', description: 'Move cuboid', execute: vi.fn() }
+            ]),
+            executeReversibleAction
         })
     };
 });
@@ -234,6 +248,8 @@ describe('PointCloudLabelingWorkspace', () => {
         sessionStorage.removeItem('lightlyStudio_pointCloudBufferEntireSequence');
         sessionStorage.removeItem('lightlyStudio_pointCloudAccumulate');
         sessionStorage.removeItem('lightlyStudio_pointCloudAccumulationRadius');
+        classDialog.isOpen?.set(false);
+        Reflect.deleteProperty(document, 'fullscreenElement');
     });
     beforeAll(() => {
         Element.prototype.scrollIntoView = vi.fn();
@@ -330,6 +346,27 @@ describe('PointCloudLabelingWorkspace', () => {
 
         expect(screen.getByRole('button', { name: 'Pause frames' })).toBeInTheDocument();
         dialog.remove();
+    });
+
+    it('shows the class picker, toasts, and the edit controls in fullscreen', async () => {
+        render(PointCloudLabelingWorkspace, { props: defaultProps });
+        const workspace = screen.getByTestId('point-cloud-labeling-workspace');
+        expect(screen.queryByTestId('workspace-fullscreen-bar')).not.toBeInTheDocument();
+
+        Object.defineProperty(document, 'fullscreenElement', {
+            configurable: true,
+            get: () => workspace
+        });
+        await fireEvent(document, new Event('fullscreenchange'));
+        classDialog.isOpen?.set(true);
+        toast.error('Saving the cuboid failed');
+
+        expect(await within(workspace).findByRole('dialog')).toBeInTheDocument();
+        expect(await within(workspace).findByText('Saving the cuboid failed')).toBeInTheDocument();
+        await fireEvent.click(within(workspace).getByRole('button', { name: 'Undo' }));
+        expect(executeReversibleAction).toHaveBeenCalledWith('move-cuboid');
+        await fireEvent.click(within(workspace).getByRole('button', { name: 'Finish Editing' }));
+        expect(setIsEditingMode).toHaveBeenCalledWith(false);
     });
 
     it('shows loading when no cloud frame is available', () => {

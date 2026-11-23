@@ -15,6 +15,14 @@ import { toast } from 'svelte-sonner';
 
 vi.mock('svelte-sonner', () => ({ toast: { error: vi.fn() } }));
 
+const { globalStorage } = vi.hoisted(() => ({
+    globalStorage: { current: {} as Record<string, unknown> }
+}));
+
+vi.mock('$lib/hooks/useGlobalStorage', () => ({
+    useGlobalStorage: () => globalStorage.current
+}));
+
 describe('Header', () => {
     const mockCollection: CollectionView = {
         collection_id: 'test-collection',
@@ -35,15 +43,14 @@ describe('Header', () => {
     const mockPage = (props: SetupProps) => {
         const setIsEditingModeSpy = vi.fn();
         const executeReversibleActionSpy = props.executeReversibleAction || vi.fn();
+        globalStorage.current = {
+            isEditingMode: writable(props?.isEditingMode),
+            setIsEditingMode: setIsEditingModeSpy,
+            reversibleActions: writable(props.reversibleActions || []),
+            executeReversibleAction: executeReversibleActionSpy
+        };
         vi.spyOn(appState, 'page', 'get').mockReturnValue({
-            data: {
-                globalStorage: {
-                    isEditingMode: writable(props?.isEditingMode),
-                    setIsEditingMode: setIsEditingModeSpy,
-                    reversibleActions: writable(props.reversibleActions || []),
-                    executeReversibleAction: executeReversibleActionSpy
-                }
-            },
+            data: {},
             params: {
                 collection_id: props.collection?.collection_id || 'test-collection'
             },
@@ -287,11 +294,10 @@ describe('Header', () => {
 
             const undoButton = screen.getByTestId('header-reverse-action-button');
 
-            // Click and wait for async operation
-            const clickPromise = fireEvent.click(undoButton);
-            await clickPromise;
+            await fireEvent.click(undoButton);
 
             expect(executeReversibleActionMock).toHaveBeenCalledWith('async-action');
+            await vi.waitFor(() => expect(undoButton).toHaveAttribute('aria-busy', 'false'));
         });
 
         it('shows a spinning loader and blocks a second undo while the undo runs', async () => {
