@@ -7,7 +7,7 @@ from alembic import op
 from sqlmodel.sql.sqltypes import AutoString
 
 revision = "4a26bbcf161f"
-down_revision = "8660d246e98e"
+down_revision = "1e2ff606de9f"
 branch_labels = None
 depends_on = None
 
