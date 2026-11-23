@@ -166,6 +166,32 @@ def test_predict__not_an_image() -> None:
     assert model.received == []
 
 
+def test_predict__truncated_header() -> None:
+    model = FakeLabelingModel()
+    client = TestClient(create_app(labeling_model=model))
+    # A header chunk of 12 bytes, one byte too short. Pillow stops before the checksum.
+    truncated_png = b"\x89PNG\r\n\x1a\n" + b"\x00\x00\x00\x0cIHDR" + bytes(12) + bytes(4)
+
+    response = _post_predict(client=client, threshold="0.5", image=truncated_png)
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "The image cannot be decoded."}
+    assert model.received == []
+
+
+def test_predict__too_many_pixels(monkeypatch: pytest.MonkeyPatch) -> None:
+    model = FakeLabelingModel()
+    client = TestClient(create_app(labeling_model=model))
+    # Pillow refuses an image with more than twice this number of pixels. The image has 3 x 2.
+    monkeypatch.setattr(PILImage, "MAX_IMAGE_PIXELS", 2)
+
+    response = _post_predict(client=client, threshold="0.5")
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": "The image cannot be decoded."}
+    assert model.received == []
+
+
 @pytest.mark.parametrize("threshold", ["1.5", "-0.1", "nan", "high"])
 def test_predict__invalid_threshold(threshold: str) -> None:
     model = FakeLabelingModel()

@@ -74,12 +74,12 @@ def mount_labeling_routes(
 
 def _decode(file: UploadFile) -> Image:
     """Read the uploaded file as an RGB image, or answer 422 if it is not an image."""
-    data = file.file.read()
+    image_bytes = file.file.read()
     file.file.close()
     try:
-        with PILImage.open(io.BytesIO(data)) as image_file:
+        with PILImage.open(io.BytesIO(image_bytes)) as image_file:
             return image_file.convert("RGB")
-    except (UnidentifiedImageError, OSError) as error:
+    except (UnidentifiedImageError, PILImage.DecompressionBombError, OSError, ValueError) as error:
         raise HTTPException(
             status_code=labeling_protocol.STATUS_UNUSABLE_INPUT,
             detail="The image cannot be decoded.",
