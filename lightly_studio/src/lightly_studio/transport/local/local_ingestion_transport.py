@@ -66,6 +66,18 @@ class LocalIngestionTransport:
             session=db_manager.persistent_session(), collection_id=collection_id, images=images
         )
 
+    def add_directory_tags(
+        self, collection_id: UUID, path: str, sample_ids: Sequence[UUID], tag_depth: int
+    ) -> None:
+        """Tag images with the names of the folders between `path` and the image file."""
+        add_images.tag_samples_by_directory(
+            session=db_manager.persistent_session(),
+            collection_id=collection_id,
+            input_path=path,
+            sample_ids=list(sample_ids),
+            tag_depth=tag_depth,
+        )
+
     def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
         """Compute embeddings for images with the default embedding model of the collection.
 
