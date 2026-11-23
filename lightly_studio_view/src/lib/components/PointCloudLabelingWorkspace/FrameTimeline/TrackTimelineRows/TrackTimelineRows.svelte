@@ -84,6 +84,10 @@
         }))
     );
     const tagItems = $derived(frameTags.map((tag) => ({ value: tag.tag_id, label: tag.name })));
+    const hasRows = $derived(tracks.length > 0 || (showFrameTags && frameTags.length > 0));
+    // A stored choice can hold ids of removed rows; they must not count as selected.
+    const keepListedIds = (ids: string[], items: { value: string }[]) =>
+        ids.filter((id) => items.some((item) => item.value === id));
     let trackToDelete = $state<SequenceTrackView | null>(null);
     let isDeleteDialogOpen = $state(false);
     const requestDelete = (track: SequenceTrackView) => {
@@ -114,19 +118,19 @@
     };
 </script>
 
-{#if tracks.length > 0 || onStartTrack || onAddTrack || onShowFrameTagsChange}
-    {#if tracks.length > 0}
+{#if hasRows || onStartTrack || onAddTrack || onShowFrameTagsChange}
+    {#if hasRows}
         <TrackRowsResizer {rowsHeight} getRenderedHeight={getRowsRenderedHeight} />
     {/if}
     <div class="w-full border-t px-2 pb-1" data-testid="object-track-rows">
         <!-- Sticks under the ruler (`h-8`) and the resize handle (`h-2`) when it is shown. -->
-        <div class="sticky z-20 bg-background py-1 {tracks.length > 0 ? 'top-10' : 'top-8'}">
+        <div class="sticky z-20 bg-background py-1 {hasRows ? 'top-10' : 'top-8'}">
             <TrackTimelineToolbar
                 trackVisibility={tracks.length > 0
                     ? {
                           items: trackItems,
                           visibleCount: visible.visibleTracks.length,
-                          selectedIds: visible.selectedKeys,
+                          selectedIds: keepListedIds(visible.selectedKeys, trackItems),
                           onChange: visible.setSelection
                       }
                     : null}
@@ -140,7 +144,7 @@
                     ? {
                           items: tagItems,
                           visibleCount: visibleTags.visibleTags.length,
-                          selectedIds: visibleTags.selectedIds,
+                          selectedIds: keepListedIds(visibleTags.selectedIds, tagItems),
                           onChange: visibleTags.setSelection
                       }
                     : undefined}

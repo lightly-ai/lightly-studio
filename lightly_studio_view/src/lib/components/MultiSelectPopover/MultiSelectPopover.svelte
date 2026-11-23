@@ -46,10 +46,6 @@
         testId
     }: Props = $props();
     let open = $state(false);
-    // Drop ids of removed items and repeats, so the count never exceeds the item total.
-    const existingIds = $derived(
-        items.map((item) => item.value).filter((id) => selectedIds.includes(id))
-    );
 </script>
 
 <Popover.Root bind:open>
@@ -77,7 +73,7 @@
     <Popover.Content class={cn('w-[280px] p-2', contentClass)} {align}>
         <MultiSelectList
             {items}
-            selectedIds={existingIds}
+            {selectedIds}
             {onChange}
             {showSelectAll}
             {itemNoun}

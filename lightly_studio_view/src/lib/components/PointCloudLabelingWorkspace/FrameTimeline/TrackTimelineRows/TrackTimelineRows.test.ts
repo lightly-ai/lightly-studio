@@ -312,6 +312,20 @@ describe('TrackTimelineRows', () => {
             expect(screen.getByTitle('occluded · Frame 3')).toBeTruthy();
         });
 
+        it('can resize the frame tag rows without tracks', () => {
+            render(TrackTimelineRows, {
+                props: {
+                    ...defaultProps,
+                    tracks: [],
+                    showFrameTags: true,
+                    frameTags: [{ tag_id: 'tag-1', name: 'occluded', seq_numbers: [2] }]
+                }
+            });
+
+            expect(screen.getByTitle('occluded · Frame 3')).toBeTruthy();
+            expect(screen.getByTestId('track-rows-resizer')).toBeTruthy();
+        });
+
         it('hides the frame tag rows while frame tags are not shown', () => {
             render(TrackTimelineRows, {
                 props: {

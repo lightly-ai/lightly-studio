@@ -8,7 +8,7 @@ from sqlmodel import Session
 
 from lightly_studio.models.mcap_sequence_ticks import TickTagListView, TickTagView
 from lightly_studio.resolvers import sequence_resolver
-from lightly_studio.services.recording_service.get_ticks import get_ticks
+from lightly_studio.services.recording_service import sequence_belongs_to_dataset
 
 
 def get_tick_tags(
@@ -27,7 +27,9 @@ def get_tick_tags(
         One entry per tag that is on at least one tick, ordered by tag name, or `None`
         if the sequence does not exist or does not belong to `dataset_id`.
     """
-    if get_ticks(session=session, dataset_id=dataset_id, sequence_id=sequence_id) is None:
+    if not sequence_belongs_to_dataset.sequence_belongs_to_dataset(
+        session=session, sequence_id=sequence_id, dataset_id=dataset_id
+    ):
         return None
     tags_by_id: dict[UUID, TickTagView] = {}
     for tag, seq_number in sequence_resolver.get_tag_links(
