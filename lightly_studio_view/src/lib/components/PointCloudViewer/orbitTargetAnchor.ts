@@ -89,10 +89,12 @@ export function createOrbitTargetAnchor(controls: OrbitControls, scene: Object3D
 
     function anchor() {
         const depth = findViewDepth(camera, scene) ?? camera.position.distanceTo(controls.target);
+        // A NaN target gives a NaN depth. The finite distance replaces the broken target.
+        const targetDistance = Number.isFinite(depth)
+            ? Math.max(depth, MIN_TARGET_DISTANCE)
+            : MIN_TARGET_DISTANCE;
         camera.getWorldDirection(forward);
-        controls.target
-            .copy(camera.position)
-            .addScaledVector(forward, Math.max(depth, MIN_TARGET_DISTANCE));
+        controls.target.copy(camera.position).addScaledVector(forward, targetDistance);
     }
 
     controls.addEventListener('start', anchor);

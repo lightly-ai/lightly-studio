@@ -102,6 +102,18 @@ describe('createOrbitTargetAnchor', () => {
         expect(camera.position.distanceTo(controls.target)).toBeCloseTo(1);
     });
 
+    it('replaces a NaN orbit target when no point is at the center of the view', () => {
+        const { camera, controls } = createControls([0, 0, 10], [0, 0, 0]);
+        const { scene } = createScene([50, 0, 0]);
+        const { anchor } = createOrbitTargetAnchor(controls, scene);
+        controls.target.set(NaN, NaN, NaN);
+
+        anchor();
+
+        expect(controls.target.distanceTo(new Vector3(0, 0, 9))).toBeCloseTo(0);
+        expect(camera.position.distanceTo(controls.target)).toBeCloseTo(1);
+    });
+
     it('stops moving the orbit target after disposal', () => {
         const { controls } = createControls([0, -10, 10], [0, 5, -5]);
         const { scene } = createScene([0, 0, 0]);
