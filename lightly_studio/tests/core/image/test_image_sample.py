@@ -568,10 +568,9 @@ class TestImageSample:
         (annotation,) = image.annotations
         assert isinstance(annotation, PolygonAnnotation)
 
-        with pytest.raises(AttributeError):
-            annotation.width = 10  # type: ignore[misc]
-        with pytest.raises(AttributeError):
-            annotation.polygons = []  # type: ignore[misc]
+        for name, value in [("x", 1), ("y", 1), ("width", 10), ("height", 10), ("polygons", [])]:
+            with pytest.raises(AttributeError):
+                setattr(annotation, name, value)
 
     def test_polygon_annotation__wrong_type(self, db_session: Session) -> None:
         collection = create_collection(session=db_session)
