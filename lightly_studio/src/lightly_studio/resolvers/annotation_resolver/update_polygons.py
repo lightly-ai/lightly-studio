@@ -6,8 +6,9 @@ from uuid import UUID
 
 from sqlmodel import Session
 
+from lightly_studio.models.annotation import polygon
 from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable
-from lightly_studio.models.annotation.polygon import Polygons, validate_polygons
+from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.resolvers import annotation_resolver
 
 
@@ -36,7 +37,7 @@ def update_polygons(
     if not details:
         raise ValueError("Annotation type does not support polygons.")
 
-    validated = validate_polygons(polygons=polygons)
+    validated = polygon.validate_polygons(polygons=polygons)
     try:
         details.polygons = validated.polygons
         details.x = validated.x

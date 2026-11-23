@@ -72,7 +72,10 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             annotation_id=annotation_update.annotation_id,
             polygons=annotation_update.polygons,
         )
-    _check_time_span_is_complete(annotation_update=annotation_update)
+    _check_time_span_is_complete(
+        start_time_s=annotation_update.start_time_s,
+        end_time_s=annotation_update.end_time_s,
+    )
     if annotation_update.start_time_s is not None and annotation_update.end_time_s is not None:
         result = annotations_service.update_temporal_span(
             session=session,
@@ -106,6 +109,6 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
     return result
 
 
-def _check_time_span_is_complete(annotation_update: AnnotationUpdate) -> None:
-    if (annotation_update.start_time_s is None) != (annotation_update.end_time_s is None):
+def _check_time_span_is_complete(start_time_s: float | None, end_time_s: float | None) -> None:
+    if (start_time_s is None) != (end_time_s is None):
         raise ValueError("Both start_time_s and end_time_s must be provided together.")
