@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-    PLOT_COMPUTE_CONFIRM_THRESHOLD,
-    getPlotComputeView,
-    isPlotRequestEnabled,
-    type PlotComputeView
-} from './plotComputeGate';
+import { getPlotComputeView, isPlotRequestEnabled, type PlotComputeView } from './plotComputeGate';
 
 type GateInput = Parameters<typeof getPlotComputeView>[0];
 
@@ -39,10 +34,6 @@ describe('getPlotComputeView', () => {
         [{ status: { is_computed: false, embedding_count: 0 } }, 'computing']
     ])('getPlotComputeView(%o) is %s', (input, expected) => {
         expect(getPlotComputeView({ ...defaultInput, ...input })).toBe(expected);
-    });
-
-    it('uses 250,000 as the threshold', () => {
-        expect(PLOT_COMPUTE_CONFIRM_THRESHOLD).toBe(250_000);
     });
 });
 

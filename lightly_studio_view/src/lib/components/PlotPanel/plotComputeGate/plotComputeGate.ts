@@ -1,7 +1,7 @@
 import type { Embeddings2dStatus } from '$lib/api/lightly_studio_local';
 
 // A first PaCMAP compute above this many embeddings can run for minutes, so the panel asks first.
-export const PLOT_COMPUTE_CONFIRM_THRESHOLD = 250_000;
+const PLOT_COMPUTE_CONFIRM_THRESHOLD = 250_000;
 
 export type PlotComputeView = 'checking' | 'error' | 'prompt' | 'computing' | 'plot';
 
