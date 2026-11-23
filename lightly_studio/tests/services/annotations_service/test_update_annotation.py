@@ -212,9 +212,7 @@ def test_update_annotation__marks_evaluation_run_stale(db_session: Session) -> N
 def test_update_annotation__polygons(db_session: Session) -> None:
     collection = create_collection(session=db_session)
     image = create_image(session=db_session, collection_id=collection.collection_id)
-    label = create_annotation_label(
-        session=db_session, root_collection_id=collection.collection_id
-    )
+    label = create_annotation_label(session=db_session, root_collection_id=collection.collection_id)
     annotation = create_annotation(
         session=db_session,
         collection_id=collection.collection_id,
