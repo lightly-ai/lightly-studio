@@ -129,7 +129,23 @@ describe('createWorkflowFileContext', () => {
                 'the reviewer annotates',
                 { state: 'not_started' as const, your_role: 'reviewer' as const }
             ],
-            ['the user cannot edit the file', { state: 'not_started' as const, can_edit: false }]
+            [
+                'it is not the user’s turn',
+                { state: 'not_started' as const, can_edit: false, your_turn: false }
+            ],
+            [
+                'an unassigned admin annotates',
+                {
+                    state: 'not_started' as const,
+                    your_role: null,
+                    can_edit: true,
+                    your_turn: false
+                }
+            ],
+            [
+                'an admin labeler annotates out of turn',
+                { state: 'not_started' as const, can_edit: true, your_turn: false }
+            ]
         ])('does nothing when %s', async (_, change) => {
             const moves = stubService({ ...workflowFile, ...change });
             const context = await renderLoadedContext(change.state);

@@ -27,12 +27,12 @@ export function roundText({ state, round }: Pick<WorkflowFile, 'state' | 'round'
 }
 
 /** Whose turn it is on a file, from the current user's point of view. */
-export function turnText(file: Pick<WorkflowFile, 'state' | 'can_edit' | 'waiting_for'>): {
+export function turnText(file: Pick<WorkflowFile, 'state' | 'your_turn' | 'waiting_for'>): {
     text: string;
     yourTurn: boolean;
 } {
     if (file.state === 'accepted') return { text: 'Done', yourTurn: false };
-    if (file.can_edit) return { text: 'Your turn', yourTurn: true };
+    if (file.your_turn) return { text: 'Your turn', yourTurn: true };
     return { text: `Waiting for ${file.waiting_for ?? 'an assignee'}`, yourTurn: false };
 }
 
@@ -44,7 +44,7 @@ export function readOnlyText(
     const labeler = file.labeler ?? 'The labeler';
     const reviewer = file.reviewer ?? 'the reviewer';
     if (file.state === 'accepted') {
-        return `Accepted by ${reviewer}. Accepted files are read-only for everyone.`;
+        return `Accepted by ${reviewer}. Only an admin can change an accepted file.`;
     }
     if (file.your_role === 'reviewer') {
         return `${labeler} is working on this file. You can edit it once it’s submitted for review.`;

@@ -20,7 +20,7 @@ describe('WorkflowFileStatus', () => {
                     ...workflowFile,
                     state: 'rework',
                     round: 2,
-                    can_edit: false
+                    your_turn: false
                 }
             }
         });

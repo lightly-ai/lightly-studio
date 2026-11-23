@@ -21,7 +21,10 @@ export interface WorkflowFile {
     labeler: string | null;
     reviewer: string | null;
     your_role: 'labeler' | 'reviewer' | null;
+    /** The user may edit the annotations now: on their turn, or always as an admin. */
     can_edit: boolean;
+    /** It is the user's turn on this file as its labeler or reviewer. */
+    your_turn: boolean;
     /** States the current user may move the file to right now. */
     allowed_transitions: WorkflowFileState[];
     waiting_for: string | null;

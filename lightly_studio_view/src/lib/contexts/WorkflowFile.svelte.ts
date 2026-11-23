@@ -71,7 +71,7 @@ export function createWorkflowFileContext(
                 file?.sample_id !== sampleId ||
                 file.state !== 'not_started' ||
                 file.your_role !== 'labeler' ||
-                !file.can_edit
+                !file.your_turn
             ) {
                 return;
             }

@@ -283,6 +283,29 @@ describe('SampleDetailsPanel keyboard shortcuts', () => {
             expect(mockAnnotationLabelContext.annotationId).toBe('a1');
         });
 
+        it('deletes on an accepted batch file for an admin', async () => {
+            workflow = {
+                active: true,
+                canEdit: true,
+                isError: false,
+                file: {
+                    ...workflowFile,
+                    state: 'accepted',
+                    your_role: null,
+                    can_edit: true,
+                    your_turn: false,
+                    allowed_transitions: ['rework'],
+                    waiting_for: null
+                }
+            };
+            renderWithSelectedAnnotation();
+
+            await fireEvent.keyDown(window, { key: 'Delete' });
+            await vi.waitFor(() => {
+                expect(mockAnnotationLabelContext.annotationId).toBeNull();
+            });
+        });
+
         it('does nothing on a batch file when it is not the user’s turn', async () => {
             workflow = {
                 active: true,
@@ -388,6 +411,29 @@ describe('SampleDetailsPanel batch context', () => {
         userRole = 'labeler';
     });
 
+    it('shows no read-only banner to an admin editing an accepted file', () => {
+        workflow = {
+            active: true,
+            canEdit: true,
+            isError: false,
+            file: {
+                ...workflowFile,
+                state: 'accepted',
+                your_role: null,
+                can_edit: true,
+                your_turn: false,
+                allowed_transitions: ['rework'],
+                waiting_for: null
+            }
+        };
+
+        render(SampleDetailsPanel, { props: defaultProps });
+
+        expect(screen.getByTestId('workflow-state-badge')).toHaveTextContent('Accepted');
+        expect(screen.getByTestId('workflow-turn')).toHaveTextContent('Done');
+        expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
     it('shows the file state, whose turn it is, and why the file is read-only', () => {
         workflow = {
             active: true,
@@ -397,6 +443,7 @@ describe('SampleDetailsPanel batch context', () => {
                 ...workflowFile,
                 state: 'in_review',
                 can_edit: false,
+                your_turn: false,
                 waiting_for: 'marta@example.com'
             }
         };

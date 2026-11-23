@@ -3,7 +3,7 @@
     import { TURN_COLORS, WORKFLOW_STATES, roundText, turnText } from '../workflowFileTexts';
 
     interface Props {
-        file: Pick<WorkflowFile, 'state' | 'round' | 'can_edit' | 'waiting_for'>;
+        file: Pick<WorkflowFile, 'state' | 'round' | 'your_turn' | 'waiting_for'>;
     }
 
     const { file }: Props = $props();
