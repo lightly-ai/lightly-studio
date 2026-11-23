@@ -67,7 +67,7 @@ describe('diffSizeGuardrail', () => {
             ])
         );
         expect(result.status).toBe('pass');
-        expect(result.summary).toContain('10');
+        expect(result.summary).toContain('adds 10 non-test');
     });
 
     it('ignores files under excluded directory prefixes', async () => {
@@ -89,7 +89,7 @@ describe('diffSizeGuardrail', () => {
             ])
         );
         expect(result.status).toBe('pass');
-        expect(result.summary).toContain('10');
+        expect(result.summary).toContain('adds 10 non-test');
     });
 
     it('ignores test files even when their additions would exceed the limit', async () => {
@@ -111,7 +111,7 @@ describe('diffSizeGuardrail', () => {
             ])
         );
         expect(result.status).toBe('pass');
-        expect(result.summary).toContain('10');
+        expect(result.summary).toContain('adds 10 non-test');
     });
 });
 

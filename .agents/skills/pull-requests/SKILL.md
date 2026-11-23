@@ -33,8 +33,7 @@ fix: keep the selected tag when the grid reloads
 - A PR does one thing. Do not mix unrelated changes.
 - Put a refactor in a different PR from a behavior change. A small cleanup next to the main
   change is acceptable.
-- Add tests for new behavior in the same PR. Move them to a second PR only if the first PR
-  becomes too large.
+- Add tests for new behavior in the same PR.
 
 ## Description
 
