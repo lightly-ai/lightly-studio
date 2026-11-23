@@ -3,6 +3,7 @@
 	import SelectScrollUpButton from "./select-scroll-up-button.svelte";
 	import SelectScrollDownButton from "./select-scroll-down-button.svelte";
 	import { cn } from "$lib/utils/shadcn.js";
+	import { usePortalTarget } from "$lib/contexts/PortalTarget";
 
 	let {
 		ref = $bindable(null),
@@ -14,9 +15,11 @@
 	}: WithoutChild<SelectPrimitive.ContentProps> & {
 		portalProps?: SelectPrimitive.PortalProps;
 	} = $props();
+
+	const getPortalTarget = usePortalTarget();
 </script>
 
-<SelectPrimitive.Portal {...portalProps}>
+<SelectPrimitive.Portal to={getPortalTarget()} {...portalProps}>
 	<SelectPrimitive.Content
 		bind:ref
 		{sideOffset}

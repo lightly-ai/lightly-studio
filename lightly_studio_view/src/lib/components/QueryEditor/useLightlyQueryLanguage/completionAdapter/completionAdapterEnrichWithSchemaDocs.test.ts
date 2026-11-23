@@ -42,7 +42,7 @@ describe('enrichWithSchemaDocs', () => {
         const sourceResult = enrichWithSchemaDocs({ label: 'source' } as never, 'classification');
         expect(sourceResult.detail).toBe('Classification.source: string');
         expect(sourceResult.documentation).toEqual({
-            value: 'Annotation source collection name.'
+            value: 'Annotation source.'
         });
 
         const confidenceResult = enrichWithSchemaDocs(

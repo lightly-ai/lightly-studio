@@ -1,0 +1,101 @@
+"""Ingestion transport that calls the v1 REST API."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping, Sequence
+from uuid import UUID
+
+import httpx
+
+from lightly_studio.core.create_sample import CreateSample
+from lightly_studio.models.dynamic_transform import DynamicTransformCreate
+from lightly_studio.models.image import AddImagesResult, ImageCreate
+from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
+from lightly_studio.models.static_transform import StaticTransformCreate
+
+
+class HttpIngestionTransport:
+    """Implements `IngestionTransport` over HTTP. The v1 API has no ingestion routes yet."""
+
+    def __init__(self, client: httpx.Client) -> None:
+        """Create the transport with an HTTP client for the Studio backend."""
+        self._client = client
+
+    def add_images_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        allowed_extensions: Sequence[str] | None,
+        embed: bool,
+        tag_depth: int,
+        limit: int | None,
+    ) -> None:
+        """Add the raw images from a path to a collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding images over HTTP is not supported yet.")
+
+    def add_images(self, collection_id: UUID, images: Sequence[ImageCreate]) -> AddImagesResult:
+        """Add images with known dimensions to a collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding images over HTTP is not supported yet.")
+
+    def add_directory_tags(
+        self, collection_id: UUID, path: str, sample_ids: Sequence[UUID], tag_depth: int
+    ) -> None:
+        """Tag images with the names of their folders. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding directory tags over HTTP is not supported yet.")
+
+    def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for images. Not supported over HTTP yet."""
+        raise NotImplementedError("Embedding images over HTTP is not supported yet.")
+
+    def add_videos_from_path(  # noqa: PLR0913
+        self,
+        collection_id: UUID,
+        path: str,
+        allowed_extensions: Sequence[str] | None,
+        num_decode_threads: int | None,
+        embed: bool,
+        embed_frames: bool,
+        target_fps: float | None,
+        limit: int | None,
+    ) -> None:
+        """Add the raw videos from a path to a collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding videos over HTTP is not supported yet.")
+
+    def add_videos(
+        self,
+        collection_id: UUID,
+        paths: Sequence[str],
+        embed_frames: bool,
+        target_fps: float | None,
+    ) -> dict[str, UUID]:
+        """Add videos from a list of file paths to a collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding videos over HTTP is not supported yet.")
+
+    def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for videos. Not supported over HTTP yet."""
+        raise NotImplementedError("Embedding videos over HTTP is not supported yet.")
+
+    def add_group_samples(
+        self, collection_id: UUID, groups: Sequence[Mapping[str, CreateSample]]
+    ) -> list[UUID]:
+        """Add group samples to a group collection. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding group samples over HTTP is not supported yet.")
+
+    def add_sensor_calibrations(self, rows: Sequence[SensorCalibrationCreate]) -> list[UUID]:
+        """Add camera calibrations. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding sensor calibrations over HTTP is not supported yet.")
+
+    def add_static_transforms(self, rows: Sequence[StaticTransformCreate]) -> list[UUID]:
+        """Add static transforms. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding transforms over HTTP is not supported yet.")
+
+    def add_dynamic_transforms(self, rows: Sequence[DynamicTransformCreate]) -> list[UUID]:
+        """Add dynamic transforms. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding transforms over HTTP is not supported yet.")
+
+    def add_sequence_samples(
+        self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]
+    ) -> None:
+        """Put groups in the slots of an MCAP sequence. Not supported over HTTP yet."""
+        raise NotImplementedError("Adding sequence samples over HTTP is not supported yet.")

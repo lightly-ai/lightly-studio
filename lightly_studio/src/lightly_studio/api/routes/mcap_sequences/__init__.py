@@ -19,6 +19,7 @@ from lightly_studio.api.routes.mcap_sequences.get_sequence_tracks import get_seq
 from lightly_studio.api.routes.mcap_sequences.get_summary import get_summary_router
 from lightly_studio.api.routes.mcap_sequences.get_tick_data import get_tick_data_router
 from lightly_studio.api.routes.mcap_sequences.get_tick_details import get_tick_details_router
+from lightly_studio.api.routes.mcap_sequences.get_tick_tags import get_tick_tags_router
 from lightly_studio.api.routes.mcap_sequences.get_ticks import get_ticks_router
 from lightly_studio.api.routes.mcap_sequences.start_sequence_track import (
     start_sequence_track_router,
@@ -31,6 +32,7 @@ mcap_sequences_router = APIRouter(
 mcap_sequences_router.include_router(get_summary_router)
 mcap_sequences_router.include_router(get_ticks_router)
 mcap_sequences_router.include_router(get_tick_details_router)
+mcap_sequences_router.include_router(get_tick_tags_router)
 mcap_sequences_router.include_router(get_tick_data_router)
 mcap_sequences_router.include_router(get_sequence_tracks_router)
 mcap_sequences_router.include_router(start_sequence_track_router)

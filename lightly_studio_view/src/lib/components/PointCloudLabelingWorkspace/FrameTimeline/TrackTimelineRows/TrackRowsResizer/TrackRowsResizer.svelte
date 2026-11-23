@@ -5,7 +5,10 @@
         type useTrackRowsHeight
     } from './useTrackRowsHeight.svelte';
 
-    /** A handle above the track rows: drag up for taller rows, down for shorter ones. */
+    /**
+     * A handle above the track rows: drag up for taller rows, down for shorter ones. It sticks
+     * under the ruler, whose height is `h-8`.
+     */
     interface Props {
         rowsHeight: ReturnType<typeof useTrackRowsHeight>;
         /** The height the rows currently have on screen. */
@@ -31,7 +34,7 @@
     aria-valuemin={MIN_TRACK_ROWS_HEIGHT}
     aria-valuemax={MAX_TRACK_ROWS_HEIGHT}
     tabindex="0"
-    class="group flex h-2 cursor-row-resize touch-none items-center justify-center bg-card"
+    class="group sticky top-8 z-20 flex h-2 cursor-row-resize touch-none items-center justify-center bg-card"
     data-testid="track-rows-resizer"
     onpointerdown={(event) => rowsHeight.startDrag(event, getRenderedHeight?.())}
     onpointermove={rowsHeight.drag}

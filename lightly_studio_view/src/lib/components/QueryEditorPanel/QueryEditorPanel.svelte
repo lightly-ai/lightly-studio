@@ -3,7 +3,7 @@
     import { useQueryClient } from '@tanstack/svelte-query';
     import { toast } from 'svelte-sonner';
     import { QueryEditor, useQueryEditor } from '$lib/components/QueryEditor';
-    import { useQueryHistory, type useImageFilters } from '$lib/hooks';
+    import { useQueryHistory, useTags, type useImageFilters } from '$lib/hooks';
 
     import QueryEditorPanelHeader from './QueryEditorPanelHeader.svelte';
     import QueryHistoryMenu from './QueryHistoryMenu.svelte';
@@ -14,6 +14,7 @@
     interface Props {
         /** Invoked when the user clicks the close button in the panel header. */
         onClose: () => void;
+        /** Collection whose tags the editor validates tag names against. */
         collectionId: string;
         sampleType: 'image' | 'video';
         queryExpression: QueryExpression | null;
@@ -23,6 +24,9 @@
     type OnSaveHandler = ComponentProps<typeof QueryEditor>['onSave'];
 
     const { onClose, collectionId, sampleType, queryExpression, updateQueryExpr }: Props = $props();
+    const { tags, isLoading, error } = $derived(useTags({ collection_id: collectionId }));
+    // Skip the tag check until the tags are known, to avoid false warnings.
+    const tagNames = $derived($isLoading || $error ? undefined : $tags.map((tag) => tag.name));
     const queryClient = useQueryClient();
     const { translateQuery } = useQueryEditor();
     const { queryHistory, addQuery } = useQueryHistory();
@@ -67,6 +71,7 @@
             {sampleType}
             value={queryExpression?.query_expr_str}
             draft={draftQuery}
+            {tagNames}
             onSave={handleQueryEditorValueChange}
         >
             {#snippet footerActions()}
