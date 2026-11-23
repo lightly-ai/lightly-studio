@@ -44,6 +44,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Hidden classes in the embedding plot legend stay hidden after a filter change, also when the legend order changes.
 
+- The embedding plot keeps its hidden classes, zoom and active tool when you close it or switch tabs.
+
 ### Security
 
 ## \[1.4.0\] - 2026-11-18
