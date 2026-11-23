@@ -290,10 +290,14 @@
         savePlotSelection({ embeddingRegion, sampleIds: [] });
         setPlotSelectionCount(collectionId, count);
     };
+    // A gesture that starts on the old points stays ignored, even when the new points land
+    // before the release.
+    let isPressOnOldPoints = false;
+    const isOnOldPoints = () => embeddingsData.isPlaceholderData || isPressOnOldPoints;
     // The sequences grid has no sample-id filter, so it does not support picks. While new points
     // load, a pick on the old points could select a point that the new filter excludes.
     const commitPickedSampleIds = (sampleIds: string[]) => {
-        if (isSequences || embeddingsData.isPlaceholderData) return;
+        if (isSequences || isOnOldPoints()) return;
         if (sampleIds.length === 0) {
             clearPlotFilter();
             return;
@@ -322,7 +326,7 @@
         }
         // While new points load, the counts below come from the old points, so the drawn
         // selection is dropped.
-        if (embeddingsData.isPlaceholderData) {
+        if (isOnOldPoints()) {
             setRangeSelection(null);
             pendingSelectionType = null;
             return;
@@ -510,7 +514,7 @@
     };
     const {
         librarySelection,
-        onPointerDown: onPlotPointerDown,
+        onPointerDown: onPickPointerDown,
         onSelection,
         isShortShiftDrag,
         pickPressedPoint
@@ -520,6 +524,10 @@
             typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
         commitPickedSampleIds
     });
+    const onPlotPointerDown = (event: PointerEvent) => {
+        isPressOnOldPoints = embeddingsData.isPlaceholderData;
+        onPickPointerDown(event);
+    };
     const hoveredSampleId = $derived(
         typeof tooltip?.identifier === 'string' && $rangeSelection === null
             ? tooltip.identifier

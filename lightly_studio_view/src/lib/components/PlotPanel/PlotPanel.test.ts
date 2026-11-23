@@ -959,6 +959,34 @@ describe('PlotPanel.svelte', () => {
             expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
         });
 
+        it('ignores a lasso and a pick that start on the old points and end on the new ones', async () => {
+            vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(
+                () => new DOMRect(0, 0, 400, 400)
+            );
+            const point = new Float32Array([0]);
+            plotDataStore.set({ x: point, y: point, category: new Uint8Array([0]) });
+            const embeddings = {
+                isLoading: false,
+                isPlaceholderData: true,
+                data: { columns: {}, legend: new Map() }
+            };
+            vi.mocked(useEmbeddings).mockReturnValue(
+                embeddings as unknown as ReturnType<typeof useEmbeddings>
+            );
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+            const plot = await screen.findByTestId('plot-viewport');
+
+            plot.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, shiftKey: true }));
+            embeddings.isPlaceholderData = false;
+            rangeSelectionStore.set(SQUARE_POLYGON);
+            selectedSampleIdsStore.set(['sample-1']);
+            await fireEvent.mouseUp(window);
+            await fireEvent.click(screen.getByRole('button', { name: 'Pick point' }));
+
+            expect(mockUpdatePlotSelection).not.toHaveBeenCalled();
+            expect(mockSetPlotSelectionCount).not.toHaveBeenCalled();
+        });
+
         it('shows the full loader when the color-by changes', async () => {
             vi.mocked(useEmbeddings).mockReturnValue({
                 isError: false,
