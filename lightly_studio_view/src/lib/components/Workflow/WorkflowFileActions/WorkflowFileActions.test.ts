@@ -167,6 +167,15 @@ describe('WorkflowFileActions', () => {
             expect(await openMenu(user)).toEqual(['Reopen (send back to Rework)']);
         });
 
+        it('lists only the moves in the menu, without a heading', async () => {
+            const user = userEvent.setup();
+            renderActions({ fileState: 'accepted', allowedTransitions: ADMIN_ALLOWED.accepted });
+
+            await openMenu(user);
+
+            expect(screen.getByRole('menu')).toHaveTextContent(/^Reopen \(send back to Rework\)$/);
+        });
+
         it('asks before accepting a file that skips review, then accepts it', async () => {
             const user = userEvent.setup();
             const { onTransition } = renderActions({

@@ -78,14 +78,11 @@
                     <Ellipsis class="size-4" />
                 </DropdownMenu.Trigger>
                 <DropdownMenu.Content align="end">
-                    <DropdownMenu.Group>
-                        <DropdownMenu.GroupHeading>Admin actions</DropdownMenu.GroupHeading>
-                        {#each actions.menu as action (action.target)}
-                            <DropdownMenu.Item onSelect={() => (confirming = action)}
-                                >{action.label}</DropdownMenu.Item
-                            >
-                        {/each}
-                    </DropdownMenu.Group>
+                    {#each actions.menu as action (action.target)}
+                        <DropdownMenu.Item onSelect={() => (confirming = action)}
+                            >{action.label}</DropdownMenu.Item
+                        >
+                    {/each}
                 </DropdownMenu.Content>
             </DropdownMenu.Root>
         {/if}
