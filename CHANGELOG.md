@@ -40,6 +40,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - The embedding plot selection is cleared when you switch to another tab, so the grid no longer stays narrowed after the Plot filter chip is gone.
 
+- A hidden "Excluded by filters" class in the embedding plot stays hidden after you draw a selection.
+
 ### Security
 
 ## \[1.4.0\] - 2026-11-18
