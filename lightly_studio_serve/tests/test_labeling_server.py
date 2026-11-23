@@ -120,7 +120,7 @@ def test_predict() -> None:
     body = PredictionsResponse.model_validate(response.json())
     assert body.model_id == "car-detector"
     first, second = (
-        labeling_protocol.from_wire_prediction(prediction=prediction)
+        labeling_protocol.from_wire_prediction(prediction=prediction, width=WIDTH, height=HEIGHT)
         for prediction in body.predictions
     )
     assert (first.class_name, first.box, first.score) == ("car", (0.0, 0.0, 3.0, 2.0), 0.9)
