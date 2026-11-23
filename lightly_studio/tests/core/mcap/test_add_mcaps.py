@@ -10,7 +10,7 @@ from pytest_mock import MockerFixture
 from lightly_studio.analytics import tracking
 from lightly_studio.core.file_outcome_report import AllInputFilesFailedError
 from lightly_studio.core.mcap import add_mcaps, mcap_dataset
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
 from lightly_studio.core.mcap.errors import McapAccessError, TopicNotFoundError
 from lightly_studio.core.mcap.mcap_dataset import McapDataset
 from lightly_studio.core.mcap.mcap_sample import McapSample
