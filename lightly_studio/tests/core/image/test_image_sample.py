@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from pytest_mock import MockerFixture
 from sqlmodel import Session
@@ -15,11 +17,13 @@ from lightly_studio.core.annotation.polygon import PolygonAnnotation
 from lightly_studio.core.annotation.segmentation_mask import SegmentationMaskAnnotation
 from lightly_studio.core.image.image_sample import ImageSample
 from lightly_studio.database import db_manager
-from lightly_studio.models.annotation.annotation_base import AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate, AnnotationType
 from lightly_studio.models.annotation.polygon import PolygonAnnotationTable
+from lightly_studio.models.annotation_label import AnnotationLabelView
 from lightly_studio.models.collection import CollectionCreate, SampleType
 from lightly_studio.models.evaluation_run import EvaluationRunCreate, EvaluationTaskType
 from lightly_studio.resolvers import collection_resolver, evaluation_run_resolver, image_resolver
+from lightly_studio.transport import active_transport
 from tests.helpers_resolvers import (
     create_annotation,
     create_annotation_label,
@@ -722,6 +726,41 @@ class TestImageSample:
         annotations = image.annotations
         assert len(annotations) == 2
         assert all(a.annotation_source == "model-v1" for a in annotations)
+
+    @pytest.mark.usefixtures("patch_collection")
+    def test_add_annotations__transport(self, mocker: MockerFixture) -> None:
+        session = db_manager.persistent_session()
+        collection = create_collection(session=session)
+        image_table = create_image(session=session, collection_id=collection.collection_id)
+        image = ImageSample(inner=image_table)
+        label = AnnotationLabelView(
+            dataset_id=collection.dataset_id,
+            annotation_label_name="cat",
+            annotation_label_id=uuid.uuid4(),
+        )
+        transport = mocker.Mock()
+        transport.collections.get_by_id.return_value = collection
+        transport.annotations.get_or_create_labels.return_value = [label]
+        mocker.patch.object(active_transport._active, "transport", transport)
+
+        image.add_annotations(
+            annotations=[CreateClassification(class_name="cat")], annotation_source="gt"
+        )
+
+        transport.annotations.get_or_create_labels.assert_called_once_with(
+            dataset_id=collection.dataset_id, label_names=["cat"]
+        )
+        transport.annotations.create.assert_called_once_with(
+            parent_collection_id=collection.collection_id,
+            annotations=[
+                AnnotationCreate(
+                    annotation_label_id=label.annotation_label_id,
+                    annotation_type=AnnotationType.CLASSIFICATION,
+                    parent_sample_id=image.sample_id,
+                )
+            ],
+            collection_name="gt",
+        )
 
     @pytest.mark.usefixtures("patch_collection")
     def test_delete_annotation(self) -> None:
