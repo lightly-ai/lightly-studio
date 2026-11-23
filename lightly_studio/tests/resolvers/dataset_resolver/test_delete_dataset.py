@@ -186,11 +186,27 @@ def test_delete_dataset__with_polygon_annotations(db_session: Session) -> None:
         annotation_type=AnnotationType.POLYGON,
         polygons=[[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]],
     )
-    assert db_session.exec(select(PolygonAnnotationTable)).all()
+    other_dataset = create_collection(session=db_session, collection_name="other")
+    other_image = create_image(
+        session=db_session, collection_id=other_dataset.collection_id, file_path_abs="/b.png"
+    )
+    other_label = create_annotation_label(
+        session=db_session, root_collection_id=other_dataset.collection_id, label_name="dog"
+    )
+    other_annotation = create_annotation(
+        session=db_session,
+        collection_id=other_dataset.collection_id,
+        sample_id=other_image.sample_id,
+        annotation_label_id=other_label.annotation_label_id,
+        annotation_type=AnnotationType.POLYGON,
+        polygons=[[(0.0, 0.0), (3.0, 0.0), (3.0, 3.0)]],
+    )
+    other_annotation_id = other_annotation.sample_id  # Capture before delete
 
     dataset_resolver.delete_dataset(session=db_session, dataset_id=dataset.dataset_id)
 
-    assert not db_session.exec(select(PolygonAnnotationTable)).all()
+    remaining = db_session.exec(select(PolygonAnnotationTable)).all()
+    assert [row.sample_id for row in remaining] == [other_annotation_id]
 
 
 def test_delete_dataset__with_video_and_frames(db_session: Session) -> None:
