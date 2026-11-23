@@ -279,6 +279,8 @@ class AnnotationView(BaseModel):
             annotation_label=cls.AnnotationLabel(
                 annotation_label_name=annotation.annotation_label.annotation_label_name
             ),
+            # TODO(Michal, 11/2026): Read only the details of the annotation type. Each read of an
+            # unloaded details relationship runs one lazy SELECT.
             object_detection_details=ObjectDetectionAnnotationView(
                 x=annotation.object_detection_details.x,
                 y=annotation.object_detection_details.y,
@@ -312,7 +314,9 @@ class AnnotationView(BaseModel):
             )
             if annotation.segmentation_details
             else None,
-            polygon_details=_polygon_view(annotation=annotation),
+            polygon_details=PolygonAnnotationView.model_validate(annotation.polygon_details)
+            if annotation.polygon_details
+            else None,
             tags=[
                 cls.AnnotationViewTag(tag_id=t.tag_id, name=t.name) for t in annotation.sample.tags
             ],
@@ -466,13 +470,3 @@ class AnnotationDetailsWithPayloadView(BaseModel):
     parent_sample_type: SampleType
     annotation: AnnotationView
     parent_sample_data: ImageAnnotationDetailsView | VideoFrameAnnotationDetailsView
-
-
-def _polygon_view(annotation: AnnotationBaseTable) -> PolygonAnnotationView | None:
-    # Only polygons read the details, so other types do not run a lazy SELECT.
-    if annotation.annotation_type != AnnotationType.POLYGON:
-        return None
-    details = annotation.polygon_details
-    if details is None:
-        return None
-    return PolygonAnnotationView.model_validate(details)
