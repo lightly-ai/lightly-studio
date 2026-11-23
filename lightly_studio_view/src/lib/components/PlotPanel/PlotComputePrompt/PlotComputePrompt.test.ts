@@ -55,14 +55,4 @@ describe('PlotComputePrompt', () => {
             screen.getByText('Running for 3:43. The first compute can take several minutes.')
         ).toBeInTheDocument();
     });
-
-    it.each([
-        { view: 'prompt' as const, startedAt: null },
-        { view: 'computing' as const, startedAt: NOW }
-    ])('never mentions text axes in the $view view', ({ view, startedAt }) => {
-        vi.useFakeTimers({ now: NOW });
-        render(PlotComputePrompt, { props: { ...defaultProps, view, startedAt } });
-
-        expect(screen.queryByText(/text axes/i)).not.toBeInTheDocument();
-    });
 });

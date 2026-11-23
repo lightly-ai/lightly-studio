@@ -2,7 +2,8 @@
     import ChartScatter from '@lucide/svelte/icons/chart-scatter';
     import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { Button } from '$lib/components/ui/button';
-    import { formatElapsed, type PlotComputeView } from '../plotComputeGate';
+    import { formatDuration } from '$lib/utils';
+    import type { PlotComputeView } from '../plotComputeGate';
 
     interface Props {
         view: Extract<PlotComputeView, 'prompt' | 'computing'>;
@@ -14,6 +15,7 @@
     }
 
     const TIMER_INTERVAL_MS = 1_000;
+    const MS_PER_SECOND = 1_000;
 
     let { view, embeddingCount, itemLabel, startedAt, onCompute }: Props = $props();
 
@@ -25,7 +27,12 @@
         return () => clearInterval(interval);
     });
 
-    const elapsed = $derived(formatElapsed(Math.max(0, now - (startedAt ?? now))));
+    const elapsed = $derived(formatDuration((now - (startedAt ?? now)) / MS_PER_SECOND));
+    const detail = $derived(
+        view === 'prompt'
+            ? `${embeddingCount.toLocaleString('en-US')} ${itemLabel}s.`
+            : `Running for ${elapsed}.`
+    );
 </script>
 
 <div
@@ -35,16 +42,14 @@
     {#if view === 'prompt'}
         <ChartScatter class="size-8 text-muted-foreground" />
         <div class="text-base font-medium">Plot not computed</div>
-        <div class="max-w-64 text-sm text-muted-foreground">
-            {embeddingCount.toLocaleString('en-US')}
-            {itemLabel}s. The first compute can take several minutes.
-        </div>
-        <Button class="mt-2" onclick={onCompute}>Compute plot</Button>
     {:else}
         <LoaderCircle class="size-8 animate-spin text-muted-foreground" />
         <div class="text-base font-medium">Computing plot…</div>
-        <div class="max-w-64 text-sm text-muted-foreground">
-            Running for {elapsed}. The first compute can take several minutes.
-        </div>
+    {/if}
+    <div class="max-w-64 text-sm text-muted-foreground">
+        {detail} The first compute can take several minutes.
+    </div>
+    {#if view === 'prompt'}
+        <Button class="mt-2" onclick={onCompute}>Compute plot</Button>
     {/if}
 </div>
