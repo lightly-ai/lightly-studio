@@ -221,7 +221,7 @@ export const VIDEO_KEYWORDS: KeywordDoc[] = [
     {
         name: 'event',
         description: 'Match a video if at least one temporal event satisfies the expression.',
-        insertText: 'event(${1:class_name = "..."} AND start_time_s < ${2:5})'
+        insertText: 'event(class_name = "${1:...}")'
     }
 ];
 
