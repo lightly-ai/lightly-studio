@@ -83,3 +83,11 @@ class IngestionTransport(Protocol):
             collection_id: The ID of the collection.
             sample_ids: The images to embed.
         """
+
+    def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for videos with the default video embedding model.
+
+        Args:
+            collection_id: The ID of the collection.
+            sample_ids: The videos to embed.
+        """

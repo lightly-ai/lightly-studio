@@ -11,7 +11,6 @@ from labelformat.formats import (
     YouTubeVISInstanceSegmentationTrackInput,
     YouTubeVISObjectDetectionTrackInput,
 )
-from sqlmodel import Session
 
 from lightly_studio.analytics import ingest_tracking
 from lightly_studio.analytics.ingest_tracking import IngestFormat
@@ -22,7 +21,6 @@ from lightly_studio.core.video.add_videos import VIDEO_EXTENSIONS
 from lightly_studio.core.video.video_frame_dataset import VideoFrameDataset
 from lightly_studio.core.video.video_sample import VideoSample
 from lightly_studio.dataset import fsspec_lister
-from lightly_studio.embed import embed_samples
 from lightly_studio.export.video_dataset_export import VideoDatasetExport
 from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.collection import SampleType
@@ -166,10 +164,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         created_sample_ids = list(video_path_to_id.values())
 
         if embed:
-            _generate_embeddings_video(
-                session=self.session,
-                collection_id=self.collection_id,
-                sample_ids=created_sample_ids,
+            active_transport.get_transport().ingestion.embed_videos(
+                collection_id=self.collection_id, sample_ids=created_sample_ids
             )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.VIDEO, ingest_format=IngestFormat.FOLDER
@@ -237,10 +233,8 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
         )
 
         if embed:
-            _generate_embeddings_video(
-                session=self.session,
-                collection_id=self.collection_id,
-                sample_ids=created_sample_ids,
+            active_transport.get_transport().ingestion.embed_videos(
+                collection_id=self.collection_id, sample_ids=created_sample_ids
             )
         ingest_tracking.track_samples_ingested(
             source=source, sample_type=SampleType.VIDEO, ingest_format=IngestFormat.YOUTUBE_VIS
@@ -272,26 +266,6 @@ class VideoDataset(BaseSampleDataset[VideoSample]):
             annotations_json=annotations_json,
             collection_name=annotation_source,
         )
-
-
-def _generate_embeddings_video(
-    session: Session,
-    collection_id: UUID,
-    sample_ids: list[UUID],
-) -> None:
-    """Generate and store embeddings for samples.
-
-    Args:
-        session: Database session for resolver operations.
-        collection_id: The ID of the collection to associate with the embedding model.
-        sample_ids: List of sample IDs to generate embeddings for.
-    """
-    if not sample_ids:
-        return
-
-    embed_samples.embed_video_samples(
-        session=session, collection_id=collection_id, sample_ids=sample_ids
-    )
 
 
 def _collect_video_file_paths(
