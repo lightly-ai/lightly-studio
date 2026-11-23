@@ -214,21 +214,27 @@ def test_update_annotation_label__polygon(db_session: Session) -> None:
         polygons=[[(1.5, 2.0), (11.0, 2.0), (11.0, 22.25)]],
     )
     annotation_id = annotation.sample_id
-    assert annotation.polygon_details is not None
-    stored_polygons = annotation.polygon_details.polygons
 
     annotation_resolver.update_annotation_label(
-        db_session,
-        annotation_id,
-        new_label.annotation_label_id,
+        session=db_session,
+        annotation_id=annotation_id,
+        annotation_label_id=new_label.annotation_label_id,
     )
 
-    updated_annotation = annotation_resolver.get_by_id(db_session, annotation_id)
+    updated_annotation = annotation_resolver.get_by_id(
+        session=db_session, annotation_id=annotation_id
+    )
     assert updated_annotation is not None
     assert updated_annotation.annotation_label_id == new_label.annotation_label_id
     assert_contains_properties(
         updated_annotation.polygon_details,
-        {"x": 1, "y": 2, "width": 10, "height": 21, "polygons": stored_polygons},
+        {
+            "x": 1,
+            "y": 2,
+            "width": 10,
+            "height": 21,
+            "polygons": [[[1.5, 2.0], [11.0, 2.0], [11.0, 22.25]]],
+        },
     )
 
 

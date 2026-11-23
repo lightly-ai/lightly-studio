@@ -65,7 +65,10 @@ def update_annotation_object(
         else None
     )
 
-    polygon_details = annotation_copy.polygon_details
+    # Only polygons read the details, so other types do not run a lazy SELECT.
+    polygon_details = (
+        annotation_copy.polygon_details if annotation_type == AnnotationType.POLYGON else None
+    )
     polygon = (
         PolygonAnnotationTable(
             sample_id=annotation_copy.sample_id,
@@ -75,7 +78,7 @@ def update_annotation_object(
             width=polygon_details.width,
             height=polygon_details.height,
         )
-        if annotation_type == AnnotationType.POLYGON and polygon_details
+        if polygon_details
         else None
     )
 

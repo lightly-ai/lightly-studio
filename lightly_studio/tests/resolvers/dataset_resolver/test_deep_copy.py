@@ -1217,13 +1217,11 @@ def test_deep_copy__polygon(db_session: Session) -> None:
         filters=AnnotationsFilter(collection_ids=[copied.children[0].collection_id]),
     ).annotations
     assert copied_polygon.sample_id != polygon.sample_id
-    original_detail = db_session.get(PolygonAnnotationTable, polygon.sample_id)
     copied_detail = db_session.get(PolygonAnnotationTable, copied_polygon.sample_id)
-    assert original_detail is not None
     assert copied_detail is not None
     assert (copied_detail.x, copied_detail.y) == (1, 2)
     assert (copied_detail.width, copied_detail.height) == (10, 21)
-    assert copied_detail.polygons == original_detail.polygons
+    assert copied_detail.polygons == [[[1.5, 2.0], [11.0, 2.0], [11.0, 22.25]]]
 
 
 def test_deep_copy__preserves_video_event_span(

@@ -51,6 +51,7 @@ def get_annotation_crops_for_ids(
     Returns:
         Resolved annotation crops ready for embedding.
     """
+    # The sqlmodel select is typed for at most 4 entities, so use the sqlalchemy select.
     rows = session.execute(
         select(
             AnnotationBaseTable,

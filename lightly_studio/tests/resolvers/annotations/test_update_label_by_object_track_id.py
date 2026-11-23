@@ -10,9 +10,8 @@ from pytest_mock import MockerFixture
 from sqlalchemy.sql.dml import Update
 from sqlmodel import Session
 
-from lightly_studio.models.annotation.annotation_base import AnnotationBaseTable, AnnotationType
+from lightly_studio.models.annotation.annotation_base import AnnotationType
 from lightly_studio.models.annotation.object_track import ObjectTrackCreate
-from lightly_studio.models.annotation.polygon import Polygons
 from lightly_studio.models.collection import SampleType
 from lightly_studio.resolvers import annotation_resolver, object_track_resolver
 from tests.helpers_resolvers import (
@@ -252,7 +251,6 @@ def test_update_label_by_object_track_id__keeps_polygons(db_session: Session) ->
             ),
         ],
     )
-    stored_polygons = [_stored_polygons(annotation=annotation) for annotation in annotations]
 
     annotation_resolver.update_label_by_object_track_id(
         session=db_session,
@@ -268,7 +266,17 @@ def test_update_label_by_object_track_id__keeps_polygons(db_session: Session) ->
         new_label.annotation_label_id,
         new_label.annotation_label_id,
     ]
-    assert [_stored_polygons(annotation=a) for a in updated if a is not None] == stored_polygons
+    assert [
+        a.polygon_details.polygons
+        for a in updated
+        if a is not None and a.polygon_details is not None
+    ] == [
+        [[[1.5, 2.0], [11.0, 2.0], [11.0, 22.25]]],
+        [
+            [[30.0, 40.0], [50.0, 40.0], [50.0, 60.0]],
+            [[70.0, 80.0], [90.0, 80.0], [90.0, 100.0]],
+        ],
+    ]
 
 
 def test_update_label_by_object_track_id__skips_annotations_already_on_new_label(
@@ -411,8 +419,3 @@ def test_update_label_by_object_track_id__restores_child_rows_on_update_failure(
     assert unchanged.object_detection_details.y == 20
     assert unchanged.object_detection_details.width == 30
     assert unchanged.object_detection_details.height == 40
-
-
-def _stored_polygons(annotation: AnnotationBaseTable) -> Polygons:
-    assert annotation.polygon_details is not None
-    return annotation.polygon_details.polygons
