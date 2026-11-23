@@ -41,6 +41,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Security
 
+- The GUI server no longer has an endpoint that sets cloud storage credentials without authentication.
+
 ## \[1.4.0\] - 2026-11-18
 
 ### Added
@@ -82,8 +84,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - Object detection and instance segmentation evaluations run faster, and evaluation results save faster.
     - Bounding box, segmentation mask, and classification exports finish faster.
     - Deleting a dataset now succeeds even if an exported file cannot be removed.
-
-- The GUI server no longer has an endpoint that sets cloud storage credentials without authentication.
 
 ## \[1.3.0\] - 2026-11-12
 
