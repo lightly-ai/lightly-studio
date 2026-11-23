@@ -1,5 +1,6 @@
 <script lang="ts">
     import { untrack } from 'svelte';
+    import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { useGlobalStorage } from '$lib/hooks/useGlobalStorage';
     import { Button } from '$lib/components';
     import PlotToolPill from './PlotToolPill/PlotToolPill.svelte';
@@ -289,9 +290,14 @@
         savePlotSelection({ embeddingRegion, sampleIds: [] });
         setPlotSelectionCount(collectionId, count);
     };
-    // The sequences grid has no sample-id filter, so it does not support picks.
+    // A gesture that starts on the old points stays ignored, even when the new points land
+    // before the release.
+    let isPressOnOldPoints = false;
+    const isOnOldPoints = () => embeddingsData.isPlaceholderData || isPressOnOldPoints;
+    // The sequences grid has no sample-id filter, so it does not support picks. While new points
+    // load, a pick on the old points could select a point that the new filter excludes.
     const commitPickedSampleIds = (sampleIds: string[]) => {
-        if (isSequences) return;
+        if (isSequences || isOnOldPoints()) return;
         if (sampleIds.length === 0) {
             clearPlotFilter();
             return;
@@ -309,8 +315,20 @@
         clearPlotSelectionCount(collectionId);
     };
 
+    const selectableCount = $derived(
+        (arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
+            return fulfils !== 0 ? count + 1 : count;
+        }, 0) ?? null
+    );
     const handleMouseUp = (event: MouseEvent) => {
         if ($rangeSelection === null) {
+            return;
+        }
+        // While new points load, the counts below come from the old points, so the drawn
+        // selection is dropped.
+        if (isOnOldPoints()) {
+            setRangeSelection(null);
+            pendingSelectionType = null;
             return;
         }
         if (isShortShiftDrag(event)) {
@@ -320,11 +338,6 @@
             return;
         }
         const polygon = $rangeSelection;
-
-        const selectableCount =
-            (arrowData?.fulfils_filter as Uint8Array | undefined)?.reduce((count, fulfils) => {
-                return fulfils !== 0 ? count + 1 : count;
-            }, 0) ?? null;
         const selectedCount = $selectedSampleIds.length;
         // Selecting nothing, or every selectable point, is equivalent to no filter at all.
         const selectsNothingOrEverything =
@@ -501,7 +514,7 @@
     };
     const {
         librarySelection,
-        onPointerDown: onPlotPointerDown,
+        onPointerDown: onPickPointerDown,
         onSelection,
         isShortShiftDrag,
         pickPressedPoint
@@ -511,6 +524,10 @@
             typeof tooltip?.identifier === 'string' ? tooltip.identifier : null,
         commitPickedSampleIds
     });
+    const onPlotPointerDown = (event: PointerEvent) => {
+        isPressOnOldPoints = embeddingsData.isPlaceholderData;
+        onPickPointerDown(event);
+    };
     const hoveredSampleId = $derived(
         typeof tooltip?.identifier === 'string' && $rangeSelection === null
             ? tooltip.identifier
@@ -619,6 +636,17 @@
                 bind:this={plotContainer}
                 onpointerdowncapture={onPlotPointerDown}
             >
+                {#if embeddingsData.isPlaceholderData}
+                    <div
+                        class="pointer-events-none absolute right-2 top-2 z-10 flex size-[30px] items-center justify-center rounded-lg border border-white/10 bg-black/60 text-white backdrop-blur-sm"
+                        data-testid="plot-loading-indicator"
+                        role="status"
+                        aria-label="Loading embeddings"
+                    >
+                        <LoaderCircle class="size-3.5 animate-spin" />
+                    </div>
+                {/if}
+
                 {#if $plotData && width >= MIN_RENDER_SIZE && height >= MIN_RENDER_SIZE}
                     <div class="embedding-view h-full w-full">
                         <EmbeddingView

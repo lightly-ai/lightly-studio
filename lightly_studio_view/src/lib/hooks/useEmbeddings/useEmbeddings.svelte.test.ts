@@ -85,6 +85,17 @@ describe('useEmbeddings', () => {
         expect(query.data).toBeUndefined();
     });
 
+    it('drops the placeholder when the layout changes during a filter change', async () => {
+        const { params, query } = await renderLoaded();
+        params.filters = { filter_type: 'image', sample_filter: { tag_ids: ['tag-a'] } };
+        await waitFor(() => expect(query.isPlaceholderData).toBe(true));
+        params.colorBy = { type: 'tag', tag_ids: ['tag-a'] };
+
+        await waitFor(() => expect(get2dEmbeddings).toHaveBeenCalledTimes(3));
+        expect(query.isPlaceholderData).toBe(false);
+        expect(query.data).toBeUndefined();
+    });
+
     it('sends no request while disabled', async () => {
         const { query } = renderEmbeddings(false);
 
