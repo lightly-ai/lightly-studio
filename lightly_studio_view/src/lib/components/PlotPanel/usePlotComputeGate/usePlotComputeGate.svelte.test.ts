@@ -1,15 +1,15 @@
 import { flushSync } from 'svelte';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { Embeddings2dStatus } from '$lib/api/lightly_studio_local';
-import { usePlotComputeGate } from './usePlotComputeGate.svelte';
-
-interface StatusQueryStub {
-    data: Embeddings2dStatus | undefined;
-    isFetchedAfterMount: boolean;
-    isError: boolean;
-    error: Error | null;
-    refetch: () => Promise<unknown>;
-}
+import {
+    COMPUTED,
+    NOT_COMPUTED_LARGE,
+    NOT_COMPUTED_SMALL,
+    createCompute,
+    createStatusQuery,
+    disposeMountedGates,
+    mountGate,
+    type StatusQueryStub
+} from './usePlotComputeGate.testFixtures.svelte';
 
 const mocks = vi.hoisted(() => ({
     statusQueries: {} as Record<string, StatusQueryStub>
@@ -23,60 +23,13 @@ vi.mock('$lib/hooks/useEmbeddingPlotStatus/useEmbeddingPlotStatus', () => ({
         mocks.statusQueries[collectionId].refetch()
 }));
 
-const NOT_COMPUTED_LARGE: Embeddings2dStatus = { is_computed: false, embedding_count: 300_000 };
-const NOT_COMPUTED_SMALL: Embeddings2dStatus = { is_computed: false, embedding_count: 1_000 };
-const COMPUTED: Embeddings2dStatus = { is_computed: true, embedding_count: 300_000 };
-
-let disposers: (() => void)[] = [];
-
-function createCompute() {
-    let succeed = () => {};
-    let fail = () => {};
-    const promise = new Promise<void>((resolve, reject) => {
-        succeed = () => resolve();
-        fail = () => reject(new Error('Server error'));
-    });
-    return { promise, succeed, fail };
-}
-
-function createStatusQuery(data: Embeddings2dStatus | undefined): StatusQueryStub {
-    const query: StatusQueryStub = $state({
-        data,
-        isFetchedAfterMount: true,
-        isError: false,
-        error: null,
-        refetch: vi.fn(async () => undefined)
-    });
-    return query;
-}
-
-function mountGate(params: {
-    collectionId: string | (() => string);
-    isAxesLayout?: () => boolean;
-    plotRequestKey?: () => string;
-}) {
-    const { collectionId } = params;
-    let gate!: ReturnType<typeof usePlotComputeGate>;
-    const dispose = $effect.root(() => {
-        gate = usePlotComputeGate({
-            getCollectionId: typeof collectionId === 'string' ? () => collectionId : collectionId,
-            getIsAxesLayout: params.isAxesLayout ?? (() => false),
-            getPlotRequestKey: params.plotRequestKey ?? (() => 'request')
-        });
-    });
-    disposers.push(dispose);
-    flushSync();
-    return { gate, dispose };
-}
-
 describe('usePlotComputeGate', () => {
     beforeEach(() => {
         mocks.statusQueries = {};
     });
 
     afterEach(() => {
-        for (const dispose of disposers) dispose();
-        disposers = [];
+        disposeMountedGates();
         vi.useRealTimers();
     });
 
