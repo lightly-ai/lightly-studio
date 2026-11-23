@@ -89,6 +89,17 @@ whole workspace, and bring each back with one click.
    - Expanded: the transport row, then the tracks and frame tags filling the rest of the pane
      with scrolling. The collapse button sits at the right end of the transport row.
    - The pane divider replaces `TrackRowsResizer` and `useTrackRowsHeight`; remove both.
+5. **Object tracks section** (inside the expanded timeline): everything below the frame ruler
+   (track toolbar, object track rows, frame tag rows) collapses on its own, with its own
+   collapse button. Collapsed, it leaves a slim bar titled "Object tracks" with the expand
+   button; the transport row and the ruler stay, so frame navigation keeps working.
+   - The timeline then has three states: collapsed (title bar only), compact (transport row,
+     ruler and the "Object tracks" bar), and full.
+   - Collapsing the section shrinks the timeline pane to the compact height; expanding it
+     restores the previous pane size. While the section is collapsed, the timeline divider
+     is not draggable (builder's call: nothing to resize).
+   - Its collapsed state is remembered like the other panels' and is included in focus mode
+     (focus mode collapses the whole timeline; exiting restores this section's state too).
    - The default timeline size should roughly match today's default (transport row plus 160px
      of track rows).
 
@@ -102,7 +113,7 @@ whole workspace, and bring each back with one click.
 
 - A button in `WorkspaceHeader`, next to fullscreen, labeled "Focus on 3D scene" /
   "Exit focus".
-- Entering saves which of the four panels are expanded, then collapses all of them. Exiting
+- Entering saves which panels are expanded (including the object tracks section), then collapses all of them. Exiting
   expands the saved ones.
 - Expanding any panel by hand while in focus mode leaves focus mode (the snapshot is dropped,
   other panels stay as they are).
