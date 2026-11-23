@@ -58,3 +58,5 @@ export function useTrackRowsHeight() {
         }
     };
 }
+
+export type TrackRowsHeight = ReturnType<typeof useTrackRowsHeight>;

@@ -17,7 +17,7 @@ afterEach(() => {
     vi.restoreAllMocks();
 });
 
-it('targets the bound workspace, tracks browser fullscreen changes, and removes its listener', async () => {
+it('targets the bound workspace, tracks browser fullscreen and its portal target, and removes its listener', async () => {
     let current: Element | null = null;
     Object.defineProperty(document, 'fullscreenElement', {
         configurable: true,
@@ -38,6 +38,7 @@ it('targets the bound workspace, tracks browser fullscreen changes, and removes 
     flushSync();
     await fullscreen.toggleFullscreen();
     expect(exitFullscreen).not.toHaveBeenCalled();
+    expect(fullscreen.portalTarget).toBe('body');
     const container = document.createElement('div');
     container.requestFullscreen = vi.fn(async () => {
         current = container;
@@ -47,10 +48,12 @@ it('targets the bound workspace, tracks browser fullscreen changes, and removes 
     document.dispatchEvent(new Event('fullscreenchange'));
     expect(container.requestFullscreen).toHaveBeenCalledOnce();
     expect(fullscreen.isFullscreen).toBe(true);
+    expect(fullscreen.portalTarget).toBe(container);
 
     current = document.createElement('div');
     document.dispatchEvent(new Event('fullscreenchange'));
     expect(fullscreen.isFullscreen).toBe(false);
+    expect(fullscreen.portalTarget).toBe('body');
     await fullscreen.toggleFullscreen();
     expect(exitFullscreen).toHaveBeenCalledOnce();
     dispose();

@@ -4,7 +4,8 @@ import pytest
 from sqlmodel import Session
 
 from lightly_studio.core.mcap import dataset_schema
-from lightly_studio.core.mcap.component import McapComponentSpec
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
+from lightly_studio.database import db_manager
 from lightly_studio.models.collection import SampleType
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import mcap_group_component_definition_resolver
@@ -26,11 +27,16 @@ COMPONENTS = [
 ]
 
 
+@pytest.fixture
+def db_session(patch_collection: None) -> Session:  # noqa: ARG001
+    """The persistent session, which the transport writes through."""
+    return db_manager.persistent_session()
+
+
 def test_create_components(db_session: Session) -> None:
     group_collection = create_collection(session=db_session, sample_type=SampleType.GROUP)
 
     dataset_schema.create_components(
-        session=db_session,
         group_collection_id=group_collection.collection_id,
         components=COMPONENTS,
     )
@@ -45,7 +51,6 @@ def test_create_components__duplicate_name(db_session: Session) -> None:
 
     with pytest.raises(ValueError, match="Duplicate component name 'front'"):
         dataset_schema.create_components(
-            session=db_session,
             group_collection_id=group_collection.collection_id,
             components=[
                 McapComponentSpec(
@@ -65,7 +70,6 @@ def test_create_components__duplicate_name(db_session: Session) -> None:
 def test_check_components_match(db_session: Session) -> None:
     group_collection = create_collection(session=db_session, sample_type=SampleType.GROUP)
     dataset_schema.create_components(
-        session=db_session,
         group_collection_id=group_collection.collection_id,
         components=COMPONENTS,
     )
@@ -81,7 +85,6 @@ def test_check_components_match(db_session: Session) -> None:
 def test_check_components_match__other_data_type(db_session: Session) -> None:
     group_collection = create_collection(session=db_session, sample_type=SampleType.GROUP)
     dataset_schema.create_components(
-        session=db_session,
         group_collection_id=group_collection.collection_id,
         components=COMPONENTS,
     )

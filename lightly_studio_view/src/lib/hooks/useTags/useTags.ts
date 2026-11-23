@@ -25,6 +25,9 @@ interface UseTagsReturn {
     error: Readable<Error | null>;
 }
 
+/** The maximum page size of the tags endpoint. */
+const TAGS_PAGE_SIZE = 100;
+
 const tagsSelectedByCollection = writable<Record<string, Set<string>>>({});
 
 export function useTags(options: UseTagsOptions): UseTagsReturn {
@@ -41,36 +44,27 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         if (!collection_id) return;
 
         isLoading.set(true);
-        currentLoadPromise = readTags({
-            path: {
-                collection_id
-            }
-        })
-            .then((response) => {
-                if (response.error) {
-                    throw response.error;
-                }
-                if (response.data) {
-                    const validTagIds = response.data.map((tag) => tag.tag_id);
+        currentLoadPromise = readAllTags(collection_id)
+            .then((allTags) => {
+                const validTagIds = allTags.map((tag) => tag.tag_id);
 
-                    // Store tags by collection_id to prevent preloading from overwriting other collections' tags
-                    tagsData.update((tagsByCollection) => ({
-                        ...tagsByCollection,
-                        [collection_id]: response.data ?? []
-                    }));
+                // Store tags by collection_id to prevent preloading from overwriting other collections' tags
+                tagsData.update((tagsByCollection) => ({
+                    ...tagsByCollection,
+                    [collection_id]: allTags
+                }));
 
-                    tagsSelectedByCollection.update((selectedByCollection) => {
-                        const selected = selectedByCollection[collection_id] ?? new Set<string>();
-                        const prunedSelected = new Set(
-                            Array.from(selected).filter((tagId) => validTagIds.includes(tagId))
-                        );
+                tagsSelectedByCollection.update((selectedByCollection) => {
+                    const selected = selectedByCollection[collection_id] ?? new Set<string>();
+                    const prunedSelected = new Set(
+                        Array.from(selected).filter((tagId) => validTagIds.includes(tagId))
+                    );
 
-                        return {
-                            ...selectedByCollection,
-                            [collection_id]: prunedSelected
-                        };
-                    });
-                }
+                    return {
+                        ...selectedByCollection,
+                        [collection_id]: prunedSelected
+                    };
+                });
             })
             .catch((err) => {
                 error.set(err as Error);
@@ -182,4 +176,19 @@ export function useTags(options: UseTagsOptions): UseTagsReturn {
         isLoading: readonly(isLoading),
         error
     };
+}
+
+/** Reads every tag of the collection. The endpoint returns at most `TAGS_PAGE_SIZE` tags per request. */
+async function readAllTags(collectionId: string): Promise<Tag[]> {
+    const allTags: Tag[] = [];
+    for (let offset = 0; ; offset += TAGS_PAGE_SIZE) {
+        const response = await readTags({
+            path: { collection_id: collectionId },
+            query: { offset, limit: TAGS_PAGE_SIZE }
+        });
+        if (response.error) throw response.error;
+        const page = response.data ?? [];
+        allTags.push(...page);
+        if (page.length < TAGS_PAGE_SIZE) return allTags;
+    }
 }

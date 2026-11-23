@@ -6,7 +6,8 @@ const mocks = vi.hoisted(() => ({
     registerHoverProvider: vi.fn(),
     createLightlyQueryServices: vi.fn(),
     parse: vi.fn(),
-    parseLightlyQuery: vi.fn()
+    parseLightlyQuery: vi.fn(),
+    findUnknownTagMarkers: vi.fn()
 }));
 
 vi.mock('monaco-editor', () => ({
@@ -22,6 +23,10 @@ vi.mock('../language/lightly-query-module', () => ({
 
 vi.mock('../language/query-expr-translation', () => ({
     parseLightlyQuery: mocks.parseLightlyQuery
+}));
+
+vi.mock('./findUnknownTagMarkers', () => ({
+    findUnknownTagMarkers: mocks.findUnknownTagMarkers
 }));
 
 interface ModelMock {
@@ -169,6 +174,67 @@ describe('useLightlyQueryLanguage', () => {
 
         expect(contentDispose).toHaveBeenCalledOnce();
         expect(mocks.setModelMarkers).toHaveBeenCalledWith(model, 'lightly-query', []);
+    });
+
+    it('skips the tag check until tag names are set', async () => {
+        const { attach } = await loadHook();
+
+        attach(makeModel('"tran" IN tags') as never);
+
+        expect(mocks.findUnknownTagMarkers).not.toHaveBeenCalled();
+    });
+
+    it('re-validates attached models with the tag names when they are set', async () => {
+        const unknownTagMarker = {
+            message: 'Tag "tran" does not exist.',
+            startLineNumber: 1,
+            endLineNumber: 1
+        };
+        mocks.findUnknownTagMarkers.mockReturnValue([unknownTagMarker]);
+        const { attach, setTagNames } = await loadHook();
+        const model = makeModel('"tran" IN tags');
+        attach(model as never);
+
+        setTagNames(['train']);
+
+        expect(mocks.findUnknownTagMarkers).toHaveBeenCalledWith({
+            query: {},
+            tagNames: new Set(['train'])
+        });
+        expect(mocks.setModelMarkers).toHaveBeenLastCalledWith(model, 'lightly-query', [
+            unknownTagMarker
+        ]);
+    });
+
+    it('maps unknown tag warnings of a video query to the visible line', async () => {
+        // The parser sees the hidden `video:` prefix, so the tag is on line 2 of its text.
+        mocks.findUnknownTagMarkers.mockReturnValue([
+            { message: 'Tag "tran" does not exist.', startLineNumber: 2, endLineNumber: 2 }
+        ]);
+        const { attach, setTagNames } = await loadHook();
+        const { createLightlyQueryServices } = await vi.importActual<
+            typeof import('../language/lightly-query-module')
+        >('../language/lightly-query-module');
+        const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
+        mocks.parse.mockImplementation((text: string) => parser.parse(text));
+        const model = makeModel('"tran" IN tags');
+        attach(model as never, 'video');
+
+        setTagNames(['train']);
+
+        expect(mocks.setModelMarkers).toHaveBeenLastCalledWith(model, 'lightly-query', [
+            expect.objectContaining({ startLineNumber: 1, endLineNumber: 1 })
+        ]);
+    });
+
+    it('does not re-validate a detached model when tag names are set', async () => {
+        const { attach, setTagNames } = await loadHook();
+        attach(makeModel('q') as never)();
+        mocks.setModelMarkers.mockClear();
+
+        setTagNames(['train']);
+
+        expect(mocks.setModelMarkers).not.toHaveBeenCalled();
     });
 
     it('delegates translateQuery to parseLightlyQuery with the cached parser', async () => {

@@ -13,6 +13,24 @@
 
 import type { FieldDoc, KeywordDoc, Scope, ScopeDoc } from './types';
 
+const classificationFields: FieldDoc[] = [
+    {
+        name: 'class_name',
+        type: 'string',
+        description: 'Annotation class of the classification.'
+    },
+    {
+        name: 'source',
+        type: 'string',
+        description: 'Annotation source.'
+    },
+    {
+        name: 'confidence',
+        type: 'float',
+        description: 'Classification confidence score.'
+    }
+];
+
 export const SCOPES: Record<Scope, ScopeDoc> = {
     sample_evaluation: {
         scope: 'sample_evaluation',
@@ -89,6 +107,24 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             }
         ]
     },
+    event: {
+        scope: 'event',
+        title: 'Event',
+        description: 'A temporal classification annotation on a video.',
+        fields: [
+            ...classificationFields,
+            {
+                name: 'start_time_s',
+                type: 'float',
+                description: 'Event start in seconds from the start of the video.'
+            },
+            {
+                name: 'end_time_s',
+                type: 'float',
+                description: 'Event end in seconds from the start of the video.'
+            }
+        ]
+    },
     video: {
         scope: 'video',
         title: 'Video',
@@ -123,7 +159,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'source',
                 type: 'string',
-                description: 'Annotation source collection name.'
+                description: 'Annotation source.'
             },
             {
                 name: 'confidence',
@@ -140,23 +176,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
         scope: 'classification',
         title: 'Classification',
         description: 'Classification annotation on a sample. Used inside `classification(...)`.',
-        fields: [
-            {
-                name: 'class_name',
-                type: 'string',
-                description: 'Annotation class of the classification.'
-            },
-            {
-                name: 'source',
-                type: 'string',
-                description: 'Annotation source collection name.'
-            },
-            {
-                name: 'confidence',
-                type: 'float',
-                description: 'Classification confidence score.'
-            }
-        ]
+        fields: classificationFields
     },
     segmentation_mask: {
         scope: 'segmentation_mask',
@@ -172,7 +192,7 @@ export const SCOPES: Record<Scope, ScopeDoc> = {
             {
                 name: 'source',
                 type: 'string',
-                description: 'Annotation source collection name.'
+                description: 'Annotation source.'
             },
             {
                 name: 'confidence',
@@ -197,6 +217,11 @@ export const VIDEO_KEYWORDS: KeywordDoc[] = [
         name: 'frame',
         description: 'Match a video if at least one frame satisfies the expression.',
         insertText: 'frame(object_detection(class_name = "${1:person}"))'
+    },
+    {
+        name: 'event',
+        description: 'Match a video if at least one temporal event satisfies the expression.',
+        insertText: 'event(class_name = "${1:...}")'
     }
 ];
 
@@ -237,7 +262,8 @@ export const TOP_LEVEL_KEYWORDS: KeywordDoc[] = [
     },
     {
         name: 'classification',
-        description: 'Match a classification annotation.',
+        description:
+            'Match an image, frame, or whole-video classification. Use event(...) for temporal events.',
         insertText: 'classification(${1:class_name = "..."})'
     },
     {
