@@ -7,9 +7,9 @@ from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.export_transport import ExportTransport
 from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.local.local_collection_transport import LocalCollectionTransport
+from lightly_studio.transport.local.local_metadata_transport import LocalMetadataTransport
 from lightly_studio.transport.local.local_sample_transport import LocalSampleTransport
 from lightly_studio.transport.local.local_tag_transport import LocalTagTransport
-from lightly_studio.transport.metadata_transport import MetadataTransport
 
 
 class LocalTransport:
@@ -23,11 +23,7 @@ class LocalTransport:
         self.collections = LocalCollectionTransport()
         self.samples = LocalSampleTransport()
         self.tags = LocalTagTransport()
-
-    @property
-    def metadata(self) -> MetadataTransport:
-        """The transport for metadata and captions."""
-        raise AttributeError("The local metadata transport does not exist yet.")
+        self.metadata = LocalMetadataTransport()
 
     @property
     def annotations(self) -> AnnotationTransport:
