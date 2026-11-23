@@ -105,6 +105,9 @@ describe('QueryEditorPanel', () => {
                 'frame(object_detection(class_name = "person") AND frame_timestamp_s < 5)'
             )
         ).toBeInTheDocument();
+        expect(
+            screen.getByText('event(class_name = "run" AND start_time_s < 5)')
+        ).toBeInTheDocument();
         await fireEvent.click(screen.getByRole('button', { name: 'Apply' }));
         expect(updateQueryExpr).toHaveBeenCalledWith({
             query_expr: queryExpr,

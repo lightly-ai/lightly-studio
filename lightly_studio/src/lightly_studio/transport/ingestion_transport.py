@@ -6,13 +6,16 @@ from collections.abc import Sequence
 from typing import Protocol
 from uuid import UUID
 
+from lightly_studio.models.image import AddImagesResult, ImageCreate
+
 
 class IngestionTransport(Protocol):
-    """Adds images and videos to a collection.
+    """Adds samples to a collection.
 
     A path is a local path or a cloud URI. A remote transport reads it on the server.
     """
 
+    # TODO(Iunir, 11/2026): Add the ingestion of videos.
     # TODO(Iunir, 11/2026): Add MCAP ingestion when `McapComponentSpec` has no DB imports.
 
     def add_images_from_path(  # noqa: PLR0913
@@ -40,76 +43,51 @@ class IngestionTransport(Protocol):
             AllInputFilesFailedError: If all images are missing or broken.
         """
 
-    def add_videos_from_path(  # noqa: PLR0913
-        self,
-        collection_id: UUID,
-        path: str,
-        allowed_extensions: Sequence[str] | None,
-        num_decode_threads: int | None,
-        embed: bool,
-        embed_frames: bool,
-        target_fps: float | None,
-        limit: int | None,
+    def add_images(self, collection_id: UUID, images: Sequence[ImageCreate]) -> AddImagesResult:
+        """Add images with known dimensions to a collection.
+
+        The ingestion of annotated data uses it, for example COCO or YOLO, and then adds the
+        annotations. The label files give the dimensions, so the image files are not opened.
+
+        Args:
+            collection_id: The ID of the collection.
+            images: The images to add.
+
+        Returns:
+            The sample ID of each new image by its path, and the outcome of each input image.
+            An image that is in the collection or earlier in `images` is already present. An
+            image whose file does not exist is missing.
+        """
+
+    def add_directory_tags(
+        self, collection_id: UUID, path: str, sample_ids: Sequence[UUID], tag_depth: int
     ) -> None:
-        """Add the raw videos from a path to a collection.
+        """Tag images with the names of the folders between `path` and the image file.
 
         Args:
             collection_id: The ID of the collection.
-            path: The folder with the videos.
-            allowed_extensions: The file extensions to add. None uses the default extensions.
-            num_decode_threads: The number of FFmpeg decode threads. None uses the number
-                of CPU cores minus 1, at most 16.
-            embed: If True, compute embeddings for the new videos.
-            embed_frames: If True, compute embeddings for the frames of the new videos.
-            target_fps: The frame rate of the added frames. None adds all frames.
-            limit: The maximum number of videos to add. None adds all videos.
+            path: The folder that the images were added from.
+            sample_ids: The images to tag.
+            tag_depth: The number of folder levels that give tags. 0 adds no tags.
 
         Raises:
-            ValueError: If `target_fps` or `limit` is not greater than 0.
-            AllInputFilesFailedError: If all videos are missing or broken.
+            ValueError: If `tag_depth` is negative.
         """
 
-    def add_images(self, collection_id: UUID, paths: Sequence[str], embed: bool) -> dict[str, UUID]:
-        """Add images from a list of file paths to a collection.
+    def embed_images(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for images with the default embedding model of the collection.
 
-        Ingestion of annotated data uses it, for example COCO or YOLO, then adds the annotations.
+        The images of the collection without an embedding of the default model get one too.
 
         Args:
             collection_id: The ID of the collection.
-            paths: The image files.
-            embed: If True, compute embeddings for the new images.
-
-        Returns:
-            The sample ID of each new image, by its path as given in `paths`. Skipped files
-            have no entry.
-
-        Raises:
-            AllInputFilesFailedError: If all images are missing or broken.
+            sample_ids: The images to embed.
         """
 
-    def add_videos(
-        self,
-        collection_id: UUID,
-        paths: Sequence[str],
-        embed: bool,
-        embed_frames: bool,
-        target_fps: float | None,
-    ) -> dict[str, UUID]:
-        """Add videos from a list of file paths to a collection.
-
-        Ingestion of annotated data uses it, for example YouTube-VIS, then adds the annotations.
+    def embed_videos(self, collection_id: UUID, sample_ids: Sequence[UUID]) -> None:
+        """Compute embeddings for videos with the default video embedding model.
 
         Args:
             collection_id: The ID of the collection.
-            paths: The video files.
-            embed: If True, compute embeddings for the new videos.
-            embed_frames: If True, compute embeddings for the frames of the new videos.
-            target_fps: The frame rate of the added frames. None adds all frames.
-
-        Returns:
-            The sample ID of each new video, by its path as given in `paths`. Skipped files
-            have no entry.
-
-        Raises:
-            AllInputFilesFailedError: If all videos are missing or broken.
+            sample_ids: The videos to embed.
         """
