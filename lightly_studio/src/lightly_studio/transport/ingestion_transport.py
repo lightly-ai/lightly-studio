@@ -10,6 +10,7 @@ from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.models.dynamic_transform import DynamicTransformCreate
 from lightly_studio.models.image import AddImagesResult, ImageCreate
 from lightly_studio.models.sensor_calibration import SensorCalibrationCreate
+from lightly_studio.models.sequence import SampleSequenceLinkCreate
 from lightly_studio.models.static_transform import StaticTransformCreate
 
 
@@ -195,4 +196,17 @@ class IngestionTransport(Protocol):
 
         Raises:
             ValueError: If `rows` is empty, or if a frame ID is empty.
+        """
+
+    def add_sequence_samples(
+        self, sequence_sample_id: UUID, links: Sequence[SampleSequenceLinkCreate]
+    ) -> None:
+        """Put groups in the slots of an MCAP sequence, in a single commit.
+
+        Args:
+            sequence_sample_id: The sample ID of the sequence.
+            links: The groups to add and the slot of each.
+
+        Raises:
+            ValueError: If a group does not exist, or if a `seq_number` is negative.
         """
