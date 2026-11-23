@@ -23,7 +23,6 @@ from lightly_studio.models.collection import (
 )
 from lightly_studio.resolvers import (
     collection_embedding_model_resolver,
-    metadata_resolver,
     tag_resolver,
 )
 from lightly_studio.transport import active_transport
@@ -234,10 +233,7 @@ class Dataset(Generic[T], ABC):
             ])
             ```
         """
-        metadata_resolver.bulk_update_metadata(
-            session=self.session,
-            sample_metadata=sample_metadata,
-        )
+        active_transport.get_transport().metadata.update(sample_metadata=sample_metadata)
 
 
 class BaseSampleDataset(Dataset[T], ABC):
