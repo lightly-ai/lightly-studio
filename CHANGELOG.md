@@ -17,8 +17,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The frames between the manually placed 3D cuboids of an object track get interpolated cuboids automatically. When you add a cuboid to a track or move one, the frames between it and the manual cuboids before and after it are interpolated again.
 - Filter video collections by categorical metadata.
 
-- Python SDK: Label images in the GUI with your own model. Subclass `ls.LabelingModel`, register it with `ls.register_labeling_model`, then use the "Auto-label" tool to review and save its suggested annotations.
-
 ### Changed
 
 - Point clouds: The selected cuboid stays selected when you go to another tick. The selection follows the object track, so the cuboid stays highlighted and its details stay open.
