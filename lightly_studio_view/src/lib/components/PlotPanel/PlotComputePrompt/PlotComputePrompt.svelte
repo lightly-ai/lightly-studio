@@ -2,7 +2,8 @@
     import ChartScatter from '@lucide/svelte/icons/chart-scatter';
     import LoaderCircle from '@lucide/svelte/icons/loader-circle';
     import { Button } from '$lib/components/ui/button';
-    import { formatElapsed, type PlotComputeView } from '../plotComputeGate';
+    import { formatDuration } from '$lib/utils';
+    import type { PlotComputeView } from '../plotComputeGate';
 
     interface Props {
         view: Extract<PlotComputeView, 'prompt' | 'computing'>;
@@ -14,6 +15,7 @@
     }
 
     const TIMER_INTERVAL_MS = 1_000;
+    const MS_PER_SECOND = 1_000;
 
     let { view, embeddingCount, itemLabel, startedAt, onCompute }: Props = $props();
 
@@ -25,7 +27,7 @@
         return () => clearInterval(interval);
     });
 
-    const elapsed = $derived(formatElapsed(Math.max(0, now - (startedAt ?? now))));
+    const elapsed = $derived(formatDuration((now - (startedAt ?? now)) / MS_PER_SECOND));
 </script>
 
 <div

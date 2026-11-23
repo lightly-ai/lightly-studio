@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
     PLOT_COMPUTE_CONFIRM_THRESHOLD,
-    formatElapsed,
     getPlotComputeView,
     isPlotRequestEnabled,
     type PlotComputeView
@@ -53,16 +52,5 @@ describe('isPlotRequestEnabled', () => {
         ['plot', true]
     ])('isPlotRequestEnabled(%s) is %s', (view, expected) => {
         expect(isPlotRequestEnabled(view)).toBe(expected);
-    });
-});
-
-describe('formatElapsed', () => {
-    it.each([
-        [0, '0:00'],
-        [999, '0:00'],
-        [222_000, '3:42'],
-        [3_725_000, '62:05']
-    ])('formatElapsed(%d) is %s', (ms, expected) => {
-        expect(formatElapsed(ms)).toBe(expected);
     });
 });
