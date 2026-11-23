@@ -7,9 +7,9 @@ import httpx
 from lightly_studio.transport.annotation_transport import AnnotationTransport
 from lightly_studio.transport.compute_transport import ComputeTransport
 from lightly_studio.transport.export_transport import ExportTransport
-from lightly_studio.transport.ingestion_transport import IngestionTransport
 from lightly_studio.transport.metadata_transport import MetadataTransport
 from lightly_studio.transport.remote.http_collection_transport import HttpCollectionTransport
+from lightly_studio.transport.remote.http_ingestion_transport import HttpIngestionTransport
 from lightly_studio.transport.remote.http_sample_transport import HttpSampleTransport
 from lightly_studio.transport.remote.http_tag_transport import HttpTagTransport
 
@@ -30,6 +30,7 @@ class HttpTransport:
         self.collections = HttpCollectionTransport(client=client)
         self.samples = HttpSampleTransport(client=client)
         self.tags = HttpTagTransport(client=client)
+        self.ingestion = HttpIngestionTransport(client=client)
 
     @property
     def metadata(self) -> MetadataTransport:
@@ -40,11 +41,6 @@ class HttpTransport:
     def annotations(self) -> AnnotationTransport:
         """The transport for annotations."""
         raise AttributeError("The HTTP annotation transport does not exist yet.")
-
-    @property
-    def ingestion(self) -> IngestionTransport:
-        """The transport for ingestion."""
-        raise AttributeError("The HTTP ingestion transport does not exist yet.")
 
     @property
     def compute(self) -> ComputeTransport:
