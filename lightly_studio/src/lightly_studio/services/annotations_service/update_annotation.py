@@ -46,6 +46,10 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
         The updated annotation.
 
     """
+    _check_time_span_is_complete(
+        start_time_s=annotation_update.start_time_s,
+        end_time_s=annotation_update.end_time_s,
+    )
     result = None
     if annotation_update.label_name is not None:
         result = annotations_service.update_annotation_label(
@@ -72,10 +76,6 @@ def update_annotation(session: Session, annotation_update: AnnotationUpdate) -> 
             annotation_id=annotation_update.annotation_id,
             polygons=annotation_update.polygons,
         )
-    _check_time_span_is_complete(
-        start_time_s=annotation_update.start_time_s,
-        end_time_s=annotation_update.end_time_s,
-    )
     if annotation_update.start_time_s is not None and annotation_update.end_time_s is not None:
         result = annotations_service.update_temporal_span(
             session=session,

@@ -127,6 +127,31 @@ def test_update_annotation__raises_error_when_only_end_time_s_is_provided(
         )
 
 
+def test_update_annotation__incomplete_time_span_writes_nothing(
+    mocker: MockerFixture,
+    db_session: Session,
+    collection_id: UUID,
+) -> None:
+    mock_update_annotation_polygons = mocker.patch(
+        "lightly_studio.services.annotations_service.update_annotation_polygons"
+    )
+
+    with pytest.raises(
+        ValueError, match="Both start_time_s and end_time_s must be provided together"
+    ):
+        annotations_service.update_annotation(
+            db_session,
+            AnnotationUpdate(
+                annotation_id=UUID("12345678-1234-5678-1234-567812345678"),
+                collection_id=collection_id,
+                polygons=[[(0.0, 0.0), (2.0, 0.0), (2.0, 2.0)]],
+                start_time_s=1.0,
+            ),
+        )
+
+    mock_update_annotation_polygons.assert_not_called()
+
+
 def test_update_annotation__calls_update_temporal_span_when_both_times_provided(
     mocker: MockerFixture,
     db_session: Session,
