@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Protocol
 from uuid import UUID
 
+from lightly_studio.core.create_sample import CreateSample
 from lightly_studio.models.image import AddImagesResult, ImageCreate
 
 
@@ -144,4 +145,21 @@ class IngestionTransport(Protocol):
         Args:
             collection_id: The ID of the collection.
             sample_ids: The videos to embed.
+        """
+
+    def add_group_samples(
+        self, collection_id: UUID, groups: Sequence[Mapping[str, CreateSample]]
+    ) -> list[UUID]:
+        """Add group samples and their component samples to a group collection.
+
+        Args:
+            collection_id: The ID of the group collection.
+            groups: The component samples of each group, by component name.
+
+        Returns:
+            The sample ID of each new group, in the order of `groups`.
+
+        Raises:
+            ValueError: If a component name is not in the collection, or if the sample type
+                of a component does not match.
         """
