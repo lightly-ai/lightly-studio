@@ -1,0 +1,56 @@
+"""Create annotations in bulk."""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+from uuid import UUID
+
+from sqlmodel import Session
+
+from lightly_studio.models.annotation.annotation_base import AnnotationCreate
+from lightly_studio.models.collection import SampleType
+from lightly_studio.resolvers import (
+    annotation_resolver,
+    collection_resolver,
+    evaluation_run_resolver,
+)
+
+
+def create_annotations(
+    session: Session,
+    parent_collection_id: UUID,
+    annotations: Sequence[AnnotationCreate],
+    collection_name: str | None,
+) -> list[UUID]:
+    """Create annotations and mark the evaluation runs of their annotation collection stale.
+
+    Args:
+        session: Database session for executing the operation.
+        parent_collection_id: The ID of the collection of the annotated samples.
+        annotations: The annotations to create.
+        collection_name: The name of the annotation collection. None uses the default.
+
+    Returns:
+        The IDs of the new annotations, in the order of `annotations`.
+    """
+    try:
+        annotation_ids = annotation_resolver.create_many(
+            session=session,
+            parent_collection_id=parent_collection_id,
+            annotations=list(annotations),
+            collection_name=collection_name,
+        )
+    except Exception:
+        # create_many flushes rows before it validates them.
+        session.rollback()
+        raise
+    annotation_collection_id = collection_resolver.get_or_create_child_collection(
+        session=session,
+        collection_id=parent_collection_id,
+        sample_type=SampleType.ANNOTATION,
+        name=collection_name,
+    )
+    evaluation_run_resolver.mark_stale_by_collection_id(
+        session=session, collection_id=annotation_collection_id
+    )
+    return annotation_ids
