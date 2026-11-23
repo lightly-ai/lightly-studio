@@ -22,6 +22,8 @@ export interface WorkflowFile {
     reviewer: string | null;
     your_role: 'labeler' | 'reviewer' | null;
     can_edit: boolean;
+    /** States the current user may move the file to right now. */
+    allowed_transitions: WorkflowFileState[];
     waiting_for: string | null;
     position: number;
     total: number;

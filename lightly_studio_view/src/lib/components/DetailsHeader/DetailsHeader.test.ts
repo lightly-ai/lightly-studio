@@ -90,6 +90,27 @@ describe('DetailsHeader', () => {
         expect(transition).toHaveBeenCalledWith('in_review');
     });
 
+    it('offers an unassigned admin the moves the workflow service allows', () => {
+        mocks.workflow = {
+            active: true,
+            canEdit: false,
+            isError: false,
+            transitioning: false,
+            transition: vi.fn().mockResolvedValue(undefined),
+            file: {
+                ...workflowFile,
+                your_role: null,
+                can_edit: false,
+                allowed_transitions: ['in_review', 'rework', 'accepted']
+            }
+        };
+
+        renderHeader();
+
+        expect(screen.getByRole('button', { name: 'Submit for review' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Admin actions' })).toBeInTheDocument();
+    });
+
     it('shows extra actions between the edit actions and the side-panel toggle', () => {
         renderHeader({ extraActions });
 

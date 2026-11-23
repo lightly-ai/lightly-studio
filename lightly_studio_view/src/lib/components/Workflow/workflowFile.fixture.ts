@@ -13,6 +13,7 @@ export const workflowFile: WorkflowFile = {
     reviewer: 'marta@example.com',
     your_role: 'labeler',
     can_edit: true,
+    allowed_transitions: ['in_review'],
     waiting_for: 'pedro@example.com',
     position: 3,
     total: 150,
