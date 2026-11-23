@@ -1114,6 +1114,22 @@ describe('PlotPanel.svelte', () => {
             expect(startCompute).toHaveBeenCalledOnce();
         });
 
+        it('shows a failed compute above the prompt', () => {
+            setGate({ view: 'prompt', embeddingCount: 300_000 });
+            (useEmbeddings as vi.Mock).mockReturnValue({
+                ...idlePlot,
+                isError: true,
+                error: new Error('Server error')
+            });
+
+            render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
+
+            expect(
+                screen.getByText('The last plot request failed: Server error')
+            ).toBeInTheDocument();
+            expect(screen.getByRole('button', { name: 'Compute plot' })).toBeInTheDocument();
+        });
+
         it('hands a running compute to the gate', () => {
             const trackCompute = vi.fn();
             setGate({ view: 'computing', trackCompute });
@@ -1121,7 +1137,7 @@ describe('PlotPanel.svelte', () => {
             render(PlotPanel, { props: { collectionId: 'test-collection-id' } });
 
             const compute = Promise.resolve();
-            lastEmbeddingsParams().onCompute(compute);
+            lastEmbeddingsParams().onCompute?.(compute);
 
             expect(trackCompute).toHaveBeenCalledWith(compute);
         });

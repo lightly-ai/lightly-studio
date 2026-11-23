@@ -644,6 +644,12 @@
                 startedAt={plotComputeGate.startedAt}
                 onCompute={plotComputeGate.startCompute}
             />
+            <!-- A failed compute returns to the prompt, so the next compute still asks first. -->
+            {#if embeddingsData.isError}
+                <div class="absolute inset-x-0 top-0 p-3 text-center text-sm text-red-500">
+                    The last plot request failed: {embeddingsData.error?.message || 'Unknown error'}
+                </div>
+            {/if}
         {:else if plotComputeGate.view === 'computing' && embeddingsData.isFetching}
             <PlotComputePrompt
                 view="computing"
