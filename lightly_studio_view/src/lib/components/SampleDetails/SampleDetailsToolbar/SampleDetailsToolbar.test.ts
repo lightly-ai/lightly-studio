@@ -1,4 +1,4 @@
-import { render, fireEvent, waitFor } from '@testing-library/svelte';
+import { render, fireEvent, waitFor, cleanup } from '@testing-library/svelte';
 import { writable } from 'svelte/store';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import SampleDetailsToolbar from './SampleDetailsToolbar.svelte';
@@ -50,6 +50,13 @@ vi.mock('$lib/hooks/useAssistedLabelingStatus', () => ({
     useAssistedLabelingStatus: () => assistedLabelingStatus
 }));
 
+const labelingModels = { isAvailable: false };
+
+vi.mock('$lib/hooks/useLabelingModels', async (importOriginal) => ({
+    ...(await importOriginal<typeof import('$lib/hooks/useLabelingModels')>()),
+    useLabelingModels: () => labelingModels
+}));
+
 vi.mock('$lib/contexts/SampleDetailsToolbar.svelte', async (importOriginal) => ({
     ...(await importOriginal<typeof import('$lib/contexts/SampleDetailsToolbar.svelte')>()),
     useSampleDetailsToolbarContext: () => ({
@@ -91,6 +98,7 @@ describe('SampleDetailsToolbar', () => {
     beforeEach(() => {
         mockSampleDetailsToolbarContext.status = 'cursor';
         mockSampleDetailsToolbarContext.brush.mode = 'brush';
+        labelingModels.isAvailable = false;
 
         mockAnnotationLabelContext.annotationType = null;
         mockAnnotationLabelContext.annotationLabel = null;
@@ -109,13 +117,15 @@ describe('SampleDetailsToolbar', () => {
         });
 
         it('disables the create tools and explains why', async () => {
+            labelingModels.isAvailable = true;
             const { getByLabelText, getByRole } = render(SampleDetailsToolbar);
 
             for (const label of [
                 'Bounding Box Tool',
                 'Mask brush',
                 'Smart select',
-                'Find all instances'
+                'Find all instances',
+                'Auto-label'
             ]) {
                 expect(getByLabelText(label)).toBeDisabled();
             }
@@ -311,6 +321,17 @@ describe('SampleDetailsToolbar', () => {
         expect(view.getByRole('tooltip')).toHaveTextContent(
             'Finds all objects that match a text prompt.'
         );
+    });
+
+    it('shows and activates the auto-label tool when models are available', async () => {
+        expect(render(SampleDetailsToolbar).queryByLabelText('Auto-label')).toBeNull();
+        cleanup();
+        labelingModels.isAvailable = true;
+        const { getByLabelText } = render(SampleDetailsToolbar);
+
+        await fireEvent.click(getByLabelText('Auto-label'));
+
+        expect(mockSampleDetailsToolbarContext.status).toBe('label-with-model');
     });
 
     it('resets the annotation type of the previous tool in smart select', () => {

@@ -8,13 +8,18 @@ from uuid import UUID
 
 from sqlmodel import Session
 
-from lightly_studio.core.mcap.component import McapComponentSpec
-from lightly_studio.models.collection import CollectionCreate, CollectionTable, SampleType
+from lightly_studio.core.mcap.component_spec import McapComponentSpec
+from lightly_studio.models.collection import (
+    CollectionCreate,
+    CollectionWithoutChildrenView,
+    SampleType,
+)
 from lightly_studio.models.mcap_group_component_definition import McapDataType
 from lightly_studio.resolvers import (
     collection_resolver,
     mcap_group_component_definition_resolver,
 )
+from lightly_studio.transport import active_transport
 
 NamedDataType: TypeAlias = tuple[str, McapDataType]
 """The name of one component of an MCAP dataset and the kind of data it carries."""
@@ -84,11 +89,12 @@ def check_components_match(
         )
 
 
-def create_collections(session: Session, name: str) -> tuple[CollectionTable, CollectionTable]:
+def create_collections(
+    name: str,
+) -> tuple[CollectionWithoutChildrenView, CollectionWithoutChildrenView]:
     """Create the root collection of an MCAP dataset and the one holding its groups.
 
     Args:
-        session: The database session.
         name: The name of the dataset.
 
     Returns:
@@ -97,12 +103,11 @@ def create_collections(session: Session, name: str) -> tuple[CollectionTable, Co
     Raises:
         ValueError: If a dataset of that name exists.
     """
-    root_collection = collection_resolver.create(
-        session=session,
+    collections = active_transport.get_transport().collections
+    root_collection = collections.create(
         collection=CollectionCreate(name=name, sample_type=SampleType.SEQUENCE),
     )
-    group_collection = collection_resolver.create(
-        session=session,
+    group_collection = collections.create(
         collection=CollectionCreate(
             name=f"{name}{GROUP_COLLECTION_SUFFIX}",
             parent_collection_id=root_collection.collection_id,

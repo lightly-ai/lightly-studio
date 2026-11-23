@@ -51,6 +51,34 @@ it.each(['=', '!=', '<', '<=', '>', '>='])('translates fps %s 29.97', (operator)
     });
 });
 
+it('translates all event criteria under one video event match', () => {
+    const result = parseLightlyQuery(
+        parser,
+        'event(class_name = "run" AND start_time_s < 5)',
+        'video'
+    );
+    const run = str('event', 'class_name', '==', 'run');
+    const early = float('event', 'start_time_s', '<', 5);
+    expect(result).toEqual({
+        status: 'ok',
+        queryExpr: query({ type: 'video_event_match_expr', subexpr: and(run, early) })
+    });
+});
+
+it.each([
+    'event(start_time_s < 5)',
+    'video: classification(start_time_s < 5)',
+    'video: event(width > 10)',
+    'video: event(classification(class_name = "run"))'
+])('rejects misplaced event syntax in %s', (source) => {
+    expect(parseLightlyQuery(parser, source).status).toBe('error');
+});
+
+it('rejects an event timestamp that overflows', () => {
+    const source = `video: event(end_time_s < ${'9'.repeat(400)})`;
+    expect(parseLightlyQuery(parser, source).status).toBe('error');
+});
+
 it('keeps same-frame criteria together and separate frame searches independent', () => {
     const car = 'object_detection(class_name = "car")';
     const person = 'object_detection(class_name = "person")';

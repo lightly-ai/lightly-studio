@@ -16,6 +16,7 @@ describe('buildSchemaCompletions', () => {
         const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
         const items = buildSchemaCompletions({ scope: 'image', range });
         const labels = items.map((i) => i.label);
+        expect(labels).not.toContain('event');
         expect(labels).not.toContain('frame');
         expect(labels).toContain('width');
         expect(labels).not.toContain('video:');
@@ -30,6 +31,9 @@ describe('buildSchemaCompletions', () => {
         const items = buildSchemaCompletions({ scope: 'video', range });
         const labels = items.map((i) => i.label);
         expect(labels).toContain('fps');
+        expect(items.find((item) => item.label === 'event')?.insertText).toBe(
+            'event(class_name = "${1:...}")'
+        );
         expect(labels).toContain('frame');
         expect(labels).not.toContain('video:');
     });
@@ -75,16 +79,33 @@ it('offers evaluation metrics and excludes unrelated sample fields and functions
     }
 });
 
-it('inserts a valid evaluation query from the top-level snippet', async () => {
+it.each([
+    ['image', 'sample_evaluation', 'sample_evaluation(name = "run-name" AND "tp" >= 1)'],
+    ['video', 'event', 'event(class_name = "...")']
+] as const)('inserts a valid %s query from the %s snippet', async (scope, label, expected) => {
     const { buildSchemaCompletions } = await import('./completionAdapterBuildSchemaCompletions');
     const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
-    const item = buildSchemaCompletions({ scope: 'image', range }).find(
-        (item) => item.label === 'sample_evaluation'
-    );
+    const item = buildSchemaCompletions({ scope, range }).find((item) => item.label === label);
     const query = item?.insertText.replace(/\$\{\d+:([^}]+)\}/g, '$1');
-    expect(query).toBe('sample_evaluation(name = "run-name" AND "tp" >= 1)');
+    expect(query).toBe(expected);
     const parser = createLightlyQueryServices().LightlyQuery.parser.LangiumParser;
-    expect(parseLightlyQuery(parser, query ?? '').status).toBe('ok');
+    expect(parseLightlyQuery(parser, query ?? '', scope).status).toBe('ok');
+});
+
+it('offers only event fields and boolean operators inside event()', async () => {
+    const { buildSchemaCompletions } = await import('./completionAdapterBuildSchemaCompletions');
+    const range = { startLineNumber: 1, endLineNumber: 1, startColumn: 1, endColumn: 1 };
+    const items = buildSchemaCompletions({ scope: 'event', range });
+    expect(items.map((item) => item.label)).toEqual([
+        'class_name',
+        'source',
+        'confidence',
+        'start_time_s',
+        'end_time_s',
+        'AND',
+        'OR',
+        'NOT'
+    ]);
 });
 
 it('offers timestamp, annotations and boolean operators inside frame()', async () => {
