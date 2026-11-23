@@ -11,7 +11,9 @@ export interface WorkflowAction {
     label: string;
     /** Shown while this move waits for the workflow service. */
     pendingLabel: string;
-    variant: 'default' | 'destructive';
+    variant: 'default' | 'outline';
+    /** Extra button classes, e.g. the red outline of Send back. */
+    class?: string;
 }
 
 /** What an admin confirms before an override that skips a workflow step. */
@@ -63,7 +65,9 @@ const ACTIONS: Record<MoveTarget, WorkflowAction> = {
         target: 'rework',
         label: 'Send back to Rework',
         pendingLabel: 'Sending back…',
-        variant: 'destructive'
+        variant: 'outline',
+        // The red of the Rework state.
+        class: 'border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-500'
     }
 };
 

@@ -62,6 +62,7 @@
             <Button
                 size="sm"
                 variant={action.variant}
+                class={action.class}
                 disabled={busy}
                 onclick={() => move(action.target)}>{buttonLabel(action)}</Button
             >

@@ -106,7 +106,8 @@ describe('WorkflowFileActions', () => {
 
             const sendBack = screen.getByRole('button', { name: 'Send back to Rework' });
             expect(sendBack).toBeEnabled();
-            expect(sendBack).toHaveClass('bg-destructive');
+            expect(sendBack).toHaveClass('border-red-500', 'text-red-500');
+            expect(sendBack).not.toHaveClass('bg-destructive');
             await fireEvent.click(sendBack);
 
             expect(onTransition).toHaveBeenCalledWith('rework');
